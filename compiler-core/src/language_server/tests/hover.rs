@@ -136,6 +136,11 @@ fn show_hover(code: &str, range: Range, pointer: Position) -> String {
 
 #[macro_export]
 macro_rules! assert_hover {
+    ($code:literal, $pointer:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_hover!(project, $pointer);
+    };
+
     ($project:expr, $pointer:expr $(,)?) => {
         let src = $project.src;
         let position = $pointer.find_position(src);
@@ -151,18 +156,20 @@ macro_rules! assert_hover {
 
 #[test]
 fn hover_function_definition() {
-    let code = "
+    assert_hover!(
+        "
 fn add_2(x) {
   x + 2
 }
-";
-    let project = TestProject::for_source(code);
-    assert_hover!(project, find_position_of("add_2"));
+",
+        find_position_of("add_2")
+    );
 }
 
 #[test]
 fn hover_local_function() {
-    let code = "
+    assert_hover!(
+        "
 fn my_fn() {
   Nil
 }
@@ -170,10 +177,7 @@ fn my_fn() {
 fn main() {
   my_fn
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("my_fn").under_char('y').nth_occurrence(2)
     );
 }
@@ -181,7 +185,8 @@ fn main() {
 // https://github.com/gleam-lang/gleam/issues/2654
 #[test]
 fn hover_local_function_in_pipe() {
-    let code = "
+    assert_hover!(
+        "
 fn add1(num: Int) -> Int {
   num + 1
 }
@@ -194,10 +199,7 @@ pub fn main() {
   |> add1
   |> add1
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("add1")
             .with_char_offset(1)
             .nth_occurrence(2)
@@ -207,7 +209,8 @@ pub fn main() {
 // https://github.com/gleam-lang/gleam/issues/2654
 #[test]
 fn hover_local_function_in_pipe_1() {
-    let code = "
+    assert_hover!(
+        "
 fn add1(num: Int) -> Int {
   num + 1
 }
@@ -220,10 +223,7 @@ pub fn main() {
   |> add1
   |> add1
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("add1")
             .with_char_offset(2)
             .nth_occurrence(3)
@@ -233,7 +233,8 @@ pub fn main() {
 // https://github.com/gleam-lang/gleam/issues/2654
 #[test]
 fn hover_local_function_in_pipe_2() {
-    let code = "
+    assert_hover!(
+        "
 fn add1(num: Int) -> Int {
   num + 1
 }
@@ -246,10 +247,7 @@ pub fn main() {
   |> add1
   |> add1
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("add1")
             .with_char_offset(2)
             .nth_occurrence(4)
@@ -259,7 +257,8 @@ pub fn main() {
 // https://github.com/gleam-lang/gleam/issues/2654
 #[test]
 fn hover_local_function_in_pipe_3() {
-    let code = "
+    assert_hover!(
+        "
 fn add1(num: Int) -> Int {
   num + 1
 }
@@ -272,10 +271,7 @@ pub fn main() {
   |> add1
   |> add1
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("add1")
             .with_char_offset(2)
             .nth_occurrence(5)
@@ -466,29 +462,28 @@ fn main() {
 
 #[test]
 fn hover_function_definition_with_docs() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x, y) {
   x <> y
 }
-";
-
-    assert_hover!(TestProject::for_source(code), find_position_of("append"));
+",
+        find_position_of("append")
+    );
 }
 
 #[test]
 fn hover_function_argument() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x, y) {
   x <> y
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("append(x, y)").under_char('x')
     );
 }
@@ -511,32 +506,32 @@ fn append(x, y) {
 
 #[test]
 fn hover_expressions_in_function_body() {
-    let code = "
+    assert_hover!(
+        "
 fn append(x, y) {
   x <> y
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("x").nth_occurrence(2)
     );
 }
 
 #[test]
 fn hover_module_constant() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 const one = 1
-";
-
-    assert_hover!(TestProject::for_source(code), find_position_of("one"));
+",
+        find_position_of("one")
+    );
 }
 
 #[test]
 fn hover_variable_in_use_expression() {
-    let code = "
+    assert_hover!(
+        "
 fn b(fun: fn(Int) -> String) {
   fun(42)
 }
@@ -547,17 +542,15 @@ fn do_stuff() {
   use a <- b
   c
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("use a").under_last_char()
     );
 }
 
 #[test]
 fn hover_variable_in_use_expression_1() {
-    let code = "
+    assert_hover!(
+        "
 fn b(fun: fn(Int) -> String) {
   fun(42)
 }
@@ -568,17 +561,15 @@ fn do_stuff() {
   use a <- b
   c
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("b").nth_occurrence(2)
     );
 }
 
 #[test]
 fn hover_variable_in_use_expression_2() {
-    let code = "
+    assert_hover!(
+        "
 fn b(fun: fn(Int) -> String) {
   fun(42)
 }
@@ -589,120 +580,99 @@ fn do_stuff() {
   use a <- b
   c
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("c").nth_occurrence(2)
     );
 }
 
 #[test]
 fn hover_function_arg_annotation_2() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> String {
   x <> y
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("String").under_char('n')
     );
 }
 
 #[test]
 fn hover_function_return_annotation() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> String {
   x <> y
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("String").under_char('n').nth_occurrence(3)
     );
 }
 
 #[test]
 fn hover_function_return_annotation_with_tuple() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> #(String, String) {
   #(x, y)
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("String").under_char('r').nth_occurrence(3)
     );
 }
 
 #[test]
 fn hover_module_constant_annotation() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 const one: Int = 1
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("Int").under_last_char()
     );
 }
 
 #[test]
 fn hover_type_constructor_annotation() {
-    let code = "
+    assert_hover!(
+        "
 type Wibble {
     Wibble(arg: String)
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("String").under_char('n')
     );
 }
 
 #[test]
 fn hover_type_alias_annotation() {
-    let code = "
-type Wibble = Int
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
-        find_position_of("Int").under_char('n')
-    );
+    assert_hover!("type Wibble = Int", find_position_of("Int").under_char('n'));
 }
 
 #[test]
 fn hover_assignment_annotation() {
-    let code = "
+    assert_hover!(
+        "
 fn wibble() {
     let wobble: Int = 7
     wobble
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("Int").under_last_char()
     );
 }
 
 #[test]
 fn hover_function_arg_annotation_with_documentation() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 type Wibble {
@@ -712,10 +682,7 @@ type Wibble {
 fn identity(x: Wibble) -> Wibble {
   x
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("Wibble")
             .under_last_char()
             .nth_occurrence(3)
@@ -780,7 +747,7 @@ fn main() -> MyType {
 /// Exciting documentation
 /// Maybe even multiple lines
 pub type MyType {
-    MyType
+  MyType
 }"
         ),
         find_position_of("MyType").under_last_char()
@@ -789,20 +756,19 @@ pub type MyType {
 
 #[test]
 fn hover_works_even_for_invalid_code() {
-    let code = "
+    assert_hover!(
+        "
 fn invalid() { 1 + Nil }
 fn valid() { Nil }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("fn valid").under_char('v')
     );
 }
 
 #[test]
 fn hover_for_pattern_spread_ignoring_all_fields() {
-    let code = "
+    assert_hover!(
+        "
 pub type Model {
   Model(
     Int,
@@ -817,14 +783,15 @@ pub fn main() {
     Model(..) -> todo
   }
 }
-";
-
-    assert_hover!(TestProject::for_source(code), find_position_of(".."));
+",
+        find_position_of("..")
+    );
 }
 
 #[test]
 fn hover_for_pattern_spread_ignoring_some_fields() {
-    let code = "
+    assert_hover!(
+        "
 pub type Model {
   Model(
     Int,
@@ -839,17 +806,15 @@ pub fn main() {
     Model(_, label1: _, ..) -> todo
   }
 }
-";
-
-    assert_hover!(
-        TestProject::for_source(code),
+",
         find_position_of("..").under_last_char()
     );
 }
 
 #[test]
 fn hover_for_pattern_spread_ignoring_all_positional_fields() {
-    let code = "
+    assert_hover!(
+        "
 pub type Model {
   Model(
     Int,
@@ -864,7 +829,7 @@ pub fn main() {
     Model(_, _, _, ..) -> todo
   }
 }
-";
-
-    assert_hover!(TestProject::for_source(code), find_position_of(".."));
+",
+        find_position_of("..")
+    );
 }
