@@ -328,7 +328,22 @@ where
     }
 
     fn inlay_hints_refresh(&mut self) -> Feedback {
-        self.send_request("workspace/inlayHint/refresh", (), None);
+        let supports_refresh = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .and_then(|capabilties| {
+                capabilties
+                    .inlay_hint
+                    .as_ref()
+                    .and_then(|h| h.refresh_support)
+            })
+            .unwrap_or(false);
+
+        if supports_refresh {
+            self.send_request("workspace/inlayHint/refresh", (), None);
+        }
         Feedback::default()
     }
 
