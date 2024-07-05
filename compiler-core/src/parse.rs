@@ -795,10 +795,19 @@ where
                     }
 
                     t0 => {
+                        // parse a field access with no label
                         self.tok0 = t0;
-                        return self.next_tok_unexpected(vec![
-                            "A positive integer or a field name.".into(),
-                        ]);
+                        let end = dot_start + 1;
+                        expr = UntypedExpr::FieldAccess {
+                            location: SrcSpan { start, end },
+                            label_location: SrcSpan {
+                                start: dot_start,
+                                end,
+                            },
+                            label: "".into(),
+                            container: Box::new(expr),
+                        };
+                        return Ok(Some(expr));
                     }
                 }
             } else if self.maybe_one(&Token::LeftParen).is_some() {

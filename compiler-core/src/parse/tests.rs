@@ -1132,6 +1132,22 @@ const a = A(\"a\", let)
     );
 }
 
+// record access should parse even if there is no label written
+#[test]
+fn record_access_no_label() {
+    assert_parse_module!(
+        "
+type Wibble {
+    Wibble(wibble: String)
+}
+
+fn wobble() {
+  Wibble(\"a\").
+}
+"
+    );
+}
+
 #[test]
 fn newline_tokens() {
     assert_eq!(
