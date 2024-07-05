@@ -8,6 +8,12 @@
   necessary.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+### Compiler
+
+- Fixed a bug where not all pure function calls in constant definitions would be
+  annotated as `@__PURE__` when compiling to JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.3.0-rc1 - 2024-06-30
 
 ### Build tool
