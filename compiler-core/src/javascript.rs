@@ -17,7 +17,7 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::EcoString;
-use expression::IsModuleConstantDefinition;
+use expression::Context;
 use itertools::Itertools;
 
 use self::import::{Imports, Member};
@@ -466,11 +466,8 @@ impl<'a> Generator<'a> {
             "export const "
         };
 
-        let document = expression::constant_expression(
-            IsModuleConstantDefinition::Yes,
-            &mut self.tracker,
-            value,
-        )?;
+        let document =
+            expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
 
         Ok(docvec![
             head,
