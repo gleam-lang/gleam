@@ -208,21 +208,25 @@ where
                 return Ok(None);
             }
 
-            let Some(found) = module.find_node(byte_index) else {
+            let Some(found) = module.find_node(byte_index, true) else {
                 return Ok(None);
             };
 
             let completions = match found {
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
-
                 // Do not show completions when typing inside a string.
                 Located::Expression(TypedExpr::String { .. }) => None,
 
+                Located::Expression(TypedExpr::RecordAccess { record, .. }) => {
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions.append(&mut completer.completion_field_accessors(record.type_()));
+                    Some(completions)
+                }
                 Located::Statement(_) | Located::Expression(_) => {
                     Some(completer.completion_values())
                 }
-
                 Located::ModuleStatement(Definition::Function(_)) => {
                     Some(completer.completion_types())
                 }
@@ -414,7 +418,7 @@ Unused labelled fields:
     ) -> Option<(LineNumbers, Located<'a>)> {
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-        let node = module.find_node(byte_index);
+        let node = module.find_node(byte_index, false);
         let node = node?;
         Some((line_numbers, node))
     }

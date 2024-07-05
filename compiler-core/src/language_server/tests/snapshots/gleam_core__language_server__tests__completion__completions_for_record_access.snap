@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "completion(TestProject::for_source(code), Position::new(8, 15))"
+---
+[
+    CompletionItem {
+        label: "wobble",
+        label_details: None,
+        kind: Some(
+            Field,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+]
