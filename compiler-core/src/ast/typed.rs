@@ -171,7 +171,7 @@ impl TypedExpr {
         }
     }
 
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
         match self {
             Self::Var { .. }
             | Self::Int { .. }
@@ -180,7 +180,7 @@ impl TypedExpr {
             | Self::Float { .. }
             | Self::String { .. }
             | Self::ModuleSelect { .. }
-            | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+            | Self::Invalid { .. } => self.self_if_contains_location(byte_index, inclusive),
 
             Self::Pipeline {
                 assignments,
@@ -188,8 +188,8 @@ impl TypedExpr {
                 ..
             } => assignments
                 .iter()
-                .find_map(|e| e.find_node(byte_index))
-                .or_else(|| finally.find_node(byte_index)),
+                .find_map(|e| e.find_node(byte_index, inclusive))
+                .or_else(|| finally.find_node(byte_index, inclusive)),
 
             // Exit the search and return None if during iteration a statement
             // is found with a start index beyond the index under search.
@@ -199,7 +199,7 @@ impl TypedExpr {
                         break;
                     }
 
-                    if let Some(located) = statement.find_node(byte_index) {
+                    if let Some(located) = statement.find_node(byte_index, inclusive) {
                         return Some(located);
                     }
                 }
@@ -222,41 +222,45 @@ impl TypedExpr {
                         break;
                     }
 
-                    if let Some(located) = expression.find_node(byte_index) {
+                    if let Some(located) = expression.find_node(byte_index, inclusive) {
                         return Some(located);
                     }
                 }
 
-                self.self_if_contains_location(byte_index)
+                self.self_if_contains_location(byte_index, inclusive)
             }
 
             Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => value
-                .find_node(byte_index)
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_node(byte_index, inclusive)
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
 
             Self::Fn { body, args, .. } => args
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| body.iter().find_map(|s| s.find_node(byte_index)))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_map(|arg| arg.find_node(byte_index, inclusive))
+                .or_else(|| body.iter().find_map(|s| s.find_node(byte_index, inclusive)))
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
 
             Self::Call { fun, args, .. } => args
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| fun.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_map(|arg| arg.find_node(byte_index, inclusive))
+                .or_else(|| fun.find_node(byte_index, inclusive))
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
 
             Self::BinOp { left, right, .. } => left
-                .find_node(byte_index)
-                .or_else(|| right.find_node(byte_index)),
+                .find_node(byte_index, inclusive)
+                .or_else(|| right.find_node(byte_index, inclusive)),
 
             Self::Case {
                 subjects, clauses, ..
             } => subjects
                 .iter()
-                .find_map(|subject| subject.find_node(byte_index))
-                .or_else(|| clauses.iter().find_map(|c| c.find_node(byte_index)))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_map(|subject| subject.find_node(byte_index, inclusive))
+                .or_else(|| {
+                    clauses
+                        .iter()
+                        .find_map(|c| c.find_node(byte_index, inclusive))
+                })
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
 
             Self::RecordAccess {
                 record: expression, ..
@@ -264,24 +268,24 @@ impl TypedExpr {
             | Self::TupleIndex {
                 tuple: expression, ..
             } => expression
-                .find_node(byte_index)
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_node(byte_index, inclusive)
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
 
             Self::BitArray { segments, .. } => segments
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_map(|arg| arg.find_node(byte_index, inclusive))
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
 
             Self::RecordUpdate { spread, args, .. } => args
                 .iter()
-                .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| spread.find_node(byte_index))
-                .or_else(|| self.self_if_contains_location(byte_index)),
+                .find_map(|arg| arg.find_node(byte_index, inclusive))
+                .or_else(|| spread.find_node(byte_index, inclusive))
+                .or_else(|| self.self_if_contains_location(byte_index, inclusive)),
         }
     }
 
-    fn self_if_contains_location(&self, byte_index: u32) -> Option<Located<'_>> {
-        if self.location().contains(byte_index) {
+    fn self_if_contains_location(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
+        if self.location().contains(byte_index, inclusive) {
             Some(self.into())
         } else {
             None

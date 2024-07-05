@@ -1230,3 +1230,23 @@ pub fn main() {
         vec![],
     );
 }
+
+#[test]
+fn completions_for_record_access() {
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wabble: Int, wobble: Int)
+}
+  
+fn fun() {
+  let wibble = Wibble(1, 2)
+  wibble.wobble
+}
+";
+
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(8, 15)
+    ),);
+}

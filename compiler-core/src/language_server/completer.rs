@@ -1,4 +1,7 @@
+use std::sync::Arc;
+
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp_types::{
     CompletionItem, CompletionItemKind, CompletionItemLabelDetails, CompletionTextEdit,
     Documentation, MarkupContent, MarkupKind, Position, Range, TextDocumentPositionParams,
@@ -12,7 +15,8 @@ use crate::{
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        pretty::Printer, ModuleInterface, PreludeType, TypeConstructor, ValueConstructorVariant,
+        collapse_links, pretty::Printer, AccessorsMap, ModuleInterface, PreludeType, Type,
+        TypeConstructor, ValueConstructorVariant,
     },
     Result,
 };
@@ -33,7 +37,7 @@ pub struct Completer<'a, IO> {
     /// The direct buffer source code
     src: &'a EcoString,
     /// The line number information of the buffer source code
-    src_line_numbers: LineNumbers,
+    pub src_line_numbers: LineNumbers,
     /// The current cursor position within the buffer source code
     cursor_position: &'a Position,
     /// A reference to the lsp compiler for getting module information
@@ -568,6 +572,37 @@ where
         completions
     }
 
+    // Looks up the type accessors for the given type
+    fn type_accessors_from_modules(
+        &'a self,
+        importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+        type_: Arc<Type>,
+    ) -> Option<&AccessorsMap> {
+        let type_ = collapse_links(type_);
+        match type_.as_ref() {
+            Type::Named { name, module, .. } => importable_modules
+                .get(module)
+                .and_then(|i| i.accessors.get(name)),
+            _ => None,
+        }
+    }
+
+    /// Provides completions for when the context being editted is
+    pub fn completion_field_accessors(&'a self, typ: Arc<Type>) -> Vec<CompletionItem> {
+        self.type_accessors_from_modules(
+            self.compiler.project_compiler.get_importable_modules(),
+            typ,
+        )
+        .map(|accessors_map| {
+            accessors_map
+                .accessors
+                .values()
+                .map(|accessor| field_completion(&accessor.label, accessor.type_.clone()))
+                .collect_vec()
+        })
+        .unwrap_or_default()
+    }
+
     fn root_package_name(&self) -> &str {
         self.compiler.project_compiler.config.name.as_str()
     }
@@ -691,6 +726,17 @@ fn value_completion(
             range: insert_range,
             new_text: label.clone(),
         })),
+        ..Default::default()
+    }
+}
+
+fn field_completion(label: &str, type_: Arc<Type>) -> CompletionItem {
+    let type_ = Printer::new().pretty_print(&type_, 0);
+
+    CompletionItem {
+        label: label.into(),
+        kind: Some(CompletionItemKind::FIELD),
+        detail: Some(type_),
         ..Default::default()
     }
 }

@@ -358,9 +358,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 label,
                 container,
                 ..
-            } => {
-                self.infer_field_access(*container, label, label_location, FieldAccessUsage::Other)
-            }
+            } => Ok(self.infer_field_access(
+                *container,
+                label,
+                label_location,
+                FieldAccessUsage::Other,
+            )),
 
             UntypedExpr::TupleIndex {
                 location,
@@ -939,39 +942,71 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    /// Attempts to infer a record access. If the attempt fails, then will fallback to attempting to infer a module access.
+    /// If both fail, then the error from the record access will be used.
     fn infer_field_access(
         &mut self,
         container: UntypedExpr,
         label: EcoString,
         label_location: SrcSpan,
         usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
-        // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
-        // of an imported module, so attempt to infer the container as a module access.
-        // TODO: Remove this cloning
-        match self.infer_record_expression_access(
-            container.clone(),
-            label.clone(),
-            label_location,
-            usage,
-        ) {
-            Ok(record_access) => Ok(record_access),
-            Err(err) => match container {
-                UntypedExpr::Var { name, location, .. } => {
-                    let module_access =
-                        self.infer_module_access(&name, label, &location, label_location);
-
-                    // If the name is in the environment, use the original error from
-                    // inferring the record access, so that we can suggest possible
-                    // misspellings of field names
-                    if self.environment.scope.contains_key(&name) {
-                        module_access.map_err(|_| err)
-                    } else {
-                        module_access
-                    }
+    ) -> TypedExpr {
+        // Computes a potential module access. This will be used if a record access can't be used.
+        // Computes both the inferred access and if it shadows a variable.
+        let module_access = match &container {
+            UntypedExpr::Var { location, name } => {
+                let module_access =
+                    self.infer_module_access(name, label.clone(), location, label_location);
+                // Returns the result and if it shadows an existing variable in scope
+                Some((module_access, self.environment.scope.contains_key(name)))
+            }
+            _ => None,
+        };
+        let record = self.infer(container);
+        // TODO: is this clone avoidable? we need to box the record for inference in both
+        // the success case and in the valid record but invalid label case
+        let record_access = match record.clone() {
+            Ok(record) => self.infer_known_record_expression_access(
+                record,
+                label.clone(),
+                label_location,
+                usage,
+            ),
+            Err(e) => Err(e),
+        };
+        match (record_access, module_access) {
+            // Record access is valid
+            (Ok(record_access), _) => record_access,
+            // Record access is invalid but module access is valid
+            (_, Some((Ok(module_access), _))) => module_access,
+            // Module access was attempted but failed and it does not shadow an existing variable
+            (_, Some((Err(module_access_err), false))) => {
+                self.errors.push(module_access_err);
+                TypedExpr::Invalid {
+                    location: label_location,
+                    typ: self.new_unbound_var(),
                 }
-                _ => Err(err),
-            },
+            }
+            // In any other case use the record access for the error
+            (Err(record_access_err), _) => {
+                self.errors.push(record_access_err);
+                match record {
+                    // If the record is valid then use a placeholder access
+                    // This allows autocomplete to know a record access is being attempted
+                    // Even if the access is not valid
+                    Ok(record) => TypedExpr::RecordAccess {
+                        location: label_location,
+                        typ: self.new_unbound_var(),
+                        label: "".into(),
+                        index: u64::MAX,
+                        record: Box::new(record),
+                    },
+                    Err(_) => TypedExpr::Invalid {
+                        location: label_location,
+                        typ: self.new_unbound_var(),
+                    },
+                }
+            }
         }
     }
 
@@ -2064,18 +2099,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_record_expression_access(
-        &mut self,
-        record: UntypedExpr,
-        label: EcoString,
-        location: SrcSpan,
-        usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
-        // Infer the type of the (presumed) record
-        let record = self.infer(record)?;
-        self.infer_known_record_expression_access(record, label, location, usage)
-    }
-
     fn infer_known_record_expression_access(
         &mut self,
         record: TypedExpr,
@@ -2753,12 +2776,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 container,
                 label_location,
                 ..
-            } => self.infer_field_access(
+            } => Ok(self.infer_field_access(
                 *container,
                 label,
                 label_location,
                 FieldAccessUsage::MethodCall,
-            ),
+            )),
 
             fun => self.infer(fun),
         }?;
