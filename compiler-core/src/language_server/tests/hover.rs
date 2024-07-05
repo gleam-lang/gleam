@@ -68,7 +68,7 @@ impl PositionFinder {
         let byte_index = src
             .match_indices(value)
             .nth(nth_occurrence - 1)
-            .expect("no match for pointer")
+            .expect("no match for position")
             .0;
 
         byte_index_to_position(src, byte_index + offset)
@@ -99,7 +99,7 @@ fn byte_index_to_position(src: &str, byte_index: usize) -> Position {
     Position::new(line, col)
 }
 
-fn show_hover(code: &str, range: Range, pointer: Position) -> String {
+fn show_hover(code: &str, range: Range, position: Position) -> String {
     let Range { start, end } = range;
 
     // When we display the over range the end character is always excluded!
@@ -111,11 +111,11 @@ fn show_hover(code: &str, range: Range, pointer: Position) -> String {
         let mut underline_empty = true;
 
         for (column_number, _) in line.chars().enumerate() {
-            let position = Position::new(line_number as u32, column_number as u32);
-            if position == pointer {
+            let current_position = Position::new(line_number as u32, column_number as u32);
+            if current_position == position {
                 underline_empty = false;
                 underline.push('↑');
-            } else if start.le(&position) && position.lt(&end) {
+            } else if start.le(&current_position) && current_position.lt(&end) {
                 underline_empty = false;
                 underline.push('▔');
             } else {
@@ -136,14 +136,14 @@ fn show_hover(code: &str, range: Range, pointer: Position) -> String {
 
 #[macro_export]
 macro_rules! assert_hover {
-    ($code:literal, $pointer:expr $(,)?) => {
+    ($code:literal, $position:expr $(,)?) => {
         let project = TestProject::for_source($code);
-        assert_hover!(project, $pointer);
+        assert_hover!(project, $position);
     };
 
-    ($project:expr, $pointer:expr $(,)?) => {
+    ($project:expr, $position:expr $(,)?) => {
         let src = $project.src;
-        let position = $pointer.find_position(src);
+        let position = $position.find_position(src);
         let result = hover($project, position).expect("no hover produced");
         let pretty_hover = show_hover(src, result.range.expect("hover with no range"), position);
         let output = format!(
