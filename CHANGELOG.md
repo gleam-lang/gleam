@@ -9,9 +9,17 @@
 - The warning for the deprecated `[..]` pattern has been improved.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Record accessors are now fault tolerant. This means an invalid label can be
+  properly detected and won't invalidate the rest of the expression.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Formatter
 
 ### Language Server
+
+- The language server can now show completions for fields if a record access is
+  being attempted.
+  ([Ameen Radwan](https://github.com/Acepie))
 
 ### Bug Fixes
 
