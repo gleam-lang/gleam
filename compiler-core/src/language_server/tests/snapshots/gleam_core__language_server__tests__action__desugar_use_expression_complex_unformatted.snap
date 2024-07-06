@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  use\t     q:  Int ,  w,  e  <-   wobble( 9 , \n  \" some text \" \n    )\n  q + w + e\n  // a comment\n    3\n}\n\nfn wobble(a: Int, c: String, b: fn(Int, Int, Int) -> Int) {\n  b(1, 2, 3)\n  Nil\n}\n"
+---
+pub fn main() {
+  wobble( 9 , 
+  " some text ", fn(q:  Int, w, e) {
+    q + w + e
+    // a comment
+      3
+  })
+}
+
+fn wobble(a: Int, c: String, b: fn(Int, Int, Int) -> Int) {
+  b(1, 2, 3)
+  Nil
+}

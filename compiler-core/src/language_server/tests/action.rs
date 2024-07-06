@@ -23,7 +23,12 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
     _ = io.src_module("list", "");
     _ = io.src_module(
         "result",
-        "pub fn is_ok() {}\npub fn is_err() {}\npub fn all() {}",
+        "
+            pub fn is_ok() {}
+            pub fn is_err() {}
+            pub fn all() {}
+            pub fn lazy(cb: fn() -> Int) {}
+        ",
     );
     _ = io.src_module("map", "pub type Map(key, value)\npub fn delete() {}");
     _ = io.src_module("option", "");
@@ -53,6 +58,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 const CONVERT_TO_CASE: &str = "Convert to case";
+const DESUGAR_USE_EXPRESSION: &str = "Desugar use expression";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -96,7 +102,7 @@ fn apply_code_edit(
 ) -> String {
     let mut result = src.to_string();
     let line_numbers = LineNumbers::new(src);
-    let mut offset = 0;
+    let mut offset: i32 = 0;
     for (change_url, change) in changes {
         if url != change_url {
             panic!("Unknown url {}", change_url)
@@ -170,6 +176,153 @@ import option
 
 pub fn main() {
   is_ok
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_simple() {
+    assert_code_action!(
+        3,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  use <- wobble()
+  3
+}
+
+fn wobble(b: fn() -> Int) {
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_with_underscore() {
+    assert_code_action!(
+        3,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  use _ <- wobble()
+  3
+}
+
+fn wobble(b: fn(x) -> Int) {
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_complex_unformatted() {
+    assert_code_action!(
+        3,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  use\t     q:  Int ,  w,  e  <-   wobble( 9 , 
+  \" some text \" 
+    )
+  q + w + e
+  // a comment
+    3
+}
+
+fn wobble(a: Int, c: String, b: fn(Int, Int, Int) -> Int) {
+  b(1, 2, 3)
+  Nil
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_fn_without_parenthesis() {
+    assert_code_action!(
+        4,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  let wobble = fn(cb: fn() -> Int) { cb() + 1 }
+
+  use <- wobble
+
+  2
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_tuple() {
+    assert_code_action!(
+        4,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  let tuple = #(fn(cb: fn() -> Int) { cb() + 1 })
+
+  use <- tuple.0
+
+  2
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_other_module() {
+    assert_code_action!(
+        5,
+        DESUGAR_USE_EXPRESSION,
+        "
+import result
+
+pub fn main() {
+  use <- result.lazy
+  2
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_multiple_inner() {
+    assert_code_action!(
+        4,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  use a <- wobble(1)
+  use b <- wobble(2)
+  3 + a + b
+}
+
+fn wobble(x: Int, b: fn(Int) -> Int) -> Int {
+  x + b(x)
+}
+"
+    );
+}
+
+#[test]
+fn test_desugar_use_expression_multiple_outer() {
+    assert_code_action!(
+        2,
+        DESUGAR_USE_EXPRESSION,
+        "
+pub fn main() {
+  use a <- wobble(1)
+  use b <- wobble(2)
+  3 + a + b
+}
+
+fn wobble(x: Int, b: fn(Int) -> Int) -> Int {
+  x + b(x)
 }
 "
     );

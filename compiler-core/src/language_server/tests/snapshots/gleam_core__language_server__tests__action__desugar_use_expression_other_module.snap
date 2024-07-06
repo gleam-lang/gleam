@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport result\n\npub fn main() {\n  use <- result.lazy\n  2\n}\n"
+---
+import result
+
+pub fn main() {
+  result.lazy(fn() {
+    2
+  })
+}

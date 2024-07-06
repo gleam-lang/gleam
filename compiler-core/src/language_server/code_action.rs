@@ -5,7 +5,7 @@ use crate::{
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
-    type_::Type,
+    type_::{Type, TypedCallArg},
 };
 use ecow::EcoString;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
@@ -409,5 +409,300 @@ impl<'a> LetAssertToCase<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
         self.actions
+    }
+}
+
+/// Code action to desugar "use" expressions.
+///
+/// Turns:
+/// ```gleam
+/// use x <- result.map(Ok(1))
+/// io.debug(x)
+/// ```
+///
+/// Into:
+/// ```gleam
+/// result.map(Ok(1), fn(x) { io.debug(x) })
+/// ```
+///
+/// The code action is available for the i'th subject if:
+/// - the whole "use" expression body overlaps with the selection.
+/// - if multiple "use" expressions match, only the inner-most is updated.
+pub struct DesugarUseExpressionCodeAction<'a> {
+    line_numbers: LineNumbers,
+    code: &'a EcoString,
+    params: &'a CodeActionParams,
+    module: &'a ast::TypedModule,
+    edits: Vec<TextEdit>,
+}
+
+impl<'ast> ast::visit::Visit<'ast> for DesugarUseExpressionCodeAction<'_> {
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        fun: &'ast ast::TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) {
+        // Perform only a single edit.
+        if !self.edits.is_empty() {
+            return;
+        }
+        ast::visit::visit_typed_expr_call(self, location, typ, fun, args);
+
+        // Perform only a single edit.
+        if !self.edits.is_empty() {
+            return;
+        }
+
+        // Perform edit after the "visit_typed_expr_call" recursion call to ensure that the inner-most
+        // "use" expression is updated.
+        if let Some(edits) = self.on_typed_expr_call(location, fun, args) {
+            self.edits.extend(edits);
+        }
+    }
+}
+
+impl<'a> DesugarUseExpressionCodeAction<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        Self {
+            line_numbers: LineNumbers::new(&module.code),
+            code: &module.code,
+            params,
+            module: &module.ast,
+            edits: vec![],
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(self.module);
+        if self.edits.is_empty() {
+            return vec![];
+        }
+
+        self.edits.sort_by_key(|edit| edit.range.start);
+
+        let mut actions = vec![];
+        CodeActionBuilder::new("Desugar use expression")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits)
+            .preferred(true)
+            .push_to(&mut actions);
+
+        actions
+    }
+
+    fn on_typed_expr_call<'ast>(
+        &mut self,
+        location: &'ast SrcSpan,
+        fun: &'ast ast::TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) -> Option<Vec<TextEdit>> {
+        if !self.expr_call_starts_with_use(location.start as usize) || args.is_empty() {
+            return None;
+        }
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if !overlaps(self.params.range, range) {
+            return None;
+        }
+        let mut edits: Vec<TextEdit> = vec![];
+
+        let fn_name_location = self.get_fn_name_location(fun, location)?;
+
+        edits.push(self.remove_use_expression(location, &fn_name_location)?);
+        edits.extend(self.insert_callback_fn(location, &fn_name_location, args)?);
+
+        Some(edits)
+    }
+
+    fn get_fn_name_location(
+        &self,
+        fun: &ast::TypedExpr,
+        use_location: &SrcSpan,
+    ) -> Option<SrcSpan> {
+        match fun {
+            ast::TypedExpr::Var { location, .. } => Some(*location),
+            ast::TypedExpr::TupleIndex { location, .. } => Some(*location),
+            ast::TypedExpr::ModuleSelect { location, .. } => {
+                let start = self
+                    .code
+                    .get(0..location.start as usize)?
+                    .rfind(|c: char| !c.is_ascii_alphanumeric() && c != '.' && c != '_')?
+                    as u32;
+                if start < use_location.start {
+                    return None;
+                }
+                Some(SrcSpan::new(start + 1, location.end))
+            }
+            _ => None,
+        }
+    }
+
+    // Generate a TextEdit to remove the "use _ -> " expression.
+    fn remove_use_expression(
+        &self,
+        use_location: &SrcSpan,
+        fn_name_location: &SrcSpan,
+    ) -> Option<TextEdit> {
+        // Remove "use _ -> " expression.
+        Some(TextEdit {
+            range: src_span_to_lsp_range(
+                SrcSpan::new(use_location.start, fn_name_location.start),
+                &self.line_numbers,
+            ),
+            new_text: "".to_string(),
+        })
+    }
+
+    fn get_use_indentation(&self, use_location: &SrcSpan) -> Option<usize> {
+        // Line number of the "use _ -> wobble()".
+        let line_of_use = self.line_numbers.line_number(use_location.start);
+        let start_of_line_of_use = self
+            .line_numbers
+            .line_starts
+            .get(line_of_use as usize - 1)?;
+        // Additional indentation of the inside of the callback.
+        Some((use_location.start - start_of_line_of_use) as usize)
+    }
+
+    // Inserts the callback function as "wobble(fn() { ... })", by:
+    // 1. Appending "fn(" after the fn_name_location
+    // 2. Indenting the body of the callback function
+    // 3. Appending "})" after the callback fn body.
+    //
+    // * use_location - the full "use" expression location.
+    // * fn_name_location - the location of the function name being called as part of the "use" expression.
+    // * args - all the function call arguments, including the last one which is a callback function.
+    fn insert_callback_fn(
+        &self,
+        use_location: &SrcSpan,
+        fn_name_location: &SrcSpan,
+        args: &[TypedCallArg],
+    ) -> Option<Vec<TextEdit>> {
+        let mut edits: Vec<TextEdit> = vec![];
+
+        // The last argument is the "use" body that should be converted to callback fn.
+        let callback = args.last()?;
+        let use_args = self.extract_use_callback_arguments(callback);
+
+        let callback_location =
+            self.get_fn_prefix_location(args, use_location, fn_name_location)?;
+
+        // The callback function that will be inserted.
+        let mut fn_prefix_text = format!("fn({}) {{", use_args.join(", ")).to_string();
+
+        if args.len() > 1 {
+            fn_prefix_text = format!(", {}", fn_prefix_text);
+        }
+
+        if args.len() == 1 {
+            edits.push(TextEdit {
+                range: src_span_to_lsp_range(callback_location, &self.line_numbers),
+                new_text: format!("({}", fn_prefix_text),
+            });
+        } else {
+            edits.push(TextEdit {
+                range: src_span_to_lsp_range(callback_location, &self.line_numbers),
+                new_text: fn_prefix_text,
+            });
+        }
+
+        // For indenting the callback body and the labmda closing brackets "})".
+        let indent = self.get_use_indentation(use_location)?;
+
+        let line_start = self
+            .line_numbers
+            .line_and_column_number(callback.location.start);
+        let line_end = self
+            .line_numbers
+            .line_and_column_number(callback.location.end);
+        // Iterate through the callback body, and add indentation to each line.
+        for i in line_start.line - 1..line_end.line {
+            let ls = self.line_numbers.byte_index(i, 0);
+            edits.push(TextEdit {
+                range: src_span_to_lsp_range(SrcSpan::new(ls + 1, ls + 1), &self.line_numbers),
+                new_text: " ".repeat(indent),
+            });
+        }
+
+        // Add "})" for the callback function.
+        let fn_suffix_pos = callback.location.end;
+        let mut fn_suffix_text = "\n".to_string();
+        fn_suffix_text.push_str(" ".repeat(indent).as_str());
+        fn_suffix_text.push_str("})");
+        edits.push(TextEdit {
+            range: src_span_to_lsp_range(
+                SrcSpan::new(fn_suffix_pos, fn_suffix_pos),
+                &self.line_numbers,
+            ),
+            new_text: fn_suffix_text,
+        });
+
+        Some(edits)
+    }
+
+    // Returns true if the fn call expression starts with "use ".
+    fn expr_call_starts_with_use(&self, expr_start: usize) -> bool {
+        self.code
+            .get(expr_start..expr_start + 4)
+            .map(|prefix| prefix == "use " || prefix == "use\t")
+            .unwrap_or(false)
+    }
+
+    // Returns position to insert the callback function prefix.
+    // Example of the prefix: "fn(a, b) {".
+    fn get_fn_prefix_location(
+        &self,
+        args: &[TypedCallArg],
+        use_location: &SrcSpan,
+        fn_name_location: &SrcSpan,
+    ) -> Option<SrcSpan> {
+        // The last argument is the "use" body that should be converted to callback.
+        let callback = args.last()?;
+
+        let insert_callback_start: usize = if args.len() > 1 {
+            // If there are arguments (besides the callback function), use the end of the last argument as the
+            // starting position.
+            args.get(args.len() - 2).map(|a| a.location.end as usize)?
+        } else {
+            // If no extra arguments, use the opening parenthesis of the function used by the "use" expression.
+            let start = self
+                .code
+                .get(0..callback.location.start as usize)
+                .and_then(|before_start| before_start.rfind('(').map(|f| f + 1));
+            match start {
+                Some(v) if use_location.start < v as u32 => v - 1,
+                // If no "(" found, possibly we're dealing with a function call without parenthesis.
+                // Example:  use x <- wobble
+                _ => return Some(SrcSpan::new(fn_name_location.end, fn_name_location.end)),
+            }
+        };
+
+        let insert_callback_end = self
+            .code
+            .get(0..callback.location.start as usize)
+            .and_then(|before_start| before_start.rfind(')').map(|f| f + 1))?;
+
+        Some(SrcSpan::new(
+            insert_callback_start as u32,
+            insert_callback_end as u32,
+        ))
+    }
+
+    // Extracts arguments from the use expression.
+    // Given "use a, b, c <- wobble()", it returns ["a", "b", "c"].
+    fn extract_use_callback_arguments(&self, arg: &ast::CallArg<ast::TypedExpr>) -> Vec<String> {
+        return if let ast::TypedExpr::Fn { args, .. } = &arg.value {
+            args.iter()
+                .map(|a| {
+                    self.code
+                        .get(a.location.start as usize..a.location.end as usize)
+                        .unwrap_or("_")
+                        .to_string()
+                })
+                .collect()
+        } else {
+            vec![]
+        };
     }
 }

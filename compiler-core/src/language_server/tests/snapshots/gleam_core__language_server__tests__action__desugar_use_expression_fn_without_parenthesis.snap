@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let wobble = fn(cb: fn() -> Int) { cb() + 1 }\n\n  use <- wobble\n\n  2\n}\n"
+---
+pub fn main() {
+  let wobble = fn(cb: fn() -> Int) { cb() + 1 }
+
+  wobble(fn() {
+
+    2
+  })
+}

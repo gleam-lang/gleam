@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let tuple = #(fn(cb: fn() -> Int) { cb() + 1 })\n\n  use <- tuple.0\n\n  2\n}\n"
+---
+pub fn main() {
+  let tuple = #(fn(cb: fn() -> Int) { cb() + 1 })
+
+  tuple.0(fn() {
+
+    2
+  })
+}

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  use <- wobble()\n  3\n}\n\nfn wobble(b: fn() -> Int) {\n  Nil\n}\n"
+---
+pub fn main() {
+  wobble(fn() {
+    3
+  })
+}
+
+fn wobble(b: fn() -> Int) {
+  Nil
+}
