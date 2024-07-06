@@ -681,9 +681,9 @@ fn value_completion(
     CompletionItem {
         label: label.clone(),
         kind,
-        detail: Some(type_),
+        detail: Some(type_.clone()),
         label_details: Some(CompletionItemLabelDetails {
-            detail: None,
+            detail: Some(format!(" {}", type_)),
             description: Some(module_name.into()),
         }),
         documentation,

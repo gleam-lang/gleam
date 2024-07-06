@@ -7,7 +7,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "dep.wobble",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " fn() -> Nil",
+                ),
                 description: Some(
                     "app",
                 ),
@@ -54,7 +56,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "wobble",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " fn() -> Nil",
+                ),
                 description: Some(
                     "app",
                 ),

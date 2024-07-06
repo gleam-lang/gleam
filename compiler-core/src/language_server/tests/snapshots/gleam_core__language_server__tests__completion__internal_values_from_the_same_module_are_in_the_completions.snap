@@ -7,7 +7,9 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
         label: "Wobble",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " Wibble",
+                ),
                 description: Some(
                     "app",
                 ),
@@ -54,7 +56,9 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
         label: "main",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " fn() -> Int",
+                ),
                 description: Some(
                     "app",
                 ),
@@ -101,7 +105,9 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
         label: "random_float",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " fn() -> Float",
+                ),
                 description: Some(
                     "app",
                 ),
@@ -148,7 +154,9 @@ expression: "completion_at_default_position(TestProject::for_source(code))"
         label: "wibble",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " Int",
+                ),
                 description: Some(
                     "app",
                 ),

@@ -7,7 +7,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "Wobble",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " Wibble",
+                ),
                 description: Some(
                     "app",
                 ),

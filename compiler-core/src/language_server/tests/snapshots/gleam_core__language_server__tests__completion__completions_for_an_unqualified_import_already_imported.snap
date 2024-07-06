@@ -7,7 +7,9 @@ expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\
         label: "myfun",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " fn() -> Int",
+                ),
                 description: Some(
                     "dep",
                 ),

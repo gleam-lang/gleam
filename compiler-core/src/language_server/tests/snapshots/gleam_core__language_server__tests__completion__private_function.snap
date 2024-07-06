@@ -7,7 +7,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "private",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " fn() -> Int",
+                ),
                 description: Some(
                     "app",
                 ),

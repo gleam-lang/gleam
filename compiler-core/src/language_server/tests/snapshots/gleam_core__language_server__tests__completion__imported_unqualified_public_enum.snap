@@ -7,7 +7,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "Left",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " Direction",
+                ),
                 description: Some(
                     "app",
                 ),
@@ -54,7 +56,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "dep.Left",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " Direction",
+                ),
                 description: Some(
                     "app",
                 ),
@@ -101,7 +105,9 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
         label: "dep.Right",
         label_details: Some(
             CompletionItemLabelDetails {
-                detail: None,
+                detail: Some(
+                    " Direction",
+                ),
                 description: Some(
                     "app",
                 ),
