@@ -2,16 +2,18 @@
 
 ## Unreleased
 
+## v1.3.0-rc3 - 2024-07-08
+
+- Fixed a bug where not all pure function calls in constant definitions would be
+  annotated as `@__PURE__` when compiling to JavaScript.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+## v1.3.0-rc2 - 2024-07-06
+
 ### Formatter
 
 - Fixed a bug when multiple subjects in a case would be split even if not
   necessary.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-### Compiler
-
-- Fixed a bug where not all pure function calls in constant definitions would be
-  annotated as `@__PURE__` when compiling to JavaScript.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.3.0-rc1 - 2024-06-30
