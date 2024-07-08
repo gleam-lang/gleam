@@ -47,11 +47,6 @@
   4 │         [..rest, last] -> 1
     │          ^^^^^^ I wasn't expecting elements after this
 
-  I was expecting the end of the list.
-  A spread can only be used to match on the entire end of a list.
-  It is not possible to extract items from the end of a list using pattern
-  matching because that would require walking through the entire list.
-
   Lists are immutable and singly-linked, so to match on the end
   of a list would require the whole list to be traversed. This
   would be slow, so there is no built-in syntax for it. Pattern
