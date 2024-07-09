@@ -38,7 +38,9 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/abs0luty">Adi Salimgereyev</a> -
   <a href="https://github.com/JitPackJoyride">Ajit Krishna</a> -
   <a href="https://alembic.com.au">Alembic</a> -
+  <a href="https://github.com/ahouseago">Alex Houseago</a> -
   <a href="https://github.com/rawhat">Alex Manning</a> -
+  <a href="https://github.com/aexvir">Alex Viscreanu</a> -
   <a href="https://github.com/akoutmos">Alexander Koutmos</a> -
   <a href="https://github.com/spektroskop">Alexander Stensrud</a> -
   <a href="https://github.com/defgenx">Alexandre Del Vecchio</a> -
