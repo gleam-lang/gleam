@@ -308,7 +308,7 @@ where
                                 let (_, location) = cached_module
                                     .dependencies
                                     .iter()
-                                    .find(|d| &d.0 == importing_module)
+                                    .find(|d| &d.0 == imported_module)
                                     .expect("import must exist for there to be a cycle");
                                 let src = self
                                     .io
