@@ -2104,7 +2104,7 @@ impl<'a> TypePrinter<'a> {
                 "list(".to_doc().append(arg0).append(")")
             }
             "Result" => match args {
-                &[ref arg_ok, ref arg_err] => {
+                [arg_ok, arg_err] => {
                     let ok = tuple(["ok".to_doc(), self.print(arg_ok)]);
                     let error = tuple(["error".to_doc(), self.print(arg_err)]);
                     docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
