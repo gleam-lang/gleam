@@ -286,15 +286,17 @@ where
                     .enumerate()
                     .map(|(i, module)| {
                         // cycles are in order of reference so get next in list or loop back to first
-                        let ind = if i == modules.len() - 1 { 0 } else { i + 1 };
-                        let next = modules.get(ind).expect("next module must exist");
+                        let index_of_importer = if i == 0 { modules.len() - 1 } else { i - 1 };
+                        let importing_module = modules
+                            .get(index_of_importer)
+                            .expect("importing module must exist");
                         let input = dep_location_map.get(module).expect("dependency must exist");
                         let location = match input {
                             Input::New(module) => {
                                 let (_, location) = module
                                     .dependencies
                                     .iter()
-                                    .find(|d| &d.0 == next)
+                                    .find(|d| &d.0 == importing_module)
                                     .expect("import must exist for there to be a cycle");
                                 ImportCycleLocationDetails {
                                     location: *location,
@@ -306,7 +308,7 @@ where
                                 let (_, location) = cached_module
                                     .dependencies
                                     .iter()
-                                    .find(|d| &d.0 == next)
+                                    .find(|d| &d.0 == importing_module)
                                     .expect("import must exist for there to be a cycle");
                                 let src = self
                                     .io
