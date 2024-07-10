@@ -6,6 +6,9 @@
 
 ### Compiler
 
+- The `[..]` pattern has been deprecated in favour of the `_` catch all pattern.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
