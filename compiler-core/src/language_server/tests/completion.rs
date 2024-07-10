@@ -1202,3 +1202,31 @@ pub fn main() {
         vec![],
     );
 }
+
+#[test]
+fn ignore_completions_inside_empty_string() {
+    let code = "
+pub fn main() {
+  \"\"
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 2)),
+        vec![],
+    );
+}
+
+#[test]
+fn ignore_completions_inside_string() {
+    let code = "
+pub fn main() {
+  \"Ok()\"
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 5)),
+        vec![],
+    );
+}
