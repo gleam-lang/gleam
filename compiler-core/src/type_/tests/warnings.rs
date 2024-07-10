@@ -1969,3 +1969,19 @@ fn deprecated_list_pattern_syntax() {
         "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3383
+#[test]
+fn deprecated_list_pattern_syntax_1() {
+    assert_warning!(
+        r#"
+    pub fn main() {
+      let letters = ["b", "c"]
+      case letters {
+        [] -> []
+        [..] -> []
+      }
+    }
+        "#
+    );
+}
