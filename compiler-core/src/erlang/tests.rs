@@ -659,3 +659,19 @@ pub fn main() {
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info() {
+    assert_erl!(
+        "
+pub type ModuleInfo {
+    ModuleInfo
+}
+
+pub fn module_info() {
+    ModuleInfo
+}
+"
+    );
+}
