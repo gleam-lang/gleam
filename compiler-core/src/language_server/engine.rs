@@ -216,6 +216,9 @@ where
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
 
+                // Do not show completions when typing inside a string.
+                Located::Expression(TypedExpr::String { .. }) => None,
+
                 Located::Statement(_) | Located::Expression(_) => {
                     Some(completer.completion_values())
                 }

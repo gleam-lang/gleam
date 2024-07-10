@@ -10,6 +10,9 @@
 
 ### Language Server
 
+- The language server no longer shows completions when inside a literal string.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug Fixes
 
 - Fixed a bug where the compiler would report errors for duplicate `@external`
@@ -20,5 +23,6 @@
 
 ### Bug Fixes
 
-- Fixes a bug with import cycle detection when there is more than 2 imports in the cycle
+- Fixes a bug with import cycle detection when there is more than 2 imports in
+  the cycle.
   ([Ameen Radwan](https://github.com/Acepie))
