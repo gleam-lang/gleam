@@ -195,6 +195,13 @@ jobs:
           cd lib_project
           gleam run
           gleam test
+
+          # Test adding of deps
+          gleam add exception    # No specifier
+          gleam add gleam_http@3 # Version specifier
+          gleam test
+
+          # Test documentation generation
           gleam docs build
 
           # Assert that module metadata has been written
