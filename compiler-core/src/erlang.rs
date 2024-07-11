@@ -249,7 +249,11 @@ fn register_imports(
             // If the function isn't for this target then don't attempt to export it
             if implementations.supports(Target::Erlang) {
                 let function_name = escape_erlang_existing_name(name);
-                exports.push(atom_string(function_name.to_string()).append("/").append(args.len()))
+                exports.push(
+                    atom_string(function_name.to_string())
+                        .append("/")
+                        .append(args.len()),
+                )
             }
         }
 
@@ -391,11 +395,20 @@ fn module_function<'a>(
     let body = function
         .external_erlang
         .as_ref()
-        .map(|(module, function)| docvec![atom(module), ":", atom(function), arguments.clone()])
+        .map(|(module, function)| {
+            docvec![
+                atom(module),
+                ":",
+                atom(escape_erlang_existing_name(function)),
+                arguments.clone()
+            ]
+        })
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
     let doc = spec
-        .append(atom_string(function_name.to_string()))
+        .append(atom_string(
+            escape_erlang_existing_name(function_name).to_string(),
+        ))
         .append(arguments)
         .append(" ->")
         .append(line().append(body).nest(INDENT).group())
@@ -989,7 +1002,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             arity, ref module, ..
         } if module == env.module => "fun "
             .to_doc()
-            .append(atom(name))
+            .append(atom(escape_erlang_existing_name(name)))
             .append("/")
             .append(*arity),
 
@@ -1002,7 +1015,7 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             .to_doc()
             .append(module_name_atom(module))
             .append(":")
-            .append(atom(name))
+            .append(atom(escape_erlang_existing_name(name)))
             .append("/")
             .append(*arity),
     }
@@ -1364,6 +1377,7 @@ fn module_fn_with_args<'a>(
     args: Vec<Document<'a>>,
     env: &Env<'a>,
 ) -> Document<'a> {
+    let name = escape_erlang_existing_name(name);
     let args = wrap_args(args);
     if module == env.module {
         atom(name).append(args)
@@ -1434,6 +1448,7 @@ fn docs_args_call<'a>(
             ..
         } => {
             let args = wrap_args(args);
+            let name = escape_erlang_existing_name(name);
             // We use the constructor Fn variant's `module` and function `name`.
             // It would also be valid to use the module and label as in the
             // Gleam code, but using the variant can result in an optimisation
