@@ -183,7 +183,7 @@ fn parse_gleam_add_specifier_non_numeric_version() {
 fn parse_gleam_add_specifier_default() {
     let provided = "some_package";
     let expected = ">= 0.0.0";
-    let (package, version) = parse_gleam_add_specifier(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
@@ -198,7 +198,7 @@ fn parse_gleam_add_specifier_default() {
 fn parse_gleam_add_specifier_major_only() {
     let provided = "wobble@1";
     let expected = ">= 1.0.0 and < 2.0.0";
-    let (package, version) = parse_gleam_add_specifier(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
@@ -213,7 +213,7 @@ fn parse_gleam_add_specifier_major_only() {
 fn parse_gleam_add_specifier_major_and_minor() {
     let provided = "wibble@1.2";
     let expected = ">= 1.2.0 and < 2.0.0";
-    let (package, version) = parse_gleam_add_specifier(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
@@ -228,7 +228,7 @@ fn parse_gleam_add_specifier_major_and_minor() {
 fn parse_gleam_add_specifier_major_minor_and_patch() {
     let provided = "bobble@1.2.3";
     let expected = "1.2.3";
-    let (package, version) = parse_gleam_add_specifier(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);

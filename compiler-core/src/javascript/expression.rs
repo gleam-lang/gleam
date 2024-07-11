@@ -1595,7 +1595,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
 }
 
 /// Wrap a document in an immediately involked function expression
-fn immediately_involked_function_expression_document<'a>(document: Document<'a>) -> Document<'a> {
+fn immediately_involked_function_expression_document(document: Document<'_>) -> Document<'_> {
     docvec!(
         docvec!("(() => {", break_("", " "), document).nest(INDENT),
         break_("", " "),
