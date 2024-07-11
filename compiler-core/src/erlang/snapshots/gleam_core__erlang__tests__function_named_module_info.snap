@@ -5,11 +5,11 @@ expression: "\npub type ModuleInfo {\n    ModuleInfo\n}\n\npub fn module_info() 
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
--export([gleam@module_info/0]).
--export_type([gleam@module_info/0]).
+-export(['moduleInfo'/0]).
+-export_type([module_info/0]).
 
--type gleam@module_info() :: gleam@module_info.
+-type module_info() :: module_info.
 
--spec 'gleam@module_info'() -> gleam@module_info().
-gleam@module_info() ->
-    gleam@module_info.
+-spec 'moduleInfo'() -> module_info().
+'moduleInfo'() ->
+    module_info.
