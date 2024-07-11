@@ -58,6 +58,11 @@
 
 ### Bug Fixes
 
+- Functions, types and constructors named `module_info` are now escaped
+  in generated Erlang code to avoid conflicts with the builtin
+  `module_info/0` and `module_info/1` functions.
+  ([Juraj Petráš](https://github.com/Hackder))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server
@@ -79,11 +84,6 @@
   code with incorrectly rewritten JavaScript variable names.
   ([Louis Pilfold](https://github.com/lpil))
 
-- Functions, types and constructors named `module_info` are now escaped
-  in generated Erlang code to avoid conflicts with the builtin
-  `module_info/0` and `module_info/1` functions.
-  ([Juraj Petráš](https://github.com/Hackder))
-
 ## v1.3.1 - 2024-07-10
 
 ### Bug Fixes
@@ -91,3 +91,8 @@
 - Fixes a bug with import cycle detection when there is more than 2 imports in
   the cycle.
   ([Ameen Radwan](https://github.com/Acepie))
+
+- Functions, types and constructors named `module_info` are now escaped
+  in generated Erlang code to avoid conflicts with the builtin
+  `module_info/0` and `module_info/1` functions.
+  ([Juraj Petráš](https://github.com/Hackder))
