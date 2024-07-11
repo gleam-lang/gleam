@@ -366,21 +366,8 @@ impl<'module> Generator<'module> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        let doc = self.immediately_involked_function_expression_document(result?);
+        let doc = immediately_involked_function_expression_document(result?);
         Ok(self.wrap_return(doc))
-    }
-
-    /// Wrap a document in an immediately involked function expression
-    fn immediately_involked_function_expression_document<'a>(
-        &mut self,
-        document: Document<'a>,
-    ) -> Document<'a> {
-        docvec!(
-            docvec!("(() => {", break_("", " "), document).nest(INDENT),
-            break_("", " "),
-            "})()",
-        )
-        .group()
     }
 
     fn variable<'a>(
@@ -631,7 +618,11 @@ impl<'module> Generator<'module> {
                 doc = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
-                    doc.append(body)
+                    // A block is used as it could declare variables still.
+                    doc.append("{")
+                        .append(docvec!(line(), body).nest(INDENT))
+                        .append(line())
+                        .append("}")
                 } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
@@ -1601,4 +1592,14 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
     }
+}
+
+/// Wrap a document in an immediately involked function expression
+fn immediately_involked_function_expression_document<'a>(document: Document<'a>) -> Document<'a> {
+    docvec!(
+        docvec!("(() => {", break_("", " "), document).nest(INDENT),
+        break_("", " "),
+        "})()",
+    )
+    .group()
 }
