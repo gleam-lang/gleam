@@ -2,12 +2,6 @@
 
 ## Unreleased
 
-### Bug Fixes
-
-- Fixed a bug where the compiler would report errors for duplicate `@external`
-  attributes with inconsistent spans between Erlang and JavaScript.
-  ([Connor Szczepaniak](https://github.com/cszczepaniak))
-
 ### Build tool
 
 ### Compiler
@@ -17,6 +11,10 @@
 ### Language Server
 
 ### Bug Fixes
+
+- Fixed a bug where the compiler would report errors for duplicate `@external`
+  attributes with inconsistent spans between Erlang and JavaScript.
+  ([Connor Szczepaniak](https://github.com/cszczepaniak))
 
 ## v1.3.1 - 2024-07-10
 
