@@ -8,8 +8,6 @@
   attributes with inconsistent spans between Erlang and JavaScript.
   ([Connor Szczepaniak](https://github.com/cszczepaniak))
 
-## v1.3.0-rc1 - 2024-06-30
-
 ### Build tool
 
 ### Compiler
