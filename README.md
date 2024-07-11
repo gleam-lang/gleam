@@ -54,7 +54,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/amscotti">Anthony Scotti</a> -
   <a href="https://github.com/oz">Arnaud Berthomier</a> -
   <a href="https://github.com/aweagel">Arthur Weagel</a> -
-  <a href="https://github.com/austinKane95">Austin Daily</a> -
+  <a href="https://github.com/austinDaily">Austin Daily</a> -
   <a href="https://github.com/chiroptical">Barry Moore</a> -
   <a href="https://github.com/bartekgorny">Bartek Górny</a> -
   <a href="https://github.com/requestben">Ben Martin</a> -
@@ -71,7 +71,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/bucsi">bucsi</a> -
   <a href="https://github.com/carlomunguia">Carlo Munguia</a> -
   <a href="https://github.com/csaltos">Carlos Saltos</a> -
-  <a href="https://github.com/orvitpng">Carter Davis</a> -
   <a href="https://github.com/chadselph">Chad Selph</a> -
   <a href="https://github.com/charlie-n01r">Charlie Govea</a> -
   <a href="https://github.com/chazwatkins">Chaz Watkins</a> -
@@ -135,6 +134,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/ghivert">Guillaume Hivert</a> -
   <a href="https://github.com/hammad-r-javed">Hammad Javed</a> -
   <a href="https://github.com/hampuskraft">Hampus Kraft</a> -
+  <a href="https://github.com/kwando">Hannes Nevalainen</a> -
   <a href="https://github.com/ildorn">Hannes Schnaitter</a> -
   <a href="https://github.com/jhundman">Hayes Hundman</a> -
   <a href="https://github.com/hayleigh-dot-dev">Hayleigh Thompson</a> -
@@ -204,6 +204,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/markmark206">Mark Markaryan</a> -
   <a href="https://github.com/Janiczek">Martin Janiczek</a> -
   <a href="https://github.com/rechsteiner">Martin Rechsteiner </a> -
+  <a href="https://github.com/martonkaufmann">martonkaufmann</a> -
   <a href="https://github.com/han-tyumi">Matt Champagne</a> -
   <a href="https://github.com/matt-savvy">Matt Savoia</a> -
   <a href="https://github.com/mattvanhorn">Matt Van Horn</a> -
@@ -256,6 +257,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/richard-viney">Richard Viney</a> -
   <a href="https://github.com/rico">Rico Leuthold</a> -
   <a href="https://github.com/ripta">Ripta Pasay</a> -
+  <a href="https://github.com/robertwayne">Rob</a> -
   <a href="https://github.com/TanklesXL">Robert Attard</a> -
   <a href="https://github.com/rellen">Robert Ellen</a> -
   <a href="https://github.com/malkomalko">Robert Malko</a> -
