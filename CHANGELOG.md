@@ -10,6 +10,12 @@
 
 ### Language Server
 
+### Bug Fixes
+
+## v1.3.2 - 2024-07-11
+
+### Language Server
+
 - The language server no longer shows completions when inside a literal string.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
