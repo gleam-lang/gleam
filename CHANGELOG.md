@@ -19,6 +19,10 @@
   attributes with inconsistent spans between Erlang and JavaScript.
   ([Connor Szczepaniak](https://github.com/cszczepaniak))
 
+- Fixed a bug where `gleam add` would fail to parse version specifiers
+  correctly.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.3.1 - 2024-07-10
 
 ### Bug Fixes
