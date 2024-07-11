@@ -23,6 +23,10 @@
   correctly.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where single clause case expressions could generate JavaScript
+  code with incorrectly rewritten JavaScript variable names.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.3.1 - 2024-07-10
 
 ### Bug Fixes
