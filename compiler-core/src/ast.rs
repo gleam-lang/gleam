@@ -48,10 +48,10 @@ pub struct Module<Info, Statements> {
 }
 
 impl TypedModule {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.definitions
             .iter()
-            .find_map(|statement| statement.find_node(byte_index, inclusive))
+            .find_map(|statement| statement.find_node(byte_index))
     }
 }
 
@@ -165,8 +165,8 @@ impl<A> Arg<A> {
 }
 
 impl TypedArg {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        if self.location.contains(byte_index, inclusive) {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if self.location.contains(byte_index) {
             Some(Located::Arg(self))
         } else {
             None
@@ -358,13 +358,8 @@ impl TypeAst {
         }
     }
 
-    pub fn find_node(
-        &self,
-        byte_index: u32,
-        inclusive: bool,
-        type_: Arc<Type>,
-    ) -> Option<Located<'_>> {
-        if !self.location().contains(byte_index, inclusive) {
+    pub fn find_node(&self, byte_index: u32, type_: Arc<Type>) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
             return None;
         }
 
@@ -374,14 +369,14 @@ impl TypeAst {
             }) => type_
                 .fn_types()
                 .and_then(|(arg_types, ret_type)| {
-                    if let Some(arg) =
-                        arguments.iter().zip(arg_types).find_map(|(arg, arg_type)| {
-                            arg.find_node(byte_index, inclusive, arg_type.clone())
-                        })
+                    if let Some(arg) = arguments
+                        .iter()
+                        .zip(arg_types)
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
                     {
                         return Some(arg);
                     }
-                    if let Some(ret) = return_.find_node(byte_index, inclusive, ret_type) {
+                    if let Some(ret) = return_.find_node(byte_index, ret_type) {
                         return Some(ret);
                     }
 
@@ -391,10 +386,10 @@ impl TypeAst {
             TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
                 .constructor_types()
                 .and_then(|arg_types| {
-                    if let Some(arg) =
-                        arguments.iter().zip(arg_types).find_map(|(arg, arg_type)| {
-                            arg.find_node(byte_index, inclusive, arg_type.clone())
-                        })
+                    if let Some(arg) = arguments
+                        .iter()
+                        .zip(arg_types)
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
                     {
                         return Some(arg);
                     }
@@ -402,20 +397,20 @@ impl TypeAst {
                     None
                 })
                 .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
-                type_
-                    .tuple_types()
-                    .and_then(|elem_types| {
-                        if let Some(e) = elems.iter().zip(elem_types).find_map(|(e, e_type)| {
-                            e.find_node(byte_index, inclusive, e_type.clone())
-                        }) {
-                            return Some(e);
-                        }
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
+                .tuple_types()
+                .and_then(|elem_types| {
+                    if let Some(e) = elems
+                        .iter()
+                        .zip(elem_types)
+                        .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
+                    {
+                        return Some(e);
+                    }
 
-                        None
-                    })
-                    .or(Some(Located::Annotation(self.location(), type_)))
-            }
+                    None
+                })
+                .or(Some(Located::Annotation(self.location(), type_))),
             TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
         }
     }
@@ -643,32 +638,28 @@ impl TypedDefinition {
         }
     }
 
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
                 // Search for the corresponding node inside the function
                 // only if the index falls within the function's full location.
-                if !function.full_location().contains(byte_index, inclusive) {
+                if !function.full_location().contains(byte_index) {
                     return None;
                 }
 
-                if let Some(found) = function
-                    .body
-                    .iter()
-                    .find_map(|s| s.find_node(byte_index, inclusive))
-                {
+                if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
                     return Some(found);
                 }
 
                 if let Some(found_arg) = function
                     .arguments
                     .iter()
-                    .find(|arg| arg.location.contains(byte_index, inclusive))
+                    .find(|arg| arg.location.contains(byte_index))
                 {
                     // Check if location is within the arg annotation.
                     if let Some(a) = &found_arg.annotation {
                         return a
-                            .find_node(byte_index, inclusive, found_arg.type_.clone())
+                            .find_node(byte_index, found_arg.type_.clone())
                             .or(Some(Located::Arg(found_arg)));
                     }
                     return Some(Located::Arg(found_arg));
@@ -677,7 +668,7 @@ impl TypedDefinition {
                 if let Some(found_statement) = function
                     .body
                     .iter()
-                    .find(|statement| statement.location().contains(byte_index, inclusive))
+                    .find(|statement| statement.location().contains(byte_index))
                 {
                     return Some(Located::Statement(found_statement));
                 };
@@ -686,16 +677,16 @@ impl TypedDefinition {
                 if let Some(l) = function
                     .return_annotation
                     .iter()
-                    .find_map(|a| a.find_node(byte_index, inclusive, function.return_type.clone()))
+                    .find_map(|a| a.find_node(byte_index, function.return_type.clone()))
                 {
                     return Some(l);
                 };
 
                 // Note that the fn `.location` covers the function head, not
                 // the entire statement.
-                if function.location.contains(byte_index, inclusive) {
+                if function.location.contains(byte_index) {
                     Some(Located::ModuleStatement(self))
-                } else if function.full_location().contains(byte_index, inclusive) {
+                } else if function.full_location().contains(byte_index) {
                     Some(Located::FunctionBody(function))
                 } else {
                     None
@@ -707,22 +698,22 @@ impl TypedDefinition {
                 if let Some(annotation) = custom
                     .constructors
                     .iter()
-                    .find(|constructor| constructor.location.contains(byte_index, inclusive))
+                    .find(|constructor| constructor.location.contains(byte_index))
                     .and_then(|constructor| {
                         constructor
                             .arguments
                             .iter()
-                            .find(|arg| arg.location.contains(byte_index, inclusive))
+                            .find(|arg| arg.location.contains(byte_index))
                     })
-                    .filter(|arg| arg.location.contains(byte_index, inclusive))
-                    .and_then(|arg| arg.ast.find_node(byte_index, inclusive, arg.type_.clone()))
+                    .filter(|arg| arg.location.contains(byte_index))
+                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                 {
                     return Some(annotation);
                 }
 
                 // Note that the custom type `.location` covers the function
                 // head, not the entire statement.
-                if custom.full_location().contains(byte_index, inclusive) {
+                if custom.full_location().contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {
                     None
@@ -731,15 +722,11 @@ impl TypedDefinition {
 
             Definition::TypeAlias(alias) => {
                 // Check if location is within the type being aliased.
-                if let Some(l) =
-                    alias
-                        .type_ast
-                        .find_node(byte_index, inclusive, alias.type_.clone())
-                {
+                if let Some(l) = alias.type_ast.find_node(byte_index, alias.type_.clone()) {
                     return Some(l);
                 }
 
-                if alias.location.contains(byte_index, inclusive) {
+                if alias.location.contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {
                     None
@@ -749,14 +736,12 @@ impl TypedDefinition {
             Definition::ModuleConstant(constant) => {
                 // Check if location is within the annotation.
                 if let Some(annotation) = &constant.annotation {
-                    if let Some(l) =
-                        annotation.find_node(byte_index, inclusive, constant.type_.clone())
-                    {
+                    if let Some(l) = annotation.find_node(byte_index, constant.type_.clone()) {
                         return Some(l);
                     }
                 }
 
-                if constant.location.contains(byte_index, inclusive) {
+                if constant.location.contains(byte_index) {
                     Some(Located::ModuleStatement(self))
                 } else {
                     None
@@ -764,11 +749,11 @@ impl TypedDefinition {
             }
 
             Definition::Import(import) => {
-                if self.location().contains(byte_index, inclusive) {
+                if self.location().contains(byte_index) {
                     if let Some(unqualified) = import
                         .unqualified_values
                         .iter()
-                        .find(|i| i.location.contains(byte_index, inclusive))
+                        .find(|i| i.location.contains(byte_index))
                     {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
@@ -783,7 +768,7 @@ impl TypedDefinition {
                     if let Some(unqualified) = import
                         .unqualified_types
                         .iter()
-                        .find(|i| i.location.contains(byte_index, inclusive))
+                        .find(|i| i.location.contains(byte_index))
                     {
                         return Some(Located::UnqualifiedImport(
                             crate::build::UnqualifiedImport {
@@ -1035,14 +1020,14 @@ pub struct CallArg<A> {
 }
 
 impl CallArg<TypedExpr> {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        self.value.find_node(byte_index, inclusive)
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index)
     }
 }
 
 impl CallArg<TypedPattern> {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        self.value.find_node(byte_index, inclusive)
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index)
     }
 }
 
@@ -1083,8 +1068,8 @@ pub struct TypedRecordUpdateArg {
 }
 
 impl TypedRecordUpdateArg {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        self.value.find_node(byte_index, inclusive)
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index)
     }
 }
 
@@ -1124,11 +1109,11 @@ impl TypedClause {
         }
     }
 
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.pattern
             .iter()
-            .find_map(|p| p.find_node(byte_index, inclusive))
-            .or_else(|| self.then.find_node(byte_index, inclusive))
+            .find_map(|p| p.find_node(byte_index))
+            .or_else(|| self.then.find_node(byte_index))
     }
 }
 
@@ -1424,12 +1409,8 @@ impl SrcSpan {
         Self { start, end }
     }
 
-    pub fn contains(&self, byte_index: u32, inclusive: bool) -> bool {
-        if inclusive {
-            byte_index >= self.start && byte_index <= self.end
-        } else {
-            byte_index >= self.start && byte_index < self.end
-        }
+    pub fn contains(&self, byte_index: u32) -> bool {
+        byte_index >= self.start && byte_index <= self.end
     }
 }
 
@@ -1662,8 +1643,8 @@ impl TypedPattern {
         }
     }
 
-    fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        if !self.location().contains(byte_index, inclusive) {
+    fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
             return None;
         }
 
@@ -1689,28 +1670,21 @@ impl TypedPattern {
             Pattern::Constructor {
                 arguments, spread, ..
             } => match spread {
-                Some(spread_location) if spread_location.contains(byte_index, inclusive) => {
+                Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
                         spread_location: *spread_location,
                         arguments,
                     })
                 }
 
-                Some(_) | None => arguments
-                    .iter()
-                    .find_map(|arg| arg.find_node(byte_index, inclusive)),
+                Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
             },
             Pattern::List { elements, tail, .. } => elements
                 .iter()
-                .find_map(|p| p.find_node(byte_index, inclusive))
-                .or_else(|| {
-                    tail.as_ref()
-                        .and_then(|p| p.find_node(byte_index, inclusive))
-                }),
+                .find_map(|p| p.find_node(byte_index))
+                .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
 
-            Pattern::Tuple { elems, .. } => elems
-                .iter()
-                .find_map(|p| p.find_node(byte_index, inclusive)),
+            Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
         }
         .or(Some(Located::Pattern(self)))
     }
@@ -1762,8 +1736,8 @@ pub struct BitArraySegment<Value, Type> {
 }
 
 impl TypedExprBitArraySegment {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        self.value.find_node(byte_index, inclusive)
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index)
     }
 }
 
@@ -2046,19 +2020,17 @@ impl TypedStatement {
         }
     }
 
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Statement::Use(_) => None,
-            Statement::Expression(expression) => expression.find_node(byte_index, inclusive),
-            Statement::Assignment(assignment) => {
-                assignment.find_node(byte_index, inclusive).or_else(|| {
-                    if assignment.location.contains(byte_index, inclusive) {
-                        Some(Located::Statement(self))
-                    } else {
-                        None
-                    }
-                })
-            }
+            Statement::Expression(expression) => expression.find_node(byte_index),
+            Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
+                if assignment.location.contains(byte_index) {
+                    Some(Located::Statement(self))
+                } else {
+                    None
+                }
+            }),
         }
     }
 
@@ -2084,15 +2056,15 @@ pub type TypedAssignment = Assignment<Arc<Type>, TypedExpr>;
 pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         if let Some(annotation) = &self.annotation {
-            if let Some(l) = annotation.find_node(byte_index, inclusive, self.pattern.type_()) {
+            if let Some(l) = annotation.find_node(byte_index, self.pattern.type_()) {
                 return Some(l);
             }
         }
         self.pattern
-            .find_node(byte_index, inclusive)
-            .or_else(|| self.value.find_node(byte_index, inclusive))
+            .find_node(byte_index)
+            .or_else(|| self.value.find_node(byte_index))
     }
 
     pub fn type_(&self) -> Arc<Type> {

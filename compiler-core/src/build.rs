@@ -234,8 +234,8 @@ impl Module {
         self.origin == Origin::Test
     }
 
-    pub fn find_node(&self, byte_index: u32, inclusive: bool) -> Option<Located<'_>> {
-        self.ast.find_node(byte_index, inclusive)
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.ast.find_node(byte_index)
     }
 
     pub fn attach_doc_and_module_comments(&mut self) {
