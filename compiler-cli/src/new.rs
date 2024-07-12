@@ -81,7 +81,7 @@ impl FileToCreate {
         let gleam_version = creator.gleam_version;
         let target = match creator.options.template {
             Template::JavaScript => r#"target = "javascript""#,
-            _ => r#""#,
+            Template::Erlang => r#""#,
         };
 
         match self {
