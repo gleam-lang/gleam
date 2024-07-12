@@ -208,7 +208,7 @@ where
                 return Ok(None);
             }
 
-            let Some(found) = module.find_node(byte_index, true) else {
+            let Some(found) = module.find_node(byte_index) else {
                 return Ok(None);
             };
 
@@ -418,7 +418,7 @@ Unused labelled fields:
     ) -> Option<(LineNumbers, Located<'a>)> {
         let line_numbers = LineNumbers::new(&module.code);
         let byte_index = line_numbers.byte_index(params.position.line, params.position.character);
-        let node = module.find_node(byte_index, false);
+        let node = module.find_node(byte_index);
         let node = node?;
         Some((line_numbers, node))
     }
