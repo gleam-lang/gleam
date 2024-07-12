@@ -9,7 +9,7 @@ use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
     build::{Mode, Target, Telemetry},
-    config::PackageConfig,
+    config::{Dependencies, PackageConfig},
     dependency,
     error::{FileIoAction, FileKind, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
@@ -626,13 +626,11 @@ fn get_manifest<Telem: Telemetry>(
 
     let manifest = read_manifest_from_disc(paths)?;
 
+    let all_dependencies = recursively_collect_dependencies_from_path_deps(config, paths.root())?;
+
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if is_same_requirements(
-        &manifest.requirements,
-        &config.all_dependencies()?,
-        paths.root(),
-    )? {
+    if is_same_requirements(&manifest.requirements, &all_dependencies, paths.root())? {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -640,6 +638,68 @@ fn get_manifest<Telem: Telemetry>(
         let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
+}
+
+fn recursively_collect_dependencies_from_path_deps(
+    config: &PackageConfig,
+    root_path: &Utf8Path,
+) -> Result<Dependencies> {
+    let mut acc = HashMap::new();
+    let mut current_path = vec![config.name.clone()];
+
+    do_recursively_collect_dependencies_from_path_deps(
+        &config.dependencies,
+        root_path,
+        &mut current_path,
+        &mut acc,
+    )?;
+
+    Ok(acc)
+}
+
+fn do_recursively_collect_dependencies_from_path_deps(
+    deps: &Dependencies,
+    root_path: &Utf8Path,
+    current_path: &mut Vec<EcoString>,
+    acc: &mut Dependencies,
+) -> Result<()> {
+    acc.reserve(deps.len());
+    for (name, requirement) in deps.iter() {
+        match requirement {
+            Requirement::Path { path } => {
+                let paths = ProjectPaths::new(root_path.join(path));
+                let config = crate::config::read(paths.root_config())?;
+
+                let _ = acc.insert(name.clone(), Requirement::Path { path: path.clone() });
+
+                // If we have already seen this package in the current recursive
+                // path, then we have a cycle
+                if current_path.contains(&config.name) {
+                    tracing::debug!("found_cycle_in_path_dep_collecting");
+                    return Err(Error::PackageCycle {
+                        packages: current_path.clone(),
+                    });
+                }
+
+                current_path.push(config.name.clone());
+
+                tracing::debug!(package=%config.name, path=%path, "recursively_collecting_dependency");
+                do_recursively_collect_dependencies_from_path_deps(
+                    &config.dependencies,
+                    &root_path.join(path),
+                    current_path,
+                    acc,
+                )?;
+
+                let _ = current_path.pop().expect("must have at least one element");
+            }
+            _ => {
+                let _ = acc.insert(name.clone(), requirement.clone());
+            }
+        }
+    }
+
+    Ok(())
 }
 
 fn is_same_requirements(
@@ -665,17 +725,16 @@ fn same_requirements(
     requirement2: Option<&Requirement>,
     root_path: &Utf8Path,
 ) -> Result<bool> {
-    let (left, right) = match (requirement1, requirement2) {
+    match (requirement1, requirement2) {
         (Requirement::Path { path: path1 }, Some(Requirement::Path { path: path2 })) => {
             let left = fs::canonicalise(&root_path.join(path1))?;
             let right = fs::canonicalise(&root_path.join(path2))?;
-            (left, right)
-        }
-        (_, Some(requirement2)) => return Ok(requirement1 == requirement2),
-        (_, None) => return Ok(false),
-    };
 
-    Ok(left == right)
+            Ok(left == right)
+        }
+        (_, Some(requirement2)) => Ok(requirement1 == requirement2),
+        (_, None) => Ok(false),
+    }
 }
 
 #[derive(Clone, Eq, PartialEq, Debug)]
