@@ -626,7 +626,7 @@ fn get_manifest<Telem: Telemetry>(
 
     let manifest = read_manifest_from_disc(paths)?;
 
-    let all_dependencies = recursively_collect_dependencies_from_path_deps(config, paths.root())?;
+    let all_dependencies = recursively_collect_dependencies_from_path_deps(config, paths)?;
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
@@ -642,14 +642,14 @@ fn get_manifest<Telem: Telemetry>(
 
 fn recursively_collect_dependencies_from_path_deps(
     config: &PackageConfig,
-    root_path: &Utf8Path,
+    paths: &ProjectPaths,
 ) -> Result<Dependencies> {
     let mut acc = HashMap::new();
-    let mut current_path = vec![config.name.clone()];
+    let mut current_path = vec![(config.name.clone(), paths.root().into())];
 
     do_recursively_collect_dependencies_from_path_deps(
         &config.dependencies,
-        root_path,
+        paths.root(),
         &mut current_path,
         &mut acc,
     )?;
@@ -660,33 +660,34 @@ fn recursively_collect_dependencies_from_path_deps(
 fn do_recursively_collect_dependencies_from_path_deps(
     deps: &Dependencies,
     root_path: &Utf8Path,
-    current_path: &mut Vec<EcoString>,
+    current_path: &mut Vec<(EcoString, Utf8PathBuf)>,
     acc: &mut Dependencies,
 ) -> Result<()> {
     acc.reserve(deps.len());
     for (name, requirement) in deps.iter() {
         match requirement {
             Requirement::Path { path } => {
-                let paths = ProjectPaths::new(root_path.join(path));
+                let new_path = fs::canonicalise(&root_path.join(path))?;
+                let paths = ProjectPaths::new(new_path);
                 let config = crate::config::read(paths.root_config())?;
 
                 let _ = acc.insert(name.clone(), Requirement::Path { path: path.clone() });
 
                 // If we have already seen this package in the current recursive
                 // path, then we have a cycle
-                if current_path.contains(&config.name) {
+                if current_path.iter().any(|(_, p)| p == paths.root()) {
                     tracing::debug!("found_cycle_in_path_dep_collecting");
                     return Err(Error::PackageCycle {
-                        packages: current_path.clone(),
+                        packages: current_path.iter().map(|(n, _)| n.clone()).collect(),
                     });
                 }
 
-                current_path.push(config.name.clone());
+                current_path.push((config.name.clone(), paths.root().into()));
 
                 tracing::debug!(package=%config.name, path=%path, "recursively_collecting_dependency");
                 do_recursively_collect_dependencies_from_path_deps(
                     &config.dependencies,
-                    &root_path.join(path),
+                    &paths.root(),
                     current_path,
                     acc,
                 )?;
