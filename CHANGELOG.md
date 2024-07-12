@@ -58,6 +58,10 @@
 
 ### Bug Fixes
 
+- Fixes a bug with path dependencies. If a package was added to a path dependency,
+  it would not be added to the dependant's `manifest.toml`, causing the build to fail.
+  ([Juraj Petráš](https://github.com/Hackder))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server
