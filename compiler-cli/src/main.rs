@@ -253,6 +253,13 @@ enum Command {
     Export(ExportTarget),
 }
 
+fn template_doc() -> String {
+    format!(
+        "The template to use ({})",
+        new::Template::VARIANTS.join("|")
+    )
+}
+
 fn target_doc() -> String {
     format!("The platform to target ({})", Target::VARIANTS.join("|"))
 }
@@ -288,7 +295,7 @@ pub struct NewOptions {
     #[arg(long)]
     pub name: Option<String>,
 
-    #[arg(long, ignore_case = true, default_value = "lib")]
+    #[arg(long, ignore_case = true, default_value = "erlang", help = template_doc())]
     pub template: new::Template,
 
     /// Skip git initialization and creation of .gitignore, .git/* and .github/* files

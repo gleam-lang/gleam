@@ -24,9 +24,14 @@ const ELIXIR_VERSION: &str = "1.15.4";
 #[derive(
     Debug, Serialize, Deserialize, Display, EnumString, VariantNames, ValueEnum, Clone, Copy,
 )]
-#[strum(serialize_all = "kebab_case")]
+#[strum(serialize_all = "lowercase")]
 pub enum Template {
-    Lib,
+    #[strum(serialize = "erlang", serialize = "erl")]
+    #[serde(rename = "erlang", alias = "erl")]
+    Erlang,
+    #[strum(serialize = "javascript", serialize = "js")]
+    #[serde(rename = "javascript", alias = "js")]
+    JavaScript,
 }
 
 #[derive(Debug)]
@@ -74,6 +79,10 @@ impl FileToCreate {
         let skip_git = creator.options.skip_git;
         let skip_github = creator.options.skip_github;
         let gleam_version = creator.gleam_version;
+        let target = match creator.options.template {
+            Template::JavaScript => r#"target = "javascript""#,
+            _ => r#""#,
+        };
 
         match self {
             Self::Readme => Some(format!(
@@ -142,6 +151,7 @@ pub fn hello_world_test() {
             Self::GleamToml => Some(format!(
                 r#"name = "{project_name}"
 version = "1.0.0"
+{target}
 
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
@@ -241,7 +251,7 @@ impl Creator {
         }
 
         match self.options.template {
-            Template::Lib => {
+            Template::Erlang | Template::JavaScript => {
                 for file in FileToCreate::iter() {
                     let path = file.location(self);
                     if let Some(contents) = file.contents(self) {
