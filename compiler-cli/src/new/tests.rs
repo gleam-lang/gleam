@@ -34,6 +34,54 @@ fn new() {
 }
 
 #[test]
+fn new_with_default_template() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::Erlang,
+            name: None,
+            skip_git: false,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+    creator.run().unwrap();
+
+    assert!(path.join("gleam.toml").exists());
+
+    let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
+    assert!(!toml.contains("target = \"javascript\""));
+}
+
+#[test]
+fn new_with_javascript_template() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::JavaScript,
+            name: None,
+            skip_git: false,
+            skip_github: true,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+    creator.run().unwrap();
+
+    assert!(path.join("gleam.toml").exists());
+
+    let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
+    assert!(toml.contains("target = \"javascript\""));
+}
+
+#[test]
 fn new_with_skip_git() {
     let tmp = tempfile::tempdir().unwrap();
     let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
