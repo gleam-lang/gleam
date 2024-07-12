@@ -6,7 +6,7 @@
 
 ### Compiler
 
-- The `[..]` pattern has been deprecated in favour of the `_` catch all pattern.
+- The warning for the deprecated `[..]` pattern has been improved.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
