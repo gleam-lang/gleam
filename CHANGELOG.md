@@ -13,6 +13,9 @@
   properly detected and won't invalidate the rest of the expression.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Fix cases where in Erlang unbound type variables are generated.
+  ([Damir Vandic](https://github.com/dvic))
+
 ### Formatter
 
 ### Language Server
