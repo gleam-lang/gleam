@@ -48,6 +48,10 @@
 
   ([Rahul D. Ghosal](https://github.com/rdghosal))
 
+- The `<>` string concatenation operator can now be used in constant
+  expressions.
+  ([Thomas](https://github.com/DeviousStoat))
+
 ### Formatter
 
 ### Language Server
