@@ -902,10 +902,17 @@ pub fn convert_get_type_constructor_error(
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub enum MatchFunTypeError {
-    IncorrectArity { expected: usize, given: usize },
-    NotFn { typ: Arc<Type> },
+    IncorrectArity {
+        expected: usize,
+        given: usize,
+        args: Vec<Arc<Type>>,
+        return_type: Arc<Type>,
+    },
+    NotFn {
+        typ: Arc<Type>,
+    },
 }
 
 pub fn convert_not_fun_error(
@@ -915,14 +922,17 @@ pub fn convert_not_fun_error(
     call_kind: CallKind,
 ) -> Error {
     match (call_kind, e) {
-        (CallKind::Function, MatchFunTypeError::IncorrectArity { expected, given }) => {
-            Error::IncorrectArity {
-                labels: vec![],
-                location: call_location,
-                expected,
-                given,
-            }
-        }
+        (
+            CallKind::Function,
+            MatchFunTypeError::IncorrectArity {
+                expected, given, ..
+            },
+        ) => Error::IncorrectArity {
+            labels: vec![],
+            location: call_location,
+            expected,
+            given,
+        },
 
         (CallKind::Function, MatchFunTypeError::NotFn { typ }) => Error::NotFn {
             location: fn_location,
@@ -931,7 +941,9 @@ pub fn convert_not_fun_error(
 
         (
             CallKind::Use { call_location, .. },
-            MatchFunTypeError::IncorrectArity { expected, given },
+            MatchFunTypeError::IncorrectArity {
+                expected, given, ..
+            },
         ) => Error::UseFnIncorrectArity {
             location: call_location,
             expected,

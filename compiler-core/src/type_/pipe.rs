@@ -217,7 +217,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             args,
             location,
             CallKind::Function,
-        )?;
+        );
         let function = TypedExpr::Call {
             location,
             typ,
@@ -235,7 +235,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             args,
             location,
             CallKind::Function,
-        )?;
+        );
         Ok(TypedExpr::Call {
             location,
             typ,
@@ -262,7 +262,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             arguments,
             location,
             CallKind::Function,
-        )?;
+        );
         Ok(TypedExpr::Call {
             location,
             typ,
