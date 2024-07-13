@@ -354,7 +354,7 @@ version = "4.5.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "528131438037fd55894f62d6e9f068b8f45ac57ffa77517819645d10aed04f64"
 dependencies = [
- "heck 0.5.0",
+ "heck",
  "proc-macro2",
  "quote",
  "syn 2.0.58",
@@ -822,7 +822,7 @@ dependencies = [
  "http",
  "ignore",
  "im",
- "itertools",
+ "itertools 0.13.0",
  "lsp-server",
  "lsp-types",
  "opener",
@@ -866,13 +866,13 @@ dependencies = [
  "flate2",
  "futures",
  "globset",
- "heck 0.4.1",
+ "heck",
  "hexpm",
  "http",
  "id-arena",
  "im",
  "insta",
- "itertools",
+ "itertools 0.13.0",
  "lsp-server",
  "lsp-types",
  "pathdiff",
@@ -908,7 +908,7 @@ dependencies = [
  "gleam-core",
  "hexpm",
  "im",
- "itertools",
+ "itertools 0.13.0",
  "serde",
  "serde-wasm-bindgen",
  "termcolor",
@@ -943,12 +943,6 @@ name = "hashbrown"
 version = "0.14.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "290f1a1d9242c78d09ce40a5e87e7554ee637af1351968159f4952f028f75604"
-
-[[package]]
-name = "heck"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "95505c38b4572b2d910cecb0281560f54b440a19336cbbcb27bf6ce6adc6f5a8"
 
 [[package]]
 name = "heck"
@@ -1209,6 +1203,15 @@ name = "itertools"
 version = "0.10.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "b0fd2260e829bddf4cb6ea802289de2f86d6a7a690192fbe91b3f46e0f2c8473"
+dependencies = [
+ "either",
+]
+
+[[package]]
+name = "itertools"
+version = "0.13.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "413ee7dfc52ee1a4949ceeb7dbc8a33f2d6c088194d9f922fb8318faf1f01186"
 dependencies = [
  "either",
 ]
@@ -2128,20 +2131,20 @@ checksum = "7da8b5736845d9f2fcb837ea5d9e2628564b3b043a70948a3f0b778838c5fb4f"
 
 [[package]]
 name = "strum"
-version = "0.26.2"
+version = "0.26.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "5d8cec3501a5194c432b2b7976db6b7d10ec95c253208b45f83f7136aa985e29"
+checksum = "8fec0f0aef304996cf250b31b5a10dee7980c85da9d759361292b8bca5a18f06"
 dependencies = [
  "strum_macros",
 ]
 
 [[package]]
 name = "strum_macros"
-version = "0.26.2"
+version = "0.26.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c6cf59daf282c0a494ba14fd21610a0325f9f90ec9d1231dea26bcb1d696c946"
+checksum = "4c6bee85a5a24955dc440386795aa378cd9cf82acd5f764469152d2270e581be"
 dependencies = [
- "heck 0.4.1",
+ "heck",
  "proc-macro2",
  "quote",
  "rustversion",
@@ -2244,7 +2247,7 @@ dependencies = [
  "gleam-core",
  "im",
  "insta",
- "itertools",
+ "itertools 0.13.0",
  "regex",
  "toml",
  "walkdir",
@@ -2382,7 +2385,7 @@ checksum = "6b26d63d75583ce572323a963b850d2121cf47a03b1f6c5fc96d641d3b0412b3"
 dependencies = [
  "combine",
  "indexmap 1.9.3",
- "itertools",
+ "itertools 0.10.5",
  "kstring",
 ]
 

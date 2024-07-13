@@ -166,7 +166,7 @@ impl<'comments> Formatter<'comments> {
         for (is_import_group, definitions) in &module
             .definitions
             .iter()
-            .group_by(|definition| definition.definition.is_import())
+            .chunk_by(|definition| definition.definition.is_import())
         {
             if is_import_group {
                 if previous_was_a_definition {
