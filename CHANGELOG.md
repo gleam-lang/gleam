@@ -56,6 +56,10 @@
   expressions.
   ([Thomas](https://github.com/DeviousStoat))
 
+- Function calls are now fault tolerant. This means that errors in the function
+  call arguments won't stop the rest of the call from being analysed.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Formatter
 
 ### Language Server
