@@ -1344,8 +1344,8 @@ pub(crate) fn constant_expression<'a>(
         }),
 
         Constant::StringConcatenation { left, right, .. } => {
-            let left = constant_expression(tracker, left)?;
-            let right = constant_expression(tracker, right)?;
+            let left = constant_expression(context, tracker, left)?;
+            let right = constant_expression(context, tracker, right)?;
             Ok(docvec!(left, " + ", right))
         }
 
