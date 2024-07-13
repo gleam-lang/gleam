@@ -26,7 +26,7 @@
 
   For example, provided a User type:
 
-  ```
+  ```gleam
   pub type User {
     name: String
   }
@@ -84,14 +84,30 @@
 - The language server now suggests a code a action to rename variables, types and
   functions when they don't match the Gleam naming requirements:
 
-  ```
+  ```gleam
   let myNumber = 10
   ```
 
   Becomes:
 
-  ```
+  ```gleam
   let my_number = 10
+  ```
+
+- The language server can now suggest a code action to convert `let assert` into
+  a case expression:
+
+  ```gleam
+  let assert Ok(value) = get_result()
+  ```
+
+  Becomes:
+
+  ```gleam
+  let value = case get_result() {
+    Ok(value) -> value
+    _ -> panic
+  }
   ```
 
   ([Gears](https://github.com/gearsdatapacks))
@@ -108,30 +124,6 @@
 
 - Fixed a bug where a private type could be leaked from an internal module.
   ([Ameen Radwan](https://github.com/Acepie))
-
-## v1.3.2 - 2024-07-11
-
-### Language Server
-
-- The language server no longer shows completions when inside a literal string.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- LSP can now suggest a code action to convert `let assert` into a case expression:
-
-  ```
-  let assert Ok(value) = get_result()
-  ```
-
-  Becomes:
-
-  ```
-  let value = case get_result() {
-    Ok(value) -> value
-    _ -> panic
-  }
-  ```
-
-  ([Gears](https://github.com/gearsdatapacks))
 
 ## v1.3.2 - 2024-07-11
 
