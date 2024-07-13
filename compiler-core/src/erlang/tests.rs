@@ -815,17 +815,18 @@ pub fn main() {
 // https://github.com/gleam-lang/gleam/issues/3382
 #[test]
 fn constant_named_module_info_with_function_inside_imported() {
-    assert_erl!((
-        "some_module",
-        "some_module",
-        "
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
 pub fn function() {
     1
 }
 
 pub const module_info = function
 "
-            ),
+        ),
         "
 import some_module
 
@@ -839,17 +840,18 @@ pub fn main() {
 // https://github.com/gleam-lang/gleam/issues/3382
 #[test]
 fn constant_named_module_info_with_function_inside_imported_qualified() {
-    assert_erl!((
-        "some_module",
-        "some_module",
-        "
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
 pub fn function() {
     1
 }
 
 pub const module_info = function
 "
-            ),
+        ),
         "
 import some_module.{module_info}
 
@@ -927,4 +929,3 @@ pub fn main() {
 "
     );
 }
-
