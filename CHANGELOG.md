@@ -67,6 +67,9 @@
   `module_info/0` and `module_info/1` functions.
   ([Juraj Petráš](https://github.com/Hackder))
 
+- Fixed formatting of comments at the start of a case branch.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server
@@ -95,4 +98,3 @@
 - Fixes a bug with import cycle detection when there is more than 2 imports in
   the cycle.
   ([Ameen Radwan](https://github.com/Acepie))
-

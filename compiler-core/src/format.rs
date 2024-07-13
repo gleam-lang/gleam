@@ -1744,7 +1744,14 @@ impl<'comments> Formatter<'comments> {
             UntypedExpr::Fn { .. }
             | UntypedExpr::List { .. }
             | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitArray { .. } => " ".to_doc().append(self.expr(expr)),
+            | UntypedExpr::BitArray { .. } => {
+                let expression_comments = self.pop_comments(expr.location().start);
+                let expression_doc = self.expr(expr);
+                match printed_comments(expression_comments, true) {
+                    Some(comments) => line().append(comments).append(expression_doc).nest(INDENT),
+                    None => " ".to_doc().append(expression_doc),
+                }
+            }
 
             UntypedExpr::Case { .. } => line().append(self.expr(expr)).nest(INDENT),
 
