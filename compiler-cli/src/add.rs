@@ -79,9 +79,9 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     Ok(())
 }
 
-fn read_toml_edit(name: &str) -> Result<toml_edit::Document, Error> {
+fn read_toml_edit(name: &str) -> Result<toml_edit::DocumentMut, Error> {
     fs::read(name)?
-        .parse::<toml_edit::Document>()
+        .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
