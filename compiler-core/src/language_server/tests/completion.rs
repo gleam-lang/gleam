@@ -23,9 +23,6 @@ fn completion_with_prefix(tester: TestProject<'_>, prefix: &str) -> Vec<Completi
     let tester = TestProject { src, ..tester };
     // Put the cursor inside the "typing_in_here" fn body.
     let line = 1 + prefix.lines().count();
-    println!("line: {}", line);
-    println!("code:\n{}", src);
-    println!("code at line: {}", src.lines().nth(line).unwrap());
     completion(tester, Position::new(line as u32, 0))
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
@@ -203,8 +200,20 @@ pub fn wobble() {
 #[test]
 fn importable_adds_extra_new_line_if_no_imports() {
     let dep = "pub fn wobble() {\nNil\n}";
-    let code = "";
     let prefix = "";
+    let code = "";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code).add_module("dep", dep),
+        prefix
+    ));
+}
+
+#[test]
+fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let prefix = "";
+    let code = "\nimport foo\n";
 
     assert_debug_snapshot!(completion_with_prefix(
         TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
@@ -215,8 +224,8 @@ fn importable_adds_extra_new_line_if_no_imports() {
 #[test]
 fn importable_does_not_add_extra_new_line_if_imports_exist() {
     let dep = "pub fn wobble() {\nNil\n}";
-    let code = "";
     let prefix = "import foo\n\n";
+    let code = "";
 
     assert_debug_snapshot!(completion_with_prefix(
         TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
@@ -227,8 +236,8 @@ fn importable_does_not_add_extra_new_line_if_imports_exist() {
 #[test]
 fn importable_does_not_add_extra_new_line_if_newline_exists() {
     let dep = "pub fn wobble() {\nNil\n}";
-    let code = "";
     let prefix = "\n";
+    let code = "";
 
     assert_debug_snapshot!(completion_with_prefix(
         TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),

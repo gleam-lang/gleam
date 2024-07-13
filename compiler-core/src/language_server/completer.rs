@@ -425,8 +425,9 @@ where
         }
 
         // Importable modules
-        let (import_location, has_imports) = self.first_import_line_in_module();
-        let after_import_newlines = self.add_newlines_after_import(import_location, has_imports);
+        let (first_import_pos, first_is_import) = self.first_import_in_module();
+        let after_import_newlines =
+            self.add_newlines_after_import(first_import_pos, first_is_import);
         for (module_full_name, module) in self.completable_modules_for_import() {
             // Do not try to import the prelude.
             if module_full_name == "gleam" {
@@ -461,7 +462,7 @@ where
                 );
                 add_import_to_completion(
                     &mut completion,
-                    import_location,
+                    first_import_pos,
                     module_full_name,
                     &after_import_newlines,
                 );
@@ -547,8 +548,9 @@ where
         }
 
         // Importable modules
-        let (import_location, has_imports) = self.first_import_line_in_module();
-        let after_import_newlines = self.add_newlines_after_import(import_location, has_imports);
+        let (first_import_pos, first_is_import) = self.first_import_in_module();
+        let after_import_newlines =
+            self.add_newlines_after_import(first_import_pos, first_is_import);
         for (module_full_name, module) in self.completable_modules_for_import() {
             // Do not try to import the prelude.
             if module_full_name == "gleam" {
@@ -578,7 +580,7 @@ where
 
                 add_import_to_completion(
                     &mut completion,
-                    import_location,
+                    first_import_pos,
                     module_full_name,
                     &after_import_newlines,
                 );
@@ -639,15 +641,14 @@ where
         }
     }
 
-    // Gets the position of the line with the first import statement in the file.
-    fn first_import_line_in_module(&'a self) -> (Position, bool) {
-        let first_import = self.module.ast.definitions.iter().find_map(get_import);
-        let import_location = first_import.map_or(0, |i| i.location.start);
-        let import_location = self.module_line_numbers.line_number(import_location);
-        (
-            Position::new(import_location - 1, 0),
-            first_import.is_some(),
-        )
+    // Gets the position of the import statement if it's the first definition in the module.
+    // If the 1st definition is not an import statement, then it returns the 1st line.
+    // 2nd element in the pair is true if the first definition is an import statement.
+    fn first_import_in_module(&'a self) -> (Position, bool) {
+        let import = self.module.ast.definitions.first().and_then(get_import);
+        let import_start = import.map_or(0, |i| i.location.start);
+        let import_line = self.module_line_numbers.line_number(import_start);
+        (Position::new(import_line - 1, 0), import.is_some())
     }
 
     // Returns how many newlines should be added after an import statement. By default `Newlines::Single`,
