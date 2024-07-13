@@ -6197,3 +6197,35 @@ fn const_concat_long_including_list() {
 "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3397
+#[test]
+fn comment_after_case_branch() {
+    assert_format!(
+        r#"pub fn main() {
+  case x {
+    _ ->
+      // comment
+      [123]
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3397
+#[test]
+fn comment_after_case_branch_case() {
+    assert_format!(
+        r#"pub fn main() {
+  case x {
+    _ ->
+      // comment
+      case y {
+        _ -> todo
+      }
+  }
+}
+"#
+    );
+}
