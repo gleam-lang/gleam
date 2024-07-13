@@ -92,7 +92,3 @@
   the cycle.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- Functions, types and constructors named `module_info` are now escaped
-  in generated Erlang code to avoid conflicts with the builtin
-  `module_info/0` and `module_info/1` functions.
-  ([Juraj Petráš](https://github.com/Hackder))
