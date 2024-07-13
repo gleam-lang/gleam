@@ -213,10 +213,10 @@ fn importable_adds_extra_new_line_if_no_imports() {
 fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
     let dep = "pub fn wobble() {\nNil\n}";
     let prefix = "";
-    let code = "\nimport foo\n";
+    let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
 
     assert_debug_snapshot!(completion_with_prefix(
-        TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
+        TestProject::for_source(code).add_module("dep", dep).add_module("dep2", ""),
         prefix
     ));
 }
