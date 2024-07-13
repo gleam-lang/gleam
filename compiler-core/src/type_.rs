@@ -1103,6 +1103,8 @@ fn match_fun_type(
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
+                args: args.clone(),
+                return_type: retrn.clone(),
             })
         } else {
             Ok((args.clone(), retrn.clone()))

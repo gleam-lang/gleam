@@ -315,3 +315,33 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn function_call_incorrect_arg_types_fault_tolerance() {
+    assert_module_error!(
+        r#"
+fn add(x: Int, y: Int) {
+  x + y
+}
+
+pub fn main() {
+  add(1.0, 1.0)
+}
+"#
+    );
+}
+
+#[test]
+fn function_call_incorrect_arity_fault_tolerance() {
+    assert_module_error!(
+        r#"
+fn add(x: Int, y: Int) {
+  x + y
+}
+
+pub fn main() {
+  add(1.0)
+}
+"#
+    );
+}

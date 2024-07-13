@@ -343,7 +343,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 fun,
                 arguments: args,
                 ..
-            } => self.infer_call(*fun, args, location, CallKind::Function),
+            } => Ok(self.infer_call(*fun, args, location, CallKind::Function)),
 
             UntypedExpr::BinOp {
                 location,
@@ -677,7 +677,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 assignments_location: use_.assignments_location,
                 last_statement_location,
             },
-        )?;
+        );
 
         Ok(Statement::Expression(call))
     }
@@ -802,8 +802,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call(fun, args, location, kind)?;
+    ) -> TypedExpr {
+        let (fun, args, typ) = self.do_infer_call(fun, args, location, kind);
 
         // One common mistake is to think that the syntax for adding a message
         // to a `todo` or a `panic` exception is to `todo("...")`, but really
@@ -833,12 +833,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 });
         }
 
-        Ok(TypedExpr::Call {
+        TypedExpr::Call {
             location,
             typ,
             args,
             fun: Box::new(fun),
-        })
+        }
     }
 
     fn infer_list(
@@ -2792,8 +2792,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-        let fun = match fun {
+    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
+        let function_location = fun.location();
+        let typed_fun = match fun {
             UntypedExpr::FieldAccess {
                 label,
                 container,
@@ -2807,10 +2808,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             )),
 
             fun => self.infer(fun),
-        }?;
+        };
 
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, kind)?;
-        Ok((fun, args, typ))
+        let fun = match typed_fun {
+            Ok(fun) => fun,
+            Err(function_inference_error) => {
+                self.error_expr_with_rigid_names(function_location, function_inference_error)
+            }
+        };
+
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, kind);
+        (fun, args, typ)
     }
 
     pub fn do_infer_call_with_known_fun(
@@ -2819,23 +2827,48 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         // Check to see if the function accepts labelled arguments
-        match self
+        let field_map = self
             .get_field_map(&fun)
-            .map_err(|e| convert_get_value_constructor_error(e, location))?
-        {
-            // The fun has a field map so labelled arguments may be present and need to be reordered.
-            Some(field_map) => field_map.reorder(&mut args, location)?,
+            .map_err(|e| convert_get_value_constructor_error(e, location))
+            .and_then(|field_map| {
+                match field_map {
+                    // The fun has a field map so labelled arguments may be present and need to be reordered.
+                    Some(field_map) => field_map.reorder(&mut args, location),
 
-            // The fun has no field map and so we error if arguments have been labelled
-            None => assert_no_labelled_arguments(&args)?,
+                    // The fun has no field map and so we error if arguments have been labelled
+                    None => assert_no_labelled_arguments(&args),
+                }
+            });
+        if let Err(e) = field_map {
+            self.error_with_rigid_names(e);
         }
 
         // Extract the type of the fun, ensuring it actually is a function
         let (mut args_types, return_type) =
-            match_fun_type(fun.type_(), args.len(), self.environment)
-                .map_err(|e| convert_not_fun_error(e, fun.location(), location, kind))?;
+            match match_fun_type(fun.type_(), args.len(), self.environment) {
+                Ok(fun) => fun,
+                Err(e) => {
+                    let converted_error =
+                        convert_not_fun_error(e.clone(), fun.location(), location, kind);
+                    match e {
+                        MatchFunTypeError::IncorrectArity {
+                            args, return_type, ..
+                        } => {
+                            self.error_with_rigid_names(converted_error);
+                            (args, return_type)
+                        }
+                        MatchFunTypeError::NotFn { .. } => {
+                            return (
+                                self.error_expr_with_rigid_names(location, converted_error),
+                                vec![],
+                                self.new_unbound_var(),
+                            );
+                        }
+                    }
+                }
+            };
 
         // When typing the function's arguments we don't care if the previous
         // expression panics or not because we want to provide a specialised
@@ -2884,16 +2917,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
+                let value = match self.infer_call_argument(value, typ.clone(), argument_kind) {
+                    Ok(value) => value,
+                    Err(e) => self.error_expr_with_rigid_names(location, e),
+                };
 
-                Ok(CallArg {
+                CallArg {
                     label,
                     value,
                     implicit,
                     location,
-                })
+                }
             })
-            .try_collect()?;
+            .collect();
 
         // We don't want to emit a warning for unreachable function call if the
         // function being called is itself `panic`, for that we emit a more
@@ -2902,7 +2938,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.warn_for_unreachable_code(fun.location(), PanicPosition::LastFunctionArgument);
         }
 
-        Ok((fun, args, return_type))
+        (fun, args, return_type)
     }
 
     fn infer_call_argument(
