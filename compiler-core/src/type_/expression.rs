@@ -2853,6 +2853,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let converted_error =
                         convert_not_fun_error(e.clone(), fun.location(), location, kind);
                     match e {
+                        // If the function was valid but had the wrong number of arguments passed.
+                        // Then we keep the error but still want to continue analysing the arguments that were passed.
                         MatchFunTypeError::IncorrectArity {
                             args, return_type, ..
                         } => {
