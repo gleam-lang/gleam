@@ -717,6 +717,38 @@ fn test_convert_let_assert_string_prefix_pattern_alias_to_case() {
     ));
 }
 
+#[test]
+fn test_convert_inner_let_assert_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let assert [wibble] = {
+        let assert Ok(wobble) = {
+            Ok(1)
+        }
+        [wobble]
+    }
+}"#,
+        2,
+        CONVERT_TO_CASE
+    ));
+}
+
+#[test]
+fn test_convert_outer_let_assert_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let assert [wibble] = {
+        let assert Ok(wobble) = {
+            Ok(1)
+        }
+        [wobble]
+    }
+}"#,
+        1,
+        CONVERT_TO_CASE
+    ));
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

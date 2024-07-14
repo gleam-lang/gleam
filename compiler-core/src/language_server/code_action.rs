@@ -288,10 +288,16 @@ pub struct LetAssertToCase<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
     fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
-        let range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
+        // To prevent weird behaviour when `let assert` statements are nested,
+        // we only check for the code action between the `let` and `=`.
+        let code_action_location =
+            SrcSpan::new(assignment.location.start, assignment.value.location().start);
+        let code_action_range = src_span_to_lsp_range(code_action_location, &self.line_numbers);
+
+        self.visit_typed_expr(&assignment.value);
 
         // Only offer the code action if the cursor is over the statement
-        if !overlaps(range, self.params.range) {
+        if !overlaps(code_action_range, self.params.range) {
             return;
         }
 
@@ -316,6 +322,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
             .get(pattern_location.start as usize..pattern_location.end as usize)
             .expect("Location must be valid");
 
+        let range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
         let indent = " ".repeat(range.start.character as usize);
 
         // Figure out which variables are assigned in the pattern
