@@ -63,6 +63,11 @@
 - The error message presented when a function is called in a guard has been improved.
   ([Thomas](https://github.com/DeviousStoat))
 
+- Case expressions are now fault tolerant. This means an subject, pattern,
+  guard, or then body can be properly detected and won't invalidate the rest
+  of the expression.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Formatter
 
 ### Language Server
