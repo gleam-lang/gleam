@@ -433,7 +433,7 @@ pub enum Error {
     /// ```
     BadName {
         location: SrcSpan,
-        kind: BadNameKind,
+        kind: Named,
         name: EcoString,
     },
 }
@@ -464,7 +464,7 @@ pub enum LiteralCollectionKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum BadNameKind {
+pub enum Named {
     Type,
     TypeVariable,
     CustomTypeVariant,
@@ -476,30 +476,19 @@ pub enum BadNameKind {
     Discard,
 }
 
-impl BadNameKind {
-    pub fn to_string(self) -> EcoString {
-        EcoString::from(match self {
-            BadNameKind::Type => "type",
-            BadNameKind::TypeVariable => "type alias",
-            BadNameKind::CustomTypeVariant => "type variant",
-            BadNameKind::Variable => "variable",
-            BadNameKind::Argument => "argument",
-            BadNameKind::Label => "label",
-            BadNameKind::Constant => "constant",
-            BadNameKind::Function => "function",
-            BadNameKind::Discard => "discard",
-        })
-    }
-
-    pub fn is_discard(&self) -> bool {
-        matches!(self, BadNameKind::Discard)
-    }
-
-    pub fn is_upname(&self) -> bool {
-        matches!(
-            self,
-            BadNameKind::Type | BadNameKind::TypeVariable | BadNameKind::CustomTypeVariant
-        )
+impl Named {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Named::Type => "type",
+            Named::TypeVariable => "type alias",
+            Named::CustomTypeVariant => "type variant",
+            Named::Variable => "variable",
+            Named::Argument => "argument",
+            Named::Label => "label",
+            Named::Constant => "constant",
+            Named::Function => "function",
+            Named::Discard => "discard",
+        }
     }
 }
 

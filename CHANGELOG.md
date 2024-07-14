@@ -81,8 +81,8 @@
   module.
   ([Zhomart Mukhamejanov](https://github.com/Zhomart))
 
-- LSP now suggests a code a action to rename variables, types and functions when they
-  don't match the gleam naming conventions:
+- The language server now suggests a code a action to rename variables, types and
+  functions when they don't match the Gleam naming requirements:
 
   ```
   let myNumber = 10
