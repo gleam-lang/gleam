@@ -14,14 +14,14 @@ fn hover(tester: TestProject<'_>, position: Position) -> Option<Hover> {
     })
 }
 
-struct PositionFinder {
+pub struct PositionFinder {
     value: String,
     offset: usize,
     nth_occurrence: usize,
 }
 
 impl PositionFinder {
-    fn with_char_offset(self, offset: usize) -> Self {
+    pub fn with_char_offset(self, offset: usize) -> Self {
         Self {
             value: self.value,
             offset,
@@ -29,7 +29,7 @@ impl PositionFinder {
         }
     }
 
-    fn under_char(self, char: char) -> Self {
+    pub fn under_char(self, char: char) -> Self {
         Self {
             offset: self.value.find(char).unwrap_or(0),
             value: self.value,
@@ -37,12 +37,12 @@ impl PositionFinder {
         }
     }
 
-    fn under_last_char(self) -> Self {
+    pub fn under_last_char(self) -> Self {
         let len = self.value.len();
         self.with_char_offset(len - 1)
     }
 
-    fn nth_occurrence(self, nth_occurrence: usize) -> Self {
+    pub fn nth_occurrence(self, nth_occurrence: usize) -> Self {
         Self {
             value: self.value,
             offset: self.offset,
@@ -50,7 +50,7 @@ impl PositionFinder {
         }
     }
 
-    fn for_value(value: &str) -> Self {
+    pub fn for_value(value: &str) -> Self {
         Self {
             value: value.into(),
             offset: 0,
@@ -58,7 +58,7 @@ impl PositionFinder {
         }
     }
 
-    fn find_position(&self, src: &str) -> Position {
+    pub fn find_position(&self, src: &str) -> Position {
         let PositionFinder {
             value,
             offset,
@@ -75,7 +75,7 @@ impl PositionFinder {
     }
 }
 
-fn find_position_of(value: &str) -> PositionFinder {
+pub fn find_position_of(value: &str) -> PositionFinder {
     PositionFinder::for_value(value)
 }
 
@@ -99,7 +99,7 @@ fn byte_index_to_position(src: &str, byte_index: usize) -> Position {
     Position::new(line, col)
 }
 
-fn show_hover(code: &str, range: Range, position: Position) -> String {
+pub fn show_hover(code: &str, range: Range, position: Position) -> String {
     let Range { start, end } = range;
 
     // When we display the over range the end character is always excluded!

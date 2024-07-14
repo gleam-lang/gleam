@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\npub fn wibble(a: Int, b: String) { 1.0 }\n\npub fn main() {\n  let wobble = fn(a: Int, b: String) { 1.0 }\n  wobble(1,)\n}\n"
+---
+pub fn wibble(a: Int, b: String) { 1.0 }
+
+pub fn main() {
+  let wobble = fn(a: Int, b: String) { 1.0 }
+  wobble(1,)
+           ↑
+}
+
+
+----- Signature help -----
+wobble(Int, String) -> Float
+            ▔▔▔▔▔▔
+
+Documentation:
+MarkupContent(
+    MarkupContent {
+        kind: Markdown,
+        value: "A locally defined variable.",
+    },
+)
