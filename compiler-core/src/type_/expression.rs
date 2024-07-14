@@ -1351,7 +1351,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
-        let mut all_clauses_panic = true;
+        // NOTE: if there are 0 clauses then there are 0 panics
+        let mut all_clauses_panic = clauses.len() > 0;
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
