@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n  let wibble = True\n  case wibble {\n    a if a == Wibble -> 0\n    b if b == Wibble -> 0\n    _ -> 1\n  }\n}\n"
+---
+error: Unknown variable
+  ┌─ /src/one/two.gleam:5:15
+  │
+5 │     a if a == Wibble -> 0
+  │               ^^^^^^ Did you mean `wibble`?
+
+The name `Wibble` is not in scope here.
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:15
+  │
+6 │     b if b == Wibble -> 0
+  │               ^^^^^^ Did you mean `wibble`?
+
+The name `Wibble` is not in scope here.

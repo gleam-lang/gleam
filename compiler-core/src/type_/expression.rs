@@ -330,7 +330,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 subjects,
                 clauses,
                 ..
-            } => self.infer_case(subjects, clauses, location),
+            } => Ok(self.infer_case(subjects, clauses, location)),
 
             UntypedExpr::List {
                 location,
@@ -1324,7 +1324,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subjects: Vec<UntypedExpr>,
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
@@ -1335,10 +1335,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = false;
         let mut any_subject_panics = false;
         for subject in subjects {
-            let subject = self.in_new_scope(|subject_typer| {
+            let subject_location = subject.location();
+            let subject = match self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
                 Ok(subject)
-            })?;
+            }) {
+                Ok(subject) => subject,
+                Err(error) => self.error_expr_with_rigid_names(subject_location, error),
+            };
 
             any_subject_panics = any_subject_panics || self.previous_panics;
             subject_types.push(subject.type_());
@@ -1354,17 +1358,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let typed_clause = self.infer_clause(clause, &subject_types)?;
+            let typed_clause = self.infer_clause(clause, &subject_types);
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
-            unify(return_type.clone(), typed_clause.then.type_())
-                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
+            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
+                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))
+            {
+                self.error_with_rigid_names(e);
+            }
             typed_clauses.push(typed_clause);
         }
 
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
-        self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
+        if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
+            self.error_with_rigid_names(e);
+        };
 
         // We track if the case expression is used like an if: that is all its
         // patterns are discarded and there's at least a guard. For example:
@@ -1384,19 +1393,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
             .for_each(|warning| self.environment.warnings.emit(warning));
 
-        Ok(TypedExpr::Case {
+        TypedExpr::Case {
             location,
             typ: return_type,
             subjects: typed_subjects,
             clauses: typed_clauses,
-        })
+        }
     }
 
-    fn infer_clause(
-        &mut self,
-        clause: UntypedClause,
-        subjects: &[Arc<Type>],
-    ) -> Result<TypedClause, Error> {
+    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[Arc<Type>]) -> TypedClause {
         let Clause {
             pattern,
             alternative_patterns,
@@ -1404,29 +1409,64 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             then,
             location,
         } = clause;
+        let then_location = then.location();
 
         let (guard, then, typed_pattern, typed_alternatives) =
-            self.in_new_scope(|clause_typer| {
+            match self.in_new_scope(|clause_typer| {
                 // Check the types
-                let (typed_pattern, typed_alternatives) = clause_typer.infer_clause_pattern(
+                let (typed_pattern, typed_alternatives) = match clause_typer.infer_clause_pattern(
                     pattern,
                     alternative_patterns,
                     subjects,
                     &location,
-                )?;
-                let guard = clause_typer.infer_optional_clause_guard(guard)?;
-                let then = clause_typer.infer(then)?;
+                ) {
+                    Ok(res) => res,
+                    // If an error occurs inferring patterns then assume no patterns
+                    Err(error) => {
+                        clause_typer.error_with_rigid_names(error);
+                        (vec![], vec![])
+                    }
+                };
+                let guard = match clause_typer.infer_optional_clause_guard(guard) {
+                    Ok(guard) => guard,
+                    // If an error occurs inferring guard then assume no guard
+                    Err(error) => {
+                        clause_typer.error_with_rigid_names(error);
+                        None
+                    }
+                };
+                let then = match clause_typer.infer(then) {
+                    Ok(then) => then,
+                    Err(error) => clause_typer.error_expr_with_rigid_names(then_location, error),
+                };
 
                 Ok((guard, then, typed_pattern, typed_alternatives))
-            })?;
+            }) {
+                Ok(res) => res,
+                Err(error) => {
+                    // NOTE: theoretically it should be impossible to get here
+                    // since the individual parts have been made fault tolerant
+                    // but in_new_scope requires that the return type be a result
+                    self.error_with_rigid_names(error);
+                    (
+                        None,
+                        TypedExpr::Invalid {
+                            location: then_location,
+                            typ: self.new_unbound_var(),
+                        },
+                        vec![],
+                        vec![],
+                    )
+                }
+            };
 
-        Ok(Clause {
+        Clause {
             location,
             pattern: typed_pattern,
             alternative_patterns: typed_alternatives,
             guard,
             then,
-        })
+        }
     }
 
     fn infer_clause_pattern(
