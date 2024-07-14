@@ -1165,15 +1165,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return;
         }
 
-        // We also don't want to raise a warning if we're inside an internal
-        // module ourselves, the type wouldn't actually be publicly exposed.
-        if self
-            .package_config
-            .is_internal_module(self.module_name.as_str())
-        {
-            return;
-        }
-
         // If a private or internal value references a private type
         if let Some(leaked) = value.type_.find_private_type() {
             self.errors.push(Error::PrivateTypeLeak {

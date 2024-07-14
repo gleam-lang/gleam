@@ -100,6 +100,14 @@ macro_rules! assert_module_error {
 }
 
 #[macro_export]
+macro_rules! assert_internal_module_error {
+    ($src:expr) => {
+        let output = $crate::type_::tests::internal_module_error($src, vec![]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
 macro_rules! assert_js_module_error {
     ($src:expr) => {
         let output = $crate::type_::tests::module_error_with_target(
@@ -431,6 +439,32 @@ pub fn module_error_with_target(
 ) -> String {
     let error = compile_module_with_opts(
         "themodule",
+        src,
+        None,
+        deps,
+        target,
+        TargetSupport::NotEnforced,
+    )
+    .expect_err("should infer an error");
+    let error = Error::Type {
+        src: src.into(),
+        path: Utf8PathBuf::from("/src/one/two.gleam"),
+        errors: Vec1::try_from_vec(error).expect("should have at least one error"),
+    };
+    error.pretty_string()
+}
+
+pub fn internal_module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
+    internal_module_error_with_target(src, deps, Target::Erlang)
+}
+
+pub fn internal_module_error_with_target(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> String {
+    let error = compile_module_with_opts(
+        "thepackage/internal/themodule",
         src,
         None,
         deps,

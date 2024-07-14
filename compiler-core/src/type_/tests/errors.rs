@@ -1,5 +1,6 @@
 use crate::{
-    assert_error, assert_module_error, assert_module_syntax_error, assert_with_module_error,
+    assert_error, assert_internal_module_error, assert_module_error, assert_module_syntax_error,
+    assert_with_module_error,
 };
 
 #[test]
@@ -808,6 +809,16 @@ pub fn go(x: PrivateType) -> Int"#
 #[test]
 fn module_private_type_leak_5() {
     assert_module_error!(
+        r#"type PrivateType
+pub type LeakType { Variant(PrivateType) }"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3387
+// Private types should not leak even in internal modules
+#[test]
+fn module_private_type_leak_6() {
+    assert_internal_module_error!(
         r#"type PrivateType
 pub type LeakType { Variant(PrivateType) }"#
     );
