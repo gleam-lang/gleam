@@ -1336,10 +1336,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut any_subject_panics = false;
         for subject in subjects {
             let subject_location = subject.location();
-            let subject = match self.in_new_scope(|subject_typer| {
+            let subject = self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
                 Ok(subject)
-            }) {
+            });
+            let subject = match subject {
                 Ok(subject) => subject,
                 Err(error) => self.error_expr_with_rigid_names(subject_location, error),
             };
@@ -1352,7 +1353,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
         // NOTE: if there are 0 clauses then there are 0 panics
-        let mut all_clauses_panic = clauses.len() > 0;
+        let mut all_clauses_panic = !clauses.is_empty();
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
@@ -1412,54 +1413,54 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = clause;
         let then_location = then.location();
 
-        let (guard, then, typed_pattern, typed_alternatives) =
-            match self.in_new_scope(|clause_typer| {
-                // Check the types
-                let (typed_pattern, typed_alternatives) = match clause_typer.infer_clause_pattern(
-                    pattern,
-                    alternative_patterns,
-                    subjects,
-                    &location,
-                ) {
-                    Ok(res) => res,
-                    // If an error occurs inferring patterns then assume no patterns
-                    Err(error) => {
-                        clause_typer.error_with_rigid_names(error);
-                        (vec![], vec![])
-                    }
-                };
-                let guard = match clause_typer.infer_optional_clause_guard(guard) {
-                    Ok(guard) => guard,
-                    // If an error occurs inferring guard then assume no guard
-                    Err(error) => {
-                        clause_typer.error_with_rigid_names(error);
-                        None
-                    }
-                };
-                let then = match clause_typer.infer(then) {
-                    Ok(then) => then,
-                    Err(error) => clause_typer.error_expr_with_rigid_names(then_location, error),
-                };
-
-                Ok((guard, then, typed_pattern, typed_alternatives))
-            }) {
+        let scoped_clause_inference = self.in_new_scope(|clause_typer| {
+            // Check the types
+            let (typed_pattern, typed_alternatives) = match clause_typer.infer_clause_pattern(
+                pattern,
+                alternative_patterns,
+                subjects,
+                &location,
+            ) {
                 Ok(res) => res,
+                // If an error occurs inferring patterns then assume no patterns
                 Err(error) => {
-                    // NOTE: theoretically it should be impossible to get here
-                    // since the individual parts have been made fault tolerant
-                    // but in_new_scope requires that the return type be a result
-                    self.error_with_rigid_names(error);
-                    (
-                        None,
-                        TypedExpr::Invalid {
-                            location: then_location,
-                            typ: self.new_unbound_var(),
-                        },
-                        vec![],
-                        vec![],
-                    )
+                    clause_typer.error_with_rigid_names(error);
+                    (vec![], vec![])
                 }
             };
+            let guard = match clause_typer.infer_optional_clause_guard(guard) {
+                Ok(guard) => guard,
+                // If an error occurs inferring guard then assume no guard
+                Err(error) => {
+                    clause_typer.error_with_rigid_names(error);
+                    None
+                }
+            };
+            let then = match clause_typer.infer(then) {
+                Ok(then) => then,
+                Err(error) => clause_typer.error_expr_with_rigid_names(then_location, error),
+            };
+
+            Ok((guard, then, typed_pattern, typed_alternatives))
+        });
+        let (guard, then, typed_pattern, typed_alternatives) = match scoped_clause_inference {
+            Ok(res) => res,
+            Err(error) => {
+                // NOTE: theoretically it should be impossible to get here
+                // since the individual parts have been made fault tolerant
+                // but in_new_scope requires that the return type be a result
+                self.error_with_rigid_names(error);
+                (
+                    None,
+                    TypedExpr::Invalid {
+                        location: then_location,
+                        typ: self.new_unbound_var(),
+                    },
+                    vec![],
+                    vec![],
+                )
+            }
+        };
 
         Clause {
             location,
