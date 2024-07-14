@@ -2,7 +2,7 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::{
         infer_bit_array_option,
-        name::{check_valid_argument, NameCorrection},
+        name::{check_argument_names, NameCorrection},
     },
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
@@ -748,7 +748,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
-            check_valid_argument(names, self.errors, self.name_corrections);
+            check_argument_names(names, self.errors, self.name_corrections);
         }
 
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;

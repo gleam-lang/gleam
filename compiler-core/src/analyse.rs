@@ -20,7 +20,7 @@ use crate::{
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, BadNameKind, Error, MissingAnnotation},
+        error::{convert_unify_error, Error, MissingAnnotation, Named},
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
@@ -36,7 +36,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
-use name::{check_valid_argument, check_valid_name, check_valid_upname, NameCorrection};
+use name::{check_argument_names, check_name_case, correct_name_case, NameCorrection};
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
@@ -352,11 +352,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             ..
         } = c;
-        if let Some((error, correction)) = check_valid_name(location, &name, BadNameKind::Constant)
-        {
-            self.errors.push(error);
-            self.name_corrections.push(correction);
-        }
+        self.check_name_case(location, &name, Named::Constant);
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -761,12 +757,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      arguments: args,
                      documentation,
                  }| {
-                    if let Some((error, correction)) =
-                        check_valid_upname(name_location, &name, BadNameKind::CustomTypeVariant)
-                    {
-                        self.errors.push(error);
-                        self.name_corrections.push(correction);
-                    }
+                    self.check_name_case(name_location, &name, Named::CustomTypeVariant);
 
                     let preregistered_fn = environment
                         .get_variable(&name)
@@ -779,12 +770,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                 .zip(&args_types)
                                 .map(|(argument, t)| {
                                     if let Some((label, location)) = &argument.label {
-                                        if let Some((error, correction)) =
-                                            check_valid_name(*location, label, BadNameKind::Label)
-                                        {
-                                            self.errors.push(error);
-                                            self.name_corrections.push(correction);
-                                        }
+                                        self.check_name_case(*location, label, Named::Label);
                                     }
 
                                     RecordConstructorArg {
@@ -1004,12 +990,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // could improve our approach here somewhat.
         environment.assert_unique_type_name(name, *location)?;
 
-        if let Some((error, correction)) =
-            check_valid_upname(*name_location, name, BadNameKind::Type)
-        {
-            self.errors.push(error);
-            self.name_corrections.push(correction);
-        }
+        self.check_name_case(*name_location, name, Named::Type);
 
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
@@ -1087,12 +1068,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return;
         }
 
-        if let Some((error, correction)) =
-            check_valid_upname(*name_location, name, BadNameKind::TypeVariable)
-        {
-            self.errors.push(error);
-            self.name_corrections.push(correction);
-        }
+        self.check_name_case(*name_location, name, Named::TypeVariable);
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
@@ -1182,19 +1158,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             implementations,
         } = f;
 
-        if let Some((error, correction)) =
-            check_valid_name(*name_location, name, BadNameKind::Function)
-        {
-            self.errors.push(error);
-            self.name_corrections.push(correction);
-        }
+        self.check_name_case(*name_location, name, Named::Function);
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for Arg {
             names, location, ..
         } in args.iter()
         {
-            check_valid_argument(names, &mut self.errors, &mut self.name_corrections);
+            check_argument_names(names, &mut self.errors, &mut self.name_corrections);
 
             builder.add(names.get_label(), *location)?;
         }
@@ -1247,6 +1218,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location: value.variant.definition_location(),
                 leaked,
             });
+        }
+    }
+
+    fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
+        if let Err(error) = check_name_case(location, name, kind) {
+            self.errors.push(error);
+            self.name_corrections
+                .push(correct_name_case(location, name, kind));
         }
     }
 }

@@ -7,7 +7,7 @@ use itertools::Itertools;
 use super::*;
 use crate::{
     analyse::{
-        name::{check_valid_discard_name, check_valid_name, NameCorrection},
+        name::{check_name_case, correct_name_case, NameCorrection},
         Inferred,
     },
     ast::{AssignName, Layer, UntypedPatternBitArraySegment},
@@ -51,12 +51,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
-        if let Some((error, correction)) =
-            check_valid_name(location, &EcoString::from(name), BadNameKind::Variable)
-        {
-            self.errors.push(error);
-            self.name_corrections.push(correction);
-        }
+        self.check_name_case(location, &EcoString::from(name), Named::Variable);
 
         match &mut self.mode {
             PatternMode::Initial => {
@@ -227,10 +222,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     ) -> Result<TypedPattern, Error> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
-                if let Some((error, correction)) = check_valid_discard_name(location, &name) {
-                    self.errors.push(error);
-                    self.name_corrections.push(correction);
-                }
+                self.check_name_case(location, &name, Named::Discard);
                 Ok(Pattern::Discard {
                     type_,
                     name,
@@ -300,12 +292,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     self.insert_variable(right.as_ref(), string(), right_location)
                         .map_err(|e| convert_unify_error(e, location))?;
                 } else if let AssignName::Discard(right) = &right_side_assignment {
-                    if let Some((error, correction)) =
-                        check_valid_discard_name(right_location, right)
-                    {
-                        self.errors.push(error);
-                        self.name_corrections.push(correction);
-                    }
+                    self.check_name_case(right_location, right, Named::Discard);
                 };
 
                 Ok(Pattern::StringPrefix {
@@ -684,6 +671,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     _ => panic!("Unexpected constructor type for a constructor pattern."),
                 }
             }
+        }
+    }
+
+    fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
+        if let Err(error) = check_name_case(location, name, kind) {
+            self.errors.push(error);
+            self.name_corrections
+                .push(correct_name_case(location, name, kind));
         }
     }
 }
