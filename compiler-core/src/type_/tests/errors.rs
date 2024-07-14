@@ -31,22 +31,22 @@ fn bit_arrays4() {
 
 #[test]
 fn bit_array() {
-    assert_error!("case <<1>> { <<2.0, a>> -> 1 }");
+    assert_error!("case <<1>> { <<2.0, a>> -> 1 _ -> 2 }");
 }
 
 #[test]
 fn bit_array_float() {
-    assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 }");
+    assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 _ -> 2 }");
 }
 
 #[test]
 fn bit_array_binary() {
-    assert_error!("case <<1>> { <<a:bytes>> if a > 1 -> 1 }");
+    assert_error!("case <<1>> { <<a:bytes>> if a > 1 -> 1 _ -> 2 }");
 }
 
 #[test]
 fn bit_array_guard() {
-    assert_error!("case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }");
+    assert_error!("case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 _ -> 2 }");
 }
 
 #[test]
@@ -101,7 +101,7 @@ fn bit_array_segment_size() {
 
 #[test]
 fn bit_array_segment_size2() {
-    assert_error!("case <<1>> { <<1:size(2)-size(8)>> -> a }");
+    assert_error!("case <<1>> { <<1:size(2)-size(8)>> -> 1 }");
 }
 
 #[test]
@@ -121,7 +121,7 @@ fn bit_array_segment_type_does_not_allow_unit_codepoint_utf16() {
 
 #[test]
 fn bit_array_segment_type_does_not_allow_unit_codepoint_utf32() {
-    assert_error!("case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }");
+    assert_error!("case <<1>> { <<1:utf32_codepoint-unit(2)>> -> 1 }");
 }
 
 #[test]
@@ -136,7 +136,7 @@ fn bit_array_segment_type_does_not_allow_unit_codepoint_utf16_2() {
 
 #[test]
 fn bit_array_segment_type_does_not_allow_unit_codepoint_utf32_2() {
-    assert_error!("case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }");
+    assert_error!("case <<1>> { <<1:utf32_codepoint-size(5)>> -> 1 }");
 }
 
 #[test]
@@ -151,7 +151,7 @@ fn bit_array_segment_type_does_not_allow_unit_utf16() {
 
 #[test]
 fn bit_array_segment_type_does_not_allow_unit_utf32() {
-    assert_error!("case <<1>> { <<1:utf32-unit(2)>> -> a }");
+    assert_error!("case <<1>> { <<1:utf32-unit(2)>> -> 1 }");
 }
 
 #[test]
@@ -166,7 +166,7 @@ fn bit_array_segment_type_does_not_allow_size_utf16() {
 
 #[test]
 fn bit_array_segment_type_does_not_allow_size_utf32() {
-    assert_error!("case <<1>> { <<1:utf32-size(5)>> -> a }");
+    assert_error!("case <<1>> { <<1:utf32-size(5)>> -> 1 }");
 }
 
 #[test]
@@ -545,7 +545,7 @@ fn duplicate_vars() {
 
 #[test]
 fn duplicate_vars_2() {
-    assert_error!("case [3.33], 1 { x, x if x > x -> 1 }");
+    assert_error!("case [3.33], 1 { x, x -> 1 }");
 }
 
 #[test]
@@ -1493,6 +1493,7 @@ pub fn parse(input: BitArray) -> String {
     <<"(":utf8, b:bytes>> ->
       parse(input)
       |> change
+    _ -> 3
   }
 }"#
     );

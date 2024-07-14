@@ -1,7 +1,30 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub fn change(x: String) -> String {\n  \"\"\n}\n\npub fn parse(input: BitArray) -> String {\n  case input {\n    <<>> -> 1\n    <<\"(\":utf8, b:bytes>> ->\n      parse(input)\n      |> change\n  }\n}"
+expression: "\npub fn change(x: String) -> String {\n  \"\"\n}\n\npub fn parse(input: BitArray) -> String {\n  case input {\n    <<>> -> 1\n    <<\"(\":utf8, b:bytes>> ->\n      parse(input)\n      |> change\n    _ -> 3\n  }\n}"
 ---
+error: Type mismatch
+   ┌─ /src/one/two.gleam:7:3
+   │  
+ 7 │ ╭   case input {
+ 8 │ │     <<>> -> 1
+ 9 │ │     <<"(":utf8, b:bytes>> ->
+10 │ │       parse(input)
+11 │ │       |> change
+12 │ │     _ -> 3
+13 │ │   }
+   │ ╰───^
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int
+
 error: Type mismatch
    ┌─ /src/one/two.gleam:9:5
    │  
