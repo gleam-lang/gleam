@@ -3,6 +3,7 @@ mod compilation;
 mod completion;
 mod definition;
 mod hover;
+mod signature_help;
 
 use std::{
     collections::HashMap,

@@ -60,7 +60,8 @@
   call arguments won't stop the rest of the call from being analysed.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- The error message presented when a function is called in a guard has been improved.
+- The error message presented when a function is called in a guard has been
+  improved.
   ([Thomas](https://github.com/DeviousStoat))
 
 - Case expressions are now fault tolerant. This means an subject, pattern,
@@ -81,8 +82,8 @@
   module.
   ([Zhomart Mukhamejanov](https://github.com/Zhomart))
 
-- The language server now suggests a code a action to rename variables, types and
-  functions when they don't match the Gleam naming requirements:
+- The language server now suggests a code a action to rename variables, types
+  and functions when they don't match the Gleam naming requirements:
 
   ```gleam
   let myNumber = 10
@@ -93,6 +94,8 @@
   ```gleam
   let my_number = 10
   ```
+
+  ([Gears](https://github.com/gearsdatapacks))
 
 - The language server can now suggest a code action to convert `let assert` into
   a case expression:
@@ -111,6 +114,9 @@
   ```
 
   ([Gears](https://github.com/gearsdatapacks))
+
+- The language server can now show signature help when writing functions.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug Fixes
 
