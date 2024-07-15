@@ -81,8 +81,8 @@ impl FileToCreate {
         let skip_github = creator.options.skip_github;
         let gleam_version = creator.gleam_version;
         let target = match creator.options.template {
-            Template::JavaScript => r#"target = "javascript""#,
-            Template::Erlang => r#""#,
+            Template::JavaScript => r#"target = "javascript"\n"#,
+            Template::Lib | Template::Erlang => r#""#,
         };
 
         match self {
@@ -153,7 +153,6 @@ pub fn hello_world_test() {
                 r#"name = "{project_name}"
 version = "1.0.0"
 {target}
-
 # Fill out these fields if you intend to generate HTML documentation or publish
 # your project to the Hex package manager.
 #
