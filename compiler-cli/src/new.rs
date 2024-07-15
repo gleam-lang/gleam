@@ -26,6 +26,7 @@ const ELIXIR_VERSION: &str = "1.15.4";
 )]
 #[strum(serialize_all = "lowercase")]
 pub enum Template {
+    Lib,
     #[strum(serialize = "erlang", serialize = "erl")]
     #[serde(rename = "erlang", alias = "erl")]
     Erlang,
@@ -251,7 +252,7 @@ impl Creator {
         }
 
         match self.options.template {
-            Template::Erlang | Template::JavaScript => {
+            Template::Lib | Template::Erlang | Template::JavaScript => {
                 for file in FileToCreate::iter() {
                     let path = file.location(self);
                     if let Some(contents) = file.contents(self) {
