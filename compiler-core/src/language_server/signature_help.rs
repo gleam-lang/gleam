@@ -24,57 +24,57 @@ pub fn for_expression<IO>(
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
 {
-    match expr {
-        // If we're inside a function call we can provide signature help,
-        // otherwise we don't want anything to pop up.
-        TypedExpr::Call { fun, args, .. } => match fun.as_ref() {
-            // If the thing being called is a local variable then we want to
-            // use it's name as the function name to be used in the signature
-            // help.
-            TypedExpr::Var {
-                constructor, name, ..
-            } => signature_help(name.clone(), fun, args, constructor.field_map()),
+    // If we're inside a function call we can provide signature help,
+    // otherwise we don't want anything to pop up.
+    let TypedExpr::Call { fun, args, .. } = expr else {
+        return None;
+    };
 
-            // If we're making a qualified call to another module's function
-            // then we want to show its type, documentation and the exact name
-            // being used (that is "<module_name>.<function_name>").
-            //
-            //   eg. list.map(|)
-            //                ^ When the cursor is here we are going to show
-            //                  "list.map(List(a), with: fn(a) -> b) -> List(b)"
-            //                  as the help signature.
-            //
-            TypedExpr::ModuleSelect {
-                module_name,
-                module_alias,
-                label,
-                constructor,
-                ..
-            } => {
-                let field_map = match constructor {
-                    ModuleValueConstructor::Constant { .. } => None,
-                    ModuleValueConstructor::Record { field_map, .. } => field_map.into(),
-                    ModuleValueConstructor::Fn { name, .. } => compiler
-                        .get_module_interface(module_name)?
-                        .get_public_value(name)?
-                        .field_map(),
-                };
-                let name = format!("{module_alias}.{label}").into();
-                signature_help(name, fun, args, field_map)
-            }
+    match fun.as_ref() {
+        // If the thing being called is a local variable then we want to
+        // use it's name as the function name to be used in the signature
+        // help.
+        TypedExpr::Var {
+            constructor, name, ..
+        } => signature_help(name.clone(), fun, args, constructor.field_map()),
 
-            // In all other cases we can't figure out a good name to show in the
-            // signature help so we use an anonymous `fn` as the name to be
-            // shown.
-            //
-            //     eg. fn(a){a}(|)
-            //                  ^ When the cursor is here we are going to show
-            //                    "fn(a: a) -> a" as the help signature.
-            //
-            _ => signature_help("fn".into(), fun, args, None),
-        },
+        // If we're making a qualified call to another module's function
+        // then we want to show its type, documentation and the exact name
+        // being used (that is "<module_name>.<function_name>").
+        //
+        //   eg. list.map(|)
+        //                ^ When the cursor is here we are going to show
+        //                  "list.map(List(a), with: fn(a) -> b) -> List(b)"
+        //                  as the help signature.
+        //
+        TypedExpr::ModuleSelect {
+            module_name,
+            module_alias,
+            label,
+            constructor,
+            ..
+        } => {
+            let field_map = match constructor {
+                ModuleValueConstructor::Constant { .. } => None,
+                ModuleValueConstructor::Record { field_map, .. } => field_map.into(),
+                ModuleValueConstructor::Fn { name, .. } => compiler
+                    .get_module_interface(module_name)?
+                    .get_public_value(name)?
+                    .field_map(),
+            };
+            let name = format!("{module_alias}.{label}").into();
+            signature_help(name, fun, args, field_map)
+        }
 
-        _ => None,
+        // In all other cases we can't figure out a good name to show in the
+        // signature help so we use an anonymous `fn` as the name to be
+        // shown.
+        //
+        //     eg. fn(a){a}(|)
+        //                  ^ When the cursor is here we are going to show
+        //                    "fn(a: a) -> a" as the help signature.
+        //
+        _ => signature_help("fn".into(), fun, args, None),
     }
 }
 
@@ -109,7 +109,7 @@ fn signature_help(
         Some(field_map) => field_map
             .fields
             .iter()
-            .map(|(name, index)| (*index, name.clone()))
+            .map(|(name, index)| (*index, name))
             .collect(),
         None => HashMap::new(),
     };
@@ -142,7 +142,7 @@ fn signature_help(
 
 fn active_parameter_index(
     supplied_args: &[CallArg<TypedExpr>],
-    mut index_to_label: HashMap<u32, EcoString>,
+    mut index_to_label: HashMap<u32, &EcoString>,
 ) -> Option<u32> {
     let mut found_labelled_arg = false;
     let mut used_labels = HashSet::new();
@@ -208,7 +208,7 @@ fn print_signature_help(
     function_name: EcoString,
     args: Vec<Arc<Type>>,
     return_: Arc<Type>,
-    index_to_label: &HashMap<u32, EcoString>,
+    index_to_label: &HashMap<u32, &EcoString>,
 ) -> (String, Vec<ParameterInformation>) {
     let args_count = args.len();
     let mut signature = format!("{function_name}(");

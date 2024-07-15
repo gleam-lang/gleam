@@ -1,5 +1,4 @@
 use super::*;
-use hover::find_position_of;
 use lsp_types::{
     ParameterInformation, ParameterLabel, SignatureHelp, SignatureHelpParams, SignatureInformation,
 };
