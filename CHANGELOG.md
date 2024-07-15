@@ -86,6 +86,9 @@
 - Fixed formatting of comments at the start of a case branch.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where a private type could be leaked from an internal module.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server
