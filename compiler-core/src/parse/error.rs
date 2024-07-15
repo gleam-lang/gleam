@@ -361,7 +361,7 @@ pub enum ParseErrorType {
         field: EcoString,
         field_type: Option<TypeAst>,
     },
-    CallInClauseGuard,                   // case x { _ if f() -> 1 }
+    CallInClauseGuard, // case x { _ if f() -> 1 }
 }
 
 impl LexicalError {

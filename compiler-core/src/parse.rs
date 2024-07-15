@@ -1445,6 +1445,7 @@ where
 
             return parse_error(
                 ParseErrorType::UnexpectedToken {
+                    token: Token::LeftParen,
                     expected: vec![Token::RArrow.to_string().into()],
                     hint: None,
                 },
