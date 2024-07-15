@@ -68,6 +68,11 @@
   being attempted.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- The language server will now insert a blank line before the first statement
+  when inserting a new import and there are no other imports at the top of the
+  module.
+  ([Zhomart Mukhamejanov](https://github.com/Zhomart))
+
 ### Bug Fixes
 
 - Functions, types and constructors named `module_info` are now escaped
