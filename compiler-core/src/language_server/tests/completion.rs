@@ -216,7 +216,9 @@ fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
     let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
 
     assert_debug_snapshot!(completion_with_prefix(
-        TestProject::for_source(code).add_module("dep", dep).add_module("dep2", ""),
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", ""),
         prefix
     ));
 }
@@ -228,7 +230,9 @@ fn importable_does_not_add_extra_new_line_if_imports_exist() {
     let code = "";
 
     assert_debug_snapshot!(completion_with_prefix(
-        TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("foo", ""),
         prefix
     ));
 }
@@ -240,7 +244,9 @@ fn importable_does_not_add_extra_new_line_if_newline_exists() {
     let code = "";
 
     assert_debug_snapshot!(completion_with_prefix(
-        TestProject::for_source(code).add_module("dep", dep).add_module("foo", ""),
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("foo", ""),
         prefix
     ));
 }
