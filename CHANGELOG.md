@@ -60,6 +60,9 @@
   call arguments won't stop the rest of the call from being analysed.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- The error message presented when a function is called in a guard has been improved.
+  ([Thomas](https://github.com/DeviousStoat))
+
 ### Formatter
 
 ### Language Server
