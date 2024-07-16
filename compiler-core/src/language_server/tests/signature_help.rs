@@ -336,3 +336,33 @@ pub fn main() {
         find_position_of("wibble(c: \"c\",)").under_last_char()
     );
 }
+
+#[test]
+pub fn help_for_piped_imported_function_starts_from_second_argument() {
+    let code = r#"
+import example
+pub fn main() {
+    1 |> example.example_fn()
+}
+    "#;
+
+    assert_signature_help!(
+        TestProject::for_source(code)
+            .add_module("example", "pub fn example_fn(a: Int, b: String) { Nil }"),
+        find_position_of("example_fn()").under_last_char()
+    );
+}
+
+#[test]
+pub fn help_for_piped_function_starts_from_second_argument() {
+    assert_signature_help!(
+        r#"
+pub fn wibble(a a: Int, b b: Int, c c: String) { 1.0 }
+
+pub fn main() {
+    1 |> wibble()
+}
+    "#,
+        find_position_of("wibble()").under_last_char()
+    );
+}
