@@ -8,6 +8,9 @@
   platform for the generated documentation.
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- `gleam deps` now supports `why` operation that takes a package name input, finds it in the deps tree, and then print all the requirements for it from the other packages
+  ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
 ### Compiler
 
 - The warning for the deprecated `[..]` pattern has been improved.

@@ -336,6 +336,13 @@ enum Dependencies {
 
     /// Update dependency packages to their latest versions
     Update,
+
+    /// Find out version requirements
+    Why {
+        /// The name of the package
+        #[arg(required = true)]
+        package: String,
+    },
 }
 
 #[derive(Subcommand, Debug)]
@@ -460,6 +467,8 @@ fn main() {
         Command::Deps(Dependencies::Download) => download_dependencies(),
 
         Command::Deps(Dependencies::Update) => dependencies::update(),
+
+        Command::Deps(Dependencies::Why { package }) => dependencies::why(package),
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 

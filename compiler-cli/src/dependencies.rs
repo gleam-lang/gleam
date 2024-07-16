@@ -32,28 +32,39 @@ use crate::{
 };
 
 pub fn list() -> Result<()> {
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let project = fs::get_project_root(fs::get_current_directory()?)?;
-    let paths = ProjectPaths::new(project);
-    let config = crate::config::root_config()?;
-    let (_, manifest) = get_manifest(
-        &paths,
-        runtime.handle().clone(),
-        Mode::Dev,
-        &config,
-        &cli::Reporter::new(),
-        UseManifest::Yes,
-    )?;
+    let (_, manifest) = load_manifest()?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
-fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
+pub fn why(package: String) -> Result<()> {
+    let (_, manifest) = load_manifest()?;
+    list_manifest_package_dependencies(std::io::stdout(), manifest, package)
+}
+
+pub fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
     manifest
         .packages
         .into_iter()
         .try_for_each(|package| writeln!(buffer, "{} {}", package.name, package.version))
         .map_err(|e| Error::StandardIo {
             action: StandardIoAction::Write,
+            err: Some(e.kind()),
+        })
+}
+
+fn list_manifest_package_dependencies<W: std::io::Write>(mut buffer: W, manifest: Manifest, source_package: String) -> Result<()> {
+    manifest
+        .packages
+        .into_iter()
+        .try_for_each(|package| package.requirements.into_iter().try_for_each(|req| {
+            if source_package == req {
+                writeln!(buffer, "{} {}", package.name, package.version)
+            } else {
+                write!(buffer, "")
+            }
+        }))
+        .map_err(|e| Error::StandardIo {
+            action:StandardIoAction::Write,
             err: Some(e.kind()),
         })
 }
@@ -102,6 +113,75 @@ fn list_manifest_format() {
         r#"root 1.0.0
 aaa 0.4.2
 zzz 0.4.0
+"#
+    )
+}
+
+#[test]
+fn list_manifest_dependencies_format() {
+    let mut buffer = vec![];
+    let source_package = String::from("gleam_stdlib");
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "root".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: ["gleam".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "aaa".into(),
+                version: Version::new(0, 4, 2),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec!["zzz".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "zzz".into(),
+                version: Version::new(0, 4, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_erlang".into(),
+                version: Version::new(0, 24, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "gleeunit".into(),
+                version: Version::new(1, 0, 2),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into(), "cowlib".into(), "cowboy".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    list_manifest_package_dependencies(&mut buffer, manifest, source_package).unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"aaa 0.4.2
+gleam_erlang 0.24.0
+gleeunit 1.0.2
 "#
     )
 }
@@ -640,6 +720,21 @@ fn get_manifest<Telem: Telemetry>(
         let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry)?;
         Ok((true, manifest))
     }
+}
+
+fn load_manifest() -> Result<(bool, Manifest)> {
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let project = fs::get_project_root(fs::get_current_directory()?)?;
+    let paths = ProjectPaths::new(project);
+    let config = crate::config::root_config()?;
+    get_manifest(
+        &paths,
+        runtime.handle().clone(),
+        Mode::Dev,
+        &config,
+        &cli::Reporter::new(),
+        UseManifest::Yes,
+    )
 }
 
 fn is_same_requirements(
