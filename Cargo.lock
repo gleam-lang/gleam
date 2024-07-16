@@ -813,6 +813,7 @@ dependencies = [
  "http",
  "ignore",
  "im",
+ "insta",
  "itertools",
  "lsp-server",
  "lsp-types",

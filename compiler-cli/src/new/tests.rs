@@ -53,8 +53,7 @@ fn new_with_default_template() {
 
     assert!(path.join("gleam.toml").exists());
 
-    let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
-    assert!(!toml.contains("target = \"javascript\""));
+    insta::assert_snapshot!(crate::fs::read(path.join("gleam.toml")).unwrap());
 }
 
 #[test]
@@ -77,8 +76,7 @@ fn new_with_javascript_template() {
 
     assert!(path.join("gleam.toml").exists());
 
-    let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
-    assert!(toml.contains("target = \"javascript\""));
+    insta::assert_snapshot!(crate::fs::read(path.join("gleam.toml")).unwrap());
 }
 
 #[test]
