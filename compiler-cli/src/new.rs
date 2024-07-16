@@ -81,8 +81,8 @@ impl FileToCreate {
         let skip_github = creator.options.skip_github;
         let gleam_version = creator.gleam_version;
         let target = match creator.options.template {
-            Template::JavaScript => r#"target = "javascript"\n"#,
-            Template::Lib | Template::Erlang => r#""#,
+            Template::JavaScript => "target = \"javascript\"\n",
+            Template::Lib | Template::Erlang => "",
         };
 
         match self {
