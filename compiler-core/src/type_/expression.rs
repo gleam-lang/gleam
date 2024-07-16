@@ -2924,11 +2924,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             (args, return_type)
                         }
                         MatchFunTypeError::NotFn { .. } => {
-                            return (
-                                self.error_expr_with_rigid_names(location, converted_error),
-                                vec![],
-                                self.new_unbound_var(),
-                            );
+                            self.error_with_rigid_names(converted_error);
+                            (vec![], self.new_unbound_var())
                         }
                     }
                 }

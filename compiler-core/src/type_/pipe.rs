@@ -98,14 +98,13 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     ..
                 } => {
                     let fun = self.expr_typer.infer(*fun)?;
-                    match fun.type_().fn_arity() {
-                        // Rewrite as right(left, ..args)
-                        Some(arity) if arity == arguments.len() + 1 => {
-                            self.infer_insert_pipe(fun, arguments, location)?
-                        }
-
+                    match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
-                        _ => self.infer_apply_to_call_pipe(fun, arguments, location)?,
+                        Some((_args, return_)) if return_.fn_arity() == Some(1) => {
+                            self.infer_apply_to_call_pipe(fun, arguments, location)
+                        }
+                        // Rewrite as right(left, ..args)
+                        _ => self.infer_insert_pipe(fun, arguments, location),
                     }
                 }
 
@@ -211,7 +210,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         function: TypedExpr,
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let (function, args, typ) = self.expr_typer.do_infer_call_with_known_fun(
             function,
             args,
@@ -236,12 +235,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location,
             CallKind::Function,
         );
-        Ok(TypedExpr::Call {
+        TypedExpr::Call {
             location,
             typ,
             args,
             fun: Box::new(function),
-        })
+        }
     }
 
     /// Attempt to infer a |> b(c) as b(a, c)
@@ -250,7 +249,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         function: TypedExpr,
         mut arguments: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         arguments.insert(0, self.untyped_left_hand_value_variable_call_argument());
         // TODO: use `.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)`
         // This will require the typing of the arguments to be lifted up out of
@@ -263,12 +262,12 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             location,
             CallKind::Function,
         );
-        Ok(TypedExpr::Call {
+        TypedExpr::Call {
             location,
             typ,
             args,
             fun: Box::new(fun),
-        })
+        }
     }
 
     /// Attempt to infer a |> b as b(a)

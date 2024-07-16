@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\nimport example\npub fn main() {\n    1 |> example.example_fn()\n}\n    "
+---
+import example
+pub fn main() {
+    1 |> example.example_fn()
+                            ↑
+}
+    
+
+
+----- Signature help -----
+example.example_fn(Int, String) -> Nil
+                        ▔▔▔▔▔▔
+
+No documentation
