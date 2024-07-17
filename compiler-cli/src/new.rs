@@ -32,6 +32,7 @@ pub enum Template {
     // See: https://github.com/Peternator7/strum/issues/244
     #[strum(disabled)]
     #[clap(skip)]
+    #[deprecated(note = "Lib is not explicit about the target. Users should instead use Erlang")]
     Lib,
     #[strum(serialize = "erlang", serialize = "erl")]
     #[serde(rename = "erlang", alias = "erl")]
