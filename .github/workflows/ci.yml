@@ -63,3 +63,22 @@ jobs:
 
       - name: Check formatting
         run: cargo fmt --all -- --check
+
+  lint-build:
+    name: lint-build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          toolchain: stable
+          components: clippy
+
+      - name: Run linter
+        run: cargo clippy --workspace
+
+      - run: cargo build
