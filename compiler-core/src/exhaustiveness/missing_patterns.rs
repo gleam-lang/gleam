@@ -1,5 +1,5 @@
 use super::{Constructor, Decision, Match, Variable};
-use crate::type_::environment::Environment;
+use crate::type_::{environment::Environment, PRELUDE_MODULE_NAME};
 use ecow::EcoString;
 use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
@@ -21,10 +21,11 @@ pub fn missing_patterns(matches: &Match, environment: &Environment<'_>) -> Vec<E
 /// Information about a single constructor/value (aka term) being tested, used
 /// to build a list of names of missing patterns.
 #[derive(Debug)]
-enum Term {
+pub enum Term {
     Variant {
         variable: Variable,
         name: EcoString,
+        module: EcoString,
         arguments: Vec<Variable>,
     },
     Infinite {
@@ -41,7 +42,7 @@ enum Term {
 }
 
 impl Term {
-    fn variable(&self) -> &Variable {
+    pub fn variable(&self) -> &Variable {
         match self {
             Term::Variant { variable, .. } => variable,
             Term::Infinite { variable } => variable,
@@ -178,6 +179,7 @@ fn add_missing_patterns(
                         terms.push(Term::Variant {
                             variable: variable.clone(),
                             name: "#".into(),
+                            module: PRELUDE_MODULE_NAME.into(),
                             arguments,
                         });
                     }
@@ -196,6 +198,7 @@ fn add_missing_patterns(
                         terms.push(Term::Variant {
                             variable: variable.clone(),
                             name,
+                            module,
                             arguments: case.arguments.clone(),
                         });
                     }
