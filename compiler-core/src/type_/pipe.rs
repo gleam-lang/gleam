@@ -2,7 +2,8 @@ use self::expression::CallKind;
 
 use super::*;
 use crate::ast::{
-    Assignment, AssignmentKind, Statement, TypedAssignment, UntypedExpr, PIPE_VARIABLE,
+    Assignment, AssignmentKind, ImplicitCallArgOrigin, Statement, TypedAssignment, UntypedExpr,
+    PIPE_VARIABLE,
 };
 use vec1::Vec1;
 
@@ -131,7 +132,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             value: self.typed_left_hand_value_variable(),
             // This argument is given implicitly by the pipe, not explicitly by
             // the programmer.
-            implicit: true,
+            implicit: Some(ImplicitCallArgOrigin::Pipe),
         }
     }
 
@@ -144,7 +145,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             value: self.untyped_left_hand_value_variable(),
             // This argument is given implicitly by the pipe, not explicitly by
             // the programmer.
-            implicit: true,
+            implicit: Some(ImplicitCallArgOrigin::Pipe),
         }
     }
 

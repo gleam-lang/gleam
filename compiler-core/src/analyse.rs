@@ -514,10 +514,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Err(error) => {
                 self.errors.push(error);
                 let type_ = preregistered_type.clone();
-                let body = Vec1::new(Statement::Expression(TypedExpr::Todo {
-                    type_: prereg_return_type.clone(),
-                    location: body_location,
-                    message: None,
+                let body = Vec1::new(Statement::Expression(TypedExpr::Invalid {
+                    typ: prereg_return_type.clone(),
+                    location: SrcSpan {
+                        start: body_location.end,
+                        end: body_location.end,
+                    },
                 }));
                 let implementations = Implementations::supporting_all();
                 (type_, body, implementations)

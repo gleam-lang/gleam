@@ -356,7 +356,7 @@ where
                         // We only want to display the arguments that were ignored using `..`.
                         // Any argument ignored that way is marked as implicit, so if it is
                         // not implicit we just ignore it.
-                        if !argument.implicit {
+                        if !argument.is_implicit() {
                             continue;
                         }
 

@@ -536,19 +536,19 @@ fn field_map_reorder_test() {
         fields: HashMap::new(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -557,19 +557,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -583,19 +583,19 @@ fn field_map_reorder_test() {
         fields: [("last".into(), 2)].into(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: Some("last".into()),
                 value: int("3"),
@@ -604,19 +604,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: Some("last".into()),
                 value: int("3"),

@@ -78,11 +78,11 @@ macro_rules! assert_signature_help {
         let pretty_hover = hover::show_hover(
             src,
             lsp_types::Range {
-                start: lsp_types::Position {
+                start: Position {
                     character: 1,
                     line: 1,
                 },
-                end: lsp_types::Position {
+                end: Position {
                     character: 0,
                     line: 0,
                 },
@@ -364,5 +364,47 @@ pub fn main() {
 }
     "#,
         find_position_of("wibble()").under_last_char()
+    );
+}
+
+#[test]
+pub fn help_for_use_function_call_starts_from_first_argument() {
+    assert_signature_help!(
+        r#"
+pub fn wibble(a: Int, b: Int, c: fn() -> Int) { 1.0 }
+
+pub fn main() {
+    use <- wibble()
+}
+    "#,
+        find_position_of("wibble()").under_last_char()
+    );
+}
+
+#[test]
+pub fn help_for_use_function_call_uses_precise_types_when_missing_some_arguments() {
+    assert_signature_help!(
+        r#"
+pub fn guard(a: Bool, b: a, c: fn() -> a) { 1.0 }
+
+pub fn main() {
+    use <- guard(True,)
+}
+    "#,
+        find_position_of("guard(True,)").under_last_char()
+    );
+}
+
+#[test]
+pub fn help_for_use_function_shows_next_unlabelled_argument() {
+    assert_signature_help!(
+        r#"
+pub fn guard(a a: Bool, b b: a, c c: fn() -> a) { 1.0 }
+
+pub fn main() {
+    use <- guard(b: 1,)
+}
+    "#,
+        find_position_of("guard(b: 1,)").under_last_char()
     );
 }

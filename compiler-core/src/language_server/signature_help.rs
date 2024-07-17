@@ -10,7 +10,7 @@ use lsp_types::{
 };
 
 use crate::{
-    ast::{CallArg, TypedExpr},
+    ast::{CallArg, ImplicitCallArgOrigin, TypedExpr},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     type_::{pretty::Printer, FieldMap, ModuleValueConstructor, Type},
 };
@@ -100,8 +100,8 @@ fn signature_help(
     let (args, return_) = fun.type_().fn_types()?;
 
     // If the function has no arguments, we don't want to show any help.
-    let args_len = args.len() as u32;
-    if args_len == 0 {
+    let arity = args.len() as u32;
+    if arity == 0 {
         return None;
     }
 
@@ -118,10 +118,10 @@ fn signature_help(
     let (label, parameters) =
         print_signature_help(printer, fun_name, args, return_, &index_to_label);
 
-    let active_parameter = active_parameter_index(supplied_args, index_to_label)
+    let active_parameter = active_parameter_index(arity, supplied_args, index_to_label)
         // If we don't want to highlight any arg in the suggestion we have to
         // explicitly provide an out of bound index.
-        .or(Some(args_len));
+        .or(Some(arity));
 
     Some(SignatureHelp {
         signatures: vec![SignatureInformation {
@@ -141,21 +141,34 @@ fn signature_help(
 }
 
 fn active_parameter_index(
+    arity: u32,
     supplied_args: &[CallArg<TypedExpr>],
     mut index_to_label: HashMap<u32, &EcoString>,
 ) -> Option<u32> {
+    let mut is_use_call = false;
     let mut found_labelled_arg = false;
     let mut used_labels = HashSet::new();
 
     let mut supplied_unlabelled_args = 0;
-    let unlabelled_args = index_to_label.keys().min().copied().unwrap_or(0);
+    let unlabelled_args = arity - index_to_label.len() as u32;
 
     for (i, arg) in supplied_args.iter().enumerate() {
         // If there's an unlabelled argument after a labelled one, we can't
         // figure out what to suggest since arguments were passed in a wrong
         // order.
-        if found_labelled_arg && arg.label.is_none() {
+        if found_labelled_arg && arg.label.is_none() && !arg.is_implicit() {
             return None;
+        }
+
+        // Once we reach to an implicit use argument (be it the callback or the
+        // missing implicitly inserted ones) we can break since those must be
+        // the last arguments of the function and are not explicitly supplied by
+        // the programmer.
+        if let Some(ImplicitCallArgOrigin::Use | ImplicitCallArgOrigin::IncorrectArityUse) =
+            arg.implicit
+        {
+            is_use_call = true;
+            break;
         }
 
         match &arg.label {
@@ -174,7 +187,7 @@ fn active_parameter_index(
         }
     }
 
-    if supplied_unlabelled_args < unlabelled_args {
+    let active_index = if supplied_unlabelled_args < unlabelled_args {
         if found_labelled_arg {
             // If I have supplied some labelled args but I haven't supplied all
             // unlabelled args before a labelled one then we can't safely
@@ -192,9 +205,19 @@ fn active_parameter_index(
         index_to_label
             .into_iter()
             .filter(|(_index, label)| !used_labels.contains(label))
-            .min_by_key(|(index, _label)| *index)
             .map(|(index, _label)| index)
+            .min()
             .or(Some(supplied_args.len() as u32))
+    };
+
+    // If we're showing hints for a use call and we end up deciding that the
+    // only index we can suggest is the one of the use callback then we do not
+    // highlight it or it would lead people into believing they can manually
+    // pass that argument in.
+    if is_use_call && active_index == Some(arity - 1) {
+        None
+    } else {
+        active_index
     }
 }
 

@@ -1176,12 +1176,49 @@ pub struct CallArg<A> {
     // determine if we should error if an argument without a label is given or
     // not, which is not permitted if the argument is given explicitly by the
     // programmer rather than implicitly by Gleam's syntactic sugar.
-    pub implicit: bool,
+    pub implicit: Option<ImplicitCallArgOrigin>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ImplicitCallArgOrigin {
+    Use,
+    Pipe,
+    PatternFieldSpread,
+    IncorrectArityUse,
+}
+
+impl<A> CallArg<A> {
+    #[must_use]
+    pub fn is_implicit(&self) -> bool {
+        self.implicit.is_some()
+    }
 }
 
 impl CallArg<TypedExpr> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value.find_node(byte_index)
+        match (self.implicit, &self.value) {
+            // If a call argument is the implicit use callback then we don't
+            // want to look at its arguments and body but we don't want to
+            // return the whole anonymous function if anything else doesn't
+            // match.
+            //
+            // In addition, if the callback is invalid because it couldn't be
+            // typed, we don't want to return it as it would make it hard for
+            // the LSP to give any suggestions on the use function being typed.
+            //
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Invalid { .. }) => None,
+            // So the code below is exactly the same as
+            // `TypedExpr::Fn{}.find_node()` except we do not return self as a
+            // fallback.
+            //
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { args, body, .. }) => args
+                .iter()
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
+            // In all other cases we're happy with the default behaviour.
+            //
+            _ => self.value.find_node(byte_index),
+        }
     }
 }
 
