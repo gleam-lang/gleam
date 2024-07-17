@@ -590,8 +590,10 @@ fn rename_invalid_case_variable_discard() {
     ));
 }
 
+#[test]
 fn test_convert_assert_result_to_case() {
-    let code = "
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
 pub fn main() {
   let assert Ok(value) = Ok(1)
 }
