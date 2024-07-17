@@ -49,6 +49,32 @@ pub struct TypeNames {
     ///
     local_types: HashMap<(EcoString, EcoString), EcoString>,
 
+    /// Values which are imported in the current module in an
+    /// unqualified fashion.
+    ///
+    /// key:   (Defining module name, type name)
+    /// value: Alias name
+    ///
+    /// # Example 1
+    ///
+    /// ```gleam
+    /// import wibble.{Wobble}
+    /// ```
+    /// would result in
+    /// - key:   `("wibble", "Wobble")`
+    /// - value: `"Wobble"`
+    ///
+    /// # Example 2
+    ///
+    /// ```gleam
+    /// import wibble.{Wobble as Woo}
+    /// ```
+    /// would result in
+    /// - key:   `("wibble", "Wobble")`
+    /// - value: `"Woo"`
+    ///
+    local_values: HashMap<(EcoString, EcoString), EcoString>,
+
     /// Mapping of imported modules to their locally used named
     ///
     /// key:   The name of the module
@@ -101,6 +127,7 @@ impl TypeNames {
             uid: Default::default(),
             current_module,
             local_types: Default::default(),
+            local_values: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
             type_variable_names: Default::default(),
@@ -117,6 +144,18 @@ impl TypeNames {
         _ = self
             .local_types
             .insert((module_name, type_name), local_alias);
+    }
+
+    /// Record a named value in this module.
+    pub fn named_value_in_scope(
+        &mut self,
+        module_name: EcoString,
+        value_name: EcoString,
+        local_alias: EcoString,
+    ) {
+        _ = self
+            .local_values
+            .insert((module_name, value_name), local_alias);
     }
 
     /// Record a type variable in this module.
@@ -140,6 +179,27 @@ impl TypeNames {
 
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
+            return NamedTypeNames::Unqualified(name.as_str());
+        }
+
+        // This type is from a module that has been imported
+        if let Some(module) = self.imported_modules.get(module) {
+            return NamedTypeNames::Qualified(module, name.as_str());
+        };
+
+        return NamedTypeNames::Unimported(name.as_str());
+    }
+
+    /// Get the name and optional module qualifier for a named type.
+    pub fn named_value<'a>(
+        &'a self,
+        module: &'a EcoString,
+        name: &'a EcoString,
+    ) -> NamedTypeNames<'a> {
+        let key: (EcoString, EcoString) = (module.clone(), name.clone());
+
+        // There is a local name for this type, use that.
+        if let Some(name) = self.local_values.get(&key) {
             return NamedTypeNames::Unqualified(name.as_str());
         }
 

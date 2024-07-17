@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_no_warnings, assert_warning};
+use crate::{assert_module_error, assert_no_warnings, assert_warning, assert_with_module_error};
 
 #[test]
 fn whatever() {
@@ -984,5 +984,25 @@ pub fn main(wibble) {
     }
 }
 "
+    );
+}
+
+#[test]
+fn case_error_prints_module_names() {
+    // This test verifies that the error reporting for inexhaustive case
+    // expressions prints the module names for types instead of just
+    // the type names.
+    assert_with_module_error!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble
+pub type Things { Thing1 Thing2(Int) }
+pub fn main() {
+    let wobble_thing = #(wibble.Wobble, Thing2(23))
+    case wobble_thing {
+        #(wibble.Wibble, Thing1) -> Nil
+    }
+}
+",
     );
 }
