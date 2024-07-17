@@ -282,6 +282,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/honsq90">Shuqian Hon</a> -
   <a href="https://github.com/simonewebdesign">Simone Vittori</a> -
   <a href="https://github.com/Qard">Stephen Belanger</a> -
+  <a href="https://github.com/Strandinator">Strandinator</a> -
   <a href="https://github.com/syhner">syhner</a> -
   <a href="https://github.com/finalclass">Szymon Wygnański</a> -
   <a href="https://github.com/slafs">Sławomir Ehlert</a> -
