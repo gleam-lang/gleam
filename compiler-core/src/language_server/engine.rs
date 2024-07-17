@@ -272,7 +272,6 @@ where
 
             code_action_unused_imports(module, &params, &mut actions);
             code_action_fix_names(module, &params, &mut actions);
-            actions.extend(AssertResultToCase::new(module, &params).code_actions());
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
 
