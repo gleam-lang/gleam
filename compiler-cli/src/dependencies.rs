@@ -630,7 +630,7 @@ fn get_manifest<Telem: Telemetry>(
     // to date so we can return it unmodified.
     if is_same_requirements(
         &manifest.requirements,
-        &config.all_dependencies()?,
+        &config.all_drect_dependencies()?,
         paths.root(),
     )? {
         tracing::debug!("manifest_up_to_date");
@@ -843,7 +843,7 @@ fn resolve_versions<Telem: Telemetry>(
 
     let manifest = Manifest {
         packages: manifest_packages,
-        requirements: config.all_dependencies()?,
+        requirements: config.all_drect_dependencies()?,
     };
 
     Ok(manifest)
