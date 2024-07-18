@@ -98,6 +98,24 @@ macro_rules! assert_signature_help {
     };
 }
 
+#[macro_export]
+macro_rules! assert_no_signature_help {
+    ($code:literal, $position:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_no_signature_help!(project, $position);
+    };
+
+    ($project:expr, $position:expr $(,)?) => {
+        let src = $project.src;
+        let position = $position.find_position(src);
+        let result = signature_help($project, position);
+        match result {
+            Some(_) => panic!("Expected no signature help"),
+            None => (),
+        }
+    };
+}
+
 #[test]
 pub fn help_for_calling_local_variable_first_arg() {
     assert_signature_help!(
@@ -406,5 +424,17 @@ pub fn main() {
 }
     "#,
         find_position_of("guard(b: 1,)").under_last_char()
+    );
+}
+
+#[test]
+pub fn help_does_not_come_up_for_function_that_does_not_exist() {
+    assert_no_signature_help!(
+        r#"
+pub fn main() {
+    use <- to_be_or_not_to_be()
+}
+    "#,
+        find_position_of("to_be_or_not_to_be()").under_last_char()
     );
 }
