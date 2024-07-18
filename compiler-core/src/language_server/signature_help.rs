@@ -66,6 +66,12 @@ where
             signature_help(name, fun, args, field_map)
         }
 
+        // If the function bein called is an invalid node we don't want to
+        // provide any hint, otherwise one might be under the impression that
+        // that function actually exists somewhere.
+        //
+        TypedExpr::Invalid { .. } => None,
+
         // In all other cases we can't figure out a good name to show in the
         // signature help so we use an anonymous `fn` as the name to be
         // shown.
