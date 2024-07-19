@@ -13,7 +13,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator, VariantNames};
 #[cfg(test)]
 mod tests;
 
-use crate::{fs::get_current_directory, NewOptions};
+use crate::{cli, fs::get_current_directory, NewOptions};
 
 const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.34.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
@@ -203,7 +203,35 @@ impl Creator {
         .trim()
         .to_string();
 
-        validate_name(&project_name)?;
+        let project_name = match validate_name(&project_name) {
+            Ok(()) => project_name,
+            Err(error) => match error.clone() {
+                Error::InvalidProjectName { name: _, reason: _ } => {
+                    println!("{}", error.pretty_string());
+                    let allowed_characters_regex = regex::Regex::new("[^a-z0-9_]")
+                        .expect("new name regex could not be compiled");
+                    let valid_format_regex = regex::Regex::new("^[a-z][a-z0-9_]*$")
+                        .expect("new name regex could not be compiled");
+                    let sanitized_name = allowed_characters_regex.replace_all(&project_name, "_");
+                    let replacement_name = if valid_format_regex.is_match(&sanitized_name) {
+                        format!("my_{sanitized_name}")
+                    } else {
+                        return Err(error);
+                    };
+                    validate_name(&replacement_name)?;
+
+                    if cfg!(test) {
+                        replacement_name
+                    } else {
+                        match cli::confirm(&format!("Would you like to create a project named {replacement_name} in a directory named {project_name}?")) {
+                        Ok(true) => replacement_name,
+                        Ok(false) | Err(_) => return Err(error)
+                    }
+                    }
+                }
+                _ => return Err(error),
+            },
+        };
 
         let root = get_current_directory()?.join(&options.project_root);
         let src = root.join("src");
