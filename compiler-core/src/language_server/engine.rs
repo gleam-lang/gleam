@@ -617,11 +617,8 @@ fn code_action_unused_values(
     for unused in unused {
         let SrcSpan { start, end } = *unused;
 
-        // If removing an unused alias or at the beginning of the file, don't backspace
-        // Otherwise, adjust the end position by 1 to ensure the entire line is deleted with the import.
-
         let hover_range = src_span_to_lsp_range(SrcSpan::new(start, end), &line_numbers);
-        // Keep track of whether any unused import has is where the cursor is
+
         if !overlaps(params.range, hover_range) {
             continue;
         }
