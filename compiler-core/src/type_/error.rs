@@ -27,6 +27,13 @@ impl Problems {
         Default::default()
     }
 
+    /// Sort the warnings and errors by their location.
+    ///
+    pub fn sort(&mut self) {
+        self.errors.sort_by_key(|e| e.start_location());
+        self.warnings.sort_by_key(|w| w.location().start);
+    }
+
     /// Register an error.
     ///
     pub fn error(&mut self, error: Error) {
@@ -855,6 +862,39 @@ impl Warning {
             path,
             src,
             warning: self,
+        }
+    }
+
+    fn location(&self) -> SrcSpan {
+        match self {
+            Warning::Todo { location, .. }
+            | Warning::ImplicitlyDiscardedResult { location, .. }
+            | Warning::UnusedLiteral { location, .. }
+            | Warning::UnusedValue { location, .. }
+            | Warning::NoFieldsRecordUpdate { location, .. }
+            | Warning::AllFieldsRecordUpdate { location, .. }
+            | Warning::UnusedType { location, .. }
+            | Warning::UnusedConstructor { location, .. }
+            | Warning::UnusedImportedValue { location, .. }
+            | Warning::UnusedImportedModule { location, .. }
+            | Warning::UnusedImportedModuleAlias { location, .. }
+            | Warning::UnusedPrivateModuleConstant { location, .. }
+            | Warning::UnusedPrivateFunction { location, .. }
+            | Warning::UnusedVariable { location, .. }
+            | Warning::UnnecessaryDoubleIntNegation { location, .. }
+            | Warning::UnnecessaryDoubleBoolNegation { location, .. }
+            | Warning::InefficientEmptyListCheck { location, .. }
+            | Warning::TransitiveDependencyImported { location, .. }
+            | Warning::DeprecatedItem { location, .. }
+            | Warning::UnreachableCaseClause { location, .. }
+            | Warning::CaseMatchOnLiteralCollection { location, .. }
+            | Warning::CaseMatchOnLiteralValue { location, .. }
+            | Warning::OpaqueExternalType { location, .. }
+            | Warning::InternalTypeLeak { location, .. }
+            | Warning::RedundantAssertAssignment { location, .. }
+            | Warning::TodoOrPanicUsedAsFunction { location, .. }
+            | Warning::UnreachableCodeAfterPanic { location, .. }
+            | Warning::RedundantPipeFunctionCapture { location, .. } => *location,
         }
     }
 }

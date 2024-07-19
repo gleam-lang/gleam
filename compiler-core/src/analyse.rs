@@ -302,10 +302,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .package_config
             .is_internal_module(self.module_name.as_str());
 
-        // TODO: handle warnings
-        let mut errors = self.problems.take_errors();
-        // Sort the errors by location so that they are easier to debug.
-        errors.sort_by_key(|e| e.start_location());
+        // We sort warnings and errors to ensure they are emitted in a
+        // deterministic order, making them easier to test and debug, and to
+        // make the output predictable.
+        self.problems.sort();
+
+        for warning in self.problems.take_warnings() {
+            self.warnings.emit(warning);
+        }
 
         let module = ast::Module {
             documentation,
@@ -328,7 +332,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             },
         };
 
-        match Vec1::try_from_vec(errors) {
+        match Vec1::try_from_vec(self.problems.take_errors()) {
             Err(_) => Outcome::Ok(module),
             Ok(errors) => Outcome::PartialFailure(module, errors),
         }
