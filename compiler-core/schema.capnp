@@ -31,7 +31,6 @@ struct Module {
   lineNumbers @8 :LineNumbers;
   srcPath @9 :Text;
   isInternal @10 :Bool;
-  unusedValues @11 :List(SrcSpan);
 }
 
 struct TypesVariantConstructors {
@@ -195,6 +194,11 @@ struct Constant {
       name @11 :Text;
       typ @12 :Type;
       constructor @13 :ValueConstructor;
+    }
+
+    stringConcatenation :group {
+      left @14 :Constant;
+      right @15 :Constant;
     }
   }
 }
