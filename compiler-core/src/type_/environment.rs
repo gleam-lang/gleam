@@ -55,6 +55,8 @@ pub struct Environment<'a> {
     /// NOTE: The bool in the tuple here tracks if the entity has been used
     pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
 
+    pub unused_values: Vec<SrcSpan>,
+
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
     pub target_support: TargetSupport,
@@ -97,6 +99,7 @@ impl<'a> Environment<'a> {
             current_module,
             warnings,
             entity_usages: vec![HashMap::new()],
+            unused_values: Default::default(),
             target_support,
             todo_encountered: false,
         }
