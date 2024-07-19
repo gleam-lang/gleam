@@ -507,6 +507,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .emit(Warning::ImplicitlyDiscardedResult {
                     location: discarded.location(),
                 });
+            self.environment.unused_values.push(discarded.location())
         } else if discarded.is_pure_value_constructor() {
             self.environment.warnings.emit(Warning::UnusedValue {
                 location: discarded.location(),

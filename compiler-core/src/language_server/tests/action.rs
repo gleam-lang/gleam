@@ -52,6 +52,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
+const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -89,13 +90,14 @@ fn apply_code_edit(
             panic!("Unknown url {}", change_url)
         }
         for edit in change {
-            let start =
-                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) - offset;
-            let end =
-                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) - offset;
+            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+                as i32
+                - offset;
+            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
+                - offset;
             let range = (start as usize)..(end as usize);
             offset += end - start;
-            offset -= edit.new_text.len() as u32;
+            offset -= edit.new_text.len() as i32;
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -290,6 +292,96 @@ pub fn main() {
 }
 "
     );
+}
+
+#[test]
+fn test_assign_unused_result() {
+    assert_code_action!(
+        2,
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    Ok(0)
+    Nil
+}
+"
+    );
+}
+
+#[test]
+fn test_assign_unused_result_in_block() {
+    assert_code_action!(
+        3,
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    {
+        Ok(0)
+        Nil
+    }
+    Nil
+}
+"
+    );
+}
+
+#[test]
+fn test_assign_unused_result_with_block() {
+    assert_code_action!(
+        2,
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    {
+        Ok(0)
+        Ok(0)
+    }
+    Nil
+}
+"
+    );
+}
+
+#[test]
+fn test_assign_unused_result_only_first_action() {
+    assert_code_action!(
+        2,
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    Ok(0)
+    Ok(0)
+    Nil
+}
+"
+    );
+}
+
+#[test]
+#[should_panic(expected = "No code action produced by the engine")]
+fn test_assign_unused_result_not_on_return_value() {
+    let code = "
+pub fn main() {
+    Ok(0)
+}
+";
+
+    let _ = apply_first_code_action_with_title(code, 2, ASSIGN_UNUSED_RESULT);
+}
+
+#[test]
+#[should_panic(expected = "No code action produced by the engine")]
+fn test_assign_unused_result_not_on_return_value_in_block() {
+    let code = "
+pub fn main() {
+    let _ = {
+        Ok(0)
+    }
+    Nil
+}
+";
+
+    let _ = apply_first_code_action_with_title(code, 3, ASSIGN_UNUSED_RESULT);
 }
 
 /* TODO: implement qualified unused location

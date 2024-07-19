@@ -263,6 +263,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_unused_values(module, &params, &mut actions);
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
@@ -596,6 +597,46 @@ pub fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
 // Returns true if a position is within a range
 fn within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
     position >= range.start && position < range.end
+}
+
+fn code_action_unused_values(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let unused = &module.ast.type_info.unused_values;
+
+    if unused.is_empty() {
+        return;
+    }
+
+    // Convert src spans to lsp range
+    let line_numbers = LineNumbers::new(&module.code);
+
+    for unused in unused {
+        let SrcSpan { start, end } = *unused;
+
+        // If removing an unused alias or at the beginning of the file, don't backspace
+        // Otherwise, adjust the end position by 1 to ensure the entire line is deleted with the import.
+
+        let hover_range = src_span_to_lsp_range(SrcSpan::new(start, end), &line_numbers);
+        // Keep track of whether any unused import has is where the cursor is
+        if !overlaps(params.range, hover_range) {
+            continue;
+        }
+
+        let edit = lsp_types::TextEdit {
+            range: src_span_to_lsp_range(SrcSpan::new(start, start), &line_numbers),
+            new_text: "let _ = ".into(),
+        };
+
+        CodeActionBuilder::new("Assign unused Result value to `_`")
+            .kind(lsp_types::CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(actions);
+    }
 }
 
 fn code_action_unused_imports(

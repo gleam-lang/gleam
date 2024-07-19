@@ -291,6 +291,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_values: values,
             todo_encountered: contains_todo,
             accessors,
+            unused_values,
             ..
         } = env;
 
@@ -315,6 +316,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 package: self.package_config.name.clone(),
                 is_internal,
                 unused_imports,
+                unused_values,
                 contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
