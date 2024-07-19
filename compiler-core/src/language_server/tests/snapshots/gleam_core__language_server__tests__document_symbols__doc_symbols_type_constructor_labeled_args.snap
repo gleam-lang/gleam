@@ -191,7 +191,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
                                 deprecated: None,
                                 range: Range {
                                     start: Position {
-                                        line: 10,
+                                        line: 9,
                                         character: 8,
                                     },
                                     end: Position {

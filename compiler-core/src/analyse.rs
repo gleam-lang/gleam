@@ -775,7 +775,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                         ast: argument.ast,
                                         location: argument.location,
                                         type_: t.clone(),
-                                        doc: None,
+                                        doc: argument.doc,
                                     }
                                 })
                                 .collect()
