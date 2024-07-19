@@ -267,7 +267,6 @@ fn compile_statement_sequence(
             "themodule".into(),
             Target::Erlang,
             &modules,
-            &TypeWarningEmitter::null(),
             TargetSupport::Enforced,
         ),
         FunctionDefinition {

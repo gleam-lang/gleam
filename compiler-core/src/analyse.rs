@@ -199,7 +199,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.module_name.clone(),
             self.target,
             self.importable_modules,
-            self.warnings,
             self.target_support,
         );
 
@@ -274,7 +273,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Generate warnings for unused items
-        let unused_imports = env.convert_unused_to_warnings();
+        let unused_imports = env.convert_unused_to_warnings(&mut self.problems);
 
         // Remove imported types and values to create the public interface
         // Private types and values are retained so they can be used in the language
@@ -394,7 +393,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.insert_module_value(name.clone(), variant);
 
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateConstant,
+                location,
+                &mut self.problems,
+            );
         }
 
         Definition::ModuleConstant(ModuleConstant {
@@ -485,11 +489,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .collect_vec();
 
         // Infer the type using the preregistered args + return types as a starting point
-        let result = environment.in_new_scope(|environment| {
+        let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
             let mut expr_typer = ExprTyper::new(
                 environment,
                 definition,
-                &mut self.problems,
+                problems,
                 &mut self.name_corrections,
             );
             expr_typer.hydrator = self
@@ -849,7 +853,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("Type for custom type not found in register_values")
             .typ
             .clone();
-        if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
+        if let Some(accessors) =
+            custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?
+        {
             let map = AccessorsMap {
                 publicity: if *opaque {
                     Publicity::Private
@@ -881,7 +887,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor.arguments.iter().enumerate()
             {
                 // Build a type from the annotation AST
-                let t = match hydrator.type_from_ast(ast, environment) {
+                let t = match hydrator.type_from_ast(ast, environment, &mut self.problems) {
                     Ok(t) => t,
                     Err(e) => {
                         self.problems.error(e);
@@ -944,6 +950,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     constructor.name.clone(),
                     EntityKind::PrivateTypeConstructor(name.clone()),
                     constructor.location,
+                    &mut self.problems,
                 );
             }
 
@@ -1039,15 +1046,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("name uniqueness checked above");
 
         if *opaque && constructors.is_empty() {
-            environment
-                .warnings
-                .emit(type_::Warning::OpaqueExternalType {
-                    location: *location,
-                });
+            self.problems.warning(type_::Warning::OpaqueExternalType {
+                location: *location,
+            });
         }
 
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateType,
+                *location,
+                &mut self.problems,
+            );
         };
         Ok(())
     }
@@ -1081,7 +1091,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let parameters = self.make_type_vars(args, *location, &mut hydrator, environment);
         let tryblock = || {
             hydrator.disallow_new_type_variables();
-            let typ = hydrator.type_from_ast(resolved_type, environment)?;
+            let typ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
@@ -1106,11 +1116,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             Ok(())
         };
-        self.record_if_error(tryblock());
+        let result = tryblock();
+        self.record_if_error(result);
 
         // Register the type for detection of dead code.
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateType,
+                *location,
+                &mut self.problems,
+            );
         };
     }
 
@@ -1183,9 +1199,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         let arg_types = args
             .iter()
-            .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
+            .map(|arg| {
+                hydrator.type_from_option_ast(&arg.annotation, environment, &mut self.problems)
+            })
             .try_collect()?;
-        let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+        let return_type =
+            hydrator.type_from_option_ast(return_annotation, environment, &mut self.problems)?;
         let typ = fn_(arg_types, return_type);
         let _ = self.hydrators.insert(name.clone(), hydrator);
 
@@ -1206,7 +1225,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateFunction,
+                *location,
+                &mut self.problems,
+            );
         };
         Ok(())
     }
@@ -1535,13 +1559,14 @@ fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
+    problems: &mut Problems,
 ) -> Result<Option<HashMap<EcoString, RecordAccessor>>, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
     for (index, label, ast) in args {
-        let typ = hydrator.type_from_ast(ast, environment)?;
+        let typ = hydrator.type_from_ast(ast, environment, problems)?;
         let _ = fields.insert(
             label.clone(),
             RecordAccessor {

@@ -56,8 +56,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
-                self.environment
-                    .init_usage(name.into(), EntityKind::Variable, location);
+                self.environment.init_usage(
+                    name.into(),
+                    EntityKind::Variable,
+                    location,
+                    self.problems,
+                );
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
@@ -591,7 +595,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 match constructor_deprecation {
                     Deprecation::NotDeprecated => {}
                     Deprecation::Deprecated { message } => {
-                        self.environment.warnings.emit(Warning::DeprecatedItem {
+                        self.problems.warning(Warning::DeprecatedItem {
                             location,
                             message: message.clone(),
                             layer: Layer::Value,
