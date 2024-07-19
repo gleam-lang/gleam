@@ -74,14 +74,12 @@ fn compile_expression(src: &str) -> TypedStatement {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), type_::build_prelude(&ids));
-    let emitter = TypeWarningEmitter::null();
     let mut environment = Environment::new(
         ids,
         "mypackage".into(),
         "mymod".into(),
         Target::Erlang,
         &modules,
-        &emitter,
         TargetSupport::Enforced,
     );
 

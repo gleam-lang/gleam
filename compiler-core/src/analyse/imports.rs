@@ -105,6 +105,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             imported_name.clone(),
             EntityKind::ImportedType,
             import.location,
+            self.problems,
         );
     }
 
@@ -142,11 +143,14 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 used_name.clone(),
                 EntityKind::ImportedConstructor,
                 location,
+                self.problems,
             ),
-            _ => {
-                self.environment
-                    .init_usage(used_name.clone(), EntityKind::ImportedValue, location)
-            }
+            _ => self.environment.init_usage(
+                used_name.clone(),
+                EntityKind::ImportedValue,
+                location,
+                self.problems,
+            ),
         };
 
         // Check if value already was imported
