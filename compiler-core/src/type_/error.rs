@@ -1,21 +1,56 @@
+use super::{
+    expression::{ArgumentKind, CallKind},
+    FieldAccessUsage,
+};
 use crate::{
-    ast::{BinOp, SrcSpan, TodoKind},
+    ast::{BinOp, Layer, SrcSpan, TodoKind},
     build::Target,
     type_::Type,
 };
 
 use camino::Utf8PathBuf;
-use std::sync::Arc;
-
-use crate::ast::Layer;
 use ecow::EcoString;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
+use std::sync::Arc;
 
-use super::{
-    expression::{ArgumentKind, CallKind},
-    FieldAccessUsage,
-};
+/// Errors and warnings discovered when compiling a module.
+///
+#[derive(Debug, Eq, PartialEq, Clone, Default)]
+pub struct Problems {
+    errors: Vec<Error>,
+    warnings: Vec<Warning>,
+}
+
+impl Problems {
+    pub fn new() -> Self {
+        Default::default()
+    }
+
+    /// Register an error.
+    ///
+    pub fn error(&mut self, error: Error) {
+        self.errors.push(error)
+    }
+
+    /// Register an warning.
+    ///
+    pub fn warning(&mut self, warning: Warning) {
+        self.warnings.push(warning)
+    }
+
+    /// Take all the errors, leaving an empty vector in its place.
+    ///
+    pub fn take_errors(&mut self) -> Vec<Error> {
+        std::mem::take(&mut self.errors)
+    }
+
+    /// Take all the warnings, leaving an empty vector in its place.
+    ///
+    pub fn take_warnings(&mut self) -> Vec<Warning> {
+        std::mem::take(&mut self.warnings)
+    }
+}
 
 #[derive(Debug, Eq, PartialEq, Clone)]
 pub struct UnknownType {

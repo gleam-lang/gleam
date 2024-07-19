@@ -15,16 +15,16 @@ pub struct Importer<'context, 'errors> {
     errors: &'errors mut Vec<Error>,
 }
 
-impl<'context, 'errors> Importer<'context, 'errors> {
+impl<'context, 'problems> Importer<'context, 'problems> {
     pub fn new(
         origin: Origin,
         environment: Environment<'context>,
-        errors: &'errors mut Vec<Error>,
+        problems: &'problems mut Problems,
     ) -> Self {
         Self {
             origin,
             environment,
-            errors,
+            errors: problems,
         }
     }
 
@@ -32,9 +32,9 @@ impl<'context, 'errors> Importer<'context, 'errors> {
         origin: Origin,
         env: Environment<'context>,
         imports: &'code [Import<()>],
-        errors: &'errors mut Vec<Error>,
+        problems: &'problems mut Problems,
     ) -> Environment<'context> {
-        let mut importer = Self::new(origin, env, errors);
+        let mut importer = Self::new(origin, env, problems);
         for import in imports {
             importer.register_import(import)
         }
