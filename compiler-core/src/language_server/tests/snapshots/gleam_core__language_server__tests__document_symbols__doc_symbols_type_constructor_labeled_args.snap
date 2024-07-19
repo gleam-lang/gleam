@@ -101,7 +101,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
                     range: Range {
                         start: Position {
                             line: 4,
-                            character: 7,
+                            character: 4,
                         },
                         end: Position {
                             line: 5,
@@ -162,7 +162,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
                     range: Range {
                         start: Position {
                             line: 7,
-                            character: 7,
+                            character: 4,
                         },
                         end: Position {
                             line: 11,

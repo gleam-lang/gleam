@@ -96,7 +96,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
                     range: Range {
                         start: Position {
                             line: 5,
-                            character: 7,
+                            character: 4,
                         },
                         end: Position {
                             line: 6,

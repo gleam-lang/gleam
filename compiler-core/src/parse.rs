@@ -209,7 +209,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
-    doc_comments: VecDeque<(u32, String)>,
+    doc_comments: VecDeque<(u32, u32, String)>,
 }
 impl<T> Parser<T>
 where
@@ -3225,9 +3225,16 @@ where
                     self.extra.comments.push(SrcSpan { start, end });
                     previous_newline = None;
                 }
-                Some(Ok((start, Token::CommentDoc { content }, end))) => {
+                Some(Ok((
+                    start,
+                    Token::CommentDoc {
+                        marker_start,
+                        content,
+                    },
+                    end,
+                ))) => {
                     self.extra.doc_comments.push(SrcSpan::new(start, end));
-                    self.doc_comments.push_back((start, content));
+                    self.doc_comments.push_back((marker_start, start, content));
                     previous_newline = None;
                 }
                 Some(Ok((start, Token::CommentModule, end))) => {
@@ -3268,12 +3275,15 @@ where
         t
     }
 
+    /// Returns the start position and contents of the documentation comments
+    /// at the current position, if available. The start position is right before
+    /// the '///' marker of the first documentation comment line.
     fn take_documentation(&mut self, until: u32) -> Option<(u32, EcoString)> {
         let mut content = String::new();
         let mut doc_start = u32::MAX;
-        while let Some((start, line)) = self.doc_comments.front() {
-            if *start < doc_start {
-                doc_start = *start;
+        while let Some((marker_start, start, line)) = self.doc_comments.front() {
+            if *marker_start < doc_start {
+                doc_start = *marker_start;
             }
             if *start >= until {
                 break;

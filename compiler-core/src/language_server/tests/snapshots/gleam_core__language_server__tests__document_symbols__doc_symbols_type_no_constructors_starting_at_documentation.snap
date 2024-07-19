@@ -12,7 +12,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
         range: Range {
             start: Position {
                 line: 1,
-                character: 3,
+                character: 0,
             },
             end: Position {
                 line: 2,
