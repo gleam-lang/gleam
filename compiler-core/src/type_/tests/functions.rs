@@ -347,13 +347,30 @@ pub fn main() {
 }
 
 #[test]
-fn case_subject_fault_tolerance() {
+fn function_call_incorrect_arity_with_labels_fault_tolerance() {
     assert_module_error!(
         r#"
+fn wibble(wibble arg1: fn() -> Int, wobble arg2: Int) -> Int {
+  arg1() + arg2
+}
+
 pub fn main() {
-  case 1.0 + 1.0, 2.0 + 2.0 {
-    _, _ -> 0
-  }
+  wibble(wobble: "")
+}
+"#
+    );
+}
+
+#[test]
+fn function_call_incorrect_arity_with_labels_fault_tolerance2() {
+    assert_module_error!(
+        r#"
+fn wibble(wibble arg1: fn() -> Int, wobble arg2: Int, wabble arg3: Int) -> Int {
+  arg1() + arg2 + arg3
+}
+
+pub fn main() {
+  wibble(fn() {""}, wobble: "")
 }
 "#
     );
