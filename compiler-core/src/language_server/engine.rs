@@ -22,7 +22,11 @@ use lsp_types::{self as lsp, Hover, HoverContents, MarkedString, Url};
 use std::sync::Arc;
 
 use super::{
-    code_action::{CodeActionBuilder, LetAssertToCase, RedundantTupleInCaseSubject},
+    code_action::{
+        move_imports_to_top::MoveImportsToTop,
+        redundant_tuple_in_case_subject::RedundantTupleInCaseSubject, CodeActionBuilder,
+        LetAssertToCase,
+    },
     completer::Completer,
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
@@ -274,6 +278,7 @@ where
             code_action_fix_names(module, &params, &mut actions);
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
+            actions.extend(MoveImportsToTop::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
                 None
@@ -652,11 +657,13 @@ fn code_action_unused_imports(
     }
     edits.sort_by_key(|edit| edit.range.start);
 
-    CodeActionBuilder::new("Remove unused imports")
-        .kind(lsp_types::CodeActionKind::QUICKFIX)
-        .changes(uri.clone(), edits)
-        .preferred(true)
-        .push_to(actions);
+    actions.push(
+        CodeActionBuilder::new("Remove unused imports")
+            .kind(lsp_types::CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), edits)
+            .preferred(true)
+            .build(),
+    );
 }
 
 fn code_action_fix_names(
@@ -688,11 +695,13 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(&format!("Rename to {}", correction))
+            let action = CodeActionBuilder::new(&format!("Rename to {}", correction))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)
-                .push_to(actions);
+                .build();
+
+            actions.push(action);
         }
     }
 }
