@@ -55,7 +55,7 @@ fn parse_and_order(
                 documentation: None,
                 location: Default::default(),
                 publicity: Publicity::Public,
-                name: EcoString::from(*name),
+                name: (SrcSpan::default(), EcoString::from(*name)),
                 annotation: None,
                 value: Box::from(const_value),
                 implementations: Implementations {
@@ -78,7 +78,7 @@ fn parse_and_order(
                 .into_iter()
                 .map(|function| match function {
                     CallGraphNode::Function(f) => f.name.map(|(_, name)| name).unwrap(),
-                    CallGraphNode::ModuleConstant(c) => c.name,
+                    CallGraphNode::ModuleConstant(c) => c.name.1,
                 })
                 .collect_vec()
         })

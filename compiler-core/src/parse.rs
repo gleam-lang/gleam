@@ -303,14 +303,14 @@ where
                 self.parse_import(start)
             }
             // Module Constants
-            (Some((_, Token::Const, _)), _) => {
+            (Some((start, Token::Const, _)), _) => {
                 self.advance();
-                self.parse_module_const(false, &attributes)
+                self.parse_module_const(start, false, &attributes)
             }
-            (Some((_, Token::Pub, _)), Some((_, Token::Const, _))) => {
+            (Some((start, Token::Pub, _)), Some((_, Token::Const, _))) => {
                 self.advance();
                 self.advance();
-                self.parse_module_const(true, &attributes)
+                self.parse_module_const(start, true, &attributes)
             }
 
             // Function
@@ -2445,11 +2445,12 @@ where
     //   pub const a:Int = 1
     fn parse_module_const(
         &mut self,
+        start: u32,
         public: bool,
         attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
-        let (start, name, end) = self.expect_name()?;
-        let documentation = self.take_documentation(start);
+        let (name_start, name, name_end) = self.expect_name()?;
+        let documentation = self.take_documentation(name_start);
 
         let annotation = self.parse_type_annotation(&Token::Colon)?;
 
@@ -2457,9 +2458,18 @@ where
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
-                location: SrcSpan { start, end },
+                location: SrcSpan {
+                    start,
+
+                    // End after the type annotation if it's there, otherwise after the name
+                    end: annotation
+                        .as_ref()
+                        .map(|annotation| annotation.location().end)
+                        .unwrap_or(0)
+                        .max(name_end),
+                },
                 publicity: self.publicity(public, attributes.internal)?,
-                name,
+                name: (SrcSpan::new(name_start, name_end), name),
                 annotation,
                 value: Box::new(value),
                 type_: (),

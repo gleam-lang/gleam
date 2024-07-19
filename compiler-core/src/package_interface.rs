@@ -465,7 +465,7 @@ impl ModuleInterface {
                 // A public module constant.
                 Definition::ModuleConstant(ModuleConstant {
                     publicity: Publicity::Public,
-                    name,
+                    name: (_, name),
                     type_,
                     documentation,
                     implementations,

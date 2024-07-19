@@ -316,7 +316,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
-                name,
+                name: (_, name),
                 value,
                 ..
             }) if publicity.is_importable() => vec![self.module_constant(name, value)],

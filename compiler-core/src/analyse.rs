@@ -345,14 +345,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let ModuleConstant {
             documentation: doc,
             location,
-            name,
+            name: (name_location, name),
             annotation,
             publicity,
             value,
             deprecation,
             ..
         } = c;
-        self.check_name_case(location, &name, Named::Constant);
+        self.check_name_case(name_location, &name, Named::Constant);
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -398,7 +398,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
             location,
-            name,
+            name: (name_location, name),
             annotation,
             publicity,
             value: Box::new(typed_expr),
@@ -1378,7 +1378,7 @@ fn generalise_module_constant(
     let ModuleConstant {
         documentation: doc,
         location,
-        name,
+        name: (name_location, name),
         annotation,
         publicity,
         value,
@@ -1416,7 +1416,7 @@ fn generalise_module_constant(
     Definition::ModuleConstant(ModuleConstant {
         documentation: doc,
         location,
-        name,
+        name: (name_location, name),
         annotation,
         publicity,
         value,

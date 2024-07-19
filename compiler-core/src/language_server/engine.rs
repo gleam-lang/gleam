@@ -373,11 +373,10 @@ where
                     Definition::Import(_) => {}
 
                     Definition::ModuleConstant(constant) => {
-                        // `ModuleConstant.location` gives us the span of the constant's name.
-                        // Therefore, it is only suitable for `selection_range` below.
-                        // For the full symbol span, necessary for `range`, include the
-                        // constant value as well.
-                        // Also include the documentation, if available.
+                        // `ModuleConstant.location` ends at the constant's name.
+                        // For the full symbol span, necessary for `range`, we need to
+                        // include the constant value as well.
+                        // Also include the documentation at the start, if available.
                         let full_constant_span = SrcSpan {
                             start: constant
                                 .documentation
@@ -388,22 +387,21 @@ where
                             end: constant.value.location().end,
                         };
 
+                        let (name_location, name) = &constant.name;
+
                         // The 'deprecated' field is deprecated, but we have to specify it anyway
                         // to be able to construct the 'DocumentSymbol' type, so
                         // we suppress the warning. We specify 'None' as specifying 'Some'
                         // is what is actually deprecated.
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
-                            name: constant.name.to_string(),
+                            name: name.to_string(),
                             detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
                             kind: SymbolKind::CONSTANT,
                             tags: make_deprecated_symbol_tag(&constant.deprecation),
                             deprecated: None,
                             range: src_span_to_lsp_range(full_constant_span, &line_numbers),
-                            selection_range: src_span_to_lsp_range(
-                                constant.location,
-                                &line_numbers,
-                            ),
+                            selection_range: src_span_to_lsp_range(*name_location, &line_numbers),
                             children: None,
                         });
                     }

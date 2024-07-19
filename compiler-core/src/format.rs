@@ -392,7 +392,7 @@ impl<'comments> Formatter<'comments> {
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
-                name,
+                name: (_, name),
                 annotation,
                 value,
                 ..

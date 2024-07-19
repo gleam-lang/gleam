@@ -44,7 +44,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
         range: Range {
             start: Position {
                 line: 4,
-                character: 10,
+                character: 0,
             },
             end: Position {
                 line: 4,

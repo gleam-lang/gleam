@@ -3,10 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n            import a/wibble\n            import b/wibble as wobble\n            const one = wibble.one\n        "
 ---
 warning: Unused private constant
-  ┌─ /src/warning/wrn.gleam:4:19
+  ┌─ /src/warning/wrn.gleam:4:13
   │
 4 │             const one = wibble.one
-  │                   ^^^ This private constant is never used
+  │             ^^^^^^^^^ This private constant is never used
 
 Hint: You can safely remove it.
 

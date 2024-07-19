@@ -67,7 +67,7 @@ pub fn main() {
             range: Range {
                 start: Position {
                     line: 1,
-                    character: 6
+                    character: 0
                 },
                 end: Position {
                     line: 1,
@@ -172,7 +172,7 @@ fn main() {
             range: Range {
                 start: Position {
                     line: 0,
-                    character: 10
+                    character: 0
                 },
                 end: Position {
                     line: 0,
@@ -207,7 +207,7 @@ fn main() {
             range: Range {
                 start: Position {
                     line: 0,
-                    character: 10
+                    character: 0
                 },
                 end: Position {
                     line: 0,
@@ -359,7 +359,7 @@ fn main() {
             range: Range {
                 start: Position {
                     line: 0,
-                    character: 10
+                    character: 0
                 },
                 end: Position {
                     line: 0,
@@ -895,7 +895,7 @@ fn main() {
             range: Range {
                 start: Position {
                     line: 0,
-                    character: 10
+                    character: 0
                 },
                 end: Position {
                     line: 0,

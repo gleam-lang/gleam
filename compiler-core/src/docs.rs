@@ -700,7 +700,7 @@ fn constant<'a>(
         Definition::ModuleConstant(ModuleConstant {
             publicity: Publicity::Public,
             documentation: doc,
-            name,
+            name: (_, name),
             value,
             location,
             ..

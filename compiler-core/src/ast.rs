@@ -701,9 +701,11 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 /// ```
 pub struct ModuleConstant<T, ConstantRecordTag> {
     pub documentation: Option<(u32, EcoString)>,
+    /// The location of the constant, starting at the "(pub) const" keywords and
+    /// ending after the ": Type" annotation, or (without an annotation) after its name.
     pub location: SrcSpan,
     pub publicity: Publicity,
-    pub name: EcoString,
+    pub name: (SrcSpan, EcoString),
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
