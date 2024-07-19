@@ -258,7 +258,7 @@ fn compile_statement_sequence(
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let errors = &mut vec![];
+    let mut problems = Problems::new();
     let name_corrections = &mut vec![];
     let res = ExprTyper::new(
         &mut Environment::new(
@@ -275,11 +275,11 @@ fn compile_statement_sequence(
             has_erlang_external: false,
             has_javascript_external: false,
         },
-        errors,
+        &mut problems,
         name_corrections,
     )
     .infer_statements(ast);
-    match Vec1::try_from_vec(errors.to_vec()) {
+    match Vec1::try_from_vec(problems.take_errors()) {
         Err(_) => Ok(res),
         Ok(errors) => Err(errors),
     }

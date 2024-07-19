@@ -206,8 +206,8 @@ pub(crate) struct ExprTyper<'a, 'b> {
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 
-    // Accumulated errors found while typing the expression
-    pub(crate) errors: &'a mut Vec<Error>,
+    // Accumulated errors and warnings found while typing the expression
+    pub(crate) problems: &'a mut Problems,
     pub(crate) name_corrections: &'a mut Vec<NameCorrection>,
 }
 
@@ -215,7 +215,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
-        errors: &'a mut Vec<Error>,
+        problems: &'a mut Problems,
         name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
@@ -239,7 +239,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
-            errors,
+            problems,
             name_corrections,
         }
     }
@@ -539,8 +539,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     // Helper to push a new error to the errors list with rigid names.
     fn error_with_rigid_names(&mut self, error: Error) {
         let rigid_names = self.hydrator.rigid_names();
-        self.errors
-            .push(error.with_unify_error_rigid_names(&rigid_names));
+        self.problems
+            .error(error.with_unify_error_rigid_names(&rigid_names));
     }
 
     // Helper to push a new error to the errors list and return an invalid expression.
@@ -744,7 +744,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
-            check_argument_names(names, self.errors, self.name_corrections);
+            check_argument_names(names, self.problems, self.name_corrections);
         }
 
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
@@ -987,7 +987,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, Some((Ok(module_access), _))) => module_access,
             // Module access was attempted but failed and it does not shadow an existing variable
             (_, Some((Err(module_access_err), false))) => {
-                self.errors.push(module_access_err);
+                self.problems.error(module_access_err);
                 TypedExpr::Invalid {
                     location: label_location,
                     typ: self.new_unbound_var(),
@@ -995,7 +995,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             // In any other case use the record access for the error
             (Err(record_access_err), _) => {
-                self.errors.push(record_access_err);
+                self.problems.error(record_access_err);
                 match record {
                     // If the record is valid then use a placeholder access
                     // This allows autocomplete to know a record access is being attempted
@@ -1277,7 +1277,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let pattern = match pattern::PatternTyper::new(
             self.environment,
             &self.hydrator,
-            self.errors,
+            self.problems,
             self.name_corrections,
         )
         .unify(pattern, value_typ.clone())
@@ -1492,7 +1492,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
             &self.hydrator,
-            self.errors,
+            self.problems,
             self.name_corrections,
         );
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
@@ -2737,7 +2737,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (None, Ok(inferred)) => inferred,
             // No annotation and invalid inferred value. Use an unbound variable hole.
             (None, Err(e)) => {
-                self.errors.push(e);
+                self.problems.error(e);
                 Constant::Invalid {
                     location: loc,
                     typ: self.new_unbound_var(),
@@ -2749,7 +2749,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 if let Err(e) = unify(const_ann.clone(), inferred.type_())
                     .map_err(|e| convert_unify_error(e, inferred.location()))
                 {
-                    self.errors.push(e);
+                    self.problems.error(e);
                     Constant::Invalid {
                         location: loc,
                         typ: const_ann,
@@ -2761,7 +2761,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
             // This should limit the errors to only the definition.
             (Some(Ok(const_ann)), Err(value_err)) => {
-                self.errors.push(value_err);
+                self.problems.error(value_err);
                 Constant::Invalid {
                     location: loc,
                     typ: const_ann,
@@ -2769,14 +2769,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             // Type annotation is invalid but the inferred value is ok. Use the inferred type.
             (Some(Err(annotation_err)), Ok(inferred)) => {
-                self.errors.push(annotation_err);
+                self.problems.error(annotation_err);
                 inferred
             }
             // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
             // This should limit the errors to only the definition assuming the constant is used consistently.
             (Some(Err(annotation_err)), Err(value_err)) => {
-                self.errors.push(annotation_err);
-                self.errors.push(value_err);
+                self.problems.error(annotation_err);
+                self.problems.error(value_err);
                 Constant::Invalid {
                     location: loc,
                     typ: self.new_unbound_var(),

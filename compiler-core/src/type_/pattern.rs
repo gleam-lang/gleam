@@ -19,7 +19,7 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
-    errors: &'a mut Vec<Error>,
+    problems: &'a mut Problems,
     name_corrections: &'a mut Vec<NameCorrection>,
 }
 
@@ -32,7 +32,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
         hydrator: &'a Hydrator,
-        errors: &'a mut Vec<Error>,
+        problems: &'a mut Problems,
         name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         Self {
@@ -40,7 +40,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
-            errors,
+            problems,
             name_corrections,
         }
     }
@@ -676,7 +676,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
-            self.errors.push(error);
+            self.problems.error(error);
             self.name_corrections
                 .push(correct_name_case(location, name, kind));
         }
