@@ -1,3 +1,4 @@
+use insta::glob;
 use std::path::PathBuf;
 
 use camino::Utf8PathBuf;
@@ -36,11 +37,11 @@ fn new() {
 #[test]
 fn new_with_default_template() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+    let path = Utf8PathBuf::from_path_buf(tmp.into_path()).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_string(),
+            project_root: path.join("my_project").to_string(),
             template: super::Template::Erlang,
             name: None,
             skip_git: false,
@@ -51,19 +52,24 @@ fn new_with_default_template() {
     .unwrap();
     creator.run().unwrap();
 
-    assert!(path.join("gleam.toml").exists());
-
-    insta::assert_snapshot!(crate::fs::read(path.join("gleam.toml")).unwrap());
+    glob!(path, "my_project/*.*", |file_path| {
+        if !file_path.is_dir() {
+            insta::assert_snapshot!(crate::fs::read(
+                Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect("Non Utf8 Path"),
+            )
+            .unwrap());
+        }
+    });
 }
 
 #[test]
 fn new_with_javascript_template() {
     let tmp = tempfile::tempdir().unwrap();
-    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+    let path = Utf8PathBuf::from_path_buf(tmp.into_path()).expect("Non Utf8 Path");
 
     let creator = super::Creator::new(
         super::NewOptions {
-            project_root: path.to_string(),
+            project_root: path.join("my_project").to_string(),
             template: super::Template::JavaScript,
             name: None,
             skip_git: false,
@@ -74,9 +80,14 @@ fn new_with_javascript_template() {
     .unwrap();
     creator.run().unwrap();
 
-    assert!(path.join("gleam.toml").exists());
-
-    insta::assert_snapshot!(crate::fs::read(path.join("gleam.toml")).unwrap());
+    glob!(path, "my_project/*.*", |file_path| {
+        if !file_path.is_dir() {
+            insta::assert_snapshot!(crate::fs::read(
+                Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect("Non Utf8 Path"),
+            )
+            .unwrap());
+        }
+    });
 }
 
 #[test]
