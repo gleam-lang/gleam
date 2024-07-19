@@ -139,6 +139,40 @@ fn invalid_name() {
 }
 
 #[test]
+fn new_with_recoverable_invalid_name() {
+    let tmp = tempfile::tempdir().unwrap();
+    let invalid_name = "gleam-demo";
+    let replacement_name = "my_gleam_demo";
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join(&invalid_name)).expect("Non Utf8 Path");
+
+    let creator = super::Creator::new(
+        super::NewOptions {
+            project_root: path.to_string(),
+            template: super::Template::Lib,
+            name: None,
+            skip_git: false,
+            skip_github: false,
+        },
+        "1.0.0-gleam",
+    )
+    .unwrap();
+
+    creator.run().unwrap();
+
+    assert!(path.join(".git").exists());
+    assert!(path.join("README.md").exists());
+    assert!(path.join("gleam.toml").exists());
+    assert!(path.join(format!("src/{replacement_name}.gleam")).exists());
+    assert!(path
+        .join(format!("test/{replacement_name}_test.gleam"))
+        .exists());
+    assert!(path.join(".github/workflows/test.yml").exists());
+
+    let toml = crate::fs::read(path.join("gleam.toml")).unwrap();
+    assert!(toml.contains(&format!(r#"name = "{replacement_name}""#)));
+}
+
+#[test]
 fn existing_directory_no_files() {
     let tmp = tempfile::tempdir().unwrap();
     let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
