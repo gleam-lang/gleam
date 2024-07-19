@@ -2886,6 +2886,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
+        let mut labelled_arity_error = false;
         // Check to see if the function accepts labelled arguments
         let field_map = self
             .get_field_map(&fun)
@@ -2900,7 +2901,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             });
         if let Err(e) = field_map {
-            self.error_with_rigid_names(e);
+            if let Error::IncorrectArity {
+                expected,
+                given,
+                labels,
+                location,
+            } = e
+            {
+                labelled_arity_error = true;
+                self.error_with_rigid_names(Error::IncorrectArity {
+                    expected,
+                    given,
+                    labels,
+                    location,
+                });
+            } else {
+                self.error_with_rigid_names(e);
+            }
         }
 
         let mut missing_args = 0;
@@ -2916,15 +2933,29 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // If the function was valid but had the wrong number of arguments passed.
                         // Then we keep the error but still want to continue analysing the arguments that were passed.
                         MatchFunTypeError::IncorrectArity {
-                            args,
+                            args: arg_types,
                             return_type,
                             expected,
                             given,
                             ..
                         } => {
                             missing_args = expected.saturating_sub(given);
-                            self.error_with_rigid_names(converted_error);
-                            (args, return_type)
+                            // If the function has labels then arity issues will already
+                            // be handled by the field map so we can ignore them here.
+                            if !labelled_arity_error {
+                                self.error_with_rigid_names(converted_error);
+                                (arg_types, return_type)
+                            } else {
+                                // Since arity errors with labels cause incorrect
+                                // ordering, we can't type check the labelled arguments here.
+                                let first_labelled_arg =
+                                    args.iter().position(|arg| arg.label.is_some());
+                                let args_to_keep = first_labelled_arg.unwrap_or(args.len());
+                                (
+                                    arg_types.iter().take(args_to_keep).cloned().collect(),
+                                    return_type,
+                                )
+                            }
                         }
                         MatchFunTypeError::NotFn { .. } => {
                             self.error_with_rigid_names(converted_error);
