@@ -53,6 +53,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 const CONVERT_TO_CASE: &str = "Convert to case";
+const MOVE_IMPORTS_UP: &str = "Move all imports to the top of the module";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -102,11 +103,22 @@ fn apply_code_edit(
             panic!("Unknown url {}", change_url)
         }
         for edit in change {
-            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
-                as i32
-                - offset;
-            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
-                - offset;
+            let edit_start =
+                line_numbers.byte_index(edit.range.start.line, edit.range.start.character) as i32;
+            let start = if offset > edit_start {
+                0
+            } else {
+                edit_start - offset
+            };
+
+            let edit_end =
+                line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32;
+            let end = if offset > edit_end {
+                0
+            } else {
+                edit_end - offset
+            };
+
             let range = (start as usize)..(end as usize);
             offset += end - start;
             offset -= edit.new_text.len() as i32;
@@ -749,6 +761,69 @@ fn test_convert_outer_let_assert_to_case() {
         1,
         CONVERT_TO_CASE
     ));
+}
+
+#[test]
+fn move_imports_to_the_top_of_the_module_does_not_pop_up_if_no_imports_can_be_moved() {
+    let code = r#"import error
+pub fn main() {
+  error.is_ok()
+}"#;
+
+    assert!(engine_response(code, 0)
+        .result
+        .expect("ok response")
+        .is_none());
+}
+
+#[test]
+fn move_imports_to_the_top_of_the_module_does_not_pop_up_if_not_over_an_import() {
+    let code = r#"pub fn main() {}
+
+const wibble = 1
+
+import list
+"#;
+
+    assert!(engine_response(code, 0)
+        .result
+        .expect("ok response")
+        .is_none());
+
+    assert!(engine_response(code, 1)
+        .result
+        .expect("ok response")
+        .is_none());
+
+    assert!(engine_response(code, 2)
+        .result
+        .expect("ok response")
+        .is_none());
+}
+
+#[test]
+fn move_imports_to_the_top_of_the_module_moves_all_imports_when_on_import_below_a_definition_1() {
+    let code = r#"import list
+
+pub fn main() {}
+
+import result
+import map
+"#;
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 4, MOVE_IMPORTS_UP));
+}
+
+#[test]
+fn move_imports_to_the_top_of_the_module_moves_all_imports_when_on_import_below_a_definition_2() {
+    let code = r#"import list
+
+pub fn main() {}
+
+import result
+"#;
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 5, MOVE_IMPORTS_UP));
 }
 
 /* TODO: implement qualified unused location

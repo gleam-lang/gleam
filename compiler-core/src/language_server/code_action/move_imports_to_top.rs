@@ -1,12 +1,13 @@
 use crate::{
-    ast::{self, visit::Visit as _},
+    ast::{self, visit::Visit as _, Import, SrcSpan},
     build,
     line_numbers::LineNumbers,
 };
 use ecow::EcoString;
+use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit};
 
-use super::{super::src_span_to_lsp_range, CodeActionBuilder};
+use super::{super::engine::overlaps, super::src_span_to_lsp_range, CodeActionBuilder};
 
 #[derive(Debug)]
 /// Code action to move all the imports to the top of the module.
@@ -16,51 +17,35 @@ pub struct MoveImportsToTop<'a> {
     params: &'a CodeActionParams,
     module: &'a ast::TypedModule,
 
-    past_top_imports: bool,
-    edits: Vec<TextEdit>,
+    is_over_import: bool,
+    imports: Vec<&'a Import<EcoString>>,
+    earlier_definition_end: Option<u32>,
 }
 
-impl<'ast> ast::visit::Visit<'ast> for MoveImportsToTop<'_> {
+impl<'ast> ast::visit::Visit<'ast> for MoveImportsToTop<'ast> {
     fn visit_typed_definition(&mut self, def: &'ast ast::TypedDefinition) {
         match def {
-            ast::Definition::Import(import) if self.past_top_imports => {
-                tracing::info!("found not top level import");
-                self.edits.push(TextEdit {
-                    range: src_span_to_lsp_range(import.location, &self.line_numbers),
-                    new_text: "".into(),
-                });
-
-                let import_start = import.location.start as usize;
-                let import_end = import.location.end as usize;
-                let import_text = self
-                    .code
-                    .get(import_start..import_end)
-                    .expect("import")
-                    .into();
-
-                self.edits.push(TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 0,
-                        },
-                    },
-                    new_text: import_text,
-                });
-            }
-            ast::Definition::Import(import_) => {
-                tracing::info!("found top level import", import_);
+            ast::Definition::Import(import) => {
+                if overlaps(
+                    self.params.range,
+                    src_span_to_lsp_range(import.location, &self.line_numbers),
+                ) {
+                    self.is_over_import = true;
+                }
+                self.imports.push(import)
             }
             ast::Definition::Function(_)
             | ast::Definition::TypeAlias(_)
             | ast::Definition::CustomType(_)
             | ast::Definition::ModuleConstant(_) => {
-                tracing::info!("found definition after top level imports");
-                self.past_top_imports = true
+                let def_location = def.location();
+                match self.earlier_definition_end {
+                    Some(end) if def_location.end < end => {
+                        self.earlier_definition_end = Some(def_location.end)
+                    }
+                    Some(_) => (),
+                    None => self.earlier_definition_end = Some(def_location.end),
+                }
             }
         }
     }
@@ -73,25 +58,75 @@ impl<'a> MoveImportsToTop<'a> {
             code: &module.code,
             params,
             module: &module.ast,
-            past_top_imports: false,
-            edits: vec![],
+            imports: vec![],
+            is_over_import: false,
+            earlier_definition_end: None,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(self.module);
-        if self.edits.is_empty() {
+
+        if self.imports.is_empty() || !self.is_over_import {
             return vec![];
         }
 
-        self.edits.sort_by_key(|edit| edit.range.start);
+        let Some(end) = self.earlier_definition_end else {
+            return vec![];
+        };
+
+        let edits = self
+            .imports
+            .iter()
+            .filter(|import| import.location.start > end)
+            .flat_map(|import| self.move_import_edits(import))
+            .collect_vec();
+
+        if edits.is_empty() {
+            vec![]
+        } else {
+            vec![
+                CodeActionBuilder::new("Move all imports to the top of the module")
+                    .kind(CodeActionKind::REFACTOR_REWRITE)
+                    .changes(self.params.text_document.uri.clone(), edits)
+                    .preferred(false)
+                    .build(),
+            ]
+        }
+    }
+
+    fn move_import_edits(&self, import: &Import<EcoString>) -> Vec<TextEdit> {
+        let import_text = self
+            .code
+            .get(import.location.start as usize..import.location.end as usize)
+            .expect("import location");
 
         vec![
-            CodeActionBuilder::new("Move all imports to the top of the module")
-                .kind(CodeActionKind::SOURCE_ORGANIZE_IMPORTS)
-                .changes(self.params.text_document.uri.clone(), self.edits)
-                .preferred(true)
-                .build(),
+            TextEdit {
+                range: src_span_to_lsp_range(
+                    SrcSpan {
+                        start: import.location.start,
+                        // This way we will take care of any eventual new line
+                        // after the import.
+                        end: import.location.end + 1,
+                    },
+                    &self.line_numbers,
+                ),
+                new_text: "".into(),
+            },
+            TextEdit {
+                range: Range {
+                    start: Position {
+                        line: 0,
+                        character: 0,
+                    },
+                    end: Position {
+                        line: 0,
+                        character: 0,
+                    },
+                },
+                new_text: format!("{import_text}\n"),
+            },
         ]
     }
 }
