@@ -23,9 +23,7 @@ use std::sync::Arc;
 
 use super::{
     code_action::{
-        move_imports_to_top::MoveImportsToTop,
-        redundant_tuple_in_case_subject::RedundantTupleInCaseSubject, CodeActionBuilder,
-        LetAssertToCase,
+        CodeActionBuilder, LetAssertToCase, MoveImportsToTop, RedundantTupleInCaseSubject,
     },
     completer::Completer,
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
