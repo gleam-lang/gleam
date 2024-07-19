@@ -655,13 +655,11 @@ fn code_action_unused_imports(
     }
     edits.sort_by_key(|edit| edit.range.start);
 
-    actions.push(
-        CodeActionBuilder::new("Remove unused imports")
-            .kind(lsp_types::CodeActionKind::QUICKFIX)
-            .changes(uri.clone(), edits)
-            .preferred(true)
-            .build(),
-    );
+    CodeActionBuilder::new("Remove unused imports")
+        .kind(lsp_types::CodeActionKind::QUICKFIX)
+        .changes(uri.clone(), edits)
+        .preferred(true)
+        .push_to(actions);
 }
 
 fn code_action_fix_names(
@@ -693,13 +691,11 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            let action = CodeActionBuilder::new(&format!("Rename to {}", correction))
+            CodeActionBuilder::new(&format!("Rename to {}", correction))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)
-                .build();
-
-            actions.push(action);
+                .push_to(actions);
         }
     }
 }

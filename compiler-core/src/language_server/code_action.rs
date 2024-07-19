@@ -55,8 +55,8 @@ impl CodeActionBuilder {
         self
     }
 
-    pub fn build(self) -> CodeAction {
-        self.action
+    pub fn push_to(self, actions: &mut Vec<CodeAction>) {
+        actions.push(self.action);
     }
 }
 
@@ -133,13 +133,11 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
 
         let uri = &self.params.text_document.uri;
 
-        let action = CodeActionBuilder::new("Convert to case")
+        CodeActionBuilder::new("Convert to case")
             .kind(CodeActionKind::REFACTOR)
             .changes(uri.clone(), vec![edit])
             .preferred(true)
-            .build();
-
-        self.actions.push(action);
+            .push_to(&mut self.actions);
     }
 
     fn visit_typed_pattern_variable(
@@ -273,13 +271,13 @@ impl<'a> MoveImportsToTop<'a> {
         if edits.is_empty() {
             vec![]
         } else {
-            vec![
-                CodeActionBuilder::new("Move all imports to the top of the module")
-                    .kind(CodeActionKind::REFACTOR_REWRITE)
-                    .changes(self.params.text_document.uri.clone(), edits)
-                    .preferred(false)
-                    .build(),
-            ]
+            let mut action = vec![];
+            CodeActionBuilder::new("Move all imports to the top of the module")
+                .kind(CodeActionKind::REFACTOR_REWRITE)
+                .changes(self.params.text_document.uri.clone(), edits)
+                .preferred(false)
+                .push_to(&mut action);
+            action
         }
     }
 
@@ -437,11 +435,13 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
 
         self.edits.sort_by_key(|edit| edit.range.start);
 
-        vec![CodeActionBuilder::new("Remove redundant tuples")
+        let mut action = vec![];
+        CodeActionBuilder::new("Remove redundant tuples")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits)
             .preferred(true)
-            .build()]
+            .push_to(&mut action);
+        action
     }
 
     fn delete_tuple_tokens(
