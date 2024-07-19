@@ -303,8 +303,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .package_config
             .is_internal_module(self.module_name.as_str());
 
+        // TODO: handle warnings
+        let mut errors = self.problems.take_errors();
         // Sort the errors by location so that they are easier to debug.
-        self.problems.sort_by_key(|e| e.start_location());
+        errors.sort_by_key(|e| e.start_location());
 
         let module = ast::Module {
             documentation,
@@ -327,17 +329,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             },
         };
 
-        match Vec1::try_from_vec(self.problems) {
+        match Vec1::try_from_vec(errors) {
             Err(_) => Outcome::Ok(module),
             Ok(errors) => Outcome::PartialFailure(module, errors),
         }
     }
 
     fn all_errors<T>(&mut self, error: Error) -> Outcome<T, Vec1<Error>> {
-        Outcome::TotalFailure(Vec1::from_vec_push(
-            std::mem::take(&mut self.problems),
-            error,
-        ))
+        Outcome::TotalFailure(Vec1::from_vec_push(self.problems.take_errors(), error))
     }
 
     fn infer_module_constant(
@@ -515,7 +514,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (type_, body, implementations) = match result {
             Ok((type_, body, implementations)) => (type_, body, implementations),
             Err(error) => {
-                self.problems.push(error);
+                self.problems.error(error);
                 let type_ = preregistered_type.clone();
                 let body = Vec1::new(Statement::Expression(TypedExpr::Invalid {
                     typ: prereg_return_type.clone(),
@@ -531,7 +530,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Assert that the inferred type matches the type of any recursive call
         if let Err(error) = unify(preregistered_type.clone(), type_) {
-            self.problems.push(convert_unify_error(error, location));
+            self.problems.error(convert_unify_error(error, location));
         }
 
         // Ensure that the current target has an implementation for the function.
@@ -548,7 +547,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // since this would be caught at the statement level
             && !has_body
         {
-            self.problems.push(Error::UnsupportedPublicFunctionTarget {
+            self.problems.error(Error::UnsupportedPublicFunctionTarget {
                 name: name.clone(),
                 target,
                 location,
@@ -612,7 +611,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .get_or_init(|| Regex::new("^[@a-zA-Z0-9\\./:_-]+$").expect("regex"))
             .is_match(module)
         {
-            self.problems.push(Error::InvalidExternalJavascriptModule {
+            self.problems.error(Error::InvalidExternalJavascriptModule {
                 location,
                 module: module.clone(),
                 name: function_name.clone(),
@@ -623,7 +622,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .is_match(function)
         {
             self.problems
-                .push(Error::InvalidExternalJavascriptFunction {
+                .error(Error::InvalidExternalJavascriptFunction {
                     location,
                     function: function.clone(),
                     name: function_name.clone(),
@@ -639,14 +638,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) {
         for arg in arguments {
             if arg.annotation.is_none() {
-                self.problems.push(Error::ExternalMissingAnnotation {
+                self.problems.error(Error::ExternalMissingAnnotation {
                     location: arg.location,
                     kind: MissingAnnotation::Parameter,
                 });
             }
         }
         if return_annotation.is_none() {
-            self.problems.push(Error::ExternalMissingAnnotation {
+            self.problems.error(Error::ExternalMissingAnnotation {
                 location,
                 kind: MissingAnnotation::Return,
             });
@@ -662,7 +661,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> bool {
         match (external_erlang, external_javascript) {
             (None, None) if body.first().is_placeholder() => {
-                self.problems.push(Error::NoImplementation { location });
+                self.problems.error(Error::NoImplementation { location });
                 false
             }
             _ => true,
@@ -725,7 +724,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         match self.do_analyse_custom_type(t, environment) {
             Ok(t) => Some(t),
             Err(error) => {
-                self.problems.push(error);
+                self.problems.error(error);
                 None
             }
         }
@@ -885,7 +884,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 let t = match hydrator.type_from_ast(ast, environment) {
                     Ok(t) => t,
                     Err(e) => {
-                        self.problems.push(e);
+                        self.problems.error(e);
                         continue;
                     }
                 };
@@ -1068,7 +1067,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // A type alias must not have the same name as any other type in the module.
         if let Err(error) = environment.assert_unique_type_name(name, *location) {
-            self.problems.push(error);
+            self.problems.error(error);
             // A type already exists with the name so we cannot continue and
             // register this new type with the same name.
             return;
@@ -1126,7 +1125,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(|name| match hydrator.add_type_variable(name, environment) {
                 Ok(t) => t,
                 Err(t) => {
-                    self.problems.push(Error::DuplicateTypeParameter {
+                    self.problems.error(Error::DuplicateTypeParameter {
                         location,
                         name: name.clone(),
                     });

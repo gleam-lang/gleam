@@ -7,7 +7,7 @@ use crate::build::Target;
 use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
 use crate::type_::expression::FunctionDefinition;
-use crate::type_::{Deprecation, PRELUDE_MODULE_NAME};
+use crate::type_::{Deprecation, Problems, PRELUDE_MODULE_NAME};
 use crate::warning::WarningEmitter;
 use crate::{
     ast::{SrcSpan, TypedExpr},
@@ -140,7 +140,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             .into(),
         },
     );
-    let errors = &mut vec![];
+    let mut problems = Problems::new();
     let name_corrections = &mut vec![];
     ExprTyper::new(
         &mut environment,
@@ -149,7 +149,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             has_erlang_external: false,
             has_javascript_external: false,
         },
-        errors,
+        &mut problems,
         name_corrections,
     )
     .infer_statements(ast)

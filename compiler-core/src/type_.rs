@@ -14,7 +14,7 @@ pub mod tests;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 pub use environment::*;
-pub use error::{Error, UnifyErrorSituation, Warning};
+pub use error::{Error, Problems, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;

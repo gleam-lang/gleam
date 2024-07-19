@@ -4,15 +4,16 @@ use crate::{
     ast::{Import, SrcSpan, UnqualifiedImport},
     build::Origin,
     type_::{
-        EntityKind, Environment, Error, ModuleInterface, UnusedModuleAlias, ValueConstructorVariant,
+        EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
+        ValueConstructorVariant,
     },
 };
 
 #[derive(Debug)]
-pub struct Importer<'context, 'errors> {
+pub struct Importer<'context, 'problems> {
     origin: Origin,
     environment: Environment<'context>,
-    errors: &'errors mut Vec<Error>,
+    problems: &'problems mut Problems,
 }
 
 impl<'context, 'problems> Importer<'context, 'problems> {
@@ -24,7 +25,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         Self {
             origin,
             environment,
-            errors: problems,
+            problems,
         }
     }
 
@@ -47,7 +48,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         // Find imported module
         let Some(module_info) = self.environment.importable_modules.get(&name) else {
-            self.errors.push(Error::UnknownModule {
+            self.problems.error(Error::UnknownModule {
                 location,
                 name: name.clone(),
                 imported_modules: self.environment.imported_modules.keys().cloned().collect(),
@@ -56,12 +57,12 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         };
 
         if let Err(e) = self.check_src_does_not_import_test(module_info, location, name.clone()) {
-            self.errors.push(e);
+            self.problems.error(e);
             return;
         }
 
         if let Err(e) = self.register_module(import, module_info) {
-            self.errors.push(e);
+            self.problems.error(e);
             return;
         }
 
@@ -80,7 +81,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         // Register the unqualified import if it is a type constructor
         let Some(type_info) = module.get_public_type(&import.name) else {
             // TODO: refine to a type specific error
-            self.errors.push(Error::UnknownModuleType {
+            self.problems.error(Error::UnknownModuleType {
                 location: import.location,
                 name: import.name.clone(),
                 module_name: module.name.clone(),
@@ -96,7 +97,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             .environment
             .insert_type_constructor(imported_name.clone(), type_info)
         {
-            self.errors.push(e);
+            self.problems.error(e);
             return;
         }
 
@@ -125,7 +126,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 &value.variant
             }
             None => {
-                self.errors.push(Error::UnknownModuleValue {
+                self.problems.error(Error::UnknownModuleValue {
                     location,
                     name: import_name.clone(),
                     module_name: module.name.clone(),
@@ -150,7 +151,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         // Check if value already was imported
         if let Some(previous) = self.environment.unqualified_imported_names.get(used_name) {
-            self.errors.push(Error::DuplicateImport {
+            self.problems.error(Error::DuplicateImport {
                 location,
                 previous_location: *previous,
                 name: import_name.clone(),
