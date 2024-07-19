@@ -66,10 +66,11 @@ jobs:
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             use-cross: true
-          - os: macos-latest
+          # macos>=14 runs exclusively on aarch64 and will thus fail to execute properly for x64
+          - os: macos-13
             target: x86_64-apple-darwin
             use-cross: false
-          - os: macos-12
+          - os: macos-latest
             target: aarch64-apple-darwin
             use-cross: false
           - os: windows-latest
@@ -212,7 +213,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build and push
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v6
         with:
           context: .
           platforms: linux/amd64,linux/arm64

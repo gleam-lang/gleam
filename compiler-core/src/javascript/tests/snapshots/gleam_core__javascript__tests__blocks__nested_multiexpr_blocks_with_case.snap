@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
+assertion_line: 94
 expression: "\nfn go() {\n  let x = {\n    1\n    {\n      2\n      case True {\n        _ -> 3\n      }\n    }\n  }\n  x\n}\n"
 ---
 function go() {
@@ -8,7 +9,9 @@ function go() {
     return (() => {
       2;
       let $ = true;
-      return 3;
+      {
+        return 3;
+      }
     })();
   })();
   return x;

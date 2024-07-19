@@ -1,23 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: hover
+expression: "\nimport example_module\nfn main() {\n  example_module.my_fn\n}\n"
 ---
-Hover {
-    contents: Scalar(
-        String(
-            "```gleam\nfn() -> Nil\n```\n",
-        ),
-    ),
-    range: Some(
-        Range {
-            start: Position {
-                line: 3,
-                character: 16,
-            },
-            end: Position {
-                line: 3,
-                character: 22,
-            },
-        },
-    ),
+import example_module
+fn main() {
+  example_module.my_fn
+                ▔▔▔↑▔▔
 }
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> Nil\n```\n",
+    ),
+)

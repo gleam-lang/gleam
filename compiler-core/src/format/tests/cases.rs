@@ -147,3 +147,19 @@ fn alternatives_are_not_split_if_not_necessary_2() {
 "#
     );
 }
+
+#[test]
+fn subjects_are_not_split_if_not_necessary() {
+    assert_format!(
+        r#"fn main() {
+  case
+    is_all_uppercase(remark),
+    string.ends_with(remark, "?"),
+    string.trim(remark) == ""
+  {
+    _, _, _ -> todo
+  }
+}
+"#
+    );
+}

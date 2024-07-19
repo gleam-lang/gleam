@@ -1,4 +1,5 @@
 use crate::{
+    analyse::name::NameCorrection,
     ast::{
         Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
@@ -27,7 +28,7 @@ use lsp_types::{
 use std::sync::Arc;
 
 use super::{
-    code_action::{CodeActionBuilder, RedundantTupleInCaseSubject},
+    code_action::{CodeActionBuilder, LetAssertToCase, RedundantTupleInCaseSubject},
     completer::Completer,
     src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
@@ -98,7 +99,7 @@ where
         // NOTE: This must come after the progress reporter has finished!
         let manifest = manifest?;
 
-        let compiler =
+        let compiler: LspProjectCompiler<FileSystemProxy<IO>> =
             LspProjectCompiler::new(manifest, config, paths.clone(), io.clone(), locker)?;
 
         let hex_deps = compiler
@@ -221,11 +222,18 @@ where
             let completions = match found {
                 Located::PatternSpread { .. } => None,
                 Located::Pattern(_pattern) => None,
+                // Do not show completions when typing inside a string.
+                Located::Expression(TypedExpr::String { .. }) => None,
 
+                Located::Expression(TypedExpr::RecordAccess { record, .. }) => {
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions.append(&mut completer.completion_field_accessors(record.type_()));
+                    Some(completions)
+                }
                 Located::Statement(_) | Located::Expression(_) => {
                     Some(completer.completion_values())
                 }
-
                 Located::ModuleStatement(Definition::Function(_)) => {
                     Some(completer.completion_types())
                 }
@@ -240,7 +248,7 @@ where
                 // we should try to provide completions for unqualified values
                 Located::ModuleStatement(Definition::Import(import)) => this
                     .compiler
-                    .get_module_inferface(import.module.as_str())
+                    .get_module_interface(import.module.as_str())
                     .map(|importing_module| {
                         completer.unqualified_completions_from_module(importing_module)
                     }),
@@ -269,6 +277,8 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
+            code_action_fix_names(module, &params, &mut actions);
+            actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
@@ -439,7 +449,7 @@ where
                     location,
                 }) => this
                     .compiler
-                    .get_module_inferface(module.as_str())
+                    .get_module_interface(module.as_str())
                     .and_then(|module| {
                         if is_type {
                             module.types.get(name).map(|t| {
@@ -877,6 +887,44 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn code_action_fix_names(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let name_corrections = &module.ast.type_info.name_corrections;
+
+    if name_corrections.is_empty() {
+        return;
+    }
+
+    // Convert src spans to lsp range
+    let line_numbers = LineNumbers::new(&module.code);
+
+    for name_correction in name_corrections {
+        let NameCorrection {
+            location,
+            correction,
+        } = name_correction;
+
+        let range = src_span_to_lsp_range(*location, &line_numbers);
+        // Check if the user's cursor is on the invalid name
+        if overlaps(params.range, range) {
+            let edit = lsp_types::TextEdit {
+                range,
+                new_text: correction.to_string(),
+            };
+
+            CodeActionBuilder::new(&format!("Rename to {}", correction))
+                .kind(lsp_types::CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), vec![edit])
+                .preferred(true)
+                .push_to(actions);
+        }
+    }
 }
 
 // Check if the edit empties a whole line; if so, delete the line.

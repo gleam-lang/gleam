@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"pub fn main() {\n    case 21 { twentyOne -> {Nil} }\n}\",\n    1)"
+---
+pub fn main() {
+    case 21 { twenty_one -> {Nil} }
+}

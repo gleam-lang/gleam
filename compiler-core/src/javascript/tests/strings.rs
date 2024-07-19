@@ -125,7 +125,7 @@ fn string_prefix_utf16() {
     assert_js!(
         r#"
 pub fn go(x) {
-  case "Θ foo bar" {
+  case "Θ wibble wobble" {
     "Θ" <> rest -> rest
     _ -> ""
   }
@@ -223,4 +223,33 @@ pub fn go(x) {
 }
 "#,
     )
+}
+
+#[test]
+fn const_concat() {
+    assert_js!(
+        r#"
+const cute = "cute"
+const cute_bee = cute <> "bee"
+
+pub fn main() {
+  cute_bee
+}
+"#
+    );
+}
+
+#[test]
+fn const_concat_multiple() {
+    assert_js!(
+        r#"
+const cute = "cute"
+const cute_bee = cute <> "bee"
+const cute_cute_bee_buzz = cute <> cute_bee <> "buzz"
+
+pub fn main() {
+  cute_cute_bee_buzz
+}
+"#
+    );
 }

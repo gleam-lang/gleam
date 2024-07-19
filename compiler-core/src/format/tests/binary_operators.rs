@@ -25,12 +25,12 @@ pub fn long_comparison_chain() {
   && trying_other_comparisons < with_ints
   || trying_other_comparisons <= with_ints
   && trying_other_comparisons >= with_ints
-  || and_now_an_equality_check == with_a_function(foo, bar)
+  || and_now_an_equality_check == with_a_function(wibble, wobble)
   && trying_other_comparisons >. with_floats
-  || trying_other_comparisons <. with_floats(baz)
+  || trying_other_comparisons <. with_floats(wobble)
   && trying_other_comparisons <=. with_floats
-  || trying_other_comparisons(foo, bar) >=. with_floats
-  && foo <> bar
+  || trying_other_comparisons(wibble, wobble) >=. with_floats
+  && wibble <> wobble
 }
 "#
     );
@@ -42,7 +42,7 @@ pub fn long_chain_mixing_operators() {
         r#"pub fn main() {
   variable + variable - variable * variable / variable
   == variable * variable / variable - variable + variable
-  || foo * bar > 11
+  || wibble * wobble > 11
 }
 "#
     );
@@ -51,7 +51,7 @@ pub fn long_chain_mixing_operators() {
         r#"pub fn main() {
   variable +. variable -. variable *. variable /. variable
   == variable *. variable /. variable -. variable +. variable
-  || foo *. bar >=. 11
+  || wibble *. wobble >=. 11
 }
 "#
     );
@@ -120,7 +120,7 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
 
     assert_format!(
         r#"pub fn main() {
-  Ok(foo(
+  Ok(wibble(
     name: names.name,
     text: text,
     code: code,
@@ -134,7 +134,7 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
 
     assert_format!(
         r#"pub fn main() {
-  Ok(foo(
+  Ok(wibble(
     name: names.name,
     text: text,
     code: code,
@@ -155,8 +155,8 @@ fn math_binops_kept_on_a_single_line_in_pipes() {
     assert_format!(
         r#"pub fn main() {
   1 + 2 * 3 / 4 - 5
-  |> foo
-  |> bar
+  |> wibble
+  |> wobble
 }
 "#
     );
@@ -164,8 +164,8 @@ fn math_binops_kept_on_a_single_line_in_pipes() {
     assert_format!(
         r#"pub fn main() {
   1 +. 2 *. 3 /. 4 -. 5
-  |> foo
-  |> bar
+  |> wibble
+  |> wobble
 }
 "#
     );
@@ -175,11 +175,11 @@ fn math_binops_kept_on_a_single_line_in_pipes() {
 fn binop_used_as_function_arguments_gets_nested() {
     assert_format!(
         r#"pub fn main() {
-  foo(
+  wibble(
     a_variable_with_a_long_name
       <> another_variable_with_a_long_name
       <> yet_another_variable_with_a_long_name,
-    bar,
+    wobble,
   )
 }
 "#
@@ -190,7 +190,7 @@ fn binop_used_as_function_arguments_gets_nested() {
 fn binop_is_not_nested_if_the_only_argument() {
     assert_format!(
         r#"pub fn main() {
-  foo(
+  wibble(
     a_variable_with_a_long_name
     <> another_variable_with_a_long_name
     <> yet_another_variable_with_a_long_name,
@@ -205,7 +205,7 @@ fn binop_inside_list_gets_nested() {
     assert_format!(
         r#"pub fn main() {
   [
-    foo,
+    wibble,
     a_variable_with_a_long_name
       <> another_variable_with_a_long_name
       <> yet_another_variable_with_a_long_name,
@@ -234,7 +234,7 @@ fn binop_inside_tuple_gets_nested() {
     assert_format!(
         r#"pub fn main() {
   #(
-    foo,
+    wibble,
     a_variable_with_a_long_name
       <> another_variable_with_a_long_name
       <> yet_another_variable_with_a_long_name,

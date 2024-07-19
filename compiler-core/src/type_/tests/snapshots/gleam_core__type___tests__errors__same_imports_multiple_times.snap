@@ -1,22 +1,22 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\n        import gleam/foo.{bar}\n        import gleam/foo.{zoo}\n        pub fn go() { bar() + zoo() }\n        "
+expression: "\n        import gleam/wibble.{wobble}\n        import gleam/wibble.{zoo}\n        pub fn go() { wobble() + zoo() }\n        "
 ---
 error: Duplicate import
   ┌─ /src/one/two.gleam:2:9
   │
-2 │         import gleam/foo.{bar}
-  │         ^^^^^^^^^^^^^^^^^^^^^^ First imported here
-3 │         import gleam/foo.{zoo}
-  │         ^^^^^^^^^^^^^^^^^^^^^^ Reimported here
+2 │         import gleam/wibble.{wobble}
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ First imported here
+3 │         import gleam/wibble.{zoo}
+  │         ^^^^^^^^^^^^^^^^^^^^^^^^^ Reimported here
 
-`foo` has been imported multiple times.
+`wibble` has been imported multiple times.
 Names in a Gleam module must be unique so one will need to be renamed.
 
 error: Unknown variable
-  ┌─ /src/one/two.gleam:4:31
+  ┌─ /src/one/two.gleam:4:34
   │
-4 │         pub fn go() { bar() + zoo() }
-  │                               ^^^
+4 │         pub fn go() { wobble() + zoo() }
+  │                                  ^^^
 
 The name `zoo` is not in scope here.

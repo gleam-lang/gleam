@@ -6,7 +6,10 @@ use itertools::Itertools;
 ///
 use super::*;
 use crate::{
-    analyse::Inferred,
+    analyse::{
+        name::{check_name_case, correct_name_case, NameCorrection},
+        Inferred,
+    },
     ast::{AssignName, Layer, UntypedPatternBitArraySegment},
 };
 use std::sync::Arc;
@@ -16,6 +19,8 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
+    errors: &'a mut Vec<Error>,
+    name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 enum PatternMode {
@@ -24,12 +29,19 @@ enum PatternMode {
 }
 
 impl<'a, 'b> PatternTyper<'a, 'b> {
-    pub fn new(environment: &'a mut Environment<'b>, hydrator: &'a Hydrator) -> Self {
+    pub fn new(
+        environment: &'a mut Environment<'b>,
+        hydrator: &'a Hydrator,
+        errors: &'a mut Vec<Error>,
+        name_corrections: &'a mut Vec<NameCorrection>,
+    ) -> Self {
         Self {
             environment,
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
+            errors,
+            name_corrections,
         }
     }
 
@@ -39,6 +51,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
+        self.check_name_case(location, &EcoString::from(name), Named::Variable);
+
         match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
@@ -207,11 +221,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         type_: Arc<Type>,
     ) -> Result<TypedPattern, Error> {
         match pattern {
-            Pattern::Discard { name, location, .. } => Ok(Pattern::Discard {
-                type_,
-                name,
-                location,
-            }),
+            Pattern::Discard { name, location, .. } => {
+                self.check_name_case(location, &name, Named::Discard);
+                Ok(Pattern::Discard {
+                    type_,
+                    name,
+                    location,
+                })
+            }
             Pattern::Invalid { location, .. } => Ok(Pattern::Invalid { type_, location }),
 
             Pattern::Variable { name, location, .. } => {
@@ -274,6 +291,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 if let AssignName::Variable(right) = &right_side_assignment {
                     self.insert_variable(right.as_ref(), string(), right_location)
                         .map_err(|e| convert_unify_error(e, location))?;
+                } else if let AssignName::Discard(right) = &right_side_assignment {
+                    self.check_name_case(right_location, right, Named::Discard);
                 };
 
                 Ok(Pattern::StringPrefix {
@@ -652,6 +671,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     _ => panic!("Unexpected constructor type for a constructor pattern."),
                 }
             }
+        }
+    }
+
+    fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
+        if let Err(error) = check_name_case(location, name, kind) {
+            self.errors.push(error);
+            self.name_corrections
+                .push(correct_name_case(location, name, kind));
         }
     }
 }

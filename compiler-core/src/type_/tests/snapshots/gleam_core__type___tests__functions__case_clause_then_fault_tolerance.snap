@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n  let wibble = True\n  case wibble {\n    True -> {\n      1.0 + 1.0\n    }\n    _ -> {\n      1.0 + 1.0\n    }\n  }\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:6:7
+  │
+6 │       1.0 + 1.0
+  │       ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats
+
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:9:7
+  │
+9 │       1.0 + 1.0
+  │       ^^^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    Float
+
+Hint: the +. operator can be used with Floats

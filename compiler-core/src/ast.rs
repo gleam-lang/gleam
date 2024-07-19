@@ -158,7 +158,7 @@ impl<A> Arg<A> {
 
     pub fn is_capture_hole(&self) -> bool {
         match &self.names {
-            ArgNames::Named { name } if name == CAPTURE_VARIABLE => true,
+            ArgNames::Named { name, .. } if name == CAPTURE_VARIABLE => true,
             _ => false,
         }
     }
@@ -176,10 +176,26 @@ impl TypedArg {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: EcoString },
-    LabelledDiscard { label: EcoString, name: EcoString },
-    Named { name: EcoString },
-    NamedLabelled { name: EcoString, label: EcoString },
+    Discard {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    LabelledDiscard {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
+    Named {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    NamedLabelled {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
 }
 
 impl ArgNames {
@@ -194,7 +210,7 @@ impl ArgNames {
     pub fn get_variable_name(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
-            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
+            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name, .. } => Some(name),
         }
     }
 }
@@ -204,6 +220,7 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<(u32, EcoString)>,
@@ -414,6 +431,146 @@ impl TypeAst {
             TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
         }
     }
+
+    /// Generates an annotation corresponding to the type.
+    pub fn print(&self, buffer: &mut EcoString) {
+        match &self {
+            TypeAst::Var(var) => buffer.push_str(&var.name),
+            TypeAst::Hole(hole) => buffer.push_str(&hole.name),
+            TypeAst::Tuple(tuple) => {
+                buffer.push_str("#(");
+                for (i, elem) in tuple.elems.iter().enumerate() {
+                    elem.print(buffer);
+                    if i < tuple.elems.len() - 1 {
+                        buffer.push_str(", ");
+                    }
+                }
+                buffer.push(')')
+            }
+            TypeAst::Fn(func) => {
+                buffer.push_str("fn(");
+                for (i, argument) in func.arguments.iter().enumerate() {
+                    argument.print(buffer);
+                    if i < func.arguments.len() - 1 {
+                        buffer.push_str(", ");
+                    }
+                }
+                buffer.push(')');
+                buffer.push_str(" -> ");
+                func.return_.print(buffer);
+            }
+            TypeAst::Constructor(constructor) => {
+                if let Some(module) = &constructor.module {
+                    buffer.push_str(module);
+                    buffer.push('.');
+                }
+                buffer.push_str(&constructor.name);
+                if !constructor.arguments.is_empty() {
+                    buffer.push('(');
+                    for (i, argument) in constructor.arguments.iter().enumerate() {
+                        argument.print(buffer);
+                        if i < constructor.arguments.len() - 1 {
+                            buffer.push_str(", ");
+                        }
+                    }
+                    buffer.push(')');
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn type_ast_print_fn() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Fn(TypeAstFn {
+        location: SrcSpan { start: 1, end: 1 },
+        arguments: vec![
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "String".into(),
+            }),
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "Bool".into(),
+            }),
+        ],
+        return_: Box::new(TypeAst::Var(TypeAstVar {
+            location: SrcSpan { start: 1, end: 1 },
+            name: "Int".into(),
+        })),
+    });
+    ast.print(&mut buffer);
+    assert_eq!(&buffer, "fn(String, Bool) -> Int")
+}
+
+#[test]
+fn type_ast_print_constructor() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Constructor(TypeAstConstructor {
+        name: "SomeType".into(),
+        module: Some("some_module".into()),
+        location: SrcSpan { start: 1, end: 1 },
+        arguments: vec![
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "String".into(),
+            }),
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "Bool".into(),
+            }),
+        ],
+    });
+    ast.print(&mut buffer);
+    assert_eq!(&buffer, "some_module.SomeType(String, Bool)")
+}
+
+#[test]
+fn type_ast_print_tuple() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Tuple(TypeAstTuple {
+        location: SrcSpan { start: 1, end: 1 },
+        elems: vec![
+            TypeAst::Constructor(TypeAstConstructor {
+                name: "SomeType".into(),
+                module: Some("some_module".into()),
+                location: SrcSpan { start: 1, end: 1 },
+                arguments: vec![
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "String".into(),
+                    }),
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "Bool".into(),
+                    }),
+                ],
+            }),
+            TypeAst::Fn(TypeAstFn {
+                location: SrcSpan { start: 1, end: 1 },
+                arguments: vec![
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "String".into(),
+                    }),
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "Bool".into(),
+                    }),
+                ],
+                return_: Box::new(TypeAst::Var(TypeAstVar {
+                    location: SrcSpan { start: 1, end: 1 },
+                    name: "Int".into(),
+                })),
+            }),
+        ],
+    });
+    ast.print(&mut buffer);
+    assert_eq!(
+        &buffer,
+        "#(some_module.SomeType(String, Bool), fn(String, Bool) -> Int)"
+    )
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -463,9 +620,9 @@ impl Publicity {
 ///
 /// ```gleam
 /// // Public function
-/// pub fn bar() -> String { ... }
+/// pub fn wobble() -> String { ... }
 /// // Private function
-/// fn foo(x: Int) -> Int { ... }
+/// fn wibble(x: Int) -> Int { ... }
 /// // Anonymous function
 /// fn(x: Int) { ... }
 /// ```
@@ -1409,7 +1566,7 @@ impl SrcSpan {
     }
 
     pub fn contains(&self, byte_index: u32) -> bool {
-        byte_index >= self.start && byte_index < self.end
+        byte_index >= self.start && byte_index <= self.end
     }
 }
 
@@ -1539,10 +1696,10 @@ impl AssignName {
         }
     }
 
-    pub fn to_arg_names(self) -> ArgNames {
+    pub fn to_arg_names(self, location: SrcSpan) -> ArgNames {
         match self {
-            AssignName::Variable(name) => ArgNames::Named { name },
-            AssignName::Discard(name) => ArgNames::Discard { name },
+            AssignName::Variable(name) => ArgNames::Named { name, location },
+            AssignName::Discard(name) => ArgNames::Discard { name, location },
         }
     }
 
@@ -1557,7 +1714,9 @@ impl AssignName {
 impl<A> Pattern<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Pattern::Assign { pattern, .. } => pattern.location(),
+            Pattern::Assign {
+                pattern, location, ..
+            } => SrcSpan::new(pattern.location().start, location.end),
             Pattern::Int { location, .. }
             | Pattern::Variable { location, .. }
             | Pattern::VarUsage { location, .. }

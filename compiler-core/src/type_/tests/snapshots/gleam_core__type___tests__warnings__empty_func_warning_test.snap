@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "pub fn main() { foo() }\npub fn foo() { }\n"
+expression: "pub fn main() { wibble() }\npub fn wibble() { }\n"
 ---
 warning: Unimplemented function
   ┌─ /src/warning/wrn.gleam:2:1
   │
-2 │ pub fn foo() { }
-  │ ^^^^^^^^^^^^ This code is incomplete
+2 │ pub fn wibble() { }
+  │ ^^^^^^^^^^^^^^^ This code is incomplete
 
 This code will crash if it is run. Be sure to finish it before
 running your program.

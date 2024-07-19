@@ -141,6 +141,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         },
     );
     let errors = &mut vec![];
+    let name_corrections = &mut vec![];
     ExprTyper::new(
         &mut environment,
         FunctionDefinition {
@@ -149,6 +150,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             has_javascript_external: false,
         },
         errors,
+        name_corrections,
     )
     .infer_statements(ast)
     .first()
@@ -162,7 +164,8 @@ fn find_node_todo() {
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(5), None);
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(6), None);
 }
 
 #[test]
@@ -172,7 +175,8 @@ fn find_node_todo_with_string() {
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(12), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(13), None);
+    assert_eq!(expr.find_node(13), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(14), None);
 }
 
 #[test]
@@ -182,7 +186,8 @@ fn find_node_string() {
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(5), None);
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(6), None);
 }
 
 #[test]
@@ -192,7 +197,8 @@ fn find_node_float() {
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(5), None);
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(6), None);
 }
 
 #[test]
@@ -202,7 +208,8 @@ fn find_node_int() {
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(4), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(5), None);
+    assert_eq!(expr.find_node(5), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(6), None);
 }
 
 #[test]
@@ -212,6 +219,12 @@ fn find_node_var() {
 wibble}"#,
     );
     let expr = get_bare_expression(&statement);
+
+    let int1 = TypedExpr::Int {
+        location: SrcSpan { start: 14, end: 15 },
+        value: "1".into(),
+        typ: type_::int(),
+    };
 
     let var = TypedExpr::Var {
         location: SrcSpan { start: 16, end: 22 },
@@ -226,10 +239,10 @@ wibble}"#,
         name: "wibble".into(),
     };
 
-    assert_eq!(expr.find_node(15), None);
+    assert_eq!(expr.find_node(15), Some(Located::Expression(&int1)));
     assert_eq!(expr.find_node(16), Some(Located::Expression(&var)));
     assert_eq!(expr.find_node(21), Some(Located::Expression(&var)));
-    assert_eq!(expr.find_node(22), None);
+    assert_eq!(expr.find_node(22), Some(Located::Expression(&var)));
 }
 
 #[test]
@@ -238,11 +251,11 @@ fn find_node_sequence() {
     assert!(block.find_node(0).is_none());
     assert!(block.find_node(1).is_none());
     assert!(block.find_node(2).is_some());
-    assert!(block.find_node(3).is_none());
+    assert!(block.find_node(3).is_some());
     assert!(block.find_node(4).is_some());
-    assert!(block.find_node(5).is_none());
+    assert!(block.find_node(5).is_some());
     assert!(block.find_node(6).is_some());
-    assert!(block.find_node(7).is_none());
+    assert!(block.find_node(7).is_some());
 }
 
 #[test]
@@ -268,14 +281,14 @@ fn find_node_list() {
 
     assert_eq!(list.find_node(0), Some(Located::Expression(list)));
     assert_eq!(list.find_node(1), Some(Located::Expression(&int1)));
-    assert_eq!(list.find_node(2), Some(Located::Expression(list)));
+    assert_eq!(list.find_node(2), Some(Located::Expression(&int1)));
     assert_eq!(list.find_node(3), Some(Located::Expression(list)));
     assert_eq!(list.find_node(4), Some(Located::Expression(&int2)));
-    assert_eq!(list.find_node(5), Some(Located::Expression(list)));
+    assert_eq!(list.find_node(5), Some(Located::Expression(&int2)));
     assert_eq!(list.find_node(6), Some(Located::Expression(list)));
     assert_eq!(list.find_node(7), Some(Located::Expression(&int3)));
-    assert_eq!(list.find_node(8), Some(Located::Expression(list)));
-    assert_eq!(list.find_node(9), None);
+    assert_eq!(list.find_node(8), Some(Located::Expression(&int3)));
+    assert_eq!(list.find_node(9), Some(Located::Expression(list)));
 }
 
 #[test]
@@ -302,14 +315,14 @@ fn find_node_tuple() {
     assert_eq!(tuple.find_node(0), Some(Located::Expression(tuple)));
     assert_eq!(tuple.find_node(1), Some(Located::Expression(tuple)));
     assert_eq!(tuple.find_node(2), Some(Located::Expression(&int1)));
-    assert_eq!(tuple.find_node(3), Some(Located::Expression(tuple)));
+    assert_eq!(tuple.find_node(3), Some(Located::Expression(&int1)));
     assert_eq!(tuple.find_node(4), Some(Located::Expression(tuple)));
     assert_eq!(tuple.find_node(5), Some(Located::Expression(&int2)));
-    assert_eq!(tuple.find_node(6), Some(Located::Expression(tuple)));
+    assert_eq!(tuple.find_node(6), Some(Located::Expression(&int2)));
     assert_eq!(tuple.find_node(7), Some(Located::Expression(tuple)));
     assert_eq!(tuple.find_node(8), Some(Located::Expression(&int3)));
-    assert_eq!(tuple.find_node(9), Some(Located::Expression(tuple)));
-    assert_eq!(tuple.find_node(10), None);
+    assert_eq!(tuple.find_node(9), Some(Located::Expression(&int3)));
+    assert_eq!(tuple.find_node(10), Some(Located::Expression(tuple)));
 }
 
 #[test]
@@ -317,11 +330,11 @@ fn find_node_binop() {
     let statement = compile_expression(r#"1 + 2"#);
     let expr = get_bare_expression(&statement);
     assert!(expr.find_node(0).is_some());
-    assert!(expr.find_node(1).is_none());
+    assert!(expr.find_node(1).is_some());
     assert!(expr.find_node(2).is_none());
     assert!(expr.find_node(3).is_none());
     assert!(expr.find_node(4).is_some());
-    assert!(expr.find_node(5).is_none());
+    assert!(expr.find_node(5).is_some());
 }
 
 #[test]
@@ -336,9 +349,8 @@ fn find_node_tuple_index() {
     };
 
     assert_eq!(expr.find_node(2), Some(Located::Expression(&int)));
-    assert_eq!(expr.find_node(4), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(5), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(6), None);
+    assert_eq!(expr.find_node(6), Some(Located::Expression(expr)));
 }
 
 #[test]
@@ -360,7 +372,7 @@ fn find_node_module_select() {
     assert_eq!(expr.find_node(0), None);
     assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
-    assert_eq!(expr.find_node(3), None);
+    assert_eq!(expr.find_node(3), Some(Located::Expression(&expr)));
 }
 
 #[test]
@@ -377,9 +389,9 @@ fn find_node_fn() {
     assert_eq!(expr.find_node(0), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(6), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(7), Some(Located::Expression(&int)));
-    assert_eq!(expr.find_node(8), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(8), Some(Located::Expression(&int)));
     assert_eq!(expr.find_node(9), Some(Located::Expression(expr)));
-    assert_eq!(expr.find_node(10), None);
+    assert_eq!(expr.find_node(10), Some(Located::Expression(expr)));
 }
 
 #[test]
@@ -406,11 +418,12 @@ fn find_node_call() {
     };
 
     assert_eq!(expr.find_node(11), Some(Located::Expression(&retrn)));
-    assert_eq!(expr.find_node(14), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(15), Some(Located::Expression(&arg1)));
-    assert_eq!(expr.find_node(16), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(16), Some(Located::Expression(&arg1)));
+    assert_eq!(expr.find_node(17), Some(Located::Expression(expr)));
     assert_eq!(expr.find_node(18), Some(Located::Expression(&arg2)));
-    assert_eq!(expr.find_node(19), Some(Located::Expression(expr)));
+    assert_eq!(expr.find_node(19), Some(Located::Expression(&arg2)));
+    assert_eq!(expr.find_node(20), Some(Located::Expression(expr)));
 }
 
 #[test]
@@ -433,9 +446,9 @@ fn find_node_record_access() {
     assert_eq!(access.find_node(4), Some(Located::Expression(&string)));
     assert_eq!(access.find_node(9), Some(Located::Expression(&string)));
     assert_eq!(access.find_node(12), Some(Located::Expression(&int)));
-    assert_eq!(access.find_node(14), Some(Located::Expression(access)));
+    assert_eq!(access.find_node(15), Some(Located::Expression(access)));
     assert_eq!(access.find_node(18), Some(Located::Expression(access)));
-    assert_eq!(access.find_node(19), None);
+    assert_eq!(access.find_node(19), Some(Located::Expression(access)));
 }
 
 #[test]
@@ -452,8 +465,8 @@ fn find_node_record_update() {
     assert_eq!(update.find_node(0), Some(Located::Expression(update)));
     assert_eq!(update.find_node(3), Some(Located::Expression(update)));
     assert_eq!(update.find_node(27), Some(Located::Expression(&int)));
-    assert_eq!(update.find_node(28), Some(Located::Expression(update)));
-    assert_eq!(update.find_node(29), None);
+    assert_eq!(update.find_node(28), Some(Located::Expression(&int)));
+    assert_eq!(update.find_node(29), Some(Located::Expression(update)));
 }
 
 #[test]
@@ -490,7 +503,8 @@ case 1, 2 {
     assert_eq!(case.find_node(9), Some(Located::Expression(&int2)));
     assert_eq!(case.find_node(23), Some(Located::Expression(&int3)));
     assert_eq!(case.find_node(25), Some(Located::Expression(case)));
-    assert_eq!(case.find_node(26), None);
+    assert_eq!(case.find_node(26), Some(Located::Expression(case)));
+    assert_eq!(case.find_node(27), None);
 }
 
 #[test]
@@ -523,7 +537,7 @@ fn find_node_bool() {
     assert_eq!(negate.find_node(2), Some(Located::Expression(&bool)));
     assert_eq!(negate.find_node(3), Some(Located::Expression(&bool)));
     assert_eq!(negate.find_node(4), Some(Located::Expression(&bool)));
-    assert_eq!(negate.find_node(5), None);
+    assert_eq!(negate.find_node(5), Some(Located::Expression(&bool)));
 }
 
 #[test]
@@ -544,8 +558,8 @@ pub fn main() {
     // The fn
     assert!(module.find_node(2).is_some());
     assert!(module.find_node(24).is_some());
-
-    assert!(module.find_node(25).is_none());
+    assert!(module.find_node(25).is_some());
+    assert!(module.find_node(26).is_none());
 }
 
 #[test]
@@ -561,8 +575,7 @@ import gleam
     // The import
     assert!(module.find_node(1).is_some());
     assert!(module.find_node(12).is_some());
-
-    assert!(module.find_node(13).is_none());
+    assert!(module.find_node(13).is_some());
     assert!(module.find_node(14).is_none());
 }
 

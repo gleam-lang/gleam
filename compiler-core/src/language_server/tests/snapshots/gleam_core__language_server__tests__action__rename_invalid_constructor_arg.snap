@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"type IntWrapper { IntWrapper(innerInt: Int) }\", 0)"
+---
+type IntWrapper { IntWrapper(inner_int: Int) }

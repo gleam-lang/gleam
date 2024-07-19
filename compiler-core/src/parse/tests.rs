@@ -318,68 +318,20 @@ fn bit_array2() {
     );
 }
 
-#[test]
-fn name() {
-    assert_error!(
-        "let xS = 1",
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::BadName { name: "xS".into() },
-                    location: SrcSpan { start: 4, end: 6 },
-                }
-            },
-            location: SrcSpan { start: 4, end: 6 },
-        }
-    );
-}
-
-#[test]
-fn name1() {
-    assert_error!(
-        "let _xS = 1",
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::BadDiscardName { name: "_xS".into() },
-                    location: SrcSpan { start: 4, end: 7 },
-                }
-            },
-            location: SrcSpan { start: 4, end: 7 },
-        }
-    );
-}
-
-#[test]
-fn name2() {
-    assert_error!(
-        "type S_m = String",
-        ParseError {
-            error: ParseErrorType::LexError {
-                error: LexicalError {
-                    error: LexicalErrorType::BadUpname { name: "S_m".into() },
-                    location: SrcSpan { start: 5, end: 8 },
-                }
-            },
-            location: SrcSpan { start: 5, end: 8 },
-        }
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/3125
 #[test]
 fn triple_equals() {
     assert_error!(
-        "let bar:Int = 32
-        bar === 42",
+        "let wobble:Int = 32
+        wobble === 42",
         ParseError {
             error: ParseErrorType::LexError {
                 error: LexicalError {
                     error: LexicalErrorType::InvalidTripleEqual,
-                    location: SrcSpan { start: 29, end: 32 },
+                    location: SrcSpan { start: 35, end: 38 },
                 }
             },
-            location: SrcSpan { start: 29, end: 32 },
+            location: SrcSpan { start: 35, end: 38 },
         }
     );
 }
@@ -387,11 +339,11 @@ fn triple_equals() {
 #[test]
 fn triple_equals_with_whitespace() {
     assert_error!(
-        "let bar:Int = 32
-        bar ==     = 42",
+        "let wobble:Int = 32
+        wobble ==     = 42",
         ParseError {
             error: ParseErrorType::NoLetBinding,
-            location: SrcSpan { start: 36, end: 37 },
+            location: SrcSpan { start: 42, end: 43 },
         }
     );
 }
@@ -437,9 +389,9 @@ fn anonymous_function_labeled_arguments() {
 #[test]
 fn no_let_binding() {
     assert_error!(
-        "foo = 32",
+        "wibble = 32",
         ParseError {
-            location: SrcSpan { start: 4, end: 5 },
+            location: SrcSpan { start: 7, end: 8 },
             error: ParseErrorType::NoLetBinding
         }
     );
@@ -448,9 +400,9 @@ fn no_let_binding() {
 #[test]
 fn no_let_binding1() {
     assert_error!(
-        "foo:Int = 32",
+        "wibble:Int = 32",
         ParseError {
-            location: SrcSpan { start: 3, end: 4 },
+            location: SrcSpan { start: 6, end: 7 },
             error: ParseErrorType::NoLetBinding
         }
     );
@@ -459,10 +411,10 @@ fn no_let_binding1() {
 #[test]
 fn no_let_binding2() {
     assert_error!(
-        "let bar:Int = 32
-        bar = 42",
+        "let wobble:Int = 32
+        wobble = 42",
         ParseError {
-            location: SrcSpan { start: 29, end: 30 },
+            location: SrcSpan { start: 35, end: 36 },
             error: ParseErrorType::NoLetBinding
         }
     );
@@ -482,9 +434,9 @@ fn no_let_binding3() {
 #[test]
 fn no_eq_after_binding() {
     assert_error!(
-        "let foo",
+        "let wibble",
         ParseError {
-            location: SrcSpan { start: 4, end: 7 },
+            location: SrcSpan { start: 4, end: 10 },
             error: ParseErrorType::ExpectedEqual
         }
     );
@@ -493,10 +445,10 @@ fn no_eq_after_binding() {
 #[test]
 fn no_eq_after_binding1() {
     assert_error!(
-        "let foo
-        foo = 4",
+        "let wibble
+        wibble = 4",
         ParseError {
-            location: SrcSpan { start: 4, end: 7 },
+            location: SrcSpan { start: 4, end: 10 },
             error: ParseErrorType::ExpectedEqual
         }
     );
@@ -504,31 +456,31 @@ fn no_eq_after_binding1() {
 
 #[test]
 fn no_let_binding_snapshot_1() {
-    assert_error!("foo = 4");
+    assert_error!("wibble = 4");
 }
 
 #[test]
 fn no_let_binding_snapshot_2() {
-    assert_error!("foo:Int = 4");
+    assert_error!("wibble:Int = 4");
 }
 
 #[test]
 fn no_let_binding_snapshot_3() {
     assert_error!(
-        "let bar:Int = 32
-        bar = 42"
+        "let wobble:Int = 32
+        wobble = 42"
     );
 }
 
 #[test]
 fn no_eq_after_binding_snapshot_1() {
-    assert_error!("let foo");
+    assert_error!("let wibble");
 }
 #[test]
 fn no_eq_after_binding_snapshot_2() {
     assert_error!(
-        "let foo
-        foo = 4"
+        "let wibble
+        wibble = 4"
     );
 }
 
@@ -1036,6 +988,43 @@ type A {
     );
 }
 
+// Tests whether diagnostic presents an example of how to formulate a proper
+// record constructor based off a common user error pattern.
+// https://github.com/gleam-lang/gleam/issues/3324
+
+#[test]
+fn type_invalid_record_constructor() {
+    assert_module_error!(
+        "
+pub type User {
+    name: String,
+}
+"
+    );
+}
+
+#[test]
+fn type_invalid_record_constructor_without_field_type() {
+    assert_module_error!(
+        "
+pub opaque type User {
+    name
+}
+"
+    );
+}
+
+#[test]
+fn type_invalid_record_constructor_invalid_field_type() {
+    assert_module_error!(
+        r#"
+type User {
+    name: "Test User",
+}
+"#
+    );
+}
+
 #[test]
 fn type_invalid_type_name() {
     assert_module_error!(
@@ -1132,6 +1121,22 @@ const a = A(\"a\", let)
     );
 }
 
+// record access should parse even if there is no label written
+#[test]
+fn record_access_no_label() {
+    assert_parse_module!(
+        "
+type Wibble {
+    Wibble(wibble: String)
+}
+
+fn wobble() {
+  Wibble(\"a\").
+}
+"
+    );
+}
+
 #[test]
 fn newline_tokens() {
     assert_eq!(
@@ -1154,5 +1159,57 @@ fn arithmetic_in_guards() {
 case 2, 3 {
     x, y if x + y == 1 -> True
 }"
+    );
+}
+
+#[test]
+fn const_string_concat() {
+    assert_parse_module!(
+        "
+const cute = \"cute\"
+const cute_bee = cute <> \"bee\"
+"
+    );
+}
+
+#[test]
+fn const_string_concat_naked_right() {
+    assert_module_error!(
+        "
+const no_cute_bee = \"cute\" <>
+"
+    );
+}
+
+#[test]
+fn function_call_in_case_clause_guard() {
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+    _ if length(my_string) > 2 -> io.debug("doesn't work')
+}"#
+    );
+}
+
+#[test]
+fn dot_access_function_call_in_case_clause_guard() {
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+    _ if string.length(my_string) > 2 -> io.debug("doesn't work')
+}"#
+    );
+}
+
+#[test]
+fn invalid_left_paren_in_case_clause_guard() {
+    assert_error!(
+        r#"
+let my_string = "hello"
+case my_string {
+    _ if string.length( > 2 -> io.debug("doesn't work')
+}"#
     );
 }

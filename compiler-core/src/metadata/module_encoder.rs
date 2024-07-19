@@ -393,6 +393,12 @@ impl<'a> ModuleEncoder<'a> {
                 );
             }
 
+            Constant::StringConcatenation { right, left, .. } => {
+                let mut builder = builder.init_string_concatenation();
+                self.build_constant(builder.reborrow().init_right(), right);
+                self.build_constant(builder.reborrow().init_left(), left);
+            }
+
             Constant::Invalid { .. } => {
                 panic!("invalid constants should not reach code generation")
             }

@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"type MyType { The_Constructor(Int) }\", 0)"
+---
+type MyType { TheConstructor(Int) }

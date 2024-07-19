@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: type Fancy_Bool = Bool
+---
+error: Invalid type alias name
+  ┌─ /src/one/two.gleam:1:6
+  │
+1 │ type Fancy_Bool = Bool
+  │      ^^^^^^^^^^ This is not a valid type alias name
+
+Hint: Type Alias names start with an uppercase letter and contain only
+lowercase letters, numbers, and uppercase letters.
+Try: FancyBool

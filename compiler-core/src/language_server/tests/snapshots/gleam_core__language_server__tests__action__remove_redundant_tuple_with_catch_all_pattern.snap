@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action_with_title(code, 4, REMOVE_REDUNDANT_TUPLES)"
+expression: "\npub fn main() {\n  case #(1, 2) {\n    #(1, 2) -> 0\n    _ -> 1\n  }\n}\n"
 ---
 pub fn main() {
   case 1, 2 {

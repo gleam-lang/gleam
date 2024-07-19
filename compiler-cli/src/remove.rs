@@ -10,7 +10,7 @@ use crate::{cli, fs, UseManifest};
 pub fn command(packages: Vec<String>) -> Result<()> {
     // Read gleam.toml so we can remove deps from it
     let mut toml = fs::read("gleam.toml")?
-        .parse::<toml_edit::Document>()
+        .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,

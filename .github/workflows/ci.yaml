@@ -54,11 +54,12 @@ jobs:
             target: aarch64-unknown-linux-musl
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
-          - os: macos-12 # intel
+          # macos>=14 runs exclusively on aarch64 and will thus fail to execute properly for x64
+          - os: macos-13 # intel
             target: x86_64-apple-darwin
             use-cross: false
             run-integration-tests: true
-          - os: macos-14 # aarch64
+          - os: macos-latest # aarch64
             toolchain: stable
             target: aarch64-apple-darwin
             use-cross: false
@@ -194,6 +195,13 @@ jobs:
           cd lib_project
           gleam run
           gleam test
+
+          # Test adding of deps
+          gleam add exception    # No specifier
+          gleam add gleam_http@3 # Version specifier
+          gleam test
+
+          # Test documentation generation
           gleam docs build
 
           # Assert that module metadata has been written
@@ -333,7 +341,7 @@ jobs:
           deno-version: v1.x
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@v1
+        uses: oven-sh/setup-bun@v2
 
       - name: Install Erlang
         uses: erlef/setup-beam@v1

@@ -57,7 +57,7 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
                             character: 0,
                         },
                     },
-                    new_text: "import dep\n",
+                    new_text: "import dep\n\n",
                 },
             ],
         ),

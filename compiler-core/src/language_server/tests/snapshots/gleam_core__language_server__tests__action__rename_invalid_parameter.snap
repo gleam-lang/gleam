@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"fn add(numA: Int, num_b: Int) { numA + num_b }\", 0)"
+---
+fn add(num_a: Int, num_b: Int) { numA + num_b }

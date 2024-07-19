@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\nfn append(x, y) {\n  x <> y\n}\n"
+---
+/// Exciting documentation
+/// Maybe even multiple lines
+fn append(x, y) {
+          ↑      
+  x <> y
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nString\n```",
+    ),
+)

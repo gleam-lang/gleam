@@ -4580,7 +4580,7 @@ pub mod field_map {
 }
 
 pub mod constant {
-  pub use self::Which::{Int,Float,String,Tuple,List,Record,BitArray,Var};
+  pub use self::Which::{Int,Float,String,Tuple,List,Record,BitArray,Var,StringConcatenation};
 
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -4692,6 +4692,11 @@ pub mod constant {
         }
         7 => {
           ::core::result::Result::Ok(Var(
+            ::capnp::traits::FromStructReader::new(self.reader)
+          ))
+        }
+        8 => {
+          ::core::result::Result::Ok(StringConcatenation(
             ::capnp::traits::FromStructReader::new(self.reader)
           ))
         }
@@ -4848,6 +4853,13 @@ pub mod constant {
       ::capnp::traits::FromStructBuilder::new(self.builder)
     }
     #[inline]
+    pub fn init_string_concatenation(self, ) -> crate::schema_capnp::constant::string_concatenation::Builder<'a> {
+      self.builder.set_data_field::<u16>(0, 8);
+      self.builder.get_pointer_field(0).clear();
+      self.builder.get_pointer_field(1).clear();
+      ::capnp::traits::FromStructBuilder::new(self.builder)
+    }
+    #[inline]
     pub fn which(self) -> ::core::result::Result<WhichBuilder<'a,>, ::capnp::NotInSchema> {
       match self.builder.get_data_field::<u16>(0) {
         0 => {
@@ -4890,6 +4902,11 @@ pub mod constant {
             ::capnp::traits::FromStructBuilder::new(self.builder)
           ))
         }
+        8 => {
+          ::core::result::Result::Ok(StringConcatenation(
+            ::capnp::traits::FromStructBuilder::new(self.builder)
+          ))
+        }
         x => ::core::result::Result::Err(::capnp::NotInSchema(x))
       }
     }
@@ -4908,7 +4925,7 @@ pub mod constant {
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
     pub const TYPE_ID: u64 = 0xe6ea_dc6f_e66d_526a;
   }
-  pub enum Which<A0,A1,A2,A3,A4,A5,A6,A7> {
+  pub enum Which<A0,A1,A2,A3,A4,A5,A6,A7,A8> {
     Int(A0),
     Float(A1),
     String(A2),
@@ -4917,9 +4934,10 @@ pub mod constant {
     Record(A5),
     BitArray(A6),
     Var(A7),
+    StringConcatenation(A8),
   }
-  pub type WhichReader<'a,> = Which<::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Reader<'a>,crate::schema_capnp::constant::record::Reader<'a>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_array_segment::Owned>>,crate::schema_capnp::constant::var::Reader<'a>>;
-  pub type WhichBuilder<'a,> = Which<::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Builder<'a>,crate::schema_capnp::constant::record::Builder<'a>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_array_segment::Owned>>,crate::schema_capnp::constant::var::Builder<'a>>;
+  pub type WhichReader<'a,> = Which<::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::text::Reader<'a>>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Reader<'a>,crate::schema_capnp::constant::record::Reader<'a>,::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::bit_array_segment::Owned>>,crate::schema_capnp::constant::var::Reader<'a>,crate::schema_capnp::constant::string_concatenation::Reader<'a>>;
+  pub type WhichBuilder<'a,> = Which<::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::text::Builder<'a>>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::constant::Owned>>,crate::schema_capnp::constant::list::Builder<'a>,crate::schema_capnp::constant::record::Builder<'a>,::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::bit_array_segment::Owned>>,crate::schema_capnp::constant::var::Builder<'a>,crate::schema_capnp::constant::string_concatenation::Builder<'a>>;
 
   pub mod list {
     #[derive(Copy, Clone)]
@@ -5485,6 +5503,173 @@ pub mod constant {
       use capnp::private::layout;
       pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
       pub const TYPE_ID: u64 = 0xcb0a_e954_2cff_02a7;
+    }
+  }
+
+  pub mod string_concatenation {
+    #[derive(Copy, Clone)]
+    pub struct Owned(());
+    impl <'a> ::capnp::traits::Owned<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
+    impl <'a> ::capnp::traits::OwnedStruct<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
+    impl ::capnp::traits::Pipelined for Owned { type Pipeline = Pipeline; }
+
+    #[derive(Clone, Copy)]
+    pub struct Reader<'a> { reader: ::capnp::private::layout::StructReader<'a> }
+
+    impl <'a,> ::capnp::traits::HasTypeId for Reader<'a,>  {
+      #[inline]
+      fn type_id() -> u64 { _private::TYPE_ID }
+    }
+    impl <'a,> ::capnp::traits::FromStructReader<'a> for Reader<'a,>  {
+      fn new(reader: ::capnp::private::layout::StructReader<'a>) -> Reader<'a,> {
+        Reader { reader,  }
+      }
+    }
+
+    impl <'a,> ::capnp::traits::FromPointerReader<'a> for Reader<'a,>  {
+      fn get_from_pointer(reader: &::capnp::private::layout::PointerReader<'a>, default: ::core::option::Option<&'a [capnp::Word]>) -> ::capnp::Result<Reader<'a,>> {
+        ::core::result::Result::Ok(::capnp::traits::FromStructReader::new(reader.get_struct(default)?))
+      }
+    }
+
+    impl <'a,> ::capnp::traits::IntoInternalStructReader<'a> for Reader<'a,>  {
+      fn into_internal_struct_reader(self) -> ::capnp::private::layout::StructReader<'a> {
+        self.reader
+      }
+    }
+
+    impl <'a,> ::capnp::traits::Imbue<'a> for Reader<'a,>  {
+      fn imbue(&mut self, cap_table: &'a ::capnp::private::layout::CapTable) {
+        self.reader.imbue(::capnp::private::layout::CapTableReader::Plain(cap_table))
+      }
+    }
+
+    impl <'a,> Reader<'a,>  {
+      pub fn reborrow(&self) -> Reader<'_,> {
+        Reader { .. *self }
+      }
+
+      pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
+        self.reader.total_size()
+      }
+      #[inline]
+      pub fn get_left(self) -> ::capnp::Result<crate::schema_capnp::constant::Reader<'a>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(0), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn has_left(&self) -> bool {
+        !self.reader.get_pointer_field(0).is_null()
+      }
+      #[inline]
+      pub fn get_right(self) -> ::capnp::Result<crate::schema_capnp::constant::Reader<'a>> {
+        ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn has_right(&self) -> bool {
+        !self.reader.get_pointer_field(1).is_null()
+      }
+    }
+
+    pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
+    impl <'a,> ::capnp::traits::HasStructSize for Builder<'a,>  {
+      #[inline]
+      fn struct_size() -> ::capnp::private::layout::StructSize { _private::STRUCT_SIZE }
+    }
+    impl <'a,> ::capnp::traits::HasTypeId for Builder<'a,>  {
+      #[inline]
+      fn type_id() -> u64 { _private::TYPE_ID }
+    }
+    impl <'a,> ::capnp::traits::FromStructBuilder<'a> for Builder<'a,>  {
+      fn new(builder: ::capnp::private::layout::StructBuilder<'a>) -> Builder<'a, > {
+        Builder { builder,  }
+      }
+    }
+
+    impl <'a,> ::capnp::traits::ImbueMut<'a> for Builder<'a,>  {
+      fn imbue_mut(&mut self, cap_table: &'a mut ::capnp::private::layout::CapTable) {
+        self.builder.imbue(::capnp::private::layout::CapTableBuilder::Plain(cap_table))
+      }
+    }
+
+    impl <'a,> ::capnp::traits::FromPointerBuilder<'a> for Builder<'a,>  {
+      fn init_pointer(builder: ::capnp::private::layout::PointerBuilder<'a>, _size: u32) -> Builder<'a,> {
+        ::capnp::traits::FromStructBuilder::new(builder.init_struct(_private::STRUCT_SIZE))
+      }
+      fn get_from_pointer(builder: ::capnp::private::layout::PointerBuilder<'a>, default: ::core::option::Option<&'a [capnp::Word]>) -> ::capnp::Result<Builder<'a,>> {
+        ::core::result::Result::Ok(::capnp::traits::FromStructBuilder::new(builder.get_struct(_private::STRUCT_SIZE, default)?))
+      }
+    }
+
+    impl <'a,> ::capnp::traits::SetPointerBuilder for Reader<'a,>  {
+      fn set_pointer_builder<'b>(pointer: ::capnp::private::layout::PointerBuilder<'b>, value: Reader<'a,>, canonicalize: bool) -> ::capnp::Result<()> { pointer.set_struct(&value.reader, canonicalize) }
+    }
+
+    impl <'a,> Builder<'a,>  {
+      pub fn into_reader(self) -> Reader<'a,> {
+        ::capnp::traits::FromStructReader::new(self.builder.into_reader())
+      }
+      pub fn reborrow(&mut self) -> Builder<'_,> {
+        Builder { .. *self }
+      }
+      pub fn reborrow_as_reader(&self) -> Reader<'_,> {
+        ::capnp::traits::FromStructReader::new(self.builder.into_reader())
+      }
+
+      pub fn total_size(&self) -> ::capnp::Result<::capnp::MessageSize> {
+        self.builder.into_reader().total_size()
+      }
+      #[inline]
+      pub fn get_left(self) -> ::capnp::Result<crate::schema_capnp::constant::Builder<'a>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(0), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_left(&mut self, value: crate::schema_capnp::constant::Reader<'_>) -> ::capnp::Result<()> {
+        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(0), value, false)
+      }
+      #[inline]
+      pub fn init_left(self, ) -> crate::schema_capnp::constant::Builder<'a> {
+        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(0), 0)
+      }
+      #[inline]
+      pub fn has_left(&self) -> bool {
+        !self.builder.get_pointer_field(0).is_null()
+      }
+      #[inline]
+      pub fn get_right(self) -> ::capnp::Result<crate::schema_capnp::constant::Builder<'a>> {
+        ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
+      }
+      #[inline]
+      pub fn set_right(&mut self, value: crate::schema_capnp::constant::Reader<'_>) -> ::capnp::Result<()> {
+        ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(1), value, false)
+      }
+      #[inline]
+      pub fn init_right(self, ) -> crate::schema_capnp::constant::Builder<'a> {
+        ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), 0)
+      }
+      #[inline]
+      pub fn has_right(&self) -> bool {
+        !self.builder.get_pointer_field(1).is_null()
+      }
+    }
+
+    pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
+    impl ::capnp::capability::FromTypelessPipeline for Pipeline {
+      fn new(typeless: ::capnp::any_pointer::Pipeline) -> Pipeline {
+        Pipeline { _typeless: typeless,  }
+      }
+    }
+    impl Pipeline  {
+      pub fn get_left(&self) -> crate::schema_capnp::constant::Pipeline {
+        ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(0))
+      }
+      pub fn get_right(&self) -> crate::schema_capnp::constant::Pipeline {
+        ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(1))
+      }
+    }
+    mod _private {
+      use capnp::private::layout;
+      pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 4 };
+      pub const TYPE_ID: u64 = 0x9abb_1c81_2600_c33d;
     }
   }
 }

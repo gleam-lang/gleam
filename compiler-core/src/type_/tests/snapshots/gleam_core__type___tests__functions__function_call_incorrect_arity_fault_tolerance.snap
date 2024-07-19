@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\nfn add(x: Int, y: Int) {\n  x + y\n}\n\npub fn main() {\n  add(1.0)\n}\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:7:3
+  │
+7 │   add(1.0)
+  │   ^^^^^^^^ Expected 2 arguments, got 1
+
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:7
+  │
+7 │   add(1.0)
+  │       ^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Float

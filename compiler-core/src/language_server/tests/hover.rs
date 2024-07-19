@@ -1,4 +1,4 @@
-use lsp_types::{Hover, HoverContents, HoverParams, MarkedString, Position, Range};
+use lsp_types::{Hover, HoverParams, Position, Range};
 
 use super::*;
 
@@ -14,35 +14,162 @@ fn hover(tester: TestProject<'_>, position: Position) -> Option<Hover> {
     })
 }
 
+struct PositionFinder {
+    value: String,
+    offset: usize,
+    nth_occurrence: usize,
+}
+
+impl PositionFinder {
+    fn with_char_offset(self, offset: usize) -> Self {
+        Self {
+            value: self.value,
+            offset,
+            nth_occurrence: self.nth_occurrence,
+        }
+    }
+
+    fn under_char(self, char: char) -> Self {
+        Self {
+            offset: self.value.find(char).unwrap_or(0),
+            value: self.value,
+            nth_occurrence: self.nth_occurrence,
+        }
+    }
+
+    fn under_last_char(self) -> Self {
+        let len = self.value.len();
+        self.with_char_offset(len - 1)
+    }
+
+    fn nth_occurrence(self, nth_occurrence: usize) -> Self {
+        Self {
+            value: self.value,
+            offset: self.offset,
+            nth_occurrence,
+        }
+    }
+
+    fn for_value(value: &str) -> Self {
+        Self {
+            value: value.into(),
+            offset: 0,
+            nth_occurrence: 1,
+        }
+    }
+
+    fn find_position(&self, src: &str) -> Position {
+        let PositionFinder {
+            value,
+            offset,
+            nth_occurrence,
+        } = self;
+
+        let byte_index = src
+            .match_indices(value)
+            .nth(nth_occurrence - 1)
+            .expect("no match for position")
+            .0;
+
+        byte_index_to_position(src, byte_index + offset)
+    }
+}
+
+fn find_position_of(value: &str) -> PositionFinder {
+    PositionFinder::for_value(value)
+}
+
+fn byte_index_to_position(src: &str, byte_index: usize) -> Position {
+    let mut line = 0;
+    let mut col = 0;
+
+    for (i, char) in src.bytes().enumerate() {
+        if i == byte_index {
+            break;
+        }
+
+        if char == b'\n' {
+            line += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+    }
+
+    Position::new(line, col)
+}
+
+fn show_hover(code: &str, range: Range, position: Position) -> String {
+    let Range { start, end } = range;
+
+    // When we display the over range the end character is always excluded!
+    let end = Position::new(end.line, end.character);
+
+    let mut str: String = "".into();
+    for (line_number, line) in code.lines().enumerate() {
+        let mut underline: String = "".into();
+        let mut underline_empty = true;
+
+        for (column_number, _) in line.chars().enumerate() {
+            let current_position = Position::new(line_number as u32, column_number as u32);
+            if current_position == position {
+                underline_empty = false;
+                underline.push('↑');
+            } else if start.le(&current_position) && current_position.lt(&end) {
+                underline_empty = false;
+                underline.push('▔');
+            } else {
+                underline.push(' ');
+            }
+        }
+
+        str.push_str(line);
+        if !underline_empty {
+            str.push('\n');
+            str.push_str(&underline);
+        }
+        str.push('\n');
+    }
+
+    str
+}
+
+#[macro_export]
+macro_rules! assert_hover {
+    ($code:literal, $position:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_hover!(project, $position);
+    };
+
+    ($project:expr, $position:expr $(,)?) => {
+        let src = $project.src;
+        let position = $position.find_position(src);
+        let result = hover($project, position).expect("no hover produced");
+        let pretty_hover = show_hover(src, result.range.expect("hover with no range"), position);
+        let output = format!(
+            "{}\n\n----- Hover content -----\n{:#?}",
+            pretty_hover, result.contents
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, src);
+    };
+}
+
 #[test]
 fn hover_function_definition() {
-    let code = "
+    assert_hover!(
+        "
 fn add_2(x) {
   x + 2
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(1, 3)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(Int) -> Int
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position::new(1, 0),
-                end: Position::new(1, 11)
-            }),
-        })
+",
+        find_position_of("add_2")
     );
 }
 
 #[test]
 fn hover_local_function() {
-    let code = "
+    assert_hover!(
+        "
 fn my_fn() {
   Nil
 }
@@ -50,36 +177,16 @@ fn my_fn() {
 fn main() {
   my_fn
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(6, 3)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn() -> Nil
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 6,
-                    character: 2,
-                },
-                end: Position {
-                    line: 6,
-                    character: 7,
-                },
-            },),
-        })
+",
+        find_position_of("my_fn").under_char('y').nth_occurrence(2)
     );
 }
 
 // https://github.com/gleam-lang/gleam/issues/2654
 #[test]
 fn hover_local_function_in_pipe() {
-    let code = "
+    assert_hover!(
+        "
 fn add1(num: Int) -> Int {
   num + 1
 }
@@ -92,95 +199,82 @@ pub fn main() {
   |> add1
   |> add1
 }
-";
+",
+        find_position_of("add1")
+            .with_char_offset(1)
+            .nth_occurrence(2)
+    );
+}
 
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(6, 3)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(Int) -> Int
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 6,
-                    character: 2,
-                },
-                end: Position {
-                    line: 6,
-                    character: 6,
-                },
-            },),
-        })
+// https://github.com/gleam-lang/gleam/issues/2654
+#[test]
+fn hover_local_function_in_pipe_1() {
+    assert_hover!(
+        "
+fn add1(num: Int) -> Int {
+  num + 1
+}
+
+pub fn main() {
+  add1(1)
+
+  1
+  |> add1
+  |> add1
+  |> add1
+}
+",
+        find_position_of("add1")
+            .with_char_offset(2)
+            .nth_occurrence(3)
     );
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(9, 7)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(Int) -> Int
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 9,
-                    character: 5,
-                },
-                end: Position {
-                    line: 9,
-                    character: 9,
-                },
-            },),
-        })
+}
+
+// https://github.com/gleam-lang/gleam/issues/2654
+#[test]
+fn hover_local_function_in_pipe_2() {
+    assert_hover!(
+        "
+fn add1(num: Int) -> Int {
+  num + 1
+}
+
+pub fn main() {
+  add1(1)
+
+  1
+  |> add1
+  |> add1
+  |> add1
+}
+",
+        find_position_of("add1")
+            .with_char_offset(2)
+            .nth_occurrence(4)
     );
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(10, 7)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(Int) -> Int
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 10,
-                    character: 5,
-                },
-                end: Position {
-                    line: 10,
-                    character: 9,
-                },
-            },),
-        })
-    );
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(11, 7)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(Int) -> Int
-```
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 11,
-                    character: 5,
-                },
-                end: Position {
-                    line: 11,
-                    character: 9,
-                },
-            },),
-        })
+}
+
+// https://github.com/gleam-lang/gleam/issues/2654
+#[test]
+fn hover_local_function_in_pipe_3() {
+    assert_hover!(
+        "
+fn add1(num: Int) -> Int {
+  num + 1
+}
+
+pub fn main() {
+  add1(1)
+
+  1
+  |> add1
+  |> add1
+  |> add1
+}
+",
+        find_position_of("add1")
+            .with_char_offset(2)
+            .nth_occurrence(5)
     );
 }
 
@@ -193,13 +287,10 @@ fn main() {
 }
 ";
 
-    // hovering over "my_fn"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
-        Position::new(3, 19),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_fn").under_char('_'),
+    );
 }
 
 #[test]
@@ -211,13 +302,10 @@ fn main() {
 }
 ";
 
-    // hovering over "my_fn"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
-        Position::new(3, 19),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_fn").under_char('_'),
+    );
 }
 
 #[test]
@@ -229,13 +317,10 @@ fn main() {
 }
 ";
 
-    // hovering over "my_fn"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
-        Position::new(3, 5),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_fn").under_char('f').nth_occurrence(2),
+    );
 }
 
 #[test]
@@ -247,13 +332,10 @@ fn main() {
 }
 ";
 
-    // hovering over "my_fn"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
-        Position::new(3, 22),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_fn").under_char('f'),
+    );
 }
 
 #[test]
@@ -265,13 +347,10 @@ fn main() {
 }
 ";
 
-    // hovering over "my_fn"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
-        Position::new(3, 6),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_fn").under_char('_').nth_occurrence(2),
+    );
 }
 
 #[test]
@@ -284,14 +363,11 @@ fn main() {
 }
 ";
 
-    // hovering over "my_fn"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code)
             .add_hex_module("my/nested/example_module", "pub fn my_fn() { Nil }"),
-        Position::new(3, 22),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_fn").under_char('f'),
+    );
 }
 
 #[test]
@@ -303,19 +379,15 @@ fn main() {
 }
 "#;
 
-    // hovering over "my_fn"
-    let hover = hover(
-        TestProject::for_source(code).add_hex_module(
-            "example_module",
-            r#"
+    let hex_module = r#"
 @external(erlang, "my_mod_ffi", "renamed_fn")
 pub fn my_fn() -> Nil
-"#,
-        ),
-        Position::new(3, 22),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+"#;
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("example_module", hex_module,),
+        find_position_of("my_fn").under_char('f'),
+    );
 }
 
 #[test]
@@ -327,13 +399,10 @@ fn main() {
 }
 ";
 
-    // hovering over "my_const"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
-        Position::new(3, 19),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_const").under_char('_'),
+    );
 }
 
 #[test]
@@ -345,13 +414,12 @@ fn main() {
 }
 ";
 
-    // hovering over "my_const"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code).add_hex_module("example_module", "pub const my_const = 42"),
-        Position::new(3, 5),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_const")
+            .under_char('c')
+            .nth_occurrence(2),
+    );
 }
 
 #[test]
@@ -364,15 +432,12 @@ fn main() {
 }
 ";
 
-    // hovering over "my_const"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code)
             .add_hex_module("a/example_module", "pub const my_const = 42")
             .add_hex_module("b/example_module", "pub const my_const = 42"),
-        Position::new(4, 22),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_const").under_char('c'),
+    );
 }
 
 #[test]
@@ -385,80 +450,41 @@ fn main() {
 }
 ";
 
-    // hovering over "my_const"
-    let hover = hover(
+    assert_hover!(
         TestProject::for_source(code)
             .add_hex_module("a/example_module", "pub const my_const = 42")
             .add_hex_module("b/example_module", "pub const my_const = 42"),
-        Position::new(4, 8),
-    )
-    .unwrap();
-    insta::assert_debug_snapshot!(hover);
+        find_position_of("my_const")
+            .under_char('o')
+            .nth_occurrence(3),
+    );
 }
 
 #[test]
 fn hover_function_definition_with_docs() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x, y) {
   x <> y
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 3)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-fn(String, String) -> String
-```
- Exciting documentation
- Maybe even multiple lines
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 0,
-                },
-                end: Position {
-                    line: 3,
-                    character: 15,
-                },
-            },),
-        })
+",
+        find_position_of("append")
     );
 }
 
 #[test]
 fn hover_function_argument() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x, y) {
   x <> y
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 10)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```".to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 10,
-                },
-                end: Position {
-                    line: 3,
-                    character: 11,
-                },
-            },),
-        })
+",
+        find_position_of("append(x, y)").under_char('x')
     );
 }
 
@@ -480,73 +506,32 @@ fn append(x, y) {
 
 #[test]
 fn hover_expressions_in_function_body() {
-    let code = "
+    assert_hover!(
+        "
 fn append(x, y) {
   x <> y
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(2, 2)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-String
-```
-A locally defined variable."
-                    .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 2,
-                    character: 2
-                },
-                end: Position {
-                    line: 2,
-                    character: 3
-                }
-            }),
-        })
+",
+        find_position_of("x").nth_occurrence(2)
     );
 }
 
 #[test]
 fn hover_module_constant() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 const one = 1
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 6)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam
-Int
-```
- Exciting documentation
- Maybe even multiple lines
-"
-                .to_string()
-            )),
-            range: Some(Range {
-                start: Position {
-                    line: 3,
-                    character: 6
-                },
-                end: Position {
-                    line: 3,
-                    character: 9
-                },
-            }),
-        })
+",
+        find_position_of("one")
     );
 }
 
 #[test]
 fn hover_variable_in_use_expression() {
-    let code = "
+    assert_hover!(
+        "
 fn b(fun: fn(Int) -> String) {
   fun(42)
 }
@@ -557,181 +542,137 @@ fn do_stuff() {
   use a <- b
   c
 }
-";
-
-    // hover over `a`
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(8, 6)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String("```gleam\nInt\n```".to_string())),
-            range: Some(Range::new(Position::new(8, 6), Position::new(8, 7))),
-        })
-    );
-
-    // hover over `b`
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(8, 11)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nfn(fn(Int) -> String) -> String\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(8, 11), Position::new(8, 12))),
-        })
-    );
-
-    // hover over `c`
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(9, 2)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```\nA locally defined variable.".to_string()
-            )),
-            range: Some(Range::new(Position::new(9, 2), Position::new(9, 3))),
-        })
+",
+        find_position_of("use a").under_last_char()
     );
 }
 
 #[test]
-fn hover_function_arg_annotation() {
-    let code = "
+fn hover_variable_in_use_expression_1() {
+    assert_hover!(
+        "
+fn b(fun: fn(Int) -> String) {
+  fun(42)
+}
+
+fn do_stuff() {
+  let c = \"done\"
+
+  use a <- b
+  c
+}
+",
+        find_position_of("b").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn hover_variable_in_use_expression_2() {
+    assert_hover!(
+        "
+fn b(fun: fn(Int) -> String) {
+  fun(42)
+}
+
+fn do_stuff() {
+  let c = \"done\"
+
+  use a <- b
+  c
+}
+",
+        find_position_of("c").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn hover_function_arg_annotation_2() {
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> String {
   x <> y
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 17)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(3, 13), Position::new(3, 19))),
-        })
+",
+        find_position_of("String").under_char('n')
     );
 }
 
 #[test]
 fn hover_function_return_annotation() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> String {
   x <> y
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 39)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(3, 35), Position::new(3, 41))),
-        })
+",
+        find_position_of("String").under_char('n').nth_occurrence(3)
     );
 }
 
 #[test]
 fn hover_function_return_annotation_with_tuple() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 fn append(x: String, y: String) -> #(String, String) {
   #(x, y)
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 39)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(3, 37), Position::new(3, 43))),
-        })
+",
+        find_position_of("String").under_char('r').nth_occurrence(3)
     );
 }
 
 #[test]
 fn hover_module_constant_annotation() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 const one: Int = 1
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(3, 13)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nInt\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(3, 11), Position::new(3, 14))),
-        })
+",
+        find_position_of("Int").under_last_char()
     );
 }
 
 #[test]
 fn hover_type_constructor_annotation() {
-    let code = "
+    assert_hover!(
+        "
 type Wibble {
     Wibble(arg: String)
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(2, 20)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nString\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(2, 16), Position::new(2, 22))),
-        })
+",
+        find_position_of("String").under_char('n')
     );
 }
 
 #[test]
 fn hover_type_alias_annotation() {
-    let code = "
-type Wibble = Int
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(1, 15)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nInt\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(1, 14), Position::new(1, 17))),
-        })
-    );
+    assert_hover!("type Wibble = Int", find_position_of("Int").under_char('n'));
 }
 
 #[test]
 fn hover_assignment_annotation() {
-    let code = "
+    assert_hover!(
+        "
 fn wibble() {
     let wobble: Int = 7
     wobble
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(2, 18)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nInt\n```\n".to_string()
-            )),
-            range: Some(Range::new(Position::new(2, 16), Position::new(2, 19))),
-        })
+",
+        find_position_of("Int").under_last_char()
     );
 }
 
 #[test]
 fn hover_function_arg_annotation_with_documentation() {
-    let code = "
+    assert_hover!(
+        "
 /// Exciting documentation
 /// Maybe even multiple lines
 type Wibble {
@@ -741,17 +682,10 @@ type Wibble {
 fn identity(x: Wibble) -> Wibble {
   x
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(7, 20)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nWibble\n```\n Exciting documentation\n Maybe even multiple lines\n"
-                    .to_string()
-            )),
-            range: Some(Range::new(Position::new(7, 15), Position::new(7, 21))),
-        })
+",
+        find_position_of("Wibble")
+            .under_last_char()
+            .nth_occurrence(3)
     );
 }
 
@@ -764,25 +698,16 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        hover(
-            TestProject::for_source(code).add_module(
-                "example_module",
-                "
+    assert_hover!(
+        TestProject::for_source(code).add_module(
+            "example_module",
+            "
 /// Exciting documentation
 /// Maybe even multiple lines
 pub const my_num = 1"
-            ),
-            Position::new(1, 26)
         ),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines\n"
-                    .to_string()
-            )),
-            range: Some(Range::new(Position::new(1, 23), Position::new(1, 29))),
-        })
-    )
+        find_position_of("my_num").under_char('n')
+    );
 }
 
 #[test]
@@ -794,25 +719,16 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        hover(
-            TestProject::for_source(code).add_hex_module(
-                "example_module",
-                "
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module(
+            "example_module",
+            "
 /// Exciting documentation
 /// Maybe even multiple lines
 pub const my_num = 1"
-            ),
-            Position::new(1, 26)
         ),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_num)"
-                    .to_string()
-            )),
-            range: Some(Range::new(Position::new(1, 23), Position::new(1, 29))),
-        })
-    )
+        find_position_of("my_num").under_char('n')
+    );
 }
 
 #[test]
@@ -824,53 +740,35 @@ fn main() -> MyType {
 }
 ";
 
-    assert_eq!(
-        hover(
-            TestProject::for_source(code).add_module(
-                "example_module",
-                "
+    assert_hover!(
+        TestProject::for_source(code).add_module(
+            "example_module",
+            "
 /// Exciting documentation
 /// Maybe even multiple lines
 pub type MyType {
-    MyType
+  MyType
 }"
-            ),
-            Position::new(1, 33)
         ),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nMyType\n```\n Exciting documentation\n Maybe even multiple lines\n"
-                    .to_string()
-            )),
-            range: Some(Range::new(Position::new(1, 23), Position::new(1, 34))),
-        })
-    )
+        find_position_of("MyType").under_last_char()
+    );
 }
 
 #[test]
 fn hover_works_even_for_invalid_code() {
-    let code = "
+    assert_hover!(
+        "
 fn invalid() { 1 + Nil }
 fn valid() { Nil }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(2, 3)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "```gleam\nfn() -> Nil\n```\n".to_string()
-            )),
-            range: Some(Range {
-                start: Position::new(2, 0),
-                end: Position::new(2, 10)
-            }),
-        })
+",
+        find_position_of("fn valid").under_char('v')
     );
 }
 
 #[test]
 fn hover_for_pattern_spread_ignoring_all_fields() {
-    let code = "
+    assert_hover!(
+        "
 pub type Model {
   Model(
     Int,
@@ -885,32 +783,15 @@ pub fn main() {
     Model(..) -> todo
   }
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(12, 10)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "Unused positional fields:
-- `Int`
-- `Float`
-
-Unused labelled fields:
-- `label1: Int`
-- `label2: String`"
-                    .into()
-            )),
-            range: Some(Range {
-                start: Position::new(12, 10),
-                end: Position::new(12, 12)
-            }),
-        })
+",
+        find_position_of("..")
     );
 }
 
 #[test]
 fn hover_for_pattern_spread_ignoring_some_fields() {
-    let code = "
+    assert_hover!(
+        "
 pub type Model {
   Model(
     Int,
@@ -925,30 +806,15 @@ pub fn main() {
     Model(_, label1: _, ..) -> todo
   }
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(12, 25)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "Unused positional fields:
-- `Float`
-
-Unused labelled fields:
-- `label2: String`"
-                    .into()
-            )),
-            range: Some(Range {
-                start: Position::new(12, 24),
-                end: Position::new(12, 26)
-            }),
-        })
+",
+        find_position_of("..").under_last_char()
     );
 }
 
 #[test]
 fn hover_for_pattern_spread_ignoring_all_positional_fields() {
-    let code = "
+    assert_hover!(
+        "
 pub type Model {
   Model(
     Int,
@@ -963,18 +829,7 @@ pub fn main() {
     Model(_, _, _, ..) -> todo
   }
 }
-";
-
-    assert_eq!(
-        hover(TestProject::for_source(code), Position::new(12, 19)),
-        Some(Hover {
-            contents: HoverContents::Scalar(MarkedString::String(
-                "Unused labelled fields:\n- `label2: String`".into()
-            )),
-            range: Some(Range {
-                start: Position::new(12, 19),
-                end: Position::new(12, 21)
-            }),
-        })
+",
+        find_position_of("..")
     );
 }

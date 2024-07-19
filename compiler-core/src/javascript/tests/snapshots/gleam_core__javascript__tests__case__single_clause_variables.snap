@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+assertion_line: 242
+expression: "\npub fn main() {\n  let text = \"first defined\"\n  case \"defined again\" {\n    text -> Nil\n  }\n  let text = \"a third time\"\n}\n"
+---
+export function main() {
+  let text = "first defined";
+  let $ = "defined again";
+  {
+    let text$1 = $;
+    undefined
+  }
+  let text$1 = "a third time";
+  return text$1;
+}

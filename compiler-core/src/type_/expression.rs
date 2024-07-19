@@ -1,6 +1,9 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::infer_bit_array_option,
+    analyse::{
+        infer_bit_array_option,
+        name::{check_argument_names, NameCorrection},
+    },
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
@@ -27,8 +30,8 @@ pub struct Implementations {
     /// Imagine this scenario:
     ///
     /// ```gleam
-    /// @external(javascript, "foo", "bar")
-    /// @external(erlang, "foo", "bar")
+    /// @external(javascript, "wibble", "wobble")
+    /// @external(erlang, "wibble", "wobble")
     /// pub fn func() -> Int
     /// ```
     ///
@@ -122,7 +125,7 @@ impl Implementations {
         //
         // For example:
         // ```gleam
-        // @external(erlang, "foo", "bar")
+        // @external(erlang, "wibble", "wobble")
         // pub fn erlang_only_with_pure_gleam_default() -> Int {
         //   1 + 1
         // }
@@ -205,6 +208,7 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Accumulated errors found while typing the expression
     pub(crate) errors: &'a mut Vec<Error>,
+    pub(crate) name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
@@ -212,6 +216,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
         errors: &'a mut Vec<Error>,
+        name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
 
@@ -235,6 +240,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implementations,
             current_function_definition: definition,
             errors,
+            name_corrections,
         }
     }
 
@@ -330,7 +336,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 subjects,
                 clauses,
                 ..
-            } => self.infer_case(subjects, clauses, location),
+            } => Ok(self.infer_case(subjects, clauses, location)),
 
             UntypedExpr::List {
                 location,
@@ -343,7 +349,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 fun,
                 arguments: args,
                 ..
-            } => self.infer_call(*fun, args, location, CallKind::Function),
+            } => Ok(self.infer_call(*fun, args, location, CallKind::Function)),
 
             UntypedExpr::BinOp {
                 location,
@@ -358,9 +364,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 label,
                 container,
                 ..
-            } => {
-                self.infer_field_access(*container, label, label_location, FieldAccessUsage::Other)
-            }
+            } => Ok(self.infer_field_access(
+                *container,
+                label,
+                label_location,
+                FieldAccessUsage::Other,
+            )),
 
             UntypedExpr::TupleIndex {
                 location,
@@ -674,7 +683,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 assignments_location: use_.assignments_location,
                 last_statement_location,
             },
-        )?;
+        );
 
         Ok(Statement::Expression(call))
     }
@@ -738,6 +747,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        for Arg { names, .. } in args.iter() {
+            check_argument_names(names, self.errors, self.name_corrections);
+        }
+
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
         self.already_warned_for_unreachable_code = false;
         self.previous_panics = false;
@@ -799,8 +812,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> Result<TypedExpr, Error> {
-        let (fun, args, typ) = self.do_infer_call(fun, args, location, kind)?;
+    ) -> TypedExpr {
+        let (fun, args, typ) = self.do_infer_call(fun, args, location, kind);
 
         // One common mistake is to think that the syntax for adding a message
         // to a `todo` or a `panic` exception is to `todo("...")`, but really
@@ -830,12 +843,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 });
         }
 
-        Ok(TypedExpr::Call {
+        TypedExpr::Call {
             location,
             typ,
             args,
             fun: Box::new(fun),
-        })
+        }
     }
 
     fn infer_list(
@@ -939,39 +952,71 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
+    /// Attempts to infer a record access. If the attempt fails, then will fallback to attempting to infer a module access.
+    /// If both fail, then the error from the record access will be used.
     fn infer_field_access(
         &mut self,
         container: UntypedExpr,
         label: EcoString,
         label_location: SrcSpan,
         usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
-        // Attempt to infer the container as a record access. If that fails, we may be shadowing the name
-        // of an imported module, so attempt to infer the container as a module access.
-        // TODO: Remove this cloning
-        match self.infer_record_expression_access(
-            container.clone(),
-            label.clone(),
-            label_location,
-            usage,
-        ) {
-            Ok(record_access) => Ok(record_access),
-            Err(err) => match container {
-                UntypedExpr::Var { name, location, .. } => {
-                    let module_access =
-                        self.infer_module_access(&name, label, &location, label_location);
-
-                    // If the name is in the environment, use the original error from
-                    // inferring the record access, so that we can suggest possible
-                    // misspellings of field names
-                    if self.environment.scope.contains_key(&name) {
-                        module_access.map_err(|_| err)
-                    } else {
-                        module_access
-                    }
+    ) -> TypedExpr {
+        // Computes a potential module access. This will be used if a record access can't be used.
+        // Computes both the inferred access and if it shadows a variable.
+        let module_access = match &container {
+            UntypedExpr::Var { location, name } => {
+                let module_access =
+                    self.infer_module_access(name, label.clone(), location, label_location);
+                // Returns the result and if it shadows an existing variable in scope
+                Some((module_access, self.environment.scope.contains_key(name)))
+            }
+            _ => None,
+        };
+        let record = self.infer(container);
+        // TODO: is this clone avoidable? we need to box the record for inference in both
+        // the success case and in the valid record but invalid label case
+        let record_access = match record.clone() {
+            Ok(record) => self.infer_known_record_expression_access(
+                record,
+                label.clone(),
+                label_location,
+                usage,
+            ),
+            Err(e) => Err(e),
+        };
+        match (record_access, module_access) {
+            // Record access is valid
+            (Ok(record_access), _) => record_access,
+            // Record access is invalid but module access is valid
+            (_, Some((Ok(module_access), _))) => module_access,
+            // Module access was attempted but failed and it does not shadow an existing variable
+            (_, Some((Err(module_access_err), false))) => {
+                self.errors.push(module_access_err);
+                TypedExpr::Invalid {
+                    location: label_location,
+                    typ: self.new_unbound_var(),
                 }
-                _ => Err(err),
-            },
+            }
+            // In any other case use the record access for the error
+            (Err(record_access_err), _) => {
+                self.errors.push(record_access_err);
+                match record {
+                    // If the record is valid then use a placeholder access
+                    // This allows autocomplete to know a record access is being attempted
+                    // Even if the access is not valid
+                    Ok(record) => TypedExpr::RecordAccess {
+                        location: label_location,
+                        typ: self.new_unbound_var(),
+                        label: "".into(),
+                        index: u64::MAX,
+                        record: Box::new(record),
+                    },
+                    Err(_) => TypedExpr::Invalid {
+                        location: label_location,
+                        typ: self.new_unbound_var(),
+                    },
+                }
+            }
         }
     }
 
@@ -1233,8 +1278,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
-        let pattern = match pattern::PatternTyper::new(self.environment, &self.hydrator)
-            .unify(pattern, value_typ.clone())
+        let pattern = match pattern::PatternTyper::new(
+            self.environment,
+            &self.hydrator,
+            self.errors,
+            self.name_corrections,
+        )
+        .unify(pattern, value_typ.clone())
         {
             Ok(pattern) => pattern,
             Err(error) => {
@@ -1289,7 +1339,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subjects: Vec<UntypedExpr>,
         clauses: Vec<UntypedClause>,
         location: SrcSpan,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
@@ -1300,10 +1350,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = false;
         let mut any_subject_panics = false;
         for subject in subjects {
+            let subject_location = subject.location();
             let subject = self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
                 Ok(subject)
-            })?;
+            });
+            let subject = match subject {
+                Ok(subject) => subject,
+                Err(error) => self.error_expr_with_rigid_names(subject_location, error),
+            };
 
             any_subject_panics = any_subject_panics || self.previous_panics;
             subject_types.push(subject.type_());
@@ -1312,24 +1367,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
-        let mut all_clauses_panic = true;
+        // NOTE: if there are 0 clauses then there are 0 panics
+        let mut all_clauses_panic = !clauses.is_empty();
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let typed_clause = self.infer_clause(clause, &subject_types)?;
+            let typed_clause = self.infer_clause(clause, &subject_types);
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
-            unify(return_type.clone(), typed_clause.then.type_())
-                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))?;
+            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
+                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))
+            {
+                self.error_with_rigid_names(e);
+            }
             typed_clauses.push(typed_clause);
         }
 
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
-        self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)?;
+        if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
+            self.error_with_rigid_names(e);
+        };
 
         // We track if the case expression is used like an if: that is all its
         // patterns are discarded and there's at least a guard. For example:
@@ -1349,19 +1410,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
             .for_each(|warning| self.environment.warnings.emit(warning));
 
-        Ok(TypedExpr::Case {
+        TypedExpr::Case {
             location,
             typ: return_type,
             subjects: typed_subjects,
             clauses: typed_clauses,
-        })
+        }
     }
 
-    fn infer_clause(
-        &mut self,
-        clause: UntypedClause,
-        subjects: &[Arc<Type>],
-    ) -> Result<TypedClause, Error> {
+    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[Arc<Type>]) -> TypedClause {
         let Clause {
             pattern,
             alternative_patterns,
@@ -1369,29 +1426,64 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             then,
             location,
         } = clause;
+        let then_location = then.location();
 
-        let (guard, then, typed_pattern, typed_alternatives) =
-            self.in_new_scope(|clause_typer| {
-                // Check the types
-                let (typed_pattern, typed_alternatives) = clause_typer.infer_clause_pattern(
-                    pattern,
-                    alternative_patterns,
-                    subjects,
-                    &location,
-                )?;
-                let guard = clause_typer.infer_optional_clause_guard(guard)?;
-                let then = clause_typer.infer(then)?;
+        let scoped_clause_inference = self.in_new_scope(|clause_typer| {
+            // Check the types
+            let (typed_pattern, typed_alternatives) = match clause_typer.infer_clause_pattern(
+                pattern,
+                alternative_patterns,
+                subjects,
+                &location,
+            ) {
+                Ok(res) => res,
+                // If an error occurs inferring patterns then assume no patterns
+                Err(error) => {
+                    clause_typer.error_with_rigid_names(error);
+                    (vec![], vec![])
+                }
+            };
+            let guard = match clause_typer.infer_optional_clause_guard(guard) {
+                Ok(guard) => guard,
+                // If an error occurs inferring guard then assume no guard
+                Err(error) => {
+                    clause_typer.error_with_rigid_names(error);
+                    None
+                }
+            };
+            let then = match clause_typer.infer(then) {
+                Ok(then) => then,
+                Err(error) => clause_typer.error_expr_with_rigid_names(then_location, error),
+            };
 
-                Ok((guard, then, typed_pattern, typed_alternatives))
-            })?;
+            Ok((guard, then, typed_pattern, typed_alternatives))
+        });
+        let (guard, then, typed_pattern, typed_alternatives) = match scoped_clause_inference {
+            Ok(res) => res,
+            Err(error) => {
+                // NOTE: theoretically it should be impossible to get here
+                // since the individual parts have been made fault tolerant
+                // but in_new_scope requires that the return type be a result
+                self.error_with_rigid_names(error);
+                (
+                    None,
+                    TypedExpr::Invalid {
+                        location: then_location,
+                        typ: self.new_unbound_var(),
+                    },
+                    vec![],
+                    vec![],
+                )
+            }
+        };
 
-        Ok(Clause {
+        Clause {
             location,
             pattern: typed_pattern,
             alternative_patterns: typed_alternatives,
             guard,
             then,
-        })
+        }
     }
 
     fn infer_clause_pattern(
@@ -1401,7 +1493,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-        let mut pattern_typer = pattern::PatternTyper::new(self.environment, &self.hydrator);
+        let mut pattern_typer = pattern::PatternTyper::new(
+            self.environment,
+            &self.hydrator,
+            self.errors,
+            self.name_corrections,
+        );
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
 
         // Each case clause has one or more patterns that may match the
@@ -2064,18 +2161,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_record_expression_access(
-        &mut self,
-        record: UntypedExpr,
-        label: EcoString,
-        location: SrcSpan,
-        usage: FieldAccessUsage,
-    ) -> Result<TypedExpr, Error> {
-        // Infer the type of the (presumed) record
-        let record = self.infer(record)?;
-        self.infer_known_record_expression_access(record, label, location, usage)
-    }
-
     fn infer_known_record_expression_access(
         &mut self,
         record: TypedExpr,
@@ -2614,6 +2699,29 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
+            Constant::StringConcatenation {
+                location,
+                left,
+                right,
+            } => {
+                let left = self.infer_const(&None, *left);
+                unify(string(), left.type_()).map_err(|e| {
+                    e.operator_situation(BinOp::Concatenate)
+                        .into_error(left.location())
+                })?;
+                let right = self.infer_const(&None, *right);
+                unify(string(), right.type_()).map_err(|e| {
+                    e.operator_situation(BinOp::Concatenate)
+                        .into_error(right.location())
+                })?;
+
+                Ok(Constant::StringConcatenation {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
             Constant::Invalid { .. } => panic!("invalid constants can not be in an untyped ast"),
         }
     }
@@ -2746,25 +2854,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
-        let fun = match fun {
+    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
+        let function_location = fun.location();
+        let typed_fun = match fun {
             UntypedExpr::FieldAccess {
                 label,
                 container,
                 label_location,
                 ..
-            } => self.infer_field_access(
+            } => Ok(self.infer_field_access(
                 *container,
                 label,
                 label_location,
                 FieldAccessUsage::MethodCall,
-            ),
+            )),
 
             fun => self.infer(fun),
-        }?;
+        };
 
-        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, kind)?;
-        Ok((fun, args, typ))
+        let fun = match typed_fun {
+            Ok(fun) => fun,
+            Err(function_inference_error) => {
+                self.error_expr_with_rigid_names(function_location, function_inference_error)
+            }
+        };
+
+        let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, kind);
+        (fun, args, typ)
     }
 
     pub fn do_infer_call_with_known_fun(
@@ -2773,23 +2889,50 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         mut args: Vec<CallArg<UntypedExpr>>,
         location: SrcSpan,
         kind: CallKind,
-    ) -> Result<(TypedExpr, Vec<TypedCallArg>, Arc<Type>), Error> {
+    ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
         // Check to see if the function accepts labelled arguments
-        match self
+        let field_map = self
             .get_field_map(&fun)
-            .map_err(|e| convert_get_value_constructor_error(e, location))?
-        {
-            // The fun has a field map so labelled arguments may be present and need to be reordered.
-            Some(field_map) => field_map.reorder(&mut args, location)?,
+            .map_err(|e| convert_get_value_constructor_error(e, location))
+            .and_then(|field_map| {
+                match field_map {
+                    // The fun has a field map so labelled arguments may be present and need to be reordered.
+                    Some(field_map) => field_map.reorder(&mut args, location),
 
-            // The fun has no field map and so we error if arguments have been labelled
-            None => assert_no_labelled_arguments(&args)?,
+                    // The fun has no field map and so we error if arguments have been labelled
+                    None => assert_no_labelled_arguments(&args),
+                }
+            });
+        if let Err(e) = field_map {
+            self.error_with_rigid_names(e);
         }
 
         // Extract the type of the fun, ensuring it actually is a function
         let (mut args_types, return_type) =
-            match_fun_type(fun.type_(), args.len(), self.environment)
-                .map_err(|e| convert_not_fun_error(e, fun.location(), location, kind))?;
+            match match_fun_type(fun.type_(), args.len(), self.environment) {
+                Ok(fun) => fun,
+                Err(e) => {
+                    let converted_error =
+                        convert_not_fun_error(e.clone(), fun.location(), location, kind);
+                    match e {
+                        // If the function was valid but had the wrong number of arguments passed.
+                        // Then we keep the error but still want to continue analysing the arguments that were passed.
+                        MatchFunTypeError::IncorrectArity {
+                            args, return_type, ..
+                        } => {
+                            self.error_with_rigid_names(converted_error);
+                            (args, return_type)
+                        }
+                        MatchFunTypeError::NotFn { .. } => {
+                            return (
+                                self.error_expr_with_rigid_names(location, converted_error),
+                                vec![],
+                                self.new_unbound_var(),
+                            );
+                        }
+                    }
+                }
+            };
 
         // When typing the function's arguments we don't care if the previous
         // expression panics or not because we want to provide a specialised
@@ -2838,16 +2981,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = self.infer_call_argument(value, typ.clone(), argument_kind)?;
+                let value = match self.infer_call_argument(value, typ.clone(), argument_kind) {
+                    Ok(value) => value,
+                    Err(e) => self.error_expr_with_rigid_names(location, e),
+                };
 
-                Ok(CallArg {
+                CallArg {
                     label,
                     value,
                     implicit,
                     location,
-                })
+                }
             })
-            .try_collect()?;
+            .collect();
 
         // We don't want to emit a warning for unreachable function call if the
         // function being called is itself `panic`, for that we emit a more
@@ -2856,7 +3002,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.warn_for_unreachable_code(fun.location(), PanicPosition::LastFunctionArgument);
         }
 
-        Ok((fun, args, return_type))
+        (fun, args, return_type)
     }
 
     fn infer_call_argument(
@@ -2946,7 +3092,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
-                    ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+                    ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
                         // Check that this name has not already been used for
                         // another argument
                         if !argument_names.insert(name) {
@@ -3264,7 +3410,7 @@ impl UseAssignments {
                 // For discards we add a discard function arguments.
                 Pattern::Discard { name, .. } => assignments.function_arguments.push(Arg {
                     location,
-                    names: ArgNames::Discard { name },
+                    names: ArgNames::Discard { name, location },
                     annotation: None,
                     type_: (),
                 }),
@@ -3274,7 +3420,7 @@ impl UseAssignments {
                 Pattern::Variable { name, .. } => assignments.function_arguments.push(Arg {
                     location,
                     annotation,
-                    names: ArgNames::Named { name },
+                    names: ArgNames::Named { name, location },
                     type_: (),
                 }),
 
@@ -3294,7 +3440,10 @@ impl UseAssignments {
                     let name: EcoString = format!("{USE_ASSIGNMENT_VARIABLE}{index}").into();
                     assignments.function_arguments.push(Arg {
                         location,
-                        names: ArgNames::Named { name: name.clone() },
+                        names: ArgNames::Named {
+                            name: name.clone(),
+                            location,
+                        },
                         annotation: None,
                         type_: (),
                     });

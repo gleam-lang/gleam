@@ -29,6 +29,7 @@ mod records;
 mod reserved;
 mod strings;
 mod todo;
+mod type_params;
 mod use_;
 mod variables;
 
@@ -654,6 +655,276 @@ pub type Else {
 
 pub fn main() {
   Else
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn type_named_module_info() {
+    assert_erl!(
+        "
+pub type ModuleInfo {
+    ModuleInfo
+}
+
+pub fn main() {
+    ModuleInfo
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info() {
+    assert_erl!(
+        "
+pub fn module_info() {
+    1
+}
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+            "
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+            "
+        ),
+        "
+import some_module.{module_info}
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info() {
+    assert_erl!(
+        "
+pub const module_info = 1
+
+pub fn main() {
+    module_info
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub const module_info = 1
+            "
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.module_info
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub const module_info = 1
+            "
+        ),
+        "
+import some_module.{module_info}
+
+pub fn main() {
+    module_info
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_with_function_inside() {
+    assert_erl!(
+        "
+pub fn function() {
+    1
+}
+
+pub const module_info = function
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_with_function_inside_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn function() {
+    1
+}
+
+pub const module_info = function
+"
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_with_function_inside_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn function() {
+    1
+}
+
+pub const module_info = function
+"
+        ),
+        "
+import some_module.{module_info}
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_in_constant() {
+    assert_erl!(
+        "
+pub fn module_info() {
+    1
+}
+
+pub const constant = module_info
+
+pub fn main() {
+    constant()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_in_constant_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+
+pub const constant = module_info
+            "
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.constant()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_in_constant_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+
+pub const constant = module_info
+            "
+        ),
+        "
+import some_module.{constant}
+
+pub fn main() {
+    constant()
 }
 "
     );

@@ -1449,7 +1449,7 @@ fn string_pattern_matching_tests() {
     }),
     "match Θ test"
     |> example(fn() {
-      assert_equal(" foo bar", case "Θ foo bar" {
+      assert_equal(" wibble wobble", case "Θ wibble wobble" {
         "Θ" <> rest -> rest
         _ -> panic
       })

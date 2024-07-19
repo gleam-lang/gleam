@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nfn foo(x: List(Int)) { x }\nfn main(y: List(something)) {\n  foo(y)\n}"
+expression: "\nfn wibble(x: List(Int)) { x }\nfn main(y: List(something)) {\n  wibble(y)\n}"
 ---
 error: Type mismatch
-  ┌─ /src/one/two.gleam:4:7
+  ┌─ /src/one/two.gleam:4:10
   │
-4 │   foo(y)
-  │       ^
+4 │   wibble(y)
+  │          ^
 
 Expected type:
 

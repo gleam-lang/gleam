@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/parse/tests.rs
-expression: "let bar:Int = 32\n        bar = 42"
+expression: "let wobble:Int = 32\n        wobble = 42"
 ---
 error: Syntax error
-  ┌─ /src/parse/error.gleam:2:13
+  ┌─ /src/parse/error.gleam:2:16
   │
-2 │         bar = 42
-  │             ^ There must be a 'let' to bind variable to value
+2 │         wobble = 42
+  │                ^ There must be a 'let' to bind variable to value
 
 Hint: Use let for binding.
 See: https://tour.gleam.run/basics/assignments/

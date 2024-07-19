@@ -315,3 +315,98 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn function_call_incorrect_arg_types_fault_tolerance() {
+    assert_module_error!(
+        r#"
+fn add(x: Int, y: Int) {
+  x + y
+}
+
+pub fn main() {
+  add(1.0, 1.0)
+}
+"#
+    );
+}
+
+#[test]
+fn function_call_incorrect_arity_fault_tolerance() {
+    assert_module_error!(
+        r#"
+fn add(x: Int, y: Int) {
+  x + y
+}
+
+pub fn main() {
+  add(1.0)
+}
+"#
+    );
+}
+
+#[test]
+fn case_subject_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  case 1.0 + 1.0, 2.0 + 2.0 {
+    _, _ -> 0
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn case_clause_pattern_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True -> 0
+    Wibble -> 1
+    Wibble2 -> 2
+    _ -> 3
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn case_clause_guard_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let wibble = True
+  case wibble {
+    a if a == Wibble -> 0
+    b if b == Wibble -> 0
+    _ -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn case_clause_then_fault_tolerance() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True -> {
+      1.0 + 1.0
+    }
+    _ -> {
+      1.0 + 1.0
+    }
+  }
+}
+"#
+    );
+}

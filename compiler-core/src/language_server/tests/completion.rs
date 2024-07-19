@@ -15,9 +15,15 @@ fn completion(tester: TestProject<'_>, position: Position) -> Vec<CompletionItem
 }
 
 fn completion_at_default_position(tester: TestProject<'_>) -> Vec<CompletionItem> {
-    let src = &format!("fn typing_in_here() {{\n  0\n}}\n {}", tester.src);
+    completion_with_prefix(tester, "")
+}
+
+fn completion_with_prefix(tester: TestProject<'_>, prefix: &str) -> Vec<CompletionItem> {
+    let src = &format!("{}fn typing_in_here() {{\n  0\n}}\n {}", prefix, tester.src);
     let tester = TestProject { src, ..tester };
-    completion(tester, Position::new(1, 0))
+    // Put the cursor inside the "typing_in_here" fn body.
+    let line = 1 + prefix.lines().count();
+    completion(tester, Position::new(line as u32, 0))
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
         .collect_vec()
@@ -189,6 +195,60 @@ pub fn wobble() {
     assert_debug_snapshot!(completion_at_default_position(
         TestProject::for_source(code).add_module("a/b/dep", dep)
     ),);
+}
+
+#[test]
+fn importable_adds_extra_new_line_if_no_imports() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let prefix = "";
+    let code = "";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code).add_module("dep", dep),
+        prefix
+    ));
+}
+
+#[test]
+fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let prefix = "";
+    let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", ""),
+        prefix
+    ));
+}
+
+#[test]
+fn importable_does_not_add_extra_new_line_if_imports_exist() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let prefix = "import foo\n\n";
+    let code = "";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("foo", ""),
+        prefix
+    ));
+}
+
+#[test]
+fn importable_does_not_add_extra_new_line_if_newline_exists() {
+    let dep = "pub fn wobble() {\nNil\n}";
+    let prefix = "\n";
+    let code = "";
+
+    assert_debug_snapshot!(completion_with_prefix(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("foo", ""),
+        prefix
+    ));
 }
 
 #[test]
@@ -670,8 +730,8 @@ fn internal_values_from_root_package_are_in_the_completions() {
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
-@internal pub type Foo { Bar }
-@internal pub const foo = 1
+@internal pub type Wibble { Wobble }
+@internal pub const wibble = 1
 "#;
 
     assert_debug_snapshot!(completion_at_default_position(
@@ -705,8 +765,8 @@ fn internal_values_from_the_same_module_are_in_the_completions() {
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
-@internal pub type Foo { Bar }
-@internal pub const foo = 1
+@internal pub type Wibble { Wobble }
+@internal pub const wibble = 1
 "#;
 
     assert_debug_snapshot!(completion_at_default_position(TestProject::for_source(
@@ -719,7 +779,7 @@ fn internal_types_from_the_same_module_are_in_the_completions() {
     let code = "
 @internal pub type Alias = Result(Int, String)
 @internal pub type AnotherType {
-  Bar
+  Wibble
 }
 ";
 
@@ -756,8 +816,8 @@ fn internal_values_from_a_dependency_are_ignored() {
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }
-@internal pub type Foo { Bar }
-@internal pub const foo = 1
+@internal pub type Wibble { Wobble }
+@internal pub const wibble = 1
 "#;
 
     assert_debug_snapshot!(completion_at_default_position(
@@ -1201,4 +1261,52 @@ pub fn main() {
         completion(TestProject::for_source(code), Position::new(3, 14)),
         vec![],
     );
+}
+
+#[test]
+fn ignore_completions_inside_empty_string() {
+    let code = "
+pub fn main() {
+  \"\"
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 2)),
+        vec![],
+    );
+}
+
+#[test]
+fn ignore_completions_inside_string() {
+    let code = "
+pub fn main() {
+  \"Ok()\"
+}
+";
+
+    assert_eq!(
+        completion(TestProject::for_source(code), Position::new(2, 5)),
+        vec![],
+    );
+}
+
+#[test]
+fn completions_for_record_access() {
+    let code = "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wabble: Int, wobble: Int)
+}
+  
+fn fun() {
+  let wibble = Wibble(1, 2)
+  wibble.wobble
+}
+";
+
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(8, 15)
+    ),);
 }
