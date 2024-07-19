@@ -349,6 +349,10 @@ where
                         };
                         let (name_location, name) = &alias.alias;
 
+                        // The 'deprecated' field is deprecated, but we have to specify it anyway
+                        // to be able to construct the 'DocumentSymbol' type, so
+                        // we suppress the warning. We specify 'None' as specifying 'Some'
+                        // is what is actually deprecated.
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: name.to_string(),
@@ -384,6 +388,10 @@ where
                             end: constant.value.location().end,
                         };
 
+                        // The 'deprecated' field is deprecated, but we have to specify it anyway
+                        // to be able to construct the 'DocumentSymbol' type, so
+                        // we suppress the warning. We specify 'None' as specifying 'Some'
+                        // is what is actually deprecated.
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: constant.name.to_string(),
@@ -600,6 +608,10 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     None => argument.location,
                 };
 
+                // The 'deprecated' field is deprecated, but we have to specify it anyway
+                // to be able to construct the 'DocumentSymbol' type, so
+                // we suppress the warning. We specify 'None' as specifying 'Some'
+                // is what is actually deprecated.
                 #[allow(deprecated)]
                 arguments.push(DocumentSymbol {
                     name: label.to_string(),
@@ -631,6 +643,10 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                     .unwrap_or(constructor.location.end),
             };
 
+            // The 'deprecated' field is deprecated, but we have to specify it anyway
+            // to be able to construct the 'DocumentSymbol' type, so
+            // we suppress the warning. We specify 'None' as specifying 'Some'
+            // is what is actually deprecated.
             #[allow(deprecated)]
             DocumentSymbol {
                 name: constructor.name.to_string(),
@@ -664,6 +680,10 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
 
     let (name_location, name) = &type_.name;
 
+    // The 'deprecated' field is deprecated, but we have to specify it anyway
+    // to be able to construct the 'DocumentSymbol' type, so
+    // we suppress the warning. We specify 'None' as specifying 'Some'
+    // is what is actually deprecated.
     #[allow(deprecated)]
     DocumentSymbol {
         name: name.to_string(),
