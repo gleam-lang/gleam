@@ -31,6 +31,7 @@ struct Module {
   lineNumbers @8 :LineNumbers;
   srcPath @9 :Text;
   isInternal @10 :Bool;
+  unusedValues @11 :List(SrcSpan);
 }
 
 struct TypesVariantConstructors {
