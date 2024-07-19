@@ -826,6 +826,20 @@ import result
     insta::assert_snapshot!(apply_first_code_action_with_title(code, 5, MOVE_IMPORTS_UP));
 }
 
+#[test]
+fn move_imports_to_the_top_of_the_module_moves_all_imports_and_qualified_items() {
+    let code = r#"import list
+
+pub fn main() {}
+
+import result.{
+  is_ok
+}
+"#;
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 5, MOVE_IMPORTS_UP));
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
