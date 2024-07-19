@@ -82,6 +82,7 @@ impl ModuleDecoder {
             unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
+            unused_values: read_vec!(reader.get_unused_values()?, self, src_span),
         })
     }
 
