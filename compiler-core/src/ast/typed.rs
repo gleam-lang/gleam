@@ -116,6 +116,7 @@ pub enum TypedExpr {
     Todo {
         location: SrcSpan,
         message: Option<Box<Self>>,
+        kind: TodoKind,
         type_: Arc<Type>,
     },
 
@@ -175,12 +176,20 @@ impl TypedExpr {
         match self {
             Self::Var { .. }
             | Self::Int { .. }
-            | Self::Todo { .. }
             | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
             | Self::ModuleSelect { .. }
             | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+
+            Self::Todo { kind, .. } => match kind {
+                TodoKind::Keyword => self.self_if_contains_location(byte_index),
+                // We don't want to match on todos that were implicitly inserted
+                // by the compiler as it would result in confusing suggestions
+                // from the LSP.
+                TodoKind::EmptyFunction => None,
+                TodoKind::IncompleteUse => None,
+            },
 
             Self::Pipeline {
                 assignments,

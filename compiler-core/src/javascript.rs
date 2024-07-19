@@ -17,7 +17,7 @@ use crate::{
 };
 use camino::Utf8Path;
 use ecow::EcoString;
-use expression::NeedsPureAnnotation;
+use expression::Context;
 use itertools::Itertools;
 
 use self::import::{Imports, Member};
@@ -269,7 +269,7 @@ impl<'a> Generator<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|s| maybe_escape_identifier_doc(s))
+                .map(|(s, _)| maybe_escape_identifier_doc(s))
                 .unwrap_or_else(|| Document::String(format!("x{i}")))
         }
 
@@ -294,7 +294,7 @@ impl<'a> Generator<'a> {
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
-                    Some(name) => docvec!["this.", name, " = ", var, ";"],
+                    Some((name, _)) => docvec!["this.", name, " = ", var, ";"],
                 }
             }),
             line(),
@@ -466,19 +466,13 @@ impl<'a> Generator<'a> {
             "export const "
         };
 
-        let mut needs_pure_annotation = NeedsPureAnnotation::No;
         let document =
-            expression::constant_expression(&mut needs_pure_annotation, &mut self.tracker, value)?;
-
-        let equals = match needs_pure_annotation {
-            NeedsPureAnnotation::Yes => " = /* @__PURE__ */ ",
-            NeedsPureAnnotation::No => " = ",
-        };
+            expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
 
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
-            equals,
+            " = ",
             document,
             ";",
         ])

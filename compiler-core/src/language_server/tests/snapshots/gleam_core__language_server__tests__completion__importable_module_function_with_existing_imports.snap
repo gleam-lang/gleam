@@ -49,15 +49,15 @@ expression: "completion_at_default_position(TestProject::for_source(code).add_mo
                 TextEdit {
                     range: Range {
                         start: Position {
-                            line: 7,
+                            line: 0,
                             character: 0,
                         },
                         end: Position {
-                            line: 7,
+                            line: 0,
                             character: 0,
                         },
                     },
-                    new_text: "import dep\n",
+                    new_text: "import dep\n\n",
                 },
             ],
         ),

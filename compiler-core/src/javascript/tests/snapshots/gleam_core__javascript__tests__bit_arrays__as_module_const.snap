@@ -11,5 +11,9 @@ export const data = /* @__PURE__ */ toBitArray([
   sizedInt(0x4, 32),
   stringBits("Gleam"),
   float64Bits(4.2),
-  toBitArray([toBitArray([1, 2, 3]).buffer, stringBits("Gleam"), 1024]).buffer,
+  /* @__PURE__ */ toBitArray([
+    /* @__PURE__ */ toBitArray([1, 2, 3]).buffer,
+    stringBits("Gleam"),
+    1024,
+  ]).buffer,
 ]);

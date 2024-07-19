@@ -100,6 +100,14 @@ macro_rules! assert_module_error {
 }
 
 #[macro_export]
+macro_rules! assert_internal_module_error {
+    ($src:expr) => {
+        let output = $crate::type_::tests::internal_module_error($src, vec![]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
 macro_rules! assert_js_module_error {
     ($src:expr) => {
         let output = $crate::type_::tests::module_error_with_target(
@@ -251,6 +259,7 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let errors = &mut vec![];
+    let name_corrections = &mut vec![];
     let res = ExprTyper::new(
         &mut Environment::new(
             ids,
@@ -267,6 +276,7 @@ fn compile_statement_sequence(
             has_javascript_external: false,
         },
         errors,
+        name_corrections,
     )
     .infer_statements(ast);
     match Vec1::try_from_vec(errors.to_vec()) {
@@ -446,6 +456,32 @@ pub fn module_error_with_target(
     error.pretty_string()
 }
 
+pub fn internal_module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
+    internal_module_error_with_target(src, deps, Target::Erlang)
+}
+
+pub fn internal_module_error_with_target(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> String {
+    let error = compile_module_with_opts(
+        "thepackage/internal/themodule",
+        src,
+        None,
+        deps,
+        target,
+        TargetSupport::NotEnforced,
+    )
+    .expect_err("should infer an error");
+    let error = Error::Type {
+        src: src.into(),
+        path: Utf8PathBuf::from("/src/one/two.gleam"),
+        errors: Vec1::try_from_vec(error).expect("should have at least one error"),
+    };
+    error.pretty_string()
+}
+
 pub fn syntax_error(src: &str) -> String {
     let error =
         crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
@@ -500,19 +536,19 @@ fn field_map_reorder_test() {
         fields: HashMap::new(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -521,19 +557,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -547,19 +583,19 @@ fn field_map_reorder_test() {
         fields: [("last".into(), 2)].into(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: Some("last".into()),
                 value: int("3"),
@@ -568,19 +604,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: Some("last".into()),
                 value: int("3"),
@@ -683,6 +719,7 @@ fn infer_module_type_retention_test() {
             values: HashMap::new(),
             accessors: HashMap::new(),
             unused_imports: Vec::new(),
+            name_corrections: Vec::new(),
             unused_values: Vec::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),

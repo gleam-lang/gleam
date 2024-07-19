@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action_with_title(\"\npub fn main() {\n  let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]\n}\n\",\n    2, CONVERT_TO_CASE)"
+---
+pub fn main() {
+  let #(var1, var2, var4) = case [1, 2, 3, 4] {
+    [var1, var2, _var3, var4] -> #(var1, var2, var4)
+    _ -> panic
+  }
+}

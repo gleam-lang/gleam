@@ -57,6 +57,7 @@ fn write_cache(
         accessors: Default::default(),
         unused_imports: Vec::new(),
         unused_values: Vec::new(),
+        name_corrections: Vec::new(),
         contains_todo: false,
         line_numbers: line_numbers.clone(),
         is_internal: false,

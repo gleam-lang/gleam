@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "let add = fn(numA: Int, num_b: Int) { numA + num_b }"
+---
+error: Invalid argument name
+  ┌─ /src/one/two.gleam:1:14
+  │
+1 │ let add = fn(numA: Int, num_b: Int) { numA + num_b }
+  │              ^^^^ This is not a valid argument name
+
+Hint: Argument names start with a lowercase letter and contain a-z, 0-9,
+or _.
+Try: num_a

@@ -210,6 +210,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         values: HashMap::new(),
         accessors: HashMap::new(),
         unused_imports: Vec::new(),
+        name_corrections: Vec::new(),
         unused_values: Vec::new(),
         contains_todo: false,
         is_internal: false,

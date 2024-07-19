@@ -21,6 +21,7 @@ pub use prelude::*;
 use serde::Serialize;
 
 use crate::{
+    analyse::name::NameCorrection,
     ast::{
         ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
         SrcSpan, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
@@ -122,7 +123,7 @@ impl Type {
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { retrn, .. } => Some(retrn.clone()),
-            Type::Var { type_ } => type_.borrow().return_type(),
+            Self::Var { type_ } => type_.borrow().return_type(),
             _ => None,
         }
     }
@@ -597,6 +598,7 @@ pub struct ModuleInterface {
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
+    pub name_corrections: Vec<NameCorrection>,
     pub unused_values: Vec<SrcSpan>,
     pub contains_todo: bool,
     /// Used for mapping to original source locations on disk
@@ -688,6 +690,7 @@ impl ModuleInterface {
             values: Default::default(),
             accessors: Default::default(),
             unused_imports: Default::default(),
+            name_corrections: Default::default(),
             unused_values: Default::default(),
             contains_todo: false,
             is_internal: false,
@@ -1105,6 +1108,8 @@ fn match_fun_type(
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
+                args: args.clone(),
+                return_type: retrn.clone(),
             })
         } else {
             Ok((args.clone(), retrn.clone()))

@@ -5,7 +5,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::{cli, fs::ProjectIO, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Mode, Options, Package},
+    build::{Codegen, Mode, Options, Package, Target},
     config::{DocsPage, PackageConfig},
     docs::DocContext,
     error::Error,
@@ -57,6 +57,7 @@ impl ApiKeyCommand for RemoveCommand {
 pub struct BuildOptions {
     /// Whether to open the docs after building.
     pub open: bool,
+    pub target: Option<Target>,
 }
 
 pub fn build(options: BuildOptions) -> Result<()> {
@@ -70,7 +71,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
     let mut built = crate::build::main(
         Options {
             mode: Mode::Prod,
-            target: None,
+            target: options.target,
             codegen: Codegen::All,
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,

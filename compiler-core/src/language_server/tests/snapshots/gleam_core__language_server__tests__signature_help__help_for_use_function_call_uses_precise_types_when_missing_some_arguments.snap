@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\npub fn guard(a: Bool, b: a, c: fn() -> a) { 1.0 }\n\npub fn main() {\n    use <- guard(True,)\n}\n    "
+---
+pub fn guard(a: Bool, b: a, c: fn() -> a) { 1.0 }
+
+pub fn main() {
+    use <- guard(True,)
+                      ↑
+}
+    
+
+
+----- Signature help -----
+guard(Bool, a, fn() -> a) -> Float
+            ▔
+
+No documentation

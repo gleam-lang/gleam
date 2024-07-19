@@ -125,6 +125,20 @@ impl Attributes {
     fn has_function_only(&self) -> bool {
         self.external_erlang.is_some() || self.external_javascript.is_some()
     }
+
+    fn has_external_for(&self, target: Target) -> bool {
+        match target {
+            Target::Erlang => self.external_erlang.is_some(),
+            Target::JavaScript => self.external_javascript.is_some(),
+        }
+    }
+
+    fn set_external_for(&mut self, target: Target, ext: Option<(EcoString, EcoString)>) {
+        match target {
+            Target::Erlang => self.external_erlang = ext,
+            Target::JavaScript => self.external_javascript = ext,
+        }
+    }
 }
 
 //
@@ -270,7 +284,7 @@ where
         if let Some(error) = self.lex_errors.first() {
             // Lex errors first
             let location = error.location;
-            let error = error.clone();
+            let error = *error;
             parse_error(ParseErrorType::LexError { error }, location)
         } else {
             // Return any existing parse error
@@ -781,10 +795,19 @@ where
                     }
 
                     t0 => {
+                        // parse a field access with no label
                         self.tok0 = t0;
-                        return self.next_tok_unexpected(vec![
-                            "A positive integer or a field name.".into(),
-                        ]);
+                        let end = dot_start + 1;
+                        expr = UntypedExpr::FieldAccess {
+                            location: SrcSpan { start, end },
+                            label_location: SrcSpan {
+                                start: dot_start,
+                                end,
+                            },
+                            label: "".into(),
+                            container: Box::new(expr),
+                        };
+                        return Ok(Some(expr));
                     }
                 }
             } else if self.maybe_one(&Token::LeftParen).is_some() {
@@ -1190,12 +1213,15 @@ where
 
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
-                let tail = if let Some((start, Token::DotDot, end)) = self.tok0 {
-                    dot_dot_location = Some((start, end));
-                    if !elements_end_with_comma {
+                let tail = if let Some((dot_dot_start, Token::DotDot, dot_dot_end)) = self.tok0 {
+                    dot_dot_location = Some((dot_dot_start, dot_dot_end));
+                    if !elements.is_empty() && !elements_end_with_comma {
                         self.warnings
                             .push(DeprecatedSyntaxWarning::DeprecatedListPattern {
-                                location: SrcSpan { start, end },
+                                location: SrcSpan {
+                                    start: dot_dot_start,
+                                    end: dot_dot_end,
+                                },
                             });
                     }
 
@@ -1258,8 +1284,15 @@ where
                     None => None,
                 };
 
+                if elements.is_empty() && tail.as_ref().is_some_and(|p| p.is_discard()) {
+                    self.warnings
+                        .push(DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern {
+                            location: SrcSpan { start, end: rsqb_e },
+                        })
+                }
+
                 Pattern::List {
-                    location: SrcSpan { start, end },
+                    location: SrcSpan { start, end: rsqb_e },
                     elements,
                     tail: tail.map(Box::new),
                     type_: (),
@@ -1286,6 +1319,13 @@ where
         }
     }
 
+    fn add_multi_line_clause_hint(&self, mut err: ParseError) -> ParseError {
+        if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = err.error {
+            *hint = Some("Did you mean to wrap a multi line clause in curly braces?".into());
+        }
+        err
+    }
+
     // examples:
     //   pattern -> expr
     //   pattern, pattern if -> expr
@@ -1301,13 +1341,9 @@ where
                 alternative_patterns.push(self.parse_patterns()?);
             }
             let guard = self.parse_case_clause_guard(false)?;
-            let (arr_s, arr_e) = self.expect_one(&Token::RArrow).map_err(|mut e| {
-                if let ParseErrorType::UnexpectedToken { ref mut hint, .. } = e.error {
-                    *hint =
-                        Some("Did you mean to wrap a multi line clause in curly braces?".into());
-                }
-                e
-            })?;
+            let (arr_s, arr_e) = self
+                .expect_one(&Token::RArrow)
+                .map_err(|e| self.add_multi_line_clause_hint(e))?;
             let then = self.parse_expression()?;
             if let Some(then) = then {
                 Ok(Some(Clause {
@@ -1396,6 +1432,34 @@ where
         }
     }
 
+    /// Checks if we have an unexpected left parenthesis and returns appropriate
+    /// error if it is a function call.
+    fn parse_function_call_in_clause_guard(&mut self, start: u32) -> Result<(), ParseError> {
+        if let Some((l_paren_start, l_paren_end)) = self.maybe_one(&Token::LeftParen) {
+            if let Ok((_, end)) = self
+                .parse_fn_args()
+                .and(self.expect_one(&Token::RightParen))
+            {
+                return parse_error(ParseErrorType::CallInClauseGuard, SrcSpan { start, end });
+            }
+
+            return parse_error(
+                ParseErrorType::UnexpectedToken {
+                    token: Token::LeftParen,
+                    expected: vec![Token::RArrow.to_string().into()],
+                    hint: None,
+                },
+                SrcSpan {
+                    start: l_paren_start,
+                    end: l_paren_end,
+                },
+            )
+            .map_err(|e| self.add_multi_line_clause_hint(e));
+        }
+
+        Ok(())
+    }
+
     // examples
     // a
     // 1
@@ -1429,6 +1493,8 @@ where
                     name,
                 };
 
+                self.parse_function_call_in_clause_guard(start)?;
+
                 loop {
                     let dot_s = match self.maybe_one(&Token::Dot) {
                         Some((dot_s, _)) => dot_s,
@@ -1457,6 +1523,8 @@ where
                         }
 
                         Some((_, Token::Name { name: label }, int_e)) => {
+                            self.parse_function_call_in_clause_guard(start)?;
+
                             unit = ClauseGuard::FieldAccess {
                                 location: SrcSpan {
                                     start: dot_s,
@@ -1561,7 +1629,7 @@ where
                 self.advance();
                 if let Some(value) = self.parse_pattern()? {
                     Ok(Some(CallArg {
-                        implicit: false,
+                        implicit: None,
                         location: SrcSpan {
                             start,
                             end: value.location().end,
@@ -1585,7 +1653,7 @@ where
                 self.tok1 = t1;
                 if let Some(value) = self.parse_pattern()? {
                     Ok(Some(CallArg {
-                        implicit: false,
+                        implicit: None,
                         location: value.location(),
                         label: None,
                         value,
@@ -1641,10 +1709,12 @@ where
         } else {
             self.take_documentation(start)
         };
+        let mut name_location = SrcSpan::new(start, start);
         let mut name = EcoString::from("");
         if !is_anon {
-            let (_, n, _) = self.expect_name()?;
+            let (start, n, end) = self.expect_name()?;
             name = n;
+            name_location = SrcSpan { start, end };
         }
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(
@@ -1694,6 +1764,7 @@ where
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
+            name_location,
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,
@@ -1744,7 +1815,7 @@ where
             // labeled discard
             (
                 Some((start, Token::Name { name: label }, tok0_end)),
-                Some((_, Token::DiscardName { name }, end)),
+                Some((name_start, Token::DiscardName { name }, end)),
             ) => {
                 if is_anon {
                     return parse_error(
@@ -1758,18 +1829,34 @@ where
 
                 self.advance();
                 self.advance();
-                (start, ArgNames::LabelledDiscard { name, label }, end)
+                (
+                    start,
+                    ArgNames::LabelledDiscard {
+                        name,
+                        name_location: SrcSpan::new(name_start, end),
+                        label,
+                        label_location: SrcSpan::new(start, tok0_end),
+                    },
+                    end,
+                )
             }
             // discard
             (Some((start, Token::DiscardName { name }, end)), t1) => {
                 self.tok1 = t1;
                 self.advance();
-                (start, ArgNames::Discard { name }, end)
+                (
+                    start,
+                    ArgNames::Discard {
+                        name,
+                        location: SrcSpan { start, end },
+                    },
+                    end,
+                )
             }
             // labeled name
             (
                 Some((start, Token::Name { name: label }, tok0_end)),
-                Some((_, Token::Name { name }, end)),
+                Some((name_start, Token::Name { name }, end)),
             ) => {
                 if is_anon {
                     return parse_error(
@@ -1783,13 +1870,29 @@ where
 
                 self.advance();
                 self.advance();
-                (start, ArgNames::NamedLabelled { name, label }, end)
+                (
+                    start,
+                    ArgNames::NamedLabelled {
+                        name,
+                        name_location: SrcSpan::new(name_start, end),
+                        label,
+                        label_location: SrcSpan::new(start, tok0_end),
+                    },
+                    end,
+                )
             }
             // name
             (Some((start, Token::Name { name }, end)), t1) => {
                 self.tok1 = t1;
                 self.advance();
-                (start, ArgNames::Named { name }, end)
+                (
+                    start,
+                    ArgNames::Named {
+                        name,
+                        location: SrcSpan { start, end },
+                    },
+                    end,
+                )
             }
             (t0, t1) => {
                 self.tok0 = t0;
@@ -1851,7 +1954,7 @@ where
                 location.start = start
             };
             Ok(Some(ParserArg::Arg(Box::new(CallArg {
-                implicit: false,
+                implicit: None,
                 label,
                 location,
                 value,
@@ -1888,7 +1991,7 @@ where
         attributes: &mut Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
-        let (_, name, parameters, end) = self.expect_type_name()?;
+        let (name_start, name, parameters, end, name_end) = self.expect_type_name()?;
         let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
@@ -1900,6 +2003,10 @@ where
                         let end = args_e.max(c_e);
                         Ok(Some(RecordConstructor {
                             location: SrcSpan { start: c_s, end },
+                            name_location: SrcSpan {
+                                start: c_s,
+                                end: c_e,
+                            },
                             name: c_n,
                             arguments: args,
                             documentation,
@@ -1911,8 +2018,7 @@ where
                 // No separator
                 None,
             )?;
-            let (_, close_end) =
-                self.expect_one_following_series(&Token::RightBrace, "a record constructor")?;
+            let (_, close_end) = self.expect_custom_type_close(&name, public, opaque)?;
             (constructors, close_end)
         } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
             // Type Alias
@@ -1925,6 +2031,7 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
+                    name_location: SrcSpan::new(name_start, name_end),
                     publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
                     parameters,
@@ -1941,6 +2048,10 @@ where
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },
+            name_location: SrcSpan {
+                start: name_start,
+                end: name_end,
+            },
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             opaque,
@@ -1955,16 +2066,18 @@ where
     // examples:
     //   A
     //   A(one, two)
-    fn expect_type_name(&mut self) -> Result<(u32, EcoString, Vec<EcoString>, u32), ParseError> {
+    fn expect_type_name(
+        &mut self,
+    ) -> Result<(u32, EcoString, Vec<EcoString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
             let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
             let args2 = args.into_iter().map(|(_, a, _)| a).collect();
-            Ok((start, upname, args2, par_e))
+            Ok((start, upname, args2, par_e, end))
         } else {
-            Ok((start, upname, vec![], end))
+            Ok((start, upname, vec![], end, end))
         }
     }
 
@@ -1979,7 +2092,10 @@ where
             let args = Parser::series_of(
                 self,
                 &|p| match (p.tok0.take(), p.tok1.take()) {
-                    (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
+                    (
+                        Some((start, Token::Name { name }, name_end)),
+                        Some((_, Token::Colon, end)),
+                    ) => {
                         let _ = Parser::next_tok(p);
                         let _ = Parser::next_tok(p);
                         let doc = p.take_documentation(start);
@@ -1987,7 +2103,13 @@ where
                             Some(type_ast) => {
                                 let end = type_ast.location().end;
                                 Ok(Some(RecordConstructorArg {
-                                    label: Some(name),
+                                    label: Some((
+                                        name,
+                                        SrcSpan {
+                                            start,
+                                            end: name_end,
+                                        },
+                                    )),
                                     ast: type_ast,
                                     location: SrcSpan { start, end },
                                     type_: (),
@@ -2373,7 +2495,17 @@ where
     //   "hi"
     //   True
     //   [1,2,3]
+    //   foo <> "bar"
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
+        let constant_result = self.parse_const_value_unit();
+        if let Ok(Some(constant)) = constant_result {
+            self.parse_const_maybe_concatenation(constant)
+        } else {
+            constant_result
+        }
+    }
+
+    fn parse_const_value_unit(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         match self.tok0.take() {
             Some((start, Token::String { value }, end)) => {
                 self.advance();
@@ -2528,6 +2660,40 @@ where
         }
     }
 
+    fn parse_const_maybe_concatenation(
+        &mut self,
+        left: UntypedConstant,
+    ) -> Result<Option<UntypedConstant>, ParseError> {
+        match self.tok0.take() {
+            Some((op_start, Token::LtGt, op_end)) => {
+                self.advance();
+
+                if let Ok(Some(right_constant_value)) = self.parse_const_value() {
+                    Ok(Some(Constant::StringConcatenation {
+                        location: SrcSpan {
+                            start: left.location().start,
+                            end: right_constant_value.location().end,
+                        },
+                        left: Box::new(left),
+                        right: Box::new(right_constant_value),
+                    }))
+                } else {
+                    parse_error(
+                        ParseErrorType::OpNakedRight,
+                        SrcSpan {
+                            start: op_start,
+                            end: op_end,
+                        },
+                    )
+                }
+            }
+            t0 => {
+                self.tok0 = t0;
+                Ok(Some(left))
+            }
+        }
+    }
+
     // Parse the '( .. )' of a const type constructor
     fn parse_const_record_finish(
         &mut self,
@@ -2585,7 +2751,7 @@ where
         if let Some(value) = self.parse_const_value()? {
             if let Some((start, label, _)) = name {
                 Ok(Some(CallArg {
-                    implicit: false,
+                    implicit: None,
                     location: SrcSpan {
                         start,
                         end: value.location().end,
@@ -2595,7 +2761,7 @@ where
                 }))
             } else {
                 Ok(Some(CallArg {
-                    implicit: false,
+                    implicit: None,
                     location: value.location(),
                     value,
                     label: None,
@@ -2794,6 +2960,59 @@ where
         match self.maybe_one(wanted) {
             Some((start, end)) => Ok((start, end)),
             None => self.next_tok_unexpected(vec![wanted.to_string().into(), series.into()]),
+        }
+    }
+
+    /// Expect the end to a custom type definiton or handle an incorrect
+    /// record constructor definition.
+    ///
+    /// Used for mapping to a more specific error type and message.
+    fn expect_custom_type_close(
+        &mut self,
+        name: &EcoString,
+        public: bool,
+        opaque: bool,
+    ) -> Result<(u32, u32), ParseError> {
+        match self.maybe_one(&Token::RightBrace) {
+            Some((start, end)) => Ok((start, end)),
+            None => match self.next_tok() {
+                None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
+                Some((start, token, end)) => {
+                    // If provided a Name, map to a more detailed error
+                    // message to nudge the user.
+                    // Else, handle as an unexpected token.
+                    let field = match token {
+                        Token::Name { name } => name,
+                        _ => {
+                            return parse_error(
+                                ParseErrorType::UnexpectedToken {
+                                    token,
+                                    expected: vec![
+                                        Token::RightBrace.to_string().into(),
+                                        "a record constructor".into(),
+                                    ],
+                                    hint: None,
+                                },
+                                SrcSpan { start, end },
+                            )
+                        }
+                    };
+                    let field_type = match self.parse_type_annotation(&Token::Colon) {
+                        Ok(Some(annotation)) => Some(annotation),
+                        _ => None,
+                    };
+                    parse_error(
+                        ParseErrorType::ExpectedRecordConstructor {
+                            name: name.clone(),
+                            public,
+                            opaque,
+                            field,
+                            field_type,
+                        },
+                        SrcSpan { start, end },
+                    )
+                }
+            },
         }
     }
 
@@ -3139,37 +3358,25 @@ where
     ) -> Result<u32, ParseError> {
         let (_, name, _) = self.expect_name()?;
 
-        match name.as_str() {
-            "erlang" => {
-                let _ = self.expect_one(&Token::Comma)?;
-                let (_, module, _) = self.expect_string()?;
-                let _ = self.expect_one(&Token::Comma)?;
-                let (_, function, _) = self.expect_string()?;
-                let _ = self.maybe_one(&Token::Comma);
-                let (_, end) = self.expect_one(&Token::RightParen)?;
-                if attributes.external_erlang.is_some() {
-                    return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
-                }
-                attributes.external_erlang = Some((module, function));
-                Ok(end)
-            }
+        let target = match name.as_str() {
+            "erlang" => Target::Erlang,
+            "javascript" => Target::JavaScript,
+            _ => return parse_error(ParseErrorType::UnknownAttribute, SrcSpan::new(start, end)),
+        };
 
-            "javascript" => {
-                let _ = self.expect_one(&Token::Comma)?;
-                let (_, module, _) = self.expect_string()?;
-                let _ = self.expect_one(&Token::Comma)?;
-                let (_, function, _) = self.expect_string()?;
-                let _ = self.maybe_one(&Token::Comma);
-                let _ = self.expect_one(&Token::RightParen)?;
-                if attributes.external_javascript.is_some() {
-                    return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
-                }
-                attributes.external_javascript = Some((module, function));
-                Ok(end)
-            }
+        let _ = self.expect_one(&Token::Comma)?;
+        let (_, module, _) = self.expect_string()?;
+        let _ = self.expect_one(&Token::Comma)?;
+        let (_, function, _) = self.expect_string()?;
+        let _ = self.maybe_one(&Token::Comma);
+        let (_, end) = self.expect_one(&Token::RightParen)?;
 
-            _ => parse_error(ParseErrorType::UnknownAttribute, SrcSpan::new(start, end)),
+        if attributes.has_external_for(target) {
+            return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
         }
+
+        attributes.set_external_for(target, Some((module, function)));
+        Ok(end)
     }
 
     fn parse_deprecated_attribute(
@@ -3592,7 +3799,7 @@ pub fn make_call(
                 }
 
                 Ok(CallArg {
-                    implicit: false,
+                    implicit: None,
                     label,
                     location,
                     value: UntypedExpr::Var {
@@ -3622,6 +3829,7 @@ pub fn make_call(
                 annotation: None,
                 names: ArgNames::Named {
                     name: CAPTURE_VARIABLE.into(),
+                    location: hole_location.expect("At least a capture hole"),
                 },
                 type_: (),
             }],

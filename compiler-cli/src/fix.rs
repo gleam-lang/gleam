@@ -11,7 +11,7 @@ pub fn run() -> Result<()> {
 
     // Set the version requirement in gleam.toml
     let mut toml = crate::fs::read("gleam.toml")?
-        .parse::<toml_edit::Document>()
+        .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,

@@ -118,133 +118,131 @@ pub fn update() -> Result<()> {
     Ok(())
 }
 
-fn parse_hex_requirement(package: &str) -> Result<Requirement> {
-    match package.find('@') {
-        Some(pos) => {
-            // Parse the major and minor from the provided semantic version.
-            let version = match package.get(pos + 1..) {
-                Some(version) => Ok(version),
-                None => Err(Error::InvalidVersionFormat {
-                    input: package.to_string(),
-                    error: "Failed to parse version from specifier".to_string(),
-                }),
-            }?;
-            let parts = version.split('.').collect::<Vec<_>>();
-            let major = match parts.first() {
-                Some(major) => Ok(major),
-                None => Err(Error::InvalidVersionFormat {
-                    input: package.to_string(),
-                    error: "Failed to parse semantic major version".to_string(),
-                }),
-            }?;
-            let minor = match parts.get(1) {
-                Some(minor) => minor,
-                None => "0",
-            };
-
-            // Using the major version specifier, calculate the maximum
-            // allowable version (i.e., the next major version).
-            let max_ver = match major.parse::<usize>() {
-                Ok(num) => Ok([&(num + 1).to_string(), "0", "0"].join(".")),
-                Err(_) => Err(Error::InvalidVersionFormat {
-                    input: version.to_string(),
-                    error: "Failed to parse semantic major version as integer".to_string(),
-                }),
-            }?;
-
-            // Pad the provided version specifier with zeros map to a Hex version.
-            match parts.len() {
-                1 | 2 => {
-                    let min_ver = [major, minor, "0"].join(".");
-                    Ok(Requirement::hex(
-                        &[">=", &min_ver, "and", "<", &max_ver].join(" "),
-                    ))
-                }
-                3 => Ok(Requirement::hex(version)),
-                n_parts => Err(Error::InvalidVersionFormat {
-                    input: version.to_string(),
-                    error: format!(
-                        "Expected up to 3 numbers in version specifier (MAJOR.MINOR.PATCH), found {n_parts}"
-                    ),
-                }),
-            }
-        }
-
+pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
+    let Some((package, version)) = package.split_once('@') else {
         // Default to the latest version available.
-        None => Ok(Requirement::hex(">= 0.0.0")),
-    }
+        return Ok((package.into(), Requirement::hex(">= 0.0.0")));
+    };
+
+    // Parse the major and minor from the provided semantic version.
+    let parts = version.split('.').collect::<Vec<_>>();
+    let major = match parts.first() {
+        Some(major) => Ok(major),
+        None => Err(Error::InvalidVersionFormat {
+            input: package.to_string(),
+            error: "Failed to parse semantic major version".to_string(),
+        }),
+    }?;
+    let minor = match parts.get(1) {
+        Some(minor) => minor,
+        None => "0",
+    };
+
+    // Using the major version specifier, calculate the maximum
+    // allowable version (i.e., the next major version).
+    let Ok(num) = major.parse::<usize>() else {
+        return Err(Error::InvalidVersionFormat {
+            input: version.to_string(),
+            error: "Failed to parse semantic major version as integer".to_string(),
+        });
+    };
+
+    let max_ver = [&(num + 1).to_string(), "0", "0"].join(".");
+
+    // Pad the provided version specifier with zeros map to a Hex version.
+    let requirement = match parts.len() {
+        1 | 2 => {
+            let min_ver = [major, minor, "0"].join(".");
+            Requirement::hex(&[">=", &min_ver, "and", "<", &max_ver].join(" "))
+        }
+        3 => Requirement::hex(version),
+        n => {
+            return Err(Error::InvalidVersionFormat {
+                input: version.to_string(),
+                error: format!(
+                    "Expected up to 3 numbers in version specifier (MAJOR.MINOR.PATCH), found {n}"
+                ),
+            })
+        }
+    };
+
+    Ok((package.into(), requirement))
 }
 
 #[test]
-fn parse_hex_requirement_invalid_semver() {
-    assert!(parse_hex_requirement("some_package@1.2.3.4").is_err());
+fn parse_gleam_add_specifier_invalid_semver() {
+    assert!(parse_gleam_add_specifier("some_package@1.2.3.4").is_err());
 }
 
 #[test]
-fn parse_hex_requirement_non_numeric_version() {
-    assert!(parse_hex_requirement("some_package@not_a_version").is_err());
+fn parse_gleam_add_specifier_non_numeric_version() {
+    assert!(parse_gleam_add_specifier("some_package@not_a_version").is_err());
 }
 
 #[test]
-fn parse_hex_requirement_default() {
+fn parse_gleam_add_specifier_default() {
     let provided = "some_package";
     let expected = ">= 0.0.0";
-    let version = parse_hex_requirement(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
         }
         _ => assert!(false, "failed hexpm version parse: {}", provided),
     }
-    assert_eq!(version, Requirement::hex(expected))
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("some_package", package);
 }
 
 #[test]
-fn parse_hex_requirement_major_only() {
-    let provided = "some_package@1";
+fn parse_gleam_add_specifier_major_only() {
+    let provided = "wobble@1";
     let expected = ">= 1.0.0 and < 2.0.0";
-    let version = parse_hex_requirement(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
         }
         _ => assert!(false, "failed hexpm version parse: {}", provided),
     }
-    assert_eq!(version, Requirement::hex(expected))
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("wobble", package);
 }
 
 #[test]
-fn parse_hex_requirement_major_and_minor() {
-    let provided = "some_package@1.2";
+fn parse_gleam_add_specifier_major_and_minor() {
+    let provided = "wibble@1.2";
     let expected = ">= 1.2.0 and < 2.0.0";
-    let version = parse_hex_requirement(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
         }
         _ => assert!(false, "failed hexpm version parse: {}", provided),
     }
-    assert_eq!(version, Requirement::hex(expected))
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("wibble", package);
 }
 
 #[test]
-fn parse_hex_requirement_major_minor_and_patch() {
-    let provided = "some_package@1.2.3";
+fn parse_gleam_add_specifier_major_minor_and_patch() {
+    let provided = "bobble@1.2.3";
     let expected = "1.2.3";
-    let version = parse_hex_requirement(&provided).unwrap();
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
             assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {}", v);
         }
         _ => assert!(false, "failed hexpm version parse: {}", provided),
     }
-    assert_eq!(version, Requirement::hex(expected))
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("bobble", package);
 }
 
 pub fn download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
-    new_package: Option<(Vec<String>, bool)>,
+    new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
     // If true we read the manifest from disc. If not set then we ignore any
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
@@ -270,12 +268,11 @@ pub fn download<Telem: Telemetry>(
 
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
-        for package in packages {
-            let version = parse_hex_requirement(&package)?;
-            let _ = if dev {
-                config.dev_dependencies.insert(package.into(), version)
+        for (package, requirement) in packages {
+            if dev {
+                _ = config.dev_dependencies.insert(package, requirement);
             } else {
-                config.dependencies.insert(package.into(), version)
+                _ = config.dependencies.insert(package, requirement);
             };
         }
     }
@@ -633,7 +630,7 @@ fn get_manifest<Telem: Telemetry>(
     // to date so we can return it unmodified.
     if is_same_requirements(
         &manifest.requirements,
-        &config.all_dependencies()?,
+        &config.all_drect_dependencies()?,
         paths.root(),
     )? {
         tracing::debug!("manifest_up_to_date");
@@ -846,7 +843,7 @@ fn resolve_versions<Telem: Telemetry>(
 
     let manifest = Manifest {
         packages: manifest_packages,
-        requirements: config.all_dependencies()?,
+        requirements: config.all_drect_dependencies()?,
     };
 
     Ok(manifest)

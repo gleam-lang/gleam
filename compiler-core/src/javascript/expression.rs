@@ -366,21 +366,8 @@ impl<'module> Generator<'module> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        let doc = self.immediately_involked_function_expression_document(result?);
+        let doc = immediately_involked_function_expression_document(result?);
         Ok(self.wrap_return(doc))
-    }
-
-    /// Wrap a document in an immediately involked function expression
-    fn immediately_involked_function_expression_document<'a>(
-        &mut self,
-        document: Document<'a>,
-    ) -> Document<'a> {
-        docvec!(
-            docvec!("(() => {", break_("", " "), document).nest(INDENT),
-            break_("", " "),
-            "})()",
-        )
-        .group()
     }
 
     fn variable<'a>(
@@ -390,7 +377,7 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
-                constant_expression(&mut NeedsPureAnnotation::No, self.tracker, literal)
+                constant_expression(Context::Function, self.tracker, literal)
             }
             ValueConstructorVariant::Record { arity, .. } => {
                 Ok(self.record_constructor(constructor.type_.clone(), None, name, *arity))
@@ -631,7 +618,11 @@ impl<'module> Generator<'module> {
                 doc = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
-                    doc.append(body)
+                    // A block is used as it could declare variables still.
+                    doc.append("{")
+                        .append(docvec!(line(), body).nest(INDENT))
+                        .append(line())
+                        .append("}")
                 } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
@@ -1250,17 +1241,24 @@ pub(crate) fn guard_constant_expression<'a>(
             .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
             .unwrap_or_else(|| maybe_escape_identifier_doc(name))),
 
-        expression => constant_expression(&mut NeedsPureAnnotation::No, tracker, expression),
+        expression => constant_expression(Context::Function, tracker, expression),
     }
 }
 
-pub enum NeedsPureAnnotation {
-    Yes,
-    No,
+#[derive(Debug, Clone, Copy)]
+/// The context where the constant expression is used, it might be inside a
+/// function call, or in the definition of another constant.
+///
+/// Based on the context we might want to annotate pure function calls as
+/// "@__PURE__".
+///
+pub enum Context {
+    Constant,
+    Function,
 }
 
 pub(crate) fn constant_expression<'a>(
-    needs_pure_annotation: &mut NeedsPureAnnotation,
+    context: Context,
     tracker: &mut UsageTracker,
     expression: &'a TypedConstant,
 ) -> Output<'a> {
@@ -1271,18 +1269,21 @@ pub(crate) fn constant_expression<'a>(
         Constant::Tuple { elements, .. } => array(
             elements
                 .iter()
-                .map(|e| constant_expression(needs_pure_annotation, tracker, e)),
+                .map(|e| constant_expression(context, tracker, e)),
         ),
 
         Constant::List { elements, .. } => {
             tracker.list_used = true;
-            let result = list(
+            let list = list(
                 elements
                     .iter()
-                    .map(|e| constant_expression(needs_pure_annotation, tracker, e)),
-            );
-            *needs_pure_annotation = NeedsPureAnnotation::Yes;
-            result
+                    .map(|e| constant_expression(context, tracker, e)),
+            )?;
+
+            match context {
+                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", list]),
+                Context::Function => Ok(list),
+            }
         }
 
         Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
@@ -1310,18 +1311,24 @@ pub(crate) fn constant_expression<'a>(
             }
             let field_values: Vec<_> = args
                 .iter()
-                .map(|arg| constant_expression(needs_pure_annotation, tracker, &arg.value))
+                .map(|arg| constant_expression(context, tracker, &arg.value))
                 .try_collect()?;
 
-            *needs_pure_annotation = NeedsPureAnnotation::Yes;
-            Ok(construct_record(module.as_deref(), name, field_values))
+            let constructor = construct_record(module.as_deref(), name, field_values);
+            match context {
+                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", constructor]),
+                Context::Function => Ok(constructor),
+            }
         }
 
         Constant::BitArray { segments, .. } => {
-            *needs_pure_annotation = NeedsPureAnnotation::Yes;
-            bit_array(tracker, segments, |tracker, expr| {
-                constant_expression(needs_pure_annotation, tracker, expr)
-            })
+            let bit_array = bit_array(tracker, segments, |tracker, expr| {
+                constant_expression(context, tracker, expr)
+            })?;
+            match context {
+                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", bit_array]),
+                Context::Function => Ok(bit_array),
+            }
         }
 
         Constant::Var { name, module, .. } => Ok({
@@ -1335,6 +1342,12 @@ pub(crate) fn constant_expression<'a>(
                 }
             }
         }),
+
+        Constant::StringConcatenation { left, right, .. } => {
+            let left = constant_expression(context, tracker, left)?;
+            let right = constant_expression(context, tracker, right)?;
+            Ok(docvec!(left, " + ", right))
+        }
 
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
@@ -1585,4 +1598,14 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
     }
+}
+
+/// Wrap a document in an immediately involked function expression
+fn immediately_involked_function_expression_document(document: Document<'_>) -> Document<'_> {
+    docvec!(
+        docvec!("(() => {", break_("", " "), document).nest(INDENT),
+        break_("", " "),
+        "})()",
+    )
+    .group()
 }

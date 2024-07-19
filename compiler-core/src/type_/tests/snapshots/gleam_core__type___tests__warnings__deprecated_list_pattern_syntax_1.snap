@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n    pub fn main() {\n      let letters = [\"b\", \"c\"]\n      case letters {\n        [] -> []\n        [..] -> []\n      }\n    }\n        "
+---
+warning: Deprecated list pattern matching syntax
+  ┌─ test/path:6:9
+  │
+6 │         [..] -> []
+  │         ^^^^ This can be replaced with `_`
+
+This syntax for pattern matching on lists is deprecated.
+To match on all possible lists, use the `_` catch-all pattern instead.
