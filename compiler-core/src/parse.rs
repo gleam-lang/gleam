@@ -3233,7 +3233,9 @@ where
                     },
                     end,
                 ))) => {
-                    self.extra.doc_comments.push(SrcSpan::new(start, end));
+                    self.extra
+                        .doc_comments
+                        .push((marker_start, SrcSpan::new(start, end)));
                     self.doc_comments.push_back((marker_start, start, content));
                     previous_newline = None;
                 }

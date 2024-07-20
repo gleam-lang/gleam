@@ -7,7 +7,9 @@ use crate::ast::SrcSpan;
 #[derive(Debug, PartialEq, Eq, Default)]
 pub struct ModuleExtra {
     pub module_comments: Vec<SrcSpan>,
-    pub doc_comments: Vec<SrcSpan>,
+    /// Contains location information for each documentation comment, including the position
+    /// right before its '///' marker starts, as well as the span of its contents (after the marker).
+    pub doc_comments: Vec<(u32, SrcSpan)>,
     pub comments: Vec<SrcSpan>,
     pub empty_lines: Vec<u32>,
     pub new_lines: Vec<u32>,
@@ -31,7 +33,10 @@ impl ModuleExtra {
         };
 
         self.comments.binary_search_by(cmp).is_ok()
-            || self.doc_comments.binary_search_by(cmp).is_ok()
+            || self
+                .doc_comments
+                .binary_search_by(|(_, span)| cmp(span))
+                .is_ok()
             || self.module_comments.binary_search_by(cmp).is_ok()
     }
 }

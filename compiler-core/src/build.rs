@@ -256,7 +256,7 @@ impl Module {
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
         for statement in &mut statements {
             let (docs_start, docs): (u32, Vec<&str>) =
-                comments_before(&mut doc_comments, statement.location().start, &self.code);
+                doc_comments_before(&mut doc_comments, statement.location().start, &self.code);
             if !docs.is_empty() {
                 let doc = docs.join("\n").into();
                 statement.put_doc((docs_start, doc));
@@ -264,16 +264,22 @@ impl Module {
 
             if let Definition::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
-                    let (docs_start, docs): (u32, Vec<&str>) =
-                        comments_before(&mut doc_comments, constructor.location.start, &self.code);
+                    let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
+                        &mut doc_comments,
+                        constructor.location.start,
+                        &self.code,
+                    );
                     if !docs.is_empty() {
                         let doc = docs.join("\n").into();
                         constructor.put_doc((docs_start, doc));
                     }
 
                     for argument in constructor.arguments.iter_mut() {
-                        let (docs_start, docs): (u32, Vec<&str>) =
-                            comments_before(&mut doc_comments, argument.location.start, &self.code);
+                        let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
+                            &mut doc_comments,
+                            argument.location.start,
+                            &self.code,
+                        );
                         if !docs.is_empty() {
                             let doc = docs.join("\n").into();
                             argument.put_doc((docs_start, doc));
@@ -394,21 +400,21 @@ impl Origin {
     }
 }
 
-fn comments_before<'a>(
-    comment_spans: &mut Peekable<impl Iterator<Item = &'a SrcSpan>>,
+fn doc_comments_before<'a>(
+    doc_comment_spans: &mut Peekable<impl Iterator<Item = &'a (u32, SrcSpan)>>,
     byte: u32,
     src: &'a str,
 ) -> (u32, Vec<&'a str>) {
     let mut comments = vec![];
-    let mut comment_start = u32::MAX;
-    while let Some(SrcSpan { start, .. }) = comment_spans.peek() {
+    let mut doc_start = u32::MAX;
+    while let Some((_, SrcSpan { start, .. })) = doc_comment_spans.peek() {
         if start <= &byte {
-            let comment = comment_spans
+            let (marker_start, comment) = doc_comment_spans
                 .next()
                 .expect("Comment before accessing next span");
 
-            if comment.start < comment_start {
-                comment_start = comment.start;
+            if *marker_start < doc_start {
+                doc_start = *marker_start;
             }
 
             comments.push(Comment::from((comment, src)).content)
@@ -416,7 +422,7 @@ fn comments_before<'a>(
             break;
         }
     }
-    (comment_start, comments)
+    (doc_start, comments)
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

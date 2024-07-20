@@ -57,7 +57,7 @@ impl<'a> Intermediate<'a> {
             doc_comments: extra
                 .doc_comments
                 .iter()
-                .map(|span| Comment::from((span, src)))
+                .map(|(_, span)| Comment::from((span, src)))
                 .collect(),
             empty_lines: &extra.empty_lines,
             module_comments: extra
