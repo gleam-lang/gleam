@@ -10,7 +10,7 @@ use lsp_types::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    ast::{CallArg, Definition, Import, Publicity, TypedDefinition, TypedExpr},
+    ast::{CallArg, Publicity, TypedExpr},
     build::Module,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
@@ -22,7 +22,12 @@ use crate::{
 };
 
 use super::{
-    compiler::LspProjectCompiler, files::FileSystemProxy, DownloadDependencies, MakeLocker,
+    compiler::LspProjectCompiler,
+    engine::{
+        add_newlines_after_import, first_import_in_module, get_import, get_import_edit, Newlines,
+    },
+    files::FileSystemProxy,
+    DownloadDependencies, MakeLocker,
 };
 
 // Represents the kind/specificity of completion that is being requested.
@@ -63,11 +68,6 @@ enum TypeCompletionForm {
     // The type completion is for an unqualified import.
     UnqualifiedImport,
     Default,
-}
-
-enum Newlines {
-    Single,
-    Double,
 }
 
 pub struct Completer<'a, IO> {
@@ -465,9 +465,14 @@ where
         }
 
         // Importable modules
-        let (first_import_pos, first_is_import) = self.first_import_in_module();
-        let after_import_newlines =
-            self.add_newlines_after_import(first_import_pos, first_is_import);
+        let (first_import_pos, first_is_import) =
+            first_import_in_module(self.module, &self.src_line_numbers);
+        let after_import_newlines = add_newlines_after_import(
+            first_import_pos,
+            first_is_import,
+            &self.src_line_numbers,
+            self.src,
+        );
         for (module_full_name, module) in self.completable_modules_for_import() {
             // Do not try to import the prelude.
             if module_full_name == "gleam" {
@@ -598,9 +603,14 @@ where
         }
 
         // Importable modules
-        let (first_import_pos, first_is_import) = self.first_import_in_module();
-        let after_import_newlines =
-            self.add_newlines_after_import(first_import_pos, first_is_import);
+        let (first_import_pos, first_is_import) =
+            first_import_in_module(self.module, &self.src_line_numbers);
+        let after_import_newlines = add_newlines_after_import(
+            first_import_pos,
+            first_is_import,
+            &self.src_line_numbers,
+            self.src,
+        );
         for (module_full_name, module) in self.completable_modules_for_import() {
             // Do not try to import the prelude.
             if module_full_name == "gleam" {
@@ -755,47 +765,6 @@ where
             Publicity::Public => true,
         }
     }
-
-    // Gets the position of the import statement if it's the first definition in the module.
-    // If the 1st definition is not an import statement, then it returns the 1st line.
-    // 2nd element in the pair is true if the first definition is an import statement.
-    fn first_import_in_module(&'a self) -> (Position, bool) {
-        // As "self.module.ast.definitions"  could be sorted, let's find the actual first definition by position.
-        let first_definition = self
-            .module
-            .ast
-            .definitions
-            .iter()
-            .min_by(|a, b| a.location().start.cmp(&b.location().start));
-        let import = first_definition.and_then(get_import);
-        let import_start = import.map_or(0, |i| i.location.start);
-        let import_line = self.module_line_numbers.line_number(import_start);
-        (Position::new(import_line - 1, 0), import.is_some())
-    }
-
-    // Returns how many newlines should be added after an import statement. By default `Newlines::Single`,
-    // but if there's not any import statement, it returns `Newlines::Double`.
-    //
-    // * ``import_location`` - The position of the first import statement in the source code.
-    fn add_newlines_after_import(
-        &'a self,
-        import_location: Position,
-        has_imports: bool,
-    ) -> Newlines {
-        let import_start_cursor = self
-            .src_line_numbers
-            .byte_index(import_location.line, import_location.character);
-        let is_new_line = self
-            .src
-            .chars()
-            .nth(import_start_cursor as usize)
-            .unwrap_or_default()
-            == '\n';
-        match !has_imports && !is_new_line {
-            true => Newlines::Double,
-            false => Newlines::Single,
-        }
-    }
 }
 
 fn add_import_to_completion(
@@ -804,17 +773,11 @@ fn add_import_to_completion(
     module_full_name: &EcoString,
     insert_newlines: &Newlines,
 ) {
-    let new_lines = match insert_newlines {
-        Newlines::Single => "\n",
-        Newlines::Double => "\n\n",
-    };
-    item.additional_text_edits = Some(vec![TextEdit {
-        range: Range {
-            start: import_location,
-            end: import_location,
-        },
-        new_text: ["import ", module_full_name, new_lines].concat(),
-    }]);
+    item.additional_text_edits = Some(vec![get_import_edit(
+        import_location,
+        module_full_name,
+        insert_newlines,
+    )]);
 }
 
 fn type_completion(
@@ -910,12 +873,5 @@ fn field_completion(label: &str, type_: Arc<Type>) -> CompletionItem {
         detail: Some(type_),
         sort_text: Some(sort_text(CompletionKind::FieldAccessor, label)),
         ..Default::default()
-    }
-}
-
-fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
-    match statement {
-        Definition::Import(import) => Some(import),
-        _ => None,
     }
 }
