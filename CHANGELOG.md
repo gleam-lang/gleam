@@ -131,6 +131,9 @@
 - Fixed a bug where a private type could be leaked from an internal module.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Fixed a bug where certain binops would generate invalid javascript.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server

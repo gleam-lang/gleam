@@ -89,6 +89,28 @@ fn go() {
 }
 
 #[test]
+fn float_operator_complex_expr() {
+    assert_js!(
+        r#"
+fn go() {
+  case 1.0 >=. 0.0 {
+    True -> 2.0
+    False -> 4.0
+  } /. 2.0 // => 1.0
+  case 1 >= 0 {
+    True -> 2
+    False -> 4
+  } / 2 // => 1
+  case 1 >= 0 {
+    True -> 2
+    False -> 4
+  } % 2 // => 0
+}
+"#,
+    );
+}
+
+#[test]
 fn wide_float_div() {
     assert_js!(
         r#"
