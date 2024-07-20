@@ -8,6 +8,7 @@ mod messages;
 mod progress;
 mod router;
 mod server;
+mod signature_help;
 
 #[cfg(test)]
 mod tests;

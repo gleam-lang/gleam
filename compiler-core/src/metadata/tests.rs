@@ -951,7 +951,7 @@ fn constant_record() {
         name: "".into(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 label: None,
                 location: Default::default(),
                 value: Constant::Float {
@@ -960,7 +960,7 @@ fn constant_record() {
                 },
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 label: None,
                 location: Default::default(),
                 value: Constant::Int {

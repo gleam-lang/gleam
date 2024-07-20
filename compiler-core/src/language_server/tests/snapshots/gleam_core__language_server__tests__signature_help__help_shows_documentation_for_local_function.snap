@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\n/// Some doc!\npub fn wibble(a: Int, b: String) { 1.0 }\n\npub fn main() {\n  wibble()\n}\n"
+---
+/// Some doc!
+pub fn wibble(a: Int, b: String) { 1.0 }
+
+pub fn main() {
+  wibble()
+         ↑
+}
+
+
+----- Signature help -----
+wibble(Int, String) -> Float
+       ▔▔▔
+
+Documentation:
+MarkupContent(
+    MarkupContent {
+        kind: Markdown,
+        value: " Some doc!\n",
+    },
+)

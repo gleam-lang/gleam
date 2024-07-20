@@ -123,7 +123,7 @@ impl Type {
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
             Self::Fn { retrn, .. } => Some(retrn.clone()),
-            Type::Var { type_ } => type_.borrow().return_type(),
+            Self::Var { type_ } => type_.borrow().return_type(),
             _ => None,
         }
     }

@@ -50,9 +50,9 @@ use crate::type_::Type;
 
 use super::{
     AssignName, BinOp, BitArrayOption, BitArraySegment, CallArg, Definition, Pattern, SrcSpan,
-    Statement, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern, TypedRecordUpdateArg,
-    TypedStatement, Use,
+    Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
+    TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
+    TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'ast> {
@@ -240,9 +240,10 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         message: &'ast Option<Box<TypedExpr>>,
+        kind: &'ast TodoKind,
         type_: &'ast Arc<Type>,
     ) {
-        visit_typed_expr_todo(self, location, message, type_);
+        visit_typed_expr_todo(self, location, message, kind, type_);
     }
 
     fn visit_typed_expr_panic(
@@ -573,8 +574,9 @@ where
         TypedExpr::Todo {
             location,
             message,
+            kind,
             type_,
-        } => v.visit_typed_expr_todo(location, message, type_),
+        } => v.visit_typed_expr_todo(location, message, kind, type_),
         TypedExpr::Panic {
             location,
             message,
@@ -804,7 +806,8 @@ pub fn visit_typed_expr_todo<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     message: &'a Option<Box<TypedExpr>>,
-    _type: &'a Arc<Type>,
+    _kind: &'a TodoKind,
+    _type_: &'a Arc<Type>,
 ) where
     V: Visit<'a> + ?Sized,
 {

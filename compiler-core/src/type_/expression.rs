@@ -6,12 +6,12 @@ use crate::{
     },
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
-        ClauseGuard, Constant, HasLocation, Layer, RecordUpdateSpread, SrcSpan, Statement,
-        TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
-        TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
-        UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
-        USE_ASSIGNMENT_VARIABLE,
+        ClauseGuard, Constant, HasLocation, ImplicitCallArgOrigin, Layer, RecordUpdateSpread,
+        SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause,
+        TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg,
+        UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
+        UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
+        UntypedMultiPattern, UntypedStatement, Use, UseAssignment, USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
     exhaustiveness,
@@ -433,6 +433,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             type_,
             message,
+            kind,
         })
     }
 
@@ -576,12 +577,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             match statement {
                 Statement::Use(use_) => {
-                    let statement = match self.infer_use(use_, location, untyped.collect()) {
-                        Ok(statement) => statement,
-                        Err(error) => {
-                            Statement::Expression(self.error_expr_with_rigid_names(location, error))
-                        }
-                    };
+                    let statement = self.infer_use(use_, location, untyped.collect());
                     statements.push(statement);
                     break; // Inferring the use has consumed the rest of the exprs
                 }
@@ -617,7 +613,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         use_: Use,
         sequence_location: SrcSpan,
         mut following_expressions: Vec<UntypedStatement>,
-    ) -> Result<TypedStatement, Error> {
+    ) -> TypedStatement {
         let use_call_location = use_.call.location();
         let mut call = get_use_expression_call(*use_.call);
         let assignments = UseAssignments::from_use_expression(use_.assignments);
@@ -666,7 +662,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             value: callback,
             // This argument is implicitly given by Gleam's use syntax so we
             // mark it as such.
-            implicit: true,
+            implicit: Some(ImplicitCallArgOrigin::Use),
         });
 
         let call_location = SrcSpan {
@@ -685,7 +681,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             },
         );
 
-        Ok(Statement::Expression(call))
+        Statement::Expression(call)
     }
 
     fn infer_negate_bool(
@@ -2890,6 +2886,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         kind: CallKind,
     ) -> (TypedExpr, Vec<TypedCallArg>, Arc<Type>) {
+        let mut labelled_arity_error = false;
         // Check to see if the function accepts labelled arguments
         let field_map = self
             .get_field_map(&fun)
@@ -2904,8 +2901,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             });
         if let Err(e) = field_map {
-            self.error_with_rigid_names(e);
+            if let Error::IncorrectArity {
+                expected,
+                given,
+                labels,
+                location,
+            } = e
+            {
+                labelled_arity_error = true;
+                self.error_with_rigid_names(Error::IncorrectArity {
+                    expected,
+                    given,
+                    labels,
+                    location,
+                });
+            } else {
+                self.error_with_rigid_names(e);
+            }
         }
+
+        let mut missing_args = 0;
 
         // Extract the type of the fun, ensuring it actually is a function
         let (mut args_types, return_type) =
@@ -2918,17 +2933,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // If the function was valid but had the wrong number of arguments passed.
                         // Then we keep the error but still want to continue analysing the arguments that were passed.
                         MatchFunTypeError::IncorrectArity {
-                            args, return_type, ..
+                            args: arg_types,
+                            return_type,
+                            expected,
+                            given,
+                            ..
                         } => {
-                            self.error_with_rigid_names(converted_error);
-                            (args, return_type)
+                            missing_args = expected.saturating_sub(given);
+                            // If the function has labels then arity issues will already
+                            // be handled by the field map so we can ignore them here.
+                            if !labelled_arity_error {
+                                self.error_with_rigid_names(converted_error);
+                                (arg_types, return_type)
+                            } else {
+                                // Since arity errors with labels cause incorrect
+                                // ordering, we can't type check the labelled arguments here.
+                                let first_labelled_arg =
+                                    args.iter().position(|arg| arg.label.is_some());
+                                let args_to_keep = first_labelled_arg.unwrap_or(args.len());
+                                (
+                                    arg_types.iter().take(args_to_keep).cloned().collect(),
+                                    return_type,
+                                )
+                            }
                         }
                         MatchFunTypeError::NotFn { .. } => {
-                            return (
-                                self.error_expr_with_rigid_names(location, converted_error),
-                                vec![],
-                                self.new_unbound_var(),
-                            );
+                            self.error_with_rigid_names(converted_error);
+                            (vec![], self.new_unbound_var())
                         }
                     }
                 }
@@ -2940,6 +2971,33 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // So we set `previous_panics` to false to avoid raising any
         // unnecessarily generic warning.
         self.previous_panics = false;
+
+        // Now if we had a mismatched arity error and we're typing a use call,
+        // we want to insert all the missing arguments before the callback
+        // argument that is implicitly passed by the compiler.
+        // This way we can provide better argument hints for incomplete use
+        // expressions.
+        if let CallKind::Use { .. } = kind {
+            if let Some(last) = args.pop() {
+                for _ in 0..missing_args {
+                    args.push(CallArg {
+                        label: None,
+                        location,
+                        value: UntypedExpr::Placeholder {
+                            // We intentionally give this an empty span since it
+                            // is an implicit argument being passed by the compiler
+                            // that doesn't appear in the source code.
+                            location: SrcSpan {
+                                start: last.location().start,
+                                end: last.location().start,
+                            },
+                        },
+                        implicit: Some(ImplicitCallArgOrigin::IncorrectArityUse),
+                    });
+                }
+                args.push(last);
+            }
+        };
 
         // Ensure that the given args have the correct types
         let args_count = args_types.len();
@@ -3121,16 +3179,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 };
             }
 
-            let body = body_typer.infer_statements(body);
+            let mut body = body_typer.infer_statements(body);
 
             // Check that any return type is accurate.
             if let Some(return_type) = return_type {
-                unify(return_type, body.last().type_()).map_err(|e| {
+                if let Err(error) = unify(return_type, body.last().type_()) {
                     let body_rigid_names = body_typer.hydrator.rigid_names();
-                    e.return_annotation_mismatch()
+                    let error = error
+                        .return_annotation_mismatch()
                         .into_error(body.last().type_defining_location())
-                        .with_unify_error_rigid_names(&body_rigid_names)
-                })?;
+                        .with_unify_error_rigid_names(&body_rigid_names);
+                    body_typer.error_with_rigid_names(error);
+
+                    // If the return type doesn't match with the annotation we
+                    // add a new expression to the end of the function to match
+                    // the annotated type and allow type inference to keep
+                    // going.
+                    body.push(Statement::Expression(TypedExpr::Invalid {
+                        // This is deliberately an empty span since this
+                        // placeholder expression is implicitly inserted by the
+                        // compiler and doesn't actually appear in the source
+                        // code.
+                        location: SrcSpan {
+                            start: body.last().location().end,
+                            end: body.last().location().end,
+                        },
+                        typ: body_typer.new_unbound_var(),
+                    }))
+                };
             }
 
             Ok((args, body))

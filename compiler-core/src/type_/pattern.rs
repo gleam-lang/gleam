@@ -10,7 +10,7 @@ use crate::{
         name::{check_name_case, correct_name_case, NameCorrection},
         Inferred,
     },
-    ast::{AssignName, Layer, UntypedPatternBitArraySegment},
+    ast::{AssignName, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment},
 };
 use std::sync::Arc;
 
@@ -529,7 +529,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     },
                                     location: spread_location,
                                     label: missing_labels.next(),
-                                    implicit: true,
+                                    implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
                                 };
 
                                 pattern_args.insert(index_of_first_labelled_arg, new_call_arg);
@@ -554,7 +554,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         },
                                         location: spread_location,
                                         label: None,
-                                        implicit: true,
+                                        implicit: Some(ImplicitCallArgOrigin::PatternFieldSpread),
                                     });
                                 }
                             };

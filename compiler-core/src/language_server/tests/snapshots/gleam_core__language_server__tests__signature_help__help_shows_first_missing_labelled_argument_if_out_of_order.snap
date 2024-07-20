@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\npub fn wibble(a a: Int, b b: Int, c c: String) { 1.0 }\n\npub fn main() {\n    wibble(c: \"c\",)\n}\n    "
+---
+pub fn wibble(a a: Int, b b: Int, c c: String) { 1.0 }
+
+pub fn main() {
+    wibble(c: "c",)
+                  ↑
+}
+    
+
+
+----- Signature help -----
+wibble(a: Int, b: Int, c: String) -> Float
+       ▔▔▔▔▔▔
+
+No documentation
