@@ -840,6 +840,41 @@ import result.{
     insta::assert_snapshot!(apply_first_code_action_with_title(code, 5, MOVE_IMPORTS_UP));
 }
 
+#[test]
+fn move_imports_to_the_top_moves_comments_as_well() {
+    let code = r#"import list
+
+pub fn main() {}
+
+// Multiline comment
+// above map
+import map
+
+pub fn wibble() {}
+
+// above result
+import result
+"#;
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 5, MOVE_IMPORTS_UP));
+}
+
+#[test]
+fn move_imports_to_the_top_preserves_groups() {
+    let code = r#"
+pub fn main() {}
+
+import result
+import map
+
+import list
+
+pub fn wibble() {}
+"#;
+
+    insta::assert_snapshot!(apply_first_code_action_with_title(code, 5, MOVE_IMPORTS_UP));
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
