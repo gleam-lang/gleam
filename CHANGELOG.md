@@ -118,7 +118,7 @@
 - The language server can now show signature help when writing functions.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- LSP now supports listing document symbols, such as functions and constants, for the current Gleam file.
+- The language server now supports listing document symbols, such as functions and constants, for the current Gleam file.
   ([PgBiel](https://github.com/PgBiel))
 
 ### Bug Fixes

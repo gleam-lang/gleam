@@ -374,7 +374,7 @@ where
                     Definition::Import(_) => {}
 
                     Definition::ModuleConstant(constant) => {
-                        // `ModuleConstant.location` ends at the constant's name.
+                        // `ModuleConstant.location` ends at the constant's name or type.
                         // For the full symbol span, necessary for `range`, we need to
                         // include the constant value as well.
                         // Also include the documentation at the start, if available.

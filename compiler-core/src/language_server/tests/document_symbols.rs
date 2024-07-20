@@ -121,11 +121,11 @@ fn doc_symbols_function() {
     let code = "
 /// DOC
 pub fn super_func(a: Int) -> List(Int) {
-    a + 5
+    [a + 5]
 }
 
 pub fn super_func2(a: Int) -> List(Int) {
-    a + 5
+    [a + 5]
 }";
 
     assert_debug_snapshot!(doc_symbols(TestProject::for_source(code)))
