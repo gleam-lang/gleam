@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nfn go() {\n  case 1 >= 0 {\n    True -> 2\n    False -> 4\n  } / 2\n}\n"
+---
+import { divideInt } from "../gleam.mjs";
+
+function go() {
+  return divideInt(
+    (() => {
+      let $ = 1 >= 0;
+      if ($) {
+        return 2;
+      } else {
+        return 4;
+      }
+    })(),
+    2
+  );
+}

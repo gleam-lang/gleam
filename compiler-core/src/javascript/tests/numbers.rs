@@ -70,6 +70,34 @@ fn go() {
 }
 
 #[test]
+fn int_divide_complex_expr() {
+    assert_js!(
+        r#"
+fn go() {
+  case 1 >= 0 {
+    True -> 2
+    False -> 4
+  } / 2
+}
+"#,
+    );
+}
+
+#[test]
+fn int_mod_complex_expr() {
+    assert_js!(
+        r#"
+fn go() {
+  case 1 >= 0 {
+    True -> 2
+    False -> 4
+  } % 2
+}
+"#,
+    );
+}
+
+#[test]
 fn float_operators() {
     assert_js!(
         r#"
@@ -78,7 +106,7 @@ fn go() {
     5.0 -. 1.5 // => 3.5
     5.0 /. 2.0 // => 2.5
     3.0 *. 3.1 // => 9.3
-    
+
     2.0 >. 1.0  // => True
     2.0 <. 1.0  // => False
     2.0 >=. 1.0 // => True
@@ -89,22 +117,14 @@ fn go() {
 }
 
 #[test]
-fn float_operator_complex_expr() {
+fn float_divide_complex_expr() {
     assert_js!(
         r#"
 fn go() {
   case 1.0 >=. 0.0 {
     True -> 2.0
     False -> 4.0
-  } /. 2.0 // => 1.0
-  case 1 >= 0 {
-    True -> 2
-    False -> 4
-  } / 2 // => 1
-  case 1 >= 0 {
-    True -> 2
-    False -> 4
-  } % 2 // => 0
+  } /. 2.0
 }
 "#,
     );
