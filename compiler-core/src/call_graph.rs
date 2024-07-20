@@ -67,7 +67,7 @@ impl<'a> CallGraphBuilder<'a> {
         &mut self,
         constant: &'a UntypedModuleConstant,
     ) -> Result<(), Error> {
-        let (_, name) = &constant.name;
+        let name = &constant.name;
         let location = constant.location;
 
         let index = self.graph.add_node(());
@@ -86,7 +86,7 @@ impl<'a> CallGraphBuilder<'a> {
     fn register_references_constant(&mut self, constant: &'a UntypedModuleConstant) {
         self.current_function = self
             .names
-            .get(constant.name.1.as_str())
+            .get(constant.name.as_str())
             .expect("Constant must already have been registered as existing")
             .expect("Constant must not be shadowed at module level")
             .0;

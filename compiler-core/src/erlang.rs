@@ -260,7 +260,7 @@ fn register_imports(
         }
 
         Definition::CustomType(CustomType {
-            name: (_, name),
+            name,
             constructors,
             typed_parameters,
             opaque,

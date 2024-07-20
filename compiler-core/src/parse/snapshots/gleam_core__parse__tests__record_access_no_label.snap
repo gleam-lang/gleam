@@ -16,13 +16,11 @@ Parsed {
                             end: 12,
                         },
                         end_position: 43,
-                        name: (
-                            SrcSpan {
-                                start: 6,
-                                end: 12,
-                            },
-                            "Wibble",
-                        ),
+                        name: "Wibble",
+                        name_location: SrcSpan {
+                            start: 6,
+                            end: 12,
+                        },
                         publicity: Private,
                         constructors: [
                             RecordConstructor {

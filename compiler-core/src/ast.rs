@@ -705,7 +705,8 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     /// ending after the ": Type" annotation, or (without an annotation) after its name.
     pub location: SrcSpan,
     pub publicity: Publicity,
-    pub name: (SrcSpan, EcoString),
+    pub name: EcoString,
+    pub name_location: SrcSpan,
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
@@ -734,7 +735,8 @@ pub type UntypedCustomType = CustomType<()>;
 pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: (SrcSpan, EcoString),
+    pub name: EcoString,
+    pub name_location: SrcSpan,
     pub publicity: Publicity,
     pub constructors: Vec<RecordConstructor<T>>,
     pub documentation: Option<(u32, EcoString)>,
@@ -769,7 +771,8 @@ pub type UntypedTypeAlias = TypeAlias<()>;
 /// ```
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
-    pub alias: (SrcSpan, EcoString),
+    pub alias: EcoString,
+    pub name_location: SrcSpan,
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
     pub type_: T,

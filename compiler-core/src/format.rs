@@ -321,7 +321,7 @@ impl<'comments> Formatter<'comments> {
             Definition::Function(function) => self.statement_fn(function),
 
             Definition::TypeAlias(TypeAlias {
-                alias: (_, alias),
+                alias,
                 parameters: args,
                 type_ast: resolved_type,
                 publicity,
@@ -392,7 +392,7 @@ impl<'comments> Formatter<'comments> {
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
-                name: (_, name),
+                name,
                 annotation,
                 value,
                 ..
@@ -1608,10 +1608,10 @@ impl<'comments> Formatter<'comments> {
             .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
-                Document::EcoString(ct.name.1.clone())
+                Document::EcoString(ct.name.clone())
             } else {
                 let args = ct.parameters.iter().map(|e| e.to_doc()).collect_vec();
-                Document::EcoString(ct.name.1.clone())
+                Document::EcoString(ct.name.clone())
                     .append(self.wrap_args(args, ct.location.end))
                     .group()
             });

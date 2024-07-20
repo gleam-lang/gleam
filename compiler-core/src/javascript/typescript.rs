@@ -293,7 +293,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
         match statement {
             Definition::TypeAlias(TypeAlias {
-                alias: (_, alias),
+                alias,
                 publicity,
                 type_,
                 ..
@@ -306,7 +306,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 publicity,
                 constructors,
                 opaque,
-                name: (_, name),
+                name,
                 typed_parameters,
                 ..
             }) if publicity.is_importable() => {
@@ -316,7 +316,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
-                name: (_, name),
+                name,
                 value,
                 ..
             }) if publicity.is_importable() => vec![self.module_constant(name, value)],

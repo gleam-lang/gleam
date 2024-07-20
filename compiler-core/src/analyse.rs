@@ -345,7 +345,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let ModuleConstant {
             documentation: doc,
             location,
-            name: (name_location, name),
+            name,
+            name_location,
             annotation,
             publicity,
             value,
@@ -398,7 +399,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
             location,
-            name: (name_location, name),
+            name,
+            name_location,
             annotation,
             publicity,
             value: Box::new(typed_expr),
@@ -739,7 +741,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             end_position,
             publicity,
             opaque,
-            name: (name_location, name),
+            name,
+            name_location,
             parameters,
             constructors,
             deprecation,
@@ -807,7 +810,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             end_position,
             publicity,
             opaque,
-            name: (name_location, name),
+            name,
+            name_location,
             parameters,
             constructors,
             typed_parameters,
@@ -825,7 +829,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             location,
             publicity,
             opaque,
-            name: (_, name),
+            name,
             constructors,
             deprecation,
             ..
@@ -971,7 +975,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment: &mut Environment<'a>,
     ) -> Result<(), Error> {
         let CustomType {
-            name: (name_location, name),
+            name,
+            name_location,
             publicity,
             parameters,
             location,
@@ -1052,7 +1057,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             location,
             publicity,
             parameters: args,
-            alias: (name_location, name),
+            alias: name,
+            name_location,
             type_ast: resolved_type,
             deprecation,
             type_: _,
@@ -1281,7 +1287,8 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
         documentation: doc,
         location,
         publicity,
-        alias: (alias_location, alias),
+        alias,
+        name_location,
         parameters: args,
         type_ast: resolved_type,
         deprecation,
@@ -1300,7 +1307,8 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
         documentation: doc,
         location,
         publicity,
-        alias: (alias_location, alias),
+        alias,
+        name_location,
         parameters: args,
         type_ast: resolved_type,
         type_: typ,
@@ -1380,7 +1388,8 @@ fn generalise_module_constant(
     let ModuleConstant {
         documentation: doc,
         location,
-        name: (name_location, name),
+        name,
+        name_location,
         annotation,
         publicity,
         value,
@@ -1418,7 +1427,8 @@ fn generalise_module_constant(
     Definition::ModuleConstant(ModuleConstant {
         documentation: doc,
         location,
-        name: (name_location, name),
+        name,
+        name_location,
         annotation,
         publicity,
         value,
@@ -1642,10 +1652,7 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
     let mut deps: Vec<(EcoString, Vec<EcoString>)> = Vec::with_capacity(aliases.len());
 
     for alias in aliases {
-        deps.push((
-            alias.alias.1.clone(),
-            get_type_dependencies(&alias.type_ast),
-        ))
+        deps.push((alias.alias.clone(), get_type_dependencies(&alias.type_ast)))
     }
 
     let sorted_deps = dep_tree::toposort_deps(deps).map_err(|err| {
@@ -1654,7 +1661,7 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
         let last = cycle.last().expect("Cycle should not be empty");
         let alias = aliases
             .iter()
-            .find(|alias| alias.alias.1 == *last)
+            .find(|alias| alias.alias == *last)
             .expect("Could not find alias for cycle");
 
         Error::RecursiveTypeAlias {
@@ -1665,6 +1672,6 @@ fn sorted_type_aliases(aliases: &Vec<TypeAlias<()>>) -> Result<Vec<&TypeAlias<()
 
     Ok(aliases
         .iter()
-        .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias.1))
+        .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias))
         .collect())
 }

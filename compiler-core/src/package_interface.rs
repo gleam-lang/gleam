@@ -384,7 +384,7 @@ impl ModuleInterface {
                 // A public type definition.
                 Definition::CustomType(CustomType {
                     publicity: Publicity::Public,
-                    name: (_, name),
+                    name,
                     constructors,
                     documentation,
                     opaque,
@@ -392,6 +392,7 @@ impl ModuleInterface {
                     typed_parameters,
                     parameters: _,
                     location: _,
+                    name_location: _,
                     end_position: _,
                 }) => {
                     let mut id_map = IdMap::new();
@@ -443,12 +444,13 @@ impl ModuleInterface {
                 // A public type alias definition
                 Definition::TypeAlias(TypeAlias {
                     publicity: Publicity::Public,
-                    alias: (_, alias),
+                    alias,
                     parameters,
                     type_,
                     documentation,
                     deprecation,
                     location: _,
+                    name_location: _,
                     type_ast: _,
                 }) => {
                     let _ = type_aliases.insert(
@@ -465,12 +467,13 @@ impl ModuleInterface {
                 // A public module constant.
                 Definition::ModuleConstant(ModuleConstant {
                     publicity: Publicity::Public,
-                    name: (_, name),
+                    name,
                     type_,
                     documentation,
                     implementations,
                     deprecation,
                     location: _,
+                    name_location: _,
                     annotation: _,
                     value: _,
                 }) => {

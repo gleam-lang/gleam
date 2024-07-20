@@ -348,7 +348,6 @@ where
                             }
                             None => alias.location,
                         };
-                        let (name_location, name) = &alias.alias;
 
                         // The 'deprecated' field is deprecated, but we have to specify it anyway
                         // to be able to construct the 'DocumentSymbol' type, so
@@ -356,13 +355,16 @@ where
                         // is what is actually deprecated.
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
-                            name: name.to_string(),
+                            name: alias.alias.to_string(),
                             detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
                             kind: SymbolKind::CLASS,
                             tags: make_deprecated_symbol_tag(&alias.deprecation),
                             deprecated: None,
                             range: src_span_to_lsp_range(full_alias_span, &line_numbers),
-                            selection_range: src_span_to_lsp_range(*name_location, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                alias.name_location,
+                                &line_numbers,
+                            ),
                             children: None,
                         });
                     }
@@ -388,21 +390,22 @@ where
                             end: constant.value.location().end,
                         };
 
-                        let (name_location, name) = &constant.name;
-
                         // The 'deprecated' field is deprecated, but we have to specify it anyway
                         // to be able to construct the 'DocumentSymbol' type, so
                         // we suppress the warning. We specify 'None' as specifying 'Some'
                         // is what is actually deprecated.
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
-                            name: name.to_string(),
+                            name: constant.name.to_string(),
                             detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
                             kind: SymbolKind::CONSTANT,
                             tags: make_deprecated_symbol_tag(&constant.deprecation),
                             deprecated: None,
                             range: src_span_to_lsp_range(full_constant_span, &line_numbers),
-                            selection_range: src_span_to_lsp_range(*name_location, &line_numbers),
+                            selection_range: src_span_to_lsp_range(
+                                constant.name_location,
+                                &line_numbers,
+                            ),
                             children: None,
                         });
                     }
@@ -690,21 +693,19 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
         end: type_.end_position,
     };
 
-    let (name_location, name) = &type_.name;
-
     // The 'deprecated' field is deprecated, but we have to specify it anyway
     // to be able to construct the 'DocumentSymbol' type, so
     // we suppress the warning. We specify 'None' as specifying 'Some'
     // is what is actually deprecated.
     #[allow(deprecated)]
     DocumentSymbol {
-        name: name.to_string(),
+        name: type_.name.to_string(),
         detail: None,
         kind: SymbolKind::CLASS,
         tags: make_deprecated_symbol_tag(&type_.deprecation),
         deprecated: None,
         range: src_span_to_lsp_range(full_type_span, line_numbers),
-        selection_range: src_span_to_lsp_range(*name_location, line_numbers),
+        selection_range: src_span_to_lsp_range(type_.name_location, line_numbers),
         children: if constructors.is_empty() {
             None
         } else {

@@ -219,7 +219,7 @@ impl<'a> Generator<'a> {
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
-                name: (_, name),
+                name,
                 value,
                 ..
             }) => Some(self.module_constant(*publicity, name, value)),
@@ -536,9 +536,9 @@ impl<'a> Generator<'a> {
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.definitions.iter() {
             match statement {
-                Definition::ModuleConstant(ModuleConstant {
-                    name: (_, name), ..
-                }) => self.register_in_scope(name),
+                Definition::ModuleConstant(ModuleConstant { name, .. }) => {
+                    self.register_in_scope(name)
+                }
 
                 Definition::Function(Function { name, .. }) => self.register_in_scope(
                     name.as_ref()

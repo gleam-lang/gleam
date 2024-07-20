@@ -599,7 +599,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
 
     match statement {
         Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
-            name: &ct.name.1,
+            name: &ct.name,
             // TODO: Don't use the same printer for docs as for the formatter.
             // We are not interested in showing the exact implementation in the
             // documentation and we could add things like colours, etc.
@@ -636,7 +636,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
         Definition::CustomType(CustomType {
             publicity: Publicity::Public,
             opaque: true,
-            name: (_, name),
+            name,
             parameters,
             documentation: doc,
             location,
@@ -662,7 +662,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
 
         Definition::TypeAlias(TypeAlias {
             publicity: Publicity::Public,
-            alias: (_, name),
+            alias: name,
             type_ast: typ,
             documentation: doc,
             parameters: args,
@@ -700,7 +700,7 @@ fn constant<'a>(
         Definition::ModuleConstant(ModuleConstant {
             publicity: Publicity::Public,
             documentation: doc,
-            name: (_, name),
+            name,
             value,
             location,
             ..
