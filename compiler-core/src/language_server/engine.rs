@@ -1,7 +1,7 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
+        Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -23,8 +23,8 @@ use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, SignatureHelp, SymbolKind,
-    SymbolTag, Url,
+    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position, Range,
+    SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
 };
 use std::sync::Arc;
 
@@ -296,6 +296,7 @@ where
             code_action_unused_values(module, &params, &mut actions);
             code_action_unused_imports(module, &params, &mut actions);
             code_action_fix_names(module, &params, &this.error, &mut actions);
+            code_action_import_module(module, &params, &mut actions);
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
             actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());
@@ -891,7 +892,7 @@ fn hover_for_imported_value(
 }
 
 // Returns true if any part of either range overlaps with the other.
-pub fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+pub fn overlaps(a: Range, b: Range) -> bool {
     position_within(a.start, b)
         || position_within(a.end, b)
         || position_within(b.start, a)
@@ -899,12 +900,12 @@ pub fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
 }
 
 // Returns true if a range is contained within another.
-pub fn within(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+pub fn within(a: Range, b: Range) -> bool {
     position_within(a.start, b) && position_within(a.end, b)
 }
 
 // Returns true if a position is within a range.
-fn position_within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
+fn position_within(position: Position, range: Range) -> bool {
     position >= range.start && position <= range.end
 }
 
@@ -1001,7 +1002,7 @@ fn code_action_unused_imports(
         // Keep track of whether any unused import has is where the cursor is
         hovered = hovered || overlaps(params.range, range);
 
-        edits.push(lsp_types::TextEdit {
+        edits.push(TextEdit {
             range,
             new_text: "".into(),
         });
@@ -1018,6 +1019,46 @@ fn code_action_unused_imports(
         .changes(uri.clone(), edits)
         .preferred(true)
         .push_to(actions);
+}
+
+fn code_action_import_module(
+    module: &Module,
+    params: &lsp::CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let suggestions = &module.ast.type_info.import_suggestions;
+
+    if suggestions.is_empty() {
+        return;
+    }
+
+    let line_numbers = LineNumbers::new(&module.code);
+    let (first_import_pos, first_is_import) = first_import_in_module(module, &line_numbers);
+    let after_import_newlines = add_newlines_after_import(
+        first_import_pos,
+        first_is_import,
+        &line_numbers,
+        &module.code,
+    );
+
+    for suggestion in suggestions {
+        let range = src_span_to_lsp_range(suggestion.location, &line_numbers);
+
+        if overlaps(params.range, range) {
+            let edits = vec![get_import_edit(
+                first_import_pos,
+                &suggestion.suggestion,
+                &after_import_newlines,
+            )];
+
+            CodeActionBuilder::new(&format!("Import {}", suggestion.suggestion))
+                .kind(lsp_types::CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), edits)
+                .preferred(true)
+                .push_to(actions);
+        }
+    }
 }
 
 struct NameCorrection {
@@ -1066,7 +1107,7 @@ fn code_action_fix_names(
         let range = src_span_to_lsp_range(location, &line_numbers);
         // Check if the user's cursor is on the invalid name
         if overlaps(params.range, range) {
-            let edit = lsp_types::TextEdit {
+            let edit = TextEdit {
                 range,
                 new_text: correction.to_string(),
             };
@@ -1144,4 +1185,73 @@ fn make_deprecated_symbol_tag(deprecation: &Deprecation) -> Option<Vec<SymbolTag
     deprecation
         .is_deprecated()
         .then(|| vec![SymbolTag::DEPRECATED])
+}
+
+// Gets the position of the import statement if it's the first definition in the module.
+// If the 1st definition is not an import statement, then it returns the 1st line.
+// 2nd element in the pair is true if the first definition is an import statement.
+pub fn first_import_in_module(module: &Module, line_numbers: &LineNumbers) -> (Position, bool) {
+    // As "self.module.ast.definitions"  could be sorted, let's find the actual first definition by position.
+    let first_definition = module
+        .ast
+        .definitions
+        .iter()
+        .min_by(|a, b| a.location().start.cmp(&b.location().start));
+    let import = first_definition.and_then(get_import);
+    let import_start = import.map_or(0, |i| i.location.start);
+    let import_line = line_numbers.line_number(import_start);
+    (Position::new(import_line - 1, 0), import.is_some())
+}
+
+pub fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {
+    match statement {
+        Definition::Import(import) => Some(import),
+        _ => None,
+    }
+}
+
+pub enum Newlines {
+    Single,
+    Double,
+}
+
+// Returns how many newlines should be added after an import statement. By default `Newlines::Single`,
+// but if there's not any import statement, it returns `Newlines::Double`.
+//
+// * ``import_location`` - The position of the first import statement in the source code.
+pub fn add_newlines_after_import(
+    import_location: Position,
+    has_imports: bool,
+    line_numbers: &LineNumbers,
+    src: &str,
+) -> Newlines {
+    let import_start_cursor =
+        line_numbers.byte_index(import_location.line, import_location.character);
+    let is_new_line = src
+        .chars()
+        .nth(import_start_cursor as usize)
+        .unwrap_or_default()
+        == '\n';
+    match !has_imports && !is_new_line {
+        true => Newlines::Double,
+        false => Newlines::Single,
+    }
+}
+
+pub fn get_import_edit(
+    import_location: Position,
+    module_full_name: &EcoString,
+    insert_newlines: &Newlines,
+) -> TextEdit {
+    let new_lines = match insert_newlines {
+        Newlines::Single => "\n",
+        Newlines::Double => "\n\n",
+    };
+    TextEdit {
+        range: Range {
+            start: import_location,
+            end: import_location,
+        },
+        new_text: ["import ", module_full_name, new_lines].concat(),
+    }
 }

@@ -1,5 +1,5 @@
 use crate::{
-    analyse::TargetSupport,
+    analyse::{suggest_imports, TargetSupport},
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
     exhaustiveness::printer::ValueNames,
@@ -45,6 +45,9 @@ pub struct Environment<'a> {
 
     /// Accessors defined in the current module
     pub accessors: HashMap<EcoString, AccessorsMap>,
+
+    // Suggestions for importing unimported modules
+    pub import_suggestions: Vec<ImportSuggestion>,
 
     /// entity_usages is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
@@ -99,6 +102,7 @@ impl<'a> Environment<'a> {
             imported_module_aliases: HashMap::new(),
             unused_module_aliases: HashMap::new(),
             current_module,
+            import_suggestions: Vec::new(),
             entity_usages: vec![HashMap::new()],
             target_support,
             value_names,
@@ -335,6 +339,7 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<EcoString>,
         name: &EcoString,
+        location: SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         let t = match module_alias {
             None => self
@@ -347,6 +352,12 @@ impl<'a> Environment<'a> {
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
+                    suggest_imports(
+                        module_name,
+                        location,
+                        &self.importable_modules.keys().collect_vec(),
+                        &mut self.import_suggestions,
+                    );
                     UnknownTypeConstructorError::Module {
                         name: module_name.clone(),
                         imported_modules: self.importable_modules.keys().cloned().collect(),
@@ -421,6 +432,7 @@ impl<'a> Environment<'a> {
         &mut self,
         module: Option<&EcoString>,
         name: &EcoString,
+        location: SrcSpan,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self.scope.get(name).ok_or_else(|| {
@@ -434,6 +446,12 @@ impl<'a> Environment<'a> {
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
+                    suggest_imports(
+                        module_name,
+                        location,
+                        &self.importable_modules.keys().collect_vec(),
+                        &mut self.import_suggestions,
+                    );
                     UnknownValueConstructorError::Module {
                         name: module_name.clone(),
                         imported_modules: self.importable_modules.keys().cloned().collect(),

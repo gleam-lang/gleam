@@ -131,7 +131,7 @@ impl Hydrator {
                     deprecation,
                     ..
                 } = environment
-                    .get_type_constructor(module, name)
+                    .get_type_constructor(module, name, *location)
                     .map_err(|e| convert_get_type_constructor_error(e, location))?
                     .clone();
 
