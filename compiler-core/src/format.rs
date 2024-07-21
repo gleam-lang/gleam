@@ -1704,29 +1704,67 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
-        match &arg.label {
-            Some(s) => commented(
-                s.to_doc().append(": "),
-                self.pop_comments(arg.location.start),
-            ),
-            None => nil(),
+        self.format_call_arg(arg, expr_call_arg_formatting, |this, value| {
+            this.comma_separated_item(value, arity)
+        })
+    }
+
+    fn format_call_arg<'a, A, F, G>(
+        &mut self,
+        arg: &'a CallArg<A>,
+        figure_formatting: F,
+        format_value: G,
+    ) -> Document<'a>
+    where
+        F: Fn(&'a CallArg<A>) -> CallArgFormatting<'a, A>,
+        G: Fn(&mut Self, &'a A) -> Document<'a>,
+    {
+        match figure_formatting(arg) {
+            CallArgFormatting::Unlabelled(value) => format_value(self, value),
+            CallArgFormatting::Punned(label) => {
+                let comments = self.pop_comments(arg.location.start);
+                let label = label.as_ref().to_doc().append(":");
+                commented(label, comments)
+            }
+            CallArgFormatting::Labelled(label, value) => {
+                let comments = self.pop_comments(arg.location.start);
+                let label = label.as_ref().to_doc().append(": ");
+                let value = format_value(self, value);
+                commented(label, comments).append(value)
+            }
         }
-        .append(self.comma_separated_item(&arg.value, arity))
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
         let comments = self.pop_comments(arg.location.start);
-        let doc = arg
-            .label
-            .as_str()
-            .to_doc()
-            .append(": ")
-            .append(self.expr(&arg.value));
+        match arg {
+            // Punned argument.
+            _ if arg.is_punned() => commented(arg.label.as_str().to_doc().append(":"), comments),
 
-        if arg.value.is_binop() || arg.value.is_pipeline() {
-            commented(doc, comments).nest(INDENT)
-        } else {
-            commented(doc, comments)
+            // A call arg that wasn't explicitly punned but could be. We want to
+            // enforce a consistent style and only one way to do things so if
+            // something can be punned it should be.
+            UntypedRecordUpdateArg {
+                label,
+                value: UntypedExpr::Var { name, .. },
+                ..
+            } if label == name => commented(arg.label.as_str().to_doc().append(":"), comments),
+
+            // Labelled argument.
+            _ => {
+                let doc = arg
+                    .label
+                    .as_str()
+                    .to_doc()
+                    .append(": ")
+                    .append(self.expr(&arg.value));
+
+                if arg.value.is_binop() || arg.value.is_pipeline() {
+                    commented(doc, comments).nest(INDENT)
+                } else {
+                    commented(doc, comments)
+                }
+            }
         }
     }
 
@@ -2117,11 +2155,9 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn pattern_call_arg<'a>(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {
-        arg.label
-            .as_ref()
-            .map(|s| s.to_doc().append(": "))
-            .unwrap_or_else(nil)
-            .append(self.pattern(&arg.value))
+        self.format_call_arg(arg, pattern_call_arg_formatting, |this, value| {
+            this.pattern(value)
+        })
     }
 
     pub fn clause_guard_bin_op<'a>(
@@ -2256,10 +2292,9 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn constant_call_arg<'a, A, B>(&mut self, arg: &'a CallArg<Constant<A, B>>) -> Document<'a> {
-        match &arg.label {
-            None => self.const_expr(&arg.value),
-            Some(s) => s.to_doc().append(": ").append(self.const_expr(&arg.value)),
-        }
+        self.format_call_arg(arg, constant_call_arg_formatting, |this, value| {
+            this.const_expr(value)
+        })
     }
 
     fn negate_bool<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -2805,5 +2840,92 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
         | UntypedExpr::Tuple { .. }
         | UntypedExpr::BitArray { .. } => true,
         _ => false,
+    }
+}
+
+enum CallArgFormatting<'a, A> {
+    Punned(&'a EcoString),
+    Unlabelled(&'a A),
+    Labelled(&'a EcoString, &'a A),
+}
+
+fn expr_call_arg_formatting(arg: &CallArg<UntypedExpr>) -> CallArgFormatting<'_, UntypedExpr> {
+    match arg {
+        // A punned argument.
+        _ if arg.is_punned() => {
+            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
+        }
+        // A call arg that wasn't explicitly punned but could be. We want to
+        // enforce a consistent style and only one way to do things so if
+        // something can be punned it should be.
+        CallArg {
+            label: Some(label),
+            value: UntypedExpr::Var { name, .. },
+            ..
+        } if label == name => CallArgFormatting::Punned(label),
+        // A labelled argument.
+        CallArg {
+            label: Some(label),
+            value,
+            ..
+        } => CallArgFormatting::Labelled(label, value),
+        // An unlabelled argument.
+        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+    }
+}
+
+fn pattern_call_arg_formatting(
+    arg: &CallArg<UntypedPattern>,
+) -> CallArgFormatting<'_, UntypedPattern> {
+    match arg {
+        // A punned argument.
+        _ if arg.is_punned() => {
+            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
+        }
+        // A call arg that wasn't explicitly punned but could be. We want to
+        // enforce a consistent style and only one way to do things so if
+        // something can be punned it should be.
+        CallArg {
+            label: Some(label),
+            value: UntypedPattern::Variable { name, .. },
+            ..
+        } if label == name => CallArgFormatting::Punned(label),
+        // A labelled argument.
+        CallArg {
+            label: Some(label),
+            value,
+            ..
+        } => CallArgFormatting::Labelled(label, value),
+        // An unlabelled argument.
+        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+    }
+}
+
+fn constant_call_arg_formatting<A, B>(
+    arg: &CallArg<Constant<A, B>>,
+) -> CallArgFormatting<'_, Constant<A, B>> {
+    match arg {
+        // A punned argument.
+        _ if arg.is_punned() => {
+            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
+        }
+        // A call arg that wasn't explicitly punned but could be. We want to
+        // enforce a consistent style and only one way to do things so if
+        // something can be punned it should be.
+        CallArg {
+            label: Some(label),
+            value: Constant::Var {
+                name, module: None, ..
+            },
+            ..
+        } if label == name => CallArgFormatting::Punned(label),
+        // A labelled argument.
+        CallArg {
+            label: Some(label),
+            value,
+            ..
+        } => CallArgFormatting::Labelled(label, value),
+        // An unlabelled argument.
+        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
     }
 }

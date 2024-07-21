@@ -96,9 +96,9 @@ fn case_pattern_split_on_multiple_lines_is_not_needlessly_nested() {
         r#"pub fn main() {
   case thing {
     CannotSaveNewSnapshot(
-      reason: reason,
-      title: title,
-      destination: destination,
+      reason: _reason,
+      title: _title,
+      destination: _destination,
     ) -> todo
   }
 }
