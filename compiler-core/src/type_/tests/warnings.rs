@@ -1985,3 +1985,32 @@ fn deprecated_list_pattern_syntax_1() {
         "#
     );
 }
+
+#[test]
+fn unused_punned_pattern_arg() {
+    assert_warning!(
+        r#"
+pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }
+
+pub fn main() {
+  let Wibble(arg1:, arg2:) = Wibble(1, True)
+  arg1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_punned_pattern_arg_shadowing() {
+    assert_warning!(
+        r#"
+pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }
+
+pub fn main() {
+  let Wibble(arg1:, arg2:) = Wibble(1, True)
+  let arg1 = False
+  arg1
+}
+"#
+    );
+}

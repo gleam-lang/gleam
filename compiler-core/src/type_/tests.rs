@@ -1295,6 +1295,18 @@ fn infer_module_test26() {
 }
 
 #[test]
+fn infer_punned_labelled_pattern() {
+    assert_module_infer!(
+        "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
+         pub fn third(t) { let Tup(_, _, third:) = t third }",
+        vec![
+            ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
+            ("third", "fn(Tup(a, b, c)) -> c"),
+        ],
+    );
+}
+
+#[test]
 fn infer_module_test27() {
     // Anon structs
     assert_module_infer!(
@@ -2050,6 +2062,104 @@ fn block_maths() {
   { max -. min } /. { max +. min }
 }",
         vec![("do", "fn(Float, Float) -> Float")],
+    );
+}
+
+#[test]
+fn infer_punned_call_arg() {
+    assert_module_infer!(
+        "
+    pub fn main() {
+        let arg1 = 1
+        let arg2 = 1.0
+        let arg3 = False
+        wibble(arg2:, arg3:, arg1:)
+    }
+
+    pub fn wibble(arg1 arg1: Int, arg2 arg2: Float, arg3 arg3: Bool) { Nil }
+        ",
+        vec![
+            ("main", "fn() -> Nil"),
+            ("wibble", "fn(Int, Float, Bool) -> Nil")
+        ],
+    );
+}
+
+#[test]
+fn infer_punned_constructor_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
+    pub fn main() {
+        let arg1 = 1
+        let arg2 = True
+        let arg3 = 1.0
+        Wibble(arg2:, arg3:, arg1:)
+    }
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Float) -> Wibble"),
+            ("main", "fn() -> Wibble"),
+        ],
+    );
+}
+
+#[test]
+fn infer_punned_constant_constructor_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
+    pub const arg1 = 1
+    pub const arg2 = True
+    pub const arg3 = 1.0
+
+    pub const wibble = Wibble(arg2:, arg3:, arg1:)
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Float) -> Wibble"),
+            ("arg1", "Int"),
+            ("arg2", "Bool"),
+            ("arg3", "Float"),
+            ("wibble", "Wibble")
+        ],
+    );
+}
+
+#[test]
+fn infer_punned_pattern_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Int) }
+    pub fn main() {
+        case Wibble(1, True, 2) {
+           Wibble(arg2:, arg3:, arg1:) if arg2 -> arg1 * arg3
+           _ -> 0
+        }
+    }
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ],
+    );
+}
+
+#[test]
+fn infer_punned_record_update_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
+    pub fn main() {
+        let wibble = Wibble(1, True, 2.0)
+        let arg3 = 3.0
+        let arg2 = False
+        Wibble(..wibble, arg3:, arg2:)
+    }
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Float) -> Wibble"),
+            ("main", "fn() -> Wibble")
+        ],
     );
 }
 

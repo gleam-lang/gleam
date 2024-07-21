@@ -109,7 +109,7 @@ pub enum EntityKind {
     ImportedType,
     ImportedValue,
     PrivateType,
-    Variable,
+    Variable(VariableKind),
 }
 
 #[derive(Debug)]
@@ -627,7 +627,11 @@ impl<'a> Environment<'a> {
                     location,
                 },
                 EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::Variable => Warning::UnusedVariable { name, location },
+                EntityKind::Variable(kind) => Warning::UnusedVariable {
+                    name,
+                    location,
+                    kind,
+                },
             };
 
             problems.warning(warning);

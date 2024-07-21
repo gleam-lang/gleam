@@ -362,6 +362,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         _location: &'ast SrcSpan,
         name: &'ast EcoString,
         _type: &'ast Arc<Type>,
+        _is_punned: bool,
     ) {
         self.pattern_variables.push(name.clone());
     }

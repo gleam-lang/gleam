@@ -603,6 +603,7 @@ pub enum Warning {
     UnusedVariable {
         location: SrcSpan,
         name: EcoString,
+        kind: VariableKind,
     },
 
     UnnecessaryDoubleIntNegation {
@@ -739,7 +740,22 @@ pub enum Warning {
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
+pub enum VariableKind {
+    /// If a variable was brought into scope through punning.
+    ///
+    /// ```gleam
+    /// let Wibble(arg:) = Wibble(arg: 1)
+    ///           ^^^^ punned variable
+    /// ```
+    ///
+    Punned,
 
+    /// A variable that was not brought into scope through punning.
+    ///
+    Regular,
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum PanicPosition {
     /// When the unreachable part is a function argument, this means that one
     /// of the previous arguments must be a panic.
