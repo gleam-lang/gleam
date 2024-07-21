@@ -1080,7 +1080,8 @@ pub trait PatternFolder {
                 location,
                 name,
                 type_: (),
-            } => self.fold_pattern_var(location, name),
+                is_punned,
+            } => self.fold_pattern_var(location, name, is_punned),
 
             Pattern::VarUsage {
                 location,
@@ -1156,11 +1157,17 @@ pub trait PatternFolder {
         Pattern::String { location, value }
     }
 
-    fn fold_pattern_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
+    fn fold_pattern_var(
+        &mut self,
+        location: SrcSpan,
+        name: EcoString,
+        is_punned: bool,
+    ) -> UntypedPattern {
         Pattern::Variable {
             location,
             name,
             type_: (),
+            is_punned,
         }
     }
 

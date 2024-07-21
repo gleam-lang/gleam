@@ -1051,6 +1051,7 @@ where
                             location: SrcSpan { start, end },
                             name,
                             type_: (),
+                            is_punned: false,
                         },
                     }
                 }
@@ -1648,6 +1649,7 @@ where
                             name,
                             location: SrcSpan { start, end },
                             type_: (),
+                            is_punned: true,
                         },
                     }))
                 }

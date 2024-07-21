@@ -39,6 +39,7 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                             },
                             name: "x",
                             type_: (),
+                            is_punned: false,
                         },
                         Variable {
                             location: SrcSpan {
@@ -47,6 +48,7 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                             },
                             name: "y",
                             type_: (),
+                            is_punned: false,
                         },
                     ],
                     alternative_patterns: [],

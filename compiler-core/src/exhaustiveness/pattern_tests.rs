@@ -76,6 +76,7 @@ fn register_variable() {
         location: SrcSpan::new(123, 456),
         name: "wibble".into(),
         type_: type_::int(),
+        is_punned: false,
     };
     let id = patterns.register(&input);
     assert_eq!(

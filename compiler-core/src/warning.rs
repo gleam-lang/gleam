@@ -4,7 +4,7 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic},
+        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic, VariableKind},
         pretty::Printer,
     },
 };
@@ -548,10 +548,21 @@ Hint: You can safely remove it.
                     }),
                 },
 
-                type_::Warning::UnusedVariable { location, name, .. } => Diagnostic {
+                type_::Warning::UnusedVariable {
+                    location,
+                    name,
+                    kind,
+                } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
-                    hint: Some(format!("You can ignore it with an underscore: `_{name}`.")),
+                    hint: match kind {
+                        VariableKind::Punned => Some(format!(
+                            "You can ignore it with an underscore: `{name}: _`."
+                        )),
+                        VariableKind::Regular => {
+                            Some(format!("You can ignore it with an underscore: `_{name}`."))
+                        }
+                    },
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
