@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  let Wibble(arg::) = todo\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:18
+  │
+3 │   let Wibble(arg::) = todo
+  │                  ^ I was not expecting this
+
+Found `:`, expected one of: 
+- `)`

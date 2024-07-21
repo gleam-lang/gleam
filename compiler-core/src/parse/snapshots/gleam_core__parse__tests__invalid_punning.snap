@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  wibble(:)\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:10
+  │
+3 │   wibble(:)
+  │          ^ There must be a 'let' to bind variable to value
+
+Hint: Use let for binding.
+See: https://tour.gleam.run/basics/assignments/

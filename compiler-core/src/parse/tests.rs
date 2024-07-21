@@ -1213,3 +1213,91 @@ case my_string {
 }"#
     );
 }
+
+#[test]
+fn invalid_punning() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(:)
+}
+"
+    );
+}
+
+#[test]
+fn invalid_punning_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(:,)
+}
+"
+    );
+}
+
+#[test]
+fn invalid_punning_3() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(:arg)
+}
+"
+    );
+}
+
+#[test]
+fn invalid_punning_4() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(arg::)
+}
+"
+    );
+}
+
+#[test]
+fn invalid_punning_5() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(arg::arg)
+}
+"
+    );
+}
+
+#[test]
+fn invalid_pattern_punning() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let Wibble(:) = todo
+}
+"
+    );
+}
+
+#[test]
+fn invalid_pattern_punning_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let Wibble(:arg) = todo
+}
+"
+    );
+}
+
+#[test]
+fn invalid_pattern_punning_3() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let Wibble(arg::) = todo
+}
+"
+    );
+}
