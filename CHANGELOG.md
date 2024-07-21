@@ -15,6 +15,49 @@
 
 ### Compiler
 
+- Labelled arguments can now be punned. This means that when you're passing a
+  variable as a labelled argument and it happens to have the same name as the
+  label, you can omit the variable name:
+
+  ```gleam
+  pub fn date(day day: Int, month month: Month, year year: Year) -> Date {
+    todo
+  }
+
+  pub fn main() {
+    let day = 11
+    let month = October
+    let year = 1998
+
+    date(year:, month:, day:)
+    // This is the same as writing
+    // date(year: year, month: month, day: day)
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Labelled pattern variables can now be punned. This means that when you're
+  pattern matching on a record constructor and binding its labelled fields to
+  variables that happen to have the same name, you can omit the variable name:
+
+  ```gleam
+  pub type Date
+    Date(day: Int, month: Month, year: Year)
+  }
+
+  pub fn main() {
+    case Date(11, October, 1998) {
+      Date(year:, month:, day:) -> todo
+      // This is the same as writing
+      // Date(year: year, month: month, day: day) -> todo
+    }
+
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The warning for the deprecated `[..]` pattern has been improved.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
