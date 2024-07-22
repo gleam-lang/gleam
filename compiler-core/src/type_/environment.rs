@@ -109,7 +109,10 @@ pub enum EntityKind {
     ImportedType,
     ImportedValue,
     PrivateType,
-    Variable(VariableKind),
+    Variable {
+        /// How the variable could be rewritten to ignore it when unused
+        how_to_ignore: Option<EcoString>,
+    },
 }
 
 #[derive(Debug)]
@@ -627,10 +630,9 @@ impl<'a> Environment<'a> {
                     location,
                 },
                 EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::Variable(kind) => Warning::UnusedVariable {
-                    name,
+                EntityKind::Variable { how_to_ignore } => Warning::UnusedVariable {
                     location,
-                    kind,
+                    how_to_ignore,
                 },
             };
 

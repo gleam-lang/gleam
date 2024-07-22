@@ -48,7 +48,30 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn insert_variable(
         &mut self,
         name: &str,
-        variable_kind: VariableKind,
+        typ: Arc<Type>,
+        location: SrcSpan,
+    ) -> Result<(), UnifyError> {
+        self.insert_variable_with_unused_hint(name, Some(format!("_{name}").into()), typ, location)
+    }
+
+    fn insert_punned_variable(
+        &mut self,
+        name: &str,
+        typ: Arc<Type>,
+        location: SrcSpan,
+    ) -> Result<(), UnifyError> {
+        self.insert_variable_with_unused_hint(
+            name,
+            Some(format!("{name}: _").into()),
+            typ,
+            location,
+        )
+    }
+
+    fn insert_variable_with_unused_hint(
+        &mut self,
+        name: &str,
+        unused_hint: Option<EcoString>,
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
@@ -59,7 +82,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register usage for the unused variable detection
                 self.environment.init_usage(
                     name.into(),
-                    EntityKind::Variable(variable_kind),
+                    EntityKind::Variable {
+                        how_to_ignore: unused_hint,
+                    },
                     location,
                     self.problems,
                 );
@@ -242,13 +267,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 is_punned,
                 ..
             } => {
-                let kind = if is_punned {
-                    VariableKind::Punned
+                if is_punned {
+                    self.insert_punned_variable(&name, type_.clone(), location)
                 } else {
-                    VariableKind::Regular
-                };
-                self.insert_variable(&name, kind, type_.clone(), location)
-                    .map_err(|e| convert_unify_error(e, location))?;
+                    self.insert_variable(&name, type_.clone(), location)
+                }
+                .map_err(|e| convert_unify_error(e, location))?;
+
                 Ok(Pattern::Variable {
                     type_,
                     name,
@@ -299,24 +324,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 // The left hand side may assign a variable, which is the prefix of the string
                 if let Some((left, left_location)) = &left_side_assignment {
-                    self.insert_variable(
-                        left.as_ref(),
-                        VariableKind::Regular,
-                        string(),
-                        *left_location,
-                    )
-                    .map_err(|e| convert_unify_error(e, location))?;
+                    self.insert_variable(left.as_ref(), string(), *left_location)
+                        .map_err(|e| convert_unify_error(e, location))?;
                 }
 
                 // The right hand side may assign a variable, which is the suffix of the string
                 if let AssignName::Variable(right) = &right_side_assignment {
-                    self.insert_variable(
-                        right.as_ref(),
-                        VariableKind::Regular,
-                        string(),
-                        right_location,
-                    )
-                    .map_err(|e| convert_unify_error(e, location))?;
+                    self.insert_variable(right.as_ref(), string(), right_location)
+                        .map_err(|e| convert_unify_error(e, location))?;
                 } else if let AssignName::Discard(right) = &right_side_assignment {
                     self.check_name_case(right_location, right, Named::Discard);
                 };
@@ -336,7 +351,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                self.insert_variable(&name, VariableKind::Regular, type_.clone(), location)
+                self.insert_variable(&name, type_.clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 let pattern = self.unify(*pattern, type_)?;
                 Ok(Pattern::Assign {
