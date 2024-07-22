@@ -1,4 +1,3 @@
-use insta::glob;
 use std::path::PathBuf;
 
 use camino::Utf8PathBuf;
@@ -52,7 +51,7 @@ fn new_with_default_template() {
     .unwrap();
     creator.run().unwrap();
 
-    glob!(path, "my_project/*.*", |file_path| {
+    insta::glob!(path, "my_project/*.*", |file_path| {
         if !file_path.is_dir() {
             insta::assert_snapshot!(crate::fs::read(
                 Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect("Non Utf8 Path"),
@@ -80,7 +79,7 @@ fn new_with_javascript_template() {
     .unwrap();
     creator.run().unwrap();
 
-    glob!(path, "my_project/*.*", |file_path| {
+    insta::glob!(path, "my_project/*.*", |file_path| {
         if !file_path.is_dir() {
             insta::assert_snapshot!(crate::fs::read(
                 Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect("Non Utf8 Path"),
