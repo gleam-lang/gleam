@@ -8,6 +8,11 @@
   platform for the generated documentation.
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- Warnings are now emitted each time the project is built, even if the module
+  the warnings originated from were loaded from the cache rather than
+  recompiling.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Compiler
 
 - The warning for the deprecated `[..]` pattern has been improved.
