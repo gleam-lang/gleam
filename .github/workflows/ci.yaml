@@ -283,6 +283,7 @@ jobs:
 
       - name: Ensure no merge commits
         uses: NexusPHP/no-merge-commits@v2.1.0
+        if: github.event_name == 'pull_request'
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
 
