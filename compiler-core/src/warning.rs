@@ -4,7 +4,7 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic, VariableKind},
+        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic},
         pretty::Printer,
     },
 };
@@ -550,19 +550,13 @@ Hint: You can safely remove it.
 
                 type_::Warning::UnusedVariable {
                     location,
-                    name,
-                    kind,
+                    how_to_ignore,
                 } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
-                    hint: match kind {
-                        VariableKind::Punned => Some(format!(
-                            "You can ignore it with an underscore: `{name}: _`."
-                        )),
-                        VariableKind::Regular => {
-                            Some(format!("You can ignore it with an underscore: `_{name}`."))
-                        }
-                    },
+                    hint: how_to_ignore.as_ref().map(|rewrite_as| {
+                        format!("You can ignore it with an underscore: `{rewrite_as}`.")
+                    }),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),

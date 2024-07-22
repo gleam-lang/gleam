@@ -602,8 +602,8 @@ pub enum Warning {
 
     UnusedVariable {
         location: SrcSpan,
-        name: EcoString,
-        kind: VariableKind,
+        /// how the variable could be rewritten to be ignored.
+        how_to_ignore: Option<EcoString>,
     },
 
     UnnecessaryDoubleIntNegation {
@@ -737,22 +737,6 @@ pub enum Warning {
     RedundantPipeFunctionCapture {
         location: SrcSpan,
     },
-}
-
-#[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
-pub enum VariableKind {
-    /// If a variable was brought into scope through punning.
-    ///
-    /// ```gleam
-    /// let Wibble(arg:) = Wibble(arg: 1)
-    ///           ^^^^ punned variable
-    /// ```
-    ///
-    Punned,
-
-    /// A variable that was not brought into scope through punning.
-    ///
-    Regular,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]

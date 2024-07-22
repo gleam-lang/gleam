@@ -3154,7 +3154,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             // can identify if it is unused
                             body_typer.environment.init_usage(
                                 name.clone(),
-                                EntityKind::Variable(VariableKind::Regular),
+                                EntityKind::Variable {
+                                    how_to_ignore: Some(format!("_{name}").into()),
+                                },
                                 arg.location,
                                 body_typer.problems,
                             );
