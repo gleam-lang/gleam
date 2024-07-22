@@ -55,7 +55,6 @@ expression: "\nlet tup = #(#(#(#(4))))\n{{{tup.0}.0}.0}.0\n"
                 },
                 name: "tup",
                 type_: (),
-                is_punned: false,
             },
             kind: Let,
             annotation: None,

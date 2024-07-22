@@ -339,9 +339,8 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
-        is_punned: bool,
     ) {
-        visit_typed_pattern_variable(self, location, name, type_, is_punned);
+        visit_typed_pattern_variable(self, location, name, type_);
     }
 
     fn visit_typed_pattern_var_usage(
@@ -978,8 +977,7 @@ where
             location,
             name,
             type_,
-            is_punned,
-        } => v.visit_typed_pattern_variable(location, name, type_, *is_punned),
+        } => v.visit_typed_pattern_variable(location, name, type_),
         Pattern::VarUsage {
             location,
             name,
@@ -1065,7 +1063,6 @@ pub fn visit_typed_pattern_variable<'a, V>(
     _location: &'a SrcSpan,
     _name: &'a EcoString,
     _type: &'a Arc<Type>,
-    _is_punned: bool,
 ) where
     V: Visit<'a> + ?Sized,
 {

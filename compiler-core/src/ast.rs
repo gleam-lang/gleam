@@ -1666,10 +1666,6 @@ pub enum Pattern<Type> {
         location: SrcSpan,
         name: EcoString,
         type_: Type,
-        /// We need to keep track of this at the variable pattern level in order
-        /// to report better error messages for unused variables coming from
-        /// punned patterns.
-        is_punned: bool,
     },
 
     /// A reference to a variable in a bit array. This is always a variable

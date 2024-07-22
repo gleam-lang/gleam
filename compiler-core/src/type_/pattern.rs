@@ -51,30 +51,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         typ: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
-        self.insert_variable_with_unused_hint(name, Some(format!("_{name}").into()), typ, location)
-    }
-
-    fn insert_punned_variable(
-        &mut self,
-        name: &str,
-        typ: Arc<Type>,
-        location: SrcSpan,
-    ) -> Result<(), UnifyError> {
-        self.insert_variable_with_unused_hint(
-            name,
-            Some(format!("{name}: _").into()),
-            typ,
-            location,
-        )
-    }
-
-    fn insert_variable_with_unused_hint(
-        &mut self,
-        name: &str,
-        unused_hint: Option<EcoString>,
-        typ: Arc<Type>,
-        location: SrcSpan,
-    ) -> Result<(), UnifyError> {
         self.check_name_case(location, &EcoString::from(name), Named::Variable);
 
         match &mut self.mode {
@@ -83,7 +59,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.environment.init_usage(
                     name.into(),
                     EntityKind::Variable {
-                        how_to_ignore: unused_hint,
+                        how_to_ignore: Some(format!("_{name}").into()),
                     },
                     location,
                     self.problems,
@@ -261,24 +237,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
             Pattern::Invalid { location, .. } => Ok(Pattern::Invalid { type_, location }),
 
-            Pattern::Variable {
-                name,
-                location,
-                is_punned,
-                ..
-            } => {
-                if is_punned {
-                    self.insert_punned_variable(&name, type_.clone(), location)
-                } else {
-                    self.insert_variable(&name, type_.clone(), location)
-                }
-                .map_err(|e| convert_unify_error(e, location))?;
+            Pattern::Variable { name, location, .. } => {
+                self.insert_variable(&name, type_.clone(), location)
+                    .map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::Variable {
                     type_,
                     name,
                     location,
-                    is_punned,
                 })
             }
 

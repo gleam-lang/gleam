@@ -201,7 +201,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 location,
                 name: PIPE_VARIABLE.into(),
                 type_: expression.type_(),
-                is_punned: false,
             },
             value: Box::new(expression),
         };
