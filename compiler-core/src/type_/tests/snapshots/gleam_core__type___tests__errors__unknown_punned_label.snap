@@ -6,7 +6,7 @@ error: Unknown label
   ┌─ /src/one/two.gleam:4:19
   │
 4 │   let x = X(a: 1, c:)
-  │                   ^ Did you mean `b`?
+  │                   ^^ Did you mean `b`?
 
 It accepts these labels:
 
