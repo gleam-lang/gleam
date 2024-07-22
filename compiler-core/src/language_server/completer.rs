@@ -645,9 +645,9 @@ where
     pub fn completion_labels(
         &'a self,
         fun: &TypedExpr,
-        existing_args: &Vec<CallArg<TypedExpr>>,
+        existing_args: &[CallArg<TypedExpr>],
     ) -> Vec<CompletionItem> {
-        let fun_type = fun.type_().fn_types().and_then(|(args, _)| Some(args));
+        let fun_type = fun.type_().fn_types().map(|(args, _)| args);
         let already_included_labels = existing_args
             .iter()
             .filter_map(|a| a.label.clone())
