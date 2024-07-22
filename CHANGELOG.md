@@ -17,7 +17,8 @@
   properly detected and won't invalidate the rest of the expression.
   ([Ameen Radwan](https://github.com/Acepie))
 
-- Fix cases where in Erlang unbound type variables are generated.
+- Erlang type spec generation has been improved to avoid new warnings emitted in
+  OTP27.
   ([Damir Vandic](https://github.com/dvic))
 
 - Error messages for invalid record constructors now contain a restructured
