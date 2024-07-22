@@ -1301,3 +1301,25 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn invalid_pattern_punning_4() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let Wibble(arg: arg:) = todo
+}
+"
+    );
+}
+
+#[test]
+fn invalid_pattern_punning_5() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let Wibble(arg1: arg2:) = todo
+}
+"
+    );
+}
