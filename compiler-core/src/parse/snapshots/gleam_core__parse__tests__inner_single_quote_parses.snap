@@ -23,7 +23,6 @@ expression: "\nlet a = \"inner 'quotes'\"\n"
                 },
                 name: "a",
                 type_: (),
-                is_punned: false,
             },
             kind: Let,
             annotation: None,
