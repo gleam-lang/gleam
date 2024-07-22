@@ -6,4 +6,4 @@ error: Incorrect arity
   ┌─ /src/one/two.gleam:2:18
   │
 2 │ fn main() { 1 |> x() }
-  │                  ^^^ Expected 2 arguments, got 0
+  │                  ^^^ Expected 2 arguments, got 1

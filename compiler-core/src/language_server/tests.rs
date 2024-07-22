@@ -3,6 +3,7 @@ mod compilation;
 mod completion;
 mod definition;
 mod hover;
+mod signature_help;
 
 use std::{
     collections::HashMap,
@@ -575,4 +576,89 @@ impl<'a> TestProject<'a> {
 
         executor(&mut engine, params, self.src.into())
     }
+}
+
+pub struct PositionFinder {
+    value: String,
+    offset: usize,
+    nth_occurrence: usize,
+}
+
+impl PositionFinder {
+    pub fn with_char_offset(self, offset: usize) -> Self {
+        Self {
+            value: self.value,
+            offset,
+            nth_occurrence: self.nth_occurrence,
+        }
+    }
+
+    pub fn under_char(self, char: char) -> Self {
+        Self {
+            offset: self.value.find(char).unwrap_or(0),
+            value: self.value,
+            nth_occurrence: self.nth_occurrence,
+        }
+    }
+
+    pub fn under_last_char(self) -> Self {
+        let len = self.value.len();
+        self.with_char_offset(len - 1)
+    }
+
+    pub fn nth_occurrence(self, nth_occurrence: usize) -> Self {
+        Self {
+            value: self.value,
+            offset: self.offset,
+            nth_occurrence,
+        }
+    }
+
+    pub fn for_value(value: &str) -> Self {
+        Self {
+            value: value.into(),
+            offset: 0,
+            nth_occurrence: 1,
+        }
+    }
+
+    pub fn find_position(&self, src: &str) -> Position {
+        let PositionFinder {
+            value,
+            offset,
+            nth_occurrence,
+        } = self;
+
+        let byte_index = src
+            .match_indices(value)
+            .nth(nth_occurrence - 1)
+            .expect("no match for position")
+            .0;
+
+        byte_index_to_position(src, byte_index + offset)
+    }
+}
+
+pub fn find_position_of(value: &str) -> PositionFinder {
+    PositionFinder::for_value(value)
+}
+
+fn byte_index_to_position(src: &str, byte_index: usize) -> Position {
+    let mut line = 0;
+    let mut col = 0;
+
+    for (i, char) in src.bytes().enumerate() {
+        if i == byte_index {
+            break;
+        }
+
+        if char == b'\n' {
+            line += 1;
+            col = 0;
+        } else {
+            col += 1;
+        }
+    }
+
+    Position::new(line, col)
 }

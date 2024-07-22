@@ -2,9 +2,8 @@ use crate::ast::{SrcSpan, TypeAst};
 use crate::error::wrap;
 use crate::parse::Token;
 use ecow::EcoString;
-use heck::{ToSnakeCase, ToUpperCamelCase};
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub struct LexicalError {
     pub error: LexicalErrorType,
     pub location: SrcSpan,
@@ -18,7 +17,7 @@ pub enum InvalidUnicodeEscapeError {
     InvalidCodepoint,             // Invalid Unicode codepoint
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum LexicalErrorType {
     BadStringEscape,                                 // string contains an unescaped slash
     InvalidUnicodeEscape(InvalidUnicodeEscapeError), // \u{...} escape sequence is invalid
@@ -27,9 +26,6 @@ pub enum LexicalErrorType {
     RadixIntNoValue,                                 // 0x, 0b, 0o without a value
     UnexpectedStringEnd,                             // Unterminated string literal
     UnrecognizedToken { tok: char },
-    BadName { name: String },
-    BadDiscardName { name: String },
-    BadUpname { name: String },
     InvalidTripleEqual,
 }
 
@@ -399,29 +395,6 @@ impl LexicalError {
             LexicalErrorType::UnrecognizedToken { .. } => (
                 "I can't figure out what to do with this character",
                 vec!["Hint: Is it a typo?".into()],
-            ),
-            LexicalErrorType::BadName { name } => (
-                "This is not a valid name",
-                vec![
-                    "Hint: Names start with a lowercase letter and contain a-z, 0-9, or _."
-                        .to_string(),
-                    format!("Try: {}", name.to_snake_case()),
-                ],
-            ),
-            LexicalErrorType::BadDiscardName { name } => (
-                "This is not a valid discard name",
-                vec![
-                    "Hint: Discard names start with _ and contain a-z, 0-9, or _.".into(),
-                    format!("Try: _{}", name.to_snake_case()),
-                ],
-            ),
-            LexicalErrorType::BadUpname { name } => (
-                "This is not a valid upname",
-                vec![
-                    "Hint: Upnames start with an uppercase letter and contain".into(),
-                    "only lowercase letters, numbers, and uppercase letters.".into(),
-                    format!("Try: {}", name.to_upper_camel_case()),
-                ],
             ),
             LexicalErrorType::InvalidUnicodeEscape(
                 InvalidUnicodeEscapeError::MissingOpeningBrace,

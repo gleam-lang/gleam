@@ -1,10 +1,12 @@
 mod imports;
+pub(crate) mod name;
+
 #[cfg(test)]
 mod tests;
 
 use crate::{
     ast::{
-        self, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
+        self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
@@ -18,7 +20,7 @@ use crate::{
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, Error, MissingAnnotation},
+        error::{convert_unify_error, Error, MissingAnnotation, Named},
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
@@ -34,6 +36,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
+use name::{check_argument_names, check_name_case, correct_name_case, NameCorrection};
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
@@ -159,6 +162,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
+            name_corrections: vec![],
         }
         .infer_module(module)
     }
@@ -177,6 +181,7 @@ struct ModuleAnalyzer<'a, A> {
     src_path: Utf8PathBuf,
     errors: Vec<Error>,
     value_names: HashMap<EcoString, SrcSpan>,
+    name_corrections: Vec<NameCorrection>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
 }
@@ -315,6 +320,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 package: self.package_config.name.clone(),
                 is_internal,
                 unused_imports,
+                name_corrections: self.name_corrections,
                 contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
@@ -346,13 +352,19 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation,
             ..
         } = c;
+        self.check_name_case(location, &name, Named::Constant);
 
         let definition = FunctionDefinition {
             has_body: true,
             has_erlang_external: false,
             has_javascript_external: false,
         };
-        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+        let mut expr_typer = ExprTyper::new(
+            environment,
+            definition,
+            &mut self.errors,
+            &mut self.name_corrections,
+        );
         let typed_expr = expr_typer.infer_const(&annotation, *value);
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
@@ -407,6 +419,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let Function {
             documentation: doc,
             location,
+            name_location,
             name,
             publicity,
             arguments,
@@ -419,6 +432,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: (),
             implementations: _,
         } = f;
+
         let target = environment.target;
         let body_location = body.last().location();
         let preregistered_fn = environment
@@ -470,7 +484,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(|environment| {
-            let mut expr_typer = ExprTyper::new(environment, definition, &mut self.errors);
+            let mut expr_typer = ExprTyper::new(
+                environment,
+                definition,
+                &mut self.errors,
+                &mut self.name_corrections,
+            );
             expr_typer.hydrator = self
                 .hydrators
                 .remove(&name)
@@ -495,10 +514,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Err(error) => {
                 self.errors.push(error);
                 let type_ = preregistered_type.clone();
-                let body = Vec1::new(Statement::Expression(TypedExpr::Todo {
-                    type_: prereg_return_type.clone(),
-                    location: body_location,
-                    message: None,
+                let body = Vec1::new(Statement::Expression(TypedExpr::Invalid {
+                    typ: prereg_return_type.clone(),
+                    location: SrcSpan {
+                        start: body_location.end,
+                        end: body_location.end,
+                    },
                 }));
                 let implementations = Implementations::supporting_all();
                 (type_, body, implementations)
@@ -565,6 +586,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_erlang,
             external_javascript,
             implementations,
+            name_location,
         })
     }
 
@@ -716,6 +738,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let CustomType {
             documentation: doc,
             location,
+            name_location,
             end_position,
             publicity,
             opaque,
@@ -731,10 +754,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(
                 |RecordConstructor {
                      location,
+                     name_location,
                      name,
                      arguments: args,
                      documentation,
                  }| {
+                    self.check_name_case(name_location, &name, Named::CustomTypeVariant);
+
                     let preregistered_fn = environment
                         .get_variable(&name)
                         .expect("Could not find preregistered type for function");
@@ -744,12 +770,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
                             args.into_iter()
                                 .zip(&args_types)
-                                .map(|(argument, t)| RecordConstructorArg {
-                                    label: argument.label,
-                                    ast: argument.ast,
-                                    location: argument.location,
-                                    type_: t.clone(),
-                                    doc: None,
+                                .map(|(argument, t)| {
+                                    if let Some((label, location)) = &argument.label {
+                                        self.check_name_case(*location, label, Named::Label);
+                                    }
+
+                                    RecordConstructorArg {
+                                        label: argument.label,
+                                        ast: argument.ast,
+                                        location: argument.location,
+                                        type_: t.clone(),
+                                        doc: None,
+                                    }
                                 })
                                 .collect()
                         } else {
@@ -758,6 +790,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
                     RecordConstructor {
                         location,
+                        name_location,
                         name,
                         arguments: args,
                         documentation,
@@ -774,6 +807,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
             location,
+            name_location,
             end_position,
             publicity,
             opaque,
@@ -858,7 +892,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 args_types.push(t);
 
                 // Register the label for this parameter, if there is one
-                if let Some(label) = label {
+                if let Some((label, _)) = label {
                     field_map.insert(label.clone(), i as u32).map_err(|_| {
                         Error::DuplicateField {
                             label: label.clone(),
@@ -942,6 +976,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             publicity,
             parameters,
             location,
+            name_location,
             deprecation,
             opaque,
             constructors,
@@ -956,6 +991,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // The fact we can't straightforwardly do this indicated to me that we
         // could improve our approach here somewhat.
         environment.assert_unique_type_name(name, *location)?;
+
+        self.check_name_case(*name_location, name, Named::Type);
 
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
@@ -1015,6 +1052,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn register_type_alias(&mut self, t: &TypeAlias<()>, environment: &mut Environment<'_>) {
         let TypeAlias {
             location,
+            name_location,
             publicity,
             parameters: args,
             alias: name,
@@ -1031,6 +1069,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // register this new type with the same name.
             return;
         }
+
+        self.check_name_case(*name_location, name, Named::TypeVariable);
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
@@ -1107,6 +1147,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name,
             arguments: args,
             location,
+            name_location,
             return_annotation,
             publicity,
             documentation,
@@ -1118,9 +1159,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
         } = f;
+
+        self.check_name_case(*name_location, name, Named::Function);
+
         let mut builder = FieldMapBuilder::new(args.len() as u32);
-        for arg in args.iter() {
-            builder.add(arg.names.get_label(), arg.location)?;
+        for Arg {
+            names, location, ..
+        } in args.iter()
+        {
+            check_argument_names(names, &mut self.errors, &mut self.name_corrections);
+
+            builder.add(names.get_label(), *location)?;
         }
         let field_map = builder.finish();
         let mut hydrator = Hydrator::new();
@@ -1171,6 +1220,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location: value.variant.definition_location(),
                 leaked,
             });
+        }
+    }
+
+    fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
+        if let Err(error) = check_name_case(location, name, kind) {
+            self.errors.push(error);
+            self.name_corrections
+                .push(correct_name_case(location, name, kind));
         }
     }
 }
@@ -1226,6 +1283,7 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     let TypeAlias {
         documentation: doc,
         location,
+        name_location,
         publicity,
         alias,
         parameters: args,
@@ -1245,6 +1303,7 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
+        name_location,
         publicity,
         alias,
         parameters: args,
@@ -1382,6 +1441,7 @@ fn generalise_function(
     let Function {
         documentation: doc,
         location,
+        name_location,
         name,
         publicity,
         deprecation,
@@ -1438,6 +1498,7 @@ fn generalise_function(
     Definition::Function(Function {
         documentation: doc,
         location,
+        name_location,
         name,
         publicity,
         deprecation,
@@ -1505,7 +1566,7 @@ fn get_compatible_record_fields<A>(
     'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
         // Fields without labels do not have accessors
         let label = match first_argument.label.as_ref() {
-            Some(label) => label,
+            Some((label, _)) => label,
             None => continue 'next_argument,
         };
 
@@ -1518,8 +1579,13 @@ fn get_compatible_record_fields<A>(
                 None => continue 'next_argument,
             };
 
+            let arg_label = match argument.label.as_ref() {
+                Some((label, _)) => label,
+                None => continue 'next_argument,
+            };
+
             // The labels must be the same
-            if argument.label != first_argument.label {
+            if arg_label != label {
                 continue 'next_argument;
             }
 

@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"pub type Box { Box(Int) }\npub fn main() {\n    let Box(_ignoredInner) = Box(203)\n}\",\n    2)"
+---
+pub type Box { Box(Int) }
+pub fn main() {
+    let Box(_ignored_inner) = Box(203)
+}

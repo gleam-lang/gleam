@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/language_server/tests/signature_help.rs
+expression: "\nimport example as wibble\npub fn main() {\n  wibble.example_fn()\n}\n"
+---
+import example as wibble
+pub fn main() {
+  wibble.example_fn()
+                    ↑
+}
+
+
+----- Signature help -----
+wibble.example_fn(Int, String) -> Nil
+                  ▔▔▔
+
+No documentation

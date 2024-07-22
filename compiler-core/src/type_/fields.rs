@@ -60,7 +60,7 @@ impl FieldMap {
                 }
 
                 None => {
-                    if labelled_arguments_given && !arg.implicit {
+                    if labelled_arguments_given && !arg.is_implicit() {
                         return Err(Error::PositionalArgumentAfterLabelled {
                             location: arg.location,
                         });

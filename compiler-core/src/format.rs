@@ -1569,7 +1569,7 @@ impl<'comments> Formatter<'comments> {
                      }| {
                         let arg_comments = self.pop_comments(location.start);
                         let arg = match label {
-                            Some(l) => l.to_doc().append(": ").append(self.type_ast(ast)),
+                            Some((l, _)) => l.to_doc().append(": ").append(self.type_ast(ast)),
                             None => self.type_ast(ast),
                         };
 
@@ -1692,12 +1692,12 @@ impl<'comments> Formatter<'comments> {
 
     fn docs_fn_arg_name<'a>(&mut self, arg: &'a TypedArg) -> Document<'a> {
         match &arg.names {
-            ArgNames::Named { name } => name.to_doc(),
-            ArgNames::NamedLabelled { label, name } => docvec![label, " ", name],
+            ArgNames::Named { name, .. } => name.to_doc(),
+            ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
             // We remove the underscore from discarded function arguments since we don't want to
             // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
-            ArgNames::Discard { name } => name.strip_prefix('_').unwrap_or(name).to_doc(),
-            ArgNames::LabelledDiscard { label, name } => {
+            ArgNames::Discard { name, .. } => name.strip_prefix('_').unwrap_or(name).to_doc(),
+            ArgNames::LabelledDiscard { label, name, .. } => {
                 docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
             }
         }
@@ -2543,8 +2543,9 @@ fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
 impl<'a> Documentable<'a> for &'a ArgNames {
     fn to_doc(self) -> Document<'a> {
         match self {
-            ArgNames::Named { name } | ArgNames::Discard { name } => name.to_doc(),
-            ArgNames::LabelledDiscard { label, name } | ArgNames::NamedLabelled { label, name } => {
+            ArgNames::Named { name, .. } | ArgNames::Discard { name, .. } => name.to_doc(),
+            ArgNames::LabelledDiscard { label, name, .. }
+            | ArgNames::NamedLabelled { label, name, .. } => {
                 docvec![label, " ", name]
             }
         }

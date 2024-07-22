@@ -1142,6 +1142,176 @@ const wibble = 2"
 }
 
 #[test]
+fn invalid_const_name() {
+    assert_module_error!("const myInvalid_Constant = 42");
+}
+
+#[test]
+fn invalid_parameter_name() {
+    assert_module_error!("fn add(numA: Int, num_b: Int) { numA + num_b }");
+}
+
+#[test]
+fn invalid_parameter_name2() {
+    assert_module_error!("fn pass(label paramName: Bool) { paramName }");
+}
+
+#[test]
+fn invalid_parameter_name3() {
+    assert_error!("let add = fn(numA: Int, num_b: Int) { numA + num_b }");
+}
+
+#[test]
+fn invalid_parameter_discard_name() {
+    assert_module_error!("fn ignore(_ignoreMe: Bool) { 98 }");
+}
+
+#[test]
+fn invalid_parameter_discard_name2() {
+    assert_module_error!("fn ignore(labelled_discard _ignoreMe: Bool) { 98 }");
+}
+
+#[test]
+fn invalid_parameter_discard_name3() {
+    assert_error!("let ignore = fn(_ignoreMe: Bool) { 98 }");
+}
+
+#[test]
+fn invalid_parameter_label() {
+    assert_module_error!("fn func(thisIsALabel param: Int) { param }");
+}
+
+#[test]
+fn invalid_parameter_label2() {
+    assert_module_error!("fn ignore(thisIsALabel _ignore: Int) { 25 }");
+}
+
+#[test]
+fn invalid_constructor_name() {
+    assert_module_error!("type MyType { Int_Value(Int) }");
+}
+
+#[test]
+fn invalid_constructor_arg_name() {
+    assert_module_error!("type IntWrapper { IntWrapper(innerInt: Int) }");
+}
+
+#[test]
+fn invalid_custom_type_name() {
+    assert_module_error!("type Boxed_value { Box(Int) }");
+}
+
+#[test]
+fn invalid_type_alias_name() {
+    assert_module_error!("type Fancy_Bool = Bool");
+}
+
+#[test]
+fn invalid_function_name() {
+    assert_module_error!("fn doStuff() {}");
+}
+
+#[test]
+fn invalid_variable_name() {
+    assert_error!("let theAnswer = 42");
+}
+
+#[test]
+fn invalid_variable_discard_name() {
+    assert_error!("let _boringNumber = 72");
+}
+
+#[test]
+fn invalid_use_name() {
+    assert_module_error!(
+        "fn use_test(f) { f(Nil) }
+pub fn main() { use useVar <- use_test() }"
+    );
+}
+
+#[test]
+fn invalid_use_discard_name() {
+    assert_module_error!(
+        "fn use_test(f) { f(Nil) }
+pub fn main() { use _discardVar <- use_test() }"
+    );
+}
+
+#[test]
+fn invalid_pattern_assignment_name() {
+    assert_error!("let assert 42 as theAnswer = 42");
+}
+
+#[test]
+fn invalid_list_pattern_name() {
+    assert_error!("let assert [theElement] = [9.4]");
+}
+
+#[test]
+fn invalid_list_pattern_discard_name() {
+    assert_error!("let assert [_elemOne] = [False]");
+}
+
+#[test]
+fn invalid_constructor_pattern_name() {
+    assert_module_error!(
+        "pub type Box { Box(Int) } pub fn main() { let Box(innerValue) = Box(203) }"
+    );
+}
+
+#[test]
+fn invalid_constructor_pattern_discard_name() {
+    assert_module_error!(
+        "pub type Box { Box(Int) } pub fn main() { let Box(_ignoredInner) = Box(203)}"
+    );
+}
+
+#[test]
+fn invalid_tuple_pattern_name() {
+    assert_error!("let #(a, secondValue) = #(1, 2)");
+}
+
+#[test]
+fn invalid_tuple_pattern_discard_name() {
+    assert_error!("let #(a, _secondValue) = #(1, 2)");
+}
+
+#[test]
+fn invalid_bit_array_pattern_name() {
+    assert_error!("let assert <<bitValue>> = <<73>>");
+}
+
+#[test]
+fn invalid_bit_array_pattern_discard_name() {
+    assert_error!("let assert <<_iDontCare>> = <<97>>");
+}
+
+#[test]
+fn invalid_string_prefix_pattern_name() {
+    assert_error!(r#"let assert "prefix" <> coolSuffix = "prefix-suffix""#);
+}
+
+#[test]
+fn invalid_string_prefix_pattern_discard_name() {
+    assert_error!(r#"let assert "prefix" <> _boringSuffix = "prefix-suffix""#);
+}
+
+#[test]
+fn invalid_string_prefix_pattern_alias() {
+    assert_error!(r#"let assert "prefix" as thePrefix <> _suffix = "prefix-suffix""#);
+}
+
+#[test]
+fn invalid_case_variable_name() {
+    assert_error!("case 21 { twentyOne -> {Nil} }");
+}
+
+#[test]
+fn invalid_case_variable_discard_name() {
+    assert_error!("case 21 { _twentyOne -> {Nil} }");
+}
+
+#[test]
 fn correct_pipe_arity_error_location() {
     // https://github.com/gleam-lang/gleam/issues/672
     assert_module_error!(

@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action(\"const myInvalid_Constant = 42\", 0)"
+---
+const my_invalid_constant = 42

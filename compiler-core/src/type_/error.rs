@@ -422,6 +422,20 @@ pub enum Error {
         location: SrcSpan,
         actual_type: Option<Type>,
     },
+
+    /// When the name assigned to a variable or function doesn't follow the gleam
+    /// naming conventions.
+    ///
+    /// For example:
+    ///
+    /// ```gleam
+    /// let myBadName = 42
+    /// ```
+    BadName {
+        location: SrcSpan,
+        kind: Named,
+        name: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -447,6 +461,35 @@ pub enum LiteralCollectionKind {
     List,
     Tuple,
     Record,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Named {
+    Type,
+    TypeVariable,
+    CustomTypeVariant,
+    Variable,
+    Argument,
+    Label,
+    Constant,
+    Function,
+    Discard,
+}
+
+impl Named {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Named::Type => "type",
+            Named::TypeVariable => "type alias",
+            Named::CustomTypeVariant => "type variant",
+            Named::Variable => "variable",
+            Named::Argument => "argument",
+            Named::Label => "label",
+            Named::Constant => "constant",
+            Named::Function => "function",
+            Named::Discard => "discard",
+        }
+    }
 }
 
 #[derive(Debug, Eq, PartialEq, Clone)]
@@ -735,7 +778,8 @@ impl Error {
                 ..
             }
             | Error::UseFnDoesntTakeCallback { location, .. }
-            | Error::UseFnIncorrectArity { location, .. } => location.start,
+            | Error::UseFnIncorrectArity { location, .. }
+            | Error::BadName { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

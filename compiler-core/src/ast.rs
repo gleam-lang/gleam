@@ -158,7 +158,7 @@ impl<A> Arg<A> {
 
     pub fn is_capture_hole(&self) -> bool {
         match &self.names {
-            ArgNames::Named { name } if name == CAPTURE_VARIABLE => true,
+            ArgNames::Named { name, .. } if name == CAPTURE_VARIABLE => true,
             _ => false,
         }
     }
@@ -176,10 +176,26 @@ impl TypedArg {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: EcoString },
-    LabelledDiscard { label: EcoString, name: EcoString },
-    Named { name: EcoString },
-    NamedLabelled { name: EcoString, label: EcoString },
+    Discard {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    LabelledDiscard {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
+    Named {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    NamedLabelled {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
 }
 
 impl ArgNames {
@@ -194,7 +210,7 @@ impl ArgNames {
     pub fn get_variable_name(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
-            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
+            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name, .. } => Some(name),
         }
     }
 }
@@ -204,6 +220,7 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<EcoString>,
@@ -219,7 +236,7 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<EcoString>,
+    pub label: Option<(EcoString, SrcSpan)>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
@@ -606,6 +623,7 @@ impl Publicity {
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
     pub arguments: Vec<Arg<T>>,
@@ -709,6 +727,7 @@ pub type UntypedCustomType = CustomType<()>;
 /// ```
 pub struct CustomType<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub end_position: u32,
     pub name: EcoString,
     pub publicity: Publicity,
@@ -745,6 +764,7 @@ pub type UntypedTypeAlias = TypeAlias<()>;
 /// ```
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
+    pub name_location: SrcSpan,
     pub alias: EcoString,
     pub parameters: Vec<EcoString>,
     pub type_ast: TypeAst,
@@ -1156,12 +1176,49 @@ pub struct CallArg<A> {
     // determine if we should error if an argument without a label is given or
     // not, which is not permitted if the argument is given explicitly by the
     // programmer rather than implicitly by Gleam's syntactic sugar.
-    pub implicit: bool,
+    pub implicit: Option<ImplicitCallArgOrigin>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ImplicitCallArgOrigin {
+    Use,
+    Pipe,
+    PatternFieldSpread,
+    IncorrectArityUse,
+}
+
+impl<A> CallArg<A> {
+    #[must_use]
+    pub fn is_implicit(&self) -> bool {
+        self.implicit.is_some()
+    }
 }
 
 impl CallArg<TypedExpr> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value.find_node(byte_index)
+        match (self.implicit, &self.value) {
+            // If a call argument is the implicit use callback then we don't
+            // want to look at its arguments and body but we don't want to
+            // return the whole anonymous function if anything else doesn't
+            // match.
+            //
+            // In addition, if the callback is invalid because it couldn't be
+            // typed, we don't want to return it as it would make it hard for
+            // the LSP to give any suggestions on the use function being typed.
+            //
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Invalid { .. }) => None,
+            // So the code below is exactly the same as
+            // `TypedExpr::Fn{}.find_node()` except we do not return self as a
+            // fallback.
+            //
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { args, body, .. }) => args
+                .iter()
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
+            // In all other cases we're happy with the default behaviour.
+            //
+            _ => self.value.find_node(byte_index),
+        }
     }
 }
 
@@ -1680,10 +1737,10 @@ impl AssignName {
         }
     }
 
-    pub fn to_arg_names(self) -> ArgNames {
+    pub fn to_arg_names(self, location: SrcSpan) -> ArgNames {
         match self {
-            AssignName::Variable(name) => ArgNames::Named { name },
-            AssignName::Discard(name) => ArgNames::Discard { name },
+            AssignName::Variable(name) => ArgNames::Named { name, location },
+            AssignName::Discard(name) => ArgNames::Discard { name, location },
         }
     }
 
@@ -1698,7 +1755,9 @@ impl AssignName {
 impl<A> Pattern<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Pattern::Assign { pattern, .. } => pattern.location(),
+            Pattern::Assign {
+                pattern, location, ..
+            } => SrcSpan::new(pattern.location().start, location.end),
             Pattern::Int { location, .. }
             | Pattern::Variable { location, .. }
             | Pattern::VarUsage { location, .. }
