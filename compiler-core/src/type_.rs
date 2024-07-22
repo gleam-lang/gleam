@@ -608,6 +608,8 @@ pub struct ModuleInterface {
     // importable by other packages but to do so is violating the contract of
     // the package and as such is not recommended.
     pub is_internal: bool,
+    /// Warnings emitted during analysis of this module.
+    pub warnings: Vec<Warning>,
 }
 
 /// Information on the constructors of a custom type.
@@ -694,6 +696,7 @@ impl ModuleInterface {
             is_internal: false,
             line_numbers,
             src_path,
+            warnings: vec![],
         }
     }
 

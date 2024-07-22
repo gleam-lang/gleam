@@ -83,6 +83,7 @@ impl ModuleDecoder {
             name_corrections: Vec::new(),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
+            warnings: vec![],
         })
     }
 

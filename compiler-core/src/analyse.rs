@@ -307,8 +307,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // make the output predictable.
         self.problems.sort();
 
-        for warning in self.problems.take_warnings() {
-            self.warnings.emit(warning);
+        let warnings = self.problems.take_warnings();
+        for warning in &warnings {
+            // TODO: remove this clone
+            self.warnings.emit(warning.clone());
         }
 
         let module = ast::Module {
@@ -329,6 +331,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
+                warnings,
             },
         };
 
