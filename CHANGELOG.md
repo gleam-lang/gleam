@@ -4,6 +4,11 @@
 
 ### Build tool
 
+- `gleam new` now takes an optional `--template` flag (with options `erlang`
+  and `javascript`) to specify the template and target for the generated
+  project.
+  ([Mohammed Khouni](https://github.com/Tar-Tarus)
+
 ### Compiler
 
 ### Formatter
