@@ -6276,3 +6276,33 @@ fn punned_pattern_arg_is_split_like_regular_labelled_patterns() {
 "#
     );
 }
+
+#[test]
+fn not_punned_record_pattern() {
+    assert_format!(
+        r#"pub fn main() {
+  let Wibble(x: x) = todo
+}
+"#
+    );
+}
+
+#[test]
+fn not_punned_record() {
+    assert_format!(
+        r#"pub fn main() {
+  Wibble(x: x)
+}
+"#
+    );
+}
+
+#[test]
+fn not_punned_funcdtion() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(x: x)
+}
+"#
+    );
+}
