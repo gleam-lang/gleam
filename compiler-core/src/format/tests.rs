@@ -2727,7 +2727,7 @@ fn pattern_constructor() {
 
     assert_format!(
         r#"fn main() {
-  let Person(age: the_age, name: the_name) = 1
+  let Person(age: age, name: name) = 1
   Nil
 }
 "#
@@ -6274,87 +6274,5 @@ fn punned_pattern_arg_is_split_like_regular_labelled_patterns() {
   ) = todo
 }
 "#
-    );
-}
-
-#[test]
-fn call_arg_that_can_be_punned_is_punned() {
-    assert_format_rewrite!(
-        "pub fn main() {
-  wibble(arg1: arg1, arg2: arg2, arg: no_pun, arg3: arg3)
-}
-",
-        "pub fn main() {
-  wibble(arg1:, arg2:, arg: no_pun, arg3:)
-}
-"
-    );
-}
-
-#[test]
-fn record_update_arg_that_can_be_punned_is_punned() {
-    assert_format_rewrite!(
-        "pub fn main() {
-  Wibble(..wibble, arg1: arg1, arg2: arg2, arg: no_pun, arg3: arg3)
-}
-",
-        "pub fn main() {
-  Wibble(..wibble, arg1:, arg2:, arg: no_pun, arg3:)
-}
-"
-    );
-}
-
-#[test]
-fn record_constructor_arg_that_can_be_punned_is_punned() {
-    assert_format_rewrite!(
-        "pub fn main() {
-  Wibble(arg1: arg1, arg2: arg2, arg: no_pun, arg3: arg3)
-}
-",
-        "pub fn main() {
-  Wibble(arg1:, arg2:, arg: no_pun, arg3:)
-}
-"
-    );
-}
-
-#[test]
-fn constant_call_arg_that_can_be_punned_is_punned() {
-    assert_format_rewrite!(
-        "pub const wibble = Wibble(arg1: arg1, arg2: arg2, arg: no_pun, arg3: arg3)\n",
-        "pub const wibble = Wibble(arg1:, arg2:, arg: no_pun, arg3:)\n"
-    );
-}
-
-#[test]
-fn pattern_arg_that_can_be_punned_is_punned() {
-    assert_format_rewrite!(
-        "pub fn main() {
-  case wibble {
-    Wibble(arg1: arg1, arg2: arg2, arg: no_pun, arg3: arg3) -> todo
-  }
-}
-",
-        "pub fn main() {
-  case wibble {
-    Wibble(arg1:, arg2:, arg: no_pun, arg3:) -> todo
-  }
-}
-"
-    );
-}
-
-#[test]
-fn pattern_arg_that_can_be_punned_is_punned_2() {
-    assert_format_rewrite!(
-        "pub fn main() {
-  let Wibble(arg1: arg1, arg2: arg2, arg: no_pun, arg3: arg3) = todo
-}
-",
-        "pub fn main() {
-  let Wibble(arg1:, arg2:, arg: no_pun, arg3:) = todo
-}
-"
     );
 }
