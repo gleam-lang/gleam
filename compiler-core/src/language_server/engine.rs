@@ -227,7 +227,12 @@ where
                 Located::Pattern(_pattern) => None,
                 // Do not show completions when typing inside a string.
                 Located::Expression(TypedExpr::String { .. }) => None,
-
+                Located::Expression(TypedExpr::Call { fun, args, .. }) => {
+                    let mut completions = vec![];
+                    completions.append(&mut completer.completion_values());
+                    completions.append(&mut completer.completion_labels(fun, args));
+                    Some(completions)
+                }
                 Located::Expression(TypedExpr::RecordAccess { record, .. }) => {
                     let mut completions = vec![];
                     completions.append(&mut completer.completion_values());

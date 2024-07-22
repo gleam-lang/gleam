@@ -1,0 +1,148 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "completion(TestProject::for_source(code), Position::new(6, 23))"
+---
+[
+    CompletionItem {
+        label: "Wibble",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Constructor,
+        ),
+        detail: Some(
+            "fn(String, Int) -> Wibble",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 6,
+                            character: 23,
+                        },
+                        end: Position {
+                            line: 6,
+                            character: 23,
+                        },
+                    },
+                    new_text: "Wibble",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "fun",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Function,
+        ),
+        detail: Some(
+            "fn() -> Wibble",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 6,
+                            character: 23,
+                        },
+                        end: Position {
+                            line: 6,
+                            character: 23,
+                        },
+                    },
+                    new_text: "fun",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "wibble",
+        label_details: None,
+        kind: Some(
+            Field,
+        ),
+        detail: Some(
+            "String",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "wobble",
+        label_details: None,
+        kind: Some(
+            Field,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: None,
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: None,
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+]
