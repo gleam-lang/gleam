@@ -10,13 +10,13 @@ use lsp_types::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    ast::{Definition, Import, Publicity, TypedDefinition},
+    ast::{CallArg, Definition, Import, Publicity, TypedDefinition, TypedExpr},
     build::Module,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        collapse_links, pretty::Printer, AccessorsMap, ModuleInterface, PreludeType, Type,
-        TypeConstructor, ValueConstructorVariant,
+        collapse_links, pretty::Printer, AccessorsMap, FieldMap, ModuleInterface, PreludeType,
+        Type, TypeConstructor, ValueConstructorVariant,
     },
     Result,
 };
@@ -606,7 +606,8 @@ where
         }
     }
 
-    /// Provides completions for when the context being editted is
+    /// Provides completions for field accessors when the context being editted
+    /// is a custom type instance
     pub fn completion_field_accessors(&'a self, typ: Arc<Type>) -> Vec<CompletionItem> {
         self.type_accessors_from_modules(
             self.compiler.project_compiler.get_importable_modules(),
@@ -620,6 +621,60 @@ where
                 .collect_vec()
         })
         .unwrap_or_default()
+    }
+
+    pub fn callable_field_map(
+        &'a self,
+        expr: &'a TypedExpr,
+        importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
+    ) -> Option<&'a FieldMap> {
+        match expr {
+            TypedExpr::Var { constructor, .. } => constructor.field_map(),
+            TypedExpr::ModuleSelect {
+                module_name, label, ..
+            } => importable_modules
+                .get(module_name)
+                .and_then(|i| i.values.get(label))
+                .and_then(|a| a.field_map()),
+            _ => None,
+        }
+    }
+
+    /// Provides completions for labels when the context being editted is a call
+    /// that has labelled arguments that can be passed
+    pub fn completion_labels(
+        &'a self,
+        fun: &TypedExpr,
+        existing_args: &Vec<CallArg<TypedExpr>>,
+    ) -> Vec<CompletionItem> {
+        let fun_type = fun.type_().fn_types().and_then(|(args, _)| Some(args));
+        let already_included_labels = existing_args
+            .iter()
+            .filter_map(|a| a.label.clone())
+            .collect_vec();
+        if let Some(field_map) =
+            self.callable_field_map(fun, self.compiler.project_compiler.get_importable_modules())
+        {
+            field_map
+                .fields
+                .iter()
+                .filter(|field| !already_included_labels.contains(field.0))
+                .map(|(label, arg_index)| {
+                    let detail = fun_type.as_ref().and_then(|args| {
+                        args.get(*arg_index as usize)
+                            .map(|a| Printer::new().pretty_print(a, 0))
+                    });
+                    CompletionItem {
+                        label: label.into(),
+                        detail,
+                        kind: Some(CompletionItemKind::FIELD),
+                        ..Default::default()
+                    }
+                })
+                .collect()
+        } else {
+            vec![]
+        }
     }
 
     fn root_package_name(&self) -> &str {

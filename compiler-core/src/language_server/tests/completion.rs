@@ -1310,3 +1310,81 @@ fn fun() {
         Position::new(8, 15)
     ),);
 }
+
+#[test]
+fn completions_for_record_labels() {
+    let code = "
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+  
+fn fun() {
+  let wibble = Wibble()
+}
+";
+
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(6, 23)
+    ),);
+}
+
+#[test]
+fn completions_for_imported_record_labels() {
+    let code = "
+import dep
+  
+fn fun() {
+  let wibble = dep.Wibble()
+}
+";
+    let dep = "
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(4, 27)
+    ),);
+}
+
+#[test]
+fn completions_for_function_labels() {
+    let code = "
+fn wibble(wibble arg1: String, wobble arg2: String) {
+  arg1 <> arg2
+}
+  
+fn fun() {
+  let wibble = wibble()
+}
+";
+
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code),
+        Position::new(6, 23)
+    ),);
+}
+
+#[test]
+fn completions_for_imported_function_labels() {
+    let code = "
+import dep
+  
+fn fun() {
+  let wibble = dep.wibble()
+}
+";
+    let dep = "
+pub fn wibble(wibble arg1: String, wobble arg2: String) {
+  arg1 <> arg2
+}
+";
+
+    assert_debug_snapshot!(completion(
+        TestProject::for_source(code).add_dep_module("dep", dep),
+        Position::new(4, 27)
+    ),);
+}
