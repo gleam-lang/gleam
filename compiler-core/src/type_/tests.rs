@@ -660,6 +660,7 @@ fn infer_module_type_retention_test() {
     assert_eq!(
         module.type_info,
         ModuleInterface {
+            warnings: vec![],
             contains_todo: false,
             origin: Origin::Src,
             package: "thepackage".into(),
