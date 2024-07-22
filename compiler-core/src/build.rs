@@ -418,7 +418,6 @@ fn doc_comments_before<'a>(
             break;
         }
         if extra.has_comment_between(*end, byte) {
-            println!("Ignore comment with span {start} {end}");
             // We ignore doc comments that come before a regular comment.
             _ = doc_comments_spans.next();
             continue;
