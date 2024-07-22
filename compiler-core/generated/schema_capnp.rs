@@ -478,10 +478,6 @@ pub mod module {
       !self.reader.get_pointer_field(6).is_null()
     }
     #[inline]
-    pub fn get_contains_todo(self) -> bool {
-      self.reader.get_bool_field(0)
-    }
-    #[inline]
     pub fn get_line_numbers(self) -> ::capnp::Result<crate::schema_capnp::line_numbers::Reader<'a>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(7), ::core::option::Option::None)
     }
@@ -499,7 +495,7 @@ pub mod module {
     }
     #[inline]
     pub fn get_is_internal(self) -> bool {
-      self.reader.get_bool_field(1)
+      self.reader.get_bool_field(0)
     }
   }
 
@@ -664,14 +660,6 @@ pub mod module {
       !self.builder.get_pointer_field(6).is_null()
     }
     #[inline]
-    pub fn get_contains_todo(self) -> bool {
-      self.builder.get_bool_field(0)
-    }
-    #[inline]
-    pub fn set_contains_todo(&mut self, value: bool)  {
-      self.builder.set_bool_field(0, value);
-    }
-    #[inline]
     pub fn get_line_numbers(self) -> ::capnp::Result<crate::schema_capnp::line_numbers::Builder<'a>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(7), ::core::option::Option::None)
     }
@@ -705,11 +693,11 @@ pub mod module {
     }
     #[inline]
     pub fn get_is_internal(self) -> bool {
-      self.builder.get_bool_field(1)
+      self.builder.get_bool_field(0)
     }
     #[inline]
     pub fn set_is_internal(&mut self, value: bool)  {
-      self.builder.set_bool_field(1, value);
+      self.builder.set_bool_field(0, value);
     }
   }
 

@@ -272,7 +272,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         .root_package
         .modules
         .iter()
-        .filter(|module| module.ast.type_info.contains_todo)
+        .filter(|module| module.ast.type_info.contains_todo())
         .map(|module| module.name.clone())
         .sorted()
         .collect_vec();

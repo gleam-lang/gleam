@@ -897,6 +897,13 @@ impl Warning {
             | Warning::RedundantPipeFunctionCapture { location, .. } => *location,
         }
     }
+
+    pub(crate) fn is_todo(&self) -> bool {
+        match self {
+            Self::Todo { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]

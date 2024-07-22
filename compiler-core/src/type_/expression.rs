@@ -416,10 +416,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typ: type_.clone(),
         });
 
-        // We've seen a todo, so register that fact. This can be used by higher
-        // level tooling such as the build tool when publishing a package.
-        self.environment.todo_encountered = true;
-
         let message = message
             .map(|message| {
                 // If there is a message expression then it must be a string.

@@ -661,7 +661,6 @@ fn infer_module_type_retention_test() {
         module.type_info,
         ModuleInterface {
             warnings: vec![],
-            contains_todo: false,
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),
@@ -2052,18 +2051,6 @@ fn block_maths() {
 }",
         vec![("do", "fn(Float, Float) -> Float")],
     );
-}
-
-#[test]
-fn contains_todo_true() {
-    let module = compile_module("test_module", "pub fn main() { 1 }", None, vec![]).unwrap();
-    assert!(!module.type_info.contains_todo);
-}
-
-#[test]
-fn contains_todo_false() {
-    let module = compile_module("test_module", "pub fn main() { todo }", None, vec![]).unwrap();
-    assert!(module.type_info.contains_todo);
 }
 
 #[test]

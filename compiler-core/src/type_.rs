@@ -599,7 +599,6 @@ pub struct ModuleInterface {
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub name_corrections: Vec<NameCorrection>,
-    pub contains_todo: bool,
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
@@ -610,6 +609,12 @@ pub struct ModuleInterface {
     pub is_internal: bool,
     /// Warnings emitted during analysis of this module.
     pub warnings: Vec<Warning>,
+}
+
+impl ModuleInterface {
+    pub fn contains_todo(&self) -> bool {
+        self.warnings.iter().any(|warning| warning.is_todo())
+    }
 }
 
 /// Information on the constructors of a custom type.
@@ -692,7 +697,6 @@ impl ModuleInterface {
             accessors: Default::default(),
             unused_imports: Default::default(),
             name_corrections: Default::default(),
-            contains_todo: false,
             is_internal: false,
             line_numbers,
             src_path,

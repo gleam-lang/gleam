@@ -27,10 +27,9 @@ struct Module {
   package @4 :Text;
   typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
-  containsTodo @7 :Bool;
-  lineNumbers @8 :LineNumbers;
-  srcPath @9 :Text;
-  isInternal @10 :Bool;
+  lineNumbers @7 :LineNumbers;
+  srcPath @8 :Text;
+  isInternal @9 :Bool;
 }
 
 struct TypesVariantConstructors {
