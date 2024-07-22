@@ -997,6 +997,25 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         }
     }
 
+    pub fn get_doc(&self) -> Option<EcoString> {
+        match self {
+            Definition::Import(Import { .. }) => None,
+
+            Definition::Function(Function {
+                documentation: doc, ..
+            })
+            | Definition::TypeAlias(TypeAlias {
+                documentation: doc, ..
+            })
+            | Definition::CustomType(CustomType {
+                documentation: doc, ..
+            })
+            | Definition::ModuleConstant(ModuleConstant {
+                documentation: doc, ..
+            }) => doc.clone(),
+        }
+    }
+
     pub fn is_internal(&self) -> bool {
         match self {
             Definition::Function(Function { publicity, .. })

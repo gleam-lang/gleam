@@ -7,6 +7,7 @@ use crate::parse::token::Token;
 use crate::warning::WarningEmitter;
 use camino::Utf8PathBuf;
 
+use ecow::EcoString;
 use itertools::Itertools;
 use pretty_assertions::assert_eq;
 
@@ -1321,5 +1322,84 @@ pub fn main() {
   let Wibble(arg1: arg2:) = todo
 }
 "
+    );
+}
+
+fn first_parsed_docstring(src: &str) -> EcoString {
+    let parsed =
+        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
+            .expect("should parse");
+
+    parsed
+        .module
+        .definitions
+        .first()
+        .expect("parsed a definition")
+        .definition
+        .get_doc()
+        .expect("definition without doc")
+}
+
+#[test]
+fn doc_comment_before_comment_is_not_attached_to_following_function() {
+    assert_eq!(
+        first_parsed_docstring(
+            r#"
+    /// Not included!
+    // pub fn call()
+
+    /// Doc!
+    pub fn wibble() {}
+"#
+        ),
+        " Doc!\n"
+    )
+}
+
+#[test]
+fn doc_comment_before_comment_is_not_attached_to_following_type() {
+    assert_eq!(
+        first_parsed_docstring(
+            r#"
+    /// Not included!
+    // pub fn call()
+
+    /// Doc!
+    pub type Wibble
+"#
+        ),
+        " Doc!\n"
+    )
+}
+
+#[test]
+fn doc_comment_before_comment_is_not_attached_to_following_type_alias() {
+    assert_eq!(
+        first_parsed_docstring(
+            r#"
+    /// Not included!
+    // pub fn call()
+
+    /// Doc!
+    pub type Wibble = Int
+"#
+        ),
+        " Doc!\n"
+    )
+}
+
+#[test]
+fn doc_comment_before_comment_is_not_attached_to_following_constant() {
+    assert_eq!(
+        first_parsed_docstring(
+            r#"
+    /// Not included!
+    // pub fn call()
+
+    /// Doc!
+    pub const wibble = 1
+"#
+        ),
+        " Doc!\n"
     );
 }
