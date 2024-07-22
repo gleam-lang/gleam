@@ -6298,10 +6298,103 @@ fn not_punned_record() {
 }
 
 #[test]
-fn not_punned_funcdtion() {
+fn not_punned_function() {
     assert_format!(
         r#"pub fn main() {
   wibble(x: x)
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn doc_comments_are_split_by_regular_comments() {
+    assert_format!(
+        r#"/// Doc comment
+// Commented function
+// fn wibble() {}
+
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn it_is_easy_to_tell_two_different_doc_comments_apart_when_a_regular_comment_is_separating_those()
+{
+    assert_format_rewrite!(
+        r#"/// Doc comment
+// regular comment
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#,
+        r#"/// Doc comment
+// regular comment
+
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn multiple_commented_definitions_in_a_row_2() {
+    assert_format!(
+        r#"/// Stray comment
+// regular comment
+
+/// Stray comment
+// regular comment
+
+/// Doc comment
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn only_stray_comments_and_definition_with_no_doc_comments() {
+    assert_format!(
+        r#"/// Stray comment
+// regular comment
+
+/// Stray comment
+// regular comment
+
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn only_stray_comments_and_definition_with_no_doc_comments_2() {
+    assert_format_rewrite!(
+        r#"/// Stray comment
+// regular comment
+pub fn wibble () {
+  todo
+}
+"#,
+        r#"/// Stray comment
+// regular comment
+
+pub fn wibble() {
+  todo
 }
 "#
     );
