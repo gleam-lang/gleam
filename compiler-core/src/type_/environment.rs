@@ -54,10 +54,6 @@ pub struct Environment<'a> {
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
     pub target_support: TargetSupport,
-
-    /// Whether a `todo` expression has been encountered in this module.
-    /// This is used by the build tool to refuse to publish packages that are unfinished.
-    pub todo_encountered: bool,
 }
 
 impl<'a> Environment<'a> {
@@ -92,7 +88,6 @@ impl<'a> Environment<'a> {
             current_module,
             entity_usages: vec![HashMap::new()],
             target_support,
-            todo_encountered: false,
         }
     }
 }

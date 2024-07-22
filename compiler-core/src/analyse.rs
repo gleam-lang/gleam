@@ -293,7 +293,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_types: types,
             module_types_constructors: types_constructors,
             module_values: values,
-            todo_encountered: contains_todo,
             accessors,
             ..
         } = env;
@@ -328,7 +327,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 is_internal,
                 unused_imports,
                 name_corrections: self.name_corrections,
-                contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
                 warnings,

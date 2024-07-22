@@ -57,7 +57,6 @@ fn write_cache(
         accessors: Default::default(),
         unused_imports: Vec::new(),
         name_corrections: Vec::new(),
-        contains_todo: false,
         line_numbers: line_numbers.clone(),
         is_internal: false,
         src_path: Utf8PathBuf::from(format!("/src/{}.gleam", name)),
