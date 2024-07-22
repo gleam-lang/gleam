@@ -6302,6 +6302,7 @@ fn not_punned_function() {
     assert_format!(
         r#"pub fn main() {
   wibble(x: x)
+}
 "#
     );
 }
