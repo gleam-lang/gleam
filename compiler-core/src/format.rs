@@ -1740,16 +1740,6 @@ impl<'comments> Formatter<'comments> {
         match arg {
             // Punned argument.
             _ if arg.is_punned() => commented(arg.label.as_str().to_doc().append(":"), comments),
-
-            // A call arg that wasn't explicitly punned but could be. We want to
-            // enforce a consistent style and only one way to do things so if
-            // something can be punned it should be.
-            UntypedRecordUpdateArg {
-                label,
-                value: UntypedExpr::Var { name, .. },
-                ..
-            } if label == name => commented(arg.label.as_str().to_doc().append(":"), comments),
-
             // Labelled argument.
             _ => {
                 let doc = arg
@@ -2855,14 +2845,6 @@ fn expr_call_arg_formatting(arg: &CallArg<UntypedExpr>) -> CallArgFormatting<'_,
         _ if arg.is_punned() => {
             CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
         }
-        // A call arg that wasn't explicitly punned but could be. We want to
-        // enforce a consistent style and only one way to do things so if
-        // something can be punned it should be.
-        CallArg {
-            label: Some(label),
-            value: UntypedExpr::Var { name, .. },
-            ..
-        } if label == name => CallArgFormatting::Punned(label),
         // A labelled argument.
         CallArg {
             label: Some(label),
@@ -2882,14 +2864,6 @@ fn pattern_call_arg_formatting(
         _ if arg.is_punned() => {
             CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
         }
-        // A call arg that wasn't explicitly punned but could be. We want to
-        // enforce a consistent style and only one way to do things so if
-        // something can be punned it should be.
-        CallArg {
-            label: Some(label),
-            value: UntypedPattern::Variable { name, .. },
-            ..
-        } if label == name => CallArgFormatting::Punned(label),
         // A labelled argument.
         CallArg {
             label: Some(label),
@@ -2909,16 +2883,6 @@ fn constant_call_arg_formatting<A, B>(
         _ if arg.is_punned() => {
             CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
         }
-        // A call arg that wasn't explicitly punned but could be. We want to
-        // enforce a consistent style and only one way to do things so if
-        // something can be punned it should be.
-        CallArg {
-            label: Some(label),
-            value: Constant::Var {
-                name, module: None, ..
-            },
-            ..
-        } if label == name => CallArgFormatting::Punned(label),
         // A labelled argument.
         CallArg {
             label: Some(label),

@@ -91,8 +91,8 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
         r#"pub fn main() {
   Ok(Lesson(
     name: names.name,
-    text:,
-    code:,
+    text: text,
+    code: code,
     path: chapter_path <> "/",
     previous: None,
     next: None,
