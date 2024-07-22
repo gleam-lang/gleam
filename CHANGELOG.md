@@ -236,6 +236,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server can now show completions for labels when writing a
+  function call or record construction.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Bug Fixes
 
 - Functions, types and constructors named `module_info` are now escaped
