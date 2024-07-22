@@ -29,7 +29,9 @@ use crate::{
 
 use super::{
     module_loader::read_source,
-    package_compiler::{CacheMetadata, CachedModule, Input, Loaded, UncompiledModule},
+    package_compiler::{
+        CacheMetadata, CachedModule, CachedWarnings, Input, Loaded, UncompiledModule,
+    },
     Mode, Target,
 };
 
@@ -63,6 +65,7 @@ pub struct PackageLoader<'a, IO> {
     stale_modules: &'a mut StaleTracker,
     already_defined_modules: &'a mut im::HashMap<EcoString, Utf8PathBuf>,
     incomplete_modules: &'a HashSet<EcoString>,
+    cached_warnings: CachedWarnings,
 }
 
 impl<'a, IO> PackageLoader<'a, IO>
@@ -74,6 +77,7 @@ where
         ids: UniqueIdGenerator,
         mode: Mode,
         root: &'a Utf8Path,
+        cached_warnings: CachedWarnings,
         warnings: &'a WarningEmitter,
         codegen: CodegenRequired,
         artefact_directory: &'a Utf8Path,
@@ -92,6 +96,7 @@ where
             codegen,
             target,
             package_name,
+            cached_warnings,
             artefact_directory,
             stale_modules,
             already_defined_modules,
@@ -164,12 +169,25 @@ where
     }
 
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
-        let path = self
-            .artefact_directory
-            .join(info.name.replace("/", "@").as_ref())
-            .with_extension("cache");
+        let dir = self.artefact_directory;
+        let name = info.name.replace("/", "@");
+        let path = dir.join(name.as_ref()).with_extension("cache");
         let bytes = self.io.read_bytes(&path)?;
-        metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())
+        let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
+
+        // Load warnings
+        if self.cached_warnings.should_use() {
+            let path = dir.join(name.as_ref()).with_extension("cache_warnings");
+            let bytes = self.io.read_bytes(&path)?;
+            module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::Parse,
+                path,
+                err: Some(e.to_string()),
+            })?;
+        }
+
+        Ok(module)
     }
 
     pub fn is_gleam_path(&self, path: &Utf8Path, dir: &Utf8Path) -> bool {

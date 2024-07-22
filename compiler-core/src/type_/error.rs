@@ -492,13 +492,13 @@ pub enum PatternMatchKind {
     Assignment,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum EmptyListCheckKind {
     Empty,
     NonEmpty,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum LiteralCollectionKind {
     List,
     Tuple,
@@ -534,7 +534,7 @@ impl Named {
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone)]
+#[derive(Debug, Eq, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
 pub enum Warning {
     Todo {
         kind: TodoKind,
@@ -738,7 +738,7 @@ pub enum Warning {
     },
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 
 pub enum PanicPosition {
     /// When the unreachable part is a function argument, this means that one
@@ -753,7 +753,7 @@ pub enum PanicPosition {
     PreviousExpression,
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum TodoOrPanic {
     Todo,
     Panic,
