@@ -270,3 +270,70 @@ fn markdown_code_from_module_comment_is_trimmed() {
     )];
     insta::assert_snapshot!(compile(config, modules));
 }
+
+#[test]
+fn doc_for_commented_definitions_is_not_included_in_next_constant() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        "
+/// Not included!
+// pub fn wibble() {}
+
+/// Included!
+pub const wobble = 1
+",
+    )];
+    assert!(!compile(config, modules).contains("Not included!"));
+}
+
+#[test]
+fn doc_for_commented_definitions_is_not_included_in_next_type() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        "
+/// Not included!
+// pub fn wibble() {}
+
+/// Included!
+pub type Wibble {
+  /// Wobble!
+  Wobble
+}
+",
+    )];
+    assert!(!compile(config, modules).contains("Not included!"));
+}
+
+#[test]
+fn doc_for_commented_definitions_is_not_included_in_next_function() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        "
+/// Not included!
+// pub fn wibble() {}
+
+/// Included!
+pub fn wobble(arg) {}
+",
+    )];
+    assert!(!compile(config, modules).contains("Not included!"));
+}
+
+#[test]
+fn doc_for_commented_definitions_is_not_included_in_next_type_alias() {
+    let config = PackageConfig::default();
+    let modules = vec![(
+        "app.gleam",
+        "
+/// Not included!
+// pub fn wibble() {}
+
+/// Included!
+pub type Wibble = Int
+",
+    )];
+    assert!(!compile(config, modules).contains("Not included!"));
+}
