@@ -623,7 +623,7 @@ where
         .unwrap_or_default()
     }
 
-    pub fn callable_field_map(
+    fn callable_field_map(
         &'a self,
         expr: &'a TypedExpr,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
