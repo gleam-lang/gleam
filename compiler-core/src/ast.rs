@@ -573,7 +573,7 @@ fn type_ast_print_tuple() {
     )
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Publicity {
     Public,
     Private,
@@ -1022,7 +1022,7 @@ impl UnqualifiedImport {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub enum Layer {
     #[default]
     Value,
@@ -2069,7 +2069,7 @@ impl<A> BitArrayOption<A> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TodoKind {
     Keyword,
     EmptyFunction,

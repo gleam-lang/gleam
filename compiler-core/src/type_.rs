@@ -46,7 +46,7 @@ pub trait HasType {
     fn type_(&self) -> Arc<Type>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Type {
     /// A nominal (named) type such as `Int`, `Float`, or a programmer defined
     /// custom type such as `Person`. The type can take other types as
@@ -782,7 +782,7 @@ impl PatternConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TypeVar {
     /// Unbound is an unbound variable. It is one specific type but we don't
     /// know what yet in the inference process. It has a unique id which can be used to
