@@ -1723,6 +1723,7 @@ where
         } else {
             self.take_documentation(start)
         };
+
         let mut name_location = SrcSpan::new(start, start);
         let mut name = EcoString::from("");
         if !is_anon {
@@ -3320,10 +3321,17 @@ where
 
     fn take_documentation(&mut self, until: u32) -> Option<EcoString> {
         let mut content = String::new();
+
         while let Some((start, line)) = self.doc_comments.front() {
             if *start >= until {
                 break;
             }
+            if self.extra.has_comment_between(*start, until) {
+                // We ignore doc comments that come before a regular comment.
+                _ = self.doc_comments.pop_front();
+                continue;
+            }
+
             content.push_str(line);
             content.push('\n');
             _ = self.doc_comments.pop_front();

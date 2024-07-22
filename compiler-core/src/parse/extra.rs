@@ -34,6 +34,20 @@ impl ModuleExtra {
             || self.doc_comments.binary_search_by(cmp).is_ok()
             || self.module_comments.binary_search_by(cmp).is_ok()
     }
+
+    pub(crate) fn has_comment_between(&self, start: u32, end: u32) -> bool {
+        self.comments
+            .binary_search_by(|comment| {
+                if comment.end < start {
+                    Ordering::Less
+                } else if comment.start > end {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .is_ok()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq)]
