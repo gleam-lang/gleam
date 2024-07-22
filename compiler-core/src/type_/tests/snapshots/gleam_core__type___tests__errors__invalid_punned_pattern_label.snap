@@ -6,7 +6,7 @@ error: Unknown label
   ┌─ /src/one/two.gleam:4:14
   │
 4 │   let Wibble(not_a_label:) = Wibble(1)
-  │              ^^^^^^^^^^^ Did you mean `arg`?
+  │              ^^^^^^^^^^^^ Did you mean `arg`?
 
 It accepts these labels:
 

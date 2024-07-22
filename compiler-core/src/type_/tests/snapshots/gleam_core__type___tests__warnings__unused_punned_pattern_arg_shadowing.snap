@@ -6,7 +6,7 @@ warning: Unused variable
   ┌─ /src/warning/wrn.gleam:5:14
   │
 5 │   let Wibble(arg1:, arg2:) = Wibble(1, True)
-  │              ^^^^ This variable is never used
+  │              ^^^^^ This variable is never used
 
 Hint: You can ignore it with an underscore: `arg1: _`.
 
@@ -14,6 +14,6 @@ warning: Unused variable
   ┌─ /src/warning/wrn.gleam:5:21
   │
 5 │   let Wibble(arg1:, arg2:) = Wibble(1, True)
-  │                     ^^^^ This variable is never used
+  │                     ^^^^^ This variable is never used
 
 Hint: You can ignore it with an underscore: `arg2: _`.

@@ -1626,7 +1626,7 @@ where
     ) -> Result<Option<CallArg<UntypedPattern>>, ParseError> {
         match (self.tok0.take(), self.tok1.take()) {
             // named arg
-            (Some((start, Token::Name { name }, end)), Some((_, Token::Colon, _))) => {
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
                 if let Some(value) = self.parse_pattern()? {
@@ -1676,8 +1676,8 @@ where
     //   a: expr
     //   a:
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
-        if let Some((start, label, end)) = self.maybe_name() {
-            let _ = self.expect_one(&Token::Colon)?;
+        if let Some((start, label, _)) = self.maybe_name() {
+            let (_, end) = self.expect_one(&Token::Colon)?;
             let value = self.parse_expression()?;
             if let Some(value) = value {
                 Ok(Some(UntypedRecordUpdateArg {
@@ -1950,20 +1950,21 @@ where
     //   a: _
     //   a: expr
     fn parse_fn_arg(&mut self) -> Result<Option<ParserArg>, ParseError> {
-        let label = match (self.tok0.take(), &self.tok1) {
-            (Some((start, Token::Name { name }, end)), Some((_, Token::Colon, _))) => {
+        let label = match (self.tok0.take(), self.tok1.take()) {
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
                 Some((start, name, end))
             }
-            (t0, _) => {
+            (t0, t1) => {
                 self.tok0 = t0;
+                self.tok1 = t1;
                 None
             }
         };
 
         if let Some(value) = self.parse_expression()? {
-            let arg = if let Some((start, label, _end)) = label {
+            let arg = if let Some((start, label, _)) = label {
                 CallArg {
                     implicit: None,
                     label: Some(label),
@@ -1983,7 +1984,7 @@ where
             };
             Ok(Some(ParserArg::Arg(Box::new(arg))))
         } else if let Some((start, name, end)) = self.maybe_discard_name() {
-            let arg = if let Some((start, label, _end)) = label {
+            let arg = if let Some((start, label, _)) = label {
                 ParserArg::Hole {
                     label: Some(label),
                     location: SrcSpan { start, end },
@@ -2774,17 +2775,18 @@ where
     //  const
     //  name:
     fn parse_const_record_arg(&mut self) -> Result<Option<CallArg<UntypedConstant>>, ParseError> {
-        let label = match (self.tok0.take(), &self.tok1) {
+        let label = match (self.tok0.take(), self.tok1.take()) {
             // Named arg
-            (Some((start, Token::Name { name }, end)), Some((_, Token::Colon, _))) => {
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
                 Some((start, name, end))
             }
 
             // Unnamed arg
-            (t0, _) => {
+            (t0, t1) => {
                 self.tok0 = t0;
+                self.tok1 = t1;
                 None
             }
         };
@@ -2809,6 +2811,7 @@ where
                 }))
             }
         } else if let Some((start, label, end)) = label {
+            // A punned argument.
             Ok(Some(CallArg {
                 implicit: None,
                 location: SrcSpan { start, end },
