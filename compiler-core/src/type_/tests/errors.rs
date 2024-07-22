@@ -831,7 +831,15 @@ fn unexpected_labelled_arg() {
 
 #[test]
 fn unexpected_punned_arg() {
-    assert_module_error!(r#"fn id(x) { x } fn y() { let x = 4 id(x:) }"#);
+    assert_module_error!(
+        r#"
+    fn id(x) { x }
+    fn y() {
+        let x = 4
+        id(x:)
+    }
+"#
+    );
 }
 
 #[test]
