@@ -1,7 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code), Position::new(6, 23))"
+expression: "\nfn wibble(wibble arg1: String, wobble arg2: String) {\n  arg1 <> arg2\n}\n  \nfn fun() { // completion inside parens below includes labels\n  let wibble = wibble()\n}\n"
 ---
+fn wibble(wibble arg1: String, wobble arg2: String) {
+  arg1 <> arg2
+}
+  
+fn fun() { // completion inside parens below includes labels
+  let wibble = wibble()
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "fun",

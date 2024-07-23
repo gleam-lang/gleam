@@ -1,7 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code), Position::new(6, 23))"
+expression: "\npub type Wibble {\n  Wibble(wibble: String, wobble: Int)\n}\n  \nfn fun() { // completion inside parens below includes labels\n  let wibble = Wibble()\n}\n"
 ---
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+  
+fn fun() { // completion inside parens below includes labels
+  let wibble = Wibble()
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "Wibble",

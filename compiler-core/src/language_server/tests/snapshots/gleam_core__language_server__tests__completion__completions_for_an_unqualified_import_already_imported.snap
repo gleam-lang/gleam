@@ -1,7 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\n    Position::new(1, 12))"
+expression: "\nimport dep.{wibble,wabble,type Wibble}\n\npub fn main() {\n  0\n}"
 ---
+import dep.{wibble,wabble,type Wibble}
+
+pub fn main() {
+  0
+}
+
+----- Completion content -----
 [
     CompletionItem {
         label: "myfun",
