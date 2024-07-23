@@ -1,9 +1,0 @@
----
-source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action(r#\"pub fn main() {\n    result.is_ok()\n}\"#, 1)"
----
-import result
-
-pub fn main() {
-    result.is_ok()
-}

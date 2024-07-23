@@ -1957,15 +1957,15 @@ Private types can only be used within the module that defines them.",
                 TypeError::UnknownModule {
                     location,
                     name,
-                    imported_modules,
+                    importable_modules,
                 } => Diagnostic {
                     title: "Unknown module".into(),
                     text: format!("No module has been found with the name `{name}`."),
-                    hint: None,
+                    hint: importable_modules.first().map(|importable| format!("Did you mean to import `{importable}`?")),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
-                            text: did_you_mean(name, imported_modules),
+                            text: None,
                             span: *location,
                         },
                         path: path.clone(),

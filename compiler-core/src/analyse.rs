@@ -292,7 +292,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_types_constructors: types_constructors,
             module_values: values,
             accessors,
-            import_suggestions,
             ..
         } = env;
 
@@ -803,7 +802,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             )
             .collect();
         let typed_parameters = environment
-            .get_type_constructor(&None, &name, location)
+            .get_type_constructor(&None, &name)
             .expect("Could not find preregistered type constructor ")
             .parameters
             .clone();
@@ -1340,7 +1339,7 @@ fn analyse_type_alias(t: UntypedTypeAlias, environment: &mut Environment<'_>) ->
     // analysis aims to be fault tolerant to get the best possible feedback for
     // the programmer in the language server, so the analyser gets here even
     // though there was previously errors.
-    let type_ = match environment.get_type_constructor(&None, &alias, location) {
+    let type_ = match environment.get_type_constructor(&None, &alias) {
         Ok(constructor) => constructor.type_.clone(),
         Err(_) => environment.new_generic_var(),
     };
@@ -1716,33 +1715,4 @@ fn sorted_type_aliases(aliases: &Vec<UntypedTypeAlias>) -> Result<Vec<&UntypedTy
         .iter()
         .sorted_by_key(|alias| sorted_deps.iter().position(|x| x == &alias.alias))
         .collect())
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ImportSuggestion {
-    pub location: SrcSpan,
-    pub suggestion: EcoString,
-}
-
-pub fn suggest_imports(
-    module_name: &str,
-    location: SrcSpan,
-    importable_modules: &[&EcoString],
-    import_suggestions: &mut Vec<ImportSuggestion>,
-) {
-    import_suggestions.extend(importable_modules.iter().filter_map(|&option| {
-        if option
-            .split('/')
-            .last()
-            .unwrap_or(option)
-            .eq_ignore_ascii_case(module_name)
-        {
-            Some(ImportSuggestion {
-                location,
-                suggestion: option.clone(),
-            })
-        } else {
-            None
-        }
-    }));
 }

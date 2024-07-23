@@ -1070,8 +1070,7 @@ pub fn main() {
 }
  "#,
         find_position_of("main").select_until(find_position_of("}").nth_occurrence(2)),
-    );
-}
+    );}
 
 #[test]
 fn use_label_shorthand_works_for_nested_record_updates() {
@@ -1252,24 +1251,139 @@ pub fn main() {
 }
 
 #[test]
-fn test_import_module() {
+fn test_import_module_from_function() {
+    let src = "
+pub fn main() {
+  result.is_ok()
+}
+";
+
     assert_code_action!(
-        "Import result",
-        r#"pub fn main() {
-        result.is_ok()
-    }"#,
+        "Import `result`",
+        TestProject::for_source(src).add_hex_module("result", "pub fn is_ok() {}"),
         find_position_of("result").select_until(find_position_of("."))
     );
 }
 
 #[test]
-fn test_import_path_module() {
+fn test_import_path_module_from_function() {
+    let src = r#"
+pub fn main() {
+  io.println("Hello, world!")
+}
+"#;
+
     assert_code_action!(
-        "import gleam/io",
-        r#"pub fn main() {
-    io.println("Hello, world!")
-}"#,
+        "Import `gleam/io`",
+        TestProject::for_source(src)
+            .add_hex_module("gleam/io", "pub fn println(message: String) {}"),
         find_position_of("io").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_import_module_from_type() {
+    let src = "type Wobble = wibble.Wubble";
+
+    assert_code_action!(
+        "Import `mod/wibble`",
+        TestProject::for_source(src).add_hex_module("mod/wibble", "pub type Wubble { Wubble }"),
+        find_position_of("wibble").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_import_module_from_constructor() {
+    let src = "
+pub fn main() {
+  let value = values.Value(10)
+}
+";
+
+    assert_code_action!(
+        "Import `values`",
+        TestProject::for_source(src).add_hex_module("values", "pub type Value { Value(Int) }"),
+        find_position_of("values").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_no_action_to_import_module_without_value() {
+    // The language server should not suggest a code action
+    // to import a module if it doesn't have a value with
+    // the same name as we are trying to access
+    let src = "
+pub fn main() {
+  io.hello_world()
+}
+";
+
+    let title = "Import `io`";
+
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module("io", "pub fn println() {}"),
+        find_position_of("io").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_no_action_to_import_module_without_type() {
+    let src = "type Name = int.String";
+
+    let title = "Import `int`";
+
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module("int", ""),
+        find_position_of("int").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_no_action_to_import_module_with_private_value() {
+    // The language server should not suggest a code action
+    // to import a module if the value we are trying to
+    // access is private.
+    let src = "
+pub fn main() {
+  mod.internal()
+}
+";
+
+    let title = "Import `mod`";
+
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module("mod", "fn internal() {}"),
+        find_position_of("mod").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_no_action_to_import_module_with_private_type() {
+    let src = "type T = module.T";
+
+    let title = "Import `module`";
+
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module("module", "type T { T }"),
+        find_position_of("module").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn test_no_action_to_import_module_with_constructor_named_same_as_type() {
+    let src = "type NotAType = shapes.Rectangle";
+
+    let title = "Import `shapes`";
+
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("shapes", "pub type Shape { Rectangle, Circle }"),
+        find_position_of("shapes").select_until(find_position_of("."))
     );
 }
 
