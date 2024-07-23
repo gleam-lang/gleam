@@ -98,7 +98,7 @@ expression: "completion(TestProject::for_source(code), Position::new(6, 23))"
         tags: None,
     },
     CompletionItem {
-        label: "wibble",
+        label: "wibble:",
         label_details: None,
         kind: Some(
             Field,
@@ -122,7 +122,7 @@ expression: "completion(TestProject::for_source(code), Position::new(6, 23))"
         tags: None,
     },
     CompletionItem {
-        label: "wobble",
+        label: "wobble:",
         label_details: None,
         kind: Some(
             Field,

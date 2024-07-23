@@ -665,7 +665,7 @@ where
                             .map(|a| Printer::new().pretty_print(a, 0))
                     });
                     CompletionItem {
-                        label: label.into(),
+                        label: format!("{label}:"),
                         detail,
                         kind: Some(CompletionItemKind::FIELD),
                         ..Default::default()
