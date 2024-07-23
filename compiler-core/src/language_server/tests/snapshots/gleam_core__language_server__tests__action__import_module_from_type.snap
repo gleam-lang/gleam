@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: type Wobble = wibble.Wubble
+---
+----- BEFORE ACTION
+type Wobble = wibble.Wubble
+              ▔▔▔▔▔▔↑      
+
+
+----- AFTER ACTION
+import mod/wibble
+
+type Wobble = wibble.Wubble

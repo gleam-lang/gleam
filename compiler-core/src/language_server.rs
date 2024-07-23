@@ -4,6 +4,7 @@ mod completer;
 mod engine;
 mod feedback;
 mod files;
+mod imports;
 mod messages;
 mod progress;
 mod router;

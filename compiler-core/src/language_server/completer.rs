@@ -23,10 +23,10 @@ use crate::{
 
 use super::{
     compiler::LspProjectCompiler,
-    engine::{
+    files::FileSystemProxy,
+    imports::{
         add_newlines_after_import, first_import_in_module, get_import, get_import_edit, Newlines,
     },
-    files::FileSystemProxy,
     DownloadDependencies, MakeLocker,
 };
 

@@ -9,6 +9,8 @@ use crate::{
     },
 };
 
+use super::Imported;
+
 #[derive(Debug)]
 pub struct Importer<'context, 'problems> {
     origin: Origin,
@@ -53,7 +55,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 name: name.clone(),
                 importable_modules: self
                     .environment
-                    .get_cimportable_modules(&name, Imported::Module),
+                    .get_importable_modules(&name, Imported::Module),
             });
             return;
         };

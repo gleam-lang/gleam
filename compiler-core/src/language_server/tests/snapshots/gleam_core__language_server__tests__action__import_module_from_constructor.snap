@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let value = values.Value(10)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let value = values.Value(10)
+              ▔▔▔▔▔▔↑         
+}
+
+
+----- AFTER ACTION
+import values
+
+pub fn main() {
+  let value = values.Value(10)
+}

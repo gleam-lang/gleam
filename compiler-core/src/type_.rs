@@ -21,7 +21,6 @@ pub use prelude::*;
 use serde::Serialize;
 
 use crate::{
-    analyse::name::NameCorrection,
     ast::{
         ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
         SrcSpan, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
@@ -602,7 +601,6 @@ pub struct ModuleInterface {
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
-    pub name_corrections: Vec<NameCorrection>,
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
@@ -700,7 +698,6 @@ impl ModuleInterface {
             values: Default::default(),
             accessors: Default::default(),
             unused_imports: Default::default(),
-            name_corrections: Default::default(),
             is_internal: false,
             line_numbers,
             src_path,

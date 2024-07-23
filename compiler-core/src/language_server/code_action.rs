@@ -14,6 +14,7 @@ use crate::{
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
     type_::{FieldMap, ModuleValueConstructor, Type, TypedCallArg},
+    Error,
 };
 use ecow::EcoString;
 use im::HashMap;
@@ -22,6 +23,7 @@ use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
 
 use super::{
     engine::{overlaps, within},
+    imports::{add_newlines_after_import, first_import_in_module, get_import_edit},
     src_span_to_lsp_range,
 };
 
@@ -633,5 +635,94 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // we find (the outermost one) and have to keep traversing it in case
         // we're inside a nested call.
         visit_typed_expr_call(self, location, type_, fun, args)
+    }
+}
+
+struct MissingImport {
+    location: SrcSpan,
+    suggestions: Vec<EcoString>,
+}
+
+pub fn code_action_import_module(
+    module: &Module,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+
+    let missing_imports: Vec<_> = errors
+        .into_iter()
+        .filter_map(|e| match e {
+            crate::type_::Error::UnknownModule {
+                location,
+                name,
+                importable_modules,
+            } => suggest_imports(name, *location, importable_modules),
+            _ => None,
+        })
+        .collect();
+
+    if missing_imports.is_empty() {
+        return;
+    }
+
+    let line_numbers = LineNumbers::new(&module.code);
+    let (first_import_pos, first_is_import) = first_import_in_module(module, &line_numbers);
+    let after_import_newlines = add_newlines_after_import(
+        first_import_pos,
+        first_is_import,
+        &line_numbers,
+        &module.code,
+    );
+
+    for missing_import in missing_imports {
+        let range = src_span_to_lsp_range(missing_import.location, &line_numbers);
+        if !overlaps(params.range, range) {
+            continue;
+        }
+
+        for suggestion in missing_import.suggestions {
+            let edits = vec![get_import_edit(
+                first_import_pos,
+                &suggestion,
+                &after_import_newlines,
+            )];
+
+            CodeActionBuilder::new(&format!("Import `{}`", suggestion))
+                .kind(CodeActionKind::QUICKFIX)
+                .changes(uri.clone(), edits)
+                .preferred(true)
+                .push_to(actions);
+        }
+    }
+}
+
+fn suggest_imports(
+    module_name: &str,
+    location: SrcSpan,
+    importable_modules: &[EcoString],
+) -> Option<MissingImport> {
+    let suggestions: Vec<_> = importable_modules
+        .iter()
+        .filter_map(|option| {
+            if option.split('/').last().unwrap_or(option) == module_name {
+                Some(option.clone())
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if suggestions.is_empty() {
+        None
+    } else {
+        Some(MissingImport {
+            location,
+            suggestions,
+        })
     }
 }

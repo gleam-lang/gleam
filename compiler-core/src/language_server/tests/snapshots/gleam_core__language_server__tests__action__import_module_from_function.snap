@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  result.is_ok()\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  result.is_ok()
+  ▔▔▔▔▔▔↑       
+}
+
+
+----- AFTER ACTION
+import result
+
+pub fn main() {
+  result.is_ok()
+}

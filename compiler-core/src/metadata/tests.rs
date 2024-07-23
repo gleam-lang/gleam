@@ -38,7 +38,6 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -94,7 +93,6 @@ fn empty_module() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
@@ -114,7 +112,6 @@ fn with_line_numbers() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(
             "const a = 1
@@ -150,7 +147,6 @@ fn module_with_private_type() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
@@ -172,7 +168,6 @@ fn module_with_unused_import() {
             SrcSpan { start: 0, end: 10 },
             SrcSpan { start: 13, end: 42 },
         ],
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -205,7 +200,6 @@ fn module_with_app_type() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
@@ -237,7 +231,6 @@ fn module_with_fn_type() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
@@ -269,7 +262,6 @@ fn module_with_tuple_type() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
@@ -307,7 +299,6 @@ fn module_with_generic_type() {
             types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             unused_imports: Vec::new(),
-            name_corrections: Vec::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
@@ -345,7 +336,6 @@ fn module_with_type_links() {
             types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             unused_imports: Vec::new(),
-            name_corrections: Vec::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
@@ -383,7 +373,6 @@ fn module_with_type_constructor_documentation() {
             types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             unused_imports: Vec::new(),
-            name_corrections: Vec::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
@@ -424,7 +413,6 @@ fn module_with_type_constructor_origin() {
             types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             unused_imports: Vec::new(),
-            name_corrections: Vec::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
@@ -455,7 +443,6 @@ fn module_type_to_constructors_mapping() {
         )]
         .into(),
         unused_imports: Default::default(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -475,7 +462,6 @@ fn module_fn_value() {
         name: "a".into(),
         types: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
@@ -522,7 +508,6 @@ fn deprecated_module_fn_value() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -569,7 +554,6 @@ fn private_module_fn_value() {
         name: "a".into(),
         types: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
@@ -618,7 +602,6 @@ fn module_fn_value_regression() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -665,7 +648,6 @@ fn module_fn_value_with_field_map() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -714,7 +696,6 @@ fn record_value() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -758,7 +739,6 @@ fn record_value_with_field_map() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -804,7 +784,6 @@ fn accessors() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: [
             (
                 "one".into(),
@@ -1018,7 +997,6 @@ fn constant_var() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [
             (
@@ -1254,7 +1232,6 @@ fn deprecated_type() {
         types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
@@ -1273,7 +1250,6 @@ fn module_fn_value_with_external_implementations() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -1320,7 +1296,6 @@ fn internal_module_fn() {
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -1387,7 +1362,6 @@ fn type_variable_ids_in_constructors_are_shared() {
             },
         )]),
         unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
         accessors: HashMap::new(),
         values: [].into(),
         line_numbers: LineNumbers::new(""),
