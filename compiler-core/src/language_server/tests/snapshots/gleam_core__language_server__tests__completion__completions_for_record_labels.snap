@@ -7,7 +7,7 @@ pub type Wibble {
 }
   
 fn fun() { // completion inside parens below includes labels
-  let wibble = Wibble()
+  let wibble = Wibble(|)
 }
 
 
@@ -43,11 +43,11 @@ fn fun() { // completion inside parens below includes labels
                     range: Range {
                         start: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                         end: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                     },
                     new_text: "Wibble",
@@ -90,11 +90,11 @@ fn fun() { // completion inside parens below includes labels
                     range: Range {
                         start: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                         end: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                     },
                     new_text: "fun",

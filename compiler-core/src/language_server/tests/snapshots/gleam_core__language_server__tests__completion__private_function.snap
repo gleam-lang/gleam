@@ -2,6 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\nfn private() {\n  1\n}\n"
 ---
+|
 fn private() {
   1
 }

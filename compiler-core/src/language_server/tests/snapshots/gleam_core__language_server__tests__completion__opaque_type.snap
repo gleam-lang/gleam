@@ -2,6 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\npub opaque type Wibble {\n  Wobble\n}\n"
 ---
+|
 pub opaque type Wibble {
   Wobble
 }

@@ -9,7 +9,7 @@ pub type Wibble {
   
 fn fun() {
   let wibble = Wibble(1, 2)
-  wibble.wobble
+  wibble.wobble|
 }
 
 

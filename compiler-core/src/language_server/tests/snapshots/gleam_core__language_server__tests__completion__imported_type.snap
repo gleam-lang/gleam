@@ -5,7 +5,7 @@ expression: "import dep\n\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 import dep
 
 pub fn wibble(
-  _: String,
+|  _: String,
 ) -> Nil {
   Nil
 }

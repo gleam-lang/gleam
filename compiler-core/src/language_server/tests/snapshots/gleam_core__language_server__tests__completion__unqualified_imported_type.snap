@@ -5,7 +5,7 @@ expression: "import dep.{type Zoo}\n\npub fn wibble(\n  _: String,\n) -> Nil {\n
 import dep.{type Zoo}
 
 pub fn wibble(
-  _: String,
+|  _: String,
 ) -> Nil {
   Nil
 }

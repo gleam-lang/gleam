@@ -6,7 +6,7 @@ import dep
 import dep2
 
 pub fn wibble(
-  _: dep.Zoo,
+  _: dep.Zoo|,
 ) -> Nil {
   Nil
 }

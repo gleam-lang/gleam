@@ -4,7 +4,7 @@ expression: "\n@internal pub type Alias = Result(Int, String)\n@internal pub typ
 ---
 @internal pub type Alias = Result(Int, String)
 @internal pub type AnotherType {
-  Wibble
+|  Wibble
 }
 
 

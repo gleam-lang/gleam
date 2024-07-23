@@ -7,7 +7,7 @@ fn wibble(wibble arg1: String, wobble arg2: String) {
 }
   
 fn fun() { // completion inside parens below includes labels
-  let wibble = wibble()
+  let wibble = wibble(|)
 }
 
 
@@ -43,11 +43,11 @@ fn fun() { // completion inside parens below includes labels
                     range: Range {
                         start: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                         end: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                     },
                     new_text: "fun",
@@ -90,11 +90,11 @@ fn fun() { // completion inside parens below includes labels
                     range: Range {
                         start: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                         end: Position {
                             line: 6,
-                            character: 23,
+                            character: 22,
                         },
                     },
                     new_text: "wibble",

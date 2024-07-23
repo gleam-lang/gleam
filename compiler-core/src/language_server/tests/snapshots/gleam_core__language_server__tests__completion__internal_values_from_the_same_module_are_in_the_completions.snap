@@ -2,6 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\n@external(erlang, \"rand\", \"uniform\")\n@internal pub fn random_float() -> Float\n@internal pub fn main() { 0 }\n@internal pub type Wibble { Wobble }\n@internal pub const wibble = 1\n"
 ---
+|
 @external(erlang, "rand", "uniform")
 @internal pub fn random_float() -> Float
 @internal pub fn main() { 0 }

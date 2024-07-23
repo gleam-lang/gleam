@@ -5,7 +5,7 @@ expression: "\ntype Zoo = Int\n\npub fn wibble(\n  x: String,\n) -> String {\n  
 type Zoo = Int
 
 pub fn wibble(
-  x: String,
+|  x: String,
 ) -> String {
   "ok"
 }

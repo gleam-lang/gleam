@@ -2,6 +2,9 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\n"
 ---
+|
+
+
 ----- Completion content -----
 [
     CompletionItem {
