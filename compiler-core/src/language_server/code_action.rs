@@ -13,10 +13,7 @@ use crate::{
 use ecow::EcoString;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
 
-use super::{
-    engine::{overlaps, overlaps_including_end},
-    src_span_to_lsp_range,
-};
+use super::{engine::overlaps, src_span_to_lsp_range};
 
 #[derive(Debug)]
 pub struct CodeActionBuilder {
@@ -465,7 +462,7 @@ impl<'a> LabelShorthandSyntax<'a> {
 impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
     fn visit_typed_call_arg(&mut self, arg: &'ast crate::type_::TypedCallArg) {
         let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
-        let is_selected = overlaps_including_end(arg_range, self.params.range);
+        let is_selected = overlaps(arg_range, self.params.range);
 
         match arg {
             CallArg {
@@ -481,7 +478,7 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
 
     fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
         let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
-        let is_selected = overlaps_including_end(arg_range, self.params.range);
+        let is_selected = overlaps(arg_range, self.params.range);
 
         match arg {
             CallArg {
@@ -497,7 +494,7 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
 
     fn visit_typed_record_update_arg(&mut self, arg: &'ast TypedRecordUpdateArg) {
         let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
-        let is_selected = overlaps_including_end(arg_range, self.params.range);
+        let is_selected = overlaps(arg_range, self.params.range);
 
         match arg {
             TypedRecordUpdateArg {
