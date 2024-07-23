@@ -1295,7 +1295,7 @@ fn infer_module_test26() {
 }
 
 #[test]
-fn infer_punned_labelled_pattern() {
+fn infer_label_shorthand_pattern() {
     assert_module_infer!(
         "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
          pub fn third(t) { let Tup(_, _, third:) = t third }",
@@ -2066,7 +2066,7 @@ fn block_maths() {
 }
 
 #[test]
-fn infer_punned_call_arg() {
+fn infer_label_shorthand_in_call_arg() {
     assert_module_infer!(
         "
     pub fn main() {
@@ -2086,7 +2086,7 @@ fn infer_punned_call_arg() {
 }
 
 #[test]
-fn infer_punned_constructor_arg() {
+fn infer_label_shorthand_in_constructor_arg() {
     assert_module_infer!(
         "
     pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
@@ -2105,7 +2105,7 @@ fn infer_punned_constructor_arg() {
 }
 
 #[test]
-fn infer_punned_constant_constructor_arg() {
+fn infer_label_shorthand_in_constant_constructor_arg() {
     assert_module_infer!(
         "
     pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
@@ -2126,7 +2126,7 @@ fn infer_punned_constant_constructor_arg() {
 }
 
 #[test]
-fn infer_punned_pattern_arg() {
+fn infer_label_shorthand_in_pattern_arg() {
     assert_module_infer!(
         "
     pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Int) }
@@ -2145,7 +2145,7 @@ fn infer_punned_pattern_arg() {
 }
 
 #[test]
-fn infer_punned_record_update_arg() {
+fn infer_label_shorthand_in_record_update_arg() {
     assert_module_infer!(
         "
     pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }

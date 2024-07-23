@@ -6231,7 +6231,7 @@ fn comment_after_case_branch_case() {
 }
 
 #[test]
-fn punned_call_arg_is_split_like_regular_labelled_args() {
+fn label_shorthand_call_arg_is_split_like_regular_labelled_args() {
     assert_format!(
         r#"pub fn main() {
   wibble(
@@ -6246,7 +6246,7 @@ fn punned_call_arg_is_split_like_regular_labelled_args() {
 }
 
 #[test]
-fn commented_punned_call_arg_is_split_like_regular_labelled_args() {
+fn commented_label_shorthand_call_arg_is_split_like_regular_labelled_args() {
     assert_format!(
         r#"pub fn main() {
   wibble(
@@ -6263,7 +6263,7 @@ fn commented_punned_call_arg_is_split_like_regular_labelled_args() {
 }
 
 #[test]
-fn punned_pattern_arg_is_split_like_regular_labelled_patterns() {
+fn label_shorthand_pattern_arg_is_split_like_regular_labelled_patterns() {
     assert_format!(
         r#"pub fn main() {
   let Wibble(
@@ -6278,7 +6278,7 @@ fn punned_pattern_arg_is_split_like_regular_labelled_patterns() {
 }
 
 #[test]
-fn not_punned_record_pattern() {
+fn record_pattern_with_no_label_shorthand() {
     assert_format!(
         r#"pub fn main() {
   let Wibble(x: x) = todo
@@ -6288,7 +6288,7 @@ fn not_punned_record_pattern() {
 }
 
 #[test]
-fn not_punned_record() {
+fn record_with_no_label_shorthand() {
     assert_format!(
         r#"pub fn main() {
   Wibble(x: x)
@@ -6298,7 +6298,7 @@ fn not_punned_record() {
 }
 
 #[test]
-fn not_punned_function() {
+fn function_with_no_label_shorthand() {
     assert_format!(
         r#"pub fn main() {
   wibble(x: x)

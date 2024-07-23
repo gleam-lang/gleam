@@ -750,7 +750,7 @@ pub fn main() {
 }
 
 #[test]
-fn hover_punned_call_arg() {
+fn hover_label_shorthand_in_call_arg() {
     assert_hover!(
         "
 fn wibble(arg1 arg1: Int, arg2 arg2: Bool) { Nil }
@@ -766,7 +766,7 @@ fn main() {
 }
 
 #[test]
-fn hover_punned_pattern_call_arg() {
+fn hover_label_shorthand_in_pattern_call_arg() {
     assert_hover!(
         "
 pub type Wibble { Wibble(arg1: Int, arg2: Bool) }
@@ -784,7 +784,7 @@ pub fn main() {
 }
 
 #[test]
-fn hover_punned_pattern_call_arg_2() {
+fn hover_label_shorthand_in_pattern_call_arg_2() {
     assert_hover!(
         "
 pub type Wibble { Wibble(arg1: Int, arg2: Bool) }

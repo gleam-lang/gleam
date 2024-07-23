@@ -362,7 +362,7 @@ pub fn main() {
 }
 
 #[test]
-fn function_call_incorrect_arity_with_punned_label_fault_tolerance() {
+fn function_call_incorrect_arity_with_label_shorthand_fault_tolerance() {
     assert_module_error!(
         r#"
 fn wibble(wibble arg1: fn() -> Int, wobble arg2: Int) -> Int {
@@ -393,7 +393,7 @@ pub fn main() {
 }
 
 #[test]
-fn function_call_incorrect_arity_with_punned_labels_fault_tolerance2() {
+fn function_call_incorrect_arity_with_label_shorthand_fault_tolerance2() {
     assert_module_error!(
         r#"
 fn wibble(wibble arg1: fn() -> Int, wobble arg2: Int, wabble arg3: Int) -> Int {

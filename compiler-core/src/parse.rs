@@ -1639,7 +1639,7 @@ where
                         value,
                     }))
                 } else {
-                    // Punned argument.
+                    // Argument defined with a label shorthand.
                     Ok(Some(CallArg {
                         implicit: None,
                         location: SrcSpan { start, end },
@@ -1687,7 +1687,7 @@ where
                     value,
                 }))
             } else {
-                // A punned argument.
+                // Argument defined with a label shorthand.
                 Ok(Some(UntypedRecordUpdateArg {
                     label: label.clone(),
                     location: SrcSpan { start, end },
@@ -2001,7 +2001,7 @@ where
 
             Ok(Some(arg))
         } else if let Some((start, label, end)) = label {
-            // A punned argument.
+            // Argument defined with a label shorthand.
             Ok(Some(ParserArg::Arg(Box::new(CallArg {
                 implicit: None,
                 label: Some(label.clone()),
@@ -2815,7 +2815,7 @@ where
                 }))
             }
         } else if let Some((start, label, end)) = label {
-            // A punned argument.
+            // Argument defined with a label shorthand.
             Ok(Some(CallArg {
                 implicit: None,
                 location: SrcSpan { start, end },
