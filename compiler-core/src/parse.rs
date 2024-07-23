@@ -1984,17 +1984,31 @@ where
                 }
             };
             Ok(Some(ParserArg::Arg(Box::new(arg))))
-        } else if let Some((start, name, end)) = self.maybe_discard_name() {
-            let arg = if let Some((start, label, _)) = label {
+        } else if let Some((name_start, name, name_end)) = self.maybe_discard_name() {
+            let arg = if let Some((label_start, label, _)) = label {
                 ParserArg::Hole {
                     label: Some(label),
-                    location: SrcSpan { start, end },
+                    arg_location: SrcSpan {
+                        start: label_start,
+                        end: name_end,
+                    },
+                    discard_location: SrcSpan {
+                        start: name_start,
+                        end: name_end,
+                    },
                     name,
                 }
             } else {
                 ParserArg::Hole {
                     label: None,
-                    location: SrcSpan { start, end },
+                    arg_location: SrcSpan {
+                        start: name_start,
+                        end: name_end,
+                    },
+                    discard_location: SrcSpan {
+                        start: name_start,
+                        end: name_end,
+                    },
                     name,
                 }
             };
@@ -3830,7 +3844,10 @@ pub enum ParserArg {
     Arg(Box<CallArg<UntypedExpr>>),
     Hole {
         name: EcoString,
-        location: SrcSpan,
+        /// The whole span of the argument.
+        arg_location: SrcSpan,
+        /// Just the span of the ignore name.
+        discard_location: SrcSpan,
         label: Option<EcoString>,
     },
 }
@@ -3849,12 +3866,13 @@ pub fn make_call(
         .map(|a| match a {
             ParserArg::Arg(arg) => Ok(*arg),
             ParserArg::Hole {
-                location,
+                arg_location,
+                discard_location,
                 name,
                 label,
             } => {
                 num_holes += 1;
-                hole_location = Some(location);
+                hole_location = Some(arg_location);
 
                 if name != "_" {
                     return parse_error(
@@ -3863,16 +3881,16 @@ pub fn make_call(
                             expected: vec!["An expression".into(), "An underscore".into()],
                             hint: None,
                         },
-                        location,
+                        arg_location,
                     );
                 }
 
                 Ok(CallArg {
                     implicit: None,
                     label,
-                    location,
+                    location: arg_location,
                     value: UntypedExpr::Var {
-                        location,
+                        location: discard_location,
                         name: CAPTURE_VARIABLE.into(),
                     },
                 })
