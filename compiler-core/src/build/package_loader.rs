@@ -178,13 +178,15 @@ where
         // Load warnings
         if self.cached_warnings.should_use() {
             let path = dir.join(name.as_ref()).with_extension("cache_warnings");
-            let bytes = self.io.read_bytes(&path)?;
-            module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
-                kind: FileKind::File,
-                action: FileIoAction::Parse,
-                path,
-                err: Some(e.to_string()),
-            })?;
+            if self.io.exists(&path) {
+                let bytes = self.io.read_bytes(&path)?;
+                module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
+                    kind: FileKind::File,
+                    action: FileIoAction::Parse,
+                    path,
+                    err: Some(e.to_string()),
+                })?;
+            }
         }
 
         Ok(module)
