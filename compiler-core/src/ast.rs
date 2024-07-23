@@ -1311,6 +1311,11 @@ impl TypedRecordUpdateArg {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
+
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool {
+        self.value.location() == self.location
+    }
 }
 
 pub type MultiPattern<Type> = Vec<Pattern<Type>>;

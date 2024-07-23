@@ -29,7 +29,9 @@ use lsp_types::{
 use std::sync::Arc;
 
 use super::{
-    code_action::{CodeActionBuilder, LetAssertToCase, RedundantTupleInCaseSubject},
+    code_action::{
+        CodeActionBuilder, LabelShorthandSyntax, LetAssertToCase, RedundantTupleInCaseSubject,
+    },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
@@ -281,6 +283,7 @@ where
             code_action_fix_names(module, &params, &mut actions);
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
+            actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
                 None
@@ -878,9 +881,23 @@ pub fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
     within(a.start, b) || within(a.end, b) || within(b.start, a) || within(b.end, a)
 }
 
-// Returns true if a position is within a range
+// Returns true if any part of either range overlaps with the other including
+// the end of the range.
+pub fn overlaps_including_end(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+    within_including_end(a.start, b)
+        || within_including_end(a.end, b)
+        || within_including_end(b.start, a)
+        || within_including_end(b.end, a)
+}
+
+// Returns true if a position is within a range.
 fn within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
     position >= range.start && position < range.end
+}
+
+// Returns true if a position is within a range, including its end.
+fn within_including_end(position: lsp_types::Position, range: lsp_types::Range) -> bool {
+    position >= range.start && position <= range.end
 }
 
 fn code_action_unused_imports(

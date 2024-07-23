@@ -53,6 +53,7 @@ fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_type
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 const CONVERT_TO_CASE: &str = "Convert to case";
+const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
 
 fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
     let response = engine_response(src, line)
@@ -60,7 +61,7 @@ fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> Stri
         .unwrap()
         .and_then(|actions| actions.into_iter().find(|action| action.title == title));
     if let Some(action) = response {
-        apply_code_action(src, &test_file_url(), &action)
+        apply_code_action(src, &test_file_url(), action)
     } else {
         panic!("No code action produced by the engine")
     }
@@ -72,14 +73,14 @@ fn apply_first_code_action(src: &str, line: u32) -> String {
         .unwrap()
         .and_then(|actions| actions.into_iter().nth(0));
     if let Some(action) = response {
-        apply_code_action(src, &test_file_url(), &action)
+        apply_code_action(src, &test_file_url(), action)
     } else {
         panic!("No code action produced by the engine")
     }
 }
 
-fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> String {
-    match &action.edit {
+fn apply_code_action(src: &str, url: &Url, action: lsp_types::CodeAction) -> String {
+    match action.edit {
         Some(WorkspaceEdit { changes, .. }) => match changes {
             Some(changes) => apply_code_edit(src, url, changes),
             None => panic!("No text edit found"),
@@ -92,15 +93,16 @@ fn apply_code_action(src: &str, url: &Url, action: &lsp_types::CodeAction) -> St
 fn apply_code_edit(
     src: &str,
     url: &Url,
-    changes: &HashMap<Url, Vec<lsp_types::TextEdit>>,
+    changes: HashMap<Url, Vec<lsp_types::TextEdit>>,
 ) -> String {
     let mut result = src.to_string();
     let line_numbers = LineNumbers::new(src);
     let mut offset = 0;
-    for (change_url, change) in changes {
-        if url != change_url {
+    for (change_url, mut change) in changes {
+        if *url != change_url {
             panic!("Unknown url {}", change_url)
         }
+        change.sort_by_key(|edit| (edit.range.start.line, edit.range.start.character));
         for edit in change {
             let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
                 as i32
@@ -752,7 +754,7 @@ fn test_convert_outer_let_assert_to_case() {
 }
 
 #[test]
-fn test_convert_assert_custom_type_with_punned_labels_to_case() {
+fn test_convert_assert_custom_type_with_label_shorthands_to_case() {
     insta::assert_snapshot!(apply_first_code_action_with_title(
         "
 pub type Wibble { Wibble(arg: Int, arg2: Float) }
@@ -763,6 +765,84 @@ pub fn main() {
         3,
         CONVERT_TO_CASE
     ));
+}
+
+#[test]
+fn label_shorthand_action_works_on_labelled_call_args() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let arg1 = 1
+    let arg2 = 2
+    wibble(arg2: arg2, arg1: arg1)
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+"#,
+        3,
+        USE_LABEL_SHORTHAND_SYNTAX
+    ));
+}
+
+#[test]
+fn label_shorthand_action_works_on_labelled_constructor_call_args() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let arg1 = 1
+    let arg2 = 2
+    Wibble(arg2: arg2, arg1: arg1)
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+"#,
+        3,
+        USE_LABEL_SHORTHAND_SYNTAX
+    ));
+}
+
+#[test]
+fn label_shorthand_action_works_on_labelled_update_call_args() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let arg1 = 1
+    Wibble(..todo, arg1: arg1)
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+"#,
+        2,
+        USE_LABEL_SHORTHAND_SYNTAX
+    ));
+}
+
+#[test]
+fn label_shorthand_action_works_on_labelled_pattern_call_args() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        r#"pub fn main() {
+    let Wibble(arg1: arg1, arg2: arg2) = todo
+    arg1 + arg2
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+"#,
+        1,
+        USE_LABEL_SHORTHAND_SYNTAX
+    ));
+}
+
+#[test]
+fn label_shorthand_action_doesnt_come_up_for_arguments_with_different_label() {
+    let src = r#"pub fn main() {
+let Wibble(arg1: arg_1, arg2: arg_2) = todo
+arg_1 + arg_2
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+"#;
+
+    assert!(engine_response(src, 1)
+        .result
+        .expect("server response")
+        .is_none())
 }
 
 /* TODO: implement qualified unused location

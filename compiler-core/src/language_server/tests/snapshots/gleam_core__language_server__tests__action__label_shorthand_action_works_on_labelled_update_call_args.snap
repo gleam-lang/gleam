@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "apply_first_code_action_with_title(r#\"pub fn main() {\n    let arg1 = 1\n    Wibble(..todo, arg1: arg1)\n}\n\npub type Wibble { Wibble(arg1: Int, arg2: Int) }\n\"#,\n    2, USE_LABEL_SHORTHAND_SYNTAX)"
+---
+pub fn main() {
+    let arg1 = 1
+    Wibble(..todo, arg1: )
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
