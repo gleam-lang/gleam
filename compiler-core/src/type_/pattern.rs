@@ -19,7 +19,7 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
-    errors: &'a mut Vec<Error>,
+    problems: &'a mut Problems,
     name_corrections: &'a mut Vec<NameCorrection>,
 }
 
@@ -32,7 +32,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
         hydrator: &'a Hydrator,
-        errors: &'a mut Vec<Error>,
+        problems: &'a mut Problems,
         name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         Self {
@@ -40,7 +40,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
-            errors,
+            problems,
             name_corrections,
         }
     }
@@ -56,8 +56,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
-                self.environment
-                    .init_usage(name.into(), EntityKind::Variable, location);
+                self.environment.init_usage(
+                    name.into(),
+                    EntityKind::Variable {
+                        how_to_ignore: Some(format!("_{name}").into()),
+                    },
+                    location,
+                    self.problems,
+                );
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
@@ -234,6 +240,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::Variable { name, location, .. } => {
                 self.insert_variable(&name, type_.clone(), location)
                     .map_err(|e| convert_unify_error(e, location))?;
+
                 Ok(Pattern::Variable {
                     type_,
                     name,
@@ -591,7 +598,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 match constructor_deprecation {
                     Deprecation::NotDeprecated => {}
                     Deprecation::Deprecated { message } => {
-                        self.environment.warnings.emit(Warning::DeprecatedItem {
+                        self.problems.warning(Warning::DeprecatedItem {
                             location,
                             message: message.clone(),
                             layer: Layer::Value,
@@ -676,7 +683,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
-            self.errors.push(error);
+            self.problems.error(error);
             self.name_corrections
                 .push(correct_name_case(location, name, kind));
         }

@@ -206,8 +206,8 @@ pub(crate) struct ExprTyper<'a, 'b> {
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 
-    // Accumulated errors found while typing the expression
-    pub(crate) errors: &'a mut Vec<Error>,
+    // Accumulated errors and warnings found while typing the expression
+    pub(crate) problems: &'a mut Problems,
     pub(crate) name_corrections: &'a mut Vec<NameCorrection>,
 }
 
@@ -215,7 +215,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
-        errors: &'a mut Vec<Error>,
+        problems: &'a mut Problems,
         name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
@@ -239,7 +239,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
-            errors,
+            problems,
             name_corrections,
         }
     }
@@ -257,13 +257,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Close scope, discarding any scope local state
         self.environment
-            .close_scope(environment_reset_data, result.is_ok());
+            .close_scope(environment_reset_data, result.is_ok(), self.problems);
         self.hydrator.close_scope(hydrator_reset_data);
         result
     }
 
     pub fn type_from_ast(&mut self, ast: &TypeAst) -> Result<Arc<Type>, Error> {
-        self.hydrator.type_from_ast(ast, self.environment)
+        self.hydrator
+            .type_from_ast(ast, self.environment, self.problems)
     }
 
     fn instantiate(&mut self, t: Arc<Type>, ids: &mut im::HashMap<u64, Arc<Type>>) -> Arc<Type> {
@@ -409,15 +410,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let type_ = self.new_unbound_var();
 
         // Emit a warning that there is a todo in the code.
-        self.environment.warnings.emit(Warning::Todo {
+        self.problems.warning(Warning::Todo {
             kind,
             location,
             typ: type_.clone(),
         });
-
-        // We've seen a todo, so register that fact. This can be used by higher
-        // level tooling such as the build tool when publishing a package.
-        self.environment.todo_encountered = true;
 
         let message = message
             .map(|message| {
@@ -470,12 +467,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // this kind.
         if !self.already_warned_for_unreachable_code {
             self.already_warned_for_unreachable_code = true;
-            self.environment
-                .warnings
-                .emit(Warning::UnreachableCodeAfterPanic {
-                    location,
-                    panic_position,
-                })
+            self.problems.warning(Warning::UnreachableCodeAfterPanic {
+                location,
+                panic_position,
+            })
         }
     }
 
@@ -508,17 +503,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     /// e.g. because it's of the `Result` type (errors should be handled)
     fn expression_discarded(&mut self, discarded: &TypedExpr) {
         if discarded.is_literal() {
-            self.environment.warnings.emit(Warning::UnusedLiteral {
+            self.problems.warning(Warning::UnusedLiteral {
                 location: discarded.location(),
             });
         } else if discarded.type_().is_result() {
-            self.environment
-                .warnings
-                .emit(Warning::ImplicitlyDiscardedResult {
-                    location: discarded.location(),
-                });
+            self.problems.warning(Warning::ImplicitlyDiscardedResult {
+                location: discarded.location(),
+            });
         } else if discarded.is_pure_value_constructor() {
-            self.environment.warnings.emit(Warning::UnusedValue {
+            self.problems.warning(Warning::UnusedValue {
                 location: discarded.location(),
             })
         }
@@ -539,8 +532,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     // Helper to push a new error to the errors list with rigid names.
     fn error_with_rigid_names(&mut self, error: Error) {
         let rigid_names = self.hydrator.rigid_names();
-        self.errors
-            .push(error.with_unify_error_rigid_names(&rigid_names));
+        self.problems
+            .error(error.with_unify_error_rigid_names(&rigid_names));
     }
 
     // Helper to push a new error to the errors list and return an invalid expression.
@@ -694,9 +687,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         unify(bool(), value.type_()).map_err(|e| convert_unify_error(e, value.location()))?;
 
         if let TypedExpr::NegateBool { .. } = value {
-            self.environment
-                .warnings
-                .emit(Warning::UnnecessaryDoubleBoolNegation { location });
+            self.problems
+                .warning(Warning::UnnecessaryDoubleBoolNegation { location });
         }
 
         Ok(TypedExpr::NegateBool {
@@ -716,16 +708,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         if let TypedExpr::Int { value: ref v, .. } = value {
             if v.starts_with('-') {
-                self.environment
-                    .warnings
-                    .emit(Warning::UnnecessaryDoubleIntNegation { location });
+                self.problems
+                    .warning(Warning::UnnecessaryDoubleIntNegation { location });
             }
         }
 
         if let TypedExpr::NegateInt { .. } = value {
-            self.environment
-                .warnings
-                .emit(Warning::UnnecessaryDoubleIntNegation { location });
+            self.problems
+                .warning(Warning::UnnecessaryDoubleIntNegation { location });
         }
 
         Ok(TypedExpr::NegateInt {
@@ -744,7 +734,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
-            check_argument_names(names, self.errors, self.name_corrections);
+            check_argument_names(names, self.problems, self.name_corrections);
         }
 
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
@@ -829,14 +819,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }),
                 _ => None,
             };
-            self.environment
-                .warnings
-                .emit(Warning::TodoOrPanicUsedAsFunction {
-                    kind,
-                    location,
-                    args_location,
-                    args: args.len(),
-                });
+            self.problems.warning(Warning::TodoOrPanicUsedAsFunction {
+                kind,
+                location,
+                args_location,
+                args: args.len(),
+            });
         }
 
         TypedExpr::Call {
@@ -987,7 +975,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, Some((Ok(module_access), _))) => module_access,
             // Module access was attempted but failed and it does not shadow an existing variable
             (_, Some((Err(module_access_err), false))) => {
-                self.errors.push(module_access_err);
+                self.problems.error(module_access_err);
                 TypedExpr::Invalid {
                     location: label_location,
                     typ: self.new_unbound_var(),
@@ -995,7 +983,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             // In any other case use the record access for the error
             (Err(record_access_err), _) => {
-                self.errors.push(record_access_err);
+                self.problems.error(record_access_err);
                 match record {
                     // If the record is valid then use a placeholder access
                     // This allows autocomplete to know a record access is being attempted
@@ -1251,9 +1239,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         // If we've gotten this far, go ahead and emit the warning.
-        self.environment
-            .warnings
-            .emit(Warning::InefficientEmptyListCheck { location, kind });
+        self.problems
+            .warning(Warning::InefficientEmptyListCheck { location, kind });
     }
 
     fn infer_assignment(&mut self, assignment: UntypedAssignment) -> TypedAssignment {
@@ -1277,7 +1264,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let pattern = match pattern::PatternTyper::new(
             self.environment,
             &self.hydrator,
-            self.errors,
+            self.problems,
             self.name_corrections,
         )
         .unify(pattern, value_typ.clone())
@@ -1315,9 +1302,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.error_with_rigid_names(e);
             }
             (AssignmentKind::Assert { location }, Ok(_)) => self
-                .environment
-                .warnings
-                .emit(Warning::RedundantAssertAssignment { location }),
+                .problems
+                .warning(Warning::RedundantAssertAssignment { location }),
             (AssignmentKind::Assert { .. }, _) => {}
         }
 
@@ -1404,7 +1390,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         typed_subjects
             .iter()
             .filter_map(|subject| check_subject_for_redundant_match(subject, case_used_like_if))
-            .for_each(|warning| self.environment.warnings.emit(warning));
+            .for_each(|warning| self.problems.warning(warning));
 
         TypedExpr::Case {
             location,
@@ -1492,7 +1478,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut pattern_typer = pattern::PatternTyper::new(
             self.environment,
             &self.hydrator,
-            self.errors,
+            self.problems,
             self.name_corrections,
         );
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
@@ -2115,7 +2101,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Emit a warning if the value being used is deprecated.
             if let Deprecation::Deprecated { message } = &constructor.deprecation {
-                self.environment.warnings.emit(Warning::DeprecatedItem {
+                self.problems.warning(Warning::DeprecatedItem {
                     location: select_location,
                     message: message.clone(),
                     layer: Layer::Value,
@@ -2356,15 +2342,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .try_collect()?;
 
         if args.is_empty() {
-            self.environment
-                .warnings
-                .emit(Warning::NoFieldsRecordUpdate { location });
+            self.problems
+                .warning(Warning::NoFieldsRecordUpdate { location });
         }
 
         if args.len() == field_map.arity as usize {
-            self.environment
-                .warnings
-                .emit(Warning::AllFieldsRecordUpdate { location });
+            self.problems
+                .warning(Warning::AllFieldsRecordUpdate { location });
         }
 
         Ok(TypedExpr::RecordUpdate {
@@ -2444,7 +2428,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Emit a warning if the value being used is deprecated.
         if let Deprecation::Deprecated { message } = &deprecation {
-            self.environment.warnings.emit(Warning::DeprecatedItem {
+            self.problems.warning(Warning::DeprecatedItem {
                 location: *location,
                 message: message.clone(),
                 layer: Layer::Value,
@@ -2737,7 +2721,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (None, Ok(inferred)) => inferred,
             // No annotation and invalid inferred value. Use an unbound variable hole.
             (None, Err(e)) => {
-                self.errors.push(e);
+                self.problems.error(e);
                 Constant::Invalid {
                     location: loc,
                     typ: self.new_unbound_var(),
@@ -2749,7 +2733,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 if let Err(e) = unify(const_ann.clone(), inferred.type_())
                     .map_err(|e| convert_unify_error(e, inferred.location()))
                 {
-                    self.errors.push(e);
+                    self.problems.error(e);
                     Constant::Invalid {
                         location: loc,
                         typ: const_ann,
@@ -2761,7 +2745,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
             // This should limit the errors to only the definition.
             (Some(Ok(const_ann)), Err(value_err)) => {
-                self.errors.push(value_err);
+                self.problems.error(value_err);
                 Constant::Invalid {
                     location: loc,
                     typ: const_ann,
@@ -2769,14 +2753,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             // Type annotation is invalid but the inferred value is ok. Use the inferred type.
             (Some(Err(annotation_err)), Ok(inferred)) => {
-                self.errors.push(annotation_err);
+                self.problems.error(annotation_err);
                 inferred
             }
             // Type annotation and inferred value are invalid. Place a placeholder constant with an unbound type.
             // This should limit the errors to only the definition assuming the constant is used consistently.
             (Some(Err(annotation_err)), Err(value_err)) => {
-                self.errors.push(annotation_err);
-                self.errors.push(value_err);
+                self.problems.error(annotation_err);
+                self.problems.error(value_err);
                 Constant::Invalid {
                     location: loc,
                     typ: self.new_unbound_var(),
@@ -3170,8 +3154,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             // can identify if it is unused
                             body_typer.environment.init_usage(
                                 name.clone(),
-                                EntityKind::Variable,
+                                EntityKind::Variable {
+                                    how_to_ignore: Some(format!("_{name}").into()),
+                                },
                                 arg.location,
+                                body_typer.problems,
                             );
                         }
                     }
@@ -3265,7 +3252,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     }
 
     fn check_case_exhaustiveness(
-        &self,
+        &mut self,
         location: SrcSpan,
         subject_types: &[Arc<Type>],
         clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
@@ -3319,11 +3306,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Emit warnings for unreachable clauses
         for (clause_index, clause) in clauses.iter().enumerate() {
             if !output.is_reachable(clause_index) {
-                self.environment
-                    .warnings
-                    .emit(Warning::UnreachableCaseClause {
-                        location: clause.location,
-                    })
+                self.problems.warning(Warning::UnreachableCaseClause {
+                    location: clause.location,
+                })
             }
         }
 

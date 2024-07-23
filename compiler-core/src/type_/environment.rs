@@ -3,7 +3,6 @@ use crate::{
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
     uid::UniqueIdGenerator,
-    warning::TypeWarningEmitter,
 };
 
 use super::*;
@@ -46,9 +45,6 @@ pub struct Environment<'a> {
     /// Accessors defined in the current module
     pub accessors: HashMap<EcoString, AccessorsMap>,
 
-    /// Warnings
-    pub warnings: &'a TypeWarningEmitter,
-
     /// entity_usages is a stack of scopes. When an entity is created it is
     /// added to the top scope. When an entity is used we crawl down the scope
     /// stack for an entity with that name and mark it as used.
@@ -58,10 +54,6 @@ pub struct Environment<'a> {
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
     pub target_support: TargetSupport,
-
-    /// Whether a `todo` expression has been encountered in this module.
-    /// This is used by the build tool to refuse to publish packages that are unfinished.
-    pub todo_encountered: bool,
 }
 
 impl<'a> Environment<'a> {
@@ -71,7 +63,6 @@ impl<'a> Environment<'a> {
         current_module: EcoString,
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
-        warnings: &'a TypeWarningEmitter,
         target_support: TargetSupport,
     ) -> Self {
         let prelude = importable_modules
@@ -95,10 +86,8 @@ impl<'a> Environment<'a> {
             imported_module_aliases: HashMap::new(),
             unused_module_aliases: HashMap::new(),
             current_module,
-            warnings,
             entity_usages: vec![HashMap::new()],
             target_support,
-            todo_encountered: false,
         }
     }
 }
@@ -120,7 +109,10 @@ pub enum EntityKind {
     ImportedType,
     ImportedValue,
     PrivateType,
-    Variable,
+    Variable {
+        /// How the variable could be rewritten to ignore it when unused
+        how_to_ignore: Option<EcoString>,
+    },
 }
 
 #[derive(Debug)]
@@ -131,15 +123,16 @@ pub struct ScopeResetData {
 impl<'a> Environment<'a> {
     pub fn in_new_scope<T, E>(
         &mut self,
-        process_scope: impl FnOnce(&mut Self) -> Result<T, E>,
+        problems: &mut Problems,
+        process_scope: impl FnOnce(&mut Self, &mut Problems) -> Result<T, E>,
     ) -> Result<T, E> {
         // Record initial scope state
         let initial = self.open_new_scope();
 
         // Process scope
-        let result = process_scope(self);
+        let result = process_scope(self, problems);
 
-        self.close_scope(initial, result.is_ok());
+        self.close_scope(initial, result.is_ok(), problems);
 
         // Return result of typing the scope
         result
@@ -151,7 +144,12 @@ impl<'a> Environment<'a> {
         ScopeResetData { local_values }
     }
 
-    pub fn close_scope(&mut self, data: ScopeResetData, was_successful: bool) {
+    pub fn close_scope(
+        &mut self,
+        data: ScopeResetData,
+        was_successful: bool,
+        problems: &mut Problems,
+    ) {
         let unused = self
             .entity_usages
             .pop()
@@ -162,7 +160,7 @@ impl<'a> Environment<'a> {
         // been used beyond the point where the error occurred, so we don't want
         // to incorrectly warn about them.
         if was_successful {
-            self.handle_unused(unused);
+            self.handle_unused(unused, problems);
         }
         self.scope = data.local_values;
     }
@@ -514,7 +512,13 @@ impl<'a> Environment<'a> {
     }
 
     /// Inserts an entity at the current scope for usage tracking.
-    pub fn init_usage(&mut self, name: EcoString, kind: EntityKind, location: SrcSpan) {
+    pub fn init_usage(
+        &mut self,
+        name: EcoString,
+        kind: EntityKind,
+        location: SrcSpan,
+        problems: &mut Problems,
+    ) {
         use EntityKind::*;
 
         match self
@@ -534,7 +538,7 @@ impl<'a> Environment<'a> {
                 // an entity was overwritten in the top most scope without being used
                 let mut unused = HashMap::with_capacity(1);
                 let _ = unused.insert(name, (kind, location, false));
-                self.handle_unused(unused);
+                self.handle_unused(unused, problems);
             }
 
             _ => {}
@@ -565,16 +569,16 @@ impl<'a> Environment<'a> {
 
     /// Converts entities with a usage count of 0 to warnings.
     /// Returns the list of unused imported module location for the removed unused lsp action.
-    pub fn convert_unused_to_warnings(&mut self) -> Vec<SrcSpan> {
+    pub fn convert_unused_to_warnings(&mut self, problems: &mut Problems) -> Vec<SrcSpan> {
         let unused = self
             .entity_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused);
+        self.handle_unused(unused, problems);
 
         let mut locations = Vec::new();
         for (name, location) in self.unused_modules.clone().into_iter() {
-            self.warnings.emit(Warning::UnusedImportedModule {
+            problems.warning(Warning::UnusedImportedModule {
                 name: name.clone(),
                 location,
             });
@@ -583,7 +587,7 @@ impl<'a> Environment<'a> {
 
         for (name, info) in self.unused_module_aliases.iter() {
             if !self.unused_modules.contains_key(name) {
-                self.warnings.emit(Warning::UnusedImportedModuleAlias {
+                problems.warning(Warning::UnusedImportedModuleAlias {
                     alias: name.clone(),
                     location: info.location,
                     module_name: info.module_name.clone(),
@@ -594,7 +598,11 @@ impl<'a> Environment<'a> {
         locations
     }
 
-    fn handle_unused(&mut self, unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>) {
+    fn handle_unused(
+        &mut self,
+        unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>,
+        problems: &mut Problems,
+    ) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
                 EntityKind::ImportedType => Warning::UnusedType {
@@ -622,10 +630,13 @@ impl<'a> Environment<'a> {
                     location,
                 },
                 EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::Variable => Warning::UnusedVariable { name, location },
+                EntityKind::Variable { how_to_ignore } => Warning::UnusedVariable {
+                    location,
+                    how_to_ignore,
+                },
             };
 
-            self.warnings.emit(warning);
+            problems.warning(warning);
         }
     }
 

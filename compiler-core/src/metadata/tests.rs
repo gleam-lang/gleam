@@ -30,8 +30,8 @@ fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
 
 fn constant_module(constant: TypedConstant) -> ModuleInterface {
     ModuleInterface {
+        warnings: vec![],
         is_internal: true,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -85,8 +85,8 @@ fn bit_array_segment_option_module(option: TypedConstantBitArraySegmentOption) -
 #[test]
 fn empty_module() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: true,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
@@ -105,8 +105,8 @@ fn empty_module() {
 #[test]
 fn with_line_numbers() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
@@ -129,8 +129,8 @@ fn with_line_numbers() {
 #[test]
 fn module_with_private_type() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -161,8 +161,8 @@ fn module_with_private_type() {
 #[test]
 fn module_with_unused_import() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -184,8 +184,8 @@ fn module_with_unused_import() {
 #[test]
 fn module_with_app_type() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -216,8 +216,8 @@ fn module_with_app_type() {
 #[test]
 fn module_with_fn_type() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -248,8 +248,8 @@ fn module_with_fn_type() {
 #[test]
 fn module_with_tuple_type() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -286,8 +286,8 @@ fn module_with_generic_type() {
 
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
+            warnings: vec![],
             is_internal: false,
-            contains_todo: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a/b".into(),
@@ -324,8 +324,8 @@ fn module_with_type_links() {
 
     fn make(type_: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
+            warnings: vec![],
             is_internal: false,
-            contains_todo: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
@@ -362,8 +362,8 @@ fn module_with_type_constructor_documentation() {
 
     fn make(type_: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
+            warnings: vec![],
             is_internal: false,
-            contains_todo: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
@@ -400,8 +400,8 @@ fn module_with_type_constructor_origin() {
 
     fn make(type_: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
+            warnings: vec![],
             is_internal: false,
-            contains_todo: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
@@ -437,8 +437,8 @@ fn module_with_type_constructor_origin() {
 #[test]
 fn module_type_to_constructors_mapping() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -468,8 +468,8 @@ fn module_type_to_constructors_mapping() {
 #[test]
 fn module_fn_value() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -514,8 +514,8 @@ fn module_fn_value() {
 #[test]
 fn deprecated_module_fn_value() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -562,8 +562,8 @@ fn deprecated_module_fn_value() {
 #[test]
 fn private_module_fn_value() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -610,8 +610,8 @@ fn private_module_fn_value() {
 #[test]
 fn module_fn_value_regression() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -657,8 +657,8 @@ fn module_fn_value_regression() {
 #[test]
 fn module_fn_value_with_field_map() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -706,8 +706,8 @@ fn record_value() {
     let mut random = rand::thread_rng();
 
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -750,8 +750,8 @@ fn record_value_with_field_map() {
     let mut random = rand::thread_rng();
 
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -795,8 +795,8 @@ fn record_value_with_field_map() {
 #[test]
 fn accessors() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -1010,8 +1010,8 @@ fn constant_var() {
     };
 
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
@@ -1231,8 +1231,8 @@ fn constant_bit_array_native() {
 #[test]
 fn deprecated_type() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
@@ -1263,31 +1263,10 @@ fn deprecated_type() {
 }
 
 #[test]
-fn contains_todo() {
-    let module = ModuleInterface {
-        contains_todo: true,
-        //             ^^^^ It does, it does!
-        is_internal: false,
-        package: "some_package".into(),
-        origin: Origin::Src,
-        name: "a/b".into(),
-        types: [].into(),
-        types_value_constructors: HashMap::new(),
-        values: HashMap::new(),
-        unused_imports: Vec::new(),
-        name_corrections: Vec::new(),
-        accessors: HashMap::new(),
-        line_numbers: LineNumbers::new(""),
-        src_path: "some_path".into(),
-    };
-    assert_eq!(roundtrip(&module), module);
-}
-
-#[test]
 fn module_fn_value_with_external_implementations() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -1333,8 +1312,8 @@ fn module_fn_value_with_external_implementations() {
 #[test]
 fn internal_module_fn() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
@@ -1381,8 +1360,8 @@ fn internal_module_fn() {
 #[test]
 fn type_variable_ids_in_constructors_are_shared() {
     let module = ModuleInterface {
+        warnings: vec![],
         is_internal: false,
-        contains_todo: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),

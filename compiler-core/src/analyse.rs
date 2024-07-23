@@ -20,7 +20,7 @@ use crate::{
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, Error, MissingAnnotation, Named},
+        error::{convert_unify_error, Error, MissingAnnotation, Named, Problems},
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
@@ -158,7 +158,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             package_config: self.package_config,
             line_numbers,
             src_path,
-            errors: vec![],
+            problems: Problems::new(),
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
@@ -179,7 +179,7 @@ struct ModuleAnalyzer<'a, A> {
     package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
     src_path: Utf8PathBuf,
-    errors: Vec<Error>,
+    problems: Problems,
     value_names: HashMap<EcoString, SrcSpan>,
     name_corrections: Vec<NameCorrection>,
     hydrators: HashMap<EcoString, Hydrator>,
@@ -199,7 +199,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.module_name.clone(),
             self.target,
             self.importable_modules,
-            self.warnings,
             self.target_support,
         );
 
@@ -209,7 +208,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Register any modules, types, and values being imported
         // We process imports first so that anything imported can be referenced
         // anywhere in the module.
-        let mut env = Importer::run(self.origin, env, &statements.imports, &mut self.errors);
+        let mut env = Importer::run(self.origin, env, &statements.imports, &mut self.problems);
 
         // Register types so they can be used in constructors and functions
         // earlier in the module.
@@ -274,7 +273,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Generate warnings for unused items
-        let unused_imports = env.convert_unused_to_warnings();
+        let unused_imports = env.convert_unused_to_warnings(&mut self.problems);
 
         // Remove imported types and values to create the public interface
         // Private types and values are retained so they can be used in the language
@@ -294,7 +293,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_types: types,
             module_types_constructors: types_constructors,
             module_values: values,
-            todo_encountered: contains_todo,
             accessors,
             ..
         } = env;
@@ -303,8 +301,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .package_config
             .is_internal_module(self.module_name.as_str());
 
-        // Sort the errors by location so that they are easier to debug.
-        self.errors.sort_by_key(|e| e.start_location());
+        // We sort warnings and errors to ensure they are emitted in a
+        // deterministic order, making them easier to test and debug, and to
+        // make the output predictable.
+        self.problems.sort();
+
+        let warnings = self.problems.take_warnings();
+        for warning in &warnings {
+            // TODO: remove this clone
+            self.warnings.emit(warning.clone());
+        }
 
         let module = ast::Module {
             documentation,
@@ -321,20 +327,20 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 is_internal,
                 unused_imports,
                 name_corrections: self.name_corrections,
-                contains_todo,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
+                warnings,
             },
         };
 
-        match Vec1::try_from_vec(self.errors) {
+        match Vec1::try_from_vec(self.problems.take_errors()) {
             Err(_) => Outcome::Ok(module),
             Ok(errors) => Outcome::PartialFailure(module, errors),
         }
     }
 
     fn all_errors<T>(&mut self, error: Error) -> Outcome<T, Vec1<Error>> {
-        Outcome::TotalFailure(Vec1::from_vec_push(std::mem::take(&mut self.errors), error))
+        Outcome::TotalFailure(Vec1::from_vec_push(self.problems.take_errors(), error))
     }
 
     fn infer_module_constant(
@@ -363,7 +369,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let mut expr_typer = ExprTyper::new(
             environment,
             definition,
-            &mut self.errors,
+            &mut self.problems,
             &mut self.name_corrections,
         );
         let typed_expr = expr_typer.infer_const(&annotation, *value);
@@ -393,7 +399,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.insert_module_value(name.clone(), variant);
 
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateConstant, location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateConstant,
+                location,
+                &mut self.problems,
+            );
         }
 
         Definition::ModuleConstant(ModuleConstant {
@@ -484,11 +495,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .collect_vec();
 
         // Infer the type using the preregistered args + return types as a starting point
-        let result = environment.in_new_scope(|environment| {
+        let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
             let mut expr_typer = ExprTyper::new(
                 environment,
                 definition,
-                &mut self.errors,
+                problems,
                 &mut self.name_corrections,
             );
             expr_typer.hydrator = self
@@ -513,7 +524,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (type_, body, implementations) = match result {
             Ok((type_, body, implementations)) => (type_, body, implementations),
             Err(error) => {
-                self.errors.push(error);
+                self.problems.error(error);
                 let type_ = preregistered_type.clone();
                 let body = Vec1::new(Statement::Expression(TypedExpr::Invalid {
                     typ: prereg_return_type.clone(),
@@ -529,7 +540,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Assert that the inferred type matches the type of any recursive call
         if let Err(error) = unify(preregistered_type.clone(), type_) {
-            self.errors.push(convert_unify_error(error, location));
+            self.problems.error(convert_unify_error(error, location));
         }
 
         // Ensure that the current target has an implementation for the function.
@@ -546,7 +557,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // since this would be caught at the statement level
             && !has_body
         {
-            self.errors.push(Error::UnsupportedPublicFunctionTarget {
+            self.problems.error(Error::UnsupportedPublicFunctionTarget {
                 name: name.clone(),
                 target,
                 location,
@@ -609,7 +620,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .get_or_init(|| Regex::new("^[@a-zA-Z0-9\\./:_-]+$").expect("regex"))
             .is_match(module)
         {
-            self.errors.push(Error::InvalidExternalJavascriptModule {
+            self.problems.error(Error::InvalidExternalJavascriptModule {
                 location,
                 module: module.clone(),
                 name: function_name.clone(),
@@ -619,11 +630,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
             .is_match(function)
         {
-            self.errors.push(Error::InvalidExternalJavascriptFunction {
-                location,
-                function: function.clone(),
-                name: function_name.clone(),
-            });
+            self.problems
+                .error(Error::InvalidExternalJavascriptFunction {
+                    location,
+                    function: function.clone(),
+                    name: function_name.clone(),
+                });
         }
     }
 
@@ -635,14 +647,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) {
         for arg in arguments {
             if arg.annotation.is_none() {
-                self.errors.push(Error::ExternalMissingAnnotation {
+                self.problems.error(Error::ExternalMissingAnnotation {
                     location: arg.location,
                     kind: MissingAnnotation::Parameter,
                 });
             }
         }
         if return_annotation.is_none() {
-            self.errors.push(Error::ExternalMissingAnnotation {
+            self.problems.error(Error::ExternalMissingAnnotation {
                 location,
                 kind: MissingAnnotation::Return,
             });
@@ -658,7 +670,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> bool {
         match (external_erlang, external_javascript) {
             (None, None) if body.first().is_placeholder() => {
-                self.errors.push(Error::NoImplementation { location });
+                self.problems.error(Error::NoImplementation { location });
                 false
             }
             _ => true,
@@ -721,7 +733,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         match self.do_analyse_custom_type(t, environment) {
             Ok(t) => Some(t),
             Err(error) => {
-                self.errors.push(error);
+                self.problems.error(error);
                 None
             }
         }
@@ -846,7 +858,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("Type for custom type not found in register_values")
             .typ
             .clone();
-        if let Some(accessors) = custom_type_accessors(constructors, &mut hydrator, environment)? {
+        if let Some(accessors) =
+            custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?
+        {
             let map = AccessorsMap {
                 publicity: if *opaque {
                     Publicity::Private
@@ -878,10 +892,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor.arguments.iter().enumerate()
             {
                 // Build a type from the annotation AST
-                let t = match hydrator.type_from_ast(ast, environment) {
+                let t = match hydrator.type_from_ast(ast, environment, &mut self.problems) {
                     Ok(t) => t,
                     Err(e) => {
-                        self.errors.push(e);
+                        self.problems.error(e);
                         continue;
                     }
                 };
@@ -944,6 +958,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     constructor.name.clone(),
                     EntityKind::PrivateTypeConstructor(name.clone()),
                     constructor.location,
+                    &mut self.problems,
                 );
             }
 
@@ -1039,15 +1054,18 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("name uniqueness checked above");
 
         if *opaque && constructors.is_empty() {
-            environment
-                .warnings
-                .emit(type_::Warning::OpaqueExternalType {
-                    location: *location,
-                });
+            self.problems.warning(type_::Warning::OpaqueExternalType {
+                location: *location,
+            });
         }
 
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateType,
+                *location,
+                &mut self.problems,
+            );
         };
         Ok(())
     }
@@ -1067,7 +1085,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // A type alias must not have the same name as any other type in the module.
         if let Err(error) = environment.assert_unique_type_name(name, *location) {
-            self.errors.push(error);
+            self.problems.error(error);
             // A type already exists with the name so we cannot continue and
             // register this new type with the same name.
             return;
@@ -1081,7 +1099,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let parameters = self.make_type_vars(args, *location, &mut hydrator, environment);
         let tryblock = || {
             hydrator.disallow_new_type_variables();
-            let typ = hydrator.type_from_ast(resolved_type, environment)?;
+            let typ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
@@ -1106,11 +1124,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             Ok(())
         };
-        self.record_if_error(tryblock());
+        let result = tryblock();
+        self.record_if_error(result);
 
         // Register the type for detection of dead code.
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateType, *location);
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateType,
+                *location,
+                &mut self.problems,
+            );
         };
     }
 
@@ -1125,7 +1149,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(|name| match hydrator.add_type_variable(name, environment) {
                 Ok(t) => t,
                 Err(t) => {
-                    self.errors.push(Error::DuplicateTypeParameter {
+                    self.problems.error(Error::DuplicateTypeParameter {
                         location,
                         name: name.clone(),
                     });
@@ -1137,7 +1161,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn record_if_error(&mut self, result: Result<(), Error>) {
         if let Err(error) = result {
-            self.errors.push(error);
+            self.problems.error(error);
         }
     }
 
@@ -1170,7 +1194,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             names, location, ..
         } in args.iter()
         {
-            check_argument_names(names, &mut self.errors, &mut self.name_corrections);
+            check_argument_names(names, &mut self.problems, &mut self.name_corrections);
 
             builder.add(names.get_label(), *location)?;
         }
@@ -1183,9 +1207,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         let arg_types = args
             .iter()
-            .map(|arg| hydrator.type_from_option_ast(&arg.annotation, environment))
+            .map(|arg| {
+                hydrator.type_from_option_ast(&arg.annotation, environment, &mut self.problems)
+            })
             .try_collect()?;
-        let return_type = hydrator.type_from_option_ast(return_annotation, environment)?;
+        let return_type =
+            hydrator.type_from_option_ast(return_annotation, environment, &mut self.problems)?;
         let typ = fn_(arg_types, return_type);
         let _ = self.hydrators.insert(name.clone(), hydrator);
 
@@ -1206,8 +1233,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         environment.insert_variable(name.clone(), variant, typ, *publicity, deprecation.clone());
         if publicity.is_private() {
-            environment.init_usage(name.clone(), EntityKind::PrivateFunction, *location);
-        }
+            environment.init_usage(
+                name.clone(),
+                EntityKind::PrivateFunction,
+                *location,
+                &mut self.problems,
+            );
+        };
         Ok(())
     }
 
@@ -1219,7 +1251,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // If a private or internal value references a private type
         if let Some(leaked) = value.type_.find_private_type() {
-            self.errors.push(Error::PrivateTypeLeak {
+            self.problems.error(Error::PrivateTypeLeak {
                 location: value.variant.definition_location(),
                 leaked,
             });
@@ -1228,7 +1260,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
-            self.errors.push(error);
+            self.problems.error(error);
             self.name_corrections
                 .push(correct_name_case(location, name, kind));
         }
@@ -1537,13 +1569,14 @@ fn custom_type_accessors<A>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
+    problems: &mut Problems,
 ) -> Result<Option<HashMap<EcoString, RecordAccessor>>, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
     hydrator.disallow_new_type_variables();
     for (index, label, ast) in args {
-        let typ = hydrator.type_from_ast(ast, environment)?;
+        let typ = hydrator.type_from_ast(ast, environment, problems)?;
         let _ = fields.insert(
             label.clone(),
             RecordAccessor {

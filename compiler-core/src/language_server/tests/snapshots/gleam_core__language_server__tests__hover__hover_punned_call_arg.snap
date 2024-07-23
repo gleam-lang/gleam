@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nfn wibble(arg1 arg1: Int, arg2 arg2: Bool) { Nil }\n\nfn main() {\n  let arg1 = 1\n  let arg2 = True\n  wibble(arg2:, arg1:)\n}\n"
+---
+fn wibble(arg1 arg1: Int, arg2 arg2: Bool) { Nil }
+
+fn main() {
+  let arg1 = 1
+  let arg2 = True
+  wibble(arg2:, arg1:)
+         ↑▔▔▔▔        
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nBool\n```\nA locally defined variable.",
+    ),
+)

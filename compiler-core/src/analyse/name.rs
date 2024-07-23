@@ -3,7 +3,10 @@ use std::sync::OnceLock;
 use ecow::{eco_format, EcoString};
 use regex::Regex;
 
-use crate::ast::{ArgNames, SrcSpan};
+use crate::{
+    ast::{ArgNames, SrcSpan},
+    type_::Problems,
+};
 
 use super::{Error, Named};
 use heck::{ToSnakeCase, ToUpperCamelCase};
@@ -78,13 +81,13 @@ pub fn correct_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Na
 
 pub fn check_argument_names(
     names: &ArgNames,
-    errors: &mut Vec<Error>,
+    problems: &mut Problems,
     name_corrections: &mut Vec<NameCorrection>,
 ) {
     match names {
         ArgNames::Discard { name, location } => {
             if let Err(error) = check_name_case(*location, name, Named::Discard) {
-                errors.push(error);
+                problems.error(error);
                 name_corrections.push(correct_name_case(*location, name, Named::Discard));
             }
         }
@@ -95,17 +98,17 @@ pub fn check_argument_names(
             name_location,
         } => {
             if let Err(error) = check_name_case(*label_location, label, Named::Label) {
-                errors.push(error);
+                problems.error(error);
                 name_corrections.push(correct_name_case(*label_location, label, Named::Label));
             }
             if let Err(error) = check_name_case(*name_location, name, Named::Discard) {
-                errors.push(error);
+                problems.error(error);
                 name_corrections.push(correct_name_case(*name_location, name, Named::Discard));
             }
         }
         ArgNames::Named { name, location } => {
             if let Err(error) = check_name_case(*location, name, Named::Argument) {
-                errors.push(error);
+                problems.error(error);
                 name_corrections.push(correct_name_case(*location, name, Named::Argument));
             }
         }
@@ -116,11 +119,11 @@ pub fn check_argument_names(
             label_location,
         } => {
             if let Err(error) = check_name_case(*label_location, label, Named::Label) {
-                errors.push(error);
+                problems.error(error);
                 name_corrections.push(correct_name_case(*label_location, label, Named::Label));
             }
             if let Err(error) = check_name_case(*name_location, name, Named::Argument) {
-                errors.push(error);
+                problems.error(error);
                 name_corrections.push(correct_name_case(*name_location, name, Named::Argument));
             }
         }

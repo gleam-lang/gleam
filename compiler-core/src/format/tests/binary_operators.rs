@@ -105,8 +105,8 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
         r#"pub fn main() {
   Ok(Lesson(
     name: names.name,
-    text: text,
-    code: code,
+    text:,
+    code:,
     path: chapter_path
       <> "/"
       <> this_one_doesnt_fit
@@ -122,8 +122,8 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
         r#"pub fn main() {
   Ok(wibble(
     name: names.name,
-    text: text,
-    code: code,
+    text:,
+    code:,
     path: chapter_path <> "/",
     previous: None,
     next: None,
@@ -136,8 +136,8 @@ fn labelled_field_with_binary_operators_are_not_broken_if_they_can_fit() {
         r#"pub fn main() {
   Ok(wibble(
     name: names.name,
-    text: text,
-    code: code,
+    text:,
+    code:,
     path: chapter_path
       <> "/"
       <> this_one_doesnt_fit

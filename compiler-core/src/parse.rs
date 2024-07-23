@@ -1618,13 +1618,14 @@ where
 
     // examples:
     //   a: <pattern>
+    //   a:
     //   <pattern>
     fn parse_constructor_pattern_arg(
         &mut self,
     ) -> Result<Option<CallArg<UntypedPattern>>, ParseError> {
         match (self.tok0.take(), self.tok1.take()) {
             // named arg
-            (Some((start, Token::Name { name }, _)), Some((col_s, Token::Colon, col_e))) => {
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
                 if let Some(value) = self.parse_pattern()? {
@@ -1638,13 +1639,17 @@ where
                         value,
                     }))
                 } else {
-                    parse_error(
-                        ParseErrorType::ExpectedPattern,
-                        SrcSpan {
-                            start: col_s,
-                            end: col_e,
+                    // Punned argument.
+                    Ok(Some(CallArg {
+                        implicit: None,
+                        location: SrcSpan { start, end },
+                        label: Some(name.clone()),
+                        value: UntypedPattern::Variable {
+                            name,
+                            location: SrcSpan { start, end },
+                            type_: (),
                         },
-                    )
+                    }))
                 }
             }
             // unnamed arg
@@ -1667,9 +1672,10 @@ where
 
     // examples:
     //   a: expr
+    //   a:
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
         if let Some((start, label, _)) = self.maybe_name() {
-            let _ = self.expect_one(&Token::Colon)?;
+            let (_, end) = self.expect_one(&Token::Colon)?;
             let value = self.parse_expression()?;
             if let Some(value) = value {
                 Ok(Some(UntypedRecordUpdateArg {
@@ -1681,7 +1687,15 @@ where
                     value,
                 }))
             } else {
-                self.next_tok_unexpected(vec!["An expression".into()])
+                // A punned argument.
+                Ok(Some(UntypedRecordUpdateArg {
+                    label: label.clone(),
+                    location: SrcSpan { start, end },
+                    value: UntypedExpr::Var {
+                        name: label,
+                        location: SrcSpan { start, end },
+                    },
+                }))
             }
         } else {
             Ok(None)
@@ -1937,41 +1951,66 @@ where
     //   a: _
     //   a: expr
     fn parse_fn_arg(&mut self) -> Result<Option<ParserArg>, ParseError> {
-        let mut start = 0;
-        let label = match (self.tok0.take(), &self.tok1) {
-            (Some((s, Token::Name { name }, _)), Some((_, Token::Colon, _))) => {
+        let label = match (self.tok0.take(), self.tok1.take()) {
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
-                start = s;
-                Some(name)
+                Some((start, name, end))
             }
-            (t0, _) => {
+            (t0, t1) => {
                 self.tok0 = t0;
+                self.tok1 = t1;
                 None
             }
         };
 
         if let Some(value) = self.parse_expression()? {
-            let mut location = value.location();
-            if label.is_some() {
-                location.start = start
+            let arg = if let Some((start, label, _)) = label {
+                CallArg {
+                    implicit: None,
+                    label: Some(label),
+                    location: SrcSpan {
+                        start,
+                        end: value.location().end,
+                    },
+                    value,
+                }
+            } else {
+                CallArg {
+                    implicit: None,
+                    label: None,
+                    location: value.location(),
+                    value,
+                }
             };
+            Ok(Some(ParserArg::Arg(Box::new(arg))))
+        } else if let Some((start, name, end)) = self.maybe_discard_name() {
+            let arg = if let Some((start, label, _)) = label {
+                ParserArg::Hole {
+                    label: Some(label),
+                    location: SrcSpan { start, end },
+                    name,
+                }
+            } else {
+                ParserArg::Hole {
+                    label: None,
+                    location: SrcSpan { start, end },
+                    name,
+                }
+            };
+
+            Ok(Some(arg))
+        } else if let Some((start, label, end)) = label {
+            // A punned argument.
             Ok(Some(ParserArg::Arg(Box::new(CallArg {
                 implicit: None,
-                label,
-                location,
-                value,
+                label: Some(label.clone()),
+                location: SrcSpan { start, end },
+                value: UntypedExpr::Var {
+                    name: label,
+                    location: SrcSpan { start, end },
+                },
             }))))
-        } else if let Some((start, name, end)) = self.maybe_discard_name() {
-            let mut location = SrcSpan { start, end };
-            if label.is_some() {
-                location.start = start
-            };
-            Ok(Some(ParserArg::Hole {
-                location,
-                name,
-                label,
-            }))
         } else {
             Ok(None)
         }
@@ -2738,24 +2777,26 @@ where
     // examples:
     //  name: const
     //  const
+    //  name:
     fn parse_const_record_arg(&mut self) -> Result<Option<CallArg<UntypedConstant>>, ParseError> {
-        let name = match (self.tok0.take(), &self.tok1) {
+        let label = match (self.tok0.take(), self.tok1.take()) {
             // Named arg
-            (Some((start, Token::Name { name }, end)), Some((_, Token::Colon, _))) => {
+            (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
                 Some((start, name, end))
             }
 
             // Unnamed arg
-            (t0, _) => {
+            (t0, t1) => {
                 self.tok0 = t0;
+                self.tok1 = t1;
                 None
             }
         };
 
         if let Some(value) = self.parse_const_value()? {
-            if let Some((start, label, _)) = name {
+            if let Some((start, label, _)) = label {
                 Ok(Some(CallArg {
                     implicit: None,
                     location: SrcSpan {
@@ -2773,8 +2814,20 @@ where
                     label: None,
                 }))
             }
-        } else if name.is_some() {
-            self.next_tok_unexpected(vec!["a constant value".into()])?
+        } else if let Some((start, label, end)) = label {
+            // A punned argument.
+            Ok(Some(CallArg {
+                implicit: None,
+                location: SrcSpan { start, end },
+                label: Some(label.clone()),
+                value: UntypedConstant::Var {
+                    location: SrcSpan { start, end },
+                    constructor: None,
+                    module: None,
+                    name: label,
+                    typ: (),
+                },
+            }))
         } else {
             Ok(None)
         }
@@ -3281,6 +3334,12 @@ where
             if *start >= until {
                 break;
             }
+            if self.extra.has_comment_between(*start, until) {
+                // We ignore doc comments that come before a regular comment.
+                _ = self.doc_comments.pop_front();
+                continue;
+            }
+
             content.push_str(line);
             content.push('\n');
             _ = self.doc_comments.pop_front();

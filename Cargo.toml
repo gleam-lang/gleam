@@ -18,7 +18,7 @@ regex = "1"
 # Colours in terminal
 termcolor = "1"
 # Data (de)serialisation
-serde = { version = "1", features = ["derive"] }
+serde = { version = "1", features = ["derive", "rc"] }
 serde_json = "1"
 # toml config file parsing
 toml = "0"

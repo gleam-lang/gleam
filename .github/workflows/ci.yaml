@@ -273,13 +273,19 @@ jobs:
 
       - run: cargo fmt --all -- --check
 
-  validate-deps:
-    name: validate-deps
+  validate:
+    name: validate
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Ensure no merge commits
+        uses: NexusPHP/no-merge-commits@v2.1.0
+        if: github.event_name == 'pull_request'
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Install Rust toolchain
         uses: dtolnay/rust-toolchain@stable

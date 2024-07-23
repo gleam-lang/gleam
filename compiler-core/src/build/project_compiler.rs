@@ -28,7 +28,10 @@ use std::{
     time::Instant,
 };
 
-use super::{elixir_libraries::ElixirLibraries, Codegen, ErlangAppCodegenConfiguration, Outcome};
+use super::{
+    elixir_libraries::ElixirLibraries, package_compiler::CachedWarnings, Codegen,
+    ErlangAppCodegenConfiguration, Outcome,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -563,6 +566,11 @@ where
             // implementation for the current target. It is OK if they have APIs that are
             // unaccessible so long as they are not used by the root package.
             TargetSupport::NotEnforced
+        };
+        compiler.cached_warnings = if is_root {
+            CachedWarnings::Use
+        } else {
+            CachedWarnings::Ignore
         };
 
         // Compile project to Erlang or JavaScript source code

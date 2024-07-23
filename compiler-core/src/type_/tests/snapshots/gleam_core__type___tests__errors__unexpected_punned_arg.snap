@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n    fn id(x) { x }\n    fn y() {\n        let x = 4\n        id(x:)\n    }\n"
+---
+error: Unexpected labelled argument
+  ┌─ /src/one/two.gleam:5:12
+  │
+5 │         id(x:)
+  │            ^^
+
+This argument has been given a label but the constructor does
+not expect any. Please remove the label `x`.

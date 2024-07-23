@@ -14,7 +14,7 @@ pub mod tests;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 pub use environment::*;
-pub use error::{Error, UnifyErrorSituation, Warning};
+pub use error::{Error, Problems, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 pub use prelude::*;
@@ -46,7 +46,7 @@ pub trait HasType {
     fn type_(&self) -> Arc<Type>;
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Type {
     /// A nominal (named) type such as `Int`, `Float`, or a programmer defined
     /// custom type such as `Person`. The type can take other types as
@@ -599,7 +599,6 @@ pub struct ModuleInterface {
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
     pub name_corrections: Vec<NameCorrection>,
-    pub contains_todo: bool,
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
@@ -608,6 +607,14 @@ pub struct ModuleInterface {
     // importable by other packages but to do so is violating the contract of
     // the package and as such is not recommended.
     pub is_internal: bool,
+    /// Warnings emitted during analysis of this module.
+    pub warnings: Vec<Warning>,
+}
+
+impl ModuleInterface {
+    pub fn contains_todo(&self) -> bool {
+        self.warnings.iter().any(|warning| warning.is_todo())
+    }
 }
 
 /// Information on the constructors of a custom type.
@@ -690,10 +697,10 @@ impl ModuleInterface {
             accessors: Default::default(),
             unused_imports: Default::default(),
             name_corrections: Default::default(),
-            contains_todo: false,
             is_internal: false,
             line_numbers,
             src_path,
+            warnings: vec![],
         }
     }
 
@@ -775,7 +782,7 @@ impl PatternConstructor {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TypeVar {
     /// Unbound is an unbound variable. It is one specific type but we don't
     /// know what yet in the inference process. It has a unique id which can be used to

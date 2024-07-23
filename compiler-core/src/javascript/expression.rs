@@ -880,22 +880,22 @@ impl<'module> Generator<'module> {
     }
 
     fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.int_division_used = true;
         Ok(docvec!("divideInt", wrap_args([left, right])))
     }
 
     fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.int_remainder_used = true;
         Ok(docvec!("remainderInt", wrap_args([left, right])))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.float_division_used = true;
         Ok(docvec!("divideFloat", wrap_args([left, right])))
     }

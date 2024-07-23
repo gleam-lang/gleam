@@ -2583,12 +2583,12 @@ fn breakable_pattern() {
     assert_format!(
         r#"fn main() {
   let Ok(Thingybob(
-    one: one,
-    two: two,
-    three: three,
-    four: four,
-    five: five,
-    six: six,
+    one: _one,
+    two: _two,
+    three: _three,
+    four: _four,
+    five: _five,
+    six: _six,
   )) = 1
   Nil
 }
@@ -2711,7 +2711,7 @@ fn pattern_constructor() {
 
     assert_format!(
         r#"fn main() {
-  let Person(name, age: age) = 1
+  let Person(name, age: the_age) = 1
   Nil
 }
 "#
@@ -2719,7 +2719,7 @@ fn pattern_constructor() {
 
     assert_format!(
         r#"fn main() {
-  let Person(name: name, age: age) = 1
+  let Person(name: the_name, age: the_age) = 1
   Nil
 }
 "#
@@ -6225,6 +6225,177 @@ fn comment_after_case_branch_case() {
         _ -> todo
       }
   }
+}
+"#
+    );
+}
+
+#[test]
+fn punned_call_arg_is_split_like_regular_labelled_args() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    a_punned_arg_that_is_super_long:,
+    another_punned_arg:,
+    yet_another_pun:,
+    ok_thats_enough: wibble,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn commented_punned_call_arg_is_split_like_regular_labelled_args() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    // A comment here
+    a_punned_arg_that_is_super_long:,
+    another_punned_arg:,
+    // And a comment there
+    yet_another_pun:,
+    ok_thats_enough: wibble,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn punned_pattern_arg_is_split_like_regular_labelled_patterns() {
+    assert_format!(
+        r#"pub fn main() {
+  let Wibble(
+    a_punned_arg_that_is_super_long:,
+    another_punned_arg:,
+    yet_another_pun:,
+    ok_thats_enough: wibble,
+  ) = todo
+}
+"#
+    );
+}
+
+#[test]
+fn not_punned_record_pattern() {
+    assert_format!(
+        r#"pub fn main() {
+  let Wibble(x: x) = todo
+}
+"#
+    );
+}
+
+#[test]
+fn not_punned_record() {
+    assert_format!(
+        r#"pub fn main() {
+  Wibble(x: x)
+}
+"#
+    );
+}
+
+#[test]
+fn not_punned_function() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(x: x)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn doc_comments_are_split_by_regular_comments() {
+    assert_format!(
+        r#"/// Doc comment
+// Commented function
+// fn wibble() {}
+
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn it_is_easy_to_tell_two_different_doc_comments_apart_when_a_regular_comment_is_separating_those()
+{
+    assert_format_rewrite!(
+        r#"/// Doc comment
+// regular comment
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#,
+        r#"/// Doc comment
+// regular comment
+
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn multiple_commented_definitions_in_a_row_2() {
+    assert_format!(
+        r#"/// Stray comment
+// regular comment
+
+/// Stray comment
+// regular comment
+
+/// Doc comment
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn only_stray_comments_and_definition_with_no_doc_comments() {
+    assert_format!(
+        r#"/// Stray comment
+// regular comment
+
+/// Stray comment
+// regular comment
+
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn only_stray_comments_and_definition_with_no_doc_comments_2() {
+    assert_format_rewrite!(
+        r#"/// Stray comment
+// regular comment
+pub fn wibble () {
+  todo
+}
+"#,
+        r#"/// Stray comment
+// regular comment
+
+pub fn wibble() {
+  todo
 }
 "#
     );

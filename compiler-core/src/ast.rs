@@ -573,7 +573,7 @@ fn type_ast_print_tuple() {
     )
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum Publicity {
     Public,
     Private,
@@ -998,6 +998,25 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         }
     }
 
+    pub fn get_doc(&self) -> Option<EcoString> {
+        match self {
+            Definition::Import(Import { .. }) => None,
+
+            Definition::Function(Function {
+                documentation: doc, ..
+            })
+            | Definition::TypeAlias(TypeAlias {
+                documentation: doc, ..
+            })
+            | Definition::CustomType(CustomType {
+                documentation: doc, ..
+            })
+            | Definition::ModuleConstant(ModuleConstant {
+                documentation: doc, ..
+            }) => doc.clone(),
+        }
+    }
+
     pub fn is_internal(&self) -> bool {
         match self {
             Definition::Function(Function { publicity, .. })
@@ -1023,7 +1042,7 @@ impl UnqualifiedImport {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub enum Layer {
     #[default]
     Value,
@@ -1172,19 +1191,25 @@ pub struct CallArg<A> {
     pub label: Option<EcoString>,
     pub location: SrcSpan,
     pub value: A,
-    // This is true if this argument is given as the callback in a `use`
-    // expression. In future it may also be true for pipes too. It is used to
-    // determine if we should error if an argument without a label is given or
-    // not, which is not permitted if the argument is given explicitly by the
-    // programmer rather than implicitly by Gleam's syntactic sugar.
     pub implicit: Option<ImplicitCallArgOrigin>,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum ImplicitCallArgOrigin {
+    /// The implicit callback argument passed as the last argument to the
+    /// function on the right hand side of `use`.
+    ///
     Use,
+    /// An argument added by the compiler when rewriting a pipe `left |> right`.
+    ///
     Pipe,
+    /// An argument added by the compiler to fill in all the missing fields of a
+    /// record that are being ignored with the `..` syntax.
+    ///
     PatternFieldSpread,
+    /// An argument used to fill in the missing args when a function on the
+    /// right hand side of `use` is being called with the wrong arity.
+    ///
     IncorrectArityUse,
 }
 
@@ -1238,6 +1263,16 @@ impl CallArg<UntypedExpr> {
     }
 }
 
+impl<T> CallArg<T>
+where
+    T: HasLocation,
+{
+    #[must_use]
+    pub fn is_punned(&self) -> bool {
+        self.label.is_some() && self.location == self.value.location()
+    }
+}
+
 impl<T> HasLocation for CallArg<T> {
     fn location(&self) -> SrcSpan {
         self.location
@@ -1255,6 +1290,13 @@ pub struct UntypedRecordUpdateArg {
     pub label: EcoString,
     pub location: SrcSpan,
     pub value: UntypedExpr,
+}
+
+impl UntypedRecordUpdateArg {
+    #[must_use]
+    pub fn is_punned(&self) -> bool {
+        self.value.location() == self.location
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -2070,7 +2112,7 @@ impl<A> BitArrayOption<A> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TodoKind {
     Keyword,
     EmptyFunction,

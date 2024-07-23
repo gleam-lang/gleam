@@ -751,6 +751,20 @@ fn test_convert_outer_let_assert_to_case() {
     ));
 }
 
+#[test]
+fn test_convert_assert_custom_type_with_punned_labels_to_case() {
+    insta::assert_snapshot!(apply_first_code_action_with_title(
+        "
+pub type Wibble { Wibble(arg: Int, arg2: Float) }
+pub fn main() {
+  let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)
+}
+",
+        3,
+        CONVERT_TO_CASE
+    ));
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

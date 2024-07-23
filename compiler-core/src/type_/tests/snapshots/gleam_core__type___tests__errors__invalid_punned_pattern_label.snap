@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble { Wibble(arg: Int) }\npub fn main() {\n  let Wibble(not_a_label:) = Wibble(1)\n}\n"
+---
+error: Unknown label
+  ┌─ /src/one/two.gleam:4:14
+  │
+4 │   let Wibble(not_a_label:) = Wibble(1)
+  │              ^^^^^^^^^^^^ Did you mean `arg`?
+
+It accepts these labels:
+
+    arg

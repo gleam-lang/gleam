@@ -548,10 +548,15 @@ Hint: You can safely remove it.
                     }),
                 },
 
-                type_::Warning::UnusedVariable { location, name, .. } => Diagnostic {
+                type_::Warning::UnusedVariable {
+                    location,
+                    how_to_ignore,
+                } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
-                    hint: Some(format!("You can ignore it with an underscore: `_{name}`.")),
+                    hint: how_to_ignore.as_ref().map(|rewrite_as| {
+                        format!("You can ignore it with an underscore: `{rewrite_as}`.")
+                    }),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),

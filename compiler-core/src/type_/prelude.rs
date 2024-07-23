@@ -211,8 +211,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         accessors: HashMap::new(),
         unused_imports: Vec::new(),
         name_corrections: Vec::new(),
-        contains_todo: false,
         is_internal: false,
+        warnings: vec![],
         // prelude doesn't have real src
         src_path: "".into(),
         // prelude doesn't have real line numbers

@@ -830,10 +830,35 @@ fn unexpected_labelled_arg() {
 }
 
 #[test]
+fn unexpected_punned_arg() {
+    assert_module_error!(
+        r#"
+    fn id(x) { x }
+    fn y() {
+        let x = 4
+        id(x:)
+    }
+"#
+    );
+}
+
+#[test]
 fn positional_argument_after_labelled() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
 fn x() { X(b: 1, a: 1, 1) }"#
+    );
+}
+
+#[test]
+fn positional_argument_after_punned() {
+    assert_module_error!(
+        r#"type X { X(a: Int, b: Int, c: Int) }
+fn x() {
+  let b = 1
+  let a = 1
+  X(b:, a:, 1)
+}"#
     );
 }
 
@@ -911,6 +936,17 @@ fn duplicate_var_in_record_pattern() {
         r#"type X { X(a: Int, b: Int, c: Int) }
 fn x() {
   case X(1,2,3) { X(x, y, x) -> 1 }
+}"#
+    );
+}
+
+#[test]
+fn duplicate_punned_var_in_record_pattern() {
+    // Duplicate var in record
+    assert_module_error!(
+        r#"type X { X(a: Int, b: Int, c: Int) }
+fn x() {
+  case X(1,2,3) { X(a:, b:, c: a) -> 1 }
 }"#
     );
 }
@@ -1435,6 +1471,18 @@ fn unknown_label() {
         r#"type X { X(a: Int, b: Float) }
 fn x() {
   let x = X(a: 1, c: 2.0)
+  x
+}"#
+    );
+}
+
+#[test]
+fn unknown_punned_label() {
+    assert_module_error!(
+        r#"type X { X(a: Int, b: Float) }
+fn x() {
+  let c = 2.0
+  let x = X(a: 1, c:)
   x
 }"#
     );
@@ -2094,6 +2142,18 @@ fn const_string_concat_invalid_type() {
         "
 const some_int = 5
 const invalid_concat = some_int <> \"with_string\"
+"
+    );
+}
+
+#[test]
+fn invalid_punned_pattern_label() {
+    assert_module_error!(
+        "
+pub type Wibble { Wibble(arg: Int) }
+pub fn main() {
+  let Wibble(not_a_label:) = Wibble(1)
+}
 "
     );
 }

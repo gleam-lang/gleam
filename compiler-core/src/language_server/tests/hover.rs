@@ -748,3 +748,51 @@ pub fn main() {
         find_position_of("..")
     );
 }
+
+#[test]
+fn hover_punned_call_arg() {
+    assert_hover!(
+        "
+fn wibble(arg1 arg1: Int, arg2 arg2: Bool) { Nil }
+
+fn main() {
+  let arg1 = 1
+  let arg2 = True
+  wibble(arg2:, arg1:)
+}
+",
+        find_position_of("arg2:").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn hover_punned_pattern_call_arg() {
+    assert_hover!(
+        "
+pub type Wibble { Wibble(arg1: Int, arg2: Bool) }
+
+pub fn main() {
+  case todo {
+    Wibble(arg2:, ..) -> todo
+  }
+}
+",
+        find_position_of("arg2:")
+            .nth_occurrence(2)
+            .under_last_char()
+    );
+}
+
+#[test]
+fn hover_punned_pattern_call_arg_2() {
+    assert_hover!(
+        "
+pub type Wibble { Wibble(arg1: Int, arg2: Bool) }
+
+pub fn main() {
+  let Wibble(arg2:, ..) = todo
+}
+",
+        find_position_of("arg2:").nth_occurrence(2).under_char('r')
+    );
+}

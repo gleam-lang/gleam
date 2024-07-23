@@ -107,12 +107,23 @@ impl<'comments> Formatter<'comments> {
 
     /// Pop comments that occur before a byte-index in the source, consuming
     /// and retaining any empty lines contained within.
-    fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
+    /// Returns an iterator of comments with their start position.
+    fn pop_comments_with_position(
+        &mut self,
+        limit: u32,
+    ) -> impl Iterator<Item = (u32, Option<&'comments str>)> {
         let (popped, rest, empty_lines) =
             comments_before(self.comments, self.empty_lines, limit, true);
         self.comments = rest;
         self.empty_lines = empty_lines;
         popped
+    }
+
+    /// Pop comments that occur before a byte-index in the source, consuming
+    /// and retaining any empty lines contained within.
+    fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
+        self.pop_comments_with_position(limit)
+            .map(|(_position, comment)| comment)
     }
 
     /// Pop doc comments that occur before a byte-index in the source, consuming
@@ -122,7 +133,7 @@ impl<'comments> Formatter<'comments> {
             comments_before(self.doc_comments, self.empty_lines, limit, false);
         self.doc_comments = rest;
         self.empty_lines = empty_lines;
-        popped
+        popped.map(|(_position, comment)| comment)
     }
 
     /// Remove between 0 and `limit` empty lines following the current position,
@@ -147,14 +158,17 @@ impl<'comments> Formatter<'comments> {
         let target = definition.target;
         let definition = &definition.definition;
         let start = definition.location().start;
-        let comments = self.pop_comments(start);
+
+        let comments = self.pop_comments_with_position(start);
+        let comments = self.printed_documented_comments(comments);
         let document = self.documented_definition(definition);
         let document = match target {
             None => document,
             Some(Target::Erlang) => docvec!["@target(erlang)", line(), document],
             Some(Target::JavaScript) => docvec!["@target(javascript)", line(), document],
         };
-        commented(document, comments)
+
+        comments.to_doc().append(document.group())
     }
 
     pub(crate) fn module<'a>(&mut self, module: &'a UntypedModule) -> Document<'a> {
@@ -1710,29 +1724,57 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn call_arg<'a>(&mut self, arg: &'a CallArg<UntypedExpr>, arity: usize) -> Document<'a> {
-        match &arg.label {
-            Some(s) => commented(
-                s.to_doc().append(": "),
-                self.pop_comments(arg.location.start),
-            ),
-            None => nil(),
+        self.format_call_arg(arg, expr_call_arg_formatting, |this, value| {
+            this.comma_separated_item(value, arity)
+        })
+    }
+
+    fn format_call_arg<'a, A, F, G>(
+        &mut self,
+        arg: &'a CallArg<A>,
+        figure_formatting: F,
+        format_value: G,
+    ) -> Document<'a>
+    where
+        F: Fn(&'a CallArg<A>) -> CallArgFormatting<'a, A>,
+        G: Fn(&mut Self, &'a A) -> Document<'a>,
+    {
+        match figure_formatting(arg) {
+            CallArgFormatting::Unlabelled(value) => format_value(self, value),
+            CallArgFormatting::Punned(label) => {
+                let comments = self.pop_comments(arg.location.start);
+                let label = label.as_ref().to_doc().append(":");
+                commented(label, comments)
+            }
+            CallArgFormatting::Labelled(label, value) => {
+                let comments = self.pop_comments(arg.location.start);
+                let label = label.as_ref().to_doc().append(": ");
+                let value = format_value(self, value);
+                commented(label, comments).append(value)
+            }
         }
-        .append(self.comma_separated_item(&arg.value, arity))
     }
 
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
         let comments = self.pop_comments(arg.location.start);
-        let doc = arg
-            .label
-            .as_str()
-            .to_doc()
-            .append(": ")
-            .append(self.expr(&arg.value));
+        match arg {
+            // Punned argument.
+            _ if arg.is_punned() => commented(arg.label.as_str().to_doc().append(":"), comments),
+            // Labelled argument.
+            _ => {
+                let doc = arg
+                    .label
+                    .as_str()
+                    .to_doc()
+                    .append(": ")
+                    .append(self.expr(&arg.value));
 
-        if arg.value.is_binop() || arg.value.is_pipeline() {
-            commented(doc, comments).nest(INDENT)
-        } else {
-            commented(doc, comments)
+                if arg.value.is_binop() || arg.value.is_pipeline() {
+                    commented(doc, comments).nest(INDENT)
+                } else {
+                    commented(doc, comments)
+                }
+            }
         }
     }
 
@@ -2123,11 +2165,9 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn pattern_call_arg<'a>(&mut self, arg: &'a CallArg<UntypedPattern>) -> Document<'a> {
-        arg.label
-            .as_ref()
-            .map(|s| s.to_doc().append(": "))
-            .unwrap_or_else(nil)
-            .append(self.pattern(&arg.value))
+        self.format_call_arg(arg, pattern_call_arg_formatting, |this, value| {
+            this.pattern(value)
+        })
     }
 
     pub fn clause_guard_bin_op<'a>(
@@ -2262,10 +2302,9 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn constant_call_arg<'a, A, B>(&mut self, arg: &'a CallArg<Constant<A, B>>) -> Document<'a> {
-        match &arg.label {
-            None => self.const_expr(&arg.value),
-            Some(s) => s.to_doc().append(": ").append(self.const_expr(&arg.value)),
-        }
+        self.format_call_arg(arg, constant_call_arg_formatting, |this, value| {
+            this.const_expr(value)
+        })
     }
 
     fn negate_bool<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {
@@ -2534,6 +2573,63 @@ impl<'comments> Formatter<'comments> {
                 .append(")"),
         }
     }
+
+    /// Given some regular comments it pretty prints those with any respective
+    /// doc comment that might be preceding those.
+    /// For example:
+    ///
+    /// ```gleam
+    /// /// Doc
+    /// // comment
+    ///
+    /// /// Doc
+    /// pub fn wibble() {}
+    /// ```
+    ///
+    /// We don't want the first doc comment to be merged together with
+    /// `wibble`'s doc comment, so when we run into comments like `// comment`
+    /// we need to first print all documentation comments that come before it.
+    ///
+    fn printed_documented_comments<'a, 'b>(
+        &mut self,
+        comments: impl IntoIterator<Item = (u32, Option<&'b str>)>,
+    ) -> Option<Document<'a>> {
+        let mut comments = comments.into_iter().peekable();
+        let _ = comments.peek()?;
+
+        let mut doc = Vec::new();
+        while let Some(c) = comments.next() {
+            let (is_doc_commented, c) = match c {
+                (comment_start, Some(c)) => {
+                    let doc_comment = self.doc_comments(comment_start);
+                    let is_doc_commented = !doc_comment.is_empty();
+                    doc.push(doc_comment);
+                    (is_doc_commented, c)
+                }
+                (_, None) => continue,
+            };
+            doc.push("//".to_doc().append(Document::String(c.to_string())));
+            match comments.peek() {
+                // Next line is a comment
+                Some((_, Some(_))) => doc.push(line()),
+                // Next line is empty
+                Some((_, None)) => {
+                    let _ = comments.next();
+                    doc.push(lines(2));
+                }
+                // We've reached the end, there are no more lines
+                None => {
+                    if is_doc_commented {
+                        doc.push(lines(2));
+                    } else {
+                        doc.push(line());
+                    }
+                }
+            }
+        }
+        let doc = concat(doc);
+        Some(doc.force_break())
+    }
 }
 
 fn init_and_last<T>(vec: &[T]) -> Option<(&[T], &T)> {
@@ -2744,7 +2840,7 @@ pub fn comments_before<'a>(
     limit: u32,
     retain_empty_lines: bool,
 ) -> (
-    impl Iterator<Item = Option<&'a str>>,
+    impl Iterator<Item = (u32, Option<&'a str>)>,
     &'a [Comment<'a>],
     &'a [u32],
 ) {
@@ -2777,8 +2873,7 @@ pub fn comments_before<'a>(
         .map(|l| (*l.0, None));
     let popped = popped_comments
         .merge_by(popped_empty_lines, |(a, _), (b, _)| a < b)
-        .skip_while(|(_, comment_or_line)| comment_or_line.is_none())
-        .map(|(_, comment_or_line)| comment_or_line);
+        .skip_while(|(_, comment_or_line)| comment_or_line.is_none());
     (
         popped,
         comments.get(end_comments..).expect("in bounds"),
@@ -2811,5 +2906,66 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
         | UntypedExpr::Tuple { .. }
         | UntypedExpr::BitArray { .. } => true,
         _ => false,
+    }
+}
+
+enum CallArgFormatting<'a, A> {
+    Punned(&'a EcoString),
+    Unlabelled(&'a A),
+    Labelled(&'a EcoString, &'a A),
+}
+
+fn expr_call_arg_formatting(arg: &CallArg<UntypedExpr>) -> CallArgFormatting<'_, UntypedExpr> {
+    match arg {
+        // A punned argument.
+        _ if arg.is_punned() => {
+            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
+        }
+        // A labelled argument.
+        CallArg {
+            label: Some(label),
+            value,
+            ..
+        } => CallArgFormatting::Labelled(label, value),
+        // An unlabelled argument.
+        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+    }
+}
+
+fn pattern_call_arg_formatting(
+    arg: &CallArg<UntypedPattern>,
+) -> CallArgFormatting<'_, UntypedPattern> {
+    match arg {
+        // A punned argument.
+        _ if arg.is_punned() => {
+            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
+        }
+        // A labelled argument.
+        CallArg {
+            label: Some(label),
+            value,
+            ..
+        } => CallArgFormatting::Labelled(label, value),
+        // An unlabelled argument.
+        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+    }
+}
+
+fn constant_call_arg_formatting<A, B>(
+    arg: &CallArg<Constant<A, B>>,
+) -> CallArgFormatting<'_, Constant<A, B>> {
+    match arg {
+        // A punned argument.
+        _ if arg.is_punned() => {
+            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
+        }
+        // A labelled argument.
+        CallArg {
+            label: Some(label),
+            value,
+            ..
+        } => CallArgFormatting::Labelled(label, value),
+        // An unlabelled argument.
+        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
     }
 }
