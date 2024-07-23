@@ -1318,7 +1318,7 @@ pub type Wibble {
   Wibble(wibble: String, wobble: Int)
 }
   
-fn fun() {
+fn fun() { // completion inside parens below includes labels
   let wibble = Wibble()
 }
 ";
@@ -1334,7 +1334,7 @@ fn completions_for_imported_record_labels() {
     let code = "
 import dep
   
-fn fun() {
+fn fun() { // completion inside parens below includes labels
   let wibble = dep.Wibble()
 }
 ";
@@ -1357,7 +1357,7 @@ fn wibble(wibble arg1: String, wobble arg2: String) {
   arg1 <> arg2
 }
   
-fn fun() {
+fn fun() { // completion inside parens below includes labels
   let wibble = wibble()
 }
 ";
@@ -1373,7 +1373,7 @@ fn completions_for_imported_function_labels() {
     let code = "
 import dep
   
-fn fun() {
+fn fun() { // completion inside parens below includes labels
   let wibble = dep.wibble()
 }
 ";

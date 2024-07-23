@@ -652,29 +652,29 @@ where
             .iter()
             .filter_map(|a| a.label.clone())
             .collect_vec();
-        if let Some(field_map) =
+        let Some(field_map) =
             self.callable_field_map(fun, self.compiler.project_compiler.get_importable_modules())
-        {
-            field_map
-                .fields
-                .iter()
-                .filter(|field| !already_included_labels.contains(field.0))
-                .map(|(label, arg_index)| {
-                    let detail = fun_type.as_ref().and_then(|args| {
-                        args.get(*arg_index as usize)
-                            .map(|a| Printer::new().pretty_print(a, 0))
-                    });
-                    CompletionItem {
-                        label: format!("{label}:"),
-                        detail,
-                        kind: Some(CompletionItemKind::FIELD),
-                        ..Default::default()
-                    }
-                })
-                .collect()
-        } else {
-            vec![]
-        }
+        else {
+            return vec![];
+        };
+
+        field_map
+            .fields
+            .iter()
+            .filter(|field| !already_included_labels.contains(field.0))
+            .map(|(label, arg_index)| {
+                let detail = fun_type.as_ref().and_then(|args| {
+                    args.get(*arg_index as usize)
+                        .map(|a| Printer::new().pretty_print(a, 0))
+                });
+                CompletionItem {
+                    label: format!("{label}:"),
+                    detail,
+                    kind: Some(CompletionItemKind::FIELD),
+                    ..Default::default()
+                }
+            })
+            .collect()
     }
 
     fn root_package_name(&self) -> &str {
