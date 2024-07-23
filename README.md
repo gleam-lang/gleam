@@ -73,7 +73,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/chadselph">Chad Selph</a> -
   <a href="https://github.com/charlie-n01r">Charlie Govea</a> -
   <a href="https://github.com/chazwatkins">Chaz Watkins</a> -
-  <a href="https://github.com/ChetanBhasin">Chetan Bhasin</a> -
   <a href="https://github.com/choonkeat">Chew Choon Keat</a> -
   <a href="https://github.com/ceedon">Chris Donnelly</a> -
   <a href="https://github.com/Morzaram">Chris King</a> -
@@ -90,7 +89,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/insanitybit">Colin</a> -
   <a href="https://github.com/CollinBrennan">Collin</a> -
   <a href="https://github.com/Comamoca">Comamoca</a> -
-  <a href="https://github.com/cristineguadelupe">Cristine Guadelupe</a> -
   <a href="https://github.com/sdaigo">Daigo Shitara</a> -
   <a href="https://github.com/dvic">Damir Vandic</a> -
   <a href="https://github.com/ddresselhaus">Dan Dresselhaus</a> -
@@ -232,7 +230,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/l1f">Ninaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</a> -
   <a href="http://www.ninefx.com">NineFX</a> -
   <a href="https://github.com/nomio">Nomio</a> -
-  <a href="https://github.com/oceanlewis">Ocean Armstrong Lewis</a> -
+  <a href="https://github.com/oceanlewis">Ocean</a> -
   <a href="https://github.com/OldhamMade">OldhamMade</a> -
   <a href="https://github.com/optizio">optizio</a> -
   <a href="https://github.com/daslaf">Osman Cea</a> -
@@ -284,7 +282,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/Qard">Stephen Belanger</a> -
   <a href="https://github.com/Strandinator">Strandinator</a> -
   <a href="https://github.com/syhner">syhner</a> -
-  <a href="https://github.com/finalclass">Szymon Wygnański</a> -
   <a href="https://github.com/slafs">Sławomir Ehlert</a> -
   <a href="https://github.com/Theosaurus-Rex">Theo Harris</a> -
   <a href="https://github.com/thomaswhyyou">Thomas</a> -
