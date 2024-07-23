@@ -169,9 +169,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 ", ",
                 end,
                 ", ",
-                endianness.is_big(),
+                bool(endianness.is_big()),
                 ", ",
-                is_signed,
+                bool(*is_signed),
                 ")"
             ),
             Index::FloatFromSlice {
@@ -184,7 +184,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 ", ",
                 end,
                 ", ",
-                endianness.is_big(),
+                bool(endianness.is_big()),
                 ")"
             ),
             Index::BinaryFromSlice(start, end) => {

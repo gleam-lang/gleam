@@ -780,3 +780,10 @@ pub(crate) struct UsageTracker {
     pub codepoint_bit_array_segment_used: bool,
     pub float_bit_array_segment_used: bool,
 }
+
+fn bool(bool: bool) -> Document<'static> {
+    match bool {
+        true => "true".to_doc(),
+        false => "false".to_doc(),
+    }
+}

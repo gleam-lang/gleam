@@ -240,7 +240,7 @@ impl<'module> Generator<'module> {
                             ", ",
                             details.size,
                             ", ",
-                            details.endianness.is_big(),
+                            bool(details.endianness.is_big()),
                             ")"
                         ])
                     } else {
@@ -254,7 +254,7 @@ impl<'module> Generator<'module> {
                         ", ",
                         details.size,
                         ", ",
-                        details.endianness.is_big(),
+                        bool(details.endianness.is_big()),
                         ")"
                     ])
                 }
@@ -1454,7 +1454,7 @@ fn bit_array<'a>(
                         ", ",
                         details.size,
                         ", ",
-                        details.endianness.is_big(),
+                        bool(details.endianness.is_big()),
                         ")"
                     ])
                 } else {
@@ -1468,7 +1468,7 @@ fn bit_array<'a>(
                     ", ",
                     details.size,
                     ", ",
-                    details.endianness.is_big(),
+                    bool(details.endianness.is_big()),
                     ")"
                 ])
             }
