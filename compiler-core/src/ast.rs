@@ -1013,7 +1013,7 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             })
             | Definition::ModuleConstant(ModuleConstant {
                 documentation: doc, ..
-            }) => doc.clone(),
+            }) => doc.as_ref().map(|(_, doc)| doc.clone()),
         }
     }
 

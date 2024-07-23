@@ -255,13 +255,12 @@ impl Module {
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
         for statement in &mut statements {
-            let (docs_start, docs): (u32, Vec<&str>) =
-                doc_comments_before(
-                    &mut doc_comments,
-                    &self.extra,
-                    statement.location().start,
-                    &self.code,
-                );
+            let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
+                &mut doc_comments,
+                &self.extra,
+                statement.location().start,
+                &self.code,
+            );
             if !docs.is_empty() {
                 let doc = docs.join("\n").into();
                 statement.put_doc((docs_start, doc));
@@ -269,26 +268,24 @@ impl Module {
 
             if let Definition::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
-                    let (docs_start, docs): (u32, Vec<&str>) =
-                        doc_comments_before(
-                            &mut doc_comments,
-                            &self.extra,
-                            constructor.location.start,
-                            &self.code,
-                        );
+                    let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
+                        &mut doc_comments,
+                        &self.extra,
+                        constructor.location.start,
+                        &self.code,
+                    );
                     if !docs.is_empty() {
                         let doc = docs.join("\n").into();
                         constructor.put_doc((docs_start, doc));
                     }
 
                     for argument in constructor.arguments.iter_mut() {
-                        let (docs_start, docs): (u32, Vec<&str>) =
-                            doc_comments_before(
-                                &mut doc_comments,
-                                &self.extra,
-                                argument.location.start,
-                                &self.code,
-                            );
+                        let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
+                            &mut doc_comments,
+                            &self.extra,
+                            argument.location.start,
+                            &self.code,
+                        );
                         if !docs.is_empty() {
                             let doc = docs.join("\n").into();
                             argument.put_doc((docs_start, doc));
