@@ -6298,7 +6298,7 @@ fn record_with_no_label_shorthand() {
 }
 
 #[test]
-fn function_with_no_label_shorthand() {
+fn function_without_label_shorthand() {
     assert_format!(
         r#"pub fn main() {
   wibble(x: x)

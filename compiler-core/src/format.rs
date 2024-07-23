@@ -1740,13 +1740,13 @@ impl<'comments> Formatter<'comments> {
         G: Fn(&mut Self, &'a A) -> Document<'a>,
     {
         match figure_formatting(arg) {
-            CallArgFormatting::Unlabelled(value) => format_value(self, value),
+            CallArgFormatting::WithoutLabel(value) => format_value(self, value),
             CallArgFormatting::WithLabelShorthand(label) => {
                 let comments = self.pop_comments(arg.location.start);
                 let label = label.as_ref().to_doc().append(":");
                 commented(label, comments)
             }
-            CallArgFormatting::Labelled(label, value) => {
+            CallArgFormatting::WithLabel(label, value) => {
                 let comments = self.pop_comments(arg.location.start);
                 let label = label.as_ref().to_doc().append(": ");
                 let value = format_value(self, value);
@@ -1758,7 +1758,7 @@ impl<'comments> Formatter<'comments> {
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
         let comments = self.pop_comments(arg.location.start);
         match arg {
-            // Argument defined with a label shorthand.
+            // Argument supplied with a label shorthand.
             _ if arg.uses_label_shorthand() => {
                 commented(arg.label.as_str().to_doc().append(":"), comments)
             }
@@ -2913,13 +2913,13 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
 
 enum CallArgFormatting<'a, A> {
     WithLabelShorthand(&'a EcoString),
-    Unlabelled(&'a A),
-    Labelled(&'a EcoString, &'a A),
+    WithoutLabel(&'a A),
+    WithLabel(&'a EcoString, &'a A),
 }
 
 fn expr_call_arg_formatting(arg: &CallArg<UntypedExpr>) -> CallArgFormatting<'_, UntypedExpr> {
     match arg {
-        // An argument defined using label shorthand syntax.
+        // An argument supplied using label shorthand syntax.
         _ if arg.uses_label_shorthand() => CallArgFormatting::WithLabelShorthand(
             arg.label.as_ref().expect("label shorthand with no label"),
         ),
@@ -2928,9 +2928,9 @@ fn expr_call_arg_formatting(arg: &CallArg<UntypedExpr>) -> CallArgFormatting<'_,
             label: Some(label),
             value,
             ..
-        } => CallArgFormatting::Labelled(label, value),
+        } => CallArgFormatting::WithLabel(label, value),
         // An unlabelled argument.
-        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+        CallArg { value, .. } => CallArgFormatting::WithoutLabel(value),
     }
 }
 
@@ -2938,7 +2938,7 @@ fn pattern_call_arg_formatting(
     arg: &CallArg<UntypedPattern>,
 ) -> CallArgFormatting<'_, UntypedPattern> {
     match arg {
-        // An argument defined using label shorthand syntax.
+        // An argument supplied using label shorthand syntax.
         _ if arg.uses_label_shorthand() => CallArgFormatting::WithLabelShorthand(
             arg.label.as_ref().expect("label shorthand with no label"),
         ),
@@ -2947,9 +2947,9 @@ fn pattern_call_arg_formatting(
             label: Some(label),
             value,
             ..
-        } => CallArgFormatting::Labelled(label, value),
+        } => CallArgFormatting::WithLabel(label, value),
         // An unlabelled argument.
-        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+        CallArg { value, .. } => CallArgFormatting::WithoutLabel(value),
     }
 }
 
@@ -2957,7 +2957,7 @@ fn constant_call_arg_formatting<A, B>(
     arg: &CallArg<Constant<A, B>>,
 ) -> CallArgFormatting<'_, Constant<A, B>> {
     match arg {
-        // An argument defined using label shorthand syntax.
+        // An argument supplied using label shorthand syntax.
         _ if arg.uses_label_shorthand() => CallArgFormatting::WithLabelShorthand(
             arg.label.as_ref().expect("label shorthand with no label"),
         ),
@@ -2966,8 +2966,8 @@ fn constant_call_arg_formatting<A, B>(
             label: Some(label),
             value,
             ..
-        } => CallArgFormatting::Labelled(label, value),
+        } => CallArgFormatting::WithLabel(label, value),
         // An unlabelled argument.
-        CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+        CallArg { value, .. } => CallArgFormatting::WithoutLabel(value),
     }
 }
