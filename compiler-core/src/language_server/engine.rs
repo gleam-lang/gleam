@@ -303,10 +303,18 @@ where
 
             for definition in &module.ast.definitions {
                 match definition {
+                    // Typically, imports aren't considered document symbols.
+                    Definition::Import(_) => {}
+
                     Definition::Function(function) => {
                         // By default, the function's location ends right after the return type.
                         // For the full symbol range, have it end at the end of the body.
                         // Also include the documentation, if available.
+                        //
+                        // By convention, the symbol span starts from the leading slash in the
+                        // documentation comment's marker ('///'), not from its content (of which
+                        // we have the position), so we must convert the content start position
+                        // to the leading slash's position using 'get_doc_marker_pos'.
                         let full_function_span = SrcSpan {
                             start: function
                                 .documentation
@@ -373,17 +381,11 @@ where
                         symbols.push(custom_type_symbol(type_, &line_numbers));
                     }
 
-                    Definition::Import(_) => {}
-
                     Definition::ModuleConstant(constant) => {
                         // `ModuleConstant.location` ends at the constant's name or type.
                         // For the full symbol span, necessary for `range`, we need to
                         // include the constant value as well.
                         // Also include the documentation at the start, if available.
-                        // By convention, the symbol span starts from the leading slash in the
-                        // documentation comment's marker ('///'), not from its content (of which
-                        // we have the position), so we must convert the content start position
-                        // to the leading slash's position using 'get_doc_marker_pos'.
                         let full_constant_span = SrcSpan {
                             start: constant
                                 .documentation
