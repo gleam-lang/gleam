@@ -1268,7 +1268,7 @@ where
     T: HasLocation,
 {
     #[must_use]
-    pub fn is_punned(&self) -> bool {
+    pub fn uses_label_shorthand(&self) -> bool {
         self.label.is_some() && self.location == self.value.location()
     }
 }
@@ -1294,7 +1294,7 @@ pub struct UntypedRecordUpdateArg {
 
 impl UntypedRecordUpdateArg {
     #[must_use]
-    pub fn is_punned(&self) -> bool {
+    pub fn uses_label_shorthand(&self) -> bool {
         self.value.location() == self.location
     }
 }

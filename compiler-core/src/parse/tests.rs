@@ -1216,7 +1216,7 @@ case my_string {
 }
 
 #[test]
-fn invalid_punning() {
+fn invalid_label_shorthand() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1227,7 +1227,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_punning_2() {
+fn invalid_label_shorthand_2() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1238,7 +1238,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_punning_3() {
+fn invalid_label_shorthand_3() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1249,7 +1249,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_punning_4() {
+fn invalid_label_shorthand_4() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1260,7 +1260,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_punning_5() {
+fn invalid_label_shorthand_5() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1271,7 +1271,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_pattern_punning() {
+fn invalid_pattern_label_shorthand() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1282,7 +1282,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_pattern_punning_2() {
+fn invalid_pattern_label_shorthand_2() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1293,7 +1293,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_pattern_punning_3() {
+fn invalid_pattern_label_shorthand_3() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1304,7 +1304,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_pattern_punning_4() {
+fn invalid_pattern_label_shorthand_4() {
     assert_module_error!(
         "
 pub fn main() {
@@ -1315,7 +1315,7 @@ pub fn main() {
 }
 
 #[test]
-fn invalid_pattern_punning_5() {
+fn invalid_pattern_label_shorthand_5() {
     assert_module_error!(
         "
 pub fn main() {

@@ -830,7 +830,7 @@ fn unexpected_labelled_arg() {
 }
 
 #[test]
-fn unexpected_punned_arg() {
+fn unexpected_arg_with_label_shorthand() {
     assert_module_error!(
         r#"
     fn id(x) { x }
@@ -851,7 +851,7 @@ fn x() { X(b: 1, a: 1, 1) }"#
 }
 
 #[test]
-fn positional_argument_after_punned() {
+fn positional_argument_after_one_using_label_shorthand() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
 fn x() {
@@ -941,7 +941,7 @@ fn x() {
 }
 
 #[test]
-fn duplicate_punned_var_in_record_pattern() {
+fn duplicate_label_shorthands_in_record_pattern() {
     // Duplicate var in record
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
@@ -1477,7 +1477,7 @@ fn x() {
 }
 
 #[test]
-fn unknown_punned_label() {
+fn unknown_label_shorthand() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
 fn x() {
@@ -2147,7 +2147,7 @@ const invalid_concat = some_int <> \"with_string\"
 }
 
 #[test]
-fn invalid_punned_pattern_label() {
+fn invalid_pattern_label_shorthand() {
     assert_module_error!(
         "
 pub type Wibble { Wibble(arg: Int) }

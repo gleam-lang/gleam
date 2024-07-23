@@ -1741,7 +1741,7 @@ impl<'comments> Formatter<'comments> {
     {
         match figure_formatting(arg) {
             CallArgFormatting::Unlabelled(value) => format_value(self, value),
-            CallArgFormatting::Punned(label) => {
+            CallArgFormatting::WithLabelShorthand(label) => {
                 let comments = self.pop_comments(arg.location.start);
                 let label = label.as_ref().to_doc().append(":");
                 commented(label, comments)
@@ -1758,8 +1758,10 @@ impl<'comments> Formatter<'comments> {
     fn record_update_arg<'a>(&mut self, arg: &'a UntypedRecordUpdateArg) -> Document<'a> {
         let comments = self.pop_comments(arg.location.start);
         match arg {
-            // Punned argument.
-            _ if arg.is_punned() => commented(arg.label.as_str().to_doc().append(":"), comments),
+            // Argument defined with a label shorthand.
+            _ if arg.uses_label_shorthand() => {
+                commented(arg.label.as_str().to_doc().append(":"), comments)
+            }
             // Labelled argument.
             _ => {
                 let doc = arg
@@ -2910,17 +2912,17 @@ fn is_breakable_argument(expr: &UntypedExpr, arity: usize) -> bool {
 }
 
 enum CallArgFormatting<'a, A> {
-    Punned(&'a EcoString),
+    WithLabelShorthand(&'a EcoString),
     Unlabelled(&'a A),
     Labelled(&'a EcoString, &'a A),
 }
 
 fn expr_call_arg_formatting(arg: &CallArg<UntypedExpr>) -> CallArgFormatting<'_, UntypedExpr> {
     match arg {
-        // A punned argument.
-        _ if arg.is_punned() => {
-            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
-        }
+        // An argument defined using label shorthand syntax.
+        _ if arg.uses_label_shorthand() => CallArgFormatting::WithLabelShorthand(
+            arg.label.as_ref().expect("label shorthand with no label"),
+        ),
         // A labelled argument.
         CallArg {
             label: Some(label),
@@ -2936,10 +2938,10 @@ fn pattern_call_arg_formatting(
     arg: &CallArg<UntypedPattern>,
 ) -> CallArgFormatting<'_, UntypedPattern> {
     match arg {
-        // A punned argument.
-        _ if arg.is_punned() => {
-            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
-        }
+        // An argument defined using label shorthand syntax.
+        _ if arg.uses_label_shorthand() => CallArgFormatting::WithLabelShorthand(
+            arg.label.as_ref().expect("label shorthand with no label"),
+        ),
         // A labelled argument.
         CallArg {
             label: Some(label),
@@ -2955,10 +2957,10 @@ fn constant_call_arg_formatting<A, B>(
     arg: &CallArg<Constant<A, B>>,
 ) -> CallArgFormatting<'_, Constant<A, B>> {
     match arg {
-        // A punned argument.
-        _ if arg.is_punned() => {
-            CallArgFormatting::Punned(arg.label.as_ref().expect("punned arg with no label"))
-        }
+        // An argument defined using label shorthand syntax.
+        _ if arg.uses_label_shorthand() => CallArgFormatting::WithLabelShorthand(
+            arg.label.as_ref().expect("label shorthand with no label"),
+        ),
         // A labelled argument.
         CallArg {
             label: Some(label),

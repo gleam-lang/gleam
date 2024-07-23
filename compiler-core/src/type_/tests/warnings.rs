@@ -1987,7 +1987,7 @@ fn deprecated_list_pattern_syntax_1() {
 }
 
 #[test]
-fn unused_punned_pattern_arg() {
+fn unused_label_shorthand_pattern_arg() {
     assert_warning!(
         r#"
 pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }
@@ -2001,7 +2001,7 @@ pub fn main() {
 }
 
 #[test]
-fn unused_punned_pattern_arg_shadowing() {
+fn unused_label_shorthand_pattern_arg_shadowing() {
     assert_warning!(
         r#"
 pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }

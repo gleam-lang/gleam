@@ -404,6 +404,10 @@ pub trait Visit<'ast> {
         );
     }
 
+    fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
+        visit_typed_pattern_call_arg(self, arg);
+    }
+
     fn visit_typed_pattern_tuple(
         &mut self,
         location: &'ast SrcSpan,
@@ -1131,8 +1135,15 @@ pub fn visit_typed_pattern_constructor<'a, V>(
     V: Visit<'a> + ?Sized,
 {
     for argument in arguments {
-        v.visit_typed_pattern(&argument.value);
+        v.visit_typed_pattern_call_arg(argument);
     }
+}
+
+pub fn visit_typed_pattern_call_arg<'a, V>(v: &mut V, argument: &'a CallArg<TypedPattern>)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_pattern(&argument.value)
 }
 
 pub fn visit_typed_pattern_tuple<'a, V>(

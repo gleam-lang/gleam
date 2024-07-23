@@ -15,9 +15,9 @@
 
 ### Compiler
 
-- Labelled arguments can now be punned. This means that when you're passing a
-  variable as a labelled argument and it happens to have the same name as the
-  label, you can omit the variable name:
+- Labelled arguments can now use the label shorthand syntax.
+  This means that when you're passing a variable as a labelled argument and it
+  happens to have the same name as the label, you can omit the variable name:
 
   ```gleam
   pub fn date(day day: Int, month month: Month, year year: Year) -> Date {
@@ -37,9 +37,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Labelled pattern variables can now be punned. This means that when you're
-  pattern matching on a record constructor and binding its labelled fields to
-  variables that happen to have the same name, you can omit the variable name:
+- Labelled pattern variables can now use the label shorthand syntax.
+  This means that when you're pattern matching on a record constructor and
+  binding its labelled fields to variables that happen to have the same name,
+  you can omit the variable name:
 
   ```gleam
   pub type Date
