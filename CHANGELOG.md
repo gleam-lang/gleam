@@ -217,8 +217,8 @@
 - The language server now supports listing document symbols, such as functions and constants, for the current Gleam file.
   ([PgBiel](https://github.com/PgBiel))
 
-- The language server can now suggest a code action to automatically use the
-  label shorthand syntax where possible:
+- The language server can now suggest a code action to automatically use
+  shorthand labels where possible:
 
   ```gleam
   case date {
