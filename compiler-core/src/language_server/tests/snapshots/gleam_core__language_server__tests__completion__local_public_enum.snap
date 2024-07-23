@@ -1,7 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion_at_default_position(TestProject::for_source(code))"
+expression: "\npub type Direction {\n  Left\n  Right\n}\n"
 ---
+pub type Direction {
+  Left
+  Right
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "Left",

@@ -1,7 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code).add_hex_module(\"example_module\",\n        dep), Position::new(0, 10))"
+expression: "import gleam\n\npub fn main() {\n  0\n}"
 ---
+import gleam
+
+pub fn main() {
+  0
+}
+
+----- Completion content -----
 [
     CompletionItem {
         label: "example_module",

@@ -1,7 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code), Position::new(3, 0))"
+expression: "\n@internal pub type Alias = Result(Int, String)\n@internal pub type AnotherType {\n  Wibble\n}\n"
 ---
+@internal pub type Alias = Result(Int, String)
+@internal pub type AnotherType {
+  Wibble
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "Alias",

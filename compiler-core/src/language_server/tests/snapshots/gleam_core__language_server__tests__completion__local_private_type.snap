@@ -1,7 +1,17 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code), Position::new(4, 0))"
+expression: "\ntype Zoo = Int\n\npub fn wibble(\n  x: String,\n) -> String {\n  \"ok\"\n}\n"
 ---
+type Zoo = Int
+
+pub fn wibble(
+  x: String,
+) -> String {
+  "ok"
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "BitArray",

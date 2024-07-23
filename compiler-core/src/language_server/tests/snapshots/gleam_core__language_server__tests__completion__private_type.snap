@@ -1,7 +1,13 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion_at_default_position(TestProject::for_source(code).add_module(\"dep\",\n        dep))"
+expression: "\ntype Wibble {\n  Wobble\n}\n"
 ---
+type Wibble {
+  Wobble
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "Wobble",

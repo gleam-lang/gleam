@@ -1,7 +1,13 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion_at_default_position(TestProject::for_source(code))"
+expression: "\npub type Box {\n  Box(Int, Int, Float)\n}\n"
 ---
+pub type Box {
+  Box(Int, Int, Float)
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "Box",

@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code).add_dep_module(\"dep\", dep),\n    Position::new(4, 27))"
+expression: "\nimport dep\n  \nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.wibble()\n}\n"
 ---
+import dep
+  
+fn fun() { // completion inside parens below includes labels
+  let wibble = dep.wibble()
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "dep.wibble",

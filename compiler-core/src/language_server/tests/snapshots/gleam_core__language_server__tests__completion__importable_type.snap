@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "completion(TestProject::for_source(code).add_module(\"dep\", dep),\n    Position::new(3, 0))"
+expression: "\n\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
+pub fn wibble(
+  _: String,
+) -> Nil {
+  Nil
+}
+
+
+----- Completion content -----
 [
     CompletionItem {
         label: "BitArray",
