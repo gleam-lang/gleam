@@ -6400,3 +6400,13 @@ pub fn wibble() {
 "#
     );
 }
+
+#[test]
+fn discard_in_pipe_is_not_turned_into_shorthand_label() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble |> wobble(one: 1, label: _, two: 2)
+}
+"#
+    );
+}
