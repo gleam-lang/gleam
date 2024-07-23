@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/language_server/tests/document_symbols.rs
+expression: "doc_symbols(TestProject::for_source(code))"
+---
+[
+    DocumentSymbol {
+        name: "A",
+        detail: None,
+        kind: Class,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 3,
+                character: 0,
+            },
+            end: Position {
+                line: 4,
+                character: 10,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 4,
+                character: 9,
+            },
+            end: Position {
+                line: 4,
+                character: 10,
+            },
+        },
+        children: None,
+    },
+]

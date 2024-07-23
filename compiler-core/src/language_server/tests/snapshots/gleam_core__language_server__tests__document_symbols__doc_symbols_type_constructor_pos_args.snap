@@ -1,0 +1,121 @@
+---
+source: compiler-core/src/language_server/tests/document_symbols.rs
+expression: "doc_symbols(TestProject::for_source(code))"
+---
+[
+    DocumentSymbol {
+        name: "B",
+        detail: None,
+        kind: Class,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 1,
+                character: 0,
+            },
+            end: Position {
+                line: 11,
+                character: 1,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 1,
+                character: 9,
+            },
+            end: Position {
+                line: 1,
+                character: 10,
+            },
+        },
+        children: Some(
+            [
+                DocumentSymbol {
+                    name: "C",
+                    detail: None,
+                    kind: Constructor,
+                    tags: None,
+                    deprecated: None,
+                    range: Range {
+                        start: Position {
+                            line: 2,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 10,
+                        },
+                    },
+                    selection_range: Range {
+                        start: Position {
+                            line: 2,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 5,
+                        },
+                    },
+                    children: None,
+                },
+                DocumentSymbol {
+                    name: "D",
+                    detail: None,
+                    kind: Constructor,
+                    tags: None,
+                    deprecated: None,
+                    range: Range {
+                        start: Position {
+                            line: 4,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 5,
+                            character: 16,
+                        },
+                    },
+                    selection_range: Range {
+                        start: Position {
+                            line: 5,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 5,
+                            character: 5,
+                        },
+                    },
+                    children: None,
+                },
+                DocumentSymbol {
+                    name: "E",
+                    detail: None,
+                    kind: Constructor,
+                    tags: None,
+                    deprecated: None,
+                    range: Range {
+                        start: Position {
+                            line: 7,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 5,
+                        },
+                    },
+                    selection_range: Range {
+                        start: Position {
+                            line: 8,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 8,
+                            character: 5,
+                        },
+                    },
+                    children: None,
+                },
+            ],
+        ),
+    },
+]

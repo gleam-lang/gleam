@@ -13,11 +13,15 @@ Parsed {
                     ModuleConstant {
                         documentation: None,
                         location: SrcSpan {
-                            start: 7,
+                            start: 1,
                             end: 11,
                         },
                         publicity: Private,
                         name: "cute",
+                        name_location: SrcSpan {
+                            start: 7,
+                            end: 11,
+                        },
                         annotation: None,
                         value: String {
                             location: SrcSpan {
@@ -44,11 +48,15 @@ Parsed {
                     ModuleConstant {
                         documentation: None,
                         location: SrcSpan {
-                            start: 27,
+                            start: 21,
                             end: 35,
                         },
                         publicity: Private,
                         name: "cute_bee",
+                        name_location: SrcSpan {
+                            start: 27,
+                            end: 35,
+                        },
                         annotation: None,
                         value: StringConcatenation {
                             location: SrcSpan {

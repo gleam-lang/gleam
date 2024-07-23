@@ -525,39 +525,45 @@ fn function<'a>(
             location,
             deprecation,
             ..
-        }) => Some(DocsFunction {
-            name,
-            documentation: markdown_documentation(doc),
-            text_documentation: text_documentation(doc),
-            signature: print(
-                formatter
-                    .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
-                    .group(),
-            ),
-            source_url: source_links.url(*location),
-            deprecation_message: match deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-        }),
+        }) => {
+            let (_, name) = name
+                .as_ref()
+                .expect("Function in a definition must be named");
+
+            Some(DocsFunction {
+                name,
+                documentation: markdown_documentation(doc),
+                text_documentation: text_documentation(doc),
+                signature: print(
+                    formatter
+                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
+                        .group(),
+                ),
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
+                },
+            })
+        }
 
         _ => None,
     }
 }
 
-fn text_documentation(doc: &Option<EcoString>) -> String {
+fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
     let raw_text = doc
         .as_ref()
-        .map(|it| it.to_string())
+        .map(|(_, it)| it.to_string())
         .unwrap_or_else(|| "".into());
 
     // TODO: parse markdown properly and extract the text nodes
     raw_text.replace("```gleam", "").replace("```", "")
 }
 
-fn markdown_documentation(doc: &Option<EcoString>) -> String {
-    doc.as_deref()
-        .map(|doc| render_markdown(doc, MarkdownSource::Comment))
+fn markdown_documentation(doc: &Option<(u32, EcoString)>) -> String {
+    doc.as_ref()
+        .map(|(_, doc)| render_markdown(doc, MarkdownSource::Comment))
         .unwrap_or_default()
 }
 
@@ -614,8 +620,8 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
                     arguments: constructor
                         .arguments
                         .iter()
-                        .filter_map(|arg| arg.label.as_ref().map(|label| (arg, label)))
-                        .map(|(argument, (label, _))| TypeConstructorArg {
+                        .filter_map(|arg| arg.label.as_ref().map(|(_, label)| (arg, label)))
+                        .map(|(argument, label)| TypeConstructorArg {
                             name: label.trim_end().to_string(),
                             doc: markdown_documentation(&argument.doc),
                         })

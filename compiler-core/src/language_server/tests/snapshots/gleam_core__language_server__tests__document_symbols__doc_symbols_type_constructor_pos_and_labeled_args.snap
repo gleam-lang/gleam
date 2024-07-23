@@ -1,0 +1,220 @@
+---
+source: compiler-core/src/language_server/tests/document_symbols.rs
+expression: "doc_symbols(TestProject::for_source(code))"
+---
+[
+    DocumentSymbol {
+        name: "B",
+        detail: None,
+        kind: Class,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 1,
+                character: 0,
+            },
+            end: Position {
+                line: 14,
+                character: 1,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 1,
+                character: 9,
+            },
+            end: Position {
+                line: 1,
+                character: 10,
+            },
+        },
+        children: Some(
+            [
+                DocumentSymbol {
+                    name: "C",
+                    detail: None,
+                    kind: Constructor,
+                    tags: None,
+                    deprecated: None,
+                    range: Range {
+                        start: Position {
+                            line: 2,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 21,
+                        },
+                    },
+                    selection_range: Range {
+                        start: Position {
+                            line: 2,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 2,
+                            character: 5,
+                        },
+                    },
+                    children: Some(
+                        [
+                            DocumentSymbol {
+                                name: "argc",
+                                detail: Some(
+                                    "Int",
+                                ),
+                                kind: Field,
+                                tags: None,
+                                deprecated: None,
+                                range: Range {
+                                    start: Position {
+                                        line: 2,
+                                        character: 11,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        character: 20,
+                                    },
+                                },
+                                selection_range: Range {
+                                    start: Position {
+                                        line: 2,
+                                        character: 11,
+                                    },
+                                    end: Position {
+                                        line: 2,
+                                        character: 15,
+                                    },
+                                },
+                                children: None,
+                            },
+                        ],
+                    ),
+                },
+                DocumentSymbol {
+                    name: "D",
+                    detail: None,
+                    kind: Constructor,
+                    tags: None,
+                    deprecated: None,
+                    range: Range {
+                        start: Position {
+                            line: 4,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 5,
+                            character: 27,
+                        },
+                    },
+                    selection_range: Range {
+                        start: Position {
+                            line: 5,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 5,
+                            character: 5,
+                        },
+                    },
+                    children: Some(
+                        [
+                            DocumentSymbol {
+                                name: "argd",
+                                detail: Some(
+                                    "List(Int)",
+                                ),
+                                kind: Field,
+                                tags: None,
+                                deprecated: None,
+                                range: Range {
+                                    start: Position {
+                                        line: 5,
+                                        character: 11,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        character: 26,
+                                    },
+                                },
+                                selection_range: Range {
+                                    start: Position {
+                                        line: 5,
+                                        character: 11,
+                                    },
+                                    end: Position {
+                                        line: 5,
+                                        character: 15,
+                                    },
+                                },
+                                children: None,
+                            },
+                        ],
+                    ),
+                },
+                DocumentSymbol {
+                    name: "E",
+                    detail: None,
+                    kind: Constructor,
+                    tags: None,
+                    deprecated: None,
+                    range: Range {
+                        start: Position {
+                            line: 7,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 13,
+                            character: 5,
+                        },
+                    },
+                    selection_range: Range {
+                        start: Position {
+                            line: 8,
+                            character: 4,
+                        },
+                        end: Position {
+                            line: 8,
+                            character: 5,
+                        },
+                    },
+                    children: Some(
+                        [
+                            DocumentSymbol {
+                                name: "arge",
+                                detail: Some(
+                                    "Result(Int, Bool)",
+                                ),
+                                kind: Field,
+                                tags: None,
+                                deprecated: None,
+                                range: Range {
+                                    start: Position {
+                                        line: 11,
+                                        character: 8,
+                                    },
+                                    end: Position {
+                                        line: 12,
+                                        character: 31,
+                                    },
+                                },
+                                selection_range: Range {
+                                    start: Position {
+                                        line: 12,
+                                        character: 8,
+                                    },
+                                    end: Position {
+                                        line: 12,
+                                        character: 12,
+                                    },
+                                },
+                                children: None,
+                            },
+                        ],
+                    ),
+                },
+            ],
+        ),
+    },
+]

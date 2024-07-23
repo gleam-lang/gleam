@@ -303,14 +303,14 @@ where
                 self.parse_import(start)
             }
             // Module Constants
-            (Some((_, Token::Const, _)), _) => {
+            (Some((start, Token::Const, _)), _) => {
                 self.advance();
-                self.parse_module_const(false, &attributes)
+                self.parse_module_const(start, false, &attributes)
             }
-            (Some((_, Token::Pub, _)), Some((_, Token::Const, _))) => {
+            (Some((start, Token::Pub, _)), Some((_, Token::Const, _))) => {
                 self.advance();
                 self.advance();
-                self.parse_module_const(true, &attributes)
+                self.parse_module_const(start, true, &attributes)
             }
 
             // Function
@@ -1723,13 +1723,16 @@ where
         } else {
             self.take_documentation(start)
         };
-
-        let mut name_location = SrcSpan::new(start, start);
-        let mut name = EcoString::from("");
+        let mut name = None;
         if !is_anon {
-            let (start, n, end) = self.expect_name()?;
-            name = n;
-            name_location = SrcSpan { start, end };
+            let (name_start, n, name_end) = self.expect_name()?;
+            name = Some((
+                SrcSpan {
+                    start: name_start,
+                    end: name_end,
+                },
+                n,
+            ));
         }
         let _ = self.expect_one(&Token::LeftParen)?;
         let args = Parser::series_of(
@@ -1779,7 +1782,6 @@ where
         Ok(Some(Definition::Function(Function {
             documentation,
             location: SrcSpan { start, end },
-            name_location,
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             name,
@@ -2032,6 +2034,7 @@ where
     ) -> Result<Option<UntypedDefinition>, ParseError> {
         let documentation = self.take_documentation(start);
         let (name_start, name, parameters, end, name_end) = self.expect_type_name()?;
+        let name_location = SrcSpan::new(name_start, name_end);
         let (constructors, end_position) = if self.maybe_one(&Token::LeftBrace).is_some() {
             // Custom Type
             let constructors = Parser::series_of(
@@ -2071,9 +2074,9 @@ where
                 return Ok(Some(Definition::TypeAlias(TypeAlias {
                     documentation,
                     location: SrcSpan::new(start, type_end),
-                    name_location: SrcSpan::new(name_start, name_end),
                     publicity: self.publicity(public, attributes.internal)?,
                     alias: name,
+                    name_location,
                     parameters,
                     type_ast: t,
                     type_: (),
@@ -2088,14 +2091,11 @@ where
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },
-            name_location: SrcSpan {
-                start: name_start,
-                end: name_end,
-            },
             end_position,
             publicity: self.publicity(public, attributes.internal)?,
             opaque,
             name,
+            name_location,
             parameters,
             constructors,
             typed_parameters: vec![],
@@ -2143,13 +2143,7 @@ where
                             Some(type_ast) => {
                                 let end = type_ast.location().end;
                                 Ok(Some(RecordConstructorArg {
-                                    label: Some((
-                                        name,
-                                        SrcSpan {
-                                            start,
-                                            end: name_end,
-                                        },
-                                    )),
+                                    label: Some((SrcSpan::new(start, name_end), name)),
                                     ast: type_ast,
                                     location: SrcSpan { start, end },
                                     type_: (),
@@ -2367,7 +2361,7 @@ where
             }
         }
 
-        let documentation = self.take_documentation(start);
+        let (_, documentation) = self.take_documentation(start).unzip();
 
         // Gather imports
         let mut unqualified_values = vec![];
@@ -2492,11 +2486,12 @@ where
     //   pub const a:Int = 1
     fn parse_module_const(
         &mut self,
+        start: u32,
         public: bool,
         attributes: &Attributes,
     ) -> Result<Option<UntypedDefinition>, ParseError> {
-        let (start, name, end) = self.expect_name()?;
-        let documentation = self.take_documentation(start);
+        let (name_start, name, name_end) = self.expect_name()?;
+        let documentation = self.take_documentation(name_start);
 
         let annotation = self.parse_type_annotation(&Token::Colon)?;
 
@@ -2504,9 +2499,19 @@ where
         if let Some(value) = self.parse_const_value()? {
             Ok(Some(Definition::ModuleConstant(ModuleConstant {
                 documentation,
-                location: SrcSpan { start, end },
+                location: SrcSpan {
+                    start,
+
+                    // End after the type annotation if it's there, otherwise after the name
+                    end: annotation
+                        .as_ref()
+                        .map(|annotation| annotation.location().end)
+                        .unwrap_or(0)
+                        .max(name_end),
+                },
                 publicity: self.publicity(public, attributes.internal)?,
                 name,
+                name_location: SrcSpan::new(name_start, name_end),
                 annotation,
                 value: Box::new(value),
                 type_: (),
@@ -3319,10 +3324,13 @@ where
         t
     }
 
-    fn take_documentation(&mut self, until: u32) -> Option<EcoString> {
+    fn take_documentation(&mut self, until: u32) -> Option<(u32, EcoString)> {
         let mut content = String::new();
-
+        let mut doc_start = u32::MAX;
         while let Some((start, line)) = self.doc_comments.front() {
+            if *start < doc_start {
+                doc_start = *start;
+            }
             if *start >= until {
                 break;
             }
@@ -3339,7 +3347,7 @@ where
         if content.is_empty() {
             None
         } else {
-            Some(content.into())
+            Some((doc_start, content.into()))
         }
     }
 

@@ -115,7 +115,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                      }| {
                         label
                             .as_ref()
-                            .map(|label| (label.0.as_str(), type_.clone()))
+                            .map(|(_, label)| (label.as_str(), type_.clone()))
                     },
                 )
                 .collect::<Option<Vec<_>>>()
@@ -243,7 +243,7 @@ fn register_imports(
     match s {
         Definition::Function(Function {
             publicity,
-            name,
+            name: Some((_, name)),
             arguments: args,
             implementations,
             ..
@@ -378,7 +378,11 @@ fn module_function<'a>(
         return None;
     }
 
-    let function_name = escape_erlang_existing_name(&function.name);
+    let (_, function_name) = function
+        .name
+        .as_ref()
+        .expect("A module's function must be named");
+    let function_name = escape_erlang_existing_name(function_name);
 
     let mut env = Env::new(module, function_name, line_numbers);
     let var_usages = collect_type_var_usages(

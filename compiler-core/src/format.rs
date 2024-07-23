@@ -772,7 +772,13 @@ impl<'comments> Formatter<'comments> {
             .collect_vec();
         let signature = pub_(function.publicity)
             .append("fn ")
-            .append(&function.name)
+            .append(
+                &function
+                    .name
+                    .as_ref()
+                    .expect("Function in a statement must be named")
+                    .1,
+            )
             .append(self.wrap_args(args, function.location.end));
 
         // Add return annotation
@@ -1583,7 +1589,7 @@ impl<'comments> Formatter<'comments> {
                      }| {
                         let arg_comments = self.pop_comments(location.start);
                         let arg = match label {
-                            Some((l, _)) => l.to_doc().append(": ").append(self.type_ast(ast)),
+                            Some((_, l)) => l.to_doc().append(": ").append(self.type_ast(ast)),
                             None => self.type_ast(ast),
                         };
 

@@ -255,7 +255,7 @@ impl Module {
         // Doc Comments
         let mut doc_comments = self.extra.doc_comments.iter().peekable();
         for statement in &mut statements {
-            let docs: Vec<&str> = doc_comments_before(
+            let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                 &mut doc_comments,
                 &self.extra,
                 statement.location().start,
@@ -263,12 +263,12 @@ impl Module {
             );
             if !docs.is_empty() {
                 let doc = docs.join("\n").into();
-                statement.put_doc(doc);
+                statement.put_doc((docs_start, doc));
             }
 
             if let Definition::CustomType(CustomType { constructors, .. }) = statement {
                 for constructor in constructors {
-                    let docs: Vec<&str> = doc_comments_before(
+                    let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                         &mut doc_comments,
                         &self.extra,
                         constructor.location.start,
@@ -276,11 +276,11 @@ impl Module {
                     );
                     if !docs.is_empty() {
                         let doc = docs.join("\n").into();
-                        constructor.put_doc(doc);
+                        constructor.put_doc((docs_start, doc));
                     }
 
                     for argument in constructor.arguments.iter_mut() {
-                        let docs: Vec<&str> = doc_comments_before(
+                        let (docs_start, docs): (u32, Vec<&str>) = doc_comments_before(
                             &mut doc_comments,
                             &self.extra,
                             argument.location.start,
@@ -288,7 +288,7 @@ impl Module {
                         );
                         if !docs.is_empty() {
                             let doc = docs.join("\n").into();
-                            argument.put_doc(doc);
+                            argument.put_doc((docs_start, doc));
                         }
                     }
                 }
@@ -411,8 +411,9 @@ fn doc_comments_before<'a>(
     extra: &ModuleExtra,
     byte: u32,
     src: &'a str,
-) -> Vec<&'a str> {
+) -> (u32, Vec<&'a str>) {
     let mut comments = vec![];
+    let mut comment_start = u32::MAX;
     while let Some(SrcSpan { start, end }) = doc_comments_spans.peek() {
         if start > &byte {
             break;
@@ -425,9 +426,14 @@ fn doc_comments_before<'a>(
         let comment = doc_comments_spans
             .next()
             .expect("Comment before accessing next span");
+
+        if comment.start < comment_start {
+            comment_start = comment.start;
+        }
+
         comments.push(Comment::from((comment, src)).content)
     }
-    comments
+    (comment_start, comments)
 }
 
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]

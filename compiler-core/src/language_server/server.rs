@@ -103,6 +103,7 @@ where
             Request::Completion(param) => self.completion(param),
             Request::CodeAction(param) => self.code_action(param),
             Request::SignatureHelp(param) => self.signature_help(param),
+            Request::DocumentSymbol(param) => self.document_symbol(param),
         };
 
         self.publish_feedback(feedback);
@@ -326,6 +327,11 @@ where
         self.respond_with_engine(path, |engine| engine.code_actions(params))
     }
 
+    fn document_symbol(&mut self, params: lsp::DocumentSymbolParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.document_symbol(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -403,7 +409,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         implementation_provider: None,
         references_provider: None,
         document_highlight_provider: None,
-        document_symbol_provider: None,
+        document_symbol_provider: Some(lsp::OneOf::Left(true)),
         workspace_symbol_provider: None,
         code_action_provider: Some(lsp::CodeActionProviderCapability::Simple(true)),
         code_lens_provider: None,

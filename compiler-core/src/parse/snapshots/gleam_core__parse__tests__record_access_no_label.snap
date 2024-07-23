@@ -15,12 +15,12 @@ Parsed {
                             start: 1,
                             end: 12,
                         },
+                        end_position: 43,
+                        name: "Wibble",
                         name_location: SrcSpan {
                             start: 6,
                             end: 12,
                         },
-                        end_position: 43,
-                        name: "Wibble",
                         publicity: Private,
                         constructors: [
                             RecordConstructor {
@@ -37,11 +37,11 @@ Parsed {
                                     RecordConstructorArg {
                                         label: Some(
                                             (
-                                                "wibble",
                                                 SrcSpan {
                                                     start: 26,
                                                     end: 32,
                                                 },
+                                                "wibble",
                                             ),
                                         ),
                                         ast: Constructor(
@@ -82,12 +82,16 @@ Parsed {
                             start: 45,
                             end: 56,
                         },
-                        name_location: SrcSpan {
-                            start: 48,
-                            end: 54,
-                        },
                         end_position: 75,
-                        name: "wobble",
+                        name: Some(
+                            (
+                                SrcSpan {
+                                    start: 48,
+                                    end: 54,
+                                },
+                                "wobble",
+                            ),
+                        ),
                         arguments: [],
                         body: [
                             Expression(

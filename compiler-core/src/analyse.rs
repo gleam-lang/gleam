@@ -352,13 +352,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             documentation: doc,
             location,
             name,
+            name_location,
             annotation,
             publicity,
             value,
             deprecation,
             ..
         } = c;
-        self.check_name_case(location, &name, Named::Constant);
+        self.check_name_case(name_location, &name, Named::Constant);
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -379,7 +380,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             publicity,
             deprecation: deprecation.clone(),
             variant: ValueConstructorVariant::ModuleConstant {
-                documentation: doc.clone(),
+                documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
@@ -410,6 +411,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             documentation: doc,
             location,
             name,
+            name_location,
             annotation,
             publicity,
             value: Box::new(typed_expr),
@@ -430,7 +432,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let Function {
             documentation: doc,
             location,
-            name_location,
             name,
             publicity,
             arguments,
@@ -443,7 +444,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: (),
             implementations: _,
         } = f;
-
+        let (name_location, name) = name.expect("Function in a definition must be named");
         let target = environment.target;
         let body_location = body.last().location();
         let preregistered_fn = environment
@@ -564,7 +565,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let variant = ValueConstructorVariant::ModuleFn {
-            documentation: doc.clone(),
+            documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
             name: impl_function,
             field_map,
             module: impl_module,
@@ -584,7 +585,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Definition::Function(Function {
             documentation: doc,
             location,
-            name,
+            name: Some((name_location, name)),
             publicity,
             deprecation,
             arguments: typed_args,
@@ -597,7 +598,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             external_erlang,
             external_javascript,
             implementations,
-            name_location,
         })
     }
 
@@ -750,11 +750,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let CustomType {
             documentation: doc,
             location,
-            name_location,
             end_position,
             publicity,
             opaque,
             name,
+            name_location,
             parameters,
             constructors,
             deprecation,
@@ -783,7 +783,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                             args.into_iter()
                                 .zip(&args_types)
                                 .map(|(argument, t)| {
-                                    if let Some((label, location)) = &argument.label {
+                                    if let Some((location, label)) = &argument.label {
                                         self.check_name_case(*location, label, Named::Label);
                                     }
 
@@ -792,7 +792,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                                         ast: argument.ast,
                                         location: argument.location,
                                         type_: t.clone(),
-                                        doc: None,
+                                        doc: argument.doc,
                                     }
                                 })
                                 .collect()
@@ -819,11 +819,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
             location,
-            name_location,
             end_position,
             publicity,
             opaque,
             name,
+            name_location,
             parameters,
             constructors,
             typed_parameters,
@@ -906,7 +906,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 args_types.push(t);
 
                 // Register the label for this parameter, if there is one
-                if let Some((label, _)) = label {
+                if let Some((_, label)) = label {
                     field_map.insert(label.clone(), i as u32).map_err(|_| {
                         Error::DuplicateField {
                             label: label.clone(),
@@ -922,7 +922,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 _ => fn_(args_types.clone(), typ.clone()),
             };
             let constructor_info = ValueConstructorVariant::Record {
-                documentation: constructor.documentation.clone(),
+                documentation: constructor
+                    .documentation
+                    .as_ref()
+                    .map(|(_, doc)| doc.clone()),
                 constructors_count: constructors.len() as u16,
                 name: constructor.name.clone(),
                 arity: constructor.arguments.len() as u16,
@@ -988,10 +991,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     ) -> Result<(), Error> {
         let CustomType {
             name,
+            name_location,
             publicity,
             parameters,
             location,
-            name_location,
             deprecation,
             opaque,
             constructors,
@@ -1045,7 +1048,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     parameters,
                     publicity,
                     typ,
-                    documentation: documentation.clone(),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
             )
             .expect("name uniqueness checked above");
@@ -1070,10 +1073,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn register_type_alias(&mut self, t: &TypeAlias<()>, environment: &mut Environment<'_>) {
         let TypeAlias {
             location,
-            name_location,
             publicity,
             parameters: args,
             alias: name,
+            name_location,
             type_ast: resolved_type,
             deprecation,
             type_: _,
@@ -1108,7 +1111,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     typ,
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
-                    documentation: documentation.clone(),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
             )?;
 
@@ -1171,7 +1174,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name,
             arguments: args,
             location,
-            name_location,
             return_annotation,
             publicity,
             documentation,
@@ -1183,6 +1185,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return_type: _,
             implementations,
         } = f;
+        let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
         self.check_name_case(*name_location, name, Named::Function);
 
@@ -1220,7 +1223,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         let (impl_module, impl_function) = implementation_names(external, &self.module_name, name);
         let variant = ValueConstructorVariant::ModuleFn {
-            documentation: documentation.clone(),
+            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
             name: impl_function,
             field_map,
             module: impl_module,
@@ -1315,9 +1318,9 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     let TypeAlias {
         documentation: doc,
         location,
-        name_location,
         publicity,
         alias,
+        name_location,
         parameters: args,
         type_ast: resolved_type,
         deprecation,
@@ -1335,9 +1338,9 @@ fn analyse_type_alias(t: TypeAlias<()>, environment: &mut Environment<'_>) -> Ty
     Definition::TypeAlias(TypeAlias {
         documentation: doc,
         location,
-        name_location,
         publicity,
         alias,
+        name_location,
         parameters: args,
         type_ast: resolved_type,
         type_: typ,
@@ -1418,6 +1421,7 @@ fn generalise_module_constant(
         documentation: doc,
         location,
         name,
+        name_location,
         annotation,
         publicity,
         value,
@@ -1428,7 +1432,7 @@ fn generalise_module_constant(
     let typ = type_.clone();
     let type_ = type_::generalise(typ);
     let variant = ValueConstructorVariant::ModuleConstant {
-        documentation: doc.clone(),
+        documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
         location,
         literal: *value.clone(),
         module: module_name.clone(),
@@ -1456,6 +1460,7 @@ fn generalise_module_constant(
         documentation: doc,
         location,
         name,
+        name_location,
         annotation,
         publicity,
         value,
@@ -1473,7 +1478,6 @@ fn generalise_function(
     let Function {
         documentation: doc,
         location,
-        name_location,
         name,
         publicity,
         deprecation,
@@ -1486,6 +1490,8 @@ fn generalise_function(
         external_javascript,
         implementations,
     } = function;
+
+    let (name_location, name) = name.expect("Function in a definition must be named");
 
     // Lookup the inferred function information
     let function = environment
@@ -1502,7 +1508,7 @@ fn generalise_function(
     let (impl_module, impl_function) = implementation_names(external, module_name, &name);
 
     let variant = ValueConstructorVariant::ModuleFn {
-        documentation: doc.clone(),
+        documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
         name: impl_function,
         field_map,
         module: impl_module,
@@ -1530,8 +1536,7 @@ fn generalise_function(
     Definition::Function(Function {
         documentation: doc,
         location,
-        name_location,
-        name,
+        name: Some((name_location, name)),
         publicity,
         deprecation,
         arguments: args,
@@ -1598,8 +1603,8 @@ fn get_compatible_record_fields<A>(
 
     'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
         // Fields without labels do not have accessors
-        let label = match first_argument.label.as_ref() {
-            Some((label, _)) => label,
+        let first_label = match first_argument.label.as_ref() {
+            Some((_, label)) => label,
             None => continue 'next_argument,
         };
 
@@ -1612,13 +1617,12 @@ fn get_compatible_record_fields<A>(
                 None => continue 'next_argument,
             };
 
-            let arg_label = match argument.label.as_ref() {
-                Some((label, _)) => label,
-                None => continue 'next_argument,
-            };
-
             // The labels must be the same
-            if arg_label != label {
+            if !argument
+                .label
+                .as_ref()
+                .is_some_and(|(_, arg_label)| arg_label == first_label)
+            {
                 continue 'next_argument;
             }
 
@@ -1631,7 +1635,7 @@ fn get_compatible_record_fields<A>(
         // The previous loop did not find any incompatible fields in the other
         // variants so this field is compatible across variants and we should
         // generate an accessor for it.
-        compatible.push((index, label, &first_argument.ast))
+        compatible.push((index, first_label, &first_argument.ast))
     }
 
     compatible

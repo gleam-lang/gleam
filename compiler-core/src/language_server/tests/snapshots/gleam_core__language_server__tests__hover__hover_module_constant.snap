@@ -5,7 +5,7 @@ expression: "\n/// Exciting documentation\n/// Maybe even multiple lines\nconst 
 /// Exciting documentation
 /// Maybe even multiple lines
 const one = 1
-      ↑▔▔    
+▔▔▔▔▔▔↑▔▔    
 
 
 ----- Hover content -----

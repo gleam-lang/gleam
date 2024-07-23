@@ -6,7 +6,10 @@ use lsp::{
 use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
-    request::{CodeActionRequest, Completion, Formatting, HoverRequest, SignatureHelpRequest},
+    request::{
+        CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, HoverRequest,
+        SignatureHelpRequest,
+    },
 };
 use std::time::Duration;
 
@@ -24,6 +27,7 @@ pub enum Request {
     Completion(lsp::CompletionParams),
     CodeAction(lsp::CodeActionParams),
     SignatureHelp(lsp::SignatureHelpParams),
+    DocumentSymbol(lsp::DocumentSymbolParams),
 }
 
 impl Request {
@@ -53,6 +57,10 @@ impl Request {
             "textDocument/signatureHelp" => {
                 let params = cast_request::<SignatureHelpRequest>(request);
                 Some(Message::Request(id, Request::SignatureHelp(params)))
+            }
+            "textDocument/documentSymbol" => {
+                let params = cast_request::<DocumentSymbolRequest>(request);
+                Some(Message::Request(id, Request::DocumentSymbol(params)))
             }
             _ => None,
         }
