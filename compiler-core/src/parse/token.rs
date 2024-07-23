@@ -10,7 +10,7 @@ pub enum Token {
     Int { value: EcoString },
     Float { value: EcoString },
     String { value: EcoString },
-    CommentDoc { marker_start: u32, content: String },
+    CommentDoc { content: String },
     // Groupings
     LeftParen,   // (
     RightParen,  // )

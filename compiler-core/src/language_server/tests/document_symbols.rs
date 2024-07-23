@@ -34,6 +34,17 @@ pub type A";
 }
 
 #[test]
+fn doc_symbols_type_no_constructors_starting_at_empty_doc() {
+    let code = "
+// Some prior code...
+
+///
+pub type A";
+
+    assert_debug_snapshot!(doc_symbols(TestProject::for_source(code)))
+}
+
+#[test]
 fn doc_symbols_type_constructor_no_args() {
     let code = "
 pub type B {
