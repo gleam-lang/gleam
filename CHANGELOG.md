@@ -216,6 +216,25 @@
 - The language server now supports listing document symbols, such as functions and constants, for the current Gleam file.
   ([PgBiel](https://github.com/PgBiel))
 
+- The language server can now suggest a code action to automatically use the
+  label shorthand syntax where possible:
+
+  ```gleam
+  case date {
+    Day(day: day, month: month, year: year) -> todo
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  case date {
+    Day(day:, month:, year:) -> todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug Fixes
 
 - Functions, types and constructors named `module_info` are now escaped

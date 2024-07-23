@@ -1,7 +1,10 @@
 use std::{iter, sync::Arc};
 
 use crate::{
-    ast::{self, visit::Visit as _, AssignName, AssignmentKind, Pattern, SrcSpan, TypedPattern},
+    ast::{
+        self, visit::Visit as _, AssignName, AssignmentKind, CallArg, Pattern, SrcSpan, TypedExpr,
+        TypedPattern, TypedRecordUpdateArg,
+    },
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
@@ -10,7 +13,10 @@ use crate::{
 use ecow::EcoString;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
 
-use super::{engine::overlaps, src_span_to_lsp_range};
+use super::{
+    engine::{overlaps, overlaps_including_end},
+    src_span_to_lsp_range,
+};
 
 #[derive(Debug)]
 pub struct CodeActionBuilder {
@@ -107,11 +113,11 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
         &mut self,
         location: &'ast SrcSpan,
         typ: &'ast Arc<Type>,
-        subjects: &'ast [ast::TypedExpr],
+        subjects: &'ast [TypedExpr],
         clauses: &'ast [ast::TypedClause],
     ) {
         'subj: for (subject_idx, subject) in subjects.iter().enumerate() {
-            let ast::TypedExpr::Tuple {
+            let TypedExpr::Tuple {
                 location, elems, ..
             } = subject
             else {
@@ -277,7 +283,8 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
     }
 }
 
-// Builder for code action to convert `let assert` into a case expression
+/// Builder for code action to convert `let assert` into a case expression.
+///
 pub struct LetAssertToCase<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
@@ -409,5 +416,98 @@ impl<'a> LetAssertToCase<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
         self.actions
+    }
+}
+
+/// Builder for code action to apply the label shorthand syntax on arguments
+/// where the label has the same name as the variable.
+///
+pub struct LabelShorthandSyntax<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    edits: Vec<TextEdit>,
+}
+
+impl<'a> LabelShorthandSyntax<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+        Self {
+            module,
+            params,
+            line_numbers,
+            edits: vec![],
+        }
+    }
+
+    fn push_delete_edit(&mut self, location: &SrcSpan) {
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(*location, &self.line_numbers),
+            new_text: "".into(),
+        })
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.edits.is_empty() {
+            return vec![];
+        }
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Use label shorthand syntax")
+            .kind(CodeActionKind::REFACTOR)
+            .changes(self.params.text_document.uri.clone(), self.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
+    fn visit_typed_call_arg(&mut self, arg: &'ast crate::type_::TypedCallArg) {
+        let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
+        let is_selected = overlaps_including_end(arg_range, self.params.range);
+
+        match arg {
+            CallArg {
+                label: Some(label),
+                value: TypedExpr::Var { name, location, .. },
+                ..
+            } if is_selected && !arg.uses_label_shorthand() && label == name => {
+                self.push_delete_edit(location)
+            }
+            _ => (),
+        }
+    }
+
+    fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
+        let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
+        let is_selected = overlaps_including_end(arg_range, self.params.range);
+
+        match arg {
+            CallArg {
+                label: Some(label),
+                value: TypedPattern::Variable { name, location, .. },
+                ..
+            } if is_selected && !arg.uses_label_shorthand() && label == name => {
+                self.push_delete_edit(location)
+            }
+            _ => (),
+        }
+    }
+
+    fn visit_typed_record_update_arg(&mut self, arg: &'ast TypedRecordUpdateArg) {
+        let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
+        let is_selected = overlaps_including_end(arg_range, self.params.range);
+
+        match arg {
+            TypedRecordUpdateArg {
+                label,
+                value: TypedExpr::Var { name, location, .. },
+                ..
+            } if is_selected && !arg.uses_label_shorthand() && label == name => {
+                self.push_delete_edit(location)
+            }
+            _ => (),
+        }
     }
 }
