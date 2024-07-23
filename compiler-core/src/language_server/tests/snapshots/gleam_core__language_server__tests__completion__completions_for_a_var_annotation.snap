@@ -3,7 +3,7 @@ source: compiler-core/src/language_server/tests/completion.rs
 expression: "\npub fn main() {\n  let wibble: Int = 7\n}\n"
 ---
 pub fn main() {
-  let wibble: Int = 7
+  let wibble: In|t = 7
 }
 
 

@@ -4,7 +4,7 @@ expression: "\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
 pub fn wibble(
   _: String,
-) -> Nil {
+) -> Ni|l {
   Nil
 }
 

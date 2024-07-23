@@ -2,7 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\n\nconst wibble: Int = 7\n\npub fn main() {\n  let wibble: Int = 7\n}\n"
 ---
-const wibble: Int = 7
+const wibble: In|t = 7
 
 pub fn main() {
   let wibble: Int = 7

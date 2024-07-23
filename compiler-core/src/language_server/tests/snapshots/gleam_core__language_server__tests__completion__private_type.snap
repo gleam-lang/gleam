@@ -2,6 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\ntype Wibble {\n  Wobble\n}\n"
 ---
+|
 type Wibble {
   Wobble
 }

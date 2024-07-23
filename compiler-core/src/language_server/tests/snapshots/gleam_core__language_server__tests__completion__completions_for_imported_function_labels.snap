@@ -5,7 +5,7 @@ expression: "\nimport dep\n  \nfn fun() { // completion inside parens below incl
 import dep
   
 fn fun() { // completion inside parens below includes labels
-  let wibble = dep.wibble()
+  let wibble = dep.wibble(|)
 }
 
 
@@ -41,11 +41,11 @@ fn fun() { // completion inside parens below includes labels
                     range: Range {
                         start: Position {
                             line: 4,
-                            character: 27,
+                            character: 26,
                         },
                         end: Position {
                             line: 4,
-                            character: 27,
+                            character: 26,
                         },
                     },
                     new_text: "dep.wibble",
@@ -88,11 +88,11 @@ fn fun() { // completion inside parens below includes labels
                     range: Range {
                         start: Position {
                             line: 4,
-                            character: 27,
+                            character: 26,
                         },
                         end: Position {
                             line: 4,
-                            character: 27,
+                            character: 26,
                         },
                     },
                     new_text: "fun",

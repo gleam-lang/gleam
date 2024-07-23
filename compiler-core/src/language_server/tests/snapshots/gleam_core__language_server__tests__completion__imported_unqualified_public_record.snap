@@ -2,6 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\nimport dep.{Box}\n"
 ---
+|
 import dep.{Box}
 
 

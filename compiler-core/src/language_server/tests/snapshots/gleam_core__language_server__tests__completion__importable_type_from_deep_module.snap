@@ -3,7 +3,7 @@ source: compiler-core/src/language_server/tests/completion.rs
 expression: "\n\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
 pub fn wibble(
-  _: String,
+|  _: String,
 ) -> Nil {
   Nil
 }

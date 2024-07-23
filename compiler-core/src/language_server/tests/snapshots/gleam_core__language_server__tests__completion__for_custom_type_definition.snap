@@ -3,8 +3,9 @@ source: compiler-core/src/language_server/tests/completion.rs
 expression: "\npub type Wibble {\n  Wobble\n}"
 ---
 pub type Wibble {
-  Wobble
+|  Wobble
 }
+
 
 ----- Completion content -----
 [

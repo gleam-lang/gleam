@@ -4,18 +4,44 @@ use lsp_types::{CompletionItem, Position};
 
 use super::*;
 
+pub fn show_complete(code: &str, position: Position) -> String {
+    let mut str: String = "".into();
+    for (line_number, line) in code.lines().enumerate() {
+        let same_line = line_number as u32 == position.line;
+        if !same_line {
+            str.push_str(line);
+        } else {
+            str.push_str(&line[0..position.character as usize]);
+            str.push('|');
+            str.push_str(&line[position.character as usize..]);
+        }
+
+        str.push('\n');
+    }
+
+    str
+}
+
 #[macro_export]
 macro_rules! assert_completion {
     ($project:expr) => {
         let src = $project.src;
         let result = completion_with_prefix($project, "");
-        let output = format!("{}\n\n----- Completion content -----\n{:#?}", src, result);
+        let output = format!(
+            "{}\n\n----- Completion content -----\n{:#?}",
+            show_complete(src, Position::new(0, 0)),
+            result
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
     ($project:expr, $position:expr) => {
         let src = $project.src;
         let result = completion($project, $position);
-        let output = format!("{}\n\n----- Completion content -----\n{:#?}", src, result);
+        let output = format!(
+            "{}\n\n----- Completion content -----\n{:#?}",
+            show_complete(src, $position),
+            result
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
 }
@@ -25,7 +51,12 @@ macro_rules! assert_completion_with_prefix {
     ($project:expr, $prefix:expr) => {
         let src = $project.src;
         let result = completion_with_prefix($project, $prefix);
-        let output = format!("{}\n\n----- Completion content -----\n{:#?}", src, result);
+        let line = 1 + $prefix.lines().count();
+        let output = format!(
+            "{}\n\n----- Completion content -----\n{:#?}",
+            show_complete(src, Position::new(line as u32, 0)),
+            result
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
 }
@@ -1256,7 +1287,7 @@ fn fun() { // completion inside parens below includes labels
 }
 ";
 
-    assert_completion!(TestProject::for_source(code), Position::new(6, 23));
+    assert_completion!(TestProject::for_source(code), Position::new(6, 22));
 }
 
 #[test]
@@ -1276,7 +1307,7 @@ pub type Wibble {
 
     assert_completion!(
         TestProject::for_source(code).add_dep_module("dep", dep),
-        Position::new(4, 27)
+        Position::new(4, 26)
     );
 }
 
@@ -1292,7 +1323,7 @@ fn fun() { // completion inside parens below includes labels
 }
 ";
 
-    assert_completion!(TestProject::for_source(code), Position::new(6, 23));
+    assert_completion!(TestProject::for_source(code), Position::new(6, 22));
 }
 
 #[test]
@@ -1312,6 +1343,6 @@ pub fn wibble(wibble arg1: String, wobble arg2: String) {
 
     assert_completion!(
         TestProject::for_source(code).add_dep_module("dep", dep),
-        Position::new(4, 27)
+        Position::new(4, 26)
     );
 }

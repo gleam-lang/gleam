@@ -4,12 +4,13 @@ expression: "\nimport dep.{\n  wibble,\n\n}\n\npub fn main() {\n  0\n}"
 ---
 import dep.{
   wibble,
-
+|
 }
 
 pub fn main() {
   0
 }
+
 
 ----- Completion content -----
 [

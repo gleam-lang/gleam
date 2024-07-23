@@ -2,6 +2,7 @@
 source: compiler-core/src/language_server/tests/completion.rs
 expression: "\npub type Box {\n/// Hello\n  Box(Int, Int, Float)\n}\n"
 ---
+|
 pub type Box {
 /// Hello
   Box(Int, Int, Float)

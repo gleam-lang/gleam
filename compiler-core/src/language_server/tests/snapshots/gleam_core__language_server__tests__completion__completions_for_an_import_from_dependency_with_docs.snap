@@ -5,11 +5,12 @@ expression: "//// Main package\n//// documentation!\n\nimport gleam\n\npub fn ma
 //// Main package
 //// documentation!
 
-import gleam
+import gle|am
 
 pub fn main() {
   0
 }
+
 
 ----- Completion content -----
 [
