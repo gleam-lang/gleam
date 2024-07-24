@@ -67,6 +67,7 @@ fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -
             let range = (start as usize)..(end as usize);
             offset += end - start;
             offset -= edit.new_text.len() as i32;
+            println!("{:?}, {:?}", range, result.get(range.clone()));
             result.replace_range(range, &edit.new_text);
         }
     }
@@ -78,6 +79,7 @@ const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 const CONVERT_TO_CASE: &str = "Convert to case";
 const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
 const FILL_LABELS: &str = "Fill labels";
+const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -1120,6 +1122,138 @@ pub fn main() {
 }
  "#,
         find_position_of("main").select_until(find_position_of("todo")),
+    );
+}
+
+#[test]
+fn test_assign_unused_result() {
+    assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    Ok(0)
+    Nil
+}
+",
+        find_position_of("Ok").select_until(find_position_of("(0)")),
+    );
+}
+
+#[test]
+fn test_assign_unused_result_in_block() {
+    assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    {
+        Ok(0)
+        Nil
+    }
+    Nil
+}
+",
+        find_position_of("Ok").select_until(find_position_of("(0)")),
+    );
+}
+
+#[test]
+fn test_assign_unused_result_on_block_start() {
+    assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    { //test here
+        Ok(0)
+        Ok(0)
+    }
+    Nil
+}
+",
+        find_position_of("{ // teest").select_until(find_position_of("here"))
+    );
+}
+
+#[test]
+fn test_assign_unused_result_on_block_end() {
+    assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    {
+        Ok(0)
+        Ok(0)
+    } // test here
+    Nil
+}
+",
+        find_position_of("} // test").select_until(find_position_of("here"))
+    );
+}
+
+#[test]
+#[should_panic(expected = "No code action produced by the engine")]
+fn test_assign_unused_result_inside_block() {
+    assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    {
+        Ok(0)
+        Ok(1)
+    }
+}
+",
+        find_position_of("Ok").select_until(find_position_of("(0)"))
+    );
+}
+
+#[test]
+fn test_assign_unused_result_only_first_action() {
+    assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        "
+pub fn main() {
+    Ok(0)
+    Ok(1)
+    Nil
+}
+",
+        find_position_of("Ok").select_until(find_position_of("(0)"))
+    );
+}
+
+#[test]
+#[should_panic(expected = "No code action produced by the engine")]
+fn test_assign_unused_result_not_on_return_value() {
+    let code = "
+pub fn main() {
+    Ok(0)
+}
+";
+
+    let _ = assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        code,
+        find_position_of("Ok").select_until(find_position_of("(0)"))
+    );
+}
+
+#[test]
+#[should_panic(expected = "No code action produced by the engine")]
+fn test_assign_unused_result_not_on_return_value_in_block() {
+    let code = "
+pub fn main() {
+    let _ = {
+        Ok(0)
+    }
+    Nil
+}
+";
+
+    let _ = assert_code_action!(
+        ASSIGN_UNUSED_RESULT,
+        code,
+        find_position_of("Ok").select_until(find_position_of("(0)"))
     );
 }
 
