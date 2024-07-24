@@ -67,7 +67,6 @@ fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -
             let range = (start as usize)..(end as usize);
             offset += end - start;
             offset -= edit.new_text.len() as i32;
-            println!("{:?}, {:?}", range, result.get(range.clone()));
             result.replace_range(range, &edit.new_text);
         }
     }
