@@ -364,6 +364,7 @@ fn find_node_module_select() {
             name: "function".into(),
             location: SrcSpan { start: 1, end: 55 },
             documentation: None,
+            field_map: None,
         },
     };
 

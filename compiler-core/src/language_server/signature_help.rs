@@ -11,19 +11,10 @@ use lsp_types::{
 
 use crate::{
     ast::{CallArg, ImplicitCallArgOrigin, TypedExpr},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     type_::{pretty::Printer, FieldMap, ModuleValueConstructor, Type},
 };
 
-use super::{compiler::LspProjectCompiler, files::FileSystemProxy};
-
-pub fn for_expression<IO>(
-    compiler: &LspProjectCompiler<FileSystemProxy<IO>>,
-    expr: &TypedExpr,
-) -> Option<SignatureHelp>
-where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
-{
+pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {
     // If we're inside a function call we can provide signature help,
     // otherwise we don't want anything to pop up.
     let TypedExpr::Call { fun, args, .. } = expr else {
@@ -48,7 +39,6 @@ where
         //                  as the help signature.
         //
         TypedExpr::ModuleSelect {
-            module_name,
             module_alias,
             label,
             constructor,
@@ -56,11 +46,8 @@ where
         } => {
             let field_map = match constructor {
                 ModuleValueConstructor::Constant { .. } => None,
-                ModuleValueConstructor::Record { field_map, .. } => field_map.into(),
-                ModuleValueConstructor::Fn { name, .. } => compiler
-                    .get_module_interface(module_name)?
-                    .get_public_value(name)?
-                    .field_map(),
+                ModuleValueConstructor::Record { field_map, .. }
+                | ModuleValueConstructor::Fn { field_map, .. } => field_map.into(),
             };
             let name = format!("{module_alias}.{label}").into();
             signature_help(name, fun, args, field_map)
