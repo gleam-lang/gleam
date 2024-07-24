@@ -438,3 +438,20 @@ pub fn main() {
         find_position_of("to_be_or_not_to_be()").under_last_char()
     );
 }
+
+#[test]
+// Regression introduced by 4112682cdb5d5b0bb6d1defc6cde849b6a6f65ab.
+pub fn help_with_labelled_constructor() {
+    assert_signature_help!(
+        r#"
+pub type Pokemon {
+    Pokemon(name: String, types: List(String), moves: List(String))
+}
+
+pub fn main() {
+    Pokemon(name: "Jirachi",)
+}
+    "#,
+        find_position_of(r#"Pokemon(name: "Jirachi",)"#).under_last_char()
+    );
+}
