@@ -168,6 +168,15 @@ pub enum CallKind {
         last_statement_location: SrcSpan,
     },
 }
+impl CallKind {
+    #[must_use]
+    fn is_use_call(&self) -> bool {
+        match self {
+            CallKind::Function => false,
+            CallKind::Use { .. } => true,
+        }
+    }
+}
 
 /// This is used to tell apart regular call arguments and the callback that is
 /// implicitly passed to a `use` function call.
@@ -2905,7 +2914,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let mut missing_args = 0;
-
+        let mut ignored_labelled_args = vec![];
         // Extract the type of the fun, ensuring it actually is a function
         let (mut args_types, return_type) =
             match match_fun_type(fun.type_(), args.len(), self.environment) {
@@ -2934,6 +2943,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 // ordering, we can't type check the labelled arguments here.
                                 let first_labelled_arg =
                                     args.iter().position(|arg| arg.label.is_some());
+                                ignored_labelled_args = args
+                                    .iter()
+                                    .skip_while(|arg| arg.label.is_none())
+                                    .map(|arg| (arg.label.clone(), arg.location.clone()))
+                                    .collect_vec();
                                 let args_to_keep = first_labelled_arg.unwrap_or(args.len());
                                 (
                                     arg_types.iter().take(args_to_keep).cloned().collect(),
@@ -2985,7 +2999,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Ensure that the given args have the correct types
         let args_count = args_types.len();
-        let args = args_types
+        let mut typed_args: Vec<_> = args_types
             .iter_mut()
             .zip(args)
             .enumerate()
@@ -3037,6 +3051,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
             .collect();
 
+        // Now if we had supplied less arguments than required and some of those
+        // were labelled, in the previous step we would have got rid of those
+        // _before_ typing.
+        // That is because we can only reliably type positional arguments in
+        // case of mismatched arity, as labelled arguments cannot be reordered.
+        //
+        // So now what we want to do is add back those labelled arguments to
+        // make sure the LS can still see that those were explicitly supplied.
+        //
+        // For use calls we've already filled in the gaps with values so we
+        // don't care about adding any label back.
+        if !kind.is_use_call() {
+            for (label, location) in ignored_labelled_args {
+                typed_args.push(CallArg {
+                    label,
+                    value: TypedExpr::Invalid {
+                        location,
+                        typ: self.new_unbound_var(),
+                    },
+                    implicit: None,
+                    location,
+                })
+            }
+        }
+
         // We don't want to emit a warning for unreachable function call if the
         // function being called is itself `panic`, for that we emit a more
         // specialised warning.
@@ -3044,7 +3083,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.warn_for_unreachable_code(fun.location(), PanicPosition::LastFunctionArgument);
         }
 
-        (fun, args, return_type)
+        (fun, typed_args, return_type)
     }
 
     fn infer_call_argument(

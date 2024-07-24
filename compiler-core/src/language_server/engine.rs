@@ -30,7 +30,8 @@ use std::sync::Arc;
 
 use super::{
     code_action::{
-        CodeActionBuilder, LabelShorthandSyntax, LetAssertToCase, RedundantTupleInCaseSubject,
+        CodeActionBuilder, FillInMissingLabelledArgs, LabelShorthandSyntax, LetAssertToCase,
+        RedundantTupleInCaseSubject,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
@@ -289,6 +290,7 @@ where
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
             actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());
+            actions.extend(FillInMissingLabelledArgs::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
                 None
@@ -568,7 +570,7 @@ Unused labelled fields:
         self.respond(
             |this| match this.node_at_position(&params.text_document_position_params) {
                 Some((_lines, Located::Expression(expr))) => {
-                    Ok(signature_help::for_expression(&this.compiler, expr))
+                    Ok(signature_help::for_expression(expr))
                 }
                 Some((_lines, _located)) => Ok(None),
                 None => Ok(None),
@@ -883,11 +885,19 @@ fn hover_for_imported_value(
 
 // Returns true if any part of either range overlaps with the other.
 pub fn overlaps(a: lsp_types::Range, b: lsp_types::Range) -> bool {
-    within(a.start, b) || within(a.end, b) || within(b.start, a) || within(b.end, a)
+    position_within(a.start, b)
+        || position_within(a.end, b)
+        || position_within(b.start, a)
+        || position_within(b.end, a)
+}
+
+// Returns true if a range is contained within another.
+pub fn within(a: lsp_types::Range, b: lsp_types::Range) -> bool {
+    position_within(a.start, b) && position_within(a.end, b)
 }
 
 // Returns true if a position is within a range.
-fn within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
+fn position_within(position: lsp_types::Position, range: lsp_types::Range) -> bool {
     position >= range.start && position <= range.end
 }
 

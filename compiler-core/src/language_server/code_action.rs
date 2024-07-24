@@ -2,18 +2,25 @@ use std::{iter, sync::Arc};
 
 use crate::{
     ast::{
-        self, visit::Visit as _, AssignName, AssignmentKind, CallArg, Pattern, SrcSpan, TypedExpr,
+        self,
+        visit::{visit_typed_expr_call, Visit as _},
+        AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
         TypedPattern, TypedRecordUpdateArg,
     },
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
-    type_::Type,
+    type_::{FieldMap, ModuleValueConstructor, Type, TypedCallArg},
 };
 use ecow::EcoString;
+use im::HashMap;
+use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
 
-use super::{engine::overlaps, src_span_to_lsp_range};
+use super::{
+    engine::{overlaps, within},
+    src_span_to_lsp_range,
+};
 
 #[derive(Debug)]
 pub struct CodeActionBuilder {
@@ -460,7 +467,7 @@ impl<'a> LabelShorthandSyntax<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
-    fn visit_typed_call_arg(&mut self, arg: &'ast crate::type_::TypedCallArg) {
+    fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
         let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
         let is_selected = overlaps(arg_range, self.params.range);
 
@@ -506,5 +513,120 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
             }
             _ => (),
         }
+    }
+}
+
+/// Builder for code action to apply the fill in the missing labelled arguments
+/// of the selected function call.
+///
+pub struct FillInMissingLabelledArgs<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    selected_call: Option<(SrcSpan, &'a FieldMap, &'a [TypedCallArg])>,
+}
+
+impl<'a> FillInMissingLabelledArgs<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+        Self {
+            module,
+            params,
+            line_numbers,
+            selected_call: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        if let Some((call_location, field_map, args)) = self.selected_call {
+            let mut missing_labels = field_map
+                .fields
+                .iter()
+                .map(|(l, i)| (i, l))
+                .collect::<HashMap<_, _>>();
+
+            for arg in args.iter() {
+                match arg.implicit {
+                    Some(ImplicitCallArgOrigin::Use)
+                    | Some(ImplicitCallArgOrigin::IncorrectArityUse) => {
+                        _ = missing_labels.remove(&(field_map.arity - 1))
+                    }
+                    Some(ImplicitCallArgOrigin::Pipe) => _ = missing_labels.remove(&0),
+                    // We do not support this action for functions that have
+                    // already been explicitly supplied an argument!
+                    Some(ImplicitCallArgOrigin::PatternFieldSpread) | None => return vec![],
+                }
+            }
+
+            // If we couldn't find any missing label to insert we just return.
+            if missing_labels.is_empty() {
+                return vec![];
+            }
+
+            let labels = missing_labels
+                .iter()
+                .sorted_by_key(|(position, _label)| *position)
+                .map(|(_, label)| format!("{label}: todo"))
+                .join(", ");
+
+            let add_labels_edit = TextEdit {
+                range: src_span_to_lsp_range(
+                    SrcSpan {
+                        start: call_location.end - 1,
+                        end: call_location.end - 1,
+                    },
+                    &self.line_numbers,
+                ),
+                new_text: format!("{labels}"),
+            };
+
+            let mut action = Vec::with_capacity(1);
+            CodeActionBuilder::new("Fill in missing labelled arguments")
+                .kind(CodeActionKind::REFACTOR)
+                .changes(self.params.text_document.uri.clone(), vec![add_labels_edit])
+                .preferred(false)
+                .push_to(&mut action);
+            return action;
+        }
+
+        return vec![];
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        typ: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) {
+        let call_range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if !within(self.params.range, call_range) {
+            return;
+        }
+
+        let field_map = match fun {
+            TypedExpr::Var { constructor, .. } => constructor.field_map(),
+            TypedExpr::ModuleSelect { constructor, .. } => match constructor {
+                ModuleValueConstructor::Record { field_map, .. }
+                | ModuleValueConstructor::Fn { field_map, .. } => field_map.as_ref(),
+                ModuleValueConstructor::Constant { .. } => None,
+            },
+            _ => None,
+        };
+
+        match field_map {
+            Some(field_map) => self.selected_call = Some((*location, field_map, args)),
+            None => (),
+        }
+
+        // We only want to take into account the innermost function call
+        // containing the current selection so we can't stop at the first call
+        // we find (the outermost one) and have to keep traversing it in case
+        // we're inside a nested call.
+        visit_typed_expr_call(self, location, typ, fun, args)
     }
 }
