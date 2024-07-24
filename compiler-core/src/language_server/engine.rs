@@ -942,16 +942,11 @@ fn code_action_unused_values(
             .get(start as usize..start as usize + 1)
             .unwrap_or_default();
 
-        tracing::info!(
-            "start_char: {:?}, {:?}, {:?}, {:?}, {:?}",
-            start_char,
-            params.range.start.line,
-            hover_range.start.line,
-            params.range.end.line,
-            hover_range.end.line
-        );
-
-        // only show the actions for the inner-most one
+        //                            ↓
+        // only show the action when: {
+        //                              Ok(1)
+        //                            }
+        //                            ↑
         if (start_char == "{"
             && params.range.start.line != hover_range.start.line
             && params.range.end.line != hover_range.end.line)
