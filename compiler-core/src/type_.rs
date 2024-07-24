@@ -458,6 +458,7 @@ impl ValueConstructorVariant {
                 module: module_name.clone(),
                 documentation: None,
                 location: *location,
+                field_map: None,
             },
 
             Self::ModuleFn {
@@ -465,12 +466,14 @@ impl ValueConstructorVariant {
                 module,
                 location,
                 documentation,
+                field_map,
                 ..
             } => ModuleValueConstructor::Fn {
                 name: name.clone(),
                 module: module.clone(),
                 documentation: documentation.clone(),
                 location: *location,
+                field_map: field_map.clone(),
             },
         }
     }
@@ -555,6 +558,7 @@ pub enum ModuleValueConstructor {
         ///
         module: EcoString,
         name: EcoString,
+        field_map: Option<FieldMap>,
         documentation: Option<EcoString>,
     },
 
