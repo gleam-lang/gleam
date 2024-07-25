@@ -1,7 +1,20 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action_with_title(r#\"pub fn main() {\n    let assert [wibble] = {\n        let assert Ok(wobble) = {\n            Ok(1)\n        }\n        [wobble]\n    }\n}\"#,\n    2, CONVERT_TO_CASE)"
+expression: "pub fn main() {\n    let assert [wibble] = {\n        let assert Ok(wobble) = {\n            Ok(1)\n        }\n        [wobble]\n    }\n}"
 ---
+----- BEFORE ACTION
+pub fn main() {
+    let assert [wibble] = {
+        let assert Ok(wobble) = {
+                          ↑      
+            Ok(1)
+        }
+        [wobble]
+    }
+}
+
+
+----- AFTER ACTION
 pub fn main() {
     let assert [wibble] = {
         let wobble = case {

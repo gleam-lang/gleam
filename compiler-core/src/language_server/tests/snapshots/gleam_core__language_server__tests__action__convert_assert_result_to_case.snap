@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 595
-expression: "apply_first_code_action_with_title(\"\npub fn main() {\n  let assert Ok(value) = Ok(1)\n}\n\",\n    2, CONVERT_TO_CASE)"
+expression: "pub fn main() {\n  let assert Ok(value) = Ok(1)\n}"
 ---
+----- BEFORE ACTION
+pub fn main() {
+  let assert Ok(value) = Ok(1)
+      ▔▔▔▔↑                   
+}
+
+
+----- AFTER ACTION
 pub fn main() {
   let value = case Ok(1) {
     Ok(value) -> value

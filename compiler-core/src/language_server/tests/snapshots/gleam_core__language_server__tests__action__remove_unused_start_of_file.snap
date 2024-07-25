@@ -2,7 +2,19 @@
 source: compiler-core/src/language_server/tests/action.rs
 expression: "import option\nimport result\n\npub fn main() {\n  result.is_ok\n}\n"
 ---
+----- BEFORE ACTION
+import option
+▔▔▔▔▔▔▔▔▔▔▔▔▔
 import result
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+
+pub fn main() {
+↑              
+  result.is_ok
+}
+
+
+----- AFTER ACTION
 
 pub fn main() {
   result.is_ok

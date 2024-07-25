@@ -1,5 +1,11 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action(\"type Boxed_value { Box(Int) }\", 0)"
+expression: "type Boxed_value { Box(Int) }"
 ---
+----- BEFORE ACTION
+type Boxed_value { Box(Int) }
+     ▔▔▔▔▔↑                  
+
+
+----- AFTER ACTION
 type BoxedValue { Box(Int) }
