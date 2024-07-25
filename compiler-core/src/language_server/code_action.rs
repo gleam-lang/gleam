@@ -580,7 +580,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             };
 
             let mut action = Vec::with_capacity(1);
-            CodeActionBuilder::new("Fill in missing labelled arguments")
+            CodeActionBuilder::new("Fill labels")
                 .kind(CodeActionKind::REFACTOR)
                 .changes(self.params.text_document.uri.clone(), vec![add_labels_edit])
                 .preferred(false)
