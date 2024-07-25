@@ -77,6 +77,7 @@ const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
 const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
 const CONVERT_TO_CASE: &str = "Convert to case";
 const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
+const FILL_IN_MISSING_LABELLED_ARGS: &str = "Fill in missing labelled arguments";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -903,7 +904,37 @@ pub type Wibble { Wibble(arg1: Int, arg2: Int) }
 #[test]
 fn fill_in_labelled_args_only_works_if_function_has_no_explicit_arguments_yet() {
     assert_no_code_actions!(
-        USE_LABEL_SHORTHAND_SYNTAX,
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  wibble(1,)
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble(").under_char('b').to_selection(),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_only_works_if_function_has_no_explicit_arguments_yet_2() {
+    assert_no_code_actions!(
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  wibble(arg2: 1)
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble(").to_selection(),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_regular_function() {
+    assert_code_action!(
+        FILL_IN_MISSING_LABELLED_ARGS,
         r#"
 pub fn main() {
   wibble()
@@ -911,7 +942,90 @@ pub fn main() {
 
 pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
  "#,
-        find_position_of("wibble()").under_char('b').to_selection(),
+        find_position_of("wibble(").to_selection(),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_record_constructor() {
+    assert_code_action!(
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  Wibble()
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: String) }
+ "#,
+        find_position_of("Wibble").select_until(find_position_of("Wibble()").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_pipes() {
+    assert_code_action!(
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  1 |> wibble()
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble()")
+            .under_last_char()
+            .to_selection(),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_pipes_2() {
+    assert_code_action!(
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  1 |> wibble()
+}
+
+pub fn wibble(not_labelled, arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble()")
+            .under_last_char()
+            .to_selection(),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_use() {
+    assert_code_action!(
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  use <- wibble()
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble(").select_until(find_position_of("wibble()").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_selects_innermost_function() {
+    assert_code_action!(
+        FILL_IN_MISSING_LABELLED_ARGS,
+        r#"
+pub fn main() {
+  wibble(
+    wibble()
+  )
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble()")
+            .under_last_char()
+            .to_selection(),
     );
 }
 
