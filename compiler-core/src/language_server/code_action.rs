@@ -549,8 +549,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 
             for arg in args.iter() {
                 match arg.implicit {
-                    Some(ImplicitCallArgOrigin::Use)
-                    | Some(ImplicitCallArgOrigin::IncorrectArityUse) => {
+                    Some(ImplicitCallArgOrigin::Use | ImplicitCallArgOrigin::IncorrectArityUse) => {
                         _ = missing_labels.remove(&(field_map.arity - 1))
                     }
                     Some(ImplicitCallArgOrigin::Pipe) => _ = missing_labels.remove(&0),
@@ -565,12 +564,6 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                 return vec![];
             }
 
-            let labels = missing_labels
-                .iter()
-                .sorted_by_key(|(position, _label)| *position)
-                .map(|(_, label)| format!("{label}: todo"))
-                .join(", ");
-
             let add_labels_edit = TextEdit {
                 range: src_span_to_lsp_range(
                     SrcSpan {
@@ -579,7 +572,11 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                     },
                     &self.line_numbers,
                 ),
-                new_text: format!("{labels}"),
+                new_text: missing_labels
+                    .iter()
+                    .sorted_by_key(|(position, _label)| *position)
+                    .map(|(_, label)| format!("{label}: todo"))
+                    .join(", "),
             };
 
             let mut action = Vec::with_capacity(1);
@@ -591,7 +588,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             return action;
         }
 
-        return vec![];
+        vec![]
     }
 }
 
@@ -618,9 +615,8 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
             _ => None,
         };
 
-        match field_map {
-            Some(field_map) => self.selected_call = Some((*location, field_map, args)),
-            None => (),
+        if let Some(field_map) = field_map {
+            self.selected_call = Some((*location, field_map, args))
         }
 
         // We only want to take into account the innermost function call
