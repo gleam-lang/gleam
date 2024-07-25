@@ -2946,7 +2946,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 ignored_labelled_args = args
                                     .iter()
                                     .skip_while(|arg| arg.label.is_none())
-                                    .map(|arg| (arg.label.clone(), arg.location.clone()))
+                                    .map(|arg| (arg.label.clone(), arg.location))
                                     .collect_vec();
                                 let args_to_keep = first_labelled_arg.unwrap_or(args.len());
                                 (
