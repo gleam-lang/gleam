@@ -246,6 +246,33 @@
   function call or record construction.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- The language server can now suggest a code action to fill in the labels of a
+  function call:
+
+  ```gleam
+  pub type Date {
+    Date(year: Int, month: Int, day: Int)
+  }
+
+  pub fn main() {
+    Date()
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  pub type Date {
+    Date(year: Int, month: Int, day: Int)
+  }
+
+  pub fn main() {
+    Date(year: todo, month: todo, day: todo)
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug Fixes
 
 - Functions, types and constructors named `module_info` are now escaped
