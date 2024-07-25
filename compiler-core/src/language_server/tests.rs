@@ -579,10 +579,25 @@ impl<'a> TestProject<'a> {
     }
 }
 
+#[derive(Clone)]
 pub struct PositionFinder {
-    value: String,
+    value: EcoString,
     offset: usize,
     nth_occurrence: usize,
+}
+
+pub struct RangeSelector {
+    from: PositionFinder,
+    to: PositionFinder,
+}
+
+impl RangeSelector {
+    pub fn find_range(&self, src: &str) -> lsp_types::Range {
+        lsp_types::Range {
+            start: self.from.find_position(src),
+            end: self.to.find_position(src),
+        }
+    }
 }
 
 impl PositionFinder {
@@ -631,12 +646,26 @@ impl PositionFinder {
         } = self;
 
         let byte_index = src
-            .match_indices(value)
+            .match_indices(value.as_str())
             .nth(nth_occurrence - 1)
             .expect("no match for position")
             .0;
 
         byte_index_to_position(src, byte_index + offset)
+    }
+
+    pub fn select_until(self, end: PositionFinder) -> RangeSelector {
+        RangeSelector {
+            from: self,
+            to: end,
+        }
+    }
+
+    pub fn to_selection(self) -> RangeSelector {
+        RangeSelector {
+            from: self.clone(),
+            to: self,
+        }
     }
 }
 

@@ -1,7 +1,20 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action_with_title(r#\"pub fn main() {\n    let Wibble(arg1: arg1, arg2: arg2) = todo\n    arg1 + arg2\n}\n\npub type Wibble { Wibble(arg1: Int, arg2: Int) }\n\"#,\n    1, USE_LABEL_SHORTHAND_SYNTAX)"
+expression: "\npub fn main() {\n    let Wibble(arg1: arg1, arg2: arg2) = todo\n    arg1 + arg2\n}\n\npub type Wibble { Wibble(arg1: Int, arg2: Int) }\n"
 ---
+----- BEFORE ACTION
+
+pub fn main() {
+    let Wibble(arg1: arg1, arg2: arg2) = todo
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑
+    arg1 + arg2
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+
+
+----- AFTER ACTION
+
 pub fn main() {
     let Wibble(arg1: , arg2: ) = todo
     arg1 + arg2

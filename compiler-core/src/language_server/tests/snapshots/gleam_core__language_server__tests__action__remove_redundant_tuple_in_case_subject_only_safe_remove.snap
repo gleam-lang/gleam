@@ -2,6 +2,20 @@
 source: compiler-core/src/language_server/tests/action.rs
 expression: "\npub fn main() {\n  case #(0), #(1) {\n    #(1), #(b) -> 0\n    a, #(0) -> 1 // The first of this clause is not a tuple\n    #(a), #(b) -> 2\n  }\n}\n"
 ---
+----- BEFORE ACTION
+
+pub fn main() {
+  case #(0), #(1) {
+       ▔▔▔▔▔▔↑     
+    #(1), #(b) -> 0
+    a, #(0) -> 1 // The first of this clause is not a tuple
+    #(a), #(b) -> 2
+  }
+}
+
+
+----- AFTER ACTION
+
 pub fn main() {
   case #(0), 1 {
     #(1), b -> 0

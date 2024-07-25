@@ -1,107 +1,62 @@
-use crate::{language_server::engine, line_numbers::LineNumbers};
+use crate::line_numbers::LineNumbers;
+use itertools::Itertools;
 use lsp_types::{
-    CodeActionContext, CodeActionParams, PartialResultParams, Position, Range,
-    TextDocumentIdentifier, Url, WorkDoneProgressParams, WorkspaceEdit,
+    CodeActionContext, CodeActionParams, PartialResultParams, Position, Range, Url,
+    WorkDoneProgressParams,
 };
 
 use super::*;
 
-const TEST_FILE_PATH: &str = match cfg!(target_family = "windows") {
-    true => r"\\?\C:\src\app.gleam",
-    false => "/src/app.gleam",
-};
-
-fn test_file_url() -> Url {
-    Url::from_file_path(Utf8PathBuf::from(TEST_FILE_PATH)).expect("file path is valid url")
-}
-
-fn engine_response(src: &str, line: u32) -> engine::Response<Option<Vec<lsp_types::CodeAction>>> {
-    let io = LanguageServerTestIO::new();
-    let mut engine = setup_engine(&io);
-
-    // inject stdlib stubs
-    _ = io.src_module("list", "");
-    _ = io.src_module(
-        "result",
-        "pub fn is_ok() {}\npub fn is_err() {}\npub fn all() {}",
-    );
-    _ = io.src_module("map", "pub type Map(key, value)\npub fn delete() {}");
-    _ = io.src_module("option", "");
-
-    _ = io.src_module("app", src);
-    let _ = engine.compile_please();
-
-    let params = CodeActionParams {
-        text_document: TextDocumentIdentifier::new(test_file_url()),
-        context: CodeActionContext {
-            diagnostics: vec![],
-            only: None,
-            trigger_kind: None,
-        },
-        range: Range::new(Position::new(0, 0), Position::new(line + 1, 0)),
-        work_done_progress_params: WorkDoneProgressParams {
-            work_done_token: None,
-        },
-        partial_result_params: PartialResultParams {
-            partial_result_token: None,
-        },
+fn code_actions(tester: TestProject<'_>, range: Range) -> Option<Vec<lsp_types::CodeAction>> {
+    let position = Position {
+        line: 0,
+        character: 0,
     };
 
-    engine.code_actions(params)
+    tester.at(position, |engine, params, _| {
+        let params = CodeActionParams {
+            text_document: params.text_document,
+            range,
+            context: CodeActionContext::default(),
+            work_done_progress_params: WorkDoneProgressParams::default(),
+            partial_result_params: PartialResultParams::default(),
+        };
+        engine.code_actions(params).result.unwrap()
+    })
 }
 
-const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
-const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
-const CONVERT_TO_CASE: &str = "Convert to case";
-const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
-
-fn apply_first_code_action_with_title(src: &str, line: u32, title: &str) -> String {
-    let response = engine_response(src, line)
-        .result
-        .unwrap()
-        .and_then(|actions| actions.into_iter().find(|action| action.title == title));
-    if let Some(action) = response {
-        apply_code_action(src, &test_file_url(), action)
-    } else {
-        panic!("No code action produced by the engine")
-    }
+fn actions_with_title(
+    titles: Vec<&str>,
+    tester: TestProject<'_>,
+    range: Range,
+) -> Vec<lsp_types::CodeAction> {
+    code_actions(tester, range)
+        .into_iter()
+        .flatten()
+        .filter(|action| titles.contains(&action.title.as_str()))
+        .collect_vec()
 }
 
-fn apply_first_code_action(src: &str, line: u32) -> String {
-    let response = engine_response(src, line)
-        .result
-        .unwrap()
-        .and_then(|actions| actions.into_iter().nth(0));
-    if let Some(action) = response {
-        apply_code_action(src, &test_file_url(), action)
-    } else {
-        panic!("No code action produced by the engine")
-    }
+fn apply_code_action(title: &str, tester: TestProject<'_>, range: Range) -> String {
+    let src = tester.src;
+    let titles = vec![title];
+    let changes = actions_with_title(titles, tester, range)
+        .pop()
+        .expect("No action with the given title")
+        .edit
+        .expect("No workspace edit found")
+        .changes
+        .expect("No text edit found");
+    apply_code_edit(src, changes)
 }
 
-fn apply_code_action(src: &str, url: &Url, action: lsp_types::CodeAction) -> String {
-    match action.edit {
-        Some(WorkspaceEdit { changes, .. }) => match changes {
-            Some(changes) => apply_code_edit(src, url, changes),
-            None => panic!("No text edit found"),
-        },
-        _ => panic!("No workspace edit found"),
-    }
-}
-
-// This function replicates how the text editor applies TextEdit
-fn apply_code_edit(
-    src: &str,
-    url: &Url,
-    changes: HashMap<Url, Vec<lsp_types::TextEdit>>,
-) -> String {
+/// This function replicates how the text editor applies TextEdit.
+///
+fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -> String {
     let mut result = src.to_string();
     let line_numbers = LineNumbers::new(src);
     let mut offset = 0;
-    for (change_url, mut change) in changes {
-        if *url != change_url {
-            panic!("Unknown url {}", change_url)
-        }
+    for (_, mut change) in changes {
         change.sort_by_key(|edit| (edit.range.start.line, edit.range.start.character));
         for edit in change {
             let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
@@ -118,54 +73,91 @@ fn apply_code_edit(
     result
 }
 
-#[macro_export]
+const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
+const REMOVE_REDUNDANT_TUPLES: &str = "Remove redundant tuples";
+const CONVERT_TO_CASE: &str = "Convert to case";
+const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
+
 macro_rules! assert_code_action {
-    ($line:expr, $title:expr, $src:expr $(,)?) => {
-        let output = apply_first_code_action_with_title($src, $line, $title);
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    ($title:expr, $code:literal, $range:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_code_action!($title, project, $range);
+    };
+
+    ($title:expr, $project:expr, $range:expr $(,)?) => {
+        let src = $project.src;
+        let range = $range.find_range(src);
+        let result = apply_code_action($title, $project, range);
+        let output = format!(
+            "----- BEFORE ACTION\n{}\n\n----- AFTER ACTION\n{}",
+            hover::show_hover(src, range, range.end),
+            result
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, src);
+    };
+}
+
+macro_rules! assert_no_code_actions {
+    ($title:ident $(| $titles:ident)*, $code:literal, $range:expr $(,)?) => {
+        let project = TestProject::for_source($code);
+        assert_no_code_actions!($title $(| $titles)*, project, $range);
+    };
+
+    ($title:ident $(| $titles:ident)*, $project:expr, $range:expr $(,)?) => {
+        let src = $project.src;
+        let range = $range.find_range(src);
+        let all_titles = vec![$title $(, $titles)*];
+        let expected: Vec<lsp_types::CodeAction> = vec![];
+        let result = actions_with_title(all_titles, $project, range);
+        assert_eq!(expected, result);
     };
 }
 
 #[test]
 fn test_remove_unused_simple() {
-    assert_code_action!(
-        2,
-        REMOVE_UNUSED_IMPORTS,
-        "
+    let src = "
 // test
 import // comment
-    list as lispy
+list as lispy
 import result
 import option
 
 pub fn main() {
   result.is_ok
 }
-"
+";
+
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src)
+            .add_hex_module("list", "")
+            .add_hex_module("result", "")
+            .add_hex_module("option", ""),
+        find_position_of("// test").select_until(find_position_of("option")),
     );
 }
 
 #[test]
 fn test_remove_unused_start_of_file() {
-    assert_code_action!(
-        2,
-        REMOVE_UNUSED_IMPORTS,
-        "import option
+    let src = "import option
 import result
 
 pub fn main() {
   result.is_ok
 }
-"
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src)
+            .add_hex_module("option", "")
+            .add_hex_module("result", ""),
+        find_position_of("import").select_until(find_position_of("pub")),
     );
 }
 
 #[test]
 fn test_remove_unused_alias() {
-    assert_code_action!(
-        2,
-        REMOVE_UNUSED_IMPORTS,
-        "
+    let src = "
 // test
 import result.{is_ok} as res
 import option
@@ -173,75 +165,72 @@ import option
 pub fn main() {
   is_ok
 }
-"
+";
+    assert_code_action!(
+        REMOVE_UNUSED_IMPORTS,
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub fn is_ok() {}")
+            .add_hex_module("option", ""),
+        find_position_of("// test").select_until(find_position_of("pub")),
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_simple() {
     assert_code_action!(
-        2,
         REMOVE_REDUNDANT_TUPLES,
-        "
-pub fn main() {
+        "pub fn main() {
   case #(1) { #(a) -> 0 }
   case #(1, 2) { #(a, b) -> 0 }
-}
-"
+}",
+        find_position_of("case").select_until(find_position_of("#(1, 2)").under_last_char())
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_with_catch_all_pattern() {
     assert_code_action!(
-        4,
         REMOVE_REDUNDANT_TUPLES,
-        "
-pub fn main() {
+        "pub fn main() {
   case #(1, 2) {
     #(1, 2) -> 0
     _ -> 1
   }
-}
-"
+}",
+        find_position_of("case").select_until(find_position_of("#(1, 2)").under_last_char())
     );
 }
 
 #[test]
 fn test_remove_multiple_redundant_tuple_with_catch_all_pattern() {
     assert_code_action!(
-        4,
         REMOVE_REDUNDANT_TUPLES,
-        "
-pub fn main() {
+        "pub fn main() {
   case #(1, 2), #(3, 4) {
     #(2, 2), #(2, 2) -> 0
     #(1, 2), _ -> 0
     _, #(1, 2) -> 0
     _, _ -> 1
   }
-}
-"
+}",
+        find_position_of("case").select_until(find_position_of("#(3, 4)"))
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_nested() {
     assert_code_action!(
-        2,
         REMOVE_REDUNDANT_TUPLES,
-        "
-pub fn main() {
+        "pub fn main() {
   case #(case #(0) { #(a) -> 0 }) { #(b) -> 0 }
-}
-"
+}",
+        find_position_of("case").select_until(find_position_of("#(b)"))
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_retain_extras() {
     assert_code_action!(
-        7,
         REMOVE_REDUNDANT_TUPLES,
         "
 pub fn main() {
@@ -273,28 +262,27 @@ pub fn main() {
     ) -> 0
   }
 }
-"
+",
+        find_position_of("#").select_until(find_position_of("// first"))
     );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_ignore_empty_tuple() {
-    let code = "
+    assert_no_code_actions!(
+        REMOVE_REDUNDANT_TUPLES,
+        "
 pub fn main() {
   case #() { #() -> 0 }
 }
-";
-
-    assert!(engine_response(code, 11)
-        .result
-        .expect("ok response")
-        .is_none());
+",
+        find_position_of("case").select_until(find_position_of("0"))
+    );
 }
 
 #[test]
 fn test_remove_redundant_tuple_in_case_subject_only_safe_remove() {
     assert_code_action!(
-        2,
         REMOVE_REDUNDANT_TUPLES,
         "
 pub fn main() {
@@ -304,426 +292,469 @@ pub fn main() {
     #(a), #(b) -> 2
   }
 }
-"
+",
+        find_position_of("#(0)").select_until(find_position_of("#(1)"))
     );
 }
 
 #[test]
 fn rename_invalid_const() {
-    insta::assert_snapshot!(apply_first_code_action("const myInvalid_Constant = 42", 0));
+    assert_code_action!(
+        "Rename to my_invalid_constant",
+        "const myInvalid_Constant = 42",
+        find_position_of("_Constant").to_selection(),
+    );
 }
 
 #[test]
 fn rename_invalid_parameter() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to num_a",
         "fn add(numA: Int, num_b: Int) { numA + num_b }",
-        0
-    ));
+        find_position_of("numA").to_selection()
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_name2() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to param_name",
         "fn pass(label paramName: Bool) { paramName }",
-        0
-    ));
+        find_position_of("paramName").to_selection()
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_name3() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to num_a",
         "pub fn main() {
     let add = fn(numA: Int, num_b: Int) { numA + num_b }
 }",
-        1
-    ));
+        find_position_of("let add").select_until(find_position_of("num_b"))
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _ignore_me",
         "fn ignore(_ignoreMe: Bool) { 98 }",
-        0
-    ));
+        find_position_of("ignore").select_until(find_position_of("98"))
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_discard_name2() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _ignore_me",
         "fn ignore(labelled_discard _ignoreMe: Bool) { 98 }",
-        0
-    ));
+        find_position_of("ignore").select_until(find_position_of("98"))
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_discard_name3() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _ignore_me",
         "pub fn main() {
     let ignore = fn(_ignoreMe: Bool) { 98 }
 }",
-        1
-    ));
+        find_position_of("ignore").select_until(find_position_of("98"))
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_label() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to this_is_a_label",
         "fn func(thisIsALabel param: Int) { param }",
-        0
-    ));
+        find_position_of("thisIs").select_until(find_position_of("Int"))
+    );
 }
 
 #[test]
 fn rename_invalid_parameter_label2() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to this_is_a_label",
         "fn ignore(thisIsALabel _ignore: Int) { 25 }",
-        0
-    ));
+        find_position_of("thisIs").under_char('i').to_selection()
+    );
 }
 
 #[test]
 fn rename_invalid_constructor() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to TheConstructor",
         "type MyType { The_Constructor(Int) }",
-        0
-    ));
+        find_position_of("The_").under_char('h').to_selection(),
+    );
 }
 
 #[test]
 fn rename_invalid_constructor_arg() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to inner_int",
         "type IntWrapper { IntWrapper(innerInt: Int) }",
-        0
-    ));
+        find_position_of("IntWrapper")
+            .nth_occurrence(2)
+            .select_until(find_position_of(": Int"))
+    );
 }
 
 #[test]
 fn rename_invalid_custom_type() {
-    insta::assert_snapshot!(apply_first_code_action("type Boxed_value { Box(Int) }", 0));
+    assert_code_action!(
+        "Rename to BoxedValue",
+        "type Boxed_value { Box(Int) }",
+        find_position_of("Box").select_until(find_position_of("_value"))
+    );
 }
 
 #[test]
 fn rename_invalid_type_alias() {
-    insta::assert_snapshot!(apply_first_code_action("type Fancy_Bool = Bool", 0));
+    assert_code_action!(
+        "Rename to FancyBool",
+        "type Fancy_Bool = Bool",
+        find_position_of("Fancy")
+            .under_char('a')
+            .select_until(find_position_of("="))
+    );
 }
 
 #[test]
 fn rename_invalid_function() {
-    insta::assert_snapshot!(apply_first_code_action("fn doStuff() {}", 0));
+    assert_code_action!(
+        "Rename to do_stuff",
+        "fn doStuff() {}",
+        find_position_of("fn").select_until(find_position_of("{}"))
+    );
 }
 
 #[test]
 fn rename_invalid_variable() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to the_answer",
         "pub fn main() {
     let theAnswer = 42
 }",
-        1
-    ));
+        find_position_of("theAnswer").select_until(find_position_of("Answer"))
+    );
 }
 
 #[test]
 fn rename_invalid_variable_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _boring_number",
         "pub fn main() {
     let _boringNumber = 72
 }",
-        1
-    ));
+        find_position_of("let").select_until(find_position_of("72"))
+    );
 }
 
 #[test]
 fn rename_invalid_use() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to use_var",
         "fn use_test(f) { f(Nil) }
 pub fn main() {use useVar <- use_test()}",
-        1
-    ));
+        find_position_of("use")
+            .nth_occurrence(2)
+            .select_until(find_position_of("use_test()"))
+    );
 }
 
 #[test]
 fn rename_invalid_use_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _discard_var",
         "fn use_test(f) { f(Nil) }
 pub fn main() {use _discardVar <- use_test()}",
-        1
-    ));
+        find_position_of("_discardVar")
+            .under_last_char()
+            .to_selection()
+    );
 }
 
 #[test]
 fn rename_invalid_pattern_assignment() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to the_answer",
         "pub fn main() {
     let assert 42 as theAnswer = 42
 }",
-        1
-    ));
+        find_position_of("let").select_until(find_position_of("= 42"))
+    );
 }
 
 #[test]
 fn rename_invalid_list_pattern() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to the_element",
         "pub fn main() {
     let assert [theElement] = [9.4]
 }",
-        1
-    ));
+        find_position_of("assert").select_until(find_position_of("9.4"))
+    );
 }
 
 #[test]
 fn rename_invalid_list_pattern_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _elem_one",
         "pub fn main() {
     let assert [_elemOne] = [False]
 }",
-        1
-    ));
+        find_position_of("[_elemOne]")
+            .under_char('O')
+            .to_selection()
+    );
 }
 
 #[test]
 fn rename_invalid_constructor_pattern() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to inner_value",
         "pub type Box { Box(Int) }
 pub fn main() {
     let Box(innerValue) = Box(203)
 }",
-        2
-    ));
+        find_position_of("innerValue").to_selection()
+    );
 }
 
 #[test]
 fn rename_invalid_constructor_pattern_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _ignored_inner",
         "pub type Box { Box(Int) }
 pub fn main() {
     let Box(_ignoredInner) = Box(203)
 }",
-        2
-    ));
+        find_position_of("_").select_until(find_position_of("203"))
+    );
 }
 
 #[test]
 fn rename_invalid_tuple_pattern() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to second_value",
         "pub fn main() {
     let #(a, secondValue) = #(1, 2)
 }",
-        1
-    ));
+        find_position_of("secondValue")
+            .select_until(find_position_of("secondValue").under_char('n'))
+    );
 }
 
 #[test]
 fn rename_invalid_tuple_pattern_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _second_value",
         "pub fn main() {
     let #(a, _secondValue) = #(1, 2)
 }",
-        1
-    ));
+        find_position_of("_secondValue")
+            .under_char('_')
+            .select_until(find_position_of("#(1, 2)"))
+    );
 }
 
 #[test]
 fn rename_invalid_bit_array_pattern() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to bit_value",
         "pub fn main() {
     let assert <<bitValue>> = <<73>>
 }",
-        1
-    ));
+        find_position_of("<<").select_until(find_position_of(">>"))
+    );
 }
 
 #[test]
 fn rename_invalid_bit_array_pattern_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _i_dont_care",
         "pub fn main() {
     let assert <<_iDontCare>> = <<97>>
 }",
-        1
-    ));
+        find_position_of("<<").select_until(find_position_of("Care"))
+    );
 }
 
 #[test]
 fn rename_invalid_string_prefix_pattern() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to cool_suffix",
         r#"pub fn main() {
     let assert "prefix" <> coolSuffix = "prefix-suffix"
 }"#,
-        1
-    ));
+        find_position_of("<>").select_until(find_position_of("-suffix"))
+    );
 }
 
 #[test]
 fn rename_invalid_string_prefix_pattern_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _boring_suffix",
         r#"pub fn main() {
     let assert "prefix" <> _boringSuffix = "prefix-suffix"
 }"#,
-        1
-    ));
+        find_position_of("<>").select_until(find_position_of("Suffix"))
+    );
 }
 
 #[test]
 fn rename_invalid_string_prefix_pattern_alias() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to the_prefix",
         r#"pub fn main() {
     let assert "prefix" as thePrefix <> _suffix = "prefix-suffix"
 }"#,
-        1
-    ));
+        find_position_of("prefix").select_until(find_position_of("-suffix"))
+    );
 }
 
 #[test]
 fn rename_invalid_case_variable() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to twenty_one",
         "pub fn main() {
     case 21 { twentyOne -> {Nil} }
 }",
-        1
-    ));
+        find_position_of("case").select_until(find_position_of("Nil"))
+    );
 }
 
 #[test]
 fn rename_invalid_case_variable_discard() {
-    insta::assert_snapshot!(apply_first_code_action(
+    assert_code_action!(
+        "Rename to _twenty_one",
         "pub fn main() {
     case 21 { _twentyOne -> {Nil} }
 }",
-        1
-    ));
+        find_position_of("21").select_until(find_position_of("->"))
+    );
 }
 
 #[test]
 fn test_convert_assert_result_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   let assert Ok(value) = Ok(1)
-}
-",
-        2,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("assert").select_until(find_position_of("assert").under_char('r')),
+    );
 }
 
 #[test]
 fn test_convert_let_assert_to_case_indented() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   {
     let assert Ok(value) = Ok(1)
   }
-}
-",
-        3,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("Ok").to_selection()
+    );
 }
 
 #[test]
 fn test_convert_let_assert_to_case_multi_variables() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]
-}
-",
-        2,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("var1").select_until(find_position_of("_var").under_last_char())
+    );
 }
 
 #[test]
 fn test_convert_let_assert_to_case_discard() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   let assert [_elem] = [6]
-}
-",
-        2,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("assert").select_until(find_position_of("[6]").under_last_char()),
+    );
 }
 
 #[test]
 fn test_convert_let_assert_to_case_no_variables() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   let assert [] = []
-}
-",
-        2,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("[]").to_selection(),
+    );
 }
 
 #[test]
 fn test_convert_let_assert_alias_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   let assert 10 as ten = 10
-}
-",
-        2,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("as").select_until(find_position_of("ten")),
+    );
 }
 
 #[test]
 fn test_convert_let_assert_tuple_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
    let assert #(first, 10, third) = #(5, 10, 15)
 }
 ",
-        2,
-        CONVERT_TO_CASE
-    ));
+        find_position_of("let").to_selection(),
+    );
 }
 
 #[test]
 fn test_convert_let_assert_bit_array_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        "
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
   let assert <<bits1, bits2>> = <<73, 98>>
-}
-",
-        2,
-        CONVERT_TO_CASE
-    ));
+}",
+        find_position_of("bits").select_until(find_position_of("2")),
+    );
 }
 
 #[test]
 fn test_convert_let_assert_string_prefix_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        r#"
-pub fn main() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"pub fn main() {
   let assert "_" <> thing = "_Hello"
 }"#,
-        2,
-        CONVERT_TO_CASE
-    ));
+        find_position_of("_").to_selection()
+    );
 }
 
 #[test]
 fn test_convert_let_assert_string_prefix_pattern_alias_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
+    assert_code_action!(
+        CONVERT_TO_CASE,
         r#"pub fn main() {
     let assert "123" as one_two_three <> rest = "123456"
 }"#,
-        1,
-        CONVERT_TO_CASE
-    ));
+        find_position_of("123").select_until(find_position_of("123456")),
+    );
 }
 
 #[test]
 fn test_convert_inner_let_assert_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
+    assert_code_action!(
+        CONVERT_TO_CASE,
         r#"pub fn main() {
     let assert [wibble] = {
         let assert Ok(wobble) = {
@@ -732,14 +763,14 @@ fn test_convert_inner_let_assert_to_case() {
         [wobble]
     }
 }"#,
-        2,
-        CONVERT_TO_CASE
-    ));
+        find_position_of("wobble").under_char('l').to_selection()
+    );
 }
 
 #[test]
 fn test_convert_outer_let_assert_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
+    assert_code_action!(
+        CONVERT_TO_CASE,
         r#"pub fn main() {
     let assert [wibble] = {
         let assert Ok(wobble) = {
@@ -748,29 +779,32 @@ fn test_convert_outer_let_assert_to_case() {
         [wobble]
     }
 }"#,
-        1,
-        CONVERT_TO_CASE
-    ));
+        find_position_of("wibble")
+            .under_char('i')
+            .select_until(find_position_of("= {")),
+    );
 }
 
 #[test]
 fn test_convert_assert_custom_type_with_label_shorthands_to_case() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
+    assert_code_action!(
+        CONVERT_TO_CASE,
         "
 pub type Wibble { Wibble(arg: Int, arg2: Float) }
 pub fn main() {
   let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)
 }
 ",
-        3,
-        CONVERT_TO_CASE
-    ));
+        find_position_of("arg2:,").select_until(find_position_of("1.0")),
+    );
 }
 
 #[test]
 fn label_shorthand_action_works_on_labelled_call_args() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        r#"pub fn main() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
     let arg1 = 1
     let arg2 = 2
     wibble(arg2: arg2, arg1: arg1)
@@ -778,15 +812,18 @@ fn label_shorthand_action_works_on_labelled_call_args() {
 
 pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
 "#,
-        3,
-        USE_LABEL_SHORTHAND_SYNTAX
-    ));
+        find_position_of("wibble")
+            .under_char('i')
+            .select_until(find_position_of("arg1: arg1")),
+    );
 }
 
 #[test]
 fn label_shorthand_action_works_on_labelled_constructor_call_args() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        r#"pub fn main() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
     let arg1 = 1
     let arg2 = 2
     Wibble(arg2: arg2, arg1: arg1)
@@ -794,55 +831,88 @@ fn label_shorthand_action_works_on_labelled_constructor_call_args() {
 
 pub type Wibble { Wibble(arg1: Int, arg2: Int) }
 "#,
-        3,
-        USE_LABEL_SHORTHAND_SYNTAX
-    ));
+        find_position_of("Wibble").select_until(find_position_of("arg1: arg1").under_char(':')),
+    );
+}
+
+#[test]
+fn label_shorthand_action_only_applies_to_selected_args() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
+    let arg1 = 1
+    let arg2 = 2
+    Wibble(arg2: arg2, arg1: arg1)
+}
+
+pub type Wibble { Wibble(arg1: Int, arg2: Int) }
+"#,
+        find_position_of("Wibble").select_until(find_position_of("arg2: arg2").under_char(':')),
+    );
 }
 
 #[test]
 fn label_shorthand_action_works_on_labelled_update_call_args() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        r#"pub fn main() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
     let arg1 = 1
     Wibble(..todo, arg1: arg1)
 }
 
 pub type Wibble { Wibble(arg1: Int, arg2: Int) }
 "#,
-        2,
-        USE_LABEL_SHORTHAND_SYNTAX
-    ));
+        find_position_of("..todo").select_until(find_position_of("arg1: arg1").under_last_char()),
+    );
 }
 
 #[test]
 fn label_shorthand_action_works_on_labelled_pattern_call_args() {
-    insta::assert_snapshot!(apply_first_code_action_with_title(
-        r#"pub fn main() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
     let Wibble(arg1: arg1, arg2: arg2) = todo
     arg1 + arg2
 }
 
 pub type Wibble { Wibble(arg1: Int, arg2: Int) }
 "#,
-        1,
-        USE_LABEL_SHORTHAND_SYNTAX
-    ));
+        find_position_of("let").select_until(find_position_of("todo").under_last_char()),
+    );
 }
 
 #[test]
 fn label_shorthand_action_doesnt_come_up_for_arguments_with_different_label() {
-    let src = r#"pub fn main() {
-let Wibble(arg1: arg_1, arg2: arg_2) = todo
-arg_1 + arg_2
+    assert_no_code_actions!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
+  let Wibble(arg1: arg_1, arg2: arg_2) = todo
+  arg_1 + arg_2
 }
 
 pub type Wibble { Wibble(arg1: Int, arg2: Int) }
-"#;
+"#,
+        find_position_of("arg_1").select_until(find_position_of("arg_2").under_last_char())
+    );
+}
 
-    assert!(engine_response(src, 1)
-        .result
-        .expect("server response")
-        .is_none())
+#[test]
+fn fill_in_labelled_args_only_works_if_function_has_no_explicit_arguments_yet() {
+    assert_no_code_actions!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn main() {
+  wibble()
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble()").under_char('b').to_selection(),
+    );
 }
 
 /* TODO: implement qualified unused location

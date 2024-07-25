@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action(\"pub fn main() {\n    let assert <<bitValue>> = <<73>>\n}\",\n    1)"
+expression: "pub fn main() {\n    let assert <<bitValue>> = <<73>>\n}"
 ---
+----- BEFORE ACTION
+pub fn main() {
+    let assert <<bitValue>> = <<73>>
+               ▔▔▔▔▔▔▔▔▔▔↑          
+}
+
+
+----- AFTER ACTION
 pub fn main() {
     let assert <<bit_value>> = <<73>>
 }

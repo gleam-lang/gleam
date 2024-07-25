@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action_with_title(\"\npub fn main() {\n  let assert [] = []\n}\n\",\n    2, CONVERT_TO_CASE)"
+expression: "pub fn main() {\n  let assert [] = []\n}"
 ---
+----- BEFORE ACTION
+pub fn main() {
+  let assert [] = []
+             ↑      
+}
+
+
+----- AFTER ACTION
 pub fn main() {
   let _ = case [] {
     [] -> Nil

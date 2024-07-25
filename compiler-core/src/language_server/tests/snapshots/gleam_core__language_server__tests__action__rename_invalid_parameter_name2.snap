@@ -1,5 +1,11 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action(\"fn pass(label paramName: Bool) { paramName }\", 0)"
+expression: "fn pass(label paramName: Bool) { paramName }"
 ---
+----- BEFORE ACTION
+fn pass(label paramName: Bool) { paramName }
+              ↑                             
+
+
+----- AFTER ACTION
 fn pass(label param_name: Bool) { paramName }

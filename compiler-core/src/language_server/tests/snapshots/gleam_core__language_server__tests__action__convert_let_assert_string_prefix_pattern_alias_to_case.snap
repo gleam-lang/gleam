@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "apply_first_code_action_with_title(r#\"pub fn main() {\n    let assert \"123\" as one_two_three <> rest = \"123456\"\n}\"#,\n    1, CONVERT_TO_CASE)"
+expression: "pub fn main() {\n    let assert \"123\" as one_two_three <> rest = \"123456\"\n}"
 ---
+----- BEFORE ACTION
+pub fn main() {
+    let assert "123" as one_two_three <> rest = "123456"
+                ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑      
+}
+
+
+----- AFTER ACTION
 pub fn main() {
     let #(one_two_three, rest) = case "123456" {
       "123" as one_two_three <> rest -> #(one_two_three, rest)

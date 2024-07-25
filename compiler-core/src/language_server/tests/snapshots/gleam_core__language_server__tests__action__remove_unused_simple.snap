@@ -1,9 +1,28 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\n// test\nimport // comment\n  list as lispy\nimport result\nimport option\n\npub fn main() {\n  result.is_ok\n}\n"
+expression: "\n// test\nimport // comment\nlist as lispy\nimport result\nimport option\n\npub fn main() {\n  result.is_ok\n}\n"
 ---
+----- BEFORE ACTION
+
 // test
+▔▔▔▔▔▔▔
+import // comment
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+list as lispy
+▔▔▔▔▔▔▔▔▔▔▔▔▔
 import result
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+import option
+▔▔▔▔▔▔▔↑     
+
+pub fn main() {
+  result.is_ok
+}
+
+
+----- AFTER ACTION
+
+// test
 
 pub fn main() {
   result.is_ok
