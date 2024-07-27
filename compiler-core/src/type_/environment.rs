@@ -2,6 +2,7 @@ use crate::{
     analyse::TargetSupport,
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
+    exhaustiveness::printer::ValueNames,
     uid::UniqueIdGenerator,
 };
 
@@ -54,6 +55,8 @@ pub struct Environment<'a> {
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
     pub target_support: TargetSupport,
+
+    pub value_names: ValueNames,
 }
 
 impl<'a> Environment<'a> {
@@ -88,6 +91,7 @@ impl<'a> Environment<'a> {
             current_module,
             entity_usages: vec![HashMap::new()],
             target_support,
+            value_names: ValueNames::new(),
         }
     }
 }

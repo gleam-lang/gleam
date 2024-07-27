@@ -1,19 +1,129 @@
-#![allow(dead_code)]
 use std::collections::HashMap;
 
 use ecow::EcoString;
 
-use crate::type_::printer::{NamedTypeNames, TypeNames};
+use crate::type_::PRELUDE_MODULE_NAME;
 
 use super::missing_patterns::Term;
 
+#[derive(Debug, Default)]
+pub struct ValueNames {
+    /// Mapping of imported modules to their locally used named
+    ///
+    /// key:   The name of the module
+    /// value: The name the module is aliased to
+    ///
+    /// # Example 1
+    ///
+    /// ```gleam
+    /// import mod1 as my_mod
+    /// ```
+    /// would result in:
+    /// - key:   "mod1"
+    /// - value: "my_mod"
+    ///
+    /// # Example 2
+    ///
+    /// ```gleam
+    /// import mod1
+    /// ```
+    /// would result in:
+    /// - key:   "mod1"
+    /// - value: "mod1"
+    ///
+    imported_modules: HashMap<EcoString, EcoString>,
+
+    /// Constructors which are imported in the current module in an
+    /// unqualified fashion.
+    ///
+    /// key:   (Defining module name, type name)
+    /// value: Alias name
+    ///
+    /// # Example 1
+    ///
+    /// ```gleam
+    /// import wibble.{Wobble}
+    /// ```
+    /// would result in
+    /// - key:   `("wibble", "Wobble")`
+    /// - value: `"Wobble"`
+    ///
+    /// # Example 2
+    ///
+    /// ```gleam
+    /// import wibble.{Wobble as Woo}
+    /// ```
+    /// would result in
+    /// - key:   `("wibble", "Wobble")`
+    /// - value: `"Woo"`
+    ///
+    local_constructors: HashMap<(EcoString, EcoString), EcoString>,
+}
+
+impl ValueNames {
+    pub fn new() -> Self {
+        Self {
+            local_constructors: Default::default(),
+            imported_modules: Default::default(),
+        }
+    }
+
+    /// Record a named value in this module.
+    pub fn named_constructor_in_scope(
+        &mut self,
+        module_name: EcoString,
+        value_name: EcoString,
+        local_alias: EcoString,
+    ) {
+        _ = self
+            .local_constructors
+            .insert((module_name, value_name), local_alias);
+    }
+
+    /// Record an imported module in this module.
+    pub fn imported_module(&mut self, module_name: EcoString, module_alias: EcoString) {
+        _ = self.imported_modules.insert(module_name, module_alias)
+    }
+
+    /// Get the name and optional module qualifier for a named constructor.
+    pub fn named_constructor<'a>(
+        &'a self,
+        module: &'a EcoString,
+        name: &'a EcoString,
+    ) -> NamedValueNames<'a> {
+        let key: (EcoString, EcoString) = (module.clone(), name.clone());
+
+        // There is a local name for this type, use that.
+        if let Some(name) = self.local_constructors.get(&key) {
+            return NamedValueNames::Unqualified(name.as_str());
+        }
+
+        // This type is from a module that has been imported
+        if let Some(module) = self.imported_modules.get(module) {
+            return NamedValueNames::Qualified(module, name.as_str());
+        };
+
+        NamedValueNames::Unimported(name.as_str())
+    }
+}
+
+#[derive(Debug)]
+pub enum NamedValueNames<'a> {
+    /// This value is from a module that has not been imported in this module.
+    Unimported(&'a str),
+    /// This value has been imported in an unqualified fashion in this module.
+    Unqualified(&'a str),
+    /// This value is from a module that has been imported.
+    Qualified(&'a str, &'a str),
+}
+
 #[derive(Debug)]
 pub struct Printer<'a> {
-    names: &'a mut TypeNames,
+    names: &'a ValueNames,
 }
 
 impl<'a> Printer<'a> {
-    pub fn new(names: &'a mut TypeNames) -> Self {
+    pub fn new(names: &'a ValueNames) -> Self {
         Printer { names }
     }
 
@@ -42,17 +152,20 @@ impl<'a> Printer<'a> {
                 arguments,
                 ..
             } => {
-                let (module, name) = match self.names.named_value(module, name) {
-                    NamedTypeNames::Qualified(m, n) => (Some(m), n),
-                    NamedTypeNames::Unqualified(n) => (None, n),
-                    NamedTypeNames::Unimported(n) => {
+                let (module, name) = match self.names.named_constructor(module, name) {
+                    NamedValueNames::Qualified(m, n) => (Some(m), n),
+                    NamedValueNames::Unqualified(n) => (None, n),
+                    NamedValueNames::Unimported(n) => {
                         (Some(module.split('/').last().unwrap_or(module)), n)
                     }
                 };
 
                 if let Some(module) = module {
-                    buffer.push_str(module);
-                    buffer.push('.');
+                    // Don't qualify values in the prelude
+                    if module != PRELUDE_MODULE_NAME {
+                        buffer.push_str(module);
+                        buffer.push('.');
+                    }
                 }
                 buffer.push_str(name);
 
@@ -131,13 +244,18 @@ impl<'a> Printer<'a> {
 }
 
 mod tests {
+    // I don't know why the compiler complains about these unused values, they are all
+    // used, but there seems to be a bug where if they're only used in tests,
+    // it doesn't count them as being used. If you're reading this in the future,
+    // try removing this and see if it doesn't complain anymore. (Rust v1.80.0)
+    #![allow(dead_code)]
+    #[allow(unused_imports)]
+    use super::{Printer, ValueNames};
     use std::{collections::HashMap, sync::Arc};
-
-    use super::Printer;
 
     use crate::{
         exhaustiveness::{missing_patterns::Term, Variable},
-        type_::{printer::TypeNames, Type},
+        type_::Type,
     };
 
     /// Create a variable with a dummy type, for ease of writing tests
@@ -159,9 +277,9 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module() {
-        let mut names = TypeNames::new("module".into());
+        let mut names = ValueNames::new();
 
-        names.named_value_in_scope("module".into(), "Wibble".into(), "Wibble".into());
+        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
 
         let mut printer = Printer::new(&mut names);
 
@@ -180,9 +298,9 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module_with_arguments() {
-        let mut names = TypeNames::new("module".into());
+        let mut names = ValueNames::new();
 
-        names.named_value_in_scope("module".into(), "Wibble".into(), "Wibble".into());
+        names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
 
         let mut printer = Printer::new(&mut names);
 
@@ -207,7 +325,7 @@ mod tests {
 
     #[test]
     fn test_module_alias() {
-        let mut names = TypeNames::new("module".into());
+        let mut names = ValueNames::new();
 
         names.imported_module("mod".into(), "shapes".into());
 
@@ -228,9 +346,9 @@ mod tests {
 
     #[test]
     fn test_unqualified_value() {
-        let mut names = TypeNames::new("module".into());
+        let mut names = ValueNames::new();
 
-        names.named_value_in_scope("regex".into(), "Regex".into(), "Regex".into());
+        names.named_constructor_in_scope("regex".into(), "Regex".into(), "Regex".into());
 
         let mut printer = Printer::new(&mut names);
 
@@ -250,10 +368,10 @@ mod tests {
 
     #[test]
     fn test_unqualified_value_with_alias() {
-        let mut names = TypeNames::new("module".into());
+        let mut names = ValueNames::new();
 
-        names.named_value_in_scope("regex".into(), "Regex".into(), "Reg".into());
-        names.named_value_in_scope("gleam".into(), "None".into(), "None".into());
+        names.named_constructor_in_scope("regex".into(), "Regex".into(), "Reg".into());
+        names.named_constructor_in_scope("gleam".into(), "None".into(), "None".into());
 
         let mut printer = Printer::new(&mut names);
 
@@ -278,9 +396,9 @@ mod tests {
 
     #[test]
     fn test_list_pattern() {
-        let mut names = TypeNames::new("module".into());
+        let mut names = ValueNames::new();
 
-        names.named_value_in_scope("module".into(), "Type".into(), "Type".into());
+        names.named_constructor_in_scope("module".into(), "Type".into(), "Type".into());
 
         let mut printer = Printer::new(&mut names);
 

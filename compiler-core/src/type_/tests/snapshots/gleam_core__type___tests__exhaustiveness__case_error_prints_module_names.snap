@@ -15,5 +15,5 @@ If it is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 
-    #(Wobble, Thing1)
     #(_, Thing2(_))
+    #(wibble.Wobble, Thing1)
