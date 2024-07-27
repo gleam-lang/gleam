@@ -6410,3 +6410,17 @@ fn discard_in_pipe_is_not_turned_into_shorthand_label() {
 "#
     );
 }
+
+// Bug found by Louis
+#[test]
+fn internal_attribute_does_not_change_formatting_of_a_function() {
+    assert_format!(
+        r#"@internal
+pub fn init(
+  start: #(SupervisorFlags, List(ChildSpecification)),
+) -> Result(#(Dynamic, Dynamic), never) {
+  todo
+}
+"#
+    );
+}

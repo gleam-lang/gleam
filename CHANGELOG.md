@@ -290,6 +290,9 @@
   thus generating invalid JavaScript.
   ([Ameen Radwan](https://github.com/Acepie))
 
+- Fixed formatting of function definitions marked as `@internal`
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server
