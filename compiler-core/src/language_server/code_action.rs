@@ -13,7 +13,7 @@ use crate::{
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
-    type_::{FieldMap, ModuleValueConstructor, Type, TypedCallArg},
+    type_::{error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
     Error,
 };
 use ecow::EcoString;
@@ -660,8 +660,8 @@ pub fn code_action_import_module(
             crate::type_::Error::UnknownModule {
                 location,
                 name,
-                importable_modules,
-            } => suggest_imports(name, *location, importable_modules),
+                suggestions,
+            } => suggest_imports(name, *location, suggestions),
             _ => None,
         })
         .collect();
@@ -704,16 +704,17 @@ pub fn code_action_import_module(
 fn suggest_imports(
     module_name: &str,
     location: SrcSpan,
-    importable_modules: &[EcoString],
+    importable_modules: &[ModuleSuggestion],
 ) -> Option<MissingImport> {
     let suggestions: Vec<_> = importable_modules
         .iter()
-        .filter_map(|option| {
-            if option.split('/').last().unwrap_or(option) == module_name {
-                Some(option.clone())
-            } else {
-                None
+        .filter_map(|suggestion| match suggestion {
+            ModuleSuggestion::Matching(name)
+                if name.split('/').last().unwrap_or(name) == module_name =>
+            {
+                Some(name.clone())
             }
+            _ => None,
         })
         .collect();
 

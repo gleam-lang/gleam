@@ -252,7 +252,6 @@ where
                     }
                     Err(e) => {
                         let feedback = project.feedback.build_with_error(e, compilation, warnings);
-                        eprintln!("{feedback:#?}");
                         (Json::Null, feedback)
                     }
                 }

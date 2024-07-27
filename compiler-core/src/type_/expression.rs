@@ -2097,9 +2097,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .ok_or_else(|| Error::UnknownModule {
                     name: module_alias.clone(),
                     location: *module_location,
-                    importable_modules: self
+                    suggestions: self
                         .environment
-                        .get_importable_modules(module_alias, Imported::Value(label.clone())),
+                        .suggest_modules(module_alias, Imported::Value(label.clone())),
                 })?;
 
             let constructor =
@@ -2409,9 +2409,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .ok_or_else(|| Error::UnknownModule {
                         location: *location,
                         name: module_name.clone(),
-                        importable_modules: self
+                        suggestions: self
                             .environment
-                            .get_importable_modules(module_name, Imported::Value(name.clone())),
+                            .suggest_modules(module_name, Imported::Value(name.clone())),
                     })?;
                 module
                     .values

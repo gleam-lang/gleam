@@ -1,7 +1,7 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
+        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -955,7 +955,7 @@ fn code_action_unused_values(
             continue;
         }
 
-        let edit = lsp_types::TextEdit {
+        let edit = TextEdit {
             range: src_span_to_lsp_range(SrcSpan::new(start, start), &line_numbers),
             new_text: "let _ = ".into(),
         };
