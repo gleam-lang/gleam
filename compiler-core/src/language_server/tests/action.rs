@@ -1070,7 +1070,8 @@ pub fn main() {
 }
  "#,
         find_position_of("main").select_until(find_position_of("}").nth_occurrence(2)),
-    );}
+    );
+}
 
 #[test]
 fn use_label_shorthand_works_for_nested_record_updates() {

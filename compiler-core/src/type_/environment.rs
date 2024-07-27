@@ -349,8 +349,8 @@ impl<'a> Environment<'a> {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
                         name: module_name.clone(),
-                        importable_modules: self
-                            .get_importable_modules(module_name, Imported::Type(name.clone())),
+                        suggestions: self
+                            .suggest_modules(module_name, Imported::Type(name.clone())),
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
@@ -401,8 +401,7 @@ impl<'a> Environment<'a> {
                 let module = self.importable_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
                         name: name.clone(),
-                        importable_modules: self
-                            .get_importable_modules(m, Imported::Type(name.clone())),
+                        suggestions: self.suggest_modules(m, Imported::Type(name.clone())),
                     }
                 })?;
                 module.types_value_constructors.get(name).ok_or_else(|| {
@@ -438,8 +437,8 @@ impl<'a> Environment<'a> {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownValueConstructorError::Module {
                         name: module_name.clone(),
-                        importable_modules: self
-                            .get_importable_modules(module_name, Imported::Value(name.clone())),
+                        suggestions: self
+                            .suggest_modules(module_name, Imported::Value(name.clone())),
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
@@ -671,10 +670,9 @@ impl<'a> Environment<'a> {
             .collect()
     }
 
-    /// Returns a list of module names which export a certain name,
-    /// to suggest possible imports for a value or type
-    pub fn get_importable_modules(&self, module: &str, imported: Imported) -> Vec<EcoString> {
-        let mut importable = self
+    /// Suggest modules to import or use, for an unknown module
+    pub fn suggest_modules(&self, module: &str, imported: Imported) -> Vec<ModuleSuggestion> {
+        let mut suggestions = self
             .importable_modules
             .iter()
             .filter_map(|(importable, module_info)| {
@@ -683,27 +681,39 @@ impl<'a> Environment<'a> {
                 }
 
                 match &imported {
-                    Imported::Module => Some(importable.clone()),
                     Imported::Type(name) if module_info.get_public_type(name).is_some() => {
-                        Some(importable.clone())
+                        Some(ModuleSuggestion::Matching(importable.clone()))
                     }
                     Imported::Value(name) if module_info.get_public_value(name).is_some() => {
-                        Some(importable.clone())
+                        Some(ModuleSuggestion::Matching(importable.clone()))
                     }
                     _ => None,
                 }
             })
             .collect_vec();
 
-        importable.sort();
-        importable
+        suggestions.sort();
+
+        suggestions.extend(
+            self.imported_modules
+                .keys()
+                .map(|module| ModuleSuggestion::Imported(module.clone())),
+        );
+        suggestions.extend(
+            self.importable_modules
+                .keys()
+                .filter(|&module| module != PRELUDE_MODULE_NAME)
+                .map(|module| ModuleSuggestion::Importable(module.clone())),
+        );
+
+        suggestions
     }
 }
 
 #[derive(Debug)]
 /// An imported name, for looking up a module which exports it
 pub enum Imported {
-    /// An imported module, with no other indicators
+    /// An imported module, with no extra information
     Module,
     /// An imported type
     Type(EcoString),

@@ -2216,3 +2216,40 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unknown_module_suggest_import() {
+    assert_with_module_error!(
+        ("utils", "pub fn helpful() {}"),
+        "
+pub fn main() {
+  utils.helpful()
+}
+",
+    );
+}
+
+#[test]
+fn unknown_module_suggest_typo_for_imported_module() {
+    assert_with_module_error!(
+        ("wibble", "pub fn wobble() {}"),
+        "
+import wibble
+pub fn main() {
+  wible.wobble()
+}
+",
+    );
+}
+
+#[test]
+fn unknown_module_suggest_typo_for_unimported_module() {
+    assert_with_module_error!(
+        ("wibble/wobble", "pub fn wubble() {}"),
+        "
+pub fn main() {
+  woble.wubble()
+}
+",
+    );
+}
