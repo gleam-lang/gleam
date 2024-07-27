@@ -42,6 +42,11 @@ jobs:
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
 
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1-${{ matrix.target }}
+
       - name: Run tests
         uses: clechasseur/rs-cargo@v2
         with:
@@ -77,6 +82,11 @@ jobs:
         with:
           toolchain: stable
           components: clippy
+
+      - name: Handle Rust dependencies caching
+        uses: Swatinem/rust-cache@v2
+        with:
+          key: v1-linux-gnu
 
       - name: Run linter
         run: cargo clippy --workspace
