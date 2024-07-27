@@ -188,6 +188,17 @@ fn go(x) {
 }
 
 #[test]
+fn match_utf8() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<"Gleam 👍":utf8>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn utf8_codepoint() {
     assert_js!(
         r#"

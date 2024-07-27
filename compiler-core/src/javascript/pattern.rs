@@ -628,6 +628,27 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 }),
                             },
 
+                            [Opt::Utf8 { .. }] => match segment.value.as_ref() {
+                                Pattern::String { value, .. } => {
+                                    for byte in value.as_bytes() {
+                                        self.push_byte_at(offset.bytes);
+                                        self.push_equality_check(
+                                            subject.clone(),
+                                            EcoString::from(format!("0x{:X}", byte)).to_doc(),
+                                        );
+                                        self.pop();
+                                        offset.increment(1);
+                                    }
+
+                                    Ok(())
+                                }
+
+                                _ => Err(Error::Unsupported {
+                                    feature: "This bit array segment option in patterns".into(),
+                                    location: segment.location,
+                                }),
+                            },
+
                             _ => Err(Error::Unsupported {
                                 feature: "This bit array segment option in patterns".into(),
                                 location: segment.location,

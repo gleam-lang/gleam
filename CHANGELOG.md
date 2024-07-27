@@ -140,6 +140,10 @@
   expressions and patterns on the JavaScript target.
   ([Richard Viney](https://github.com/richard-viney))
 
+- The `utf8` option can now be used with constant strings in bit array patterns
+  on the JavaScript target.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Formatter
 
 - The formatter will no longer move a documentation comment below a regular

@@ -21,9 +21,9 @@ pub fn main() {
       suite("strings", strings_tests()),
       suite("equality", equality_tests()),
       suite("constants", constants_tests()),
-      suite("bit strings target", bit_array_target_tests()),
-      suite("bit strings", bit_array_tests()),
-      suite("sized bit strings", sized_bit_array_tests()),
+      suite("bit arrays target", bit_array_target_tests()),
+      suite("bit arrays", bit_array_tests()),
+      suite("sized bit arrays", sized_bit_array_tests()),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -42,7 +42,7 @@ pub fn main() {
       suite("unicode overflow", unicode_overflow_tests()),
       suite("bool negation", bool_negation_tests()),
       suite("number negation", int_negation_tests()),
-      suite("bit string match", bit_array_match_tests()),
+      suite("bit array match", bit_array_match_tests()),
       suite("anonymous functions", anonymous_function_tests()),
       suite("string pattern matching", string_pattern_matching_tests()),
       suite("typescript file inclusion", typescript_file_included_tests()),
@@ -966,6 +966,8 @@ fn bit_array_tests() -> List(Test) {
     }),
     "<<\"abc\":utf8>> == <<97, 98, 99>>"
     |> example(fn() { assert_equal(True, <<"abc":utf8>> == <<97, 98, 99>>) }),
+    "<<\"😀\":utf8>> == <<\"\u{1F600}\":utf8>>"
+    |> example(fn() { assert_equal(True, <<"😀":utf8>> == <<"\u{1F600}":utf8>>) }),
     "<<<<1>>:bit_array, 2>> == <<1, 2>>"
     |> example(fn() { assert_equal(True, <<<<1>>:bits, 2>> == <<1, 2>>) }),
     "<<1>> == <<1:int>>"
@@ -986,16 +988,21 @@ fn bit_array_tests() -> List(Test) {
     |> example(fn() {
       assert_equal(True, <<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float-64-big>>)
     }),
+    "pattern match on bit array containing utf8"
+    |> example(fn() {
+      assert_equal(True, case <<0x20, "😀👍":utf8, 0x20>> {
+        <<" ":utf8, "😀👍":utf8, 0x20>> -> True
+        _ -> False
+      })
+    })
   ]
 }
 
 @target(erlang)
 fn bit_array_target_tests() -> List(Test) {
   [
-    "<<60,0>> == <<1.0:float-size(16)>>"
+    "<<60, 0>> == <<1.0:float-16>>"
     |> example(fn() { assert_equal(True, <<60, 0>> == <<1.0:float-16>>) }),
-    "<<\"😀\":utf8>> == <<\"\u{1F600}\":utf8>>"
-    |> example(fn() { assert_equal(True, <<"😀":utf8>> == <<"\u{1F600}":utf8>>) }),
   ]
 }
 
