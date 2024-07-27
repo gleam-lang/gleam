@@ -411,7 +411,11 @@ impl<'comments> Formatter<'comments> {
                 value,
                 ..
             }) => {
-                let head = pub_(*publicity).append("const ").append(name.as_str());
+                let attributes = AttributesPrinter::new().set_internal(*publicity).to_doc();
+                let head = attributes
+                    .append(pub_(*publicity))
+                    .append("const ")
+                    .append(name.as_str());
                 let head = match annotation {
                     None => head,
                     Some(t) => head.append(": ").append(self.type_ast(t)),
@@ -615,13 +619,9 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         value: &'a TypedConstant,
     ) -> Document<'a> {
-        let mut printer = type_::pretty::Printer::new();
-
-        pub_(publicity)
-            .append("const ")
-            .append(name)
-            .append(": ")
-            .append(printer.print(&value.type_()))
+        let type_ = type_::pretty::Printer::new().print(&value.type_());
+        let attributes = AttributesPrinter::new().set_internal(publicity);
+        docvec![attributes, pub_(publicity), "const ", name, ": ", type_]
     }
 
     fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
@@ -709,11 +709,12 @@ impl<'comments> Formatter<'comments> {
         deprecation: &'a Deprecation,
         location: &SrcSpan,
     ) -> Document<'a> {
-        // @deprecated attribute
-        let head = self.deprecation_attr(deprecation);
+        let attributes = AttributesPrinter::new()
+            .set_deprecation(deprecation)
+            .set_internal(publicity)
+            .to_doc();
 
-        let head = head.append(pub_(publicity)).append("type ").append(name);
-
+        let head = docvec![attributes, pub_(publicity), "type ", name];
         let head = if args.is_empty() {
             head
         } else {
@@ -723,18 +724,6 @@ impl<'comments> Formatter<'comments> {
 
         head.append(" =")
             .append(line().append(self.type_ast(typ)).group().nest(INDENT))
-    }
-
-    fn deprecation_attr<'a>(&mut self, deprecation: &'a Deprecation) -> Document<'a> {
-        match deprecation {
-            Deprecation::NotDeprecated => "".to_doc(),
-            Deprecation::Deprecated { message } => ""
-                .to_doc()
-                .append("@deprecated(\"")
-                .append(message)
-                .append("\")")
-                .append(line()),
-        }
     }
 
     fn fn_arg<'a, A>(&mut self, arg: &'a Arg<A>) -> Document<'a> {
@@ -748,21 +737,12 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn statement_fn<'a>(&mut self, function: &'a UntypedFunction) -> Document<'a> {
-        // @deprecated attribute
-        let attributes = self.deprecation_attr(&function.deprecation);
-
-        // @external attribute
-        let external = |t: &'static str, m: &'a str, f: &'a str| {
-            docvec!["@external(", t, ", \"", m, "\", \"", f, "\")", line()]
-        };
-        let attributes = match function.external_erlang.as_ref() {
-            Some((m, f)) => attributes.append(external("erlang", m, f)),
-            None => attributes,
-        };
-        let attributes = match function.external_javascript.as_ref() {
-            Some((m, f)) => attributes.append(external("javascript", m, f)),
-            None => attributes,
-        };
+        let attributes = AttributesPrinter::new()
+            .set_deprecation(&function.deprecation)
+            .set_internal(function.publicity)
+            .set_external_erlang(&function.external_erlang)
+            .set_external_javascript(&function.external_javascript)
+            .to_doc();
 
         // Fn name and args
         let args = function
@@ -1614,12 +1594,13 @@ impl<'comments> Formatter<'comments> {
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
         let _ = self.pop_empty_lines(ct.location.end);
 
-        // @deprecated attribute
-        let doc = self.deprecation_attr(&ct.deprecation);
+        let attributes = AttributesPrinter::new()
+            .set_deprecation(&ct.deprecation)
+            .set_internal(ct.publicity)
+            .to_doc();
 
-        let doc = doc
+        let doc = attributes
             .append(pub_(ct.publicity))
-            .to_doc()
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
                 Document::EcoString(ct.name.clone())
@@ -1663,8 +1644,10 @@ impl<'comments> Formatter<'comments> {
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
-        pub_(publicity)
-            .to_doc()
+        let attributes = AttributesPrinter::new().set_internal(publicity).to_doc();
+
+        attributes
+            .append(pub_(publicity))
             .append("opaque type ")
             .append(if args.is_empty() {
                 name.to_doc()
@@ -1683,13 +1666,19 @@ impl<'comments> Formatter<'comments> {
         location: &SrcSpan,
     ) -> Document<'a> {
         let mut printer = type_::pretty::Printer::new();
+        let fn_args = self.docs_fn_args(args, &mut printer, location);
+        let return_type = printer.print(&return_type);
 
-        pub_(publicity)
-            .append("fn ")
-            .append(name)
-            .append(self.docs_fn_args(args, &mut printer, location))
-            .append(" -> ".to_doc())
-            .append(printer.print(&return_type))
+        let attributes = AttributesPrinter::new().set_internal(publicity);
+        docvec![
+            attributes,
+            pub_(publicity),
+            "fn ",
+            name,
+            fn_args,
+            " -> ",
+            return_type
+        ]
     }
 
     // Will always print the types, even if they were implicit in the original source
@@ -2658,9 +2647,8 @@ impl<'a> Documentable<'a> for &'a ArgNames {
 
 fn pub_(publicity: Publicity) -> Document<'static> {
     match publicity {
-        Publicity::Public => "pub ".to_doc(),
+        Publicity::Public | Publicity::Internal => "pub ".to_doc(),
         Publicity::Private => nil(),
-        Publicity::Internal => "@internal".to_doc().append(line()).append("pub "),
     }
 }
 
@@ -2969,5 +2957,74 @@ fn constant_call_arg_formatting<A, B>(
         } => CallArgFormatting::Labelled(label, value),
         // An unlabelled argument.
         CallArg { value, .. } => CallArgFormatting::Unlabelled(value),
+    }
+}
+
+struct AttributesPrinter<'a> {
+    external_erlang: &'a Option<(EcoString, EcoString)>,
+    external_javascript: &'a Option<(EcoString, EcoString)>,
+    deprecation: &'a Deprecation,
+    internal: bool,
+}
+
+impl<'a> AttributesPrinter<'a> {
+    pub fn new() -> Self {
+        Self {
+            external_erlang: &None,
+            external_javascript: &None,
+            deprecation: &Deprecation::NotDeprecated,
+            internal: false,
+        }
+    }
+
+    pub fn set_external_erlang(mut self, external: &'a Option<(EcoString, EcoString)>) -> Self {
+        self.external_erlang = external;
+        self
+    }
+
+    pub fn set_external_javascript(mut self, external: &'a Option<(EcoString, EcoString)>) -> Self {
+        self.external_javascript = external;
+        self
+    }
+
+    pub fn set_internal(mut self, publicity: Publicity) -> Self {
+        self.internal = publicity.is_internal();
+        self
+    }
+
+    pub fn set_deprecation(mut self, deprecation: &'a Deprecation) -> Self {
+        self.deprecation = deprecation;
+        self
+    }
+}
+
+impl<'a> Documentable<'a> for AttributesPrinter<'a> {
+    fn to_doc(self) -> Document<'a> {
+        let mut attributes = vec![];
+
+        // @deprecated attribute
+        if let Deprecation::Deprecated { message } = self.deprecation {
+            attributes.push(docvec!["@deprecated(\"", message, "\")"])
+        };
+
+        // @external attributes
+        if let Some((m, f)) = self.external_erlang {
+            attributes.push(docvec!["@external(erlang, \"", m, "\", \"", f, "\")"])
+        };
+
+        if let Some((m, f)) = self.external_javascript {
+            attributes.push(docvec!["@external(javascript, \"", m, "\", \"", f, "\")"])
+        };
+
+        // @internal attribute
+        if self.internal {
+            attributes.push("@internal".to_doc());
+        };
+
+        if attributes.is_empty() {
+            nil()
+        } else {
+            join(attributes, line()).append(line())
+        }
     }
 }
