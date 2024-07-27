@@ -139,12 +139,19 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         };
 
         match variant {
-            &ValueConstructorVariant::Record { .. } => self.environment.init_usage(
-                used_name.clone(),
-                EntityKind::ImportedConstructor,
-                location,
-                self.problems,
-            ),
+            ValueConstructorVariant::Record { name, module, .. } => {
+                self.environment.init_usage(
+                    used_name.clone(),
+                    EntityKind::ImportedConstructor,
+                    location,
+                    self.problems,
+                );
+                self.environment.value_names.named_constructor_in_scope(
+                    module.clone(),
+                    name.clone(),
+                    used_name.clone(),
+                );
+            }
             _ => self.environment.init_usage(
                 used_name.clone(),
                 EntityKind::ImportedValue,
@@ -225,7 +232,11 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             let _ = self
                 .environment
                 .imported_modules
-                .insert(used_name, (import.location, import_info));
+                .insert(used_name.clone(), (import.location, import_info));
+
+            self.environment
+                .value_names
+                .imported_module(import.module.clone(), used_name)
         };
 
         Ok(())

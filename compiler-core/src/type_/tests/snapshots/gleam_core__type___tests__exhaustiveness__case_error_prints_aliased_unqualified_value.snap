@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\nimport wibble.{Wibble, Wobble as Wubble}\npub fn main() {\n    case Wibble {\n        Wibble -> Nil\n    }\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:4:5
+  │  
+4 │ ╭     case Wibble {
+5 │ │         Wibble -> Nil
+6 │ │     }
+  │ ╰─────^
+
+This case expression does not have a pattern for all possible values.
+If it is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Wubble

@@ -989,9 +989,6 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_module_names() {
-    // This test verifies that the error reporting for inexhaustive case
-    // expressions prints the module names for types instead of just
-    // the type names.
     assert_with_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
@@ -1001,6 +998,51 @@ pub fn main() {
     let wobble_thing = #(wibble.Wobble, Thing2(23))
     case wobble_thing {
         #(wibble.Wibble, Thing1) -> Nil
+    }
+}
+",
+    );
+}
+
+#[test]
+fn case_error_prints_module_alias() {
+    assert_with_module_error!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble as wobble
+pub fn main() {
+    case wobble.Wobble {
+        wobble.Wibble -> Nil
+    }
+}
+",
+    );
+}
+
+#[test]
+fn case_error_prints_unqualified_value() {
+    assert_with_module_error!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble, Wobble}
+pub fn main() {
+    case Wobble {
+        Wibble -> Nil
+    }
+}
+",
+    );
+}
+
+#[test]
+fn case_error_prints_aliased_unqualified_value() {
+    assert_with_module_error!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble.{Wibble, Wobble as Wubble}
+pub fn main() {
+    case Wibble {
+        Wibble -> Nil
     }
 }
 ",
