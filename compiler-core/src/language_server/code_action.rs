@@ -3,7 +3,10 @@ use std::{iter, sync::Arc};
 use crate::{
     ast::{
         self,
-        visit::{visit_typed_expr_call, Visit as _},
+        visit::{
+            visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg,
+            visit_typed_record_update_arg, Visit as _,
+        },
         AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
         TypedPattern, TypedRecordUpdateArg,
     },
@@ -481,6 +484,8 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
             }
             _ => (),
         }
+
+        visit_typed_call_arg(self, arg)
     }
 
     fn visit_typed_pattern_call_arg(&mut self, arg: &'ast CallArg<TypedPattern>) {
@@ -497,6 +502,8 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
             }
             _ => (),
         }
+
+        visit_typed_pattern_call_arg(self, arg)
     }
 
     fn visit_typed_record_update_arg(&mut self, arg: &'ast TypedRecordUpdateArg) {
@@ -513,6 +520,8 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
             }
             _ => (),
         }
+
+        visit_typed_record_update_arg(self, arg)
     }
 }
 

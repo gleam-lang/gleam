@@ -915,6 +915,11 @@ where
     for pattern in clause.pattern.iter() {
         v.visit_typed_pattern(pattern);
     }
+    for patterns in clause.alternative_patterns.iter() {
+        for pattern in patterns {
+            v.visit_typed_pattern(pattern);
+        }
+    }
     v.visit_typed_expr(&clause.then);
 }
 

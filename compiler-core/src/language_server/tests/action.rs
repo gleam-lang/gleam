@@ -1029,6 +1029,73 @@ pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
     );
 }
 
+#[test]
+fn use_label_shorthand_works_for_nested_calls() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub fn wibble(arg arg: Int) -> Int { arg }
+
+pub fn main() {
+  let arg = 1
+  wibble(wibble(arg: arg))
+}
+ "#,
+        find_position_of("main").select_until(find_position_of("}").nth_occurrence(2)),
+    );
+}
+
+#[test]
+fn use_label_shorthand_works_for_nested_record_updates() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub type Wibble { Wibble(arg: Int, arg2: Wobble) }
+pub type Wobble { Wobble(arg: Int, arg2: String) }
+
+pub fn main() {
+  let arg = 1
+  let arg2 = "a"
+  Wibble(..todo, arg2: Wobble(arg: arg, arg2: arg2))
+}
+ "#,
+        find_position_of("todo").select_until(find_position_of("arg2: arg2")),
+    );
+}
+
+#[test]
+fn use_label_shorthand_works_for_nested_patterns() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub type Wibble { Wibble(arg: Int, arg2: Wobble) }
+pub type Wobble { Wobble(arg: Int, arg2: String) }
+
+pub fn main() {
+  let Wibble(arg2: Wobble(arg: arg, arg2: arg2), ..) = todo
+}
+ "#,
+        find_position_of("main").select_until(find_position_of("todo")),
+    );
+}
+
+#[test]
+fn use_label_shorthand_works_for_alternative_patterns() {
+    assert_code_action!(
+        USE_LABEL_SHORTHAND_SYNTAX,
+        r#"
+pub type Wibble { Wibble(arg: Int, arg2: String) }
+
+pub fn main() {
+  case Wibble(1, "wibble") {
+    Wibble(arg2: arg2, ..) | Wibble(arg: 1, arg2: arg2) -> todo
+  }
+}
+ "#,
+        find_position_of("main").select_until(find_position_of("todo")),
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
