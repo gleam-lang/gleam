@@ -22,5 +22,5 @@ deno:
 
 .phony: bun
 bun:
-	@echo test/languate on JavaScript with Bun
+	@echo test/language on JavaScript with Bun
 	cargo run --quiet -- test --target javascript --runtime bun
