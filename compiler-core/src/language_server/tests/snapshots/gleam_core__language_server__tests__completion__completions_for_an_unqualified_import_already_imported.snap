@@ -31,7 +31,7 @@ pub fn main() {
         deprecated: None,
         preselect: None,
         sort_text: Some(
-            "5_myfun",
+            "3_myfun",
         ),
         filter_text: None,
         insert_text: None,

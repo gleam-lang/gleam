@@ -73,7 +73,7 @@ pub fn main() {
         deprecated: None,
         preselect: None,
         sort_text: Some(
-            "5_myfun",
+            "3_myfun",
         ),
         filter_text: None,
         insert_text: None,
@@ -122,7 +122,7 @@ pub fn main() {
         deprecated: None,
         preselect: None,
         sort_text: Some(
-            "5_wabble",
+            "3_wabble",
         ),
         filter_text: None,
         insert_text: None,
@@ -171,7 +171,7 @@ pub fn main() {
         deprecated: None,
         preselect: None,
         sort_text: Some(
-            "5_wibble",
+            "3_wibble",
         ),
         filter_text: None,
         insert_text: None,
