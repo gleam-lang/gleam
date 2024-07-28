@@ -293,6 +293,11 @@
 - Fixed formatting of function definitions marked as `@internal`
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where importing a record constructor in an unqualified fashion and
+  aliasing it and then using it in a case guard expression would generate
+  invalid JavaScript.
+  ([PgBiel](https://github.com/PgBiel))
+
 ## v1.3.2 - 2024-07-11
 
 ### Language Server

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "import other_module.{A as B}\nfn func() {\n  case B {\n    x if x == B -> True\n    _ -> False\n  }\n}\n"
+---
+import * as $other_module from "../../package/other_module.mjs";
+import { A as B } from "../../package/other_module.mjs";
+import { isEqual } from "../gleam.mjs";
+
+function func() {
+  let $ = new B();
+  if (isEqual($, new B())) {
+    let x = $;
+    return true;
+  } else {
+    return false;
+  }
+}
