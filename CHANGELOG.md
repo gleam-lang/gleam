@@ -273,6 +273,12 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Completions are now sorted by priority based on why the completion is in the
+  list. This means that more specific completions like labels and local
+  definitions will be shown before more broad completions like functions from a
+  not yet imported module.
+  ([Ameen Radwan](https://github.com/Acepie))
+
 ### Bug Fixes
 
 - Functions, types and constructors named `module_info` are now escaped
