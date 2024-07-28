@@ -1287,10 +1287,11 @@ pub(crate) fn guard_constant_expression<'a>(
         Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
 
         Constant::Record {
-            tag,
-            typ,
             args,
             module,
+            name,
+            tag,
+            typ,
             ..
         } => {
             if typ.is_result() {
@@ -1304,7 +1305,7 @@ pub(crate) fn guard_constant_expression<'a>(
                 .iter()
                 .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(module.as_deref(), tag, field_values))
+            Ok(construct_record(module.as_deref(), name, field_values))
         }
 
         Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {

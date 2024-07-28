@@ -468,3 +468,52 @@ fn not_two() {
 "#,
     );
 }
+
+#[test]
+fn custom_type_constructor_imported_and_aliased() {
+    assert_js!(
+        ("package", "other_module", "pub type T { A }"),
+        r#"import other_module.{A as B}
+fn func() {
+  case B {
+    x if x == B -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn imported_aliased_ok() {
+    assert_js!(
+        r#"import gleam.{Ok as Y}
+pub type X {
+  Ok
+}
+fn func() {
+  case Y {
+    y if y == Y -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn imported_ok() {
+    assert_js!(
+        r#"import gleam
+pub type X {
+  Ok
+}
+fn func(x) {
+  case gleam.Ok {
+    _ if [] == [ gleam.Ok ] -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
