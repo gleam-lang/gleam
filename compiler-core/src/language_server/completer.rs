@@ -25,10 +25,10 @@ use super::{
     compiler::LspProjectCompiler, files::FileSystemProxy, DownloadDependencies, MakeLocker,
 };
 
-/// Represents the kind of completion that is being requested and its relative priority.
+/// Represents the kind/specificity of completion that is being requested.
 ///
-/// **NOTE: The order of the variants is important as it determines the priority of the completion.**
-/// The higher the variant, the higher the priority.
+/// **NOTE: The order of the variants is important as it determines the ordering of the completion.**
+/// Earlier variants are considered more specific than later ones.
 #[derive(Copy, Clone)]
 enum CompletionKind {
     // A label for a function or type definition
@@ -45,11 +45,12 @@ enum CompletionKind {
     ImportableModule,
 }
 
-// Gives the sort text for a completion item based on the priority and label.
-// This ensures that higher priority items are placed before lower priority items.
-fn sort_text(priority: CompletionKind, label: &str) -> String {
-    let priority = priority as u8;
-    format!("{}_{}", priority, label)
+// Gives the sort text for a completion item based on the kind and label.
+// This ensures that more specific kinds of completions are placed before
+// less specific ones..
+fn sort_text(kind: CompletionKind, label: &str) -> String {
+    let kind = kind as u8;
+    format!("{}_{}", kind, label)
 }
 
 // The form in which a type completion is needed in context.
