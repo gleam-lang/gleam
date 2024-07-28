@@ -25,8 +25,12 @@ use super::{
     compiler::LspProjectCompiler, files::FileSystemProxy, DownloadDependencies, MakeLocker,
 };
 
+/// Represents the kind of completion that is being requested and its relative priority.
+///
+/// **NOTE: The order of the variants is important as it determines the priority of the completion.**
+/// The higher the variant, the higher the priority.
 #[derive(Copy, Clone)]
-enum SortPriority {
+enum CompletionKindPriority {
     // A label for a function or type definition
     Label,
     // A field of a record
@@ -43,7 +47,7 @@ enum SortPriority {
 
 // Gives the sort text for a completion item based on the priority and label.
 // This ensures that higher priority items are placed before lower priority items.
-fn sort_text(priority: SortPriority, label: &str) -> String {
+fn sort_text(priority: CompletionKindPriority, label: &str) -> String {
     let priority = priority as u8;
     format!("{}_{}", priority, label)
 }
@@ -261,7 +265,7 @@ where
                 type_,
                 insert_range,
                 TypeCompletionForm::UnqualifiedImport,
-                SortPriority::ImportedModule,
+                CompletionKindPriority::ImportedModule,
             ));
         }
 
@@ -285,7 +289,7 @@ where
                 name,
                 value,
                 insert_range,
-                SortPriority::ImportedModule,
+                CompletionKindPriority::ImportedModule,
             ));
         }
 
@@ -376,7 +380,7 @@ where
         // Prelude types
         for type_ in PreludeType::iter() {
             let label: String = type_.name().into();
-            let sort_text = Some(sort_text(SortPriority::Prelude, &label));
+            let sort_text = Some(sort_text(CompletionKindPriority::Prelude, &label));
             completions.push(CompletionItem {
                 label,
                 detail: Some("Type".into()),
@@ -397,7 +401,7 @@ where
                     type_,
                     insert_range,
                     TypeCompletionForm::Default,
-                    SortPriority::LocallyDefined,
+                    CompletionKindPriority::LocallyDefined,
                 ));
             }
         }
@@ -430,7 +434,7 @@ where
                         type_,
                         insert_range,
                         TypeCompletionForm::Default,
-                        SortPriority::ImportedModule,
+                        CompletionKindPriority::ImportedModule,
                     ));
                 }
             }
@@ -447,7 +451,7 @@ where
                             type_,
                             insert_range,
                             TypeCompletionForm::Default,
-                            SortPriority::ImportedModule,
+                            CompletionKindPriority::ImportedModule,
                         )),
                         None => continue,
                     }
@@ -490,7 +494,7 @@ where
                     type_,
                     insert_range,
                     TypeCompletionForm::Default,
-                    SortPriority::ImportableModule,
+                    CompletionKindPriority::ImportableModule,
                 );
                 add_import_to_completion(
                     &mut completion,
@@ -527,7 +531,7 @@ where
                     name,
                     value,
                     insert_range,
-                    SortPriority::LocallyDefined,
+                    CompletionKindPriority::LocallyDefined,
                 ));
             }
         }
@@ -560,7 +564,7 @@ where
                         name,
                         value,
                         insert_range,
-                        SortPriority::ImportedModule,
+                        CompletionKindPriority::ImportedModule,
                     ));
                 }
             }
@@ -579,7 +583,7 @@ where
                                 name,
                                 value,
                                 insert_range,
-                                SortPriority::ImportedModule,
+                                CompletionKindPriority::ImportedModule,
                             ))
                         }
                         None => continue,
@@ -622,7 +626,7 @@ where
                     name,
                     value,
                     insert_range,
-                    SortPriority::ImportableModule,
+                    CompletionKindPriority::ImportableModule,
                 );
 
                 add_import_to_completion(
@@ -715,7 +719,7 @@ where
                         .map(|a| Printer::new().pretty_print(a, 0))
                 });
                 let label = format!("{label}:");
-                let sort_text = Some(sort_text(SortPriority::Label, &label));
+                let sort_text = Some(sort_text(CompletionKindPriority::Label, &label));
                 CompletionItem {
                     label,
                     detail,
@@ -813,7 +817,7 @@ fn type_completion(
     type_: &TypeConstructor,
     insert_range: Range,
     include_type_in_completion: TypeCompletionForm,
-    priority: SortPriority,
+    priority: CompletionKindPriority,
 ) -> CompletionItem {
     let label = match module {
         Some(module) => format!("{module}.{name}"),
@@ -848,7 +852,7 @@ fn value_completion(
     name: &str,
     value: &crate::type_::ValueConstructor,
     insert_range: Range,
-    priority: SortPriority,
+    priority: CompletionKindPriority,
 ) -> CompletionItem {
     let label = match module_qualifier {
         Some(module) => format!("{module}.{name}"),
@@ -898,7 +902,7 @@ fn field_completion(label: &str, type_: Arc<Type>) -> CompletionItem {
         label: label.into(),
         kind: Some(CompletionItemKind::FIELD),
         detail: Some(type_),
-        sort_text: Some(sort_text(SortPriority::FieldAccessor, label)),
+        sort_text: Some(sort_text(CompletionKindPriority::FieldAccessor, label)),
         ..Default::default()
     }
 }
