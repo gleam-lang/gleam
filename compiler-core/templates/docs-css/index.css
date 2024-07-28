@@ -532,16 +532,13 @@ body.drawer-open .label-closed {
 }
 
 .visibility-tag {
-  background-color: var(--bg-shade-2);
+  background-color: var(--bg-shade-3);
   color: var(--text);
-  padding: 2px 6px;
+  padding: 0px 6px 4px;
   border-radius: 4px;
-  border-style: solid;
-  border-width: 1px;
-  border-color: var(--fg-shade-2);
   font-size: 0.9em;
-  margin-left: 8px;
-  float: right;
+  margin-left: auto;
+  line-height: normal;
 }
 
 /* Custom type constructors */
