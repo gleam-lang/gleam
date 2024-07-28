@@ -25,10 +25,7 @@ use super::{
     compiler::LspProjectCompiler, files::FileSystemProxy, DownloadDependencies, MakeLocker,
 };
 
-/// Represents the kind/specificity of completion that is being requested.
-///
-/// **NOTE: The order of the variants is important as it determines the ordering of the completion.**
-/// Earlier variants are considered more specific than later ones.
+// Represents the kind/specificity of completion that is being requested.
 #[derive(Copy, Clone)]
 enum CompletionKind {
     // A label for a function or type definition
