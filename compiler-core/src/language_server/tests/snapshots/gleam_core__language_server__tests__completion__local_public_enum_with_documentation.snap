@@ -39,7 +39,9 @@ pub type Direction {
         ),
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_Left",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -93,7 +95,9 @@ pub type Direction {
         ),
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_Right",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,

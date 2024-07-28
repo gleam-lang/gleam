@@ -29,7 +29,9 @@ type Wibble {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_Wobble",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,

@@ -29,7 +29,9 @@ fn private() {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_private",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,

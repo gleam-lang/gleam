@@ -29,7 +29,9 @@ pub fn main() {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_main",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,

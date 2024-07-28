@@ -27,7 +27,9 @@ import dep
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "3_dep.wobble",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,

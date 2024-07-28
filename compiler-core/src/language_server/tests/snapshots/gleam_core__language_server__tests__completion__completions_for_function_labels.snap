@@ -32,7 +32,9 @@ fn fun() { // completion inside parens below includes labels
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_fun",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -79,7 +81,9 @@ fn fun() { // completion inside parens below includes labels
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "2_wibble",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -119,7 +123,9 @@ fn fun() { // completion inside parens below includes labels
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "0_wibble:",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -143,7 +149,9 @@ fn fun() { // completion inside parens below includes labels
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "0_wobble:",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
