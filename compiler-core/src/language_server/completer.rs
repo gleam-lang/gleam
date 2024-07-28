@@ -285,7 +285,7 @@ where
                 name,
                 value,
                 insert_range,
-                SortPriority::ImportableModule,
+                SortPriority::ImportedModule,
             ));
         }
 
