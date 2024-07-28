@@ -49,8 +49,15 @@ enum CompletionKind {
 // This ensures that more specific kinds of completions are placed before
 // less specific ones..
 fn sort_text(kind: CompletionKind, label: &str) -> String {
-    let kind = kind as u8;
-    format!("{}_{}", kind, label)
+    let priority: u8 = match kind {
+        CompletionKind::Label => 0,
+        CompletionKind::FieldAccessor => 1,
+        CompletionKind::LocallyDefined => 2,
+        CompletionKind::ImportedModule => 3,
+        CompletionKind::Prelude => 4,
+        CompletionKind::ImportableModule => 5,
+    };
+    format!("{}_{}", priority, label)
 }
 
 // The form in which a type completion is needed in context.
