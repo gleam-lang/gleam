@@ -23,7 +23,9 @@ pub fn main() {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "3_Wibble",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -70,7 +72,9 @@ pub fn main() {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "5_myfun",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -117,7 +121,9 @@ pub fn main() {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "5_wabble",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
@@ -164,7 +170,9 @@ pub fn main() {
         documentation: None,
         deprecated: None,
         preselect: None,
-        sort_text: None,
+        sort_text: Some(
+            "5_wibble",
+        ),
         filter_text: None,
         insert_text: None,
         insert_text_format: None,
