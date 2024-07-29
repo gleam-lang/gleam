@@ -2,8 +2,6 @@ use std::collections::HashMap;
 
 use ecow::EcoString;
 
-use crate::type_::PRELUDE_MODULE_NAME;
-
 use super::missing_patterns::Term;
 
 #[derive(Debug, Default)]
@@ -58,6 +56,30 @@ pub struct ValueNames {
     /// - value: `"Woo"`
     ///
     local_constructors: HashMap<(EcoString, EcoString), EcoString>,
+
+    /// A map from local constructor names to the modules which they refer to.
+    /// This helps resolve cases like:
+    /// ```gleam
+    /// import wibble.{Wobble}
+    /// type Wibble { Wobble }
+    /// ```
+    /// Here, `Wobble` is shadowed, causing `Wobble` not to be valid syntax
+    /// for `wibble.Wobble`.
+    ///
+    /// Each key is the local name of the constructor, and the value is the module
+    /// for which the unqualified version is valid. In the above example,
+    /// it would result in
+    /// - key:   `"Wobble"`
+    /// - value: `"module"` (Whatever the current module is)
+    ///
+    /// But in this case:
+    /// ```gleam
+    /// import wibble.{Wobble as Wubble}
+    /// type Wibble { Wobble }
+    /// ```
+    /// No shadowing occurs, so this isn't needed.
+    ///
+    constructor_names: HashMap<EcoString, EcoString>,
 }
 
 impl ValueNames {
@@ -65,6 +87,7 @@ impl ValueNames {
         Self {
             local_constructors: Default::default(),
             imported_modules: Default::default(),
+            constructor_names: Default::default(),
         }
     }
 
@@ -77,7 +100,8 @@ impl ValueNames {
     ) {
         _ = self
             .local_constructors
-            .insert((module_name, value_name), local_alias);
+            .insert((module_name.clone(), value_name), local_alias.clone());
+        _ = self.constructor_names.insert(local_alias, module_name);
     }
 
     /// Record an imported module in this module.
@@ -93,12 +117,22 @@ impl ValueNames {
     ) -> NamedValueNames<'a> {
         let key: (EcoString, EcoString) = (module.clone(), name.clone());
 
-        // There is a local name for this type, use that.
+        // There is a local name for this value, use that.
         if let Some(name) = self.local_constructors.get(&key) {
-            return NamedValueNames::Unqualified(name.as_str());
+            // Only return unqualified syntax if the constructor is not shadowed,
+            // and unqualified syntax is valid.
+            eprintln!("{:?}", self.constructor_names.get(name));
+            if self
+                .constructor_names
+                .get(name)
+                .expect("Constructors must be added to both maps")
+                == module
+            {
+                return NamedValueNames::Unqualified(name.as_str());
+            }
         }
 
-        // This type is from a module that has been imported
+        // This value is from a module that has been imported
         if let Some(module) = self.imported_modules.get(module) {
             return NamedValueNames::Qualified(module, name.as_str());
         };
@@ -161,11 +195,8 @@ impl<'a> Printer<'a> {
                 };
 
                 if let Some(module) = module {
-                    // Don't qualify values in the prelude
-                    if module != PRELUDE_MODULE_NAME {
-                        buffer.push_str(module);
-                        buffer.push('.');
-                    }
+                    buffer.push_str(module);
+                    buffer.push('.');
                 }
                 buffer.push_str(name);
 
@@ -173,6 +204,26 @@ impl<'a> Printer<'a> {
                     return;
                 }
                 buffer.push('(');
+                for (i, variable) in arguments.iter().enumerate() {
+                    if i != 0 {
+                        buffer.push_str(", ");
+                    }
+
+                    if let Some(&idx) = mapping.get(&variable.id) {
+                        self.print(
+                            terms.get(idx).expect("Term must exist"),
+                            terms,
+                            mapping,
+                            buffer,
+                        );
+                    } else {
+                        buffer.push('_');
+                    }
+                }
+                buffer.push(')');
+            }
+            Term::Tuple { arguments, .. } => {
+                buffer.push_str("#(");
                 for (i, variable) in arguments.iter().enumerate() {
                     if i != 0 {
                         buffer.push_str(", ");
@@ -209,7 +260,7 @@ impl<'a> Printer<'a> {
         buffer: &mut EcoString,
     ) {
         match term {
-            Term::Infinite { .. } | Term::Variant { .. } => buffer.push('_'),
+            Term::Infinite { .. } | Term::Variant { .. } | Term::Tuple { .. } => buffer.push('_'),
 
             Term::EmptyList { .. } => {}
 
@@ -243,13 +294,8 @@ impl<'a> Printer<'a> {
     }
 }
 
+#[cfg(test)]
 mod tests {
-    // I don't know why the compiler complains about these unused values, they are all
-    // used, but there seems to be a bug where if they're only used in tests,
-    // it doesn't count them as being used. If you're reading this in the future,
-    // try removing this and see if it doesn't complain anymore. (Rust v1.80.0)
-    #![allow(dead_code)]
-    #[allow(unused_imports)]
     use super::{Printer, ValueNames};
     use std::{collections::HashMap, sync::Arc};
 

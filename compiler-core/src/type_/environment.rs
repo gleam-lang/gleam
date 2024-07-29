@@ -71,6 +71,16 @@ impl<'a> Environment<'a> {
         let prelude = importable_modules
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
+
+        let mut value_names = ValueNames::new();
+        for name in prelude.values.keys() {
+            value_names.named_constructor_in_scope(
+                PRELUDE_MODULE_NAME.into(),
+                name.clone(),
+                name.clone(),
+            );
+        }
+
         Self {
             current_package: current_package.clone(),
             previous_id: ids.next(),
@@ -91,7 +101,7 @@ impl<'a> Environment<'a> {
             current_module,
             entity_usages: vec![HashMap::new()],
             target_support,
-            value_names: ValueNames::new(),
+            value_names,
         }
     }
 }

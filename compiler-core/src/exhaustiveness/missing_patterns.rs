@@ -1,5 +1,5 @@
 use super::{printer::Printer, Constructor, Decision, Match, Variable};
-use crate::type_::{environment::Environment, PRELUDE_MODULE_NAME};
+use crate::type_::environment::Environment;
 use ecow::EcoString;
 use std::collections::{HashMap, HashSet};
 
@@ -27,6 +27,10 @@ pub enum Term {
         module: EcoString,
         arguments: Vec<Variable>,
     },
+    Tuple {
+        variable: Variable,
+        arguments: Vec<Variable>,
+    },
     Infinite {
         variable: Variable,
     },
@@ -44,6 +48,7 @@ impl Term {
     pub fn variable(&self) -> &Variable {
         match self {
             Term::Variant { variable, .. } => variable,
+            Term::Tuple { variable, .. } => variable,
             Term::Infinite { variable } => variable,
             Term::EmptyList { variable } => variable,
             Term::List { variable, .. } => variable,
@@ -108,10 +113,8 @@ fn add_missing_patterns(
 
                     Constructor::Tuple(_) => {
                         let arguments = case.arguments.clone();
-                        terms.push(Term::Variant {
+                        terms.push(Term::Tuple {
                             variable: variable.clone(),
-                            name: "#".into(),
-                            module: PRELUDE_MODULE_NAME.into(),
                             arguments,
                         });
                     }
