@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.4.0-rc1 - 2024-07-29
 
 ### Build tool
 
