@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "type Wrapper(innerType) {}"
+---
+----- BEFORE ACTION
+type Wrapper(innerType) {}
+             ▔▔▔▔▔▔▔▔▔↑   
+
+
+----- AFTER ACTION
+type Wrapper(inner_type) {}

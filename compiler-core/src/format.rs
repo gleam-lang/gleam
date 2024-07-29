@@ -704,7 +704,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         publicity: Publicity,
         name: &'a str,
-        args: &'a [EcoString],
+        args: &'a [(SrcSpan, EcoString)],
         typ: &'a TypeAst,
         deprecation: &'a Deprecation,
         location: &SrcSpan,
@@ -718,7 +718,7 @@ impl<'comments> Formatter<'comments> {
         let head = if args.is_empty() {
             head
         } else {
-            let args = args.iter().map(|e| e.to_doc()).collect_vec();
+            let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
             head.append(self.wrap_args(args, location.end).group())
         };
 
@@ -1605,7 +1605,7 @@ impl<'comments> Formatter<'comments> {
             .append(if ct.parameters.is_empty() {
                 Document::EcoString(ct.name.clone())
             } else {
-                let args = ct.parameters.iter().map(|e| e.to_doc()).collect_vec();
+                let args = ct.parameters.iter().map(|(_, e)| e.to_doc()).collect_vec();
                 Document::EcoString(ct.name.clone())
                     .append(self.wrap_args(args, ct.location.end))
                     .group()
@@ -1640,7 +1640,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         publicity: Publicity,
         name: &'a str,
-        args: &'a [EcoString],
+        args: &'a [(SrcSpan, EcoString)],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
@@ -1652,7 +1652,7 @@ impl<'comments> Formatter<'comments> {
             .append(if args.is_empty() {
                 name.to_doc()
             } else {
-                let args = args.iter().map(|e| e.to_doc()).collect_vec();
+                let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
                 name.to_doc().append(self.wrap_args(args, location.end))
             })
     }

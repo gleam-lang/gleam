@@ -3,11 +3,10 @@ source: compiler-core/src/type_/tests/type_alias.rs
 expression: "\ntype Two(a, a) =\n  #(a, a)\n\ntype UnknownType =\n  Dunno\n"
 ---
 error: Duplicate type parameter
-  ┌─ /src/one/two.gleam:2:1
-  │  
-2 │ ╭ type Two(a, a) =
-3 │ │   #(a, a)
-  │ ╰─────────^
+  ┌─ /src/one/two.gleam:2:13
+  │
+2 │ type Two(a, a) =
+  │             ^
 
 This definition has multiple type parameters named `a`.
 Rename or remove one of them.

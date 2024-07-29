@@ -2956,10 +2956,11 @@ See: https://tour.gleam.run/advanced-features/use/");
                     let label = format!("This is not a valid {kind_str} name");
                     let text = match kind {
                         Named::Type |
-                        Named::TypeVariable |
+                        Named::TypeAlias |
                         Named::CustomTypeVariant => wrap_format!("Hint: {} names start with an uppercase letter and contain only lowercase letters, numbers, and uppercase letters.
 Try: {}", kind_str.to_title_case(), name.to_upper_camel_case()),
                         Named::Variable |
+                        Named::TypeVariable |
                         Named::Argument |
                         Named::Label |
                         Named::Constant  |

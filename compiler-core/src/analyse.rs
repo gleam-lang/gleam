@@ -745,7 +745,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         t: CustomType<()>,
         environment: &mut Environment<'_>,
     ) -> Result<TypedDefinition, Error> {
-        self.register_values_from_custom_type(&t, environment, &t.parameters)?;
+        self.register_values_from_custom_type(
+            &t,
+            environment,
+            &t.parameters.iter().map(|(_, name)| name).collect_vec(),
+        )?;
 
         let CustomType {
             documentation: doc,
@@ -835,7 +839,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         &mut self,
         t: &CustomType<()>,
         environment: &mut Environment<'_>,
-        type_parameters: &[EcoString],
+        type_parameters: &[&EcoString],
     ) -> Result<(), Error> {
         let CustomType {
             location,
@@ -1013,7 +1017,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         self.check_name_case(*name_location, name, Named::Type);
 
         let mut hydrator = Hydrator::new();
-        let parameters = self.make_type_vars(parameters, *location, &mut hydrator, environment);
+        let parameters = self.make_type_vars(parameters, &mut hydrator, environment);
 
         hydrator.clear_ridgid_type_names();
 
@@ -1091,12 +1095,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             return;
         }
 
-        self.check_name_case(*name_location, name, Named::TypeVariable);
+        self.check_name_case(*name_location, name, Named::TypeAlias);
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
-        let parameters = self.make_type_vars(args, *location, &mut hydrator, environment);
+        let parameters = self.make_type_vars(args, &mut hydrator, environment);
         let tryblock = || {
             hydrator.disallow_new_type_variables();
             let typ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
@@ -1140,20 +1144,22 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
     fn make_type_vars(
         &mut self,
-        args: &[EcoString],
-        location: SrcSpan,
+        args: &[(SrcSpan, EcoString)],
         hydrator: &mut Hydrator,
         environment: &mut Environment<'_>,
     ) -> Vec<Arc<Type>> {
         args.iter()
-            .map(|name| match hydrator.add_type_variable(name, environment) {
-                Ok(t) => t,
-                Err(t) => {
-                    self.problems.error(Error::DuplicateTypeParameter {
-                        location,
-                        name: name.clone(),
-                    });
-                    t
+            .map(|(location, name)| {
+                self.check_name_case(*location, name, Named::TypeVariable);
+                match hydrator.add_type_variable(name, environment) {
+                    Ok(t) => t,
+                    Err(t) => {
+                        self.problems.error(Error::DuplicateTypeParameter {
+                            location: *location,
+                            name: name.clone(),
+                        });
+                        t
+                    }
                 }
             })
             .collect()
