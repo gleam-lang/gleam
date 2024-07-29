@@ -508,6 +508,7 @@ pub enum LiteralCollectionKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Named {
     Type,
+    TypeAlias,
     TypeVariable,
     CustomTypeVariant,
     Variable,
@@ -522,7 +523,8 @@ impl Named {
     pub fn as_str(self) -> &'static str {
         match self {
             Named::Type => "type",
-            Named::TypeVariable => "type alias",
+            Named::TypeAlias => "type alias",
+            Named::TypeVariable => "type variable",
             Named::CustomTypeVariant => "type variant",
             Named::Variable => "variable",
             Named::Argument => "argument",

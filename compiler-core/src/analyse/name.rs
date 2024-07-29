@@ -45,10 +45,13 @@ fn valid_upname(name: &EcoString) -> bool {
 
 pub fn check_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Result<(), Error> {
     let valid = match kind {
-        Named::Type | Named::TypeVariable | Named::CustomTypeVariant => valid_upname(name),
-        Named::Variable | Named::Argument | Named::Label | Named::Constant | Named::Function => {
-            valid_name(name)
-        }
+        Named::Type | Named::TypeAlias | Named::CustomTypeVariant => valid_upname(name),
+        Named::Variable
+        | Named::TypeVariable
+        | Named::Argument
+        | Named::Label
+        | Named::Constant
+        | Named::Function => valid_name(name),
         Named::Discard => valid_discard_name(name),
     };
 
@@ -65,12 +68,15 @@ pub fn check_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Resu
 
 pub fn correct_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> NameCorrection {
     let correction = match kind {
-        Named::Type | Named::TypeVariable | Named::CustomTypeVariant => {
+        Named::Type | Named::TypeAlias | Named::CustomTypeVariant => {
             name.to_upper_camel_case().into()
         }
-        Named::Variable | Named::Argument | Named::Label | Named::Constant | Named::Function => {
-            name.to_snake_case().into()
-        }
+        Named::Variable
+        | Named::TypeVariable
+        | Named::Argument
+        | Named::Label
+        | Named::Constant
+        | Named::Function => name.to_snake_case().into(),
         Named::Discard => eco_format!("_{}", name.to_snake_case()),
     };
     NameCorrection {

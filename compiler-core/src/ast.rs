@@ -743,7 +743,7 @@ pub struct CustomType<T> {
     pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
-    pub parameters: Vec<EcoString>,
+    pub parameters: Vec<(SrcSpan, EcoString)>,
     /// Once type checked this field will contain the type information for the
     /// type parameters.
     pub typed_parameters: Vec<T>,
@@ -773,7 +773,7 @@ pub struct TypeAlias<T> {
     pub location: SrcSpan,
     pub alias: EcoString,
     pub name_location: SrcSpan,
-    pub parameters: Vec<EcoString>,
+    pub parameters: Vec<(SrcSpan, EcoString)>,
     pub type_ast: TypeAst,
     pub type_: T,
     pub publicity: Publicity,

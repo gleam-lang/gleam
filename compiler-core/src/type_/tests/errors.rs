@@ -1348,6 +1348,16 @@ fn invalid_case_variable_discard_name() {
 }
 
 #[test]
+fn invalid_type_parameter_name() {
+    assert_module_error!("type Wrapper(innerType) {}");
+}
+
+#[test]
+fn invalid_type_alias_parameter_name() {
+    assert_module_error!("type GleamOption(okType) = Result(okType, Nil)");
+}
+
+#[test]
 fn correct_pipe_arity_error_location() {
     // https://github.com/gleam-lang/gleam/issues/672
     assert_module_error!(

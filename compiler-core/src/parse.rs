@@ -2122,13 +2122,16 @@ where
     //   A(one, two)
     fn expect_type_name(
         &mut self,
-    ) -> Result<(u32, EcoString, Vec<EcoString>, u32, u32), ParseError> {
+    ) -> Result<(u32, EcoString, Vec<(SrcSpan, EcoString)>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
                 Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
             let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
-            let args2 = args.into_iter().map(|(_, a, _)| a).collect();
+            let args2 = args
+                .into_iter()
+                .map(|(start, name, end)| (SrcSpan { start, end }, name))
+                .collect();
             Ok((start, upname, args2, par_e, end))
         } else {
             Ok((start, upname, vec![], end, end))

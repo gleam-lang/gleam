@@ -644,13 +644,13 @@ pub struct TypeVariantConstructors {
 impl TypeVariantConstructors {
     pub(crate) fn new(
         variants: Vec<TypeValueConstructor>,
-        type_parameters: &[EcoString],
+        type_parameters: &[&EcoString],
         hydrator: Hydrator,
     ) -> TypeVariantConstructors {
         let named_types = hydrator.named_type_variables();
         let type_parameters = type_parameters
             .iter()
-            .map(|p| {
+            .map(|&p| {
                 let t = named_types
                     .get(p)
                     .expect("Type parameter not found in hydrator");
