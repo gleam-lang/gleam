@@ -1048,3 +1048,84 @@ pub fn main() {
 ",
     );
 }
+
+#[test]
+fn case_error_prints_prelude_module_unqualified() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let result = Ok(Nil)
+  case result {
+    Ok(Nil) -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn case_error_prints_prelude_module_when_shadowed() {
+    assert_module_error!(
+        "
+import gleam
+type MyResult { Ok Error }
+pub fn main() {
+  let res = gleam.Ok(10)
+  case res {
+    gleam.Ok(n) -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn case_error_prints_module_when_shadowed() {
+    assert_with_module_error!(
+        ("mod", "pub type Wibble { Wibble Wobble }"),
+        "
+import mod.{Wibble}
+type Wibble { Wibble Wobble }
+pub fn main() {
+  let wibble = mod.Wibble
+  case wibble {
+    mod.Wobble -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn case_error_prints_module_when_aliased_and_shadowed() {
+    assert_with_module_error!(
+        ("mod", "pub type Wibble { Wibble Wobble }"),
+        "
+import mod.{Wibble as Wobble}
+type Wibble { Wobble Wubble }
+pub fn main() {
+  let wibble = mod.Wibble
+  case wibble {
+    mod.Wobble -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn case_error_prints_unqualifed_when_aliased() {
+    assert_with_module_error!(
+        ("mod", "pub type Wibble { Wibble Wobble }"),
+        "
+import mod.{Wibble as Wobble}
+type Wibble { Wibble Wubble }
+pub fn main() {
+  let wibble = mod.Wibble
+  case wibble {
+    mod.Wobble -> Nil
+  }
+}
+"
+    );
+}
