@@ -200,7 +200,7 @@
   let my_number = 10
   ```
 
-  ([Gears](https://github.com/gearsdatapacks))
+  ([Surya Rose](https://github.com/gearsdatapacks))
 
 - The language server can now suggest a code action to convert `let assert` into
   a case expression:
@@ -218,7 +218,7 @@
   }
   ```
 
-  ([Gears](https://github.com/gearsdatapacks))
+  ([Surya Rose](https://github.com/gearsdatapacks))
 
 - The language server can now show signature help when writing functions.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
