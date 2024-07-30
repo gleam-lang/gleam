@@ -996,7 +996,7 @@ where
         // Better error: name definitions must start with `let`
         if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
             match self.tok1 {
-                Some((start, Token::Equal, end)) | Some((start, Token::Colon, end)) => {
+                Some((start, Token::Equal | Token::Colon, end)) => {
                     return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
                 }
 
