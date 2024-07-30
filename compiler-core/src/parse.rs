@@ -994,7 +994,7 @@ where
 
     fn parse_statement_errors(&mut self) -> Result<(), ParseError> {
         // Better error: name definitions must start with `let`
-        if let Some((start, Token::Name { .. }, end)) = self.tok0.as_ref() {
+        if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
             match self.tok1 {
                 Some((start, Token::Equal, end)) | Some((start, Token::Colon, end)) => {
                     return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
