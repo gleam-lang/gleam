@@ -427,11 +427,7 @@ fn no_let_binding3() {
         "[x] = [2]",
         ParseError {
             location: SrcSpan { start: 4, end: 5 },
-            error: ParseErrorType::UnexpectedToken {
-                token: Token::Equal,
-                expected: vec!["An import, const, type, or function.".into()],
-                hint: None,
-            },
+            error: ParseErrorType::NoLetBinding
         }
     );
 }
