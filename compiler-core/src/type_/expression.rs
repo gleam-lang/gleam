@@ -1,9 +1,6 @@
 use super::{pipe::PipeTyper, *};
 use crate::{
-    analyse::{
-        infer_bit_array_option,
-        name::{check_argument_names, NameCorrection},
-    },
+    analyse::{infer_bit_array_option, name::check_argument_names},
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, ImplicitCallArgOrigin, Layer, RecordUpdateSpread,
@@ -217,7 +214,6 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     // Accumulated errors and warnings found while typing the expression
     pub(crate) problems: &'a mut Problems,
-    pub(crate) name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 impl<'a, 'b> ExprTyper<'a, 'b> {
@@ -225,7 +221,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         definition: FunctionDefinition,
         problems: &'a mut Problems,
-        name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         let mut hydrator = Hydrator::new();
 
@@ -249,7 +244,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             implementations,
             current_function_definition: definition,
             problems,
-            name_corrections,
         }
     }
 
@@ -743,7 +737,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
-            check_argument_names(names, self.problems, self.name_corrections);
+            check_argument_names(names, self.problems);
         }
 
         let already_warned_for_unreachable_code = self.already_warned_for_unreachable_code;
@@ -1270,19 +1264,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
-        let pattern = match pattern::PatternTyper::new(
-            self.environment,
-            &self.hydrator,
-            self.problems,
-            self.name_corrections,
-        )
-        .unify(pattern, value_typ.clone())
-        {
-            Ok(pattern) => pattern,
-            Err(error) => {
-                self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
-            }
-        };
+        let pattern =
+            match pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems)
+                .unify(pattern, value_typ.clone())
+            {
+                Ok(pattern) => pattern,
+                Err(error) => {
+                    self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
+                }
+            };
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
@@ -1484,12 +1474,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subjects: &[Arc<Type>],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
-        let mut pattern_typer = pattern::PatternTyper::new(
-            self.environment,
-            &self.hydrator,
-            self.problems,
-            self.name_corrections,
-        );
+        let mut pattern_typer =
+            pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems);
         let typed_pattern = pattern_typer.infer_multi_pattern(pattern, subjects, location)?;
 
         // Each case clause has one or more patterns that may match the

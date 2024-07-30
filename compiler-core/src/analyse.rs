@@ -36,7 +36,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
-use name::{check_argument_names, check_name_case, correct_name_case, NameCorrection};
+use name::{check_argument_names, check_name_case};
 use std::{
     collections::HashMap,
     sync::{Arc, OnceLock},
@@ -162,7 +162,6 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
-            name_corrections: vec![],
         }
         .infer_module(module)
     }
@@ -181,7 +180,6 @@ struct ModuleAnalyzer<'a, A> {
     src_path: Utf8PathBuf,
     problems: Problems,
     value_names: HashMap<EcoString, SrcSpan>,
-    name_corrections: Vec<NameCorrection>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
 }
@@ -326,7 +324,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 package: self.package_config.name.clone(),
                 is_internal,
                 unused_imports,
-                name_corrections: self.name_corrections,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
                 warnings,
@@ -366,12 +363,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_erlang_external: false,
             has_javascript_external: false,
         };
-        let mut expr_typer = ExprTyper::new(
-            environment,
-            definition,
-            &mut self.problems,
-            &mut self.name_corrections,
-        );
+        let mut expr_typer = ExprTyper::new(environment, definition, &mut self.problems);
         let typed_expr = expr_typer.infer_const(&annotation, *value);
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
@@ -496,12 +488,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
-            let mut expr_typer = ExprTyper::new(
-                environment,
-                definition,
-                problems,
-                &mut self.name_corrections,
-            );
+            let mut expr_typer = ExprTyper::new(environment, definition, problems);
             expr_typer.hydrator = self
                 .hydrators
                 .remove(&name)
@@ -1200,7 +1187,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             names, location, ..
         } in args.iter()
         {
-            check_argument_names(names, &mut self.problems, &mut self.name_corrections);
+            check_argument_names(names, &mut self.problems);
 
             builder.add(names.get_label(), *location)?;
         }
@@ -1267,8 +1254,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
             self.problems.error(error);
-            self.name_corrections
-                .push(correct_name_case(location, name, kind));
         }
     }
 }

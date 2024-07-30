@@ -6,10 +6,7 @@ use itertools::Itertools;
 ///
 use super::*;
 use crate::{
-    analyse::{
-        name::{check_name_case, correct_name_case, NameCorrection},
-        Inferred,
-    },
+    analyse::{name::check_name_case, Inferred},
     ast::{AssignName, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment},
 };
 use std::sync::Arc;
@@ -20,7 +17,6 @@ pub struct PatternTyper<'a, 'b> {
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
     problems: &'a mut Problems,
-    name_corrections: &'a mut Vec<NameCorrection>,
 }
 
 enum PatternMode {
@@ -33,7 +29,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         environment: &'a mut Environment<'b>,
         hydrator: &'a Hydrator,
         problems: &'a mut Problems,
-        name_corrections: &'a mut Vec<NameCorrection>,
     ) -> Self {
         Self {
             environment,
@@ -41,7 +36,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
             problems,
-            name_corrections,
         }
     }
 
@@ -684,8 +678,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
             self.problems.error(error);
-            self.name_corrections
-                .push(correct_name_case(location, name, kind));
         }
     }
 }

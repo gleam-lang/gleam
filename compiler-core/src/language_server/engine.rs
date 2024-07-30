@@ -1,5 +1,5 @@
 use crate::{
-    analyse::name::NameCorrection,
+    analyse::name::correct_name_case,
     ast::{
         Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
@@ -13,7 +13,7 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        pretty::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
+        self, pretty::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
         ValueConstructorVariant,
     },
     Error, Result, Warning,
@@ -64,6 +64,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
 
     modules_compiled_since_last_feedback: Vec<Utf8PathBuf>,
     compiled_since_last_feedback: bool,
+    error: Option<Error>,
 
     // Used to publish progress notifications to the client without waiting for
     // the usual request-response loop.
@@ -125,6 +126,7 @@ where
             progress_reporter,
             compiler,
             paths,
+            error: None,
             hex_deps,
         })
     }
@@ -141,11 +143,18 @@ where
         let outcome = self.compiler.compile();
         self.progress_reporter.compilation_finished();
 
-        outcome
+        let result = outcome
             // Register which modules have changed
             .map(|modules| self.modules_compiled_since_last_feedback.extend(modules))
             // Return the error, if present
-            .into_result()
+            .into_result();
+
+        self.error = match &result {
+            Ok(_) => None,
+            Err(error) => Some(error.clone()),
+        };
+
+        result
     }
 
     fn take_warnings(&mut self) -> Vec<Warning> {
@@ -286,7 +295,7 @@ where
             };
 
             code_action_unused_imports(module, &params, &mut actions);
-            code_action_fix_names(module, &params, &mut actions);
+            code_action_fix_names(module, &params, &this.error, &mut actions);
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
             actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());
@@ -855,7 +864,7 @@ fn hover_for_expression(
 }
 
 fn hover_for_imported_value(
-    value: &crate::type_::ValueConstructor,
+    value: &type_::ValueConstructor,
     location: &SrcSpan,
     line_numbers: LineNumbers,
     hex_module_imported_from: Option<&ModuleInterface>,
@@ -950,13 +959,35 @@ fn code_action_unused_imports(
         .push_to(actions);
 }
 
+struct NameCorrection {
+    pub location: SrcSpan,
+    pub correction: EcoString,
+}
+
 fn code_action_fix_names(
     module: &Module,
     params: &lsp::CodeActionParams,
+    error: &Option<Error>,
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let name_corrections = &module.ast.type_info.name_corrections;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+    let name_corrections = errors
+        .iter()
+        .filter_map(|error| match error {
+            type_::Error::BadName {
+                location,
+                name,
+                kind,
+            } => Some(NameCorrection {
+                correction: correct_name_case(name, *kind),
+                location: *location,
+            }),
+            _ => None,
+        })
+        .collect_vec();
 
     if name_corrections.is_empty() {
         return;
@@ -971,7 +1002,7 @@ fn code_action_fix_names(
             correction,
         } = name_correction;
 
-        let range = src_span_to_lsp_range(*location, &line_numbers);
+        let range = src_span_to_lsp_range(location, &line_numbers);
         // Check if the user's cursor is on the invalid name
         if overlaps(params.range, range) {
             let edit = lsp_types::TextEdit {

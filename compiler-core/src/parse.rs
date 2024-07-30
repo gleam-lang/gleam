@@ -141,6 +141,8 @@ impl Attributes {
     }
 }
 
+type SpannedString = (SrcSpan, EcoString);
+
 //
 // Public Interface
 //
@@ -2122,7 +2124,7 @@ where
     //   A(one, two)
     fn expect_type_name(
         &mut self,
-    ) -> Result<(u32, EcoString, Vec<(SrcSpan, EcoString)>, u32, u32), ParseError> {
+    ) -> Result<(u32, EcoString, Vec<SpannedString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
         if self.maybe_one(&Token::LeftParen).is_some() {
             let args =
