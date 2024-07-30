@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.4.0-rc2 - Unreleased
+
+### Bug Fixes
+
+- Fixed a bug where pipe function arity errors could have an incorrect error
+  message.
+
 ## v1.4.0-rc1 - 2024-07-29
 
 ### Build tool
