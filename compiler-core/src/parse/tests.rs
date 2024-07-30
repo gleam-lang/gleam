@@ -433,6 +433,17 @@ fn no_let_binding3() {
 }
 
 #[test]
+fn with_let_binding3() {
+    // The same with `let assert` must parse:
+    assert_parse!("let assert [x] = [2]");
+}
+
+#[test]
+fn with_let_binding3_and_annotation() {
+    assert_parse!("let assert [x]: List(Int) = [2]");
+}
+
+#[test]
 fn no_eq_after_binding() {
     assert_error!(
         "let wibble",
