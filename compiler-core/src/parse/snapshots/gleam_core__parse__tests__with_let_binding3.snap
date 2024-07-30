@@ -1,0 +1,55 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let assert [x] = [2]"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 0,
+                end: 20,
+            },
+            value: List {
+                location: SrcSpan {
+                    start: 17,
+                    end: 20,
+                },
+                elements: [
+                    Int {
+                        location: SrcSpan {
+                            start: 18,
+                            end: 19,
+                        },
+                        value: "2",
+                    },
+                ],
+                tail: None,
+            },
+            pattern: List {
+                location: SrcSpan {
+                    start: 11,
+                    end: 14,
+                },
+                elements: [
+                    Variable {
+                        location: SrcSpan {
+                            start: 12,
+                            end: 13,
+                        },
+                        name: "x",
+                        type_: (),
+                    },
+                ],
+                tail: None,
+                type_: (),
+            },
+            kind: Assert {
+                location: SrcSpan {
+                    start: 4,
+                    end: 10,
+                },
+            },
+            annotation: None,
+        },
+    ),
+]

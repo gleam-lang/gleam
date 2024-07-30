@@ -201,15 +201,6 @@ pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
 }
 
 //
-// Parser's state: do we bind a name at the moment?
-//
-#[derive(Debug)]
-enum NameBindingState {
-    Empty,
-    Let,
-}
-
-//
 // Parser
 //
 #[derive(Debug)]
@@ -221,7 +212,6 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok1: Option<Spanned>,
     extra: ModuleExtra,
     doc_comments: VecDeque<(u32, String)>,
-    name_binding_state: NameBindingState,
 }
 impl<T> Parser<T>
 where
@@ -236,7 +226,6 @@ where
             tok1: None,
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
-            name_binding_state: NameBindingState::Empty,
         };
         parser.advance();
         parser.advance();
@@ -396,6 +385,13 @@ where
     //   unit op unit pipe unit(call)
     //   unit op unit pipe unit(call) pipe unit(call)
     fn parse_expression(&mut self) -> Result<Option<UntypedExpr>, ParseError> {
+        self.parse_expression_inner(false)
+    }
+
+    fn parse_expression_inner(
+        &mut self,
+        is_let_binding: bool,
+    ) -> Result<Option<UntypedExpr>, ParseError> {
         // uses the simple operator parser algorithm
         let mut opstack = vec![];
         let mut estack = vec![];
@@ -403,7 +399,10 @@ where
         let mut last_op_end = 0;
         loop {
             match self.parse_expression_unit()? {
-                Some(unit) => estack.push(unit),
+                Some(unit) => {
+                    self.post_process_expression_unit(&unit, is_let_binding)?;
+                    estack.push(unit)
+                }
                 _ if estack.is_empty() => return Ok(None),
                 _ => {
                     return parse_error(
@@ -444,6 +443,23 @@ where
             &mut estack,
             &do_reduce_expression,
         ))
+    }
+
+    fn post_process_expression_unit(
+        &mut self,
+        unit: &UntypedExpr,
+        is_let_binding: bool,
+    ) -> Result<(), ParseError> {
+        // Produce better error message for `[x] = [1]` outside
+        // of `let` statement.
+        if !is_let_binding {
+            if let UntypedExpr::List { .. } = unit {
+                if let Some((start, Token::Equal, end)) = self.tok0 {
+                    return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
+                }
+            }
+        }
+        Ok(())
     }
 
     fn parse_expression_unit_collapsing_single_value_blocks(
@@ -612,21 +628,11 @@ where
                     _ => {}
                 }
 
-                let list = UntypedExpr::List {
+                UntypedExpr::List {
                     location: SrcSpan { start, end },
                     elements,
                     tail,
-                };
-
-                // We also need to check for a special case: `[x] = ...`
-                // It only should be used in `let` context.
-                if !matches!(self.name_binding_state, NameBindingState::Let) {
-                    if let Some((start, Token::Equal, end)) = self.tok0 {
-                        return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
-                    }
                 }
-
-                list
             }
 
             // BitArray
@@ -924,7 +930,6 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
-        self.name_binding_state = NameBindingState::Let;
         let kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
             _ = self.next_tok();
             AssignmentKind::Assert {
@@ -947,14 +952,13 @@ where
                 end: pattern.location().end,
             },
         })?;
-        let value = self.parse_expression()?.ok_or(ParseError {
+        let value = self.parse_expression_inner(true)?.ok_or(ParseError {
             error: ParseErrorType::ExpectedValue,
             location: SrcSpan {
                 start: eq_s,
                 end: eq_e,
             },
         })?;
-        self.name_binding_state = NameBindingState::Empty;
         Ok(Statement::Assignment(Assignment {
             location: SrcSpan {
                 start,
@@ -1017,11 +1021,9 @@ where
 
     fn parse_statement_errors(&mut self) -> Result<(), ParseError> {
         // Better error: name definitions must start with `let`
-        if !matches!(self.name_binding_state, NameBindingState::Let) {
-            if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
-                if let Some((start, Token::Equal | Token::Colon, end)) = self.tok1 {
-                    return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
-                }
+        if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
+            if let Some((start, Token::Equal | Token::Colon, end)) = self.tok1 {
+                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
             }
         }
         Ok(())
