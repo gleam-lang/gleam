@@ -6,6 +6,7 @@ mod edits;
 mod engine;
 mod feedback;
 mod files;
+mod inlay_hints;
 mod messages;
 mod progress;
 mod router;

@@ -1,7 +1,7 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        self, CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
+        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -38,8 +38,7 @@ use super::{
     },
     completer::Completer,
     configuration::SharedConfig,
-    signature_help, src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies,
-    MakeLocker,
+    inlay_hints, signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -469,19 +468,7 @@ where
 
             let line_numbers = LineNumbers::new(&module.code);
 
-            let hints = ast::inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers)
-                .into_iter()
-                .map(|hint| InlayHint {
-                    position: src_offset_to_lsp_position(hint.offset, &line_numbers),
-                    label: InlayHintLabel::String(hint.label),
-                    kind: Some(InlayHintKind::TYPE),
-                    text_edits: None,
-                    tooltip: None,
-                    padding_left: Some(true),
-                    padding_right: None,
-                    data: None,
-                })
-                .collect();
+            let hints = inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers);
 
             Ok(hints)
         })

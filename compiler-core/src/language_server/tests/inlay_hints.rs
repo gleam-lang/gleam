@@ -1,51 +1,143 @@
 use crate::language_server::tests::{setup_engine, LanguageServerTestIO};
-use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel, InlayHintParams, Position, Range};
+use lsp_types::{InlayHintParams, Position, Range};
 
 #[test]
-fn render_inlay_hints() {
-    let code = "
-  fn get_int() { 42 }
-  fn to_str(x) { \"abc\" }
-
-  fn main() {
-    get_int()
-    |> to_str()
-  }
-  ";
-
-    expect_hints(
-        code,
-        vec![
-            default_hint(Position::new(5, 13), "Int"),
-            default_hint(Position::new(6, 15), "String"),
-        ],
-    );
-}
-
-fn default_hint(position: Position, label: &str) -> InlayHint {
-    InlayHint {
-        position,
-        label: InlayHintLabel::String(label.to_string()),
-        kind: Some(InlayHintKind::TYPE),
-        text_edits: None,
-        tooltip: None,
-        padding_left: Some(true),
-        padding_right: None,
-        data: None,
+fn no_hints_when_same_line() {
+    let src = r#"
+    fn identity(x) {
+      x
     }
-}
 
-fn expect_hints(src: &str, expected_hints: Vec<InlayHint>) {
+    fn ret_str(_x) {
+      "abc"
+    }
+
+    pub fn example_pipe() {
+      0 |> ret_str() |> identity()
+    }
+"#;
+
     let hints = inlay_hints(src);
-
-    // InlayHint doesn't implement PartialEq so we're serialising to compare them
-    let hints = serde_json::to_value(hints).expect("serialisation shouldn't fail");
-    let expected_hints =
-        serde_json::to_value(expected_hints).expect("serialisation shouldn't fail");
-    assert_eq!(hints, expected_hints);
+    insta::assert_snapshot!(hints);
 }
 
-fn inlay_hints(src: &str) -> Vec<InlayHint> {
+#[test]
+fn no_hints_when_value_is_literal() {
+    let src = r#"
+    pub fn ret_str(f1) {
+      "abc"
+      |> f1()
+    }
+
+    pub fn ret_int(f2) {
+      42
+      |> f2()
+    }
+
+    pub fn ret_float(f3) {
+      42.2
+      |> f3()
+    }
+
+    pub fn ret_bit_array(f4) {
+      <<1, 2>>
+      |> f4()
+    }
+"#;
+
+    let hints = inlay_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
+fn show_many_hints() {
+    let src = r#"
+          const int_val = 0
+
+          fn identity(x) {
+            x
+          }
+
+          fn ret_str(_x) {
+            "abc"
+          }
+
+          pub fn example_pipe() {
+            int_val
+            |> ret_str()
+            |> identity()
+          }
+      "#;
+
+    let hints = inlay_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
+fn hints_nested_in_case_block() {
+    let src = r#"
+          const int_val = 0
+
+          fn identity(x) {
+            x
+          }
+
+          fn main(a) {
+            case a {
+              _ -> {
+                  int_val
+                  |> identity()
+              }
+            }
+          }
+      "#;
+
+    let hints = inlay_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
+fn hints_nested_for_apply_fn_let() {
+    let src = r#"
+          const int_val = 0
+
+          fn identity(x) {
+            x
+          }
+
+          fn main() {
+            let f = identity(fn() {
+              int_val
+              |> identity()
+            })
+          }
+      "#;
+
+    let hints = inlay_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
+fn hints_in_use() {
+    let src = r#"
+          const int_val = 0
+
+          fn identity(x) {
+            x
+          }
+
+          fn main(f) {
+            use a <- f()
+            int_val
+            |> identity()
+          }
+      "#;
+
+    let hints = inlay_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+fn inlay_hints(src: &str) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
 
@@ -65,8 +157,12 @@ fn inlay_hints(src: &str) -> Vec<InlayHint> {
         ),
     };
 
-    engine
+    let hints = engine
         .inlay_hints(params)
         .result
-        .expect("inlay hint request should not fail")
+        .expect("inlay hint request should not fail");
+
+    let stringified = serde_json::to_string_pretty(&hints).expect("json pprint should not fail");
+
+    stringified
 }

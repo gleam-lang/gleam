@@ -1,3 +1,5 @@
+use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel};
+
 use crate::{
     ast::{
         visit::{self, Visit},
@@ -7,11 +9,7 @@ use crate::{
     type_::pretty::Printer,
 };
 
-#[derive(Debug, Eq, PartialEq)]
-pub struct InlayHint {
-    pub label: String,
-    pub offset: u32,
-}
+use super::src_offset_to_lsp_position;
 
 /// Determines if the expression is a simple literal whose inlayHints must not be showed
 /// in a pipeline chain
@@ -39,6 +37,21 @@ impl<'a> InlayHintsVisitor<'a> {
     }
 }
 
+fn default_inlay_hint(line_numbers: &LineNumbers, offset: u32, label: String) -> InlayHint {
+    let position = src_offset_to_lsp_position(offset, line_numbers);
+
+    InlayHint {
+        position,
+        label: InlayHintLabel::String(label),
+        kind: Some(InlayHintKind::TYPE),
+        text_edits: None,
+        tooltip: None,
+        padding_left: Some(true),
+        padding_right: None,
+        data: None,
+    }
+}
+
 impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
     fn visit_typed_expr_pipeline(
         &mut self,
@@ -61,10 +74,12 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
                 }
             };
 
-            let this_hint = InlayHint {
-                label: Printer::new().pretty_print(assign.type_().as_ref(), 0),
-                offset: assign.location.end,
-            };
+            let this_hint = default_inlay_hint(
+                &self.line_numbers,
+                assign.location.end,
+                Printer::new().pretty_print(assign.type_().as_ref(), 0),
+            );
+
             prev_hint = Some((
                 this_line,
                 if is_simple_lit(&assign.value) {
@@ -86,10 +101,12 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
                 if let Some(prev_hint) = prev_hint {
                     self.hints.push(prev_hint);
                 }
-                self.hints.push(InlayHint {
-                    label: Printer::new().pretty_print(finally.type_().as_ref(), 0),
-                    offset: finally.location().end,
-                });
+                let hint = default_inlay_hint(
+                    &self.line_numbers,
+                    finally.location().end,
+                    Printer::new().pretty_print(finally.type_().as_ref(), 0),
+                );
+                self.hints.push(hint);
             }
         }
 
