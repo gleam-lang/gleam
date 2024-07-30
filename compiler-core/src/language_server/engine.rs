@@ -942,11 +942,7 @@ fn code_action_unused_values(
             .get(start as usize..start as usize + 1)
             .unwrap_or_default();
 
-        //                            ↓
-        // only show the action when: {
-        //                              Ok(1)
-        //                            }
-        //                            ↑
+        // only show actions for the most inner span
         if (start_char == "{"
             && params.range.start.line != hover_range.start.line
             && params.range.end.line != hover_range.end.line)
