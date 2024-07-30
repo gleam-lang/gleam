@@ -201,6 +201,15 @@ pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
 }
 
 //
+// Parser's state: do we bind a name at the moment?
+//
+#[derive(Debug)]
+enum NameBindingState {
+    Empty,
+    Let,
+}
+
+//
 // Parser
 //
 #[derive(Debug)]
@@ -212,6 +221,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok1: Option<Spanned>,
     extra: ModuleExtra,
     doc_comments: VecDeque<(u32, String)>,
+    name_binding_state: NameBindingState,
 }
 impl<T> Parser<T>
 where
@@ -226,6 +236,7 @@ where
             tok1: None,
             extra: ModuleExtra::new(),
             doc_comments: VecDeque::new(),
+            name_binding_state: NameBindingState::Empty,
         };
         parser.advance();
         parser.advance();
@@ -601,11 +612,21 @@ where
                     _ => {}
                 }
 
-                UntypedExpr::List {
+                let list = UntypedExpr::List {
                     location: SrcSpan { start, end },
                     elements,
                     tail,
+                };
+
+                // We also need to check for a special case: `[x] = ...`
+                // It only should be used in `let` context.
+                if !matches!(self.name_binding_state, NameBindingState::Let) {
+                    if let Some((start, Token::Equal, end)) = self.tok0 {
+                        return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
+                    }
                 }
+
+                list
             }
 
             // BitArray
@@ -903,6 +924,7 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
+        self.name_binding_state = NameBindingState::Let;
         let kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
             _ = self.next_tok();
             AssignmentKind::Assert {
@@ -932,6 +954,7 @@ where
                 end: eq_e,
             },
         })?;
+        self.name_binding_state = NameBindingState::Empty;
         Ok(Statement::Assignment(Assignment {
             location: SrcSpan {
                 start,
@@ -994,9 +1017,11 @@ where
 
     fn parse_statement_errors(&mut self) -> Result<(), ParseError> {
         // Better error: name definitions must start with `let`
-        if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
-            if let Some((start, Token::Equal | Token::Colon, end)) = self.tok1 {
-                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
+        if !matches!(self.name_binding_state, NameBindingState::Let) {
+            if let Some((_, Token::Name { .. }, _)) = self.tok0.as_ref() {
+                if let Some((start, Token::Equal | Token::Colon, end)) = self.tok1 {
+                    return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end });
+                }
             }
         }
         Ok(())
