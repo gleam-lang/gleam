@@ -10,8 +10,8 @@ error: Type mismatch
 
 Expected type:
 
-    fn(Int, Int) -> Int
+    fn(Int) -> a
 
 Found type:
 
-    fn(Int) -> a
+    fn(Int, Int) -> Int

@@ -283,6 +283,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             fn_(vec![self.argument_type.clone()], return_type.clone()),
         )
         .map_err(|e| {
+            if self.check_if_pipe_function_mismatch(&e) {
+                return convert_unify_error(flip_unify_error(e), function.location());
+            }
             let is_pipe_mismatch = self.check_if_pipe_type_mismatch(&e);
             let error = convert_unify_error(e, function.location());
             if is_pipe_mismatch {
@@ -315,6 +318,19 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     _ => false,
                 }
             }
+            _ => false,
+        }
+    }
+
+    fn check_if_pipe_function_mismatch(&mut self, error: &UnifyError) -> bool {
+        match error {
+            UnifyError::CouldNotUnify {
+                situation:
+                    Some(UnifyErrorSituation::FunctionsMismatch {
+                        reason: FunctionsMismatchReason::Arity { .. },
+                    }),
+                ..
+            } => true,
             _ => false,
         }
     }
