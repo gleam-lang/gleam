@@ -343,8 +343,8 @@ fn triple_equals_with_whitespace() {
         "let wobble:Int = 32
         wobble ==     = 42",
         ParseError {
-            error: ParseErrorType::NoLetBinding,
-            location: SrcSpan { start: 42, end: 43 },
+            error: ParseErrorType::OpNakedRight,
+            location: SrcSpan { start: 35, end: 37 },
         }
     );
 }
@@ -427,7 +427,11 @@ fn no_let_binding3() {
         "[x] = [2]",
         ParseError {
             location: SrcSpan { start: 4, end: 5 },
-            error: ParseErrorType::NoLetBinding
+            error: ParseErrorType::UnexpectedToken {
+                token: Token::Equal,
+                expected: vec!["An import, const, type, or function.".into()],
+                hint: None,
+            },
         }
     );
 }

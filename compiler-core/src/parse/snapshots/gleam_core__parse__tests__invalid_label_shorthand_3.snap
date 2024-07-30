@@ -6,7 +6,7 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:3:10
   │
 3 │   wibble(:arg)
-  │          ^ There must be a 'let' to bind variable to value
+  │          ^ I was not expecting this
 
-Hint: Use let for binding.
-See: https://tour.gleam.run/basics/assignments/
+Found `:`, expected one of: 
+- `)`
