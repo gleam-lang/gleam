@@ -658,6 +658,15 @@ fn rename_invalid_type_alias_parameter_name() {
 }
 
 #[test]
+fn rename_invalid_function_type_parameter_name() {
+    assert_code_action!(
+        "Rename to some_type",
+        "fn identity(value: someType) { value }",
+        find_position_of("someType").select_until(find_position_of(")"))
+    );
+}
+
+#[test]
 fn test_convert_assert_result_to_case() {
     assert_code_action!(
         CONVERT_TO_CASE,

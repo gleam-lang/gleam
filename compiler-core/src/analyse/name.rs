@@ -11,12 +11,6 @@ use crate::{
 use super::{Error, Named};
 use heck::{ToSnakeCase, ToUpperCamelCase};
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct NameCorrection {
-    pub location: SrcSpan,
-    pub correction: EcoString,
-}
-
 static VALID_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 fn valid_name(name: &EcoString) -> bool {
@@ -66,8 +60,8 @@ pub fn check_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Resu
     })
 }
 
-pub fn correct_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> NameCorrection {
-    let correction = match kind {
+pub fn correct_name_case(name: &EcoString, kind: Named) -> EcoString {
+    match kind {
         Named::Type | Named::TypeAlias | Named::CustomTypeVariant => {
             name.to_upper_camel_case().into()
         }
@@ -78,23 +72,14 @@ pub fn correct_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Na
         | Named::Constant
         | Named::Function => name.to_snake_case().into(),
         Named::Discard => eco_format!("_{}", name.to_snake_case()),
-    };
-    NameCorrection {
-        location,
-        correction,
     }
 }
 
-pub fn check_argument_names(
-    names: &ArgNames,
-    problems: &mut Problems,
-    name_corrections: &mut Vec<NameCorrection>,
-) {
+pub fn check_argument_names(names: &ArgNames, problems: &mut Problems) {
     match names {
         ArgNames::Discard { name, location } => {
             if let Err(error) = check_name_case(*location, name, Named::Discard) {
                 problems.error(error);
-                name_corrections.push(correct_name_case(*location, name, Named::Discard));
             }
         }
         ArgNames::LabelledDiscard {
@@ -105,17 +90,14 @@ pub fn check_argument_names(
         } => {
             if let Err(error) = check_name_case(*label_location, label, Named::Label) {
                 problems.error(error);
-                name_corrections.push(correct_name_case(*label_location, label, Named::Label));
             }
             if let Err(error) = check_name_case(*name_location, name, Named::Discard) {
                 problems.error(error);
-                name_corrections.push(correct_name_case(*name_location, name, Named::Discard));
             }
         }
         ArgNames::Named { name, location } => {
             if let Err(error) = check_name_case(*location, name, Named::Argument) {
                 problems.error(error);
-                name_corrections.push(correct_name_case(*location, name, Named::Argument));
             }
         }
         ArgNames::NamedLabelled {
@@ -126,11 +108,9 @@ pub fn check_argument_names(
         } => {
             if let Err(error) = check_name_case(*label_location, label, Named::Label) {
                 problems.error(error);
-                name_corrections.push(correct_name_case(*label_location, label, Named::Label));
             }
             if let Err(error) = check_name_case(*name_location, name, Named::Argument) {
                 problems.error(error);
-                name_corrections.push(correct_name_case(*name_location, name, Named::Argument));
             }
         }
     }

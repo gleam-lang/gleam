@@ -1,6 +1,7 @@
 use super::*;
-use crate::ast::{
-    Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+use crate::{
+    analyse::name::check_name_case,
+    ast::{Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar},
 };
 use std::sync::Arc;
 
@@ -211,6 +212,9 @@ impl Hydrator {
                     }
 
                     None if self.permit_new_type_variables => {
+                        if let Err(error) = check_name_case(*location, name, Named::TypeVariable) {
+                            problems.error(error);
+                        }
                         let t = environment.new_generic_var();
                         let _ = self
                             .rigid_type_names
