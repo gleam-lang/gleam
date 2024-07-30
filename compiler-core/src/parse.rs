@@ -731,15 +731,6 @@ where
                 }
             }
 
-            // if it reaches this code block, there must be no "let" or "assert" at the beginning of the expression
-            Some((start, Token::Equal, end)) => {
-                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
-            }
-
-            Some((start, Token::Colon, end)) => {
-                return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
-            }
-
             t0 => {
                 self.tok0 = t0;
                 return Ok(None);
@@ -994,10 +985,25 @@ where
 
             token => {
                 self.tok0 = token;
+                self.parse_statement_errors()?;
                 let expression = self.parse_expression()?.map(Statement::Expression);
                 Ok(expression)
             }
         }
+    }
+
+    fn parse_statement_errors(&mut self) -> Result<(), ParseError> {
+        // Better error: name definitions must start with `let`
+        if let Some((start, Token::Name { .. }, end)) = self.tok0.as_ref() {
+            match self.tok1 {
+                Some((start, Token::Equal, end)) | Some((start, Token::Colon, end)) => {
+                    return parse_error(ParseErrorType::NoLetBinding, SrcSpan { start, end })
+                }
+
+                _ => (),
+            }
+        }
+        Ok(())
     }
 
     fn parse_block(&mut self, start: u32) -> Result<UntypedExpr, ParseError> {
