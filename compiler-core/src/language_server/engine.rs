@@ -38,7 +38,8 @@ use super::{
     },
     completer::Completer,
     configuration::SharedConfig,
-    signature_help, src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    signature_help, src_offset_to_lsp_position, src_span_to_lsp_range, DownloadDependencies,
+    MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]
@@ -800,7 +801,6 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover
         range: Some(src_span_to_lsp_range(pattern.location(), &line_numbers)),
     }
 }
-
 
 fn get_function_type(fun: &TypedFunction) -> Type {
     Type::Fn {

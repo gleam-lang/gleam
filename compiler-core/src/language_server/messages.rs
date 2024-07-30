@@ -9,8 +9,8 @@ use lsp_types::{
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{
         CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, HoverRequest,
-        SignatureHelpRequest,
-    , InlayHintRequest},
+        InlayHintRequest, SignatureHelpRequest,
+    },
 };
 use std::{collections::HashMap, time::Duration};
 
