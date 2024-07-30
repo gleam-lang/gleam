@@ -599,8 +599,6 @@ Unused labelled fields:
     }
 
     fn module_for_uri(&self, uri: &Url) -> Option<&Module> {
-        use itertools::Itertools;
-
         // The to_file_path method is available on these platforms
         #[cfg(any(unix, windows, target_os = "redox", target_os = "wasi"))]
         let path = uri.to_file_path().expect("URL file");
