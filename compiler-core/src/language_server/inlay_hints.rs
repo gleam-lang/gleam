@@ -75,7 +75,7 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
             };
 
             let this_hint = default_inlay_hint(
-                &self.line_numbers,
+                self.line_numbers,
                 assign.location.end,
                 Printer::new().pretty_print(assign.type_().as_ref(), 0),
             );
@@ -102,7 +102,7 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
                     self.hints.push(prev_hint);
                 }
                 let hint = default_inlay_hint(
-                    &self.line_numbers,
+                    self.line_numbers,
                     finally.location().end,
                     Printer::new().pretty_print(finally.type_().as_ref(), 0),
                 );
