@@ -907,6 +907,41 @@ fn main() {
 }
 
 #[test]
+fn goto_definition_unqualified_function() {
+    let code = "
+import wibble.{wobble}
+fn main() {
+  wobble()
+}
+";
+
+    assert_eq!(
+        definition(
+            TestProject::for_source(code).add_module("wibble", "pub fn wobble() {}"),
+            Position::new(3, 5)
+        ),
+        Some(Location {
+            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
+                r"\\?\C:\src\wibble.gleam"
+            } else {
+                "/src/wibble.gleam"
+            }))
+            .unwrap(),
+            range: Range {
+                start: Position {
+                    line: 0,
+                    character: 0
+                },
+                end: Position {
+                    line: 0,
+                    character: 15
+                }
+            }
+        })
+    )
+}
+
+#[test]
 fn goto_definition_import_unqualified_type() {
     let code = "
 import example_module.{type MyType}
