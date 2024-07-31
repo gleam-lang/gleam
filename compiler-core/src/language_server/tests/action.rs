@@ -1161,14 +1161,14 @@ fn test_assign_unused_result_on_block_start() {
         ASSIGN_UNUSED_RESULT,
         r#"
 pub fn main() {
-    { // test here
+    {
         Ok(0)
         Ok(0)
     }
     Nil
 }
 "#,
-        find_position_of("{ // test").select_until(find_position_of("here"))
+        find_position_of("{").nth_occurrence(2).to_selection()
     );
 }
 
@@ -1181,11 +1181,11 @@ pub fn main() {
     {
         Ok(0)
         Ok(0)
-    } // test here
+    }
     Nil
 }
 "#,
-        find_position_of("} // test").select_until(find_position_of("here"))
+        find_position_of("}").to_selection()
     );
 }
 

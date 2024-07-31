@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\npub fn main() {\n    {\n        Ok(0)\n        Ok(0)\n    } // test here\n    Nil\n}\n"
+expression: "\npub fn main() {\n    {\n        Ok(0)\n        Ok(0)\n    }\n    Nil\n}\n"
 ---
 ----- BEFORE ACTION
 
@@ -8,8 +8,8 @@ pub fn main() {
     {
         Ok(0)
         Ok(0)
-    } // test here
-    ▔▔▔▔▔▔▔▔▔▔↑   
+    }
+    ↑
     Nil
 }
 
@@ -20,6 +20,6 @@ pub fn main() {
     let _ = {
         Ok(0)
         Ok(0)
-    } // test here
+    }
     Nil
 }
