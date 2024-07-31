@@ -521,3 +521,15 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn provide_arg_type_to_fn_not_a_tuple() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+   let z = "not a tuple"
+   fn(x) { x.2 }(z)
+}
+"#
+    );
+}
