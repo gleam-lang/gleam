@@ -542,6 +542,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     // Helper to push a new error to the errors list and return an invalid expression.
     fn error_expr_with_rigid_names(&mut self, location: SrcSpan, error: Error) -> TypedExpr {
         self.error_with_rigid_names(error);
+        self.error_expr(location)
+    }
+
+    // Helper to create a new error expr.
+    fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
         TypedExpr::Invalid {
             location,
             typ: self.new_unbound_var(),
@@ -2861,6 +2866,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 FieldAccessUsage::MethodCall,
             )),
 
+            UntypedExpr::Fn {
+                location,
+                is_capture,
+                arguments,
+                body,
+                return_annotation,
+                ..
+            } => self.infer_fn_with_call_context(
+                arguments,
+                &args,
+                body,
+                is_capture,
+                return_annotation,
+                location,
+            ),
+
             fun => self.infer(fun),
         };
 
@@ -2873,6 +2894,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let (fun, args, typ) = self.do_infer_call_with_known_fun(fun, args, location, kind);
         (fun, args, typ)
+    }
+
+    fn infer_fn_with_call_context(
+        &mut self,
+        args: Vec<UntypedArg>,
+        call_args: &[CallArg<UntypedExpr>],
+        body: Vec1<UntypedStatement>,
+        is_capture: bool,
+        return_annotation: Option<TypeAst>,
+        location: SrcSpan,
+    ) -> Result<TypedExpr, Error> {
+        let typed_call_args: Vec<Arc<Type>> = call_args
+            .iter()
+            .map(|a| {
+                match self.infer(a.value.clone()) {
+                    Ok(arg) => arg,
+                    Err(_e) => self.error_expr(location),
+                }
+                .type_()
+            })
+            .collect_vec();
+        self.infer_fn(
+            args,
+            &typed_call_args,
+            body,
+            is_capture,
+            return_annotation,
+            location,
+        )
     }
 
     pub fn do_infer_call_with_known_fun(
