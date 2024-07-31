@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n   let z = \"not a tuple\"\n   fn(x) { x.2 }(z)\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:12
+  │
+4 │    fn(x) { x.2 }(z)
+  │            ^ This is not a tuple
+
+To index into this value it needs to be a tuple, however it has this type:
+
+    String
