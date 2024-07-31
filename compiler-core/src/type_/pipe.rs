@@ -80,7 +80,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         expressions: impl IntoIterator<Item = UntypedExpr>,
     ) -> Result<TypedExpr, Error> {
         let mut finally = None;
-        let expressions = expressions.into_iter().collect_vec();
 
         for (i, call) in expressions.into_iter().enumerate() {
             if self.expr_typer.previous_panics {
