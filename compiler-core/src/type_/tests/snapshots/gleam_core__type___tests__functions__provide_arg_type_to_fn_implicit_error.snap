@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\npub fn main() {\n   let z = #(1,2)\n   fn(x) { x.2 }(z)\n}\n"
+---
+error: Out of bounds tuple index
+  ┌─ /src/one/two.gleam:4:13
+  │
+4 │    fn(x) { x.2 }(z)
+  │             ^^ This index is too large
+
+The index being accessed for this tuple is 2, but this tuple has 2 elements
+so the highest valid index is 1.

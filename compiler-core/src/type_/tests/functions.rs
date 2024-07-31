@@ -459,3 +459,65 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/2504
+#[test]
+fn provide_arg_type_to_fn_implicit_ok() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+   let z = #(1,2)
+   fn(x) { x.0 }(z)
+}
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn provide_arg_type_to_fn_explicit_ok() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+   let z = #(1,2)
+   fn(x: #(Int, Int)) { x.0 }(z)
+}
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn provide_arg_type_to_fn_implicit_error() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+   let z = #(1,2)
+   fn(x) { x.2 }(z)
+}
+"#
+    );
+}
+
+#[test]
+fn provide_arg_type_to_fn_explicit_error() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+   let z = #(1,2)
+   fn(x: #(Int, Int)) { x.2 }(z)
+}
+"#
+    );
+}
+
+#[test]
+fn provide_arg_type_to_fn_arg_infer_error() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+   fn(x) { x.2 }(z)
+}
+"#
+    );
+}
