@@ -16,6 +16,10 @@
   two constructors of the same name were created.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where jumping to the definition of an unqualified function would
+  produce the correct location, but remain in the same file.
+  ([Surya Rose](https://github.com/gearsdatapacks))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
