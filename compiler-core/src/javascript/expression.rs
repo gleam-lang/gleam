@@ -749,15 +749,11 @@ impl<'module> Generator<'module> {
         location: SrcSpan,
         subject: Document<'a>,
     ) -> Output<'a> {
-        let scope_position = self.scope_position;
-        self.scope_position = Position::NotTail;
-
         let message = match message {
-            Some(m) => self.expression(m)?,
+            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("Assignment pattern did not match"),
         };
 
-        self.scope_position = scope_position;
         Ok(self.throw_error(
             "assignment_no_match",
             &message,
