@@ -533,3 +533,42 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn provide_two_args_type_to_fn() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+   let a = #(1,2)
+   let b = #(1,2)
+   fn(x, y) { x.0 + y.1 }(a, b)
+}
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn provide_one_arg_type_to_two_args_fn() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+   let a = #(1,2)
+   fn(x, y) { x.0 + y.1 }(a)
+}
+"#
+    );
+}
+
+#[test]
+fn provide_two_args_type_to_fn_wrong_types() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+   let a = 1
+   let b = "not an int"
+   fn(x, y) { x + y }(a, b)
+}
+"#
+    );
+}
