@@ -8,7 +8,6 @@ use crate::{
     },
     build::Target,
     docvec,
-    io::Utf8Writer,
     parse::extra::{Comment, ModuleExtra},
     pretty::{self, *},
     type_::{self, Type},
@@ -25,7 +24,7 @@ use camino::Utf8Path;
 
 const INDENT: isize = 2;
 
-pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) -> Result<()> {
+pub fn pretty(writer: &mut impl DocumentWriter, src: &EcoString, path: &Utf8Path) -> Result<()> {
     let parsed = crate::parse::parse_module(path.to_owned(), src, &WarningEmitter::null())
         .map_err(|error| Error::Parse {
             path: path.to_path_buf(),

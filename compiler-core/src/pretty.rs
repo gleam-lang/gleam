@@ -16,6 +16,8 @@
 #[cfg(test)]
 mod tests;
 
+use std::fmt::Write;
+
 use ecow::EcoString;
 use itertools::Itertools;
 
@@ -163,6 +165,10 @@ pub enum Document<'a> {
     /// Join multiple documents together
     Vec(Vec<Self>),
 
+    /// Add annotations to a document, which might be used to add syntax
+    /// highlighting and links/titles to it while printing.
+    Annotated(Box<Self>, Annotation),
+
     /// Nests the given document by the given indent, depending on the specified
     /// condition
     Nest(isize, NestMode, NestCondition, Box<Self>),
@@ -234,11 +240,153 @@ pub enum NestMode {
     Set,
 }
 
-fn fits(
-    limit: isize,
-    mut current_width: isize,
-    mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
-) -> bool {
+/// Documents can be annotated, hinting to the `DocumentWriter` how to highlight
+/// the nested document, if desired.
+/// NOTE: This list is intentionally incomplete, since we only use markups
+/// while printing type signatures right now!
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum Annotation {
+    /// The name of a variable, function, or module.
+    Variable,
+    /// A reserverd keyword
+    Keyword,
+    /// The name of a type, type constructor, or top-level function name.
+    Title,
+    /// A string literal
+    String,
+    /// A number literal
+    Number,
+    /// A comment or discarded pattern
+    Comment,
+    /// A link or hover text
+    Meta {
+        link: EcoString,
+        hover_text: EcoString,
+    },
+}
+
+pub trait DocumentWriter: Utf8Writer {
+    /// Called before the inner doc gets printed when Annotated node is found.
+    fn enter(&mut self, _annotation: &Annotation) -> Result<()> {
+        Ok(())
+    }
+
+    /// Called after the inner doc got printed, after an Annotated node was found.
+    fn exit(&mut self, _annotation: &Annotation) -> Result<()> {
+        Ok(())
+    }
+}
+
+/// No specialisation in stable Rust, sadge.
+#[derive(Debug)]
+pub struct TextWriter<T: Utf8Writer>(pub T);
+impl<T: Utf8Writer> Write for TextWriter<T> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.0.write_str(s)
+    }
+}
+
+impl<T: Utf8Writer> Utf8Writer for TextWriter<T> {
+    fn str_write(&mut self, str: &str) -> Result<()> {
+        self.0.str_write(str)
+    }
+
+    fn convert_err<E: std::error::Error>(&self, err: E) -> crate::error::Error {
+        self.0.convert_err(err)
+    }
+}
+
+impl<T: Utf8Writer> DocumentWriter for TextWriter<T> {}
+
+/// Use strings directly at least instead of having to wrap them inside TextWriter
+impl DocumentWriter for String {}
+
+/// Wrap a Utf8Writer, printing HTML elements for highlighting.
+#[derive(Debug)]
+pub struct HtmlWriter<T: Utf8Writer>(pub T);
+
+impl<T: Utf8Writer> HtmlWriter<T> {
+    /// forward the write call to the wrapped Utf8Writer, without escaping.
+    fn write_raw(&mut self, s: &str) -> Result<()> {
+        self.0.str_write(s)
+    }
+
+    /// write some escaped text, converting the error using the inner Utf8Writer.
+    fn write_text(&mut self, s: &str) -> Result<()> {
+        self.text_write(s).map_err(|e| self.convert_err(e))
+    }
+
+    /// write some esacped text, returning the raw Result.
+    fn text_write(&mut self, s: &str) -> std::fmt::Result {
+        write!(self.0, "{}", self.html_escape(s))
+    }
+
+    fn html_escape<'a>(&self, s: &'a str) -> askama::MarkupDisplay<askama::Html, &'a str> {
+        // always returns an Ok(), looking at the source.
+        askama::filters::escape(askama::Html {}, s).expect("html_escape failed")
+    }
+}
+
+impl<T: Utf8Writer> Write for HtmlWriter<T> {
+    /// Using std::fmt::Write on an HtmlWriter will write escaped text.
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.text_write(s)
+    }
+}
+
+impl<T: Utf8Writer> Utf8Writer for HtmlWriter<T> {
+    /// Using Utf8Writer directly on an HtmlWriter will write escaped text.
+    fn str_write(&mut self, s: &str) -> Result<()> {
+        self.write_text(s)
+    }
+
+    fn convert_err<E: std::error::Error>(&self, err: E) -> crate::error::Error {
+        self.0.convert_err(err)
+    }
+}
+
+impl<T: Utf8Writer> DocumentWriter for HtmlWriter<T> {
+    fn enter(&mut self, annotation: &Annotation) -> Result<()> {
+        match annotation {
+            Annotation::Variable => self.write_raw("<span class=\"hljs-variable\">"),
+            Annotation::Keyword => self.write_raw("<span class=\"hljs-keyword\">"),
+            Annotation::Title => self.write_raw("<span class=\"hljs-title\">"),
+            Annotation::String => self.write_raw("<span class=\"hljs-string\">"),
+            Annotation::Number => self.write_raw("<span class=\"hljs-number\">"),
+            Annotation::Comment => self.write_raw("<span class=\"hljs-comment\">"),
+            Annotation::Meta { link, hover_text } => write!(
+                self.0,
+                "<a href=\"{}\" title=\"{}\">",
+                self.html_escape(link),
+                self.html_escape(hover_text)
+            )
+            .map_err(|e| self.convert_err(e)),
+        }
+    }
+
+    fn exit(&mut self, annotation: &Annotation) -> Result<()> {
+        match annotation {
+            Annotation::Meta { .. } => self.write_raw("</a>"),
+            _ => self.write_raw("</span>"),
+        }
+    }
+}
+
+/// Internal type that is used to track the work that still needs to be done.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum Cmd<'a> {
+    Doc {
+        indent: isize,
+        mode: Mode,
+        doc: &'a Document<'a>,
+    },
+
+    AnnotationExit {
+        annotation: &'a Annotation,
+    },
+}
+
+fn fits(limit: isize, mut current_width: isize, mut cmds: im::Vector<Cmd<'_>>) -> bool {
     // The `fits` function is going to take each document from the `docs` queue
     // and check if those can fit on a single line. In order to do so documents
     // are going to be pushed in front of this queue and have to be accompanied
@@ -265,8 +413,10 @@ fn fits(
         // We start by checking the first document of the queue. If there's no
         // documents then we can safely say that it fits (if reached this point
         // it means that the limit wasn't exceeded).
-        let (indent, mode, document) = match docs.pop_front() {
-            Some(x) => x,
+        let (indent, mode, document) = match cmds.pop_front() {
+            Some(Cmd::Doc { indent, mode, doc }) => (indent, mode, doc),
+            // AnnotationExit commands can be safely ignored.
+            Some(Cmd::AnnotationExit { .. }) => continue,
             None => return true,
         };
 
@@ -278,7 +428,7 @@ fn fits(
                 // If the mode is `ForcedBroken` it means that we have to ignore
                 // this break [ref:forced-broken], so we go check the inner
                 // document ignoring the effects of this one.
-                Mode::ForcedBroken => docs.push_front((indent, mode, doc)),
+                Mode::ForcedBroken => cmds.push_front(Cmd::Doc { indent, mode, doc }),
                 _ => return false,
             },
 
@@ -292,13 +442,17 @@ fn fits(
             // document and increase its indentation level based on the nesting
             // condition.
             Document::Nest(i, nest_mode, condition, doc) => match condition {
-                NestCondition::IfBroken => docs.push_front((indent, mode, doc)),
+                NestCondition::IfBroken => cmds.push_front(Cmd::Doc { indent, mode, doc }),
                 NestCondition::Always => {
                     let new_indent = match nest_mode {
                         NestMode::Increase => indent + i,
                         NestMode::Set => *i,
                     };
-                    docs.push_front((new_indent, mode, doc))
+                    cmds.push_front(Cmd::Doc {
+                        indent: new_indent,
+                        mode,
+                        doc,
+                    })
                 }
             },
 
@@ -308,11 +462,15 @@ fn fits(
                 // If an outer group was broken, we still try to fit the inner
                 // group on a single line, that's why for the inner document
                 // we change the mode back to `Unbroken`.
-                Mode::Broken => docs.push_front((indent, Mode::Unbroken, doc)),
+                Mode::Broken => cmds.push_front(Cmd::Doc {
+                    indent,
+                    mode: Mode::Unbroken,
+                    doc,
+                }),
                 // Any other mode is preserved as-is: if the mode is forced it
                 // has to be left unchanged, and if the mode is already unbroken
                 // there's no need to change it.
-                _ => docs.push_front((indent, mode, doc)),
+                _ => cmds.push_front(Cmd::Doc { indent, mode, doc }),
             },
 
             // When we run into a string we increase the current_width; looping
@@ -343,19 +501,27 @@ fn fits(
             Document::NextBreakFits(doc, enabled) => match enabled {
                 // [tag:disable-next-break] If it is disabled then we check the
                 // wrapped document changing the mode to `ForcedUnbroken`.
-                NextBreakFitsMode::Disabled => docs.push_front((indent, Mode::ForcedUnbroken, doc)),
+                NextBreakFitsMode::Disabled => cmds.push_front(Cmd::Doc {
+                    indent,
+                    mode: Mode::ForcedUnbroken,
+                    doc,
+                }),
                 NextBreakFitsMode::Enabled => match mode {
                     // If we're in `ForcedUnbroken` mode it means that the check
                     // was disabled by a document wrapping this one
                     // [ref:disable-next-break]; that's why we do nothing and
                     // check the wrapped document as if it were a normal one.
-                    Mode::ForcedUnbroken => docs.push_front((indent, mode, doc)),
+                    Mode::ForcedUnbroken => cmds.push_front(Cmd::Doc { indent, mode, doc }),
                     // [tag:forced-broken] Any other mode is turned into
                     // `ForcedBroken` so that when we run into a break, the
                     // response to the question "Does the document fit?" will be
                     // yes [ref:break-fit].
                     // This is why this is called `NextBreakFit` I think.
-                    _ => docs.push_front((indent, Mode::ForcedBroken, doc)),
+                    _ => cmds.push_front(Cmd::Doc {
+                        indent,
+                        mode: Mode::ForcedBroken,
+                        doc,
+                    }),
                 },
             },
 
@@ -367,8 +533,14 @@ fn fits(
                 // documents since each one is pushed _to the front_ of the
                 // queue of documents to check.
                 for doc in vec.iter().rev() {
-                    docs.push_front((indent, mode, doc));
+                    cmds.push_front(Cmd::Doc { indent, mode, doc });
                 }
+            }
+
+            // Annotations can just be ignored while fitting documents
+            Document::Annotated(doc, annotation) => {
+                cmds.push_front(Cmd::AnnotationExit { annotation });
+                cmds.push_front(Cmd::Doc { indent, mode, doc });
             }
         }
     }
@@ -381,10 +553,10 @@ pub enum BreakKind {
 }
 
 fn format(
-    writer: &mut impl Utf8Writer,
+    writer: &mut impl DocumentWriter,
     limit: isize,
     mut width: isize,
-    mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
+    mut cmds: im::Vector<Cmd<'_>>,
 ) -> Result<()> {
     // As long as there are documents to print we'll take each one by one and
     // output the corresponding string to the given writer.
@@ -398,154 +570,185 @@ fn format(
     //   group. For example, if a group doesn't fit on a single line its
     //   documents will be split into multiple lines and the mode set to
     //   `Broken` to keep track of this.
-    while let Some((indent, mode, document)) = docs.pop_front() {
-        match document {
-            // When we run into a line we print the given number of newlines and
-            // add the indentation required by the given document.
-            Document::Line(i) => {
-                for _ in 0..*i {
-                    writer.str_write("\n")?;
-                }
-                for _ in 0..indent {
-                    writer.str_write(" ")?;
-                }
-                width = indent;
-            }
-
-            // Flex breaks are NOT conditional to the mode: if the mode is
-            // already `Unbroken`, then the break is left unbroken (like strict
-            // breaks); any other mode is ignored.
-            // A flexible break will only be split if the following documents
-            // can't fit on the same line; otherwise, it is just displayed as an
-            // unbroken `Break`.
-            Document::Break {
-                broken,
-                unbroken,
-                kind: BreakKind::Flex,
-            } => {
-                let unbroken_width = width + unbroken.len() as isize;
-                // Every time we need to check again if the remaining piece can
-                // fit. If it does, the flexible break is not broken.
-                if mode == Mode::Unbroken || fits(limit, unbroken_width, docs.clone()) {
-                    writer.str_write(unbroken)?;
-                    width = unbroken_width;
-                } else {
-                    writer.str_write(broken)?;
-                    writer.str_write("\n")?;
+    while let Some(cmd) = cmds.pop_front() {
+        match cmd {
+            Cmd::Doc {
+                indent,
+                mode,
+                doc: document,
+            } => match document {
+                // When we run into a line we print the given number of newlines and
+                // add the indentation required by the given document.
+                Document::Line(i) => {
+                    for _ in 0..*i {
+                        writer.str_write("\n")?;
+                    }
                     for _ in 0..indent {
                         writer.str_write(" ")?;
                     }
                     width = indent;
                 }
-            }
 
-            // Strict breaks are conditional to the mode. They differ from
-            // flexible break because, if a group gets split - that is the mode
-            // is `Broken` or `ForceBroken` - ALL of the breaks in that group
-            // will be split. You can notice the difference with flexible breaks
-            // because here we only check the mode and then take action; before
-            // we would try and see if the remaining documents fit on a single
-            // line before deciding if the (flexible) break can be split or not.
-            Document::Break {
-                broken,
-                unbroken,
-                kind: BreakKind::Strict,
-            } => match mode {
-                // If the mode requires the break to be broken, then its broken
-                // string is printed, then we start a newline and indent it
-                // according to the current indentation level.
-                Mode::Broken | Mode::ForcedBroken => {
-                    writer.str_write(broken)?;
-                    writer.str_write("\n")?;
-                    for _ in 0..indent {
-                        writer.str_write(" ")?;
+                // Flex breaks are NOT conditional to the mode: if the mode is
+                // already `Unbroken`, then the break is left unbroken (like strict
+                // breaks); any other mode is ignored.
+                // A flexible break will only be split if the following documents
+                // can't fit on the same line; otherwise, it is just displayed as an
+                // unbroken `Break`.
+                Document::Break {
+                    broken,
+                    unbroken,
+                    kind: BreakKind::Flex,
+                } => {
+                    let unbroken_width = width + unbroken.len() as isize;
+                    // Every time we need to check again if the remaining piece can
+                    // fit. If it does, the flexible break is not broken.
+                    if mode == Mode::Unbroken || fits(limit, unbroken_width, cmds.clone()) {
+                        writer.str_write(unbroken)?;
+                        width = unbroken_width;
+                    } else {
+                        writer.str_write(broken)?;
+                        writer.str_write("\n")?;
+                        for _ in 0..indent {
+                            writer.str_write(" ")?;
+                        }
+                        width = indent;
                     }
-                    width = indent;
                 }
-                // If the mode doesn't require the break to be broken, then its
-                // unbroken string is printed as if it were a normal string;
-                // also updating the width of the current line.
-                Mode::Unbroken | Mode::ForcedUnbroken => {
-                    writer.str_write(unbroken)?;
-                    width += unbroken.len() as isize
+
+                // Strict breaks are conditional to the mode. They differ from
+                // flexible break because, if a group gets split - that is the mode
+                // is `Broken` or `ForceBroken` - ALL of the breaks in that group
+                // will be split. You can notice the difference with flexible breaks
+                // because here we only check the mode and then take action; before
+                // we would try and see if the remaining documents fit on a single
+                // line before deciding if the (flexible) break can be split or not.
+                Document::Break {
+                    broken,
+                    unbroken,
+                    kind: BreakKind::Strict,
+                } => match mode {
+                    // If the mode requires the break to be broken, then its broken
+                    // string is printed, then we start a newline and indent it
+                    // according to the current indentation level.
+                    Mode::Broken | Mode::ForcedBroken => {
+                        writer.str_write(broken)?;
+                        writer.str_write("\n")?;
+                        for _ in 0..indent {
+                            writer.str_write(" ")?;
+                        }
+                        width = indent;
+                    }
+                    // If the mode doesn't require the break to be broken, then its
+                    // unbroken string is printed as if it were a normal string;
+                    // also updating the width of the current line.
+                    Mode::Unbroken | Mode::ForcedUnbroken => {
+                        writer.str_write(unbroken)?;
+                        width += unbroken.len() as isize
+                    }
+                },
+
+                // Strings are printed as they are and the current width is
+                // increased accordingly.
+                Document::String(s) => {
+                    width += s.len() as isize;
+                    writer.str_write(s)?;
+                }
+
+                Document::EcoString(s) => {
+                    width += s.len() as isize;
+                    writer.str_write(s)?;
+                }
+
+                Document::Str(s) => {
+                    width += s.len() as isize;
+                    writer.str_write(s)?;
+                }
+
+                // If multiple documents need to be printed, then they are all
+                // pushed to the front of the queue and will be printed one by one.
+                Document::Vec(vec) => {
+                    // Just like `fits`, the elements will be pushed _on the front_
+                    // of the queue. In order to keep their original order they need
+                    // to be pushed in reverse order.
+                    for doc in vec.iter().rev() {
+                        cmds.push_front(Cmd::Doc { indent, mode, doc });
+                    }
+                }
+
+                Document::Annotated(doc, annotation) => {
+                    writer.enter(annotation)?;
+                    // since we push to the front, we have to push the AnnotationExit first.
+                    cmds.push_front(Cmd::AnnotationExit { annotation });
+                    cmds.push_front(Cmd::Doc { indent, mode, doc });
+                }
+
+                // A `Nest` document doesn't result in anything being printed, its
+                // only effect is to increase the current nesting level for the
+                // wrapped document [tag:format-nest].
+                Document::Nest(i, nest_mode, condition, doc) => match (condition, mode) {
+                    // The nesting is only applied under two conditions:
+                    // - either the nesting condition is `Always`.
+                    // - or the condition is `IfBroken` and the group was actually
+                    //   broken (that is, the current mode is `Broken`).
+                    (NestCondition::Always, _) | (NestCondition::IfBroken, Mode::Broken) => {
+                        let new_indent = match nest_mode {
+                            NestMode::Increase => indent + i,
+                            NestMode::Set => *i,
+                        };
+                        cmds.push_front(Cmd::Doc {
+                            indent: new_indent,
+                            mode,
+                            doc,
+                        })
+                    }
+                    // If none of the above conditions is met, then the nesting is
+                    // not applied.
+                    _ => cmds.push_front(Cmd::Doc { indent, mode, doc }),
+                },
+
+                Document::Group(doc) => {
+                    // When we see a group we first try and see if it can fit on a
+                    // single line without breaking any break; that is why we use
+                    // the `Unbroken` mode here: we want to try to fit everything on
+                    // a single line.
+                    let group_docs = im::vector![Cmd::Doc {
+                        indent,
+                        mode: Mode::Unbroken,
+                        doc: doc.as_ref()
+                    }];
+                    if fits(limit, width, group_docs) {
+                        // If everything can stay on a single line we print the
+                        // wrapped document with the `Unbroken` mode, leaving all
+                        // the group's break as unbroken.
+                        cmds.push_front(Cmd::Doc {
+                            indent,
+                            mode: Mode::Unbroken,
+                            doc,
+                        });
+                    } else {
+                        // Otherwise, we need to break the group. We print the
+                        // wrapped document changing its mode to `Broken` so that
+                        // all its breaks will be split on newlines.
+                        cmds.push_front(Cmd::Doc {
+                            indent,
+                            mode: Mode::Broken,
+                            doc,
+                        });
+                    }
+                }
+
+                // `ForceBroken` and `NextBreakFits` only change the way the `fit`
+                // function works but do not actually change the formatting of a
+                // document by themselves. That's why when we run into those we
+                // just go on printing the wrapped document without altering the
+                // current mode.
+                Document::ForceBroken(doc) | Document::NextBreakFits(doc, _) => {
+                    cmds.push_front(Cmd::Doc { indent, mode, doc });
                 }
             },
 
-            // Strings are printed as they are and the current width is
-            // increased accordingly.
-            Document::String(s) => {
-                width += s.len() as isize;
-                writer.str_write(s)?;
-            }
-
-            Document::EcoString(s) => {
-                width += s.len() as isize;
-                writer.str_write(s)?;
-            }
-
-            Document::Str(s) => {
-                width += s.len() as isize;
-                writer.str_write(s)?;
-            }
-
-            // If multiple documents need to be printed, then they are all
-            // pushed to the front of the queue and will be printed one by one.
-            Document::Vec(vec) => {
-                // Just like `fits`, the elements will be pushed _on the front_
-                // of the queue. In order to keep their original order they need
-                // to be pushed in reverse order.
-                for doc in vec.iter().rev() {
-                    docs.push_front((indent, mode, doc));
-                }
-            }
-
-            // A `Nest` document doesn't result in anything being printed, its
-            // only effect is to increase the current nesting level for the
-            // wrapped document [tag:format-nest].
-            Document::Nest(i, nest_mode, condition, doc) => match (condition, mode) {
-                // The nesting is only applied under two conditions:
-                // - either the nesting condition is `Always`.
-                // - or the condition is `IfBroken` and the group was actually
-                //   broken (that is, the current mode is `Broken`).
-                (NestCondition::Always, _) | (NestCondition::IfBroken, Mode::Broken) => {
-                    let new_indent = match nest_mode {
-                        NestMode::Increase => indent + i,
-                        NestMode::Set => *i,
-                    };
-                    docs.push_front((new_indent, mode, doc))
-                }
-                // If none of the above conditions is met, then the nesting is
-                // not applied.
-                _ => docs.push_front((indent, mode, doc)),
-            },
-
-            Document::Group(doc) => {
-                // When we see a group we first try and see if it can fit on a
-                // single line without breaking any break; that is why we use
-                // the `Unbroken` mode here: we want to try to fit everything on
-                // a single line.
-                let group_docs = im::vector![(indent, Mode::Unbroken, doc.as_ref())];
-                if fits(limit, width, group_docs) {
-                    // If everything can stay on a single line we print the
-                    // wrapped document with the `Unbroken` mode, leaving all
-                    // the group's break as unbroken.
-                    docs.push_front((indent, Mode::Unbroken, doc));
-                } else {
-                    // Otherwise, we need to break the group. We print the
-                    // wrapped document changing its mode to `Broken` so that
-                    // all its breaks will be split on newlines.
-                    docs.push_front((indent, Mode::Broken, doc));
-                }
-            }
-
-            // `ForceBroken` and `NextBreakFits` only change the way the `fit`
-            // function works but do not actually change the formatting of a
-            // document by themselves. That's why when we run into those we
-            // just go on printing the wrapped document without altering the
-            // current mode.
-            Document::ForceBroken(document) | Document::NextBreakFits(document, _) => {
-                docs.push_front((indent, mode, document));
-            }
+            Cmd::AnnotationExit { annotation } => writer.exit(annotation)?,
         }
     }
     Ok(())
@@ -625,18 +828,33 @@ impl<'a> Document<'a> {
     }
 
     pub fn to_pretty_string(self, limit: isize) -> String {
-        let mut buffer = String::new();
-        self.pretty_print(limit, &mut buffer)
+        let mut writer = TextWriter(String::new());
+        self.pretty_print(limit, &mut writer)
             .expect("Writing to string buffer failed");
-        buffer
+        writer.0
+    }
+
+    pub fn to_html_string(self, limit: isize) -> String {
+        let mut writer = HtmlWriter(String::new());
+        self.pretty_print(limit, &mut writer)
+            .expect("Writing to string buffer failed");
+        writer.0
     }
 
     pub fn surround(self, open: impl Documentable<'a>, closed: impl Documentable<'a>) -> Self {
         open.to_doc().append(self).append(closed)
     }
 
-    pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
-        let docs = im::vector![(0, Mode::Unbroken, self)];
+    pub fn annotate(self, annotation: Annotation) -> Self {
+        Self::Annotated(Box::new(self), annotation)
+    }
+
+    pub fn pretty_print(&self, limit: isize, writer: &mut impl DocumentWriter) -> Result<()> {
+        let docs = im::vector![Cmd::Doc {
+            indent: 0,
+            mode: Mode::Unbroken,
+            doc: self
+        }];
         format(writer, limit, 0, docs)?;
         Ok(())
     }
@@ -652,7 +870,11 @@ impl<'a> Document<'a> {
             Str(s) => s.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
+            ForceBroken(d)
+            | Nest(_, _, _, d)
+            | Group(d)
+            | NextBreakFits(d, _)
+            | Annotated(d, _) => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }
