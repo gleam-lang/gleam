@@ -715,18 +715,10 @@ impl<'module> Generator<'module> {
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
-        let scope_position = self.scope_position;
-        let function_position = self.function_position;
-
-        self.scope_position = Position::NotTail;
-        self.function_position = Position::NotTail;
         let arguments = arguments
             .iter()
-            .map(|element| self.wrap_expression(&element.value))
+            .map(|element| self.not_in_tail_position(|gen| gen.wrap_expression(&element.value)))
             .try_collect()?;
-
-        self.function_position = function_position;
-        self.scope_position = scope_position;
 
         self.call_with_doc_args(fun, arguments)
     }
@@ -986,35 +978,21 @@ impl<'module> Generator<'module> {
     }
 
     fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
-        let scope_position = self.scope_position;
-        self.scope_position = Position::NotTail;
-
         let message = match message {
-            Some(m) => self.expression(m)?,
+            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("This has not yet been implemented"),
         };
         let doc = self.throw_error("todo", &message, *location, vec![]);
-
-        // Reset tail position so later values are returned as needed. i.e.
-        // following clauses in a case expression.
-        self.scope_position = scope_position;
 
         Ok(doc)
     }
 
     fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
-        let scope_position = self.scope_position;
-        self.scope_position = Position::NotTail;
-
         let message = match message {
-            Some(m) => self.expression(m)?,
+            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("panic expression evaluated"),
         };
         let doc = self.throw_error("panic", &message, *location, vec![]);
-
-        // Reset tail position so later values are returned as needed. i.e.
-        // following clauses in a case expression.
-        self.scope_position = scope_position;
 
         Ok(doc)
     }
