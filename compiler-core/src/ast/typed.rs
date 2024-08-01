@@ -49,7 +49,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         typ: Arc<Type>,
         is_capture: bool,
-        args: Vec<Arg<Arc<Type>>>,
+        args: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,
     },

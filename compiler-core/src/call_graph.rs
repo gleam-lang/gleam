@@ -4,11 +4,11 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use crate::ast::{ModuleConstant, UntypedModuleConstant};
 use crate::{
     ast::{
         AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
-        UntypedExpr, UntypedFunction, UntypedPattern, UntypedStatement,
+        UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant, UntypedPattern,
+        UntypedStatement,
     },
     type_::Error,
     Result,
@@ -28,7 +28,7 @@ struct CallGraphBuilder<'a> {
 pub enum CallGraphNode {
     Function(UntypedFunction),
 
-    ModuleConstant(ModuleConstant<(), ()>),
+    ModuleConstant(UntypedModuleConstant),
 }
 
 impl<'a> CallGraphBuilder<'a> {
@@ -389,7 +389,7 @@ impl<'a> CallGraphBuilder<'a> {
         }
     }
 
-    fn guard(&mut self, guard: &'a ClauseGuard<(), ()>) {
+    fn guard(&mut self, guard: &'a UntypedClauseGuard) {
         match guard {
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. }

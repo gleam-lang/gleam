@@ -310,7 +310,7 @@ pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     PatternSpread {
         spread_location: SrcSpan,
-        arguments: &'a Vec<CallArg<Pattern<Arc<Type>>>>,
+        arguments: &'a Vec<CallArg<TypedPattern>>,
     },
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),

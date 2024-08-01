@@ -276,7 +276,7 @@ pub trait GetLiteralValue {
     fn as_int_literal(&self) -> Option<i64>;
 }
 
-impl GetLiteralValue for crate::ast::Pattern<Arc<Type>> {
+impl GetLiteralValue for crate::ast::TypedPattern {
     fn as_int_literal(&self) -> Option<i64> {
         match self {
             crate::ast::Pattern::Int { value, .. } => {

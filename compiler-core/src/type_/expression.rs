@@ -1995,10 +1995,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_guard_record_access(
         &mut self,
-        container: ClauseGuard<Arc<Type>, EcoString>,
+        container: TypedClauseGuard,
         label: EcoString,
         location: SrcSpan,
-    ) -> Result<ClauseGuard<Arc<Type>, EcoString>, Error> {
+    ) -> Result<TypedClauseGuard, Error> {
         let container = Box::new(container);
         let container_type = container.type_();
         let (index, label, type_) = self.infer_known_record_access(
@@ -2023,7 +2023,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         label: EcoString,
         location: SrcSpan,
         record_access_erorr: Error,
-    ) -> Result<ClauseGuard<Arc<Type>, EcoString>, Error> {
+    ) -> Result<TypedClauseGuard, Error> {
         let module_access = self
             .infer_module_access(&name, label, &location, location)
             .and_then(|ma| match ma {
@@ -3283,7 +3283,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         location: SrcSpan,
         subject_types: &[Arc<Type>],
-        clauses: &[Clause<TypedExpr, Arc<Type>, EcoString>],
+        clauses: &[TypedClause],
     ) -> Result<(), Error> {
         use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
 
@@ -3471,7 +3471,7 @@ struct UseAssignments {
     /// fn(_use1) { let Box(x) = _use1 }
     /// // ^^^^^ The function arguments
     /// ```
-    function_arguments: Vec<Arg<()>>,
+    function_arguments: Vec<UntypedArg>,
 
     /// With sugar
     /// ```gleam

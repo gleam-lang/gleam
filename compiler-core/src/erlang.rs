@@ -647,7 +647,7 @@ fn bit_array<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> 
 
 fn const_segment<'a>(
     value: &'a TypedConstant,
-    options: &'a [BitArrayOption<TypedConstant>],
+    options: &'a [TypedConstantBitArraySegmentOption],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let document = match value {
@@ -1782,7 +1782,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn pipeline<'a>(
-    assignments: &'a [Assignment<Arc<Type>, TypedExpr>],
+    assignments: &'a [TypedAssignment],
     finally: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {

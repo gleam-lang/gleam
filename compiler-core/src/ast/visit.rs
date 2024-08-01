@@ -49,10 +49,10 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, BitArraySegment, CallArg, Definition, Pattern, SrcSpan,
-    Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
-    TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
-    TypedRecordUpdateArg, TypedStatement, Use,
+    AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, SrcSpan, Statement, TodoKind,
+    TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
+    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
+    TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'ast> {
@@ -419,7 +419,7 @@ pub trait Visit<'ast> {
     fn visit_typed_pattern_bit_array(
         &mut self,
         location: &'ast SrcSpan,
-        segments: &'ast Vec<BitArraySegment<TypedPattern, Arc<Type>>>,
+        segments: &'ast Vec<TypedPatternBitArraySegment>,
     ) {
         visit_typed_pattern_bit_array(self, location, segments);
     }
@@ -1166,7 +1166,7 @@ pub fn visit_typed_pattern_tuple<'a, V>(
 pub fn visit_typed_pattern_bit_array<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    segments: &'a Vec<BitArraySegment<TypedPattern, Arc<Type>>>,
+    segments: &'a Vec<TypedPatternBitArraySegment>,
 ) where
     V: Visit<'a> + ?Sized,
 {

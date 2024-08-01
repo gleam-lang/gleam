@@ -1,7 +1,7 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
+        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -783,7 +783,7 @@ fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Ho
     }
 }
 
-fn hover_for_function_argument(argument: &Arg<Arc<Type>>, line_numbers: LineNumbers) -> Hover {
+fn hover_for_function_argument(argument: &TypedArg, line_numbers: LineNumbers) -> Hover {
     let type_ = Printer::new().pretty_print(&argument.type_, 0);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
