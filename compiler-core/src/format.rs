@@ -16,6 +16,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
+use std::ops::Deref;
 use std::{cmp::Ordering, sync::Arc};
 use vec1::Vec1;
 
@@ -617,10 +618,19 @@ impl<'comments> Formatter<'comments> {
         publicity: Publicity,
         name: &'a str,
         value: &'a TypedConstant,
+        printer: &mut type_::pretty::Printer,
     ) -> Document<'a> {
-        let type_ = type_::pretty::Printer::new().print(&value.type_());
+        let type_ = printer.print(&value.type_());
         let attributes = AttributesPrinter::new().set_internal(publicity);
-        docvec![attributes, pub_(publicity), "const ", name, ": ", type_]
+        docvec![
+            attributes,
+            pub_(publicity),
+            keyword("const"),
+            " ",
+            variable(name),
+            ": ",
+            type_
+        ]
     }
 
     fn documented_definition<'a>(&mut self, s: &'a UntypedDefinition) -> Document<'a> {
@@ -653,8 +663,8 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let head = module
             .as_ref()
-            .map(|qualifier| qualifier.to_doc().append(".").append(name))
-            .unwrap_or_else(|| name.to_doc());
+            .map(|qualifier| variable(qualifier).append(".").append(title(name)))
+            .unwrap_or_else(|| title(name));
 
         if args.is_empty() {
             head
@@ -665,7 +675,7 @@ impl<'comments> Formatter<'comments> {
 
     fn type_ast<'a>(&mut self, t: &'a TypeAst) -> Document<'a> {
         match t {
-            TypeAst::Hole(TypeAstHole { name, .. }) => name.to_doc(),
+            TypeAst::Hole(TypeAstHole { name, .. }) => variable(name),
 
             TypeAst::Constructor(TypeAstConstructor {
                 name,
@@ -678,14 +688,13 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 return_: retrn,
                 location,
-            }) => "fn"
-                .to_doc()
+            }) => keyword("fn")
                 .append(self.type_arguments(args, location))
                 .group()
                 .append(" ->")
                 .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
 
-            TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
+            TypeAst::Var(TypeAstVar { name, .. }) => variable(name),
 
             TypeAst::Tuple(TypeAstTuple { elems, location }) => {
                 "#".to_doc().append(self.type_arguments(elems, location))
@@ -713,11 +722,18 @@ impl<'comments> Formatter<'comments> {
             .set_internal(publicity)
             .to_doc();
 
-        let head = docvec![attributes, pub_(publicity), "type ", name];
+        let head = docvec![
+            attributes,
+            pub_(publicity),
+            keyword("type"),
+            " ",
+            title(name)
+        ];
+
         let head = if args.is_empty() {
             head
         } else {
-            let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
+            let args = args.iter().map(|(_, e)| variable(e)).collect_vec();
             head.append(self.wrap_args(args, location.end).group())
         };
 
@@ -1590,6 +1606,56 @@ impl<'comments> Formatter<'comments> {
         commented(doc_comments.append(doc).group(), comments)
     }
 
+    /// like record_constructor, but add annotations, and print the type using
+    /// the provided `printer` instead of the `TypeAst`
+    pub fn docs_record_constructor<'a>(
+        &mut self,
+        constructor: &'a TypedRecordConstructor,
+        printer: &mut type_::pretty::Printer,
+    ) -> Document<'a> {
+        let comments = self.pop_comments(constructor.location.start);
+        let doc_comments = self.doc_comments(constructor.location.start);
+
+        let doc = if constructor.arguments.is_empty() {
+            if self.any_comments(constructor.location.end) {
+                title(constructor.name.as_str())
+                    .append(self.wrap_args(vec![], constructor.location.end))
+                    .group()
+            } else {
+                title(constructor.name.as_str())
+            }
+        } else {
+            let args = constructor
+                .arguments
+                .iter()
+                .map(
+                    |RecordConstructorArg {
+                         label,
+                         location,
+                         type_,
+                         ..
+                     }| {
+                        let arg_comments = self.pop_comments(location.start);
+                        let arg = match label {
+                            Some((_, l)) => variable(l).append(": ").append(printer.print(type_)),
+                            None => printer.print(type_),
+                        };
+
+                        commented(
+                            self.doc_comments(location.start).append(arg).group(),
+                            arg_comments,
+                        )
+                    },
+                )
+                .collect_vec();
+            title(constructor.name.as_str())
+                .append(self.wrap_args(args, constructor.location.end))
+                .group()
+        };
+
+        commented(doc_comments.append(doc).group(), comments)
+    }
+
     pub fn custom_type<'a, A>(&mut self, ct: &'a CustomType<A>) -> Document<'a> {
         let _ = self.pop_empty_lines(ct.location.end);
 
@@ -1635,6 +1701,65 @@ impl<'comments> Formatter<'comments> {
         doc.append(inner).append(line()).append("}")
     }
 
+    /// like `custom_type`, but add annotations, and print the type using the
+    // provided `printer` instead of the `TypeAst`.
+    pub fn docs_custom_type<'a>(
+        &mut self,
+        ct: &'a TypedCustomType,
+        printer: &mut type_::pretty::Printer,
+    ) -> Document<'a> {
+        let _ = self.pop_empty_lines(ct.location.end);
+
+        let attributes = AttributesPrinter::new()
+            .set_deprecation(&ct.deprecation)
+            .set_internal(ct.publicity)
+            .to_doc();
+
+        let doc = attributes
+            .append(pub_(ct.publicity))
+            .append(keyword(if ct.opaque { "opaque type" } else { "type" }))
+            .append(" ")
+            .append(if ct.parameters.is_empty() {
+                title(Document::EcoString(ct.name.clone()))
+            } else {
+                let args = ct
+                    .parameters
+                    .iter()
+                    .map(|(_loc, name)| variable(name))
+                    .collect_vec();
+                title(Document::EcoString(ct.name.clone()))
+                    .append(self.wrap_args(args, ct.location.end))
+                    .group()
+            });
+
+        if ct.constructors.is_empty() {
+            return doc;
+        }
+        let doc = doc.append(" {");
+
+        // it is important that printer.names has been setup prior to here,
+        // since otherwise the type variable names wont line up between the
+        // ct.parameters and the ones the printer will generate!
+        let inner = concat(ct.constructors.iter().map(|c| {
+            if self.pop_empty_lines(c.location.start) {
+                lines(2)
+            } else {
+                line()
+            }
+            .append(self.docs_record_constructor(c, printer))
+        }));
+
+        // Add any trailing comments
+        let inner = match printed_comments(self.pop_comments(ct.end_position), false) {
+            Some(comments) => inner.append(line()).append(comments),
+            None => inner,
+        }
+        .nest(INDENT)
+        .group();
+
+        doc.append(inner).append(line()).append("}")
+    }
+
     pub fn docs_opaque_custom_type<'a>(
         &mut self,
         publicity: Publicity,
@@ -1647,12 +1772,13 @@ impl<'comments> Formatter<'comments> {
 
         attributes
             .append(pub_(publicity))
-            .append("opaque type ")
+            .append(keyword("opaque type"))
+            .append(" ")
             .append(if args.is_empty() {
-                name.to_doc()
+                title(name)
             } else {
-                let args = args.iter().map(|(_, e)| e.to_doc()).collect_vec();
-                name.to_doc().append(self.wrap_args(args, location.end))
+                let args = args.iter().map(|(_, e)| variable(e)).collect_vec();
+                title(name).append(self.wrap_args(args, location.end))
             })
     }
 
@@ -1663,17 +1789,18 @@ impl<'comments> Formatter<'comments> {
         args: &'a [TypedArg],
         return_type: Arc<Type>,
         location: &SrcSpan,
+        printer: &mut type_::pretty::Printer,
     ) -> Document<'a> {
-        let mut printer = type_::pretty::Printer::new();
-        let fn_args = self.docs_fn_args(args, &mut printer, location);
+        let fn_args = self.docs_fn_args(args, printer, location);
         let return_type = printer.print(&return_type);
 
         let attributes = AttributesPrinter::new().set_internal(publicity);
         docvec![
             attributes,
             pub_(publicity),
-            "fn ",
-            name,
+            keyword("fn"),
+            " ",
+            title(name),
             fn_args,
             " -> ",
             return_type
@@ -1700,13 +1827,19 @@ impl<'comments> Formatter<'comments> {
 
     fn docs_fn_arg_name<'a>(&mut self, arg: &'a TypedArg) -> Document<'a> {
         match &arg.names {
-            ArgNames::Named { name, .. } => name.to_doc(),
-            ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
+            ArgNames::Named { name, .. } => variable(name),
+            ArgNames::NamedLabelled { label, name, .. } => {
+                docvec![variable(label), " ", variable(name)]
+            }
             // We remove the underscore from discarded function arguments since we don't want to
             // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
-            ArgNames::Discard { name, .. } => name.strip_prefix('_').unwrap_or(name).to_doc(),
+            ArgNames::Discard { name, .. } => variable(name.strip_prefix('_').unwrap_or(name)),
             ArgNames::LabelledDiscard { label, name, .. } => {
-                docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
+                docvec![
+                    variable(label),
+                    " ",
+                    variable(name.strip_prefix('_').unwrap_or(name))
+                ]
             }
         }
     }
@@ -2646,9 +2779,21 @@ impl<'a> Documentable<'a> for &'a ArgNames {
 
 fn pub_(publicity: Publicity) -> Document<'static> {
     match publicity {
-        Publicity::Public | Publicity::Internal => "pub ".to_doc(),
+        Publicity::Public | Publicity::Internal => keyword("pub").append(" "),
         Publicity::Private => nil(),
     }
+}
+
+fn variable<'a>(variable: impl Documentable<'a>) -> Document<'a> {
+    variable.to_doc().annotate(Annotation::Variable)
+}
+
+fn title<'a>(title: impl Documentable<'a>) -> Document<'a> {
+    title.to_doc().annotate(Annotation::Title)
+}
+
+fn keyword<'a>(keyword: impl Documentable<'a>) -> Document<'a> {
+    keyword.to_doc().annotate(Annotation::Keyword)
 }
 
 impl<'a> Documentable<'a> for &'a UnqualifiedImport {

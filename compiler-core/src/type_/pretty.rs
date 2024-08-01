@@ -1,9 +1,10 @@
-use super::{Type, TypeVar};
+use super::{prelude::is_prelude_module, Publicity, Type, TypeVar};
 use crate::{
     docvec,
     pretty::{nil, *},
 };
 use ecow::EcoString;
+use itertools::Itertools;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -22,6 +23,8 @@ pub struct Printer {
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
     printed_types: im::HashMap<EcoString, EcoString>,
+    // the current package/module, to generate relative links if we are in the same package.
+    context: Option<(EcoString, EcoString)>,
 }
 
 impl Printer {
@@ -31,6 +34,10 @@ impl Printer {
 
     pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
         self.names = names;
+    }
+
+    pub fn with_context(&mut self, package: EcoString, module: EcoString) {
+        self.context = Some((package, module));
     }
 
     /// Render a Type as a well formatted string.
@@ -47,31 +54,35 @@ impl Printer {
             .to_pretty_string(80)
     }
 
+    /// Render a Type as a well formatted, annotated HTML snippet.
+    pub fn doc_pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
+        let mut buffer = String::with_capacity(initial_indent);
+        for _ in 0..initial_indent {
+            buffer.push(' ');
+        }
+        buffer
+            .to_doc()
+            .append(self.print(typ))
+            .nest(initial_indent as isize)
+            .to_html_string(80)
+    }
+
     // TODO: have this function return a Document that borrows from the Type.
     // Is this possible? The lifetime would have to go through the Arc<Refcell<Type>>
     // for TypeVar::Link'd types.
     pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
         match typ {
             Type::Named {
-                name, args, module, ..
-            } => {
-                let doc = if self.name_clashes_if_unqualified(name, module) {
-                    qualify_type_name(module, name)
-                } else {
-                    let _ = self.printed_types.insert(name.clone(), module.clone());
-                    name.to_doc()
-                };
-                if args.is_empty() {
-                    doc
-                } else {
-                    doc.append("(")
-                        .append(self.args_to_gleam_doc(args))
-                        .append(")")
-                }
-            }
+                publicity,
+                package,
+                module,
+                name,
+                args,
+                ..
+            } => self.named_type(*publicity, package, module, name, args),
 
-            Type::Fn { args, retrn } => "fn("
-                .to_doc()
+            Type::Fn { args, retrn } => keyword("fn")
+                .append("(")
                 .append(self.args_to_gleam_doc(args))
                 .append(") ->")
                 .append(
@@ -95,6 +106,68 @@ impl Printer {
         }
     }
 
+    fn named_type(
+        &mut self,
+        publicity: Publicity,
+        package: &EcoString,
+        module: &EcoString,
+        name: &EcoString,
+        args: &[Arc<Type>],
+    ) -> Document<'static> {
+        let doc = if self.name_clashes_if_unqualified(name, module) {
+            docvec![variable(module), ".", title(name)]
+        } else {
+            let _ = self.printed_types.insert(name.clone(), module.clone());
+            title(name)
+        };
+
+        let doc = if !is_prelude_module(module) && publicity.is_public() {
+            // generate a relative link inside the same package, or a link to hex.
+            let target = match &self.context {
+                Some((ctx_package, ctx_module)) if package == ctx_package => {
+                    if module == ctx_module {
+                        // same module, just generate an anchor link
+                        format!("#{}", name)
+                    } else {
+                        // go back, then go forward. TODO: links could be simplified.
+                        let backwards = 1 + ctx_module.matches('/').count();
+                        format!(
+                            "{}/{}#{}",
+                            std::iter::repeat("..").take(backwards).join("/"),
+                            module,
+                            name
+                        )
+                    }
+                }
+
+                _ => format!("https://hexdocs.pm/{0}/{1}.html#{2}", package, module, name),
+            };
+
+            let title = if !package.is_empty() && !module.is_empty() {
+                format!("{1}.{{type {2}}}, Package: {0}", package, module, name)
+            } else if !module.is_empty() {
+                format!("{0}.{{type {1}}}", module, name)
+            } else {
+                String::new()
+            };
+
+            doc.annotate(Annotation::Meta {
+                link: target.into(),
+                hover_text: title.into(),
+            })
+        } else {
+            doc
+        };
+
+        if args.is_empty() {
+            doc
+        } else {
+            doc.append("(")
+                .append(self.args_to_gleam_doc(args))
+                .append(")")
+        }
+    }
+
     fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
         match typ {
             TypeVar::Link { type_: ref typ, .. } => self.print(typ),
@@ -106,13 +179,13 @@ impl Printer {
         match self.names.get(&id) {
             Some(n) => {
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                n.to_doc()
+                variable(n)
             }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                n.to_doc()
+                variable(n)
             }
         }
     }
@@ -156,9 +229,16 @@ impl Printer {
     }
 }
 
-fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
-    let type_name = Document::String(type_name.to_string());
-    docvec![Document::String(module.to_string()), ".", type_name]
+fn variable<'a>(name: impl Documentable<'a>) -> Document<'a> {
+    name.to_doc().annotate(Annotation::Variable)
+}
+
+fn keyword<'a>(keyword: impl Documentable<'a>) -> Document<'a> {
+    keyword.to_doc().annotate(Annotation::Keyword)
+}
+
+fn title<'a>(title: impl Documentable<'a>) -> Document<'a> {
+    title.to_doc().annotate(Annotation::Title)
 }
 
 #[test]

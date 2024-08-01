@@ -18,7 +18,7 @@ use crate::{
     package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
-    type_::Deprecation,
+    type_::{self, Deprecation},
     version::COMPILER_VERSION,
 };
 use askama::Template;
@@ -164,7 +164,14 @@ pub fn generate_html<IO: FileSystemReader>(
             .definitions
             .iter()
             .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| function(&source_links, statement))
+            .flat_map(|statement| {
+                function(
+                    &source_links,
+                    statement,
+                    config.name.clone(),
+                    module.name.clone(),
+                )
+            })
             .sorted()
             .collect();
 
@@ -173,7 +180,14 @@ pub fn generate_html<IO: FileSystemReader>(
             .definitions
             .iter()
             .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| type_(&source_links, statement))
+            .flat_map(|statement| {
+                type_(
+                    &source_links,
+                    statement,
+                    config.name.clone(),
+                    module.name.clone(),
+                )
+            })
             .sorted()
             .collect();
 
@@ -182,7 +196,14 @@ pub fn generate_html<IO: FileSystemReader>(
             .definitions
             .iter()
             .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| constant(&source_links, statement))
+            .flat_map(|statement| {
+                constant(
+                    &source_links,
+                    statement,
+                    config.name.clone(),
+                    module.name.clone(),
+                )
+            })
             .sorted()
             .collect();
 
@@ -512,8 +533,12 @@ fn import_synonyms(parent: &str, child: &str) -> String {
 fn function<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
+    package: EcoString,
+    module: EcoString,
 ) -> Option<DocsFunction<'a>> {
     let mut formatter = format::Formatter::new();
+    let mut printer = type_::pretty::Printer::new();
+    printer.with_context(package, module);
 
     match statement {
         Definition::Function(Function {
@@ -536,7 +561,14 @@ fn function<'a>(
                 text_documentation: text_documentation(doc),
                 signature: print(
                     formatter
-                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
+                        .docs_fn_signature(
+                            Publicity::Public,
+                            name,
+                            args,
+                            ret.clone(),
+                            location,
+                            &mut printer,
+                        )
                         .group(),
                 ),
                 source_url: source_links.url(*location),
@@ -594,44 +626,77 @@ fn render_markdown(text: &str, source: MarkdownSource) -> String {
     s
 }
 
-fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Option<Type<'a>> {
+fn type_<'a>(
+    source_links: &SourceLinker,
+    statement: &'a TypedDefinition,
+    package: EcoString,
+    module: EcoString,
+) -> Option<Type<'a>> {
     let mut formatter = format::Formatter::new();
+    let mut printer = type_::pretty::Printer::new();
+    printer.with_context(package, module);
 
     match statement {
-        Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => Some(Type {
-            name: &ct.name,
-            // TODO: Don't use the same printer for docs as for the formatter.
-            // We are not interested in showing the exact implementation in the
-            // documentation and we could add things like colours, etc.
-            definition: print(formatter.custom_type(ct)),
-            documentation: markdown_documentation(&ct.documentation),
-            text_documentation: text_documentation(&ct.documentation),
-            deprecation_message: match &ct.deprecation {
-                Deprecation::NotDeprecated => "".to_string(),
-                Deprecation::Deprecated { message } => message.to_string(),
-            },
-            constructors: ct
-                .constructors
-                .iter()
-                .map(|constructor| TypeConstructor {
-                    definition: print(formatter.record_constructor(constructor)),
-                    documentation: markdown_documentation(&constructor.documentation),
-                    text_documentation: text_documentation(&constructor.documentation),
-                    arguments: constructor
-                        .arguments
-                        .iter()
-                        .filter_map(|arg| arg.label.as_ref().map(|(_, label)| (arg, label)))
-                        .map(|(argument, label)| TypeConstructorArg {
-                            name: label.trim_end().to_string(),
-                            doc: markdown_documentation(&argument.doc),
-                        })
-                        .filter(|arg| !arg.doc.is_empty())
-                        .collect(),
-                })
-                .collect(),
-            source_url: source_links.url(ct.location),
-            opaque: ct.opaque,
-        }),
+        Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => {
+            // since we use the type printer for the constructors, but just
+            // print the actual variable names above we need to prepare the
+            // names map for the printer.
+            printer.with_names({
+                let mut names = im::HashMap::<u64, EcoString>::new();
+
+                let pairs = ct.parameters.iter().zip(ct.typed_parameters.iter());
+                for ((_, name), type_param) in pairs {
+                    if let Type::Var { type_ } = type_param.as_ref() {
+                        match type_.borrow().deref() {
+                            type_::TypeVar::Unbound { id } | type_::TypeVar::Generic { id } => {
+                                let _ = names.insert(*id, name.clone());
+                            }
+
+                            type_::TypeVar::Link { .. } => continue,
+                        }
+                    }
+                }
+
+                names
+            });
+
+            Some(Type {
+                name: &ct.name,
+                // TODO: Don't use the same printer for docs as for the formatter.
+                // We are not interested in showing the exact implementation in the
+                // documentation and we could add things like colours, etc.
+                definition: print(formatter.docs_custom_type(ct, &mut printer)),
+                documentation: markdown_documentation(&ct.documentation),
+                text_documentation: text_documentation(&ct.documentation),
+                deprecation_message: match &ct.deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
+                },
+                constructors: ct
+                    .constructors
+                    .iter()
+                    .map(|constructor| TypeConstructor {
+                        definition: print(
+                            formatter.docs_record_constructor(constructor, &mut printer),
+                        ),
+                        documentation: markdown_documentation(&constructor.documentation),
+                        text_documentation: text_documentation(&constructor.documentation),
+                        arguments: constructor
+                            .arguments
+                            .iter()
+                            .filter_map(|arg| arg.label.as_ref().map(|(_, label)| (arg, label)))
+                            .map(|(argument, label)| TypeConstructorArg {
+                                name: label.trim_end().to_string(),
+                                doc: markdown_documentation(&argument.doc),
+                            })
+                            .filter(|arg| !arg.doc.is_empty())
+                            .collect(),
+                    })
+                    .collect(),
+                source_url: source_links.url(ct.location),
+                opaque: ct.opaque,
+            })
+        }
 
         Definition::CustomType(CustomType {
             publicity: Publicity::Public,
@@ -694,8 +759,13 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
 fn constant<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
+    package: EcoString,
+    module: EcoString,
 ) -> Option<Constant<'a>> {
     let mut formatter = format::Formatter::new();
+    let mut printer = type_::pretty::Printer::new();
+    printer.with_context(package, module);
+
     match statement {
         Definition::ModuleConstant(ModuleConstant {
             publicity: Publicity::Public,
@@ -706,7 +776,12 @@ fn constant<'a>(
             ..
         }) => Some(Constant {
             name,
-            definition: print(formatter.docs_const_expr(Publicity::Public, name, value)),
+            definition: print(formatter.docs_const_expr(
+                Publicity::Public,
+                name,
+                value,
+                &mut printer,
+            )),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             source_url: source_links.url(*location),
@@ -717,7 +792,7 @@ fn constant<'a>(
 }
 
 fn print(doc: pretty::Document<'_>) -> String {
-    doc.to_pretty_string(MAX_COLUMNS)
+    doc.to_html_string(MAX_COLUMNS)
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Clone)]
