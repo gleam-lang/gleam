@@ -2873,7 +2873,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 body,
                 return_annotation,
                 ..
-            } => self.infer_fn_with_call_context(
+            } if arguments.len() == args.len() => self.infer_fn_with_call_context(
                 arguments,
                 &args,
                 body,
