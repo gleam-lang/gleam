@@ -1,11 +1,11 @@
-use std::sync::{Arc, OnceLock};
+use std::sync::OnceLock;
 
 use super::{expression::is_js_scalar, *};
 use crate::{
     analyse::Inferred,
     javascript::endianness::Endianness,
     strings::convert_string_escape_chars,
-    type_::{FieldMap, PatternConstructor, Type},
+    type_::{FieldMap, PatternConstructor},
 };
 
 pub static ASSIGNMENT_VAR: &str = "$";
@@ -669,7 +669,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn sized_bit_array_segment_details(
-        segment: &BitArraySegment<Pattern<Arc<Type>>, Arc<Type>>,
+        segment: &TypedPatternBitArraySegment,
     ) -> Result<SizedBitArraySegmentDetails, Error> {
         use BitArrayOption as Opt;
 

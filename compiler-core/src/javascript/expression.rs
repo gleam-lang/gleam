@@ -1432,7 +1432,7 @@ pub(crate) fn constant_expression<'a>(
 
 fn bit_array<'a>(
     tracker: &mut UsageTracker,
-    segments: &'a [BitArraySegment<TypedConstant, Arc<Type>>],
+    segments: &'a [TypedConstantBitArraySegment],
     mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
 ) -> Output<'a> {
     tracker.bit_array_literal_used = true;
@@ -1510,7 +1510,7 @@ struct SizedBitArraySegmentDetails<'a> {
 }
 
 fn sized_bit_array_segment_details<'a>(
-    segment: &'a BitArraySegment<TypedConstant, Arc<Type>>,
+    segment: &'a TypedConstantBitArraySegment,
     tracker: &mut UsageTracker,
     constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
 ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {

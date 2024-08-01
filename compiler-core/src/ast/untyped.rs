@@ -37,7 +37,7 @@ pub enum UntypedExpr {
         /// The byte location of the end of the function head before the opening bracket
         end_of_head_byte_index: u32,
         is_capture: bool,
-        arguments: Vec<Arg<()>>,
+        arguments: Vec<UntypedArg>,
         body: Vec1<UntypedStatement>,
         return_annotation: Option<TypeAst>,
     },

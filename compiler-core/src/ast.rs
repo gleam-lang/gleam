@@ -2128,9 +2128,9 @@ pub enum TodoKind {
 pub struct GroupedStatements {
     pub functions: Vec<UntypedFunction>,
     pub constants: Vec<UntypedModuleConstant>,
-    pub custom_types: Vec<CustomType<()>>,
-    pub imports: Vec<Import<()>>,
-    pub type_aliases: Vec<TypeAlias<()>>,
+    pub custom_types: Vec<UntypedCustomType>,
+    pub imports: Vec<UntypedImport>,
+    pub type_aliases: Vec<UntypedTypeAlias>,
 }
 
 impl GroupedStatements {

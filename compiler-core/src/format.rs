@@ -2123,8 +2123,8 @@ impl<'comments> Formatter<'comments> {
 
     fn list_pattern<'a>(
         &mut self,
-        elements: &'a [Pattern<()>],
-        tail: &'a Option<Box<Pattern<()>>>,
+        elements: &'a [UntypedPattern],
+        tail: &'a Option<Box<UntypedPattern>>,
     ) -> Document<'a> {
         if elements.is_empty() {
             return match tail {
