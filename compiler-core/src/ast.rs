@@ -1942,27 +1942,6 @@ impl<A> HasLocation for Pattern<A> {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum AssignmentKind {
-    // let x = ...
-    Let,
-    // let assert x = ...
-    Assert { location: SrcSpan },
-}
-
-impl AssignmentKind {
-    /// Returns `true` if the assignment kind is [`Assert`].
-    ///
-    /// [`Assert`]: AssignmentKind::Assert
-    #[must_use]
-    pub fn is_assert(&self) -> bool {
-        match self {
-            Self::Assert { .. } => true,
-            Self::Let => false,
-        }
-    }
-}
-
 // BitArrays
 
 pub type UntypedExprBitArraySegment = BitArraySegment<UntypedExpr, ()>;
@@ -2291,12 +2270,28 @@ impl TypedStatement {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct AssertAssignment<ExpressionT> {
+    pub location: SrcSpan,
+    pub message: Option<Box<ExpressionT>>,
+}
+
+pub type TypedAssertAssignment = AssertAssignment<TypedExpr>;
+pub type UntypedAssertAssignment = AssertAssignment<UntypedExpr>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Assignment<TypeT, ExpressionT> {
     pub location: SrcSpan,
     pub value: Box<ExpressionT>,
     pub pattern: Pattern<TypeT>,
-    pub kind: AssignmentKind,
+    pub assert: Option<Box<AssertAssignment<ExpressionT>>>,
     pub annotation: Option<TypeAst>,
+}
+
+impl<TypeT, ExpressionT> Assignment<TypeT, ExpressionT> {
+    #[must_use]
+    pub fn is_assert(&self) -> bool {
+        self.assert.is_some()
+    }
 }
 
 pub type TypedAssignment = Assignment<Arc<Type>, TypedExpr>;

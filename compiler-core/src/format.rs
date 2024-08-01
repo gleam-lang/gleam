@@ -862,17 +862,14 @@ impl<'comments> Formatter<'comments> {
         let Assignment {
             pattern,
             value,
-            kind,
+            assert,
             annotation,
             ..
         } = assignment;
 
         let _ = self.pop_empty_lines(pattern.location().end);
 
-        let keyword = match kind {
-            AssignmentKind::Let => "let ",
-            AssignmentKind::Assert { .. } => "let assert ",
-        };
+        let keyword = self.assert_assignment(assert);
 
         let pattern = self.pattern(pattern);
 
@@ -881,11 +878,26 @@ impl<'comments> Formatter<'comments> {
             .map(|a| ": ".to_doc().append(self.type_ast(a)));
 
         let doc = keyword
-            .to_doc()
             .append(pattern.append(annotation).group())
             .append(" =")
             .append(self.assigned_value(value));
         commented(doc, comments)
+    }
+
+    fn assert_assignment<'a>(
+        &mut self,
+        assert: &'a Option<Box<UntypedAssertAssignment>>,
+    ) -> Document<'a> {
+        match assert {
+            None => "let ".to_doc(),
+            Some(inner_assert) => {
+                let mut keyword = "let assert ".to_doc();
+                if let Some(message) = &inner_assert.message {
+                    keyword = keyword.append("as ").append(self.expr(message)).append(" ")
+                }
+                keyword.group()
+            }
+        }
     }
 
     fn expr<'a>(&mut self, expr: &'a UntypedExpr) -> Document<'a> {

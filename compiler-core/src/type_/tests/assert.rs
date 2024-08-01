@@ -1,4 +1,5 @@
 use crate::assert_infer;
+use crate::assert_module_error;
 
 #[test]
 fn empty_list() {
@@ -88,4 +89,33 @@ fn expression2() {
 #[test]
 fn expression3() {
     assert_infer!("let assert 1 = 1", "Int");
+}
+
+#[test]
+fn expression4() {
+    assert_infer!(r#"let assert as "err" x = 1"#, "Int");
+}
+
+#[test]
+fn expression5() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+    let assert as 1 x = 1
+}
+"#
+    );
+}
+
+#[test]
+fn expression6() {
+    assert_infer!(
+        r#"
+        fn(x) {
+            let message = "error"
+            let assert as message [a] = x a
+        }
+    "#,
+        "fn(List(a)) -> a"
+    );
 }

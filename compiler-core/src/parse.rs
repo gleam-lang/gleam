@@ -56,14 +56,14 @@ mod token;
 
 use crate::analyse::Inferred;
 use crate::ast::{
-    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
-    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
-    Module, ModuleConstant, Pattern, Publicity, RecordConstructor, RecordConstructorArg,
-    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
-    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
-    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
-    CAPTURE_VARIABLE,
+    Arg, ArgNames, AssertAssignment, AssignName, Assignment, BinOp, BitArrayOption,
+    BitArraySegment, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function,
+    HasLocation, Import, Module, ModuleConstant, Pattern, Publicity, RecordConstructor,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
+    TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
+    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::parse::extra::ModuleExtra;
@@ -912,13 +912,14 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
-        let kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
-            _ = self.next_tok();
-            AssignmentKind::Assert {
+        let assert = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
+            let (message, assert_end) = self.parse_assert_assignment_message(assert_end)?;
+            Some(Box::new(AssertAssignment {
                 location: SrcSpan::new(assert_start, assert_end),
-            }
+                message,
+            }))
         } else {
-            AssignmentKind::Let
+            None
         };
         let pattern = if let Some(p) = self.parse_pattern()? {
             p
@@ -928,7 +929,11 @@ where
         };
         let annotation = self.parse_type_annotation(&Token::Colon)?;
         let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
-            error: ParseErrorType::ExpectedEqual,
+            error: if assert.is_some() {
+                ParseErrorType::ExpectedAssignmentAssert
+            } else {
+                ParseErrorType::ExpectedEqual
+            },
             location: SrcSpan {
                 start: pattern.location().start,
                 end: pattern.location().end,
@@ -949,8 +954,22 @@ where
             value: Box::new(value),
             pattern,
             annotation,
-            kind,
+            assert,
         }))
+    }
+
+    fn parse_assert_assignment_message(
+        &mut self,
+        end: u32,
+    ) -> Result<(Option<Box<UntypedExpr>>, u32), ParseError> {
+        self.advance(); // consume `assert` token itself
+        if self.maybe_one(&Token::As).is_some() {
+            let msg_expr = self.expect_expression_unit()?;
+            let end = msg_expr.location().end;
+            Ok((Some(Box::new(msg_expr)), end))
+        } else {
+            Ok((None, end))
+        }
     }
 
     // examples:

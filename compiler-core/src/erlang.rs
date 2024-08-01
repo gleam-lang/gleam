@@ -942,7 +942,12 @@ fn binop_documents<'a>(left: Document<'a>, op: &'static str, right: Document<'a>
         .append(right)
 }
 
-fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
+fn let_assert<'a>(
+    assert: &'a TypedAssertAssignment,
+    value: &'a TypedExpr,
+    pat: &'a TypedPattern,
+    env: &mut Env<'a>,
+) -> Document<'a> {
     let mut vars: Vec<&str> = vec![];
     let body = maybe_block_expr(value, env);
     let (subject_var, subject_definition) = if value.is_var() {
@@ -960,6 +965,10 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
     // We don't take the guards from the assign pattern or we would end up with
     // all the same guards repeated twice!
     let assign_pattern = pattern::to_doc(pat, &mut vars, env, &mut vec![]);
+    let message = match &assert.message {
+        Some(m) => expr(m, env),
+        None => string("Assertion pattern match failed"),
+    };
     let clauses = docvec![
         check_pattern.clone(),
         clause_guard,
@@ -973,7 +982,7 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
             line(),
             erlang_error(
                 "let_assert",
-                &string("Assertion pattern match failed"),
+                &message,
                 pat.location(),
                 vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
                 env,
@@ -1799,9 +1808,9 @@ fn pipeline<'a>(
 }
 
 fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Document<'a> {
-    match assignment.kind {
-        AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
-        AssignmentKind::Assert { .. } => let_assert(&assignment.value, &assignment.pattern, env),
+    match &assignment.assert {
+        None => let_(&assignment.value, &assignment.pattern, env),
+        Some(assert) => let_assert(assert, &assignment.value, &assignment.pattern, env),
     }
 }
 

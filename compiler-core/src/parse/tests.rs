@@ -1403,3 +1403,29 @@ fn doc_comment_before_comment_is_not_attached_to_following_constant() {
         " Doc!\n"
     );
 }
+
+#[test]
+fn parse_as_def_after_let_assert() {
+    assert_parse!("let assert Ok(a) as b = some()");
+}
+
+// https://github.com/gleam-lang/gleam/issues/3216
+#[test]
+fn parse_as_def_in_let_assert() {
+    assert_parse!(r#"let assert as "error" Ok(a) = some()"#);
+}
+
+#[test]
+fn parse_as_def_in_let_assert_no_as_keyword() {
+    assert_error!(r#"let assert "error" Ok(a) = some()"#);
+}
+
+#[test]
+fn parse_as_def_in_let_assert_no_message() {
+    assert_error!(r#"let assert as Ok(a) = some()"#);
+}
+
+#[test]
+fn parse_as_def_in_let_assert_not_a_unit() {
+    assert_error!(r#"let assert "custom" <> "error" Ok(a) = some()"#);
+}

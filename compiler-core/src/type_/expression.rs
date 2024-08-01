@@ -2,12 +2,12 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::{infer_bit_array_option, name::check_argument_names},
     ast::{
-        Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
+        Arg, AssertAssignment, Assignment, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, HasLocation, ImplicitCallArgOrigin, Layer, RecordUpdateSpread,
-        SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause,
-        TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement, UntypedArg,
-        UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
-        UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
+        SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssertAssignment, TypedAssignment,
+        TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
+        UntypedArg, UntypedAssertAssignment, UntypedAssignment, UntypedClause, UntypedClauseGuard,
+        UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
         UntypedMultiPattern, UntypedStatement, Use, UseAssignment, USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
@@ -1250,7 +1250,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let Assignment {
             pattern,
             value,
-            kind,
+            assert,
             annotation,
             location,
         } = assignment;
@@ -1295,23 +1295,66 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
-        match (kind, exhaustiveness_check) {
-            (AssignmentKind::Let, Ok(_)) => {}
-            (AssignmentKind::Let, Err(e)) => {
+        match (assert.clone(), exhaustiveness_check) {
+            (None, Ok(_)) => {}
+            (None, Err(e)) => {
                 self.error_with_rigid_names(e);
             }
-            (AssignmentKind::Assert { location }, Ok(_)) => self
-                .problems
-                .warning(Warning::RedundantAssertAssignment { location }),
-            (AssignmentKind::Assert { .. }, _) => {}
+            (Some(inner_assert), Ok(_)) => {
+                self.problems.warning(Warning::RedundantAssertAssignment {
+                    location: inner_assert.location,
+                })
+            }
+            (_, _) => {}
         }
+
+        let assert = match assert {
+            Some(inner_assert) => self.infer_assert_assignment(*inner_assert),
+            None => None,
+        };
 
         Assignment {
             location,
             annotation,
-            kind,
             pattern,
+            assert,
             value: Box::new(value),
+        }
+    }
+
+    fn infer_assert_assignment(
+        &mut self,
+        assert: UntypedAssertAssignment,
+    ) -> Option<Box<TypedAssertAssignment>> {
+        if let Some(message) = assert.message {
+            Some(Box::new(AssertAssignment {
+                location: assert.location,
+                message: Some(Box::new(
+                    self.infer_assert_assignment_message(*message, assert.location),
+                )),
+            }))
+        } else {
+            Some(Box::new(AssertAssignment {
+                location: assert.location,
+                message: None,
+            }))
+        }
+    }
+
+    fn infer_assert_assignment_message(
+        &mut self,
+        message: UntypedExpr,
+        location: SrcSpan,
+    ) -> TypedExpr {
+        match self.infer(message) {
+            Ok(value) => match unify(string(), value.type_()) {
+                Ok(_) => value,
+                Err(e) => {
+                    let error = convert_unify_error(e, location);
+                    self.error_expr_with_rigid_names(location, error)
+                }
+            },
+            Err(error) => self.error_expr_with_rigid_names(location, error),
         }
     }
 
@@ -3537,7 +3580,7 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        kind: AssignmentKind::Let,
+                        assert: None,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

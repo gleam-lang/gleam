@@ -22,6 +22,29 @@ fn assert1() {
 }
 
 #[test]
+fn assert2() {
+    assert_js!(
+        r#"
+    fn go(x) {
+        let msg = "custom" <> " error"
+        let assert as msg Ok(x) = Ok(1)
+    }
+    "#
+    );
+}
+
+#[test]
+fn assert3() {
+    assert_js!(
+        r#"
+    fn go(x) {
+        let assert as "custom error" Ok(x) = Ok(1)
+    }
+    "#
+    );
+}
+
+#[test]
 fn nested_binding() {
     assert_js!(
         r#"

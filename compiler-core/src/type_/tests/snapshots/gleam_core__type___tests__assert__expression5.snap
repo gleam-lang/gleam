@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/assert.rs
+expression: "\npub fn main() {\n    let assert as 1 x = 1\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:9
+  │
+3 │     let assert as 1 x = 1
+  │         ^^^^^^^^^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\n    fn go(x) {\n        let assert as \"custom error\" Ok(x) = Ok(1)\n    }\n    "
+---
+import { Ok, makeError } from "../gleam.mjs";
+
+function go(x) {
+  let $ = new Ok(1);
+  if (!$.isOk()) {
+    throw makeError(
+      "assignment_no_match",
+      "my/mod",
+      3,
+      "go",
+      "custom error",
+      { value: $ }
+    )
+  }
+  let x$1 = $[0];
+  return $;
+}

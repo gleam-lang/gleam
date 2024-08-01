@@ -7,8 +7,8 @@ use crate::{
             visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg,
             visit_typed_record_update_arg, Visit as _,
         },
-        AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
-        TypedPattern, TypedRecordUpdateArg,
+        AssignName, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr, TypedPattern,
+        TypedRecordUpdateArg,
     },
     build::Module,
     line_numbers::LineNumbers,
@@ -316,9 +316,9 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         }
 
         // This pattern only applies to `let assert`
-        if !matches!(assignment.kind, AssignmentKind::Assert { .. }) {
+        if !assignment.is_assert() {
             return;
-        };
+        }
 
         // Get the source code for the tested expression
         let location = assignment.value.location();

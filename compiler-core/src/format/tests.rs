@@ -6424,3 +6424,30 @@ pub fn init(
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3216
+#[test]
+fn let_assert_with_message_formats() {
+    assert_format!(
+        r#"pub fn main() {
+  let assert as "error message" Ok(a) = Ok(1)
+}
+"#
+    );
+}
+
+#[test]
+fn let_assert_with_message_formats_long_error_message() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  let assert as "very-very-very-very-very-very-very-very-very long error message" Ok(a) = Ok(1)
+}
+"#,
+        r#"pub fn main() {
+  let assert as "very-very-very-very-very-very-very-very-very long error message" Ok(
+    a,
+  ) = Ok(1)
+}
+"#
+    );
+}
