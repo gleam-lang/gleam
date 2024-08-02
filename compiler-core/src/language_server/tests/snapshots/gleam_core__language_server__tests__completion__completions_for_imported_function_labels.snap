@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "\nimport dep\n  \nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.wibble()\n}\n"
+expression: "\nimport dep\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.wibble()\n}\n"
 ---
 import dep
-  
+
 fn fun() { // completion inside parens below includes labels
   let wibble = dep.wibble(|)
 }
