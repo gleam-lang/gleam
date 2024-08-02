@@ -2117,12 +2117,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
+            let mod_name = module.name.clone();
+
             // Register this imported module as having been used, to inform
             // warnings of unused imports later
             let _ = self.environment.unused_modules.remove(module_alias);
             let _ = self.environment.unused_module_aliases.remove(module_alias);
+            self.environment
+                .increment_imported_value_usage(&mod_name, &label, &select_location);
 
-            (module.name.clone(), constructor.clone())
+            (mod_name, constructor.clone())
         };
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
@@ -2403,6 +2407,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Look in an imported module for a binding with this name
             Some(module_name) => {
+                self.environment
+                    .increment_imported_value_usage(module_name, name, location);
                 let (_, module) = &self
                     .environment
                     .imported_modules

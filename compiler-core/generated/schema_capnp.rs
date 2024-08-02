@@ -478,20 +478,36 @@ pub mod module {
       !self.reader.get_pointer_field(6).is_null()
     }
     #[inline]
-    pub fn get_line_numbers(self) -> ::capnp::Result<crate::schema_capnp::line_numbers::Reader<'a>> {
+    pub fn get_external_value_usages(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(7), ::core::option::Option::None)
     }
     #[inline]
-    pub fn has_line_numbers(&self) -> bool {
+    pub fn has_external_value_usages(&self) -> bool {
       !self.reader.get_pointer_field(7).is_null()
     }
     #[inline]
-    pub fn get_src_path(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+    pub fn get_external_type_usages(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(8), ::core::option::Option::None)
     }
     #[inline]
-    pub fn has_src_path(&self) -> bool {
+    pub fn has_external_type_usages(&self) -> bool {
       !self.reader.get_pointer_field(8).is_null()
+    }
+    #[inline]
+    pub fn get_line_numbers(self) -> ::capnp::Result<crate::schema_capnp::line_numbers::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(9), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn has_line_numbers(&self) -> bool {
+      !self.reader.get_pointer_field(9).is_null()
+    }
+    #[inline]
+    pub fn get_src_path(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(10), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn has_src_path(&self) -> bool {
+      !self.reader.get_pointer_field(10).is_null()
     }
     #[inline]
     pub fn get_is_internal(self) -> bool {
@@ -660,36 +676,68 @@ pub mod module {
       !self.builder.get_pointer_field(6).is_null()
     }
     #[inline]
-    pub fn get_line_numbers(self) -> ::capnp::Result<crate::schema_capnp::line_numbers::Builder<'a>> {
+    pub fn get_external_value_usages(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(7), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_line_numbers(&mut self, value: crate::schema_capnp::line_numbers::Reader<'_>) -> ::capnp::Result<()> {
+    pub fn set_external_value_usages(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(7), value, false)
     }
     #[inline]
-    pub fn init_line_numbers(self, ) -> crate::schema_capnp::line_numbers::Builder<'a> {
-      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(7), 0)
+    pub fn init_external_value_usages(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>> {
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(7), size)
     }
     #[inline]
-    pub fn has_line_numbers(&self) -> bool {
+    pub fn has_external_value_usages(&self) -> bool {
       !self.builder.get_pointer_field(7).is_null()
     }
     #[inline]
-    pub fn get_src_path(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+    pub fn get_external_type_usages(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(8), ::core::option::Option::None)
     }
     #[inline]
+    pub fn set_external_type_usages(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>>) -> ::capnp::Result<()> {
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(8), value, false)
+    }
+    #[inline]
+    pub fn init_external_type_usages(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::property::Owned<::capnp::struct_list::Owned<crate::schema_capnp::src_span::Owned>>>>> {
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(8), size)
+    }
+    #[inline]
+    pub fn has_external_type_usages(&self) -> bool {
+      !self.builder.get_pointer_field(8).is_null()
+    }
+    #[inline]
+    pub fn get_line_numbers(self) -> ::capnp::Result<crate::schema_capnp::line_numbers::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(9), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_line_numbers(&mut self, value: crate::schema_capnp::line_numbers::Reader<'_>) -> ::capnp::Result<()> {
+      ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(9), value, false)
+    }
+    #[inline]
+    pub fn init_line_numbers(self, ) -> crate::schema_capnp::line_numbers::Builder<'a> {
+      ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(9), 0)
+    }
+    #[inline]
+    pub fn has_line_numbers(&self) -> bool {
+      !self.builder.get_pointer_field(9).is_null()
+    }
+    #[inline]
+    pub fn get_src_path(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(10), ::core::option::Option::None)
+    }
+    #[inline]
     pub fn set_src_path(&mut self, value: ::capnp::text::Reader<'_>)  {
-      self.builder.get_pointer_field(8).set_text(value);
+      self.builder.get_pointer_field(10).set_text(value);
     }
     #[inline]
     pub fn init_src_path(self, size: u32) -> ::capnp::text::Builder<'a> {
-      self.builder.get_pointer_field(8).init_text(size)
+      self.builder.get_pointer_field(10).init_text(size)
     }
     #[inline]
     pub fn has_src_path(&self) -> bool {
-      !self.builder.get_pointer_field(8).is_null()
+      !self.builder.get_pointer_field(10).is_null()
     }
     #[inline]
     pub fn get_is_internal(self) -> bool {
@@ -709,12 +757,12 @@ pub mod module {
   }
   impl Pipeline  {
     pub fn get_line_numbers(&self) -> crate::schema_capnp::line_numbers::Pipeline {
-      ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(7))
+      ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(9))
     }
   }
   mod _private {
     use capnp::private::layout;
-    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 9 };
+    pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 1, pointers: 11 };
     pub const TYPE_ID: u64 = 0x9a52_9544_50db_0581;
   }
 }

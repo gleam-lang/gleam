@@ -27,6 +27,15 @@ pub struct Environment<'a> {
     pub imported_modules: HashMap<EcoString, (SrcSpan, &'a ModuleInterface)>,
     pub unused_modules: HashMap<EcoString, SrcSpan>,
 
+    /// All the references to values from other modules in this module.
+    /// The outer key is the name of the module and the value is a map
+    /// from the name of the value from the module to the locations of the references
+    pub imported_module_value_usages: HashMap<EcoString, HashMap<EcoString, Vec<SrcSpan>>>,
+    /// All the references to types from other modules in this module.
+    /// The outer key is the name of the module and the value is a map
+    /// from the name of the type from the module to the locations of the references
+    pub imported_module_type_usages: HashMap<EcoString, HashMap<EcoString, Vec<SrcSpan>>>,
+
     /// Names of modules that have been imported with as name.
     pub imported_module_aliases: HashMap<EcoString, SrcSpan>,
     pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
@@ -93,6 +102,8 @@ impl<'a> Environment<'a> {
             unused_modules: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
             unqualified_imported_types: HashMap::new(),
+            imported_module_value_usages: HashMap::new(),
+            imported_module_type_usages: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
@@ -216,25 +227,6 @@ impl<'a> Environment<'a> {
         );
     }
 
-    /// Insert a constant in the current scope
-    pub fn insert_local_constant(
-        &mut self,
-        name: EcoString,
-        literal: Constant<Arc<Type>, EcoString>,
-    ) {
-        let _ = self.scope.insert(
-            name,
-            ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
-                publicity: Publicity::Private,
-                variant: ValueConstructorVariant::LocalConstant {
-                    literal: literal.clone(),
-                },
-                type_: literal.type_(),
-            },
-        );
-    }
-
     /// Insert a variable in the current scope.
     ///
     pub fn insert_variable(
@@ -266,17 +258,6 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_variable(&self, name: &EcoString) -> Option<&ValueConstructor> {
         self.scope.get(name)
-    }
-
-    /// Lookup a module constant in the current scope.
-    ///
-    pub fn get_module_const(&mut self, name: &EcoString) -> Option<&ValueConstructor> {
-        self.increment_usage(name);
-        self.module_values
-            .get(name)
-            .filter(|ValueConstructor { variant, .. }| {
-                matches!(variant, ValueConstructorVariant::ModuleConstant { .. })
-            })
     }
 
     /// Map a type in the current scope.
@@ -578,6 +559,42 @@ impl<'a> Environment<'a> {
                 }
                 _ => break,
             }
+        }
+    }
+
+    pub fn increment_imported_value_usage(
+        &mut self,
+        module: &EcoString,
+        name: &EcoString,
+        location: &SrcSpan,
+    ) {
+        self.increment_usage(name);
+        if module != &self.current_module {
+            let _ = self
+                .imported_module_value_usages
+                .entry(module.clone())
+                .or_insert_with(HashMap::new)
+                .entry(name.clone())
+                .or_insert_with(Vec::new)
+                .push(location.clone());
+        }
+    }
+
+    pub fn increment_imported_type_usage(
+        &mut self,
+        module: &EcoString,
+        name: &EcoString,
+        location: &SrcSpan,
+    ) {
+        self.increment_usage(name);
+        if module != &self.current_module {
+            let _ = self
+                .imported_module_type_usages
+                .entry(module.clone())
+                .or_insert_with(HashMap::new)
+                .entry(name.clone())
+                .or_insert_with(Vec::new)
+                .push(location.clone());
         }
     }
 

@@ -716,6 +716,8 @@ fn infer_module_type_retention_test() {
             values: HashMap::new(),
             accessors: HashMap::new(),
             unused_imports: Vec::new(),
+            external_value_usages: HashMap::new(),
+            external_type_usages: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),
         }

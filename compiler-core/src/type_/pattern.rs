@@ -266,7 +266,15 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .keys()
                             .any(|typ| typ == &name),
                     })?;
-                self.environment.increment_usage(&name);
+                match vc.variant.module_defined() {
+                    None => {
+                        self.environment.increment_usage(&name);
+                    }
+                    Some(module) => {
+                        self.environment
+                            .increment_imported_value_usage(&module, &name, &location);
+                    }
+                };
                 let typ =
                     self.environment
                         .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
@@ -453,7 +461,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 ..
             } => {
                 // Register the value as seen for detection of unused values
-                self.environment.increment_usage(&name);
 
                 let cons = self
                     .environment
@@ -606,6 +613,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             message: message.clone(),
                             layer: Layer::Value,
                         })
+                    }
+                }
+                match cons.variant.module_defined() {
+                    None => self.environment.increment_usage(&name),
+                    Some(module) => {
+                        self.environment
+                            .increment_imported_value_usage(&module, &name, &location);
                     }
                 }
 

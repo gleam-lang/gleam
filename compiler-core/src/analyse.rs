@@ -290,6 +290,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_types: types,
             module_types_constructors: types_constructors,
             module_values: values,
+            imported_module_value_usages: external_value_usages,
+            imported_module_type_usages: external_type_usages,
             accessors,
             ..
         } = env;
@@ -309,6 +311,29 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.warnings.emit(warning.clone());
         }
 
+        // Need to deduplicate locations for external type usages
+        // since type usages are incremented on unification
+        let external_type_usages = external_type_usages
+            .into_iter()
+            .map(|(module, used_values)| {
+                (
+                    module,
+                    used_values
+                        .into_iter()
+                        .map(|(value, locations)| {
+                            (
+                                value,
+                                locations
+                                    .into_iter()
+                                    .unique_by(|loc| (loc.start, loc.end))
+                                    .sorted_by_key(|loc| loc.start)
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
         let module = ast::Module {
             documentation,
             name: self.module_name.clone(),
@@ -323,6 +348,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 package: self.package_config.name.clone(),
                 is_internal,
                 unused_imports,
+                external_value_usages,
+                external_type_usages,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
                 warnings,

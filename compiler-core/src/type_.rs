@@ -492,6 +492,18 @@ impl ValueConstructorVariant {
         matches!(self, Self::LocalVariable { .. })
     }
 
+    /// Returns the module the value is defined in if it is from a
+    /// different module.
+    pub fn module_defined(&self) -> Option<EcoString> {
+        match self {
+            ValueConstructorVariant::ModuleConstant { module, .. }
+            | ValueConstructorVariant::ModuleFn { module, .. }
+            | ValueConstructorVariant::Record { module, .. } => Some(module.clone()),
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::LocalConstant { .. } => None,
+        }
+    }
+
     /// Returns `true` if the value constructor variant is [`ModuleFn`].
     ///
     /// [`ModuleFn`]: ValueConstructorVariant::ModuleFn
@@ -601,6 +613,14 @@ pub struct ModuleInterface {
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     pub unused_imports: Vec<SrcSpan>,
+    /// All the references to values from other modules in this module.
+    /// The outer key is the name of the module and the value is a map
+    /// from the name of the value from the module to the locations of the references
+    pub external_value_usages: HashMap<EcoString, HashMap<EcoString, Vec<SrcSpan>>>,
+    /// All the references to types from other modules in this module.
+    /// The outer key is the name of the module and the value is a map
+    /// from the name of the type from the module to the locations of the references
+    pub external_type_usages: HashMap<EcoString, HashMap<EcoString, Vec<SrcSpan>>>,
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
@@ -698,6 +718,8 @@ impl ModuleInterface {
             values: Default::default(),
             accessors: Default::default(),
             unused_imports: Default::default(),
+            external_value_usages: Default::default(),
+            external_type_usages: Default::default(),
             is_internal: false,
             line_numbers,
             src_path,

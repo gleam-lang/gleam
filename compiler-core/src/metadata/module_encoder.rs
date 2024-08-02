@@ -47,6 +47,8 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
         self.set_unused_imports(&mut module);
+        self.set_external_value_usages(&mut module);
+        self.set_external_type_usages(&mut module);
         self.set_line_numbers(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
@@ -70,6 +72,46 @@ impl<'a> ModuleEncoder<'a> {
         for (i, span) in self.data.unused_imports.iter().enumerate() {
             let unused_import = unused_imports.reborrow().get(i as u32);
             self.build_src_span(unused_import, *span)
+        }
+    }
+
+    fn set_external_value_usages(&mut self, module: &mut module::Builder<'_>) {
+        let mut builder = module
+            .reborrow()
+            .init_external_value_usages(self.data.external_value_usages.len() as u32);
+        for (i, (key, map)) in self.data.external_value_usages.iter().enumerate() {
+            let mut property = builder.reborrow().get(i as u32);
+            property.set_key(key);
+            self.build_external_usage(property.initn_value(map.len() as u32), map);
+        }
+    }
+
+    fn set_external_type_usages(&mut self, module: &mut module::Builder<'_>) {
+        let mut builder = module
+            .reborrow()
+            .init_external_type_usages(self.data.external_type_usages.len() as u32);
+        for (i, (key, map)) in self.data.external_type_usages.iter().enumerate() {
+            let mut property = builder.reborrow().get(i as u32);
+            property.set_key(key);
+            self.build_external_usage(property.initn_value(map.len() as u32), map);
+        }
+    }
+
+    fn build_external_usage(
+        &mut self,
+        mut builder: capnp::struct_list::Builder<
+            '_,
+            property::Owned<capnp::struct_list::Owned<src_span::Owned>>,
+        >,
+        map: &HashMap<EcoString, Vec<SrcSpan>>,
+    ) {
+        for (i, (key, spans)) in map.iter().enumerate() {
+            let mut property = builder.reborrow().get(i as u32);
+            property.set_key(key);
+            let mut builder = property.initn_value(spans.len() as u32);
+            for (j, span) in spans.iter().enumerate() {
+                self.build_src_span(builder.reborrow().get(j as u32), *span);
+            }
         }
     }
 
