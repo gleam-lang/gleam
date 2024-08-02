@@ -129,6 +129,7 @@ impl Hydrator {
                     parameters,
                     typ: return_type,
                     deprecation,
+                    module: full_module,
                     ..
                 } = environment
                     .get_type_constructor(module, name)
@@ -151,8 +152,8 @@ impl Hydrator {
                 // used in another module.
                 match module {
                     None => environment.increment_usage(name),
-                    Some(module) => {
-                        environment.increment_imported_type_usage(module, name, location)
+                    Some(_) => {
+                        environment.increment_imported_type_usage(&full_module, name, location)
                     }
                 }
 
