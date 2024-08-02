@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nfn wibble() {\n  let assert \"a\" <> j = \"ab\"\n\n}\n"
+---
+fn wibble() {
+  let assert "a" <> j = "ab"
+|
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+j
+  kind:   Variable
+  detail: String
+  sort:   2_j
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "j"
+wibble
+  kind:   Function
+  detail: fn() -> String
+  sort:   2_wibble
+  desc:   app
+  edits:
+    [3:0-3:0]: "wibble"

@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nfn wibble() {\n  let assert <<h:1>> as i = <<1:1>>\n\n}\n"
+---
+fn wibble() {
+  let assert <<h:1>> as i = <<1:1>>
+|
+}
+
+
+----- Completion content -----
+h
+  kind:   Variable
+  detail: Int
+  sort:   2_h
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "h"
+i
+  kind:   Variable
+  detail: BitArray
+  sort:   2_i
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "i"
+wibble
+  kind:   Function
+  detail: fn() -> BitArray
+  sort:   2_wibble
+  desc:   app
+  edits:
+    [3:0-3:0]: "wibble"

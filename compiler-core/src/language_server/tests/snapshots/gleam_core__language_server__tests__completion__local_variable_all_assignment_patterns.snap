@@ -1,0 +1,734 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\ntype Foo { Bar(str: String) }\nfn wibble() {\n  let _a = 10\n  let a = 10\n  let b as c = 5.\n  let assert #([d, e] as f, g) = #([0, 1], 2)\n  let assert <<h:1>> as i = <<1:1>>\n  let assert \"a\" <> j = \"ab\"\n  let Bar(k) = Bar(\"baz\")\n\n}\n"
+---
+type Foo { Bar(str: String) }
+fn wibble() {
+  let _a = 10
+  let a = 10
+  let b as c = 5.
+  let assert #([d, e] as f, g) = #([0, 1], 2)
+  let assert <<h:1>> as i = <<1:1>>
+  let assert "a" <> j = "ab"
+  let Bar(k) = Bar("baz")
+|
+}
+
+
+----- Completion content -----
+[
+    CompletionItem {
+        label: "Bar",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Constructor,
+        ),
+        detail: Some(
+            "fn(String) -> Foo",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_Bar",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "Bar",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "a",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_a",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "a",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "b",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Float",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_b",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "b",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "c",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Float",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_c",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "c",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "d",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_d",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "d",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "e",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_e",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "e",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "f",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "List(Int)",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_f",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "f",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "g",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_g",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "g",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "h",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "Int",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_h",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "h",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "i",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "BitArray",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_i",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "i",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "j",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "String",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_j",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "j",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "k",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Variable,
+        ),
+        detail: Some(
+            "String",
+        ),
+        documentation: Some(
+            MarkupContent(
+                MarkupContent {
+                    kind: Markdown,
+                    value: "A locally defined variable.",
+                },
+            ),
+        ),
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_k",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "k",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+    CompletionItem {
+        label: "wibble",
+        label_details: Some(
+            CompletionItemLabelDetails {
+                detail: None,
+                description: Some(
+                    "app",
+                ),
+            },
+        ),
+        kind: Some(
+            Function,
+        ),
+        detail: Some(
+            "fn() -> Foo",
+        ),
+        documentation: None,
+        deprecated: None,
+        preselect: None,
+        sort_text: Some(
+            "2_wibble",
+        ),
+        filter_text: None,
+        insert_text: None,
+        insert_text_format: None,
+        insert_text_mode: None,
+        text_edit: Some(
+            Edit(
+                TextEdit {
+                    range: Range {
+                        start: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                        end: Position {
+                            line: 10,
+                            character: 0,
+                        },
+                    },
+                    new_text: "wibble",
+                },
+            ),
+        ),
+        additional_text_edits: None,
+        command: None,
+        commit_characters: None,
+        data: None,
+        tags: None,
+    },
+]
