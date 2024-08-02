@@ -1,6 +1,6 @@
 # Changelog
 
-## v1.4.0-rc2 - Unreleased
+## v1.4.0 - 2024-08-02
 
 ### Bug Fixes
 
