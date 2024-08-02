@@ -2386,20 +2386,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let constructor = match module {
             // Look in the current scope for a binding with this name
             None => {
-                let constructor =
-                    self.environment
-                        .get_variable(name)
-                        .cloned()
-                        .ok_or_else(|| Error::UnknownVariable {
-                            location: *location,
-                            name: name.clone(),
-                            variables: self.environment.local_value_names(),
-                            type_with_name_in_scope: self
-                                .environment
-                                .module_types
-                                .keys()
-                                .any(|type_| type_ == name),
-                        })?;
+                let constructor = self
+                    .environment
+                    .get_variable(name)
+                    .cloned()
+                    .ok_or_else(|| self.report_name_error(name, location))?;
 
                 // Register the value as seen for detection of unused values
                 self.environment.increment_usage(name);
@@ -2463,6 +2454,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             variant,
             type_,
         })
+    }
+
+    fn report_name_error(&mut self, name: &EcoString, location: &SrcSpan) -> Error {
+        // First try to see if this is a module alias:
+        // `import gleam/io`
+        // `io.debug(io)`
+        // Show nice error message for this case.
+        let module = self.environment.imported_modules.get(name);
+        match module {
+            Some(_) => Error::ModuleAliasUsedAsName {
+                location: *location,
+                name: name.clone(),
+            },
+            None => Error::UnknownVariable {
+                location: *location,
+                name: name.clone(),
+                variables: self.environment.local_value_names(),
+                type_with_name_in_scope: self
+                    .environment
+                    .module_types
+                    .keys()
+                    .any(|typ| typ == name),
+            },
+        }
     }
 
     // helper for infer_const to get the value of a constant ignoring annotations

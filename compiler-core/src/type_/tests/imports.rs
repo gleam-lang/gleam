@@ -312,3 +312,17 @@ pub fn main() -> Integer {
 }"
     );
 }
+
+#[test]
+fn module_alias_used_as_a_name() {
+    assert_with_module_error!(
+        ("one/two", ""),
+        "
+import one/two
+
+pub fn main() {
+  two
+}
+"
+    );
+}

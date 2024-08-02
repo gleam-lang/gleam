@@ -125,6 +125,11 @@ pub enum Error {
         type_with_same_name: bool,
     },
 
+    ModuleAliasUsedAsName {
+        location: SrcSpan,
+        name: EcoString,
+    },
+
     NotFn {
         location: SrcSpan,
         type_: Arc<Type>,
@@ -772,6 +777,7 @@ impl Error {
             | Error::UnknownModule { location, .. }
             | Error::UnknownModuleType { location, .. }
             | Error::UnknownModuleValue { location, .. }
+            | Error::ModuleAliasUsedAsName { location, .. }
             | Error::NotFn { location, .. }
             | Error::UnknownRecordField { location, .. }
             | Error::IncorrectArity { location, .. }

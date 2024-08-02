@@ -2030,6 +2030,31 @@ Private types can only be used within the module that defines them.",
                     }
                 }
 
+                TypeError::ModuleAliasUsedAsName {
+                    location,
+                    name
+                } => {
+                    let text = wrap_format!(
+                        "Module alias `{name}` cannot be used as a regular name.
+Did you mean to access module's members?",
+                    );
+                    Diagnostic {
+                        title: format!("Module alias `{name}` used as a name"),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
                 TypeError::IncorrectNumClausePatterns {
                     location,
                     expected,
