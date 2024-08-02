@@ -1265,7 +1265,7 @@ pub type Wibble {
   Wibble(wibble: Int, wobble: Int)
   Wobble(wabble: Int, wobble: Int)
 }
-  
+
 fn fun() {
   let wibble = Wibble(1, 2)
   wibble.wobble
@@ -1281,7 +1281,7 @@ fn completions_for_record_labels() {
 pub type Wibble {
   Wibble(wibble: String, wobble: Int)
 }
-  
+
 fn fun() { // completion inside parens below includes labels
   let wibble = Wibble()
 }
@@ -1294,7 +1294,7 @@ fn fun() { // completion inside parens below includes labels
 fn completions_for_imported_record_labels() {
     let code = "
 import dep
-  
+
 fn fun() { // completion inside parens below includes labels
   let wibble = dep.Wibble()
 }
@@ -1317,7 +1317,7 @@ fn completions_for_function_labels() {
 fn wibble(wibble arg1: String, wobble arg2: String) {
   arg1 <> arg2
 }
-  
+
 fn fun() { // completion inside parens below includes labels
   let wibble = wibble()
 }
@@ -1330,7 +1330,7 @@ fn fun() { // completion inside parens below includes labels
 fn completions_for_imported_function_labels() {
     let code = "
 import dep
-  
+
 fn fun() { // completion inside parens below includes labels
   let wibble = dep.wibble()
 }
@@ -1345,4 +1345,24 @@ pub fn wibble(wibble arg1: String, wobble arg2: String) {
         TestProject::for_source(code).add_dep_module("dep", dep),
         Position::new(4, 26)
     );
+}
+
+#[test]
+fn no_completion_inside_comment_that_is_more_than_three_lines() {
+    let code = "import list
+
+// list.
+// list.
+fn fun() {
+  // list.
+  todo
+}
+";
+
+    let dep = "pub fn map() {}";
+    let completions = completion(
+        TestProject::for_source(code).add_dep_module("list", dep),
+        Position::new(5, 10),
+    );
+    assert_eq!(completions, vec![],);
 }

@@ -22,9 +22,9 @@ impl ModuleExtra {
     pub fn is_within_comment(&self, byte_index: u32) -> bool {
         let cmp = |span: &SrcSpan| {
             if byte_index < span.start {
-                Ordering::Less
-            } else if span.end < byte_index {
                 Ordering::Greater
+            } else if byte_index > span.end {
+                Ordering::Less
             } else {
                 Ordering::Equal
             }

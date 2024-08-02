@@ -211,14 +211,6 @@ where
             };
 
             let completer = Completer::new(&src, &params, &this.compiler, module);
-
-            // Check current filercontents if the user is writing an import
-            // and handle separately from the rest of the completion flow
-            // Check if an import is being written
-            if let Some(value) = completer.import_completions() {
-                return value;
-            }
-
             let byte_index = completer
                 .module_line_numbers
                 .byte_index(params.position.line, params.position.character);
@@ -226,6 +218,13 @@ where
             // If in comment context, do not provide completions
             if module.extra.is_within_comment(byte_index) {
                 return Ok(None);
+            }
+
+            // Check current filercontents if the user is writing an import
+            // and handle separately from the rest of the completion flow
+            // Check if an import is being written
+            if let Some(value) = completer.import_completions() {
+                return value;
             }
 
             let Some(found) = module.find_node(byte_index) else {
