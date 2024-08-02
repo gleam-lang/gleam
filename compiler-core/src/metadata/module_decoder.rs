@@ -82,12 +82,12 @@ impl ModuleDecoder {
             external_value_usages: read_hashmap!(
                 reader.get_external_value_usages()?,
                 self,
-                src_spans_map
+                external_usages
             ),
             external_type_usages: read_hashmap!(
                 reader.get_external_type_usages()?,
                 self,
-                src_spans_map
+                external_usages
             ),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
@@ -487,14 +487,11 @@ impl ModuleDecoder {
         Ok(read_vec!(reader, self, src_span))
     }
 
-    fn src_spans_map(
+    fn external_usages(
         &self,
-        reader: &capnp::struct_list::Reader<
-            '_,
-            property::Owned<capnp::struct_list::Owned<src_span::Owned>>,
-        >,
+        reader: &external_usages::Reader<'_>,
     ) -> Result<HashMap<EcoString, Vec<SrcSpan>>> {
-        Ok(read_hashmap!(reader, self, src_span_list))
+        Ok(read_hashmap!(reader.get_usages()?, self, src_span_list))
     }
 
     fn module_fn_variant(

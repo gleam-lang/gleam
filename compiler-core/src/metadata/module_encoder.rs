@@ -99,12 +99,10 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_external_usage(
         &mut self,
-        mut builder: capnp::struct_list::Builder<
-            '_,
-            property::Owned<capnp::struct_list::Owned<src_span::Owned>>,
-        >,
+        mut builder: external_usages::Builder<'_>,
         map: &HashMap<EcoString, Vec<SrcSpan>>,
     ) {
+        let mut builder = builder.reborrow().init_usages(map.len() as u32);
         for (i, (key, spans)) in map.iter().enumerate() {
             let mut property = builder.reborrow().get(i as u32);
             property.set_key(key);

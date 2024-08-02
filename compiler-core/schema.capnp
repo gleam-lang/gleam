@@ -27,11 +27,15 @@ struct Module {
   package @4 :Text;
   typesConstructors @5 :List(Property(TypesVariantConstructors));
   unusedImports @6 :List(SrcSpan);
-  externalValueUsages @7 :List(Property(List(Property(List(SrcSpan)))));
-  externalTypeUsages @8 :List(Property(List(Property(List(SrcSpan)))));
+  externalValueUsages @7 :List(Property(ExternalUsages));
+  externalTypeUsages @8 :List(Property(ExternalUsages));
   lineNumbers @9 :LineNumbers;
   srcPath @10 :Text;
   isInternal @11 :Bool;
+}
+
+struct ExternalUsages {
+  usages @0 :List(Property(List(SrcSpan)));
 }
 
 struct TypesVariantConstructors {
