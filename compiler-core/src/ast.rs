@@ -647,7 +647,7 @@ pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
 pub type UntypedFunction = Function<(), UntypedExpr>;
 
 impl<T, E> Function<T, E> {
-    fn full_location(&self) -> SrcSpan {
+    pub fn full_location(&self) -> SrcSpan {
         SrcSpan::new(self.location.start, self.end_position)
     }
 }

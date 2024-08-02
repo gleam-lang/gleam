@@ -809,6 +809,221 @@ pub fn wibble(
 }
 
 #[test]
+fn local_variable() {
+    let code = "
+pub fn main(wibble: Int) {
+  let wobble = 1
+  w
+
+  let wabble = 2
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 3));
+}
+
+#[test]
+fn local_variable_anonymous_function() {
+    let code = "
+pub fn main() {
+  let add_one = fn(wibble: Int) { wibble + 1 }
+  add_one(1)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(2, 40));
+}
+
+#[test]
+fn local_variable_nested_anonymous_function() {
+    let code = "
+pub fn main() {
+  let add_one = fn(wibble: Int) {
+    let wabble = 1
+    let add_two = fn(wobble: Int) { wobble + 2 }
+    wibble + add_two(1)
+  }
+  add_one(1)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 42));
+}
+
+#[test]
+fn local_variable_ignore_anonymous_function_args() {
+    let code = "
+pub fn main() {
+  let add_one = fn(wibble: Int) { wibble + 1 }
+  let wobble = 1
+  w
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 3));
+}
+
+#[test]
+fn local_variable_ignore_anonymous_function_args_nested() {
+    let code = "
+pub fn main() {
+  let add_one = fn(wibble: Int) {
+    let wabble = 1
+    let add_two = fn(wobble: Int) { wobble + 2 }
+    wibble + add_two(1)
+  }
+  add_one(1)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 10));
+}
+
+#[test]
+fn local_variable_ignore_anonymous_function_returned() {
+    let code = "
+pub fn main() {
+  fn(wibble: Int) {
+    let wabble = 1
+    let add_two = fn(wobble: Int) { wobble + 2 }
+    wibble + add_two(1)
+  }
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 10));
+}
+
+#[test]
+fn local_variable_case_expression() {
+    let code = "
+pub fn main() {
+  case True {
+    True as wibble -> { todo }
+    False -> { todo }
+  }
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 25));
+}
+
+#[test]
+fn local_variable_inside_nested_exprs() {
+    let code = r#"
+type Foo { Bar(List(#(Bool))) }
+fn wibble() {
+  Bar([#(!{
+    let foo = True
+    foo
+  })])
+  todo
+}
+"#;
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 7));
+}
+
+#[test]
+fn local_variable_pipe() {
+    let code = "
+pub fn main() {
+  let add_one = fn(wibble: Int) { wibble + 1 }
+  let wobble = 1
+  wobble |> add_one
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 19));
+}
+
+#[test]
+fn local_variable_pipe_with_args() {
+    let code = "
+pub fn main() {
+  let add_one = fn(wibble: Int, wobble: Int) { wibble + wobble }
+  let wobble = 1
+  let wibble = 2
+  wobble |> add_one(1, wibble)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(5, 29));
+}
+
+#[test]
+fn local_variable_function_call() {
+    let code = "
+fn add_one(wibble: Int) -> Int {
+  wibble + 1
+}
+
+pub fn main() {
+  let wobble = 1
+  add_one(wobble)
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(7, 16));
+}
+
+#[test]
+fn local_variable_ignored() {
+    let code = "
+fn wibble() {
+  let a = 1
+  let _b = 2
+
+}
+";
+    assert_completion!(TestProject::for_source(code), Position::new(4, 0));
+}
+
+#[test]
+fn local_variable_as() {
+    let code = "
+fn wibble() {
+  let b as c = 5
+
+}
+";
+    assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}
+
+#[test]
+fn local_variable_tuple() {
+    let code = "
+fn wibble() {
+  let assert #([d, e] as f, g) = #([0, 1], 2)
+
+}
+";
+    assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}
+
+#[test]
+fn local_variable_bit_array() {
+    let code = "
+fn wibble() {
+  let assert <<h:1>> as i = <<1:1>>
+
+}
+";
+    assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}
+
+#[test]
+fn local_variable_string() {
+    let code = r#"
+fn wibble() {
+  let assert "a" <> j = "ab"
+
+}
+"#;
+    assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}
+
+#[test]
 fn internal_values_from_root_package_are_in_the_completions() {
     let dep = r#"
 @external(erlang, "rand", "uniform")

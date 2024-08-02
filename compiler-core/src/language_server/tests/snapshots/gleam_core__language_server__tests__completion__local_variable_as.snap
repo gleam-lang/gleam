@@ -1,0 +1,54 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nfn wibble() {\n  let b as c = 5\n\n}\n"
+---
+fn wibble() {
+  let b as c = 5
+|
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+b
+  kind:   Variable
+  detail: Int
+  sort:   2_b
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "b"
+c
+  kind:   Variable
+  detail: Int
+  sort:   2_c
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "c"
+wibble
+  kind:   Function
+  detail: fn() -> Int
+  sort:   2_wibble
+  desc:   app
+  edits:
+    [3:0-3:0]: "wibble"
