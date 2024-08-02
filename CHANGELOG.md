@@ -11,6 +11,10 @@
 - Fixed a bug where the case of type parameters would not be checked.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+- Fixed a bug where the language server would still show completions when inside
+  a comment.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.4.0-rc1 - 2024-07-29
 
 ### Build tool
