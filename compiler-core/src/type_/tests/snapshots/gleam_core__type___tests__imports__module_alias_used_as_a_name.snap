@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+expression: "\nimport one/two\n\npub fn main() {\n  two\n}\n"
+---
+error: Module alias `two` used as a name
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   two
+  │   ^^^
+
+Module alias `two` cannot be used as a regular name.
+Did you mean to access module's members?
