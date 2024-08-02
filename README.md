@@ -34,6 +34,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/amouat">Adrian Mouat</a> -
   <a href="https://github.com/JitPackJoyride">Ajit Krishna</a> -
   <a href="https://alembic.com.au">Alembic</a> -
+  <a href="https://github.com/NoxQ">Alex</a> -
   <a href="https://github.com/ahouseago">Alex Houseago</a> -
   <a href="https://github.com/rawhat">Alex Manning</a> -
   <a href="https://github.com/aexvir">Alex Viscreanu</a> -
@@ -72,6 +73,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/charlie-n01r">Charlie Govea</a> -
   <a href="https://github.com/chazwatkins">Chaz Watkins</a> -
   <a href="https://github.com/choonkeat">Chew Choon Keat</a> -
+  <a href="https://github.com/chaynes3">Chris</a> -
   <a href="https://github.com/ceedon">Chris Donnelly</a> -
   <a href="https://github.com/Morzaram">Chris King</a> -
   <a href="https://github.com/chrislloyd">Chris Lloyd</a> -
@@ -121,6 +123,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/ffigiel">Filip Figiel</a> -
   <a href="https://github.com/codefionn">Fionn Langhans</a> -
   <a href="https://github.com/floriank">Florian Kraft</a> -
+  <a href="https://github.com/Frank-III">frankwang</a> -
   <a href="https://github.com/gvrooyen">G-J van Rooyen</a> -
   <a href="https://github.com/hagenek">Georg H. Ekeberg</a> -
   <a href="https://github.com/giacomocavalieri">Giacomo Cavalieri</a> -
@@ -172,6 +175,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/JonasHedEng">Jonas Hedman Engström</a> -
   <a href="https://github.com/jormarma">Jorge Martí Marín</a> -
   <a href="https://github.com/josefrichter">Josef Richter</a> -
+  <a href="https://github.com/joseph-lozano">Joseph Lozano</a> -
   <a href="https://github.com/joshocalico">Joshua Steele</a> -
   <a href="https://liberapay.com/d2quadra/">Julian Lukwata</a> -
   <a href="https://github.com/schurhammer">Julian Schurhammer</a> -
@@ -192,6 +196,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/wowi42">Loïc Tosser</a> -
   <a href="https://github.com/lucaspellegrinelli">Lucas Pellegrinelli</a> -
   <a href="https://github.com/lpetic">Lucian Petic</a> -
+  <a href="https://github.com/lukasmeihsner">Lukas Meihsner</a> -
   <a href="https://github.com/2kool4idkwhat">Luna</a> -
   <a href="https://github.com/manuel-rubio">Manuel Rubio</a> -
   <a href="https://github.com/it-is-wednesday">Maor Kadosh</a> -
@@ -207,6 +212,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/rechsteiner">Martin Rechsteiner </a> -
   <a href="https://github.com/martonkaufmann">martonkaufmann</a> -
   <a href="https://github.com/han-tyumi">Matt Champagne</a> -
+  <a href="https://github.com/matthewrobinsondev">Matt Robinson</a> -
   <a href="https://github.com/matt-savvy">Matt Savoia</a> -
   <a href="https://github.com/mattvanhorn">Matt Van Horn</a> -
   <a href="https://github.com/KtorZ">Matthias Benkort</a> -
@@ -243,6 +249,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/patrik-kuehl">Patrik Kühl</a> -
   <a href="https://github.com/giddie">Paul Gideon Dann</a> -
   <a href="https://github.com/pguse">Paul Guse</a> -
+  <a href="https://github.com/vidalpaul">Paulo Vidal</a> -
   <a href="https://github.com/biernacki">Pawel Biernacki</a> -
   <a href="https://github.com/petejodo">Pete Jodo</a> -
   <a href="https://github.com/pvsr">Peter Rice</a> -
@@ -311,6 +318,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/xhh">xhh</a> -
   <a href="https://github.com/yamen">Yamen Sader</a> -
   <a href="https://github.com/Yasuo-Higano">Yasuo Higano</a> -
+  <a href="https://github.com/joshi-monster">yoshi~ </a> -
   <a href="https://github.com/Zhomart">Zhomart Mukhamejanov</a> -
   <a href="https://github.com/gasparinzsombor">Zsombor Gasparin</a> -
   <a href="https://liberapay.com/~1847917/">~1847917</a>
