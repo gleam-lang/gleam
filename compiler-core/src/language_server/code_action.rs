@@ -344,10 +344,11 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         self.visit_typed_pattern(&assignment.pattern);
         let variables = std::mem::take(&mut self.pattern_variables);
 
+        let formatted_all = format!("#({})", variables.join(", "));
         let assigned = match variables.len() {
             0 => "_",
             1 => variables.first().expect("Variables is length one"),
-            _ => &format!("#({})", variables.join(", ")),
+            _ => &formatted_all,
         };
 
         let edit = TextEdit {
