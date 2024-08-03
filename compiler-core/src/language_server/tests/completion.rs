@@ -1276,6 +1276,23 @@ fn fun() {
 }
 
 #[test]
+fn completions_for_private_record_access() {
+    let code = "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wabble: Int, wobble: Int)
+}
+
+fn fun() {
+  let wibble = Wibble(1, 2)
+  wibble.wobble
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(8, 15));
+}
+
+#[test]
 fn completions_for_record_labels() {
     let code = "
 pub type Wibble {
