@@ -220,7 +220,7 @@ fn active_parameter_index(
 /// `ParameterInformation` for all its arguments.
 ///
 fn print_signature_help(
-    mut printer: Printer,
+    mut printer: Printer<'_>,
     function_name: EcoString,
     args: Vec<Arc<Type>>,
     return_: Arc<Type>,

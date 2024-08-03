@@ -6,6 +6,7 @@ use gleam_core::{
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
     hex,
+    manifest::Manifest,
     paths::{self, ProjectPaths},
     requirement::Requirement,
     Error, Result,
@@ -49,6 +50,7 @@ impl PublishCommand {
 
         let Tarball {
             mut compile_result,
+            manifest,
             data: package_tarball,
             src_files_added,
             generated_files_added,
@@ -60,6 +62,7 @@ impl PublishCommand {
         let docs_tarball = fs::create_tar_archive(docs::build_documentation(
             &config,
             &mut compile_result,
+            &manifest,
             DocContext::HexPublish,
         )?)?;
 
@@ -237,6 +240,7 @@ HTML documentation will work:
 
 struct Tarball {
     compile_result: Package,
+    manifest: Manifest,
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
@@ -255,6 +259,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, target))?;
 
     // Build the project to check that it is valid
+    let manifest = build::download_dependencies()?;
     let built = build::main(
         Options {
             root_target_support: TargetSupport::Enforced,
@@ -263,7 +268,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             target: Some(target),
             codegen: Codegen::All,
         },
-        build::download_dependencies()?,
+        manifest.clone(),
     )?;
 
     // If any of the modules in the package contain a todo then refuse to
@@ -315,6 +320,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
     }
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
+        manifest,
         compile_result: built.root_package,
         data: tarball,
         src_files_added: src_files,

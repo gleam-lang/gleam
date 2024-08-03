@@ -15,6 +15,7 @@ use crate::{
     docs::source_links::SourceLinker,
     format,
     io::{Content, FileSystemReader, OutputFile},
+    manifest::Manifest,
     package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
@@ -38,6 +39,7 @@ pub enum DocContext {
 pub fn generate_html<IO: FileSystemReader>(
     paths: &ProjectPaths,
     config: &PackageConfig,
+    manifest: &Manifest,
     analysed: &[Module],
     docs_pages: &[DocsPage],
     fs: IO,
@@ -168,8 +170,9 @@ pub fn generate_html<IO: FileSystemReader>(
                 function(
                     &source_links,
                     statement,
-                    config.name.clone(),
-                    module.name.clone(),
+                    manifest,
+                    &config.name,
+                    &module.name,
                 )
             })
             .sorted()
@@ -184,8 +187,9 @@ pub fn generate_html<IO: FileSystemReader>(
                 type_(
                     &source_links,
                     statement,
-                    config.name.clone(),
-                    module.name.clone(),
+                    manifest,
+                    &config.name,
+                    &module.name,
                 )
             })
             .sorted()
@@ -200,8 +204,9 @@ pub fn generate_html<IO: FileSystemReader>(
                 constant(
                     &source_links,
                     statement,
-                    config.name.clone(),
-                    module.name.clone(),
+                    manifest,
+                    &config.name,
+                    &module.name,
                 )
             })
             .sorted()
@@ -533,12 +538,14 @@ fn import_synonyms(parent: &str, child: &str) -> String {
 fn function<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
-    package: EcoString,
-    module: EcoString,
+    manifest: &Manifest,
+    package: &EcoString,
+    module: &EcoString,
 ) -> Option<DocsFunction<'a>> {
     let mut formatter = format::Formatter::new();
     let mut printer = type_::pretty::Printer::new();
     printer.with_context(package, module);
+    printer.with_manifest(manifest);
 
     match statement {
         Definition::Function(Function {
@@ -629,12 +636,14 @@ fn render_markdown(text: &str, source: MarkdownSource) -> String {
 fn type_<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
-    package: EcoString,
-    module: EcoString,
+    manifest: &Manifest,
+    package: &EcoString,
+    module: &EcoString,
 ) -> Option<Type<'a>> {
     let mut formatter = format::Formatter::new();
     let mut printer = type_::pretty::Printer::new();
     printer.with_context(package, module);
+    printer.with_manifest(manifest);
 
     match statement {
         Definition::CustomType(ct) if ct.publicity.is_importable() && !ct.opaque => {
@@ -646,10 +655,10 @@ fn type_<'a>(
 
                 let pairs = ct.parameters.iter().zip(ct.typed_parameters.iter());
                 for ((_, name), type_param) in pairs {
-                    if let Type::Var { type_ } = type_param.as_ref() {
-                        match type_.borrow().deref() {
+                    if let type_::Type::Var { type_ } = type_param.as_ref() {
+                        match *type_.borrow() {
                             type_::TypeVar::Unbound { id } | type_::TypeVar::Generic { id } => {
-                                let _ = names.insert(*id, name.clone());
+                                let _ = names.insert(id, name.clone());
                             }
 
                             type_::TypeVar::Link { .. } => continue,
@@ -759,12 +768,14 @@ fn type_<'a>(
 fn constant<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
-    package: EcoString,
-    module: EcoString,
+    manifest: &Manifest,
+    package: &EcoString,
+    module: &EcoString,
 ) -> Option<Constant<'a>> {
     let mut formatter = format::Formatter::new();
     let mut printer = type_::pretty::Printer::new();
     printer.with_context(package, module);
+    printer.with_manifest(manifest);
 
     match statement {
         Definition::ModuleConstant(ModuleConstant {

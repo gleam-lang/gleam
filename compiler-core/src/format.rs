@@ -16,7 +16,6 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use std::ops::Deref;
 use std::{cmp::Ordering, sync::Arc};
 use vec1::Vec1;
 
@@ -618,7 +617,7 @@ impl<'comments> Formatter<'comments> {
         publicity: Publicity,
         name: &'a str,
         value: &'a TypedConstant,
-        printer: &mut type_::pretty::Printer,
+        printer: &mut type_::pretty::Printer<'_>,
     ) -> Document<'a> {
         let type_ = printer.print(&value.type_());
         let attributes = AttributesPrinter::new().set_internal(publicity);
@@ -1611,7 +1610,7 @@ impl<'comments> Formatter<'comments> {
     pub fn docs_record_constructor<'a>(
         &mut self,
         constructor: &'a TypedRecordConstructor,
-        printer: &mut type_::pretty::Printer,
+        printer: &mut type_::pretty::Printer<'_>,
     ) -> Document<'a> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
@@ -1706,7 +1705,7 @@ impl<'comments> Formatter<'comments> {
     pub fn docs_custom_type<'a>(
         &mut self,
         ct: &'a TypedCustomType,
-        printer: &mut type_::pretty::Printer,
+        printer: &mut type_::pretty::Printer<'_>,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(ct.location.end);
 
@@ -1789,7 +1788,7 @@ impl<'comments> Formatter<'comments> {
         args: &'a [TypedArg],
         return_type: Arc<Type>,
         location: &SrcSpan,
-        printer: &mut type_::pretty::Printer,
+        printer: &mut type_::pretty::Printer<'_>,
     ) -> Document<'a> {
         let fn_args = self.docs_fn_args(args, printer, location);
         let return_type = printer.print(&return_type);
@@ -1811,7 +1810,7 @@ impl<'comments> Formatter<'comments> {
     fn docs_fn_args<'a>(
         &mut self,
         args: &'a [TypedArg],
-        printer: &mut type_::pretty::Printer,
+        printer: &mut type_::pretty::Printer<'_>,
         location: &SrcSpan,
     ) -> Document<'a> {
         let args = args
