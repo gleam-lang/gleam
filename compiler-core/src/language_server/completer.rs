@@ -657,7 +657,8 @@ where
         match type_.as_ref() {
             Type::Named { name, module, .. } => importable_modules
                 .get(module)
-                .and_then(|i| i.accessors.get(name)),
+                .and_then(|i| i.accessors.get(name))
+                .filter(|a| a.publicity.is_importable() || module == &self.module.name),
             _ => None,
         }
     }

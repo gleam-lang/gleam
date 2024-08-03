@@ -279,8 +279,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // items.
         env.module_types
             .retain(|_, info| info.module == self.module_name);
-        env.accessors
-            .retain(|_, accessors| accessors.publicity.is_importable());
 
         // Ensure no exported values have private types in their type signature
         for value in env.module_values.values() {
