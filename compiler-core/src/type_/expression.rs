@@ -2206,7 +2206,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .environment
                 .importable_modules
                 .get(module)
-                .and_then(|module| module.accessors.get(name)),
+                .and_then(|module| module.accessors.get(name))
+                .filter(|a| {
+                    a.publicity.is_importable() || module == &self.environment.current_module
+                }),
 
             _something_without_fields => return Err(unknown_field(vec![])),
         }
