@@ -2172,3 +2172,23 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn no_crash_on_duplicate_definition() {
+    // This previous caused the compiler to crash
+    assert_module_error!(
+        "
+type Wibble {
+  Wobble
+  Wobble
+}
+
+pub fn main() {
+  let wibble = Wobble
+  case wibble {
+    Wobble -> Nil
+  }
+}
+"
+    );
+}
