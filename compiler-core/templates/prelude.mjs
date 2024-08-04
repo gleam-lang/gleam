@@ -174,20 +174,20 @@ export function sizedInt(value, size, isBigEndian) {
   }
 
   if (isBigEndian) {
-    for (let i = 0; i < byteArray.length; i++) {
+    for (let i = byteArray.length - 1; i >= 0; i--) {
       const byte = value % 256;
       byteArray[i] = byte;
       value = (value - byte) / 256;
     }
   } else {
-    for (let i = byteArray.length - 1; i >= 0; i--) {
+    for (let i = 0; i < byteArray.length; i++) {
       const byte = value % 256;
       byteArray[i] = byte;
       value = (value - byte) / 256;
     }
   }
 
-  return byteArray.reverse();
+  return byteArray;
 }
 
 // @internal

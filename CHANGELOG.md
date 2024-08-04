@@ -316,6 +316,11 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- On the JavaScript target, non-byte aligned integers in bit array patterns are
+  now reported as a compile-time error.
+
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Formatter
 
 - The formatter now adds a `todo` after a `use` expression if it is the last

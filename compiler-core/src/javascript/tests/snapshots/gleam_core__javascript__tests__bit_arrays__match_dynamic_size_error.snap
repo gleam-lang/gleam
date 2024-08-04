@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 390
+expression: "\nfn go(x) {\n  let n = 16\n  let assert <<a:size(n)>> = x\n}\n"
+---
+error: Unsupported feature for compilation target
+  ┌─ /src/javascript/error.gleam:4:16
+  │
+4 │   let assert <<a:size(n)>> = x
+  │                ^^^^^^^^^
+
+Non-constant size option in patterns is not supported for JavaScript compilation.
