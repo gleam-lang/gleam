@@ -96,7 +96,9 @@ jobs:
           esac
 
       - name: Upload release archive
-        uses: softprops/action-gh-release@v2
+        # https://github.com/softprops/action-gh-release/issues/445
+        # uses: softprops/action-gh-release@v2
+        uses: softprops/action-gh-release@0bd7e8b279c9b5b36661d552472fbbfe671fe26e
         with:
           draft: true
           prerelease: false
