@@ -1,8 +1,6 @@
 use super::{prelude::is_prelude_module, Publicity, Type, TypeVar};
 use crate::{
-    docvec,
-    manifest::Manifest,
-    pretty::{nil, *},
+    docvec, manifest::{Manifest, ManifestPackageSource}, pretty::{nil, *}
 };
 use ecow::EcoString;
 use itertools::Itertools;
@@ -157,7 +155,12 @@ impl<'a> Printer<'a> {
         }
     }
 
-    fn type_link(&self, package: &EcoString, module: &EcoString, name: &EcoString) -> String {
+    fn type_link(
+        &self,
+        package: &EcoString,
+        module: &EcoString,
+        name: &EcoString,
+    ) -> String {
         // generate a relative link inside the same package
         if let Some((ctx_pkg, ctx_module)) = &self.context {
             if ctx_pkg == package {
@@ -168,7 +171,7 @@ impl<'a> Printer<'a> {
                     // go back, then go forward. TODO: links could be simplified.
                     let backwards = 1 + ctx_module.matches('/').count();
                     return format!(
-                        "{}/{}#{}",
+                        "{}/{}.html#{}",
                         std::iter::repeat("..").take(backwards).join("/"),
                         module,
                         name
@@ -176,23 +179,19 @@ impl<'a> Printer<'a> {
                 }
             }
         }
-
-        // generate a versioned link if we have the package in the manifest
+        
+        // generate a versioned link if we have the package in the manifest,
+        // and it is a Hex package.
         if let Some(manifest) = &self.manifest {
-            if let Some(manifest_pkg) = manifest
-                .packages
-                .iter()
-                .find(|p| p.name.as_ref() == package)
-            {
-                return format!(
-                    "https://hexdocs.pm/{0}/{1}/{2}.html#{3}",
-                    package, manifest_pkg.version, module, name
-                );
+            if let Some(manifest_pkg) = manifest.packages.iter().find(|p| p.name.as_ref() == package) {
+                if let ManifestPackageSource::Hex { .. } = manifest_pkg.source {
+                    return format!("https://hexdocs.pm/{0}/{1}/{2}.html#{3}", package, manifest_pkg.version, module, name) 
+                }
             }
         }
 
-        // generate a default link to hex
-        format!("https://hexdocs.pm/{0}/{1}.html#{2}", package, module, name)
+        // no link we could generate :(
+        String::new()
     }
 
     fn type_var_doc<'b>(&mut self, typ: &TypeVar) -> Document<'b> {
