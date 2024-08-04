@@ -706,7 +706,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     .parse::<usize>()
                     .expect("part of an Int node should always parse as integer")),
                 _ => Err(Error::Unsupported {
-                    feature: "This bit array size option in patterns".into(),
+                    feature: "Non-constant size option in patterns".into(),
                     location: segment.location,
                 }),
             },
@@ -723,9 +723,17 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }?;
 
         // 16-bit floats are not supported
-        if segment.type_ == crate::type_::float() && size == 16usize {
+        if segment.type_ == crate::type_::float() && size == 16 {
             return Err(Error::Unsupported {
-                feature: "This bit array size option in patterns".into(),
+                feature: "Float width of 16 bits in patterns".into(),
+                location: segment.location,
+            });
+        }
+
+        // Ints that aren't byte-aligned are not supported
+        if segment.type_ == crate::type_::int() && size % 8 != 0 {
+            return Err(Error::Unsupported {
+                feature: "Non byte aligned integer in patterns".into(),
                 location: segment.location,
             });
         }
