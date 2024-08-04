@@ -354,19 +354,20 @@ impl<T: Utf8Writer> DocumentWriter for HtmlWriter<T> {
             Annotation::String => self.write_raw("<span class=\"hljs-string\">"),
             Annotation::Number => self.write_raw("<span class=\"hljs-number\">"),
             Annotation::Comment => self.write_raw("<span class=\"hljs-comment\">"),
-            Annotation::Meta { link, hover_text } => write!(
-                self.0,
-                "<a href=\"{}\" title=\"{}\">",
-                self.html_escape(link),
-                self.html_escape(hover_text)
-            )
-            .map_err(|e| self.convert_err(e)),
+            Annotation::Meta { link, hover_text } =>
+                if link.is_empty() {
+                    write!(self.0, "<span title=\"{}\">", self.html_escape(hover_text))
+                        .map_err(|e| self.convert_err(e))
+                } else {
+                    write!(self.0, "<a href=\"{}\" title=\"{}\">", self.html_escape(link), self.html_escape(hover_text))
+                        .map_err(|e| self.convert_err(e))
+                },
         }
     }
 
     fn exit(&mut self, annotation: &Annotation) -> Result<()> {
         match annotation {
-            Annotation::Meta { .. } => self.write_raw("</a>"),
+            Annotation::Meta { link, .. } if !link.is_empty() => self.write_raw("</a>"),
             _ => self.write_raw("</span>"),
         }
     }
