@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+expression: doc_print(custom_bool())
+---
+<span title="one/two.{type Bool}, Package: wibble"><span class="hljs-title">Bool</span></span>

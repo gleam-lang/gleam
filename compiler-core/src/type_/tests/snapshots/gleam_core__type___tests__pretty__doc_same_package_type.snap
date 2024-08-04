@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+expression: "doc_print(named(\"mypkg\", \"wibble/wobble\", \"Int\", Publicity::Public, vec![]))"
+---
+<a href="../wibble/wobble.html#Int" title="wibble/wobble.{type Int}, Package: mypkg"><span class="hljs-title">Int</span></a>
