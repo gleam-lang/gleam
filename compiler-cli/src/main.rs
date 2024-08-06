@@ -192,6 +192,10 @@ enum Command {
         #[arg(short, long)]
         module: Option<String>,
 
+        /// Don't print progress information
+        #[arg(long)]
+        no_print_progress: bool,
+
         arguments: Vec<String>,
     },
 
