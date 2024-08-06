@@ -311,9 +311,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.warnings.emit(warning.clone());
         }
 
-        // Need to deduplicate locations for external type usages
-        // since type usages are incremented on unification
-        let external_type_usages = external_type_usages
+        // Deduplicate locations for external usages
+        let external_value_usages = external_value_usages
             .into_iter()
             .map(|(module, used_values)| {
                 (
@@ -323,6 +322,27 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .map(|(value, locations)| {
                             (
                                 value,
+                                locations
+                                    .into_iter()
+                                    .unique_by(|loc| (loc.start, loc.end))
+                                    .sorted_by_key(|loc| loc.start)
+                                    .collect(),
+                            )
+                        })
+                        .collect(),
+                )
+            })
+            .collect();
+        let external_type_usages = external_type_usages
+            .into_iter()
+            .map(|(module, used_types)| {
+                (
+                    module,
+                    used_types
+                        .into_iter()
+                        .map(|(type_, locations)| {
+                            (
+                                type_,
                                 locations
                                     .into_iter()
                                     .unique_by(|loc| (loc.start, loc.end))
