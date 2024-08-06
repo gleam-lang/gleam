@@ -26,6 +26,7 @@ pub fn command(
     target: Option<Target>,
     runtime: Option<Runtime>,
     module: Option<String>,
+    no_print_progress: bool,
     which: Which,
 ) -> Result<(), Error> {
     let paths = crate::find_project_paths()?;

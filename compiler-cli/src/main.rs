@@ -474,13 +474,21 @@ fn main() {
             arguments,
             runtime,
             module,
-        } => run::command(arguments, target, runtime, module, run::Which::Src),
+            no_print_progress,
+        } => run::command(
+            arguments,
+            target,
+            runtime,
+            module,
+            no_print_progress,
+            run::Which::Src,
+        ),
 
         Command::Test {
             target,
             arguments,
             runtime,
-        } => run::command(arguments, target, runtime, None, run::Which::Test),
+        } => run::command(arguments, target, runtime, None, false, run::Which::Test),
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
