@@ -2123,7 +2123,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // warnings of unused imports later
             let _ = self.environment.unused_modules.remove(module_alias);
             let _ = self.environment.unused_module_aliases.remove(module_alias);
-            self.environment.increment_usage(&label, &select_location);
             self.environment
                 .increment_imported_value_usage(&mod_name, &label, &select_location);
 
@@ -2408,7 +2407,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Look in an imported module for a binding with this name
             Some(module_name) => {
-                self.environment.increment_usage(name, location);
                 self.environment
                     .increment_imported_value_usage(module_name, name, location);
                 let (_, module) = &self
