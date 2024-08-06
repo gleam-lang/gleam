@@ -130,9 +130,18 @@ pub enum EntityKind {
     // String here is the type constructor's type name
     PrivateTypeConstructor(EcoString),
     PrivateFunction,
-    ImportedConstructor,
-    ImportedType,
-    ImportedValue,
+    ImportedConstructor {
+        // The module the constructor was imported from
+        module: EcoString,
+    },
+    ImportedType {
+        // The module the type was imported from
+        module: EcoString,
+    },
+    ImportedValue {
+        // The module the value was imported from
+        module: EcoString,
+    },
     PrivateType,
     Variable {
         /// How the variable could be rewritten to ignore it when unused
@@ -527,7 +536,7 @@ impl<'a> Environment<'a> {
             // TODO: Improve this so that we can tell if an imported overridden
             // type is actually used or not by tracking whether usages apply to
             // the value or type scope
-            Some((ImportedType | PrivateType, _, _)) => {}
+            Some((ImportedType { .. } | PrivateType, _, _)) => {}
 
             Some((kind, location, false)) => {
                 // an entity was overwritten in the top most scope without being used
@@ -541,7 +550,7 @@ impl<'a> Environment<'a> {
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &EcoString) {
+    pub fn increment_usage(&mut self, name: &EcoString, location: &SrcSpan) {
         let mut name = name.clone();
 
         while let Some((kind, _, used)) = self
@@ -557,6 +566,25 @@ impl<'a> Environment<'a> {
                 EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
                     name = type_name.clone();
                 }
+                EntityKind::ImportedType { module } => {
+                    self.imported_module_type_usages
+                        .entry(module.clone())
+                        .or_default()
+                        .entry(name.clone())
+                        .or_default()
+                        .push(*location);
+                    break;
+                }
+                EntityKind::ImportedValue { module }
+                | EntityKind::ImportedConstructor { module } => {
+                    self.imported_module_value_usages
+                        .entry(module.clone())
+                        .or_default()
+                        .entry(name.clone())
+                        .or_default()
+                        .push(*location);
+                    break;
+                }
                 _ => break,
             }
         }
@@ -568,7 +596,6 @@ impl<'a> Environment<'a> {
         name: &EcoString,
         location: &SrcSpan,
     ) {
-        self.increment_usage(name);
         if module != &self.current_module {
             self.imported_module_value_usages
                 .entry(module.clone())
@@ -585,7 +612,6 @@ impl<'a> Environment<'a> {
         name: &EcoString,
         location: &SrcSpan,
     ) {
-        self.increment_usage(name);
         if module != &self.current_module {
             self.imported_module_type_usages
                 .entry(module.clone())
@@ -634,12 +660,12 @@ impl<'a> Environment<'a> {
     ) {
         for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
             let warning = match kind {
-                EntityKind::ImportedType => Warning::UnusedType {
+                EntityKind::ImportedType { .. } => Warning::UnusedType {
                     name,
                     imported: true,
                     location,
                 },
-                EntityKind::ImportedConstructor => Warning::UnusedConstructor {
+                EntityKind::ImportedConstructor { .. } => Warning::UnusedConstructor {
                     name,
                     imported: true,
                     location,
@@ -658,7 +684,7 @@ impl<'a> Environment<'a> {
                     imported: false,
                     location,
                 },
-                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
+                EntityKind::ImportedValue { .. } => Warning::UnusedImportedValue { name, location },
                 EntityKind::Variable { how_to_ignore } => Warning::UnusedVariable {
                     location,
                     how_to_ignore,

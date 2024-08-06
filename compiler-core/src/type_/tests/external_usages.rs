@@ -1,6 +1,43 @@
 use crate::{ast::SrcSpan, type_::tests::compile_module};
 
 #[test]
+fn external_unqualified_function_usages() {
+    let module = compile_module(
+        "test_module",
+        "
+import test_module/test_module_inner.{wibble}
+
+pub fn main() {
+  wibble()
+}
+",
+        None,
+        vec![(
+            "thepackage",
+            "test_module/test_module_inner",
+            "pub fn wibble() { 1 }",
+        )],
+    )
+    .unwrap();
+    assert_eq!(
+        module.type_info.external_value_usages,
+        [(
+            "test_module/test_module_inner".into(),
+            [(
+                "wibble".into(),
+                [
+                    SrcSpan { start: 39, end: 45 },
+                    SrcSpan { start: 66, end: 72 }
+                ]
+                .into()
+            )]
+            .into()
+        )]
+        .into()
+    );
+}
+
+#[test]
 fn external_qualified_function_usages() {
     let module = compile_module(
         "test_module",
@@ -30,6 +67,43 @@ pub fn main() {
 }
 
 #[test]
+fn external_unqualified_constant_usages() {
+    let module = compile_module(
+        "test_module",
+        "
+import test_module/test_module_inner.{wibble}
+
+pub fn main() {
+  wibble
+}
+",
+        None,
+        vec![(
+            "thepackage",
+            "test_module/test_module_inner",
+            "pub const wibble = 1",
+        )],
+    )
+    .unwrap();
+    assert_eq!(
+        module.type_info.external_value_usages,
+        [(
+            "test_module/test_module_inner".into(),
+            [(
+                "wibble".into(),
+                [
+                    SrcSpan { start: 39, end: 45 },
+                    SrcSpan { start: 66, end: 72 }
+                ]
+                .into()
+            )]
+            .into()
+        )]
+        .into()
+    );
+}
+
+#[test]
 fn external_qualified_constant_usages() {
     let module = compile_module(
         "test_module",
@@ -53,6 +127,54 @@ pub fn main() {
         [(
             "test_module/test_module_inner".into(),
             [("wibble".into(), [SrcSpan { start: 74, end: 81 }].into())].into()
+        )]
+        .into()
+    );
+}
+
+#[test]
+fn external_unqualified_constructor_usages() {
+    let module = compile_module(
+        "test_module",
+        "
+import test_module/test_module_inner.{Wibble, Wobble}
+
+pub fn main() {
+  Wibble(1)
+  Wobble(\"wibble\")
+}
+",
+        None,
+        vec![(
+            "thepackage",
+            "test_module/test_module_inner",
+            "pub type Wibble { Wibble(Int) Wobble(String) }",
+        )],
+    )
+    .unwrap();
+    assert_eq!(
+        module.type_info.external_value_usages,
+        [(
+            "test_module/test_module_inner".into(),
+            [
+                (
+                    "Wibble".into(),
+                    [
+                        SrcSpan { start: 39, end: 45 },
+                        SrcSpan { start: 74, end: 80 }
+                    ]
+                    .into()
+                ),
+                (
+                    "Wobble".into(),
+                    [
+                        SrcSpan { start: 47, end: 53 },
+                        SrcSpan { start: 86, end: 92 }
+                    ]
+                    .into()
+                )
+            ]
+            .into()
         )]
         .into()
     );

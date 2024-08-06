@@ -268,9 +268,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     })?;
                 match vc.variant.module_defined() {
                     None => {
-                        self.environment.increment_usage(&name);
+                        self.environment.increment_usage(&name, &location);
                     }
                     Some(module) => {
+                        self.environment.increment_usage(&name, &location);
                         self.environment
                             .increment_imported_value_usage(&module, &name, &location);
                     }
@@ -616,8 +617,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
                 match cons.variant.module_defined() {
-                    None => self.environment.increment_usage(&name),
+                    None => self.environment.increment_usage(&name, &location),
                     Some(module) => {
+                        self.environment.increment_usage(&name, &location);
                         self.environment
                             .increment_imported_value_usage(&module, &name, &location);
                     }

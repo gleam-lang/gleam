@@ -151,8 +151,9 @@ impl Hydrator {
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 match module {
-                    None => environment.increment_usage(name),
+                    None => environment.increment_usage(name, location),
                     Some(_) => {
+                        environment.increment_usage(name, location);
                         environment.increment_imported_type_usage(&full_module, name, location)
                     }
                 }

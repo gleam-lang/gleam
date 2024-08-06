@@ -103,10 +103,14 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         self.environment.init_usage(
             imported_name.clone(),
-            EntityKind::ImportedType,
+            EntityKind::ImportedType {
+                module: module.name.clone(),
+            },
             import.location,
             self.problems,
         );
+        self.environment
+            .increment_imported_type_usage(&module.name, &import.name, &import.location)
     }
 
     fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
@@ -142,7 +146,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             ValueConstructorVariant::Record { name, module, .. } => {
                 self.environment.init_usage(
                     used_name.clone(),
-                    EntityKind::ImportedConstructor,
+                    EntityKind::ImportedConstructor {
+                        module: module.clone(),
+                    },
                     location,
                     self.problems,
                 );
@@ -154,7 +160,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             }
             _ => self.environment.init_usage(
                 used_name.clone(),
-                EntityKind::ImportedValue,
+                EntityKind::ImportedValue {
+                    module: module.name.clone(),
+                },
                 location,
                 self.problems,
             ),
@@ -176,6 +184,8 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             .environment
             .unqualified_imported_names
             .insert(used_name.clone(), location);
+        self.environment
+            .increment_imported_value_usage(&module.name, import_name, &location)
     }
 
     fn check_src_does_not_import_test(
