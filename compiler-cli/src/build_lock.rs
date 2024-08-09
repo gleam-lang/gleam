@@ -29,7 +29,7 @@ impl BuildLock {
     }
 
     /// Lock the specified directory
-    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Result<Guard> {
+    pub fn lock(&self, telemetry: &dyn Telemetry) -> Result<Guard> {
         tracing::debug!(path=?self.directory, "locking_build_directory");
 
         crate::fs::mkdir(&self.directory)?;
