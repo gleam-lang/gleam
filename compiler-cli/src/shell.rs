@@ -18,6 +18,7 @@ pub fn command() -> Result<(), Error> {
             target: Some(Target::Erlang),
         },
         crate::build::download_dependencies()?,
+        Box::new(crate::cli::Reporter::new()),
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

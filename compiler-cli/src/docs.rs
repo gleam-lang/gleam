@@ -77,6 +77,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
             root_target_support: TargetSupport::Enforced,
         },
         crate::build::download_dependencies()?,
+        Box::new(cli::Reporter::new()),
     )?;
     let outputs = build_documentation(&config, &mut built.root_package, DocContext::Build)?;
 
@@ -170,6 +171,7 @@ impl PublishCommand {
                 target: None,
             },
             crate::build::download_dependencies()?,
+            Box::new(cli::Reporter::new()),
         )?;
         let outputs =
             build_documentation(&config, &mut built.root_package, DocContext::HexPublish)?;

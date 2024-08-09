@@ -264,6 +264,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             codegen: Codegen::All,
         },
         build::download_dependencies()?,
+        Box::new(cli::Reporter::new()),
     )?;
 
     // If any of the modules in the package contain a todo then refuse to
