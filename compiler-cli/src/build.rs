@@ -48,8 +48,8 @@ pub fn main(options: Options, manifest: Manifest, telemetry: Arc<dyn Telemetry>)
     };
 
     match perform_codegen {
-        Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
-        Codegen::None => cli::print_checked(start.elapsed()),
+        Codegen::All | Codegen::DepsOnly => telemetry.compiled_packages(start),
+        Codegen::None => telemetry.checked_packages(start),
     };
 
     Ok(result)

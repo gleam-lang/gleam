@@ -19,12 +19,20 @@ impl Reporter {
 }
 
 impl Telemetry for Reporter {
-    fn compiling_package(&self, name: &str) {
-        print_compiling(name);
+    fn checked_packages(&self, start: Instant) {
+        print_checked(start.elapsed())
     }
 
     fn checking_package(&self, name: &str) {
         print_checking(name);
+    }
+
+    fn compiled_packages(&self, start: Instant) {
+        print_compiled(start.elapsed())
+    }
+
+    fn compiling_package(&self, name: &str) {
+        print_compiling(name);
     }
 
     fn downloading_package(&self, name: &str) {
