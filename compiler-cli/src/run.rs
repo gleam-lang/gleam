@@ -85,7 +85,7 @@ pub fn command(
         Arc::new(crate::cli::Reporter::new())
     };
 
-    let built = crate::build::main(options, manifest, telemetry)?;
+    let built = crate::build::main(options, manifest, telemetry.clone())?;
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
@@ -93,7 +93,7 @@ pub fn command(
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
-    crate::cli::print_running(&format!("{module}.main"));
+    telemetry.running_module(&module);
 
     // Run the command
     let status = match target {

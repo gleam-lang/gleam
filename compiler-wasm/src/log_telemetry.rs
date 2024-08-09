@@ -26,4 +26,8 @@ impl Telemetry for LogTelemetry {
     fn waiting_for_build_directory_lock(&self) {
         tracing::info!("Waiting for build directory lock");
     }
+
+    fn running_module(&self, name: &str) {
+        tracing::info!("Running {}.main", name);
+    }
 }

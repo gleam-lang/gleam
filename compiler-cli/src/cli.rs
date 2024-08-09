@@ -42,6 +42,10 @@ impl Telemetry for Reporter {
     fn waiting_for_build_directory_lock(&self) {
         print_waiting_for_build_directory_lock()
     }
+
+    fn running_module(&self, name: &str) {
+        print_running(&format!("{name}.main"))
+    }
 }
 
 pub fn ask(question: &str) -> Result<String, Error> {

@@ -12,6 +12,7 @@ pub trait Telemetry: Debug {
     fn packages_downloaded(&self, start: Instant, count: usize);
     fn compiling_package(&self, name: &str);
     fn checking_package(&self, name: &str);
+    fn running_module(&self, name: &str);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -24,4 +25,5 @@ impl Telemetry for NullTelemetry {
     fn compiling_package(&self, _name: &str) {}
     fn checking_package(&self, _name: &str) {}
     fn packages_downloaded(&self, _start: Instant, _count: usize) {}
+    fn running_module(&self, _name: &str) {}
 }
