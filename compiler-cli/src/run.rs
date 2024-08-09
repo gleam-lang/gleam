@@ -4,7 +4,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Built, Codegen, Mode, Options, Runtime, Target},
+    build::{Built, Codegen, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -79,7 +79,13 @@ pub fn command(
         },
     };
 
-    let built = crate::build::main(options, manifest, Box::new(crate::cli::Reporter::new()))?;
+    let telemetry: Box<dyn Telemetry> = if no_print_progress {
+        Box::new(NullTelemetry)
+    } else {
+        Box::new(crate::cli::Reporter::new())
+    };
+
+    let built = crate::build::main(options, manifest, telemetry)?;
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
