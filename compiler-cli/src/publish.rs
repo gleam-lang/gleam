@@ -13,7 +13,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{io::Write, path::PathBuf, time::Instant};
+use std::{io::Write, path::PathBuf, time::Instant, sync::Arc};
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
@@ -264,7 +264,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             codegen: Codegen::All,
         },
         build::download_dependencies()?,
-        Box::new(cli::Reporter::new()),
+        Arc::new(cli::Reporter::new()),
     )?;
 
     // If any of the modules in the package contain a todo then refuse to

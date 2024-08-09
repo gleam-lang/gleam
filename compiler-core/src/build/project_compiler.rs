@@ -91,7 +91,7 @@ pub struct ProjectCompiler<IO> {
     /// successful compilation.
     incomplete_modules: HashSet<EcoString>,
     warnings: WarningEmitter,
-    telemetry: Box<dyn Telemetry>,
+    telemetry: Arc<dyn Telemetry>,
     options: Options,
     paths: ProjectPaths,
     ids: UniqueIdGenerator,
@@ -112,7 +112,7 @@ where
         config: PackageConfig,
         options: Options,
         packages: Vec<ManifestPackage>,
-        telemetry: Box<dyn Telemetry>,
+        telemetry: Arc<dyn Telemetry>,
         warning_emitter: Arc<dyn WarningEmitterIO>,
         paths: ProjectPaths,
         io: IO,

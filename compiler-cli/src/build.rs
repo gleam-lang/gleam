@@ -19,7 +19,7 @@ pub fn download_dependencies() -> Result<Manifest> {
     crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)
 }
 
-pub fn main(options: Options, manifest: Manifest, telemetry: Box<dyn Telemetry>) -> Result<Built> {
+pub fn main(options: Options, manifest: Manifest, telemetry: Arc<dyn Telemetry>) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
@@ -39,7 +39,7 @@ pub fn main(options: Options, manifest: Manifest, telemetry: Box<dyn Telemetry>)
             root_config,
             options,
             manifest.packages,
-            telemetry,
+            telemetry.clone(),
             Arc::new(ConsoleWarningEmitter),
             ProjectPaths::new(current_dir),
             io,

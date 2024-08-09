@@ -84,6 +84,7 @@ use gleam_core::{
 };
 use hex::ApiKeyCommand as _;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use camino::Utf8PathBuf;
 
@@ -552,7 +553,7 @@ fn command_check(target: Option<Target>) -> Result<()> {
             target,
         },
         build::download_dependencies()?,
-        Box::new(cli::Reporter::new()),
+        Arc::new(cli::Reporter::new()),
     )?;
     Ok(())
 }
@@ -567,7 +568,7 @@ fn command_build(target: Option<Target>, warnings_as_errors: bool) -> Result<()>
             target,
         },
         build::download_dependencies()?,
-        Box::new(cli::Reporter::new()),
+        Arc::new(cli::Reporter::new()),
     )?;
     Ok(())
 }

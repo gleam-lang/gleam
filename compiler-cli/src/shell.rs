@@ -3,7 +3,7 @@ use gleam_core::{
     build::{Codegen, Mode, Options, Target},
     error::Error,
 };
-use std::process::Command;
+use std::{process::Command, sync::Arc};
 
 pub fn command() -> Result<(), Error> {
     let paths = crate::find_project_paths()?;
@@ -18,7 +18,7 @@ pub fn command() -> Result<(), Error> {
             target: Some(Target::Erlang),
         },
         crate::build::download_dependencies()?,
-        Box::new(crate::cli::Reporter::new()),
+        Arc::new(crate::cli::Reporter::new()),
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

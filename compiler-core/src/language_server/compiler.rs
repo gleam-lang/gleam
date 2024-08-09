@@ -50,7 +50,7 @@ where
         io: IO,
         locker: Box<dyn Locker>,
     ) -> Result<Self> {
-        let telemetry = NullTelemetry;
+        let telemetry = Arc::new(NullTelemetry);
         let target = config.target;
         let name = config.name.clone();
         let warnings = Arc::new(VectorWarningEmitterIO::default());
@@ -76,7 +76,7 @@ where
             config,
             options,
             manifest.packages,
-            Box::new(telemetry),
+            telemetry,
             warnings.clone(),
             paths,
             io,

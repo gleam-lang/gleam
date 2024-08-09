@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::{sync::Arc, sync::OnceLock};
 
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -79,10 +79,10 @@ pub fn command(
         },
     };
 
-    let telemetry: Box<dyn Telemetry> = if no_print_progress {
-        Box::new(NullTelemetry)
+    let telemetry: Arc<dyn Telemetry> = if no_print_progress {
+        Arc::new(NullTelemetry)
     } else {
-        Box::new(crate::cli::Reporter::new())
+        Arc::new(crate::cli::Reporter::new())
     };
 
     let built = crate::build::main(options, manifest, telemetry)?;

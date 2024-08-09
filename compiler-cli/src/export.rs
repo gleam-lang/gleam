@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use camino::Utf8PathBuf;
 use gleam_core::{
     analyse::TargetSupport,
@@ -49,7 +51,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             target: Some(target),
         },
         crate::build::download_dependencies()?,
-        Box::new(crate::cli::Reporter::new()),
+        Arc::new(crate::cli::Reporter::new()),
     )?;
 
     for entry in crate::fs::read_dir(&build)?.filter_map(Result::ok) {
@@ -139,7 +141,7 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
             root_target_support: TargetSupport::Enforced,
         },
         crate::build::download_dependencies()?,
-        Box::new(crate::cli::Reporter::new()),
+        Arc::new(crate::cli::Reporter::new()),
     )?;
     built.root_package.attach_doc_and_module_comments();
 
