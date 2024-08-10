@@ -22,12 +22,12 @@ pub struct NullTelemetry;
 
 impl Telemetry for NullTelemetry {
     fn checked_packages(&self, _start: Instant) {}
-    fn compiled_packages(&self, _start: Instant) {}
-    fn waiting_for_build_directory_lock(&self) {}
-    fn resolving_package_versions(&self) {}
-    fn downloading_package(&self, _name: &str) {}
-    fn compiling_package(&self, _name: &str) {}
     fn checking_package(&self, _name: &str) {}
+    fn compiled_packages(&self, _start: Instant) {}
+    fn compiling_package(&self, _name: &str) {}
+    fn downloading_package(&self, _name: &str) {}
     fn packages_downloaded(&self, _start: Instant, _count: usize) {}
+    fn resolving_package_versions(&self) {}
     fn running_module(&self, _name: &str) {}
+    fn waiting_for_build_directory_lock(&self) {}
 }
