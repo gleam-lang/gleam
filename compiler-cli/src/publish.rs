@@ -262,8 +262,9 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             mode: Mode::Prod,
             target: Some(target),
             codegen: Codegen::All,
+            no_print_progress: false,
         },
-        build::download_dependencies()?,
+        build::download_dependencies(cli::Reporter::new())?,
     )?;
 
     // If any of the modules in the package contain a todo then refuse to

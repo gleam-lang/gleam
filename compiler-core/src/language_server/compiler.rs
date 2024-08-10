@@ -50,7 +50,6 @@ where
         io: IO,
         locker: Box<dyn Locker>,
     ) -> Result<Self> {
-        let telemetry = NullTelemetry;
         let target = config.target;
         let name = config.name.clone();
         let warnings = Arc::new(VectorWarningEmitterIO::default());
@@ -71,12 +70,13 @@ where
             target: None,
             codegen: build::Codegen::None,
             root_target_support: TargetSupport::Enforced,
+            no_print_progress: false,
         };
         let mut project_compiler = ProjectCompiler::new(
             config,
             options,
             manifest.packages,
-            Box::new(telemetry),
+            &NullTelemetry,
             warnings.clone(),
             paths,
             io,

@@ -1,7 +1,7 @@
 use std::{sync::Arc, time::Instant};
 
 use gleam_core::{
-    build::{Built, Codegen, Options, ProjectCompiler},
+    build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
     paths::ProjectPaths,
     Result,
@@ -14,16 +14,20 @@ use crate::{
     fs::{self, get_current_directory, get_project_root, ConsoleWarningEmitter},
 };
 
-pub fn download_dependencies() -> Result<Manifest> {
+pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
     let paths = crate::find_project_paths()?;
-    crate::dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)
+    crate::dependencies::download(&paths, telemetry, None, UseManifest::Yes)
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
-    let telemetry = Box::new(cli::Reporter::new());
+    let telemetry: &'static dyn Telemetry = if options.no_print_progress {
+        &NullTelemetry
+    } else {
+        &cli::Reporter
+    };
     let io = fs::ProjectIO::new();
     let start = Instant::now();
     let lock = BuildLock::new_target(
@@ -35,7 +39,7 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
 
     tracing::info!("Compiling packages");
     let result = {
-        let _guard = lock.lock(telemetry.as_ref());
+        let _guard = lock.lock(telemetry);
         let compiler = ProjectCompiler::new(
             root_config,
             options,
@@ -49,8 +53,8 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
     };
 
     match perform_codegen {
-        Codegen::All | Codegen::DepsOnly => cli::print_compiled(start.elapsed()),
-        Codegen::None => cli::print_checked(start.elapsed()),
+        Codegen::All | Codegen::DepsOnly => telemetry.compiled_package(start.elapsed()),
+        Codegen::None => telemetry.checked_package(start.elapsed()),
     };
 
     Ok(result)
