@@ -75,8 +75,9 @@ pub fn build(options: BuildOptions) -> Result<()> {
             codegen: Codegen::All,
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
+            no_print_progress: false,
         },
-        crate::build::download_dependencies()?,
+        crate::build::download_dependencies(cli::Reporter::new())?,
     )?;
     let outputs = build_documentation(&config, &mut built.root_package, DocContext::Build)?;
 
@@ -168,8 +169,9 @@ impl PublishCommand {
                 codegen: Codegen::All,
                 mode: Mode::Prod,
                 target: None,
+                no_print_progress: false,
             },
-            crate::build::download_dependencies()?,
+            crate::build::download_dependencies(cli::Reporter::new())?,
         )?;
         let outputs =
             build_documentation(&config, &mut built.root_package, DocContext::HexPublish)?;

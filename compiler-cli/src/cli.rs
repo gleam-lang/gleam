@@ -19,8 +19,16 @@ impl Reporter {
 }
 
 impl Telemetry for Reporter {
+    fn compiled_package(&self, duration: Duration) {
+        print_compiled(duration);
+    }
+
     fn compiling_package(&self, name: &str) {
         print_compiling(name);
+    }
+
+    fn checked_package(&self, duration: Duration) {
+        print_checked(duration);
     }
 
     fn checking_package(&self, name: &str) {
@@ -37,6 +45,10 @@ impl Telemetry for Reporter {
 
     fn resolving_package_versions(&self) {
         print_resolving_versions()
+    }
+
+    fn running(&self, name: &str) {
+        print_running(name);
     }
 
     fn waiting_for_build_directory_lock(&self) {

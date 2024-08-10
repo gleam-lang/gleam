@@ -3,8 +3,16 @@ use gleam_core::build::Telemetry;
 pub struct LogTelemetry;
 
 impl Telemetry for LogTelemetry {
+    fn compiled_package(&self, duration: std::time::Duration) {
+        tracing::info!("Compiled in {} ", seconds(duration));
+    }
+
     fn compiling_package(&self, name: &str) {
         tracing::info!("Compiling package: {}", name);
+    }
+
+    fn checked_package(&self, duration: std::time::Duration) {
+        tracing::info!("Checked in {}", seconds(duration));
     }
 
     fn checking_package(&self, name: &str) {
@@ -13,6 +21,10 @@ impl Telemetry for LogTelemetry {
 
     fn downloading_package(&self, name: &str) {
         tracing::info!("Downloading package: {}", name);
+    }
+
+    fn running(&self, name: &str) {
+        tracing::info!("Running {}", name);
     }
 
     fn resolving_package_versions(&self) {
@@ -26,4 +38,8 @@ impl Telemetry for LogTelemetry {
     fn waiting_for_build_directory_lock(&self) {
         tracing::info!("Waiting for build directory lock");
     }
+}
+
+pub fn seconds(duration: std::time::Duration) -> String {
+    format!("{:.2}s", duration.as_millis() as f32 / 1000.)
 }
