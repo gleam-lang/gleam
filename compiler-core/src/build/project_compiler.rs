@@ -347,7 +347,7 @@ where
 
         let env = [
             ("ERL_LIBS", "../*/ebin".into()),
-            ("REBAR_BARE_COMPILER_OUTPUT_DIR", "./".into()),
+            ("REBAR_BARE_COMPILER_OUTPUT_DIR", package_build.to_string()),
             ("REBAR_PROFILE", "prod".into()),
             ("TERM", "dumb".into()),
         ];
