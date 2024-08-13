@@ -2178,7 +2178,7 @@ fn no_crash_on_duplicate_definition() {
     // This previous caused the compiler to crash
     assert_module_error!(
         "
-type Wibble {
+pub type Wibble {
   Wobble
   Wobble
 }
@@ -2187,6 +2187,30 @@ pub fn main() {
   let wibble = Wobble
   case wibble {
     Wobble -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn no_crash_on_duplicate_definition2() {
+    // This also caused a compiler crash, separate to the above test
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+  Wobble
+  Wubble
+}
+
+pub fn main() {
+  let wibble = Wobble
+  case wibble {
+    Wibble -> Nil
+    Wobble -> Nil
+    Wubble -> Nil
   }
 }
 "
