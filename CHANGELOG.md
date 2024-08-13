@@ -26,6 +26,11 @@
 
 - Fixed a bug where incorrect syntax error message were shown,
   when using `:` or `=` in wrong possitions in expressions.
+  ([Ankit Goel](https://github.com/crazymerlyn))
+
+- Fixed a bug where the compiler would crash when pattern matching on a type
+  which had constructors of duplicate names.
+  ([Surya Rose](https://github.com/gearsdatapacks))
 
 ## v1.4.1 - 2024-08-04
 
