@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+expression: "doc_print(tuple(vec![fn_(vec![unbound(78), unbound(2)], unbound(2)),\n            fn_(vec![generic(79), generic(2231)], generic(2)),]))"
+---
+#(<span class="hljs-keyword">fn</span>(<span class="hljs-variable">a</span>, <span class="hljs-variable">b</span>) -&gt; <span class="hljs-variable">b</span>, <span class="hljs-keyword">fn</span>(<span class="hljs-variable">c</span>, <span class="hljs-variable">d</span>) -&gt; <span class="hljs-variable">b</span>)

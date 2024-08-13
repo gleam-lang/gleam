@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+expression: "doc_print(named(\"onhex\", \"wibble/wobble\", \"Whatever\", Publicity::Private,\n        vec![]))"
+---
+<span class="hljs-title">Whatever</span>

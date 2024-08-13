@@ -11,6 +11,7 @@ use gleam_core::{
     error::Error,
     hex,
     io::HttpClient as _,
+    manifest::Manifest,
     Result,
 };
 
@@ -68,6 +69,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
     let out = paths.build_documentation_directory(&config.name);
+    let manifest = crate::build::download_dependencies()?;
     let mut built = crate::build::main(
         Options {
             mode: Mode::Prod,
@@ -76,9 +78,14 @@ pub fn build(options: BuildOptions) -> Result<()> {
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
         },
-        crate::build::download_dependencies()?,
+        manifest.clone(),
     )?;
-    let outputs = build_documentation(&config, &mut built.root_package, DocContext::Build)?;
+    let outputs = build_documentation(
+        &config,
+        &mut built.root_package,
+        &manifest,
+        DocContext::Build,
+    )?;
 
     // Write
     crate::fs::delete_directory(&out)?;
@@ -116,6 +123,7 @@ fn open_docs(path: &Utf8Path) -> Result<()> {
 pub(crate) fn build_documentation(
     config: &PackageConfig,
     compiled: &mut Package,
+    manifest: &Manifest,
     is_hex_publish: DocContext,
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
@@ -130,6 +138,7 @@ pub(crate) fn build_documentation(
     let mut outputs = gleam_core::docs::generate_html(
         &paths,
         config,
+        manifest,
         compiled.modules.as_slice(),
         &pages,
         ProjectIO::new(),
@@ -160,7 +169,7 @@ impl PublishCommand {
 
         // Reset the build directory so we know the state of the project
         crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
-
+        let manifest = crate::build::download_dependencies()?;
         let mut built = crate::build::main(
             Options {
                 root_target_support: TargetSupport::Enforced,
@@ -169,10 +178,14 @@ impl PublishCommand {
                 mode: Mode::Prod,
                 target: None,
             },
-            crate::build::download_dependencies()?,
+            manifest.clone(),
         )?;
-        let outputs =
-            build_documentation(&config, &mut built.root_package, DocContext::HexPublish)?;
+        let outputs = build_documentation(
+            &config,
+            &mut built.root_package,
+            &manifest,
+            DocContext::HexPublish,
+        )?;
         let archive = crate::fs::create_tar_archive(outputs)?;
         Ok(Self { config, archive })
     }

@@ -15,76 +15,172 @@ fn fits_test() {
 
     // ForceBreak never fits
     let doc = ForceBroken(Box::new(nil()));
-    assert!(!fits(100, 0, vector![(0, Unbroken, &doc)]));
+    assert!(!fits(
+        100,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
     let doc = ForceBroken(Box::new(nil()));
-    assert!(!fits(100, 0, vector![(0, Broken, &doc)]));
+    assert!(!fits(
+        100,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
 
     // Break in Broken fits always
     assert!(fits(
         1,
         0,
-        vector![(
-            0,
-            Broken,
-            &Break {
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &Break {
                 broken: "12",
                 unbroken: "",
                 kind: BreakKind::Strict,
             }
-        )]
+        }]
     ));
 
     // Break in Unbroken mode fits if `unbroken` fits
     assert!(fits(
         3,
         0,
-        vector![(
-            0,
-            Unbroken,
-            &Break {
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &Break {
                 broken: "",
                 unbroken: "123",
                 kind: BreakKind::Strict,
             }
-        )]
+        }]
     ));
     assert!(!fits(
         2,
         0,
-        vector![(
-            0,
-            Unbroken,
-            &Break {
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &Break {
                 broken: "",
                 unbroken: "123",
                 kind: BreakKind::Strict,
             }
-        )]
+        }]
     ));
 
     // Line always fits
-    assert!(fits(0, 0, vector![(0, Broken, &Line(100))]));
-    assert!(fits(0, 0, vector![(0, Unbroken, &Line(100))]));
+    assert!(fits(
+        0,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &Line(100)
+        }]
+    ));
+    assert!(fits(
+        0,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &Line(100)
+        }]
+    ));
 
     // String fits if smaller than limit
     let doc = String("Hello".into());
-    assert!(fits(5, 0, vector![(0, Broken, &doc)]));
+    assert!(fits(
+        5,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
     let doc = String("Hello".into());
-    assert!(fits(5, 0, vector![(0, Unbroken, &doc)]));
+    assert!(fits(
+        5,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
     let doc = String("Hello".into());
-    assert!(!fits(4, 0, vector![(0, Broken, &doc)]));
+    assert!(!fits(
+        4,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
     let doc = String("Hello".into());
-    assert!(!fits(4, 0, vector![(0, Unbroken, &doc)]));
+    assert!(!fits(
+        4,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
 
     // Cons fits if combined smaller than limit
     let doc = String("1".into()).append(String("2".into()));
-    assert!(fits(2, 0, vector![(0, Broken, &doc)]));
+    assert!(fits(
+        2,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
     let doc = String("1".into()).append(String("2".into()));
-    assert!(fits(2, 0, vector![(0, Unbroken, &doc,)]));
+    assert!(fits(
+        2,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
     let doc = String("1".into()).append(String("2".into()));
-    assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
+    assert!(!fits(
+        1,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
     let doc = String("1".into()).append(String("2".into()));
-    assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
+    assert!(!fits(
+        1,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
 
     // Nest fits if combined smaller than limit
     let doc = Nest(
@@ -93,10 +189,42 @@ fn fits_test() {
         NestCondition::Always,
         Box::new(String("12".into())),
     );
-    assert!(fits(2, 0, vector![(0, Broken, &doc)]));
-    assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
-    assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
-    assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
+    assert!(fits(
+        2,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
+    assert!(fits(
+        2,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
+    assert!(!fits(
+        1,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
+    assert!(!fits(
+        1,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
 
     // Nest fits if combined smaller than limit
     let doc = Nest(
@@ -105,10 +233,42 @@ fn fits_test() {
         NestCondition::Always,
         Box::new(String("12".into())),
     );
-    assert!(fits(2, 0, vector![(0, Broken, &doc)]));
-    assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
-    assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
-    assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
+    assert!(fits(
+        2,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
+    assert!(fits(
+        2,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
+    assert!(!fits(
+        1,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Broken,
+            doc: &doc
+        }]
+    ));
+    assert!(!fits(
+        1,
+        0,
+        vector![Cmd::Doc {
+            indent: 0,
+            mode: Unbroken,
+            doc: &doc
+        }]
+    ));
 }
 
 #[test]

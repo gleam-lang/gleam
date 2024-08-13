@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+expression: "doc_print(tuple(vec![int(), int(), int()]))"
+---
+#(<span class="hljs-title">Int</span>, <span class="hljs-title">Int</span>, <span class="hljs-title">Int</span>)

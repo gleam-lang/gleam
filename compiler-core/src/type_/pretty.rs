@@ -1,9 +1,9 @@
-use super::{Type, TypeVar};
+use super::{prelude::is_prelude_module, Publicity, Type, TypeVar};
 use crate::{
-    docvec,
-    pretty::{nil, *},
+    docvec, manifest::{Manifest, ManifestPackageSource}, pretty::{nil, *}
 };
 use ecow::EcoString;
+use itertools::Itertools;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -17,20 +17,32 @@ use pretty_assertions::assert_eq;
 const INDENT: isize = 2;
 
 #[derive(Debug, Default)]
-pub struct Printer {
+pub struct Printer<'a> {
     names: im::HashMap<u64, EcoString>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
     printed_types: im::HashMap<EcoString, EcoString>,
+    // the current package/module, to generate relative links if we are in the same package.
+    context: Option<(&'a str, &'a str)>,
+    // if present, types are linked to the versions of packages in the manifest file
+    manifest: Option<&'a Manifest>,
 }
 
-impl Printer {
+impl<'a> Printer<'a> {
     pub fn new() -> Self {
         Default::default()
     }
 
     pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
         self.names = names;
+    }
+
+    pub fn with_context(&mut self, package: &'a str, module: &'a str) {
+        self.context = Some((package, module));
+    }
+
+    pub fn with_manifest(&mut self, manifest: &'a Manifest) {
+        self.manifest = Some(manifest);
     }
 
     /// Render a Type as a well formatted string.
@@ -47,31 +59,35 @@ impl Printer {
             .to_pretty_string(80)
     }
 
+    /// Render a Type as a well formatted, annotated HTML snippet.
+    pub fn doc_pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
+        let mut buffer = String::with_capacity(initial_indent);
+        for _ in 0..initial_indent {
+            buffer.push(' ');
+        }
+        buffer
+            .to_doc()
+            .append(self.print(typ))
+            .nest(initial_indent as isize)
+            .to_html_string(80)
+    }
+
     // TODO: have this function return a Document that borrows from the Type.
     // Is this possible? The lifetime would have to go through the Arc<Refcell<Type>>
     // for TypeVar::Link'd types.
-    pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
+    pub fn print<'b>(&mut self, typ: &Type) -> Document<'b> {
         match typ {
             Type::Named {
-                name, args, module, ..
-            } => {
-                let doc = if self.name_clashes_if_unqualified(name, module) {
-                    qualify_type_name(module, name)
-                } else {
-                    let _ = self.printed_types.insert(name.clone(), module.clone());
-                    name.to_doc()
-                };
-                if args.is_empty() {
-                    doc
-                } else {
-                    doc.append("(")
-                        .append(self.args_to_gleam_doc(args))
-                        .append(")")
-                }
-            }
+                publicity,
+                package,
+                module,
+                name,
+                args,
+                ..
+            } => self.named_type(*publicity, package, module, name, args),
 
-            Type::Fn { args, retrn } => "fn("
-                .to_doc()
+            Type::Fn { args, retrn } => keyword("fn")
+                .append("(")
                 .append(self.args_to_gleam_doc(args))
                 .append(") ->")
                 .append(
@@ -95,24 +111,107 @@ impl Printer {
         }
     }
 
-    fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
+    fn named_type(
+        &mut self,
+        publicity: Publicity,
+        package: &EcoString,
+        module: &EcoString,
+        name: &EcoString,
+        args: &[Arc<Type>],
+    ) -> Document<'static> {
+        let doc = if self.name_clashes_if_unqualified(name, module) {
+            docvec![variable(module), ".", title(name)]
+        } else {
+            let _ = self.printed_types.insert(name.clone(), module.clone());
+            title(name)
+        };
+
+        let doc = if !is_prelude_module(module) && publicity.is_public() {
+            // generate a relative link inside the same package
+            let target = self.type_link(package, module, name);
+
+            let title = if !package.is_empty() && !module.is_empty() {
+                format!("{1}.{{type {2}}}, Package: {0}", package, module, name)
+            } else if !module.is_empty() {
+                format!("{0}.{{type {1}}}", module, name)
+            } else {
+                String::new()
+            };
+
+            doc.annotate(Annotation::Meta {
+                link: target.into(),
+                hover_text: title.into(),
+            })
+        } else {
+            doc
+        };
+
+        if args.is_empty() {
+            doc
+        } else {
+            doc.append("(")
+                .append(self.args_to_gleam_doc(args))
+                .append(")")
+        }
+    }
+
+    fn type_link(
+        &self,
+        package: &EcoString,
+        module: &EcoString,
+        name: &EcoString,
+    ) -> String {
+        // generate a relative link inside the same package
+        if let Some((ctx_pkg, ctx_module)) = &self.context {
+            if ctx_pkg == package {
+                if module == ctx_module {
+                    // same module, just generate an anchor link
+                    return format!("#{}", name);
+                } else {
+                    // go back, then go forward. TODO: links could be simplified.
+                    let backwards = 1 + ctx_module.matches('/').count();
+                    return format!(
+                        "{}/{}.html#{}",
+                        std::iter::repeat("..").take(backwards).join("/"),
+                        module,
+                        name
+                    );
+                }
+            }
+        }
+        
+        // generate a versioned link if we have the package in the manifest,
+        // and it is a Hex package.
+        if let Some(manifest) = &self.manifest {
+            if let Some(manifest_pkg) = manifest.packages.iter().find(|p| p.name.as_ref() == package) {
+                if let ManifestPackageSource::Hex { .. } = manifest_pkg.source {
+                    return format!("https://hexdocs.pm/{0}/{1}/{2}.html#{3}", package, manifest_pkg.version, module, name) 
+                }
+            }
+        }
+
+        // no link we could generate :(
+        String::new()
+    }
+
+    fn type_var_doc<'b>(&mut self, typ: &TypeVar) -> Document<'b> {
         match typ {
             TypeVar::Link { type_: ref typ, .. } => self.print(typ),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }
 
-    pub fn generic_type_var<'a>(&mut self, id: u64) -> Document<'a> {
+    pub fn generic_type_var<'b>(&mut self, id: u64) -> Document<'b> {
         match self.names.get(&id) {
             Some(n) => {
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                n.to_doc()
+                variable(n)
             }
             None => {
                 let n = self.next_letter();
                 let _ = self.names.insert(id, n.clone());
                 let _ = self.printed_types.insert(n.clone(), "".into());
-                n.to_doc()
+                variable(n)
             }
         }
     }
@@ -156,9 +255,16 @@ impl Printer {
     }
 }
 
-fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
-    let type_name = Document::String(type_name.to_string());
-    docvec![Document::String(module.to_string()), ".", type_name]
+fn variable<'a>(name: impl Documentable<'a>) -> Document<'a> {
+    name.to_doc().annotate(Annotation::Variable)
+}
+
+fn keyword<'a>(keyword: impl Documentable<'a>) -> Document<'a> {
+    keyword.to_doc().annotate(Annotation::Keyword)
+}
+
+fn title<'a>(title: impl Documentable<'a>) -> Document<'a> {
+    title.to_doc().annotate(Annotation::Title)
 }
 
 #[test]

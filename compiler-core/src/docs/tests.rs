@@ -1,14 +1,7 @@
-use std::{collections::HashSet, time::SystemTime};
+use std::{collections::HashSet, default::Default, time::SystemTime};
 
 use crate::{
-    build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
-    config::{DocsPage, PackageConfig},
-    docs::DocContext,
-    io::{memory::InMemoryFileSystem, FileSystemWriter},
-    paths::ProjectPaths,
-    uid::UniqueIdGenerator,
-    version::COMPILER_VERSION,
-    warning::WarningEmitter,
+    build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration}, config::{DocsPage, PackageConfig}, docs::DocContext, io::{memory::InMemoryFileSystem, FileSystemWriter}, manifest::Manifest, paths::ProjectPaths, uid::UniqueIdGenerator, version::COMPILER_VERSION, warning::WarningEmitter
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -79,6 +72,10 @@ fn compile_with_markdown_pages(
     super::generate_html(
         &paths,
         &config,
+        &Manifest {
+            requirements: Default::default(),
+            packages: Default::default(),
+        },
         &modules,
         &docs_pages,
         pages_fs,

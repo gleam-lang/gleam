@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/type_/tests/pretty.rs
+expression: "doc_print(fn_(vec![int(),\n            named(\"onhex\", \"something/else/entirely\", \"HttpFactorProxyBean\",\n            Publicity::Public, vec![]),\n            named(\"mypkg\", \"wibble/wabble\", \"Helper\", Publicity::Public,\n            vec![int(), int()]),], custom_bool()))"
+---
+<span class="hljs-keyword">fn</span>(<span class="hljs-title">Int</span>, <a href="https://hexdocs.pm/onhex/1.2.3/something/else/entirely.html#HttpFactorProxyBean" title="something/else/entirely.{type HttpFactorProxyBean}, Package: onhex"><span class="hljs-title">HttpFactorProxyBean</span></a>, <a href="../wibble/wabble.html#Helper" title="wibble/wabble.{type Helper}, Package: mypkg"><span class="hljs-title">Helper</span></a>(<span class="hljs-title">Int</span>, <span class="hljs-title">Int</span>)) -&gt; <span title="one/two.{type Bool}, Package: wibble"><span class="hljs-title">Bool</span></span>
