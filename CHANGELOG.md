@@ -4,6 +4,10 @@
 
 ### Build tool
 
+- The `--no-print-progress` flag has been added to prevent the build tool from
+  printing messages as the project is built.
+  ([Ankit Goel](https://github.com/crazymerlyn))
+
 ### Compiler
 
 ### Formatter
