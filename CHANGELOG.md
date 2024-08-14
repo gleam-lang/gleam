@@ -24,6 +24,9 @@
   produce the correct location, but remain in the same file.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+- Fixed a bug where incorrect syntax error message were shown,
+  when using `:` or `=` in wrong possitions in expressions.
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
