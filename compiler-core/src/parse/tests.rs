@@ -1427,6 +1427,17 @@ pub fn main() {
 }
 
 #[test]
+fn error_message_on_variable_starting_with_underscore() {
+    // https://github.com/gleam-lang/gleam/issues/3504
+    assert_module_error!(
+        "
+  pub fn main() {
+    let val = _func_starting_with_underscore(1)
+  }"
+    );
+}
+
+#[test]
 fn non_module_level_function_with_not_a_name() {
     assert_module_error!(
         r#"
@@ -1434,5 +1445,18 @@ pub fn main() {
   fn @() { 1 }  // wrong token and not a name
 }
 "#
+    );
+}
+
+#[test]
+fn error_message_on_variable_starting_with_underscore2() {
+    // https://github.com/gleam-lang/gleam/issues/3504
+    assert_module_error!(
+        "
+  pub fn main() {
+    case 1 {
+      1 -> _with_underscore(1)
+    }
+  }"
     );
 }

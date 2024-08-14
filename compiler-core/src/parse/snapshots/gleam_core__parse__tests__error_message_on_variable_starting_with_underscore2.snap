@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n  pub fn main() {\n    case 1 {\n      1 -> _with_underscore(1)\n    }\n  }"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:12
+  │
+4 │       1 -> _with_underscore(1)
+  │            ^^^^^^^^^^^^^^^^ I'm expecting a lowercase name here
+
+Hint: Variable and module names start with a lowercase letter, and can
+contain a-z, 0-9, or _.
