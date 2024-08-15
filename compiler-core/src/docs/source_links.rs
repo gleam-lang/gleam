@@ -51,21 +51,21 @@ impl SourceLinker {
             )),
             Repository::CodeBerg { user, repo } => Some((
                 format!(
-                    "https://codeberg.org/{}/{}/src/tag/{}/{}#L",
+                    "https://codeberg.org/{}/{}/src/tag/v{}/{}#L",
                     user, repo, project_config.version, path_in_repo
                 ),
                 "-".into(),
             )),
             Repository::SourceHut { user, repo } => Some((
                 format!(
-                    "https://git.sr.ht/~{}/{}/tree/{}/item/{}#L",
+                    "https://git.sr.ht/~{}/{}/tree/v{}/item/{}#L",
                     user, repo, project_config.version, path_in_repo
                 ),
                 "-".into(),
             )),
             Repository::Gitea { user, repo, host } => Some((
                 format!(
-                    "{host}/{user}/{repo}/src/tag/{}/{}#L",
+                    "{host}/{user}/{repo}/src/tag/v{}/{}#L",
                     project_config.version, path_in_repo
                 ),
                 "-".into(),
