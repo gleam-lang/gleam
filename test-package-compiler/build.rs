@@ -15,7 +15,7 @@ pub fn main() {
         .map(|entry| entry.unwrap().file_name().into_string().unwrap())
         .collect();
     names.sort();
-    
+
     for name in names {
         let path = cases.join(&name);
         let path = path.to_str().unwrap().replace('\\', "/");
