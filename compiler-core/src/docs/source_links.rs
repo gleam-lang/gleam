@@ -49,7 +49,7 @@ impl SourceLinker {
                 ),
                 ":".into(),
             )),
-            Repository::CodeBerg { user, repo } => Some((
+            Repository::Codeberg { user, repo } => Some((
                 format!(
                     "https://codeberg.org/{}/{}/src/tag/v{}/{}#L",
                     user, repo, project_config.version, path_in_repo
