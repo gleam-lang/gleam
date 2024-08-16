@@ -34,6 +34,16 @@
   was imported then the alias would be shown.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+- Improves how inference works for anonymous functions followed by call
+  arguments. For example:
+
+  ```gleam
+  fn(x) { x.0 }(#(1, 2))
+  ```
+
+  would be infered as `fn() -> Int` in this context.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server
