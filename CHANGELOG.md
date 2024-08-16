@@ -36,6 +36,10 @@
   not calling them could produce invalid code.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where source links in HTML documentation would be incorrect for
+  Codeberg, SourceHut, and Gitea.
+  ([sobolevn](https://github.com/sobolevn))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
