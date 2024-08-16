@@ -121,7 +121,6 @@ impl ValueNames {
         if let Some(name) = self.local_constructors.get(&key) {
             // Only return unqualified syntax if the constructor is not shadowed,
             // and unqualified syntax is valid.
-            eprintln!("{:?}", self.constructor_names.get(name));
             if self
                 .constructor_names
                 .get(name)
