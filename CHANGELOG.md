@@ -25,8 +25,13 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The compiler now correctly prints types, including module names, when
-  reporting diagnostics for inexhaustive case expressions.
+- In inexhaustive pattern match errors the missing variants variants are now
+  printed using the correct syntax for the module the error is emitted in,
+  rather than the module it was defined in.
+
+  For example, if the variant would need be qualified by the name of the
+  defining module then that would be shown. If the variant was aliased when it
+  was imported then the alias would be shown.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
 ### Formatter
