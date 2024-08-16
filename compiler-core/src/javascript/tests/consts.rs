@@ -120,3 +120,9 @@ fn literal_tuple_does_not_get_constant_annotation() {
 fn literal_nil_does_not_get_constant_annotation() {
     assert_js!("pub const a = Nil");
 }
+
+// https://github.com/lpil/decode/pull/6
+#[test]
+fn constructor_function_in_constant() {
+    assert_js!("pub const a = Ok");
+}

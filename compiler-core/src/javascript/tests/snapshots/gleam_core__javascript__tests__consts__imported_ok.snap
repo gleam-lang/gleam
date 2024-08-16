@@ -1,10 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/consts.rs
+assertion_line: 30
 expression: "import gleam\n\npub type X {\n  Ok\n}\n\npub const y = gleam.Ok\n"
 ---
 import * as $gleam from "../gleam.mjs";
-import { CustomType as $CustomType } from "../gleam.mjs";
+import { Ok, CustomType as $CustomType } from "../gleam.mjs";
 
 export class Ok extends $CustomType {}
 
-export const y = /* @__PURE__ */ new $gleam.Ok();
+export const y = (var0) => { return new Ok(var0); };

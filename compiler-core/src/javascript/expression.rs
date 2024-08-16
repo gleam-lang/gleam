@@ -456,53 +456,13 @@ impl<'module> Generator<'module> {
                 constant_expression(Context::Function, self.tracker, literal)
             }
             ValueConstructorVariant::Record { arity, .. } => {
-                Ok(self.record_constructor(constructor.type_.clone(), None, name, *arity))
+                let type_ = constructor.type_.clone();
+                let tracker = &mut self.tracker;
+                Ok(record_constructor(type_, None, name, *arity, tracker))
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name)),
-        }
-    }
-
-    fn record_constructor<'a>(
-        &mut self,
-        type_: Arc<Type>,
-        qualifier: Option<&'a str>,
-        name: &'a str,
-        arity: u16,
-    ) -> Document<'a> {
-        if qualifier.is_none() && type_.is_result_constructor() {
-            if name == "Ok" {
-                self.tracker.ok_used = true;
-            } else if name == "Error" {
-                self.tracker.error_used = true;
-            }
-        }
-        if type_.is_bool() && name == "True" {
-            "true".to_doc()
-        } else if type_.is_bool() {
-            "false".to_doc()
-        } else if type_.is_nil() {
-            "undefined".to_doc()
-        } else if arity == 0 {
-            match qualifier {
-                Some(module) => docvec!["new $", module, ".", name, "()"],
-                None => docvec!["new ", name, "()"],
-            }
-        } else {
-            let vars = (0..arity).map(|i| Document::String(format!("var{i}")));
-            let body = docvec![
-                "return ",
-                construct_record(qualifier, name, vars.clone()),
-                ";"
-            ];
-            docvec!(
-                docvec!(wrap_args(vars), " => {", break_("", " "), body)
-                    .nest(INDENT)
-                    .append(break_("", " "))
-                    .group(),
-                "}",
-            )
         }
     }
 
@@ -1106,7 +1066,7 @@ impl<'module> Generator<'module> {
 
             ModuleValueConstructor::Record {
                 name, arity, type_, ..
-            } => self.record_constructor(type_.clone(), Some(module), name, *arity),
+            } => record_constructor(type_.clone(), Some(module), name, *arity, &mut self.tracker),
         }
     }
 
@@ -1386,6 +1346,17 @@ pub(crate) fn constant_expression<'a>(
                     tracker.error_used = true;
                 }
             }
+
+            // If there's no arguments and the type is a function that takes
+            // arguments then this is the constructor being referenced, not the
+            // function being called.
+            if let Some(arity) = typ.fn_arity() {
+                if args.len() == 0 && arity != 0 {
+                    let arity = arity as u16;
+                    return Ok(record_constructor(typ.clone(), None, name, arity, tracker));
+                }
+            }
+
             let field_values: Vec<_> = args
                 .iter()
                 .map(|arg| constant_expression(context, tracker, &arg.value))
@@ -1768,4 +1739,46 @@ fn immediately_involked_function_expression_document(document: Document<'_>) -> 
         "})()",
     )
     .group()
+}
+
+fn record_constructor<'a>(
+    type_: Arc<Type>,
+    qualifier: Option<&'a str>,
+    name: &'a str,
+    arity: u16,
+    tracker: &mut UsageTracker,
+) -> Document<'a> {
+    if qualifier.is_none() && type_.is_result_constructor() {
+        if name == "Ok" {
+            tracker.ok_used = true;
+        } else if name == "Error" {
+            tracker.error_used = true;
+        }
+    }
+    if type_.is_bool() && name == "True" {
+        "true".to_doc()
+    } else if type_.is_bool() {
+        "false".to_doc()
+    } else if type_.is_nil() {
+        "undefined".to_doc()
+    } else if arity == 0 {
+        match qualifier {
+            Some(module) => docvec!["new $", module, ".", name, "()"],
+            None => docvec!["new ", name, "()"],
+        }
+    } else {
+        let vars = (0..arity).map(|i| Document::String(format!("var{i}")));
+        let body = docvec![
+            "return ",
+            construct_record(qualifier, name, vars.clone()),
+            ";"
+        ];
+        docvec!(
+            docvec!(wrap_args(vars), " => {", break_("", " "), body)
+                .nest(INDENT)
+                .append(break_("", " "))
+                .group(),
+            "}",
+        )
+    }
 }

@@ -32,6 +32,10 @@
   which had constructors of duplicate names.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+- Fixed a bug where referencing record constructors in JavaScript constants but
+  not calling them could produce invalid code.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
