@@ -650,9 +650,13 @@ fn const_segment<'a>(
     options: &'a [TypedConstantBitArraySegmentOption],
     env: &mut Env<'a>,
 ) -> Document<'a> {
+    let mut value_is_a_string_literal = false;
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Constant::String { value, .. } => {
+            value_is_a_string_literal = true;
+            value.to_doc().surround("\"", "\"")
+        }
 
         // As normal
         Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
@@ -673,7 +677,15 @@ fn const_segment<'a>(
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_array_segment(document, options, size, unit, true, env)
+    bit_array_segment(
+        document,
+        options,
+        size,
+        unit,
+        value_is_a_string_literal,
+        false,
+        env,
+    )
 }
 
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
@@ -738,6 +750,7 @@ fn expr_segment<'a>(
         size,
         unit,
         value_is_a_string_literal,
+        false,
         env,
     )
 }
@@ -748,6 +761,7 @@ fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
+    value_is_a_discard: bool,
     env: &mut Env<'a>,
 ) -> Document<'a>
 where
@@ -761,7 +775,7 @@ where
     // Erlang only allows valid codepoint integers to be used as values for utf segments
     // We want to support <<string_var:utf8>> for all string variables, but <<StringVar/utf8>> is invalid
     // To work around this we use the binary type specifier for these segments instead
-    let override_type = if !value_is_a_string_literal {
+    let override_type = if !value_is_a_string_literal && !value_is_a_discard {
         Some("binary")
     } else {
         None
