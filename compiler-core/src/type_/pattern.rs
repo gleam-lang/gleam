@@ -7,7 +7,9 @@ use itertools::Itertools;
 use super::*;
 use crate::{
     analyse::{name::check_name_case, Inferred},
-    ast::{AssignName, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment},
+    ast::{
+        AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
+    },
 };
 use std::sync::Arc;
 
@@ -178,6 +180,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             value,
             ..
         } = segment;
+
+        let options = match value.as_ref() {
+            Pattern::String { .. } if options.is_empty() => vec![BitArrayOption::Utf8 {
+                location: SrcSpan::default(),
+            }],
+            _ => options,
+        };
 
         let options: Vec<_> = options
             .into_iter()

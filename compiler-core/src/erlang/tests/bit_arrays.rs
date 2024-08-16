@@ -22,7 +22,7 @@ fn bit_array_float() {
         r#"pub fn main() {
   let b = 16
   let floats = <<1.0:16-float, 5.0:float-32, 6.0:float-64-little, 1.0:float-size(b)>>
-  let assert <<1.0:16-float, 5.0:float-32, 6.0:float-64-little, 1.0:float-size(b)>> = floats 
+  let assert <<1.0:16-float, 5.0:float-32, 6.0:float-64-little, 1.0:float-size(b)>> = floats
 }"#
     );
 }
@@ -158,6 +158,39 @@ fn unicode_bit_array_2() {
         r#"
     pub fn main() {
         let arr = <<"\u{1F600}":utf8>>
+}"#
+    );
+}
+
+#[test]
+fn bit_array_literal_string_constant_is_treated_as_utf8() {
+    assert_erl!(
+        r#"
+const a = <<"hello", " ", "world">>
+pub fn main() { a }
+"#
+    );
+}
+
+#[test]
+fn bit_array_literal_string_is_treated_as_utf8() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  <<"hello", " ", "world">>
+}"#
+    );
+}
+
+#[test]
+fn bit_array_literal_string_pattern_is_treated_as_utf8() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  case <<>> {
+    <<"a", "b", _:bits>> -> 1
+    _ -> 2
+  }
 }"#
     );
 }
