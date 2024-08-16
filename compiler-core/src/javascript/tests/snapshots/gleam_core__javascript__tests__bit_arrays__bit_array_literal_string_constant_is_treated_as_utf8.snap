@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "const a = <<\"hello\", \" \", \"world\">>"
+---
+import { toBitArray, stringBits } from "../gleam.mjs";
+
+const a = /* @__PURE__ */ toBitArray([
+  stringBits("hello"),
+  stringBits(" "),
+  stringBits("world"),
+]);

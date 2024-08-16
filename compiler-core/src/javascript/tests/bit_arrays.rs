@@ -583,3 +583,31 @@ fn go() {
 "#,
     );
 }
+
+#[test]
+fn bit_array_literal_string_constant_is_treated_as_utf8() {
+    assert_js!(r#"const a = <<"hello", " ", "world">>"#);
+}
+
+#[test]
+fn bit_array_literal_string_is_treated_as_utf8() {
+    assert_js!(
+        r#"
+pub fn main() {
+  <<"hello", " ", "world">>
+}"#
+    );
+}
+
+#[test]
+fn bit_array_literal_string_pattern_is_treated_as_utf8() {
+    assert_js!(
+        r#"
+pub fn main() {
+  case <<>> {
+    <<"a", "b", _:bytes>> -> 1
+    _ -> 2
+  }
+}"#
+    );
+}

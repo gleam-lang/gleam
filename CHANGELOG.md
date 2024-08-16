@@ -10,6 +10,21 @@
 
 ### Compiler
 
+- It is now possible to omit the `:utf8` option for literal strings used in a
+  `BitArray` segment.
+
+  ```gleam
+  <<"Hello", " ", "world">>
+  ```
+
+  Is the same as:
+
+  ```gleam
+  <<"Hello":utf8, " ":utf8, "world":utf8>>
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server

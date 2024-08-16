@@ -1054,7 +1054,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let segments = segments
             .into_iter()
             .map(|s| {
-                self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| env.infer(expr))
+                let options = match s.value.as_ref() {
+                    UntypedExpr::String { .. } if s.options.is_empty() => {
+                        vec![BitArrayOption::Utf8 {
+                            location: SrcSpan::default(),
+                        }]
+                    }
+                    _ => s.options,
+                };
+                self.infer_bit_segment(*s.value, options, s.location, |env, expr| env.infer(expr))
             })
             .try_collect()?;
 
@@ -1073,7 +1081,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let segments = segments
             .into_iter()
             .map(|s| {
-                self.infer_bit_segment(*s.value, s.options, s.location, |env, expr| {
+                let options = match s.value.as_ref() {
+                    Constant::String { .. } => vec![BitArrayOption::Utf8 {
+                        location: SrcSpan::default(),
+                    }],
+                    _ => s.options,
+                };
+                self.infer_bit_segment(*s.value, options, s.location, |env, expr| {
                     Ok(env.infer_const(&None, expr))
                 })
             })
