@@ -271,7 +271,7 @@ where
                     .compiler
                     .get_module_interface(import.module.as_str())
                     .map(|importing_module| {
-                        completer.unqualified_completions_from_module(importing_module)
+                        completer.unqualified_completions_from_module(importing_module, true)
                     }),
 
                 Located::ModuleStatement(Definition::ModuleConstant(_)) => None,
