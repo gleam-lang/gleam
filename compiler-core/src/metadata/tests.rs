@@ -134,7 +134,7 @@ fn module_with_private_type() {
         types: [(
             "ListIntType".into(),
             TypeConstructor {
-                typ: type_::list(type_::int()),
+                type_: type_::list(type_::int()),
                 publicity: Publicity::Private,
                 origin: Default::default(),
                 module: "the/module".into(),
@@ -187,7 +187,7 @@ fn module_with_app_type() {
         types: [(
             "ListIntType".into(),
             TypeConstructor {
-                typ: type_::list(type_::int()),
+                type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
@@ -218,7 +218,7 @@ fn module_with_fn_type() {
         types: [(
             "FnType".into(),
             TypeConstructor {
-                typ: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
+                type_: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
                 publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
@@ -249,7 +249,7 @@ fn module_with_tuple_type() {
         types: [(
             "TupleType".into(),
             TypeConstructor {
-                typ: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
+                type_: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
                 publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
@@ -286,7 +286,7 @@ fn module_with_generic_type() {
             types: [(
                 "TupleType".into(),
                 TypeConstructor {
-                    typ: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
+                    type_: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "the/module".into(),
@@ -323,7 +323,7 @@ fn module_with_type_links() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    typ: type_,
+                    type_: type_,
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
@@ -360,7 +360,7 @@ fn module_with_type_constructor_documentation() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    typ: type_,
+                    type_: type_,
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
@@ -397,7 +397,7 @@ fn module_with_type_constructor_origin() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    typ: type_,
+                    type_: type_,
                     publicity: Publicity::Public,
                     origin: SrcSpan {
                         start: 535,
@@ -902,7 +902,7 @@ fn constant_tuple() {
 fn constant_list() {
     let module = constant_module(Constant::List {
         location: Default::default(),
-        typ: type_::int(),
+        type_: type_::int(),
         elements: vec![
             Constant::Int {
                 location: Default::default(),
@@ -949,7 +949,7 @@ fn constant_record() {
             },
         ],
         tag: "thetag".into(),
-        typ: type_::int(),
+        type_: type_::int(),
         field_map: None,
     });
 
@@ -967,7 +967,7 @@ fn constant_var() {
         location: Default::default(),
         module: None,
         name: "one_original".into(),
-        typ: type_::int(),
+        type_: type_::int(),
         constructor: Some(Box::from(ValueConstructor {
             publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
@@ -1217,7 +1217,7 @@ fn deprecated_type() {
         types: [(
             "ListIntType".into(),
             TypeConstructor {
-                typ: type_::list(type_::int()),
+                type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),

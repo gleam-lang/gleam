@@ -853,7 +853,7 @@ pub trait UntypedConstantFolder {
             Constant::List {
                 location,
                 elements,
-                typ: (),
+                type_: (),
             } => self.fold_constant_list(location, elements),
 
             Constant::Record {
@@ -862,7 +862,7 @@ pub trait UntypedConstantFolder {
                 name,
                 args,
                 tag: (),
-                typ: (),
+                type_: (),
                 field_map: _,
             } => self.fold_constant_record(location, module, name, args),
 
@@ -875,7 +875,7 @@ pub trait UntypedConstantFolder {
                 module,
                 name,
                 constructor: _,
-                typ: (),
+                type_: (),
             } => self.fold_constant_var(location, module, name),
 
             Constant::StringConcatenation {
@@ -884,7 +884,10 @@ pub trait UntypedConstantFolder {
                 right,
             } => self.fold_constant_string_concatenation(location, left, right),
 
-            Constant::Invalid { location, typ: () } => self.fold_constant_invalid(location),
+            Constant::Invalid {
+                location,
+                type_: (),
+            } => self.fold_constant_invalid(location),
         }
     }
 
@@ -916,7 +919,7 @@ pub trait UntypedConstantFolder {
         Constant::List {
             location,
             elements,
-            typ: (),
+            type_: (),
         }
     }
 
@@ -933,7 +936,7 @@ pub trait UntypedConstantFolder {
             name,
             args,
             tag: (),
-            typ: (),
+            type_: (),
             field_map: None,
         }
     }
@@ -957,7 +960,7 @@ pub trait UntypedConstantFolder {
             module,
             name,
             constructor: None,
-            typ: (),
+            type_: (),
         }
     }
 
@@ -975,7 +978,10 @@ pub trait UntypedConstantFolder {
     }
 
     fn fold_constant_invalid(&mut self, location: SrcSpan) -> UntypedConstant {
-        Constant::Invalid { location, typ: () }
+        Constant::Invalid {
+            location,
+            type_: (),
+        }
     }
 
     /// You probably don't want to override this method.
@@ -991,7 +997,7 @@ pub trait UntypedConstantFolder {
             Constant::List {
                 location,
                 elements,
-                typ,
+                type_,
             } => {
                 let elements = elements
                     .into_iter()
@@ -1000,7 +1006,7 @@ pub trait UntypedConstantFolder {
                 Constant::List {
                     location,
                     elements,
-                    typ,
+                    type_,
                 }
             }
 
@@ -1010,7 +1016,7 @@ pub trait UntypedConstantFolder {
                 name,
                 args,
                 tag,
-                typ,
+                type_,
                 field_map,
             } => {
                 let args = args
@@ -1026,7 +1032,7 @@ pub trait UntypedConstantFolder {
                     name,
                     args,
                     tag,
-                    typ,
+                    type_,
                     field_map,
                 }
             }

@@ -186,8 +186,8 @@ pub fn generate_html<IO: FileSystemReader>(
             .sorted()
             .collect();
 
-        types.iter().for_each(|typ| {
-            let constructors = typ
+        types.iter().for_each(|type_| {
+            let constructors = type_
                 .constructors
                 .iter()
                 .map(|constructor| {
@@ -206,15 +206,15 @@ pub fn generate_html<IO: FileSystemReader>(
 
             search_indexes.push(SearchIndex {
                 doc: module.name.to_string(),
-                title: typ.name.to_string(),
+                title: type_.name.to_string(),
                 content: format!(
                     "{}\n{}\n{}\n{}",
-                    typ.definition,
-                    typ.text_documentation,
+                    type_.definition,
+                    type_.text_documentation,
                     constructors,
-                    import_synonyms(&module.name, typ.name)
+                    import_synonyms(&module.name, type_.name)
                 ),
-                url: format!("{}.html#{}", module.name, typ.name),
+                url: format!("{}.html#{}", module.name, type_.name),
             })
         });
         constants.iter().for_each(|constant| {
@@ -663,7 +663,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
         Definition::TypeAlias(TypeAlias {
             publicity: Publicity::Public,
             alias: name,
-            type_ast: typ,
+            type_ast: type_,
             documentation: doc,
             parameters: args,
             location,
@@ -673,7 +673,7 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
             name,
             definition: print(
                 formatter
-                    .type_alias(Publicity::Public, name, args, typ, deprecation, location)
+                    .type_alias(Publicity::Public, name, args, type_, deprecation, location)
                     .group(),
             ),
             documentation: markdown_documentation(doc),

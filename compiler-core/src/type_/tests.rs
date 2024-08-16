@@ -35,9 +35,9 @@ mod warnings;
 
 #[macro_export]
 macro_rules! assert_infer {
-    ($src:expr, $typ:expr $(,)?) => {
+    ($src:expr, $type_:expr $(,)?) => {
         let t = $crate::type_::tests::infer($src);
-        assert_eq!(($src, t), ($src, $typ.to_string()),);
+        assert_eq!(($src, t), ($src, $type_.to_string()),);
     };
 }
 

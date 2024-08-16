@@ -75,28 +75,28 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_int(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         value: &'ast EcoString,
     ) {
-        visit_typed_expr_int(self, location, typ, value);
+        visit_typed_expr_int(self, location, type_, value);
     }
 
     fn visit_typed_expr_float(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         value: &'ast EcoString,
     ) {
-        visit_typed_expr_float(self, location, typ, value);
+        visit_typed_expr_float(self, location, type_, value);
     }
 
     fn visit_typed_expr_string(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         value: &'ast EcoString,
     ) {
-        visit_typed_expr_string(self, location, typ, value);
+        visit_typed_expr_string(self, location, type_, value);
     }
 
     fn visit_typed_expr_block(
@@ -128,7 +128,7 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         is_capture: &'ast bool,
         args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
@@ -137,7 +137,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_fn(
             self,
             location,
-            typ,
+            type_,
             is_capture,
             args,
             body,
@@ -148,59 +148,59 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_list(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         elements: &'ast [TypedExpr],
         tail: &'ast Option<Box<TypedExpr>>,
     ) {
-        visit_typed_expr_list(self, location, typ, elements, tail);
+        visit_typed_expr_list(self, location, type_, elements, tail);
     }
 
     fn visit_typed_expr_call(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         args: &'ast [TypedCallArg],
     ) {
-        visit_typed_expr_call(self, location, typ, fun, args);
+        visit_typed_expr_call(self, location, type_, fun, args);
     }
 
     fn visit_typed_expr_bin_op(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         name: &'ast BinOp,
         left: &'ast TypedExpr,
         right: &'ast TypedExpr,
     ) {
-        visit_typed_expr_bin_op(self, location, typ, name, left, right);
+        visit_typed_expr_bin_op(self, location, type_, name, left, right);
     }
 
     fn visit_typed_expr_case(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         subjects: &'ast [TypedExpr],
         clauses: &'ast [TypedClause],
     ) {
-        visit_typed_expr_case(self, location, typ, subjects, clauses);
+        visit_typed_expr_case(self, location, type_, subjects, clauses);
     }
 
     fn visit_typed_expr_record_access(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         index: &'ast u64,
         record: &'ast TypedExpr,
     ) {
-        visit_typed_expr_record_access(self, location, typ, label, index, record);
+        visit_typed_expr_record_access(self, location, type_, label, index, record);
     }
 
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
@@ -209,7 +209,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_module_select(
             self,
             location,
-            typ,
+            type_,
             label,
             module_name,
             module_alias,
@@ -220,20 +220,20 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_tuple(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         elems: &'ast [TypedExpr],
     ) {
-        visit_typed_expr_tuple(self, location, typ, elems);
+        visit_typed_expr_tuple(self, location, type_, elems);
     }
 
     fn visit_typed_expr_tuple_index(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         index: &'ast u64,
         tuple: &'ast TypedExpr,
     ) {
-        visit_typed_expr_tuple_index(self, location, typ, index, tuple);
+        visit_typed_expr_tuple_index(self, location, type_, index, tuple);
     }
 
     fn visit_typed_expr_todo(
@@ -258,20 +258,20 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_bit_array(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         segments: &'ast [TypedExprBitArraySegment],
     ) {
-        visit_typed_expr_bit_array(self, location, typ, segments);
+        visit_typed_expr_bit_array(self, location, type_, segments);
     }
 
     fn visit_typed_expr_record_update(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         spread: &'ast TypedExpr,
         args: &'ast [TypedRecordUpdateArg],
     ) {
-        visit_typed_expr_record_update(self, location, typ, spread, args);
+        visit_typed_expr_record_update(self, location, type_, spread, args);
     }
 
     fn visit_typed_expr_negate_bool(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
@@ -282,8 +282,8 @@ pub trait Visit<'ast> {
         visit_typed_expr_negate_int(self, location, value)
     }
 
-    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, typ: &'ast Arc<Type>) {
-        visit_typed_expr_invalid(self, location, typ);
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        visit_typed_expr_invalid(self, location, type_);
     }
 
     fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
@@ -482,19 +482,19 @@ where
     match node {
         TypedExpr::Int {
             location,
-            typ,
+            type_,
             value,
-        } => v.visit_typed_expr_int(location, typ, value),
+        } => v.visit_typed_expr_int(location, type_, value),
         TypedExpr::Float {
             location,
-            typ,
+            type_,
             value,
-        } => v.visit_typed_expr_float(location, typ, value),
+        } => v.visit_typed_expr_float(location, type_, value),
         TypedExpr::String {
             location,
-            typ,
+            type_,
             value,
-        } => v.visit_typed_expr_string(location, typ, value),
+        } => v.visit_typed_expr_string(location, type_, value),
         TypedExpr::Block {
             location,
             statements,
@@ -511,54 +511,54 @@ where
         } => v.visit_typed_expr_var(location, constructor, name),
         TypedExpr::Fn {
             location,
-            typ,
+            type_,
             is_capture,
             args,
             body,
             return_annotation,
-        } => v.visit_typed_expr_fn(location, typ, is_capture, args, body, return_annotation),
+        } => v.visit_typed_expr_fn(location, type_, is_capture, args, body, return_annotation),
         TypedExpr::List {
             location,
-            typ,
+            type_,
             elements,
             tail,
-        } => v.visit_typed_expr_list(location, typ, elements, tail),
+        } => v.visit_typed_expr_list(location, type_, elements, tail),
         TypedExpr::Call {
             location,
-            typ,
+            type_,
             fun,
             args,
-        } => v.visit_typed_expr_call(location, typ, fun, args),
+        } => v.visit_typed_expr_call(location, type_, fun, args),
         TypedExpr::BinOp {
             location,
-            typ,
+            type_,
             name,
             left,
             right,
-        } => v.visit_typed_expr_bin_op(location, typ, name, left, right),
+        } => v.visit_typed_expr_bin_op(location, type_, name, left, right),
         TypedExpr::Case {
             location,
-            typ,
+            type_,
             subjects,
             clauses,
-        } => v.visit_typed_expr_case(location, typ, subjects, clauses),
+        } => v.visit_typed_expr_case(location, type_, subjects, clauses),
         TypedExpr::RecordAccess {
             location,
-            typ,
+            type_,
             label,
             index,
             record,
-        } => v.visit_typed_expr_record_access(location, typ, label, index, record),
+        } => v.visit_typed_expr_record_access(location, type_, label, index, record),
         TypedExpr::ModuleSelect {
             location,
-            typ,
+            type_,
             label,
             module_name,
             module_alias,
             constructor,
         } => v.visit_typed_expr_module_select(
             location,
-            typ,
+            type_,
             label,
             module_name,
             module_alias,
@@ -566,15 +566,15 @@ where
         ),
         TypedExpr::Tuple {
             location,
-            typ,
+            type_,
             elems,
-        } => v.visit_typed_expr_tuple(location, typ, elems),
+        } => v.visit_typed_expr_tuple(location, type_, elems),
         TypedExpr::TupleIndex {
             location,
-            typ,
+            type_,
             index,
             tuple,
-        } => v.visit_typed_expr_tuple_index(location, typ, index, tuple),
+        } => v.visit_typed_expr_tuple_index(location, type_, index, tuple),
         TypedExpr::Todo {
             location,
             message,
@@ -588,20 +588,20 @@ where
         } => v.visit_typed_expr_panic(location, message, type_),
         TypedExpr::BitArray {
             location,
-            typ,
+            type_,
             segments,
-        } => v.visit_typed_expr_bit_array(location, typ, segments),
+        } => v.visit_typed_expr_bit_array(location, type_, segments),
         TypedExpr::RecordUpdate {
             location,
-            typ,
+            type_,
             spread,
             args,
-        } => v.visit_typed_expr_record_update(location, typ, spread, args),
+        } => v.visit_typed_expr_record_update(location, type_, spread, args),
         TypedExpr::NegateBool { location, value } => {
             v.visit_typed_expr_negate_bool(location, value)
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
-        TypedExpr::Invalid { location, typ } => v.visit_typed_expr_invalid(location, typ),
+        TypedExpr::Invalid { location, type_ } => v.visit_typed_expr_invalid(location, type_),
     }
 }
 

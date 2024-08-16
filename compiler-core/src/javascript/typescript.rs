@@ -84,20 +84,20 @@ fn collect_generic_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
-    for typ in types {
-        generic_ids(typ, &mut ids);
+    for type_ in types {
+        generic_ids(type_, &mut ids);
     }
     ids
 }
 
 fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
-        Type::Var { type_: typ } => match typ.borrow().deref() {
+        Type::Var { type_ } => match type_.borrow().deref() {
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
             }
-            TypeVar::Link { type_: typ } => generic_ids(typ, ids),
+            TypeVar::Link { type_ } => generic_ids(type_, ids),
         },
         Type::Named { args, .. } => {
             for arg in args {
@@ -555,7 +555,7 @@ impl<'a> TypeScriptGenerator<'a> {
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages, false),
+            Type::Var { type_ } => self.print_var(&type_.borrow(), generic_usages, false),
 
             Type::Named {
                 name, module, args, ..
@@ -573,7 +573,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow(), None, true),
+            Type::Var { type_ } => self.print_var(&type_.borrow(), None, true),
 
             Type::Named {
                 name, module, args, ..
@@ -610,7 +610,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     }
                 }
             },
-            TypeVar::Link { type_: typ } => self.do_print(typ, generic_usages),
+            TypeVar::Link { type_ } => self.do_print(type_, generic_usages),
         }
     }
 

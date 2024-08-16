@@ -35,14 +35,14 @@ impl Printer {
 
     /// Render a Type as a well formatted string.
     ///
-    pub fn pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
+    pub fn pretty_print(&mut self, type_: &Type, initial_indent: usize) -> String {
         let mut buffer = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
             buffer.push(' ');
         }
         buffer
             .to_doc()
-            .append(self.print(typ))
+            .append(self.print(type_))
             .nest(initial_indent as isize)
             .to_pretty_string(80)
     }
@@ -50,8 +50,8 @@ impl Printer {
     // TODO: have this function return a Document that borrows from the Type.
     // Is this possible? The lifetime would have to go through the Arc<Refcell<Type>>
     // for TypeVar::Link'd types.
-    pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
-        match typ {
+    pub fn print<'a>(&mut self, type_: &Type) -> Document<'a> {
+        match type_ {
             Type::Named {
                 name, args, module, ..
             } => {
@@ -81,7 +81,7 @@ impl Printer {
                         .group(),
                 ),
 
-            Type::Var { type_: typ, .. } => self.type_var_doc(&typ.borrow()),
+            Type::Var { type_, .. } => self.type_var_doc(&type_.borrow()),
 
             Type::Tuple { elems, .. } => self.args_to_gleam_doc(elems).surround("#(", ")"),
         }
@@ -95,9 +95,9 @@ impl Printer {
         }
     }
 
-    fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
-        match typ {
-            TypeVar::Link { type_: ref typ, .. } => self.print(typ),
+    fn type_var_doc<'a>(&mut self, type_: &TypeVar) -> Document<'a> {
+        match type_ {
+            TypeVar::Link { ref type_, .. } => self.print(type_),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }
@@ -247,9 +247,9 @@ fn next_letter_test() {
 #[test]
 fn pretty_print_test() {
     macro_rules! assert_string {
-        ($src:expr, $typ:expr $(,)?) => {
+        ($src:expr, $type_:expr $(,)?) => {
             let mut printer = Printer::new();
-            assert_eq!($typ.to_string(), printer.pretty_print(&$src, 0),);
+            assert_eq!($type_.to_string(), printer.pretty_print(&$src, 0),);
         };
     }
 
@@ -455,6 +455,6 @@ fn function_test() {
 }
 
 #[cfg(test)]
-fn pretty_print(typ: Arc<Type>) -> String {
-    Printer::new().pretty_print(&typ, 0)
+fn pretty_print(type_: Arc<Type>) -> String {
+    Printer::new().pretty_print(&type_, 0)
 }

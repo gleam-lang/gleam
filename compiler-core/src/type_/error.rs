@@ -127,12 +127,12 @@ pub enum Error {
 
     NotFn {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
     },
 
     UnknownRecordField {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         label: EcoString,
         fields: Vec<EcoString>,
         usage: FieldAccessUsage,
@@ -421,7 +421,7 @@ pub enum Error {
     /// ```
     NotFnInUse {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
     },
 
     /// When the function to the right hand side of `<-` in a `use` expression
@@ -541,7 +541,7 @@ pub enum Warning {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
     },
 
     ImplicitlyDiscardedResult {
@@ -1039,7 +1039,7 @@ pub enum MatchFunTypeError {
         return_type: Arc<Type>,
     },
     NotFn {
-        typ: Arc<Type>,
+        type_: Arc<Type>,
     },
 }
 
@@ -1062,9 +1062,9 @@ pub fn convert_not_fun_error(
             given,
         },
 
-        (CallKind::Function, MatchFunTypeError::NotFn { typ }) => Error::NotFn {
+        (CallKind::Function, MatchFunTypeError::NotFn { type_ }) => Error::NotFn {
             location: fn_location,
-            typ,
+            type_,
         },
 
         (
@@ -1078,10 +1078,10 @@ pub fn convert_not_fun_error(
             given,
         },
 
-        (CallKind::Use { call_location, .. }, MatchFunTypeError::NotFn { typ }) => {
+        (CallKind::Use { call_location, .. }, MatchFunTypeError::NotFn { type_ }) => {
             Error::NotFnInUse {
                 location: call_location,
-                typ,
+                type_,
             }
         }
     }

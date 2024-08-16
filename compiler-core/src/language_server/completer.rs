@@ -665,10 +665,10 @@ where
 
     /// Provides completions for field accessors when the context being editted
     /// is a custom type instance
-    pub fn completion_field_accessors(&'a self, typ: Arc<Type>) -> Vec<CompletionItem> {
+    pub fn completion_field_accessors(&'a self, type_: Arc<Type>) -> Vec<CompletionItem> {
         self.type_accessors_from_modules(
             self.compiler.project_compiler.get_importable_modules(),
-            typ,
+            type_,
         )
         .map(|accessors_map| {
             accessors_map
@@ -830,7 +830,7 @@ fn type_completion(
         None => name.to_string(),
     };
 
-    let kind = Some(if type_.typ.is_variable() {
+    let kind = Some(if type_.type_.is_variable() {
         CompletionItemKind::VARIABLE
     } else {
         CompletionItemKind::CLASS

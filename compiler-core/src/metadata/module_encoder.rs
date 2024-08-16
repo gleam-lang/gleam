@@ -173,7 +173,7 @@ impl<'a> ModuleEncoder<'a> {
         });
         builder.set_publicity(self.publicity(constructor.publicity));
         let type_builder = builder.reborrow().init_type();
-        self.build_type(type_builder, &constructor.typ);
+        self.build_type(type_builder, &constructor.type_);
         self.build_types(
             builder
                 .reborrow()
@@ -342,13 +342,15 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_constants(builder.init_tuple(elements.len() as u32), elements)
             }
 
-            Constant::List { elements, typ, .. } => {
+            Constant::List {
+                elements, type_, ..
+            } => {
                 let mut builder = builder.init_list();
                 self.build_constants(
                     builder.reborrow().init_elements(elements.len() as u32),
                     elements,
                 );
-                self.build_type(builder.init_type(), typ);
+                self.build_type(builder.init_type(), type_);
             }
 
             Constant::BitArray { segments, .. } => {
@@ -358,7 +360,9 @@ impl<'a> ModuleEncoder<'a> {
                 }
             }
 
-            Constant::Record { args, tag, typ, .. } => {
+            Constant::Record {
+                args, tag, type_, ..
+            } => {
                 let mut builder = builder.init_record();
                 {
                     let mut builder = builder.reborrow().init_args(args.len() as u32);
@@ -367,13 +371,13 @@ impl<'a> ModuleEncoder<'a> {
                     }
                 }
                 builder.reborrow().set_tag(tag);
-                self.build_type(builder.reborrow().init_typ(), typ);
+                self.build_type(builder.reborrow().init_type(), type_);
             }
 
             Constant::Var {
                 module,
                 name,
-                typ,
+                type_,
                 constructor,
                 ..
             } => {
@@ -383,7 +387,7 @@ impl<'a> ModuleEncoder<'a> {
                     None => builder.set_module(""),
                 };
                 builder.set_name(name);
-                self.build_type(builder.reborrow().init_typ(), typ);
+                self.build_type(builder.reborrow().init_type(), type_);
                 self.build_value_constructor(
                     builder.reborrow().init_constructor(),
                     constructor
@@ -496,8 +500,8 @@ impl<'a> ModuleEncoder<'a> {
                 elems,
             ),
 
-            Type::Var { type_: typ } => match typ.borrow().deref() {
-                TypeVar::Link { type_: typ } => self.build_type(builder, typ),
+            Type::Var { type_ } => match type_.borrow().deref() {
+                TypeVar::Link { type_ } => self.build_type(builder, type_),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id } => {
                     self.build_type_var(builder.init_var(), *id)
                 }

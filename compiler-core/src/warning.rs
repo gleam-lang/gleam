@@ -282,7 +282,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 type_::Warning::Todo {
                     kind,
                     location,
-                    typ,
+                    type_,
                 } => {
                     let mut text = String::new();
                     text.push_str(
@@ -303,10 +303,10 @@ expression.",
                         }
                     }
                     .into();
-                    if !typ.is_variable() {
+                    if !type_.is_variable() {
                         text.push_str(&format!(
                             "\n\nHint: I think its type is `{}`.\n",
-                            Printer::new().pretty_print(typ, 0)
+                            Printer::new().pretty_print(type_, 0)
                         ));
                     }
 

@@ -28,7 +28,7 @@ where
 }
 
 struct SegmentOptionCategories<'a, T> {
-    typ: Option<&'a BitArrayOption<T>>,
+    type_: Option<&'a BitArrayOption<T>>,
     signed: Option<&'a BitArrayOption<T>>,
     endian: Option<&'a BitArrayOption<T>>,
     unit: Option<&'a BitArrayOption<T>>,
@@ -38,7 +38,7 @@ struct SegmentOptionCategories<'a, T> {
 impl<T> SegmentOptionCategories<'_, T> {
     fn new() -> Self {
         SegmentOptionCategories {
-            typ: None,
+            type_: None,
             signed: None,
             endian: None,
             unit: None,
@@ -52,7 +52,7 @@ impl<T> SegmentOptionCategories<'_, T> {
             location: SrcSpan::default(),
         };
 
-        match self.typ.unwrap_or(&default) {
+        match self.type_.unwrap_or(&default) {
             Int { .. } => crate::type_::int(),
             Float { .. } => crate::type_::float(),
             Utf8 { .. } | Utf16 { .. } | Utf32 { .. } => crate::type_::string(),
@@ -96,7 +96,7 @@ where
             | Utf8Codepoint { .. }
             | Utf16Codepoint { .. }
             | Utf32Codepoint { .. } => {
-                if let Some(previous) = categories.typ {
+                if let Some(previous) = categories.type_ {
                     return err(
                         ErrorType::ConflictingTypeOptions {
                             existing_type: previous.label(),
@@ -104,7 +104,7 @@ where
                         option.location(),
                     );
                 } else {
-                    categories.typ = Some(option);
+                    categories.type_ = Some(option);
                 }
             }
 
@@ -159,7 +159,7 @@ where
                 signed: Some(opt), ..
             }
             | SegmentOptionCategories {
-                typ: Some(opt @ Bytes { .. }),
+                type_: Some(opt @ Bytes { .. }),
                 ..
             } => return err(ErrorType::OptionNotAllowedInValue, opt.location()),
             _ => (),
@@ -169,7 +169,7 @@ where
     // All but the last segment in a pattern must have an exact size
     if must_have_size {
         if let SegmentOptionCategories {
-            typ: Some(opt @ (Bytes { .. } | Bits { .. })),
+            type_: Some(opt @ (Bytes { .. } | Bits { .. })),
             size: None,
             ..
         } = categories
@@ -181,7 +181,7 @@ where
     // Endianness is only valid for int, utf16, utf32 and float
     match categories {
         SegmentOptionCategories {
-            typ: None | Some(Int { .. } | Utf16 { .. } | Utf32 { .. } | Float { .. }),
+            type_: None | Some(Int { .. } | Utf16 { .. } | Utf32 { .. } | Float { .. }),
             ..
         } => {}
 
@@ -196,17 +196,17 @@ where
     // signed and unsigned can only be used with int types
     match categories {
         SegmentOptionCategories {
-            typ: None | Some(Int { .. }),
+            type_: None | Some(Int { .. }),
             ..
         } => {}
 
         SegmentOptionCategories {
-            typ: Some(opt),
+            type_: Some(opt),
             signed: Some(sign),
             ..
         } => {
             return err(
-                ErrorType::SignednessUsedOnNonInt { typ: opt.label() },
+                ErrorType::SignednessUsedOnNonInt { type_: opt.label() },
                 sign.location(),
             );
         }
@@ -217,24 +217,28 @@ where
     // utf8, utf16, utf32 exclude unit and size
     match categories {
         SegmentOptionCategories {
-            typ: Some(typ),
+            type_: Some(type_),
             unit: Some(_),
             ..
-        } if is_unicode(typ) => {
+        } if is_unicode(type_) => {
             return err(
-                ErrorType::TypeDoesNotAllowUnit { typ: typ.label() },
-                typ.location(),
+                ErrorType::TypeDoesNotAllowUnit {
+                    type_: type_.label(),
+                },
+                type_.location(),
             );
         }
 
         SegmentOptionCategories {
-            typ: Some(typ),
+            type_: Some(type_),
             size: Some(_),
             ..
-        } if is_unicode(typ) => {
+        } if is_unicode(type_) => {
             return err(
-                ErrorType::TypeDoesNotAllowSize { typ: typ.label() },
-                typ.location(),
+                ErrorType::TypeDoesNotAllowSize {
+                    type_: type_.label(),
+                },
+                type_.location(),
             );
         }
 
@@ -253,7 +257,7 @@ where
 
     // float only 16/32/64
     if let SegmentOptionCategories {
-        typ: Some(Float { .. }),
+        type_: Some(Float { .. }),
         size: Some(size),
         ..
     } = categories
@@ -326,9 +330,9 @@ pub enum ErrorType {
     InvalidEndianness,
     OptionNotAllowedInValue,
     SegmentMustHaveSize,
-    SignednessUsedOnNonInt { typ: EcoString },
-    TypeDoesNotAllowSize { typ: EcoString },
-    TypeDoesNotAllowUnit { typ: EcoString },
+    SignednessUsedOnNonInt { type_: EcoString },
+    TypeDoesNotAllowSize { type_: EcoString },
+    TypeDoesNotAllowUnit { type_: EcoString },
     UnitMustHaveSize,
     VariableUtfSegmentInPattern,
 }

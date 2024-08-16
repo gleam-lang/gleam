@@ -253,8 +253,8 @@ impl<'a> Printer<'a> {
                 self.print(retrn, buffer);
             }
 
-            Type::Var { type_: typ, .. } => match *typ.borrow() {
-                TypeVar::Link { type_: ref typ, .. } => self.print(typ, buffer),
+            Type::Var { type_, .. } => match *type_.borrow() {
+                TypeVar::Link { ref type_, .. } => self.print(type_, buffer),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                     buffer.push_str(&self.names.type_variable(id))
                 }
@@ -284,7 +284,7 @@ fn test_local_type() {
     names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Tiger".into(),
         args: vec![],
         module: "mod".into(),
@@ -292,7 +292,7 @@ fn test_local_type() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "Cat");
+    assert_eq!(printer.print_type(&type_), "Cat");
 }
 
 #[test]
@@ -301,11 +301,11 @@ fn test_generic_type_annotation() {
     names.type_variable_in_scope(0, "one".into());
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Var {
+    let type_ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
     };
 
-    assert_eq!(printer.print_type(&typ), "one");
+    assert_eq!(printer.print_type(&type_), "one");
 }
 
 #[test]
@@ -313,7 +313,7 @@ fn test_generic_type_var() {
     let mut names = TypeNames::new("module".into());
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Var {
+    let type_ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Unbound { id: 0 })),
     };
 
@@ -321,7 +321,7 @@ fn test_generic_type_var() {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Unbound { id: 1 })),
     };
 
-    assert_eq!(printer.print_type(&typ), "a");
+    assert_eq!(printer.print_type(&type_), "a");
     assert_eq!(printer.print_type(&typ2), "b");
 }
 
@@ -330,7 +330,7 @@ fn test_tuple_type() {
     let mut names = TypeNames::new("module".into());
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Tuple {
+    let type_ = Type::Tuple {
         elems: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
@@ -349,7 +349,7 @@ fn test_tuple_type() {
         ],
     };
 
-    assert_eq!(printer.print_type(&typ), "#(gleam.Int, gleam.String)");
+    assert_eq!(printer.print_type(&type_), "#(gleam.Int, gleam.String)");
 }
 
 #[test]
@@ -359,7 +359,7 @@ fn test_fn_type() {
     names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Fn {
+    let type_ = Type::Fn {
         args: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
@@ -385,7 +385,7 @@ fn test_fn_type() {
         }),
     };
 
-    assert_eq!(printer.print_type(&typ), "fn(Int, gleam.String) -> Bool");
+    assert_eq!(printer.print_type(&type_), "fn(Int, gleam.String) -> Bool");
 }
 
 #[test]
@@ -394,7 +394,7 @@ fn test_module_alias() {
     names.imported_module("mod1".into(), "animals".into());
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Cat".into(),
         args: vec![],
         module: "mod1".into(),
@@ -402,7 +402,7 @@ fn test_module_alias() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "animals.Cat");
+    assert_eq!(printer.print_type(&type_), "animals.Cat");
 }
 
 #[test]
@@ -415,7 +415,7 @@ fn test_type_alias_and_generics() {
 
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Tiger".into(),
         args: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
@@ -425,7 +425,7 @@ fn test_type_alias_and_generics() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "Cat(one)");
+    assert_eq!(printer.print_type(&type_), "Cat(one)");
 }
 
 #[test]
@@ -438,7 +438,7 @@ fn test_unqualified_import_and_generic() {
 
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Cat".into(),
         args: vec![Arc::new(Type::Var {
             type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
@@ -448,14 +448,14 @@ fn test_unqualified_import_and_generic() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "C(one)");
+    assert_eq!(printer.print_type(&type_), "C(one)");
 }
 
 #[test]
 fn nested_module() {
     let mut names = TypeNames::new("module".into());
     let mut printer = Printer::new(&mut names);
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Cat".into(),
         args: vec![],
         module: "one/two/three".into(),
@@ -463,7 +463,7 @@ fn nested_module() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "three.Cat");
+    assert_eq!(printer.print_type(&type_), "three.Cat");
 }
 
 #[test]
@@ -478,7 +478,7 @@ fn test_unqualified_import_and_module_alias() {
 
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Cat".into(),
         args: vec![],
         module: "mod1".into(),
@@ -486,7 +486,7 @@ fn test_unqualified_import_and_module_alias() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "C");
+    assert_eq!(printer.print_type(&type_), "C");
 }
 
 #[test]
@@ -499,7 +499,7 @@ fn test_module_imports() {
 
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Cat".into(),
         args: vec![],
         module: "mod".into(),
@@ -515,7 +515,7 @@ fn test_module_imports() {
         package: "".into(),
     };
 
-    assert_eq!(printer.print_type(&typ), "animals.Cat");
+    assert_eq!(printer.print_type(&type_), "animals.Cat");
     assert_eq!(printer.print_type(&typ1), "Cat");
 }
 
@@ -528,7 +528,7 @@ fn test_multiple_generic_annotations() {
 
     let mut printer = Printer::new(&mut names);
 
-    let typ = Type::Named {
+    let type_ = Type::Named {
         name: "Tiger".into(),
         args: vec![
             Arc::new(Type::Var {
@@ -547,7 +547,7 @@ fn test_multiple_generic_annotations() {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 2 })),
     };
 
-    assert_eq!(printer.print_type(&typ), "tigermodule.Tiger(one, two)");
+    assert_eq!(printer.print_type(&type_), "tigermodule.Tiger(one, two)");
     assert_eq!(printer.print_type(&typ1), "a");
 }
 

@@ -1120,7 +1120,9 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 .map(|s| const_segment(&s.value, &s.options, env)),
         ),
 
-        Constant::Record { tag, typ, args, .. } if args.is_empty() => match typ.deref() {
+        Constant::Record {
+            tag, type_, args, ..
+        } if args.is_empty() => match type_.deref() {
             Type::Fn { args, .. } => record_constructor_function(tag, args.len()),
             _ => atom_string(tag.to_snake_case()),
         },
@@ -1752,10 +1754,10 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => record_constructor_function(name, *arity as usize),
 
         TypedExpr::ModuleSelect {
-            typ,
+            type_,
             constructor: ModuleValueConstructor::Fn { module, name, .. },
             ..
-        } => module_select_fn(typ.clone(), module, name),
+        } => module_select_fn(type_.clone(), module, name),
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
@@ -1817,8 +1819,8 @@ fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Docum
         .append(wrap_args([index_doc, tuple_doc]))
 }
 
-fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
-    match crate::type_::collapse_links(typ).as_ref() {
+fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
+    match crate::type_::collapse_links(type_).as_ref() {
         Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name_to_erlang(module_name))
@@ -2012,8 +2014,8 @@ fn collect_type_var_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
-    for typ in types {
-        type_var_ids(typ, &mut ids);
+    for type_ in types {
+        type_var_ids(type_, &mut ids);
     }
     ids
 }
@@ -2048,12 +2050,12 @@ fn result_type_var_ids(ids: &mut HashMap<u64, u64>, arg_ok: &Type, arg_err: &Typ
 
 fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
-        Type::Var { type_: typ } => match typ.borrow().deref() {
+        Type::Var { type_ } => match type_.borrow().deref() {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
             }
-            TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
+            TypeVar::Link { type_ } => type_var_ids(type_, ids),
         },
         Type::Named {
             args, module, name, ..
@@ -2153,7 +2155,7 @@ impl<'a> TypePrinter<'a> {
 
     pub fn print(&self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow()),
+            Type::Var { type_ } => self.print_var(&type_.borrow()),
 
             Type::Named {
                 name, module, args, ..
@@ -2182,7 +2184,7 @@ impl<'a> TypePrinter<'a> {
                 },
                 None => id_to_type_var(*id),
             },
-            TypeVar::Link { type_: typ } => self.print(typ),
+            TypeVar::Link { type_ } => self.print(type_),
         }
     }
 

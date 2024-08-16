@@ -190,14 +190,14 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_local_variable(&mut self, name: EcoString, location: SrcSpan, typ: Arc<Type>) {
+    pub fn insert_local_variable(&mut self, name: EcoString, location: SrcSpan, type_: Arc<Type>) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
                 deprecation: Deprecation::NotDeprecated,
                 publicity: Publicity::Private,
                 variant: ValueConstructorVariant::LocalVariable { location },
-                type_: typ,
+                type_,
             },
         );
     }
@@ -227,7 +227,7 @@ impl<'a> Environment<'a> {
         &mut self,
         name: EcoString,
         variant: ValueConstructorVariant,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         publicity: Publicity,
         deprecation: Deprecation,
     ) {
@@ -237,7 +237,7 @@ impl<'a> Environment<'a> {
                 publicity,
                 deprecation,
                 variant,
-                type_: typ,
+                type_,
             },
         );
     }
@@ -410,7 +410,7 @@ impl<'a> Environment<'a> {
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self.scope.get(name).ok_or_else(|| {
-                let type_with_name_in_scope = self.module_types.keys().any(|typ| typ == name);
+                let type_with_name_in_scope = self.module_types.keys().any(|type_| type_ == name);
                 UnknownValueConstructorError::Variable {
                     name: name.clone(),
                     variables: self.local_value_names(),
@@ -472,13 +472,17 @@ impl<'a> Environment<'a> {
                 })
             }
 
-            Type::Var { type_: typ } => {
-                match typ.borrow().deref() {
-                    TypeVar::Link { type_: typ } => {
-                        return self.instantiate(typ.clone(), ids, hydrator)
+            Type::Var { type_ } => {
+                match type_.borrow().deref() {
+                    TypeVar::Link { type_ } => {
+                        return self.instantiate(type_.clone(), ids, hydrator)
                     }
 
-                    TypeVar::Unbound { .. } => return Arc::new(Type::Var { type_: typ.clone() }),
+                    TypeVar::Unbound { .. } => {
+                        return Arc::new(Type::Var {
+                            type_: type_.clone(),
+                        })
+                    }
 
                     TypeVar::Generic { id } => match ids.get(id) {
                         Some(t) => return t.clone(),
@@ -492,7 +496,9 @@ impl<'a> Environment<'a> {
                         }
                     },
                 }
-                Arc::new(Type::Var { type_: typ.clone() })
+                Arc::new(Type::Var {
+                    type_: type_.clone(),
+                })
             }
 
             Type::Fn { args, retrn, .. } => fn_(
@@ -660,21 +666,21 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
     }
 
     // Collapse right hand side type links. Left hand side will be collapsed in the next block.
-    if let Type::Var { type_: typ } = t2.deref() {
-        if let TypeVar::Link { type_: typ } = typ.borrow().deref() {
-            return unify(t1, typ.clone());
+    if let Type::Var { type_ } = t2.deref() {
+        if let TypeVar::Link { type_ } = type_.borrow().deref() {
+            return unify(t1, type_.clone());
         }
     }
 
-    if let Type::Var { type_: typ } = t1.deref() {
+    if let Type::Var { type_ } = t1.deref() {
         enum Action {
             Unify(Arc<Type>),
             CouldNotUnify,
             Link,
         }
 
-        let action = match typ.borrow().deref() {
-            TypeVar::Link { type_: typ } => Action::Unify(typ.clone()),
+        let action = match type_.borrow().deref() {
+            TypeVar::Link { type_ } => Action::Unify(type_.clone()),
 
             TypeVar::Unbound { id } => {
                 unify_unbound_type(t2.clone(), *id)?;
@@ -682,9 +688,9 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             }
 
             TypeVar::Generic { id } => {
-                if let Type::Var { type_: typ } = t2.deref() {
-                    if typ.borrow().is_unbound() {
-                        *typ.borrow_mut() = TypeVar::Generic { id: *id };
+                if let Type::Var { type_ } = t2.deref() {
+                    if type_.borrow().is_unbound() {
+                        *type_.borrow_mut() = TypeVar::Generic { id: *id };
                         return Ok(());
                     }
                 }
@@ -694,7 +700,7 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
 
         return match action {
             Action::Link => {
-                *typ.borrow_mut() = TypeVar::Link { type_: t2 };
+                *type_.borrow_mut() = TypeVar::Link { type_: t2 };
                 Ok(())
             }
 

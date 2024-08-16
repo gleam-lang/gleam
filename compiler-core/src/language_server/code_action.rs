@@ -119,7 +119,7 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
     fn visit_typed_expr_case(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         subjects: &'ast [TypedExpr],
         clauses: &'ast [ast::TypedClause],
     ) {
@@ -164,7 +164,7 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
             self.edits.extend(clause_edits);
         }
 
-        ast::visit::visit_typed_expr_case(self, location, typ, subjects, clauses)
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses)
     }
 }
 
@@ -605,7 +605,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
     fn visit_typed_expr_call(
         &mut self,
         location: &'ast SrcSpan,
-        typ: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         fun: &'ast TypedExpr,
         args: &'ast [TypedCallArg],
     ) {
@@ -632,6 +632,6 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // containing the current selection so we can't stop at the first call
         // we find (the outermost one) and have to keep traversing it in case
         // we're inside a nested call.
-        visit_typed_expr_call(self, location, typ, fun, args)
+        visit_typed_expr_call(self, location, type_, fun, args)
     }
 }
