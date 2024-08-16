@@ -74,6 +74,10 @@
   Codeberg, SourceHut, and Gitea.
   ([sobolevn](https://github.com/sobolevn))
 
+- Fixed a bug with Erlang code generation for discard utf8 patterns in bit
+  arrays.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes

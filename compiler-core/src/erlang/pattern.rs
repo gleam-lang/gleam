@@ -192,15 +192,23 @@ fn pattern_segment<'a>(
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
+    let mut pattern_is_a_string_literal = false;
+    let mut pattern_is_a_discard = false;
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Pattern::String { value, .. } => {
+            pattern_is_a_string_literal = true;
+            value.to_doc().surround("\"", "\"")
+        }
 
         // As normal
-        Pattern::Discard { .. }
-        | Pattern::Variable { .. }
-        | Pattern::Int { .. }
-        | Pattern::Float { .. } => print(value, vars, define_variables, env, guards),
+        Pattern::Discard { .. } => {
+            pattern_is_a_discard = true;
+            print(value, vars, define_variables, env, guards)
+        }
+        Pattern::Variable { .. } | Pattern::Int { .. } | Pattern::Float { .. } => {
+            print(value, vars, define_variables, env, guards)
+        }
 
         // No other pattern variants are allowed in pattern bit array segments
         _ => panic!("Pattern segment match not recognised"),
@@ -215,7 +223,15 @@ fn pattern_segment<'a>(
 
     let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
 
-    bit_array_segment(document, options, size, unit, true, env)
+    bit_array_segment(
+        document,
+        options,
+        size,
+        unit,
+        pattern_is_a_string_literal,
+        pattern_is_a_discard,
+        env,
+    )
 }
 
 fn pattern_list<'a>(
