@@ -7,19 +7,19 @@ use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
 pub enum TypedExpr {
     Int {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         value: EcoString,
     },
 
     Float {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         value: EcoString,
     },
 
     String {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         value: EcoString,
     },
 
@@ -47,7 +47,7 @@ pub enum TypedExpr {
 
     Fn {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         is_capture: bool,
         args: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
@@ -56,21 +56,21 @@ pub enum TypedExpr {
 
     List {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         elements: Vec<Self>,
         tail: Option<Box<Self>>,
     },
 
     Call {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         fun: Box<Self>,
         args: Vec<CallArg<Self>>,
     },
 
     BinOp {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         name: BinOp,
         left: Box<Self>,
         right: Box<Self>,
@@ -78,14 +78,14 @@ pub enum TypedExpr {
 
     Case {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, Arc<Type>, EcoString>>,
     },
 
     RecordAccess {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         label: EcoString,
         index: u64,
         record: Box<Self>,
@@ -93,7 +93,7 @@ pub enum TypedExpr {
 
     ModuleSelect {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         label: EcoString,
         module_name: EcoString,
         module_alias: EcoString,
@@ -102,13 +102,13 @@ pub enum TypedExpr {
 
     Tuple {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         elems: Vec<Self>,
     },
 
     TupleIndex {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         index: u64,
         tuple: Box<Self>,
     },
@@ -128,13 +128,13 @@ pub enum TypedExpr {
 
     BitArray {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         segments: Vec<TypedExprBitArraySegment>,
     },
 
     RecordUpdate {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         spread: Box<Self>,
         args: Vec<TypedRecordUpdateArg>,
     },
@@ -153,7 +153,7 @@ pub enum TypedExpr {
     /// even when there are type errors. Should never end up in generated code.
     Invalid {
         location: SrcSpan,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
     },
 }
 
@@ -410,23 +410,23 @@ impl TypedExpr {
             Self::NegateBool { .. } => bool(),
             Self::NegateInt { value, .. } => value.type_(),
             Self::Var { constructor, .. } => constructor.type_.clone(),
-            Self::Fn { typ, .. }
-            | Self::Int { typ, .. }
-            | Self::Todo { type_: typ, .. }
-            | Self::Case { typ, .. }
-            | Self::List { typ, .. }
-            | Self::Call { typ, .. }
-            | Self::Float { typ, .. }
-            | Self::Panic { type_: typ, .. }
-            | Self::BinOp { typ, .. }
-            | Self::Tuple { typ, .. }
-            | Self::String { typ, .. }
-            | Self::BitArray { typ, .. }
-            | Self::TupleIndex { typ, .. }
-            | Self::ModuleSelect { typ, .. }
-            | Self::RecordAccess { typ, .. }
-            | Self::RecordUpdate { typ, .. }
-            | Self::Invalid { typ, .. } => typ.clone(),
+            Self::Fn { type_, .. }
+            | Self::Int { type_, .. }
+            | Self::Todo { type_, .. }
+            | Self::Case { type_, .. }
+            | Self::List { type_, .. }
+            | Self::Call { type_, .. }
+            | Self::Float { type_, .. }
+            | Self::Panic { type_, .. }
+            | Self::BinOp { type_, .. }
+            | Self::Tuple { type_, .. }
+            | Self::String { type_, .. }
+            | Self::BitArray { type_, .. }
+            | Self::TupleIndex { type_, .. }
+            | Self::ModuleSelect { type_, .. }
+            | Self::RecordAccess { type_, .. }
+            | Self::RecordUpdate { type_, .. }
+            | Self::Invalid { type_, .. } => type_.clone(),
             Self::Pipeline { finally, .. } => finally.type_(),
             Self::Block { statements, .. } => statements.last().type_(),
         }

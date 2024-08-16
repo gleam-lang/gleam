@@ -120,14 +120,14 @@ impl Hydrator {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(args.len());
                 for t in args {
-                    let typ = self.type_from_ast(t, environment, problems)?;
-                    argument_types.push((t.location(), typ));
+                    let type_ = self.type_from_ast(t, environment, problems)?;
+                    argument_types.push((t.location(), type_));
                 }
 
                 // Look up the constructor
                 let TypeConstructor {
                     parameters,
-                    typ: return_type,
+                    type_: return_type,
                     deprecation,
                     ..
                 } = environment
@@ -168,7 +168,7 @@ impl Hydrator {
                 #[allow(clippy::needless_collect)] // Not needless, used for side effects
                 let parameter_types: Vec<_> = parameters
                     .into_iter()
-                    .map(|typ| environment.instantiate(typ, &mut type_vars, self))
+                    .map(|type_| environment.instantiate(type_, &mut type_vars, self))
                     .collect();
 
                 let return_type = environment.instantiate(return_type, &mut type_vars, self);

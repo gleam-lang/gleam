@@ -101,7 +101,7 @@ impl ModuleDecoder {
             origin: self.src_span(&reader.get_origin()?)?,
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
-            typ: type_,
+            type_,
             deprecation,
             documentation: self.optional_string(reader.get_documentation()?),
         })
@@ -286,12 +286,12 @@ impl ModuleDecoder {
         Ok(Constant::List {
             location: Default::default(),
             elements: read_vec!(reader.get_elements()?, self, constant),
-            typ: type_,
+            type_,
         })
     }
 
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
-        let type_ = self.type_(&reader.get_typ()?)?;
+        let type_ = self.type_(&reader.get_type()?)?;
         let tag = reader.get_tag()?.into();
         let args = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
@@ -300,7 +300,7 @@ impl ModuleDecoder {
             name: Default::default(),
             args,
             tag,
-            typ: type_,
+            type_,
             field_map: None,
         })
     }
@@ -328,7 +328,7 @@ impl ModuleDecoder {
     }
 
     fn constant_var(&mut self, reader: &constant::var::Reader<'_>) -> Result<TypedConstant> {
-        let type_ = self.type_(&reader.get_typ()?)?;
+        let type_ = self.type_(&reader.get_type()?)?;
         let module = match reader.get_module()? {
             "" => None,
             module_str => Some(module_str),
@@ -340,7 +340,7 @@ impl ModuleDecoder {
             module: module.map(EcoString::from),
             name: name.into(),
             constructor: Some(Box::from(constructor)),
-            typ: type_,
+            type_,
         })
     }
 

@@ -44,7 +44,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn insert_variable(
         &mut self,
         name: &str,
-        typ: Arc<Type>,
+        type_: Arc<Type>,
         location: SrcSpan,
     ) -> Result<(), UnifyError> {
         self.check_name_case(location, &EcoString::from(name), Named::Variable);
@@ -71,7 +71,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
                 self.environment
-                    .insert_local_variable(name.into(), location, typ);
+                    .insert_local_variable(name.into(), location, type_);
                 Ok(())
             }
 
@@ -81,7 +81,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.into());
                         let initial_typ = initial.type_.clone();
-                        unify(initial_typ, typ)
+                        unify(initial_typ, type_)
                     }
 
                     // This variable was not defined in the Initial multi-pattern
@@ -190,7 +190,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options: Vec<_> = options
             .into_iter()
-            .map(|o| crate::analyse::infer_bit_array_option(o, |value, typ| self.unify(value, typ)))
+            .map(|o| {
+                crate::analyse::infer_bit_array_option(o, |value, type_| self.unify(value, type_))
+            })
             .try_collect()?;
 
         let segment_type = bit_array::type_options_for_pattern(&options, !is_last_segment)
@@ -199,7 +201,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location: error.location,
             })?;
 
-        let typ = {
+        let type_ = {
             match value.deref() {
                 Pattern::Variable { .. } if segment_type == string() => {
                     Err(Error::BitArraySegmentError {
@@ -210,13 +212,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 _ => Ok(segment_type),
             }
         }?;
-        let typed_value = self.unify(*value, typ.clone())?;
+        let typed_value = self.unify(*value, type_.clone())?;
 
         Ok(BitArraySegment {
             location,
             value: Box::new(typed_value),
             options,
-            type_: typ,
+            type_,
         })
     }
 
@@ -264,19 +266,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .environment
                             .module_types
                             .keys()
-                            .any(|typ| typ == &name),
+                            .any(|type_| type_ == &name),
                     })?;
                 self.environment.increment_usage(&name);
-                let typ =
+                let type_ =
                     self.environment
                         .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
-                unify(int(), typ.clone()).map_err(|e| convert_unify_error(e, location))?;
+                unify(int(), type_.clone()).map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::VarUsage {
                     name,
                     location,
                     constructor: Some(vc),
-                    type_: typ,
+                    type_,
                 })
             }
 
@@ -405,7 +407,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elems = elems
                         .into_iter()
                         .zip(type_elems)
-                        .map(|(pattern, typ)| self.unify(pattern, typ.clone()))
+                        .map(|(pattern, type_)| self.unify(pattern, type_.clone()))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }
@@ -618,14 +620,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             let pattern_args = pattern_args
                                 .into_iter()
                                 .zip(args)
-                                .map(|(arg, typ)| {
+                                .map(|(arg, type_)| {
                                     let CallArg {
                                         value,
                                         location,
                                         implicit,
                                         label,
                                     } = arg;
-                                    let value = self.unify(value, typ.clone())?;
+                                    let value = self.unify(value, type_.clone())?;
                                     Ok(CallArg {
                                         value,
                                         location,

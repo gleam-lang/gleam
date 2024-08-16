@@ -71,7 +71,7 @@ Parsed {
                                 module: None,
                                 name: "cute",
                                 constructor: None,
-                                typ: (),
+                                type_: (),
                             },
                             right: String {
                                 location: SrcSpan {

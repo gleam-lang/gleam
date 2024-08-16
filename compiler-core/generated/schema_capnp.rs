@@ -5154,11 +5154,11 @@ pub mod constant {
         !self.reader.get_pointer_field(1).is_null()
       }
       #[inline]
-      pub fn get_typ(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
+      pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
       #[inline]
-      pub fn has_typ(&self) -> bool {
+      pub fn has_type(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
     }
@@ -5244,19 +5244,19 @@ pub mod constant {
         !self.builder.get_pointer_field(1).is_null()
       }
       #[inline]
-      pub fn get_typ(self) -> ::capnp::Result<crate::schema_capnp::type_::Builder<'a>> {
+      pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Builder<'a>> {
         ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
       }
       #[inline]
-      pub fn set_typ(&mut self, value: crate::schema_capnp::type_::Reader<'_>) -> ::capnp::Result<()> {
+      pub fn set_type(&mut self, value: crate::schema_capnp::type_::Reader<'_>) -> ::capnp::Result<()> {
         ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
       }
       #[inline]
-      pub fn init_typ(self, ) -> crate::schema_capnp::type_::Builder<'a> {
+      pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
       }
       #[inline]
-      pub fn has_typ(&self) -> bool {
+      pub fn has_type(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
     }
@@ -5268,7 +5268,7 @@ pub mod constant {
       }
     }
     impl Pipeline  {
-      pub fn get_typ(&self) -> crate::schema_capnp::type_::Pipeline {
+      pub fn get_type(&self) -> crate::schema_capnp::type_::Pipeline {
         ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(2))
       }
     }
@@ -5342,11 +5342,11 @@ pub mod constant {
         !self.reader.get_pointer_field(1).is_null()
       }
       #[inline]
-      pub fn get_typ(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
+      pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Reader<'a>> {
         ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
       }
       #[inline]
-      pub fn has_typ(&self) -> bool {
+      pub fn has_type(&self) -> bool {
         !self.reader.get_pointer_field(2).is_null()
       }
       #[inline]
@@ -5440,19 +5440,19 @@ pub mod constant {
         !self.builder.get_pointer_field(1).is_null()
       }
       #[inline]
-      pub fn get_typ(self) -> ::capnp::Result<crate::schema_capnp::type_::Builder<'a>> {
+      pub fn get_type(self) -> ::capnp::Result<crate::schema_capnp::type_::Builder<'a>> {
         ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
       }
       #[inline]
-      pub fn set_typ(&mut self, value: crate::schema_capnp::type_::Reader<'_>) -> ::capnp::Result<()> {
+      pub fn set_type(&mut self, value: crate::schema_capnp::type_::Reader<'_>) -> ::capnp::Result<()> {
         ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
       }
       #[inline]
-      pub fn init_typ(self, ) -> crate::schema_capnp::type_::Builder<'a> {
+      pub fn init_type(self, ) -> crate::schema_capnp::type_::Builder<'a> {
         ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), 0)
       }
       #[inline]
-      pub fn has_typ(&self) -> bool {
+      pub fn has_type(&self) -> bool {
         !self.builder.get_pointer_field(2).is_null()
       }
       #[inline]
@@ -5480,7 +5480,7 @@ pub mod constant {
       }
     }
     impl Pipeline  {
-      pub fn get_typ(&self) -> crate::schema_capnp::type_::Pipeline {
+      pub fn get_type(&self) -> crate::schema_capnp::type_::Pipeline {
         ::capnp::capability::FromTypelessPipeline::new(self._typeless.get_pointer_field(2))
       }
       pub fn get_constructor(&self) -> crate::schema_capnp::value_constructor::Pipeline {

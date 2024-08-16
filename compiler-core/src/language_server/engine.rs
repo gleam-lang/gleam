@@ -487,7 +487,7 @@ where
                     .and_then(|module| {
                         if is_type {
                             module.types.get(name).map(|t| {
-                                hover_for_annotation(*location, t.typ.as_ref(), Some(t), lines)
+                                hover_for_annotation(*location, t.type_.as_ref(), Some(t), lines)
                             })
                         } else {
                             module.values.get(name).map(|v| {

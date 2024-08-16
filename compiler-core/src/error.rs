@@ -1492,11 +1492,11 @@ Hint: Add some type annotations and try again."
                     }
                 }
 
-                TypeError::NotFn { location, typ } => {
+                TypeError::NotFn { location, type_ } => {
                     let mut printer = Printer::new();
                     let text = format!(
                         "This value is being called as a function but its type is:\n\n{}",
-                        printer.pretty_print(typ, 4)
+                        printer.pretty_print(type_, 4)
                     );
                     Diagnostic {
                         title: "Type mismatch".into(),
@@ -1518,7 +1518,7 @@ Hint: Add some type annotations and try again."
                 TypeError::UnknownRecordField {
                     usage,
                     location,
-                    typ,
+                    type_,
                     label,
                     fields,
                     variants,
@@ -1528,7 +1528,7 @@ Hint: Add some type annotations and try again."
                     // Give a hint about what type this value has.
                     let mut text = format!(
                         "The value being accessed has this type:\n\n{}\n",
-                        printer.pretty_print(typ, 4)
+                        printer.pretty_print(type_, 4)
                     );
 
                     // Give a hint about what record fields this value has, if any.
@@ -2314,17 +2314,17 @@ function and try again."
                                 vec!["Hint: This option has no effect in BitArray values.".into()],
                             ),
 
-                            bit_array::ErrorType::SignednessUsedOnNonInt { typ } => (
+                            bit_array::ErrorType::SignednessUsedOnNonInt { type_ } => (
                                 "Signedness is only valid with int types",
-                                vec![format!("Hint: This segment has a type of {typ}")],
+                                vec![format!("Hint: This segment has a type of {type_}")],
                             ),
-                            bit_array::ErrorType::TypeDoesNotAllowSize { typ } => (
+                            bit_array::ErrorType::TypeDoesNotAllowSize { type_ } => (
                                 "Size cannot be specified here",
-                                vec![format!("Hint: {typ} segments have an automatic size.")],
+                                vec![format!("Hint: {type_} segments have an automatic size.")],
                             ),
-                            bit_array::ErrorType::TypeDoesNotAllowUnit { typ } => (
+                            bit_array::ErrorType::TypeDoesNotAllowUnit { type_ } => (
                                 "Unit cannot be specified here",
-                                vec![wrap(&format!("Hint: {typ} segments are sized based on their value \
+                                vec![wrap(&format!("Hint: {type_} segments are sized based on their value \
     and cannot have a unit."))],
                             ),
                             bit_array::ErrorType::VariableUtfSegmentInPattern => (
@@ -2784,7 +2784,7 @@ Rename or remove one of them.",
                     }
                 },
 
-                TypeError::NotFnInUse { location, typ } => {
+                TypeError::NotFnInUse { location, type_ } => {
                     let mut printer = Printer::new();
                     let text = wrap_format!(
                         "In a use expression, there should be a function on the right hand side \
@@ -2793,7 +2793,7 @@ of `<-`, but this value has type:
 {}
 
 See: https://tour.gleam.run/advanced-features/use/",
-                        printer.pretty_print(typ, 4)
+                        printer.pretty_print(type_, 4)
                     );
 
                     Diagnostic {

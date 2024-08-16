@@ -29,7 +29,7 @@ pub enum Constant<T, RecordTag> {
     List {
         location: SrcSpan,
         elements: Vec<Self>,
-        typ: T,
+        type_: T,
     },
 
     Record {
@@ -38,7 +38,7 @@ pub enum Constant<T, RecordTag> {
         name: EcoString,
         args: Vec<CallArg<Self>>,
         tag: RecordTag,
-        typ: T,
+        type_: T,
         field_map: Option<FieldMap>,
     },
 
@@ -52,7 +52,7 @@ pub enum Constant<T, RecordTag> {
         module: Option<EcoString>,
         name: EcoString,
         constructor: Option<Box<ValueConstructor>>,
-        typ: T,
+        type_: T,
     },
 
     StringConcatenation {
@@ -65,7 +65,7 @@ pub enum Constant<T, RecordTag> {
     /// even when there are type errors. Should never end up in generated code.
     Invalid {
         location: SrcSpan,
-        typ: T,
+        type_: T,
     },
 }
 
@@ -79,10 +79,10 @@ impl TypedConstant {
             Constant::Tuple { elements, .. } => {
                 type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }
-            Constant::List { typ, .. }
-            | Constant::Record { typ, .. }
-            | Constant::Var { typ, .. }
-            | Constant::Invalid { typ, .. } => typ.clone(),
+            Constant::List { type_, .. }
+            | Constant::Record { type_, .. }
+            | Constant::Var { type_, .. }
+            | Constant::Invalid { type_, .. } => type_.clone(),
         }
     }
 }

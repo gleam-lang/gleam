@@ -326,7 +326,7 @@ impl<'module> Generator<'module> {
                 let size_int = match *size.clone() {
                     TypedExpr::Int {
                         location: _,
-                        typ: _,
+                        type_: _,
                         value,
                     } => value.parse().unwrap_or(0),
                     _ => 0,
@@ -1216,23 +1216,23 @@ pub(crate) fn guard_constant_expression<'a>(
                     .map(|e| guard_constant_expression(assignments, tracker, e)),
             )
         }
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
             Ok("false".to_doc())
         }
-        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
+        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
 
         Constant::Record {
             args,
             module,
             name,
             tag,
-            typ,
+            type_,
             ..
         } => {
-            if typ.is_result() {
+            if type_.is_result() {
                 if tag == "Ok" {
                     tracker.ok_used = true;
                 } else {
@@ -1301,23 +1301,23 @@ pub(crate) fn constant_expression<'a>(
             }
         }
 
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
             Ok("false".to_doc())
         }
-        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
+        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
 
         Constant::Record {
             args,
             module,
             name,
             tag,
-            typ,
+            type_,
             ..
         } => {
-            if typ.is_result() {
+            if type_.is_result() {
                 if tag == "Ok" {
                     tracker.ok_used = true;
                 } else {
@@ -1328,10 +1328,16 @@ pub(crate) fn constant_expression<'a>(
             // If there's no arguments and the type is a function that takes
             // arguments then this is the constructor being referenced, not the
             // function being called.
-            if let Some(arity) = typ.fn_arity() {
+            if let Some(arity) = type_.fn_arity() {
                 if args.is_empty() && arity != 0 {
                     let arity = arity as u16;
-                    return Ok(record_constructor(typ.clone(), None, name, arity, tracker));
+                    return Ok(record_constructor(
+                        type_.clone(),
+                        None,
+                        name,
+                        arity,
+                        tracker,
+                    ));
                 }
             }
 
