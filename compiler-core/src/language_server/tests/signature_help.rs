@@ -38,23 +38,19 @@ fn pretty_signature_help(signature_help: SignatureHelp) -> String {
 
     let documentation = match documentation {
         Some(d) => format!("Documentation:\n{:#?}", d),
-        None => format!("No documentation"),
+        None => "No documentation".to_string(),
     };
 
     let label = match active_parameter {
-        None => format!("{label}"),
+        None => label.to_string(),
         Some(i) => match parameters.get(i as usize) {
-            None => format!("{label}"),
+            None => label.to_string(),
             Some(ParameterInformation {
                 label: ParameterLabel::LabelOffsets([start, end]),
                 ..
             }) => {
-                let spaces = std::iter::repeat(' ')
-                    .take(*start as usize)
-                    .collect::<String>();
-                let underlined = std::iter::repeat('▔')
-                    .take((end - start) as usize)
-                    .collect::<String>();
+                let spaces = " ".repeat(*start as usize);
+                let underlined = "▔".repeat((end - start) as usize);
                 format!("{label}\n{spaces}{underlined}")
             }
             Some(_) => panic!("unexpected response"),
