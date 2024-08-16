@@ -169,7 +169,7 @@ pub fn seconds(duration: Duration) -> String {
 }
 
 pub fn print_colourful_prefix(prefix: &str, text: &str) {
-    let buffer_writer = stdout_buffer_writer();
+    let buffer_writer = stderr_buffer_writer();
     let mut buffer = buffer_writer.buffer();
     buffer
         .set_color(
