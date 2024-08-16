@@ -45,6 +45,7 @@ export class List {
     return desired === 0;
   }
 
+  // @internal
   countLength() {
     let length = 0;
     for (let _ of this) length++;
