@@ -141,11 +141,12 @@ impl Attributes {
     }
 }
 
-type SpannedString = (SrcSpan, EcoString);
-
 //
 // Public Interface
 //
+
+pub type SpannedString = (SrcSpan, EcoString);
+
 pub fn parse_module(
     path: Utf8PathBuf,
     src: &str,

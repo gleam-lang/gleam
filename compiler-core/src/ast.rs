@@ -13,6 +13,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
+use crate::parse::SpannedString;
 use crate::type_::expression::Implementations;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
@@ -236,7 +237,7 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<(SrcSpan, EcoString)>,
+    pub label: Option<SpannedString>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
@@ -629,7 +630,7 @@ impl Publicity {
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: Option<(SrcSpan, EcoString)>,
+    pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
     pub publicity: Publicity,
@@ -743,7 +744,7 @@ pub struct CustomType<T> {
     pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
-    pub parameters: Vec<(SrcSpan, EcoString)>,
+    pub parameters: Vec<SpannedString>,
     /// Once type checked this field will contain the type information for the
     /// type parameters.
     pub typed_parameters: Vec<T>,
@@ -773,7 +774,7 @@ pub struct TypeAlias<T> {
     pub location: SrcSpan,
     pub alias: EcoString,
     pub name_location: SrcSpan,
-    pub parameters: Vec<(SrcSpan, EcoString)>,
+    pub parameters: Vec<SpannedString>,
     pub type_ast: TypeAst,
     pub type_: T,
     pub publicity: Publicity,
