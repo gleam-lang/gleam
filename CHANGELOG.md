@@ -44,6 +44,21 @@
   would be infered as `fn() -> Int` in this context.
   ([sobolevn](https://github.com/sobolevn))
 
+- Improves how inference works for anonymous functions inside a pipe.
+  For example:
+
+  ```gleam
+  pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x) { x }
+  }
+  ```
+
+  Now inferes correctly to return `Int`.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server

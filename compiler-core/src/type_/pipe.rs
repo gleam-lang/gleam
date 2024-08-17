@@ -90,6 +90,21 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             self.warn_if_call_first_argument_is_hole(&call);
 
             let call = match call {
+                func @ UntypedExpr::Fn { location, .. } => {
+                    let (func, args, return_type) = self.expr_typer.do_infer_call(
+                        func.clone(),
+                        vec![self.untyped_left_hand_value_variable_call_argument()],
+                        location,
+                        CallKind::Function,
+                    );
+                    TypedExpr::Call {
+                        location,
+                        args,
+                        type_: return_type,
+                        fun: Box::new(func),
+                    }
+                }
+
                 // left |> right(..args)
                 UntypedExpr::Call {
                     fun,
