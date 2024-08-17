@@ -2356,6 +2356,20 @@ pub fn main() {
 }
 
 #[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity3() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn () { x }
+}
+"#
+    );
+}
+
+#[test]
 fn pipe_with_annonymous_mixed_functions() {
     assert_module_infer!(
         r#"
