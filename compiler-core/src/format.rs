@@ -10,6 +10,7 @@ use crate::{
     docvec,
     io::Utf8Writer,
     parse::extra::{Comment, ModuleExtra},
+    parse::SpannedString,
     pretty::{self, *},
     type_::{self, Type},
     warning::WarningEmitter,
@@ -704,7 +705,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         publicity: Publicity,
         name: &'a str,
-        args: &'a [(SrcSpan, EcoString)],
+        args: &'a [SpannedString],
         type_: &'a TypeAst,
         deprecation: &'a Deprecation,
         location: &SrcSpan,
@@ -1640,7 +1641,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         publicity: Publicity,
         name: &'a str,
-        args: &'a [(SrcSpan, EcoString)],
+        args: &'a [SpannedString],
         location: &'a SrcSpan,
     ) -> Document<'a> {
         let _ = self.pop_empty_lines(location.start);
