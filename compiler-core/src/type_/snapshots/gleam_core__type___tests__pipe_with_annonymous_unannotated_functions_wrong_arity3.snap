@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn main() {\n  let a = 1\n     |> fn (x) { #(x, x + 1) }\n     |> fn (x) { x.0 }\n     |> fn () { x }\n}\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:6:9
+  │
+6 │      |> fn () { x }
+  │         ^^^^^^^^^^^ Expected no arguments, got 1
+
+
+error: Unknown variable
+  ┌─ /src/one/two.gleam:6:17
+  │
+6 │      |> fn () { x }
+  │                 ^
+
+The name `x` is not in scope here.
