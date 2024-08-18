@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  fn my() { 1 }\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:6
+  │
+3 │   fn my() { 1 }
+  │      ^^ I was not expecting this
+
+Found a name, expected one of: 
+- `(`
+Hint: Only module-level functions can be named.
