@@ -2034,13 +2034,10 @@ Private types can only be used within the module that defines them.",
                     location,
                     name
                 } => {
-                    let text = wrap_format!(
-                        "Module alias `{name}` cannot be used as a regular name.
-Did you mean to access module's members?",
-                    );
+                    let text = "Module name used as a value";
                     Diagnostic {
-                        title: format!("Module alias `{name}` used as a name"),
-                        text,
+                        title: format!("Module name `{name}` used as a value"),
+                        text: text.into(),
                         hint: None,
                         level: Level::Error,
                         location: Some(Location {
