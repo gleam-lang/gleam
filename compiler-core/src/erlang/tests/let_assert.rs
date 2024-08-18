@@ -45,6 +45,27 @@ fn variable_rewrites() {
     );
 }
 
+#[test]
+fn let_assert_as() {
+    assert_erl!(
+        r#"pub fn main() {
+  let msg = "custom" <> " error"
+  let assert as msg Ok(y) = Ok(1)
+  y
+}"#
+    );
+}
+
+#[test]
+fn let_assert_as_no_var() {
+    assert_erl!(
+        r#"pub fn main() {
+  let assert as "custom error" Ok(y) = Ok(1)
+  y
+}"#
+    );
+}
+
 // TODO: patterns that are just vars don't render a case expression
 // #[test]
 // fn just_pattern() {

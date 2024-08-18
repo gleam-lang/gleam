@@ -24,7 +24,7 @@ expression: "\nlet a = \"inner 'quotes'\"\n"
                 name: "a",
                 type_: (),
             },
-            kind: Let,
+            assert: None,
             annotation: None,
         },
     ),

@@ -4,13 +4,14 @@ use vec1::Vec1;
 use crate::{
     analyse::Inferred,
     ast::{
-        AssignName, Assignment, BinOp, CallArg, Constant, Definition, Pattern, RecordUpdateSpread,
-        SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
-        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
-        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
-        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use, UseAssignment,
+        AssertAssignment, AssignName, Assignment, BinOp, CallArg, Constant, Definition, Pattern,
+        RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
+        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
+        UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
+        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedPattern,
+        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias,
+        Use, UseAssignment,
     },
     build::Target,
 };
@@ -583,17 +584,24 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 location,
                 value,
                 pattern,
-                kind,
+                assert,
                 annotation,
             }) => {
                 let pattern = self.fold_pattern(pattern);
                 let annotation = annotation.map(|t| self.fold_type(t));
+                let assert = assert.map(|a| {
+                    let message = a.message.map(|message| Box::new(self.fold_expr(*message)));
+                    Box::new(AssertAssignment {
+                        location: a.location,
+                        message,
+                    })
+                });
                 let value = Box::new(self.fold_expr(*value));
                 Statement::Assignment(Assignment {
                     location,
                     value,
                     pattern,
-                    kind,
+                    assert,
                     annotation,
                 })
             }

@@ -2,8 +2,7 @@ use self::expression::CallKind;
 
 use super::*;
 use crate::ast::{
-    Assignment, AssignmentKind, ImplicitCallArgOrigin, Statement, TypedAssignment, UntypedExpr,
-    PIPE_VARIABLE,
+    Assignment, ImplicitCallArgOrigin, Statement, TypedAssignment, UntypedExpr, PIPE_VARIABLE,
 };
 use vec1::Vec1;
 
@@ -210,7 +209,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let assignment = Assignment {
             location,
             annotation: None,
-            kind: AssignmentKind::Let,
+            assert: None,
             pattern: Pattern::Variable {
                 location,
                 name: PIPE_VARIABLE.into(),

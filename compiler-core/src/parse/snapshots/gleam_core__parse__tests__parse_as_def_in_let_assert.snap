@@ -1,0 +1,75 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let assert as \"error\" Ok(a) = some()"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 0,
+                end: 36,
+            },
+            value: Call {
+                location: SrcSpan {
+                    start: 30,
+                    end: 36,
+                },
+                fun: Var {
+                    location: SrcSpan {
+                        start: 30,
+                        end: 34,
+                    },
+                    name: "some",
+                },
+                arguments: [],
+            },
+            pattern: Constructor {
+                location: SrcSpan {
+                    start: 22,
+                    end: 27,
+                },
+                name: "Ok",
+                arguments: [
+                    CallArg {
+                        label: None,
+                        location: SrcSpan {
+                            start: 25,
+                            end: 26,
+                        },
+                        value: Variable {
+                            location: SrcSpan {
+                                start: 25,
+                                end: 26,
+                            },
+                            name: "a",
+                            type_: (),
+                        },
+                        implicit: None,
+                    },
+                ],
+                module: None,
+                constructor: Unknown,
+                spread: None,
+                type_: (),
+            },
+            assert: Some(
+                AssertAssignment {
+                    location: SrcSpan {
+                        start: 4,
+                        end: 21,
+                    },
+                    message: Some(
+                        String {
+                            location: SrcSpan {
+                                start: 14,
+                                end: 21,
+                            },
+                            value: "error",
+                        },
+                    ),
+                },
+            ),
+            annotation: None,
+        },
+    ),
+]

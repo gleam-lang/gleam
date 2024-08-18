@@ -1,0 +1,74 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: let assert Ok(a) as b = some()
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 0,
+                end: 30,
+            },
+            value: Call {
+                location: SrcSpan {
+                    start: 24,
+                    end: 30,
+                },
+                fun: Var {
+                    location: SrcSpan {
+                        start: 24,
+                        end: 28,
+                    },
+                    name: "some",
+                },
+                arguments: [],
+            },
+            pattern: Assign {
+                name: "b",
+                location: SrcSpan {
+                    start: 20,
+                    end: 21,
+                },
+                pattern: Constructor {
+                    location: SrcSpan {
+                        start: 11,
+                        end: 16,
+                    },
+                    name: "Ok",
+                    arguments: [
+                        CallArg {
+                            label: None,
+                            location: SrcSpan {
+                                start: 14,
+                                end: 15,
+                            },
+                            value: Variable {
+                                location: SrcSpan {
+                                    start: 14,
+                                    end: 15,
+                                },
+                                name: "a",
+                                type_: (),
+                            },
+                            implicit: None,
+                        },
+                    ],
+                    module: None,
+                    constructor: Unknown,
+                    spread: None,
+                    type_: (),
+                },
+            },
+            assert: Some(
+                AssertAssignment {
+                    location: SrcSpan {
+                        start: 4,
+                        end: 10,
+                    },
+                    message: None,
+                },
+            ),
+            annotation: None,
+        },
+    ),
+]
