@@ -63,6 +63,19 @@
   of the `Record(a, ..)` syntax.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Adds a better error message when module names are used as values. Example:
+
+  ```gleam
+  import wibble/wobble
+
+  pub fn main() {
+    wobble  // error: Module name "wobble" is used as a value
+  }
+  ```
+
+  It used to be a plain "Unknown variable" error.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server
