@@ -59,6 +59,10 @@
   Now inferes correctly to return `Int`.
   ([sobolevn](https://github.com/sobolevn))
 
+- The record pattern matching syntax `Record(a ..)` is now deprecated in favour
+  of the `Record(a, ..)` syntax.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server

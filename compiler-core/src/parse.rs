@@ -1629,17 +1629,23 @@ where
         upname_end: u32,
     ) -> Result<(Vec<CallArg<UntypedPattern>>, Option<SrcSpan>, u32), ParseError> {
         if self.maybe_one(&Token::LeftParen).is_some() {
-            let args = Parser::series_of(
-                self,
+            let (args, args_end_with_comma) = self.series_of_has_trailing_separator(
                 &Parser::parse_constructor_pattern_arg,
                 Some(&Token::Comma),
             )?;
+
             let spread = self
                 .maybe_one(&Token::DotDot)
                 .map(|(start, end)| SrcSpan { start, end });
 
-            if spread.is_some() {
+            if let Some(spread_location) = spread {
                 let _ = self.maybe_one(&Token::Comma);
+                if !args.is_empty() && !args_end_with_comma {
+                    self.warnings
+                        .push(DeprecatedSyntaxWarning::DeprecatedRecordSpreadPattern {
+                            location: spread_location,
+                        })
+                }
             }
             let (_, end) = self.expect_one(&Token::RightParen)?;
             Ok((args, spread, end))

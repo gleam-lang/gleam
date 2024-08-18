@@ -188,6 +188,16 @@ pub enum DeprecatedSyntaxWarning {
     /// ```
     ///
     DeprecatedListCatchAllPattern { location: SrcSpan },
+
+    /// If a record pattern has a spread that is not preceded by a comma:
+    /// ```gleam
+    /// case wibble {
+    ///   Wibble(arg1: name ..) -> todo
+    /// //                  ^^ this should be preceded by a comma!
+    /// }
+    /// ```
+    ///
+    DeprecatedRecordSpreadPattern { location: SrcSpan },
 }
 
 impl Warning {
@@ -247,6 +257,26 @@ like this: `[item, ..list]`.",
                 location: Some(Location {
                     label: diagnostic::Label {
                         text: Some("This spread should be preceded by a comma".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedRecordSpreadPattern { location },
+            } => Diagnostic {
+                title: "Deprecated record pattern matching syntax".into(),
+                text: wrap("This syntax for pattern matching on a record is deprecated."),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This should be preceded by a comma".into()),
                         span: *location,
                     },
                     path: path.clone(),

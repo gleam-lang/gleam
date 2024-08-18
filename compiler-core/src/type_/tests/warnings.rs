@@ -1986,6 +1986,97 @@ fn deprecated_list_pattern_syntax_1() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/3473
+#[test]
+fn deprecated_record_pattern_syntax() {
+    assert_warning!(
+        r#"
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  case wibble {
+    Wibble(one: one ..) -> one
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_record_pattern_syntax_with_no_labels() {
+    assert_warning!(
+        r#"
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  case wibble {
+    Wibble(one ..) -> one
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_record_pattern_syntax_with_label_shorthand() {
+    assert_warning!(
+        r#"
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  case wibble {
+    Wibble(one: ..) -> one
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_record_pattern_syntax_has_no_warning_if_everything_is_discarded() {
+    assert_no_warnings!(
+        r#"
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  case wibble {
+    Wibble(..) -> 1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_record_pattern_syntax_has_no_warning_if_there_is_a_comma_before_spread() {
+    assert_no_warnings!(
+        r#"
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  case wibble {
+    Wibble(one: one, ..) -> one
+  }
+}
+"#
+    );
+}
+
 #[test]
 fn unused_label_shorthand_pattern_arg() {
     assert_warning!(
