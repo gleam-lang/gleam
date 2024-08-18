@@ -194,3 +194,13 @@ pub fn main() {
 }"#
     );
 }
+
+#[test]
+fn discard_utf8_pattern() {
+    assert_erl!(
+        r#"
+pub fn main() {
+    let assert <<_:utf8, rest:bits>> = <<>>
+}"#
+    );
+}

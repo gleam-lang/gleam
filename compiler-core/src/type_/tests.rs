@@ -2311,3 +2311,100 @@ fn assert_suitable_main_function_javascript_not_supported() {
     };
     assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
 }
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x) { x }
+}
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity1() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x, y) { x.0 }
+     |> fn (x) { x }
+}
+"#
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x, y) { x }
+}
+"#
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity3() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn () { x }
+}
+"#
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_mixed_functions() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  let a = "abc"
+     |> fn (x) { #(x, x <> "d") }
+     |> fn (x) { x.0 }
+     |> fn (x: String) { x }
+}
+"#,
+        vec![("main", "fn() -> String")]
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_functions_using_structs() {
+    // https://github.com/gleam-lang/gleam/issues/2504
+    assert_module_infer!(
+        r#"
+type Date {
+  Date(day: Day)
+}
+type Day {
+  Day(year: Int)
+}
+fn now() -> Date {
+  Date(Day(2024))
+}
+fn get_day(date: Date) -> Day {
+  date.day
+}
+pub fn main() {
+  now() |> get_day() |> fn (it) { it.year }
+}
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}

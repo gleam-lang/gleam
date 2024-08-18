@@ -44,6 +44,21 @@
   would be infered as `fn() -> Int` in this context.
   ([sobolevn](https://github.com/sobolevn))
 
+- Improves how inference works for anonymous functions inside a pipe.
+  For example:
+
+  ```gleam
+  pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x) { x }
+  }
+  ```
+
+  Now inferes correctly to return `Int`.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server
@@ -73,6 +88,10 @@
 - Fixed a bug where source links in HTML documentation would be incorrect for
   Codeberg, SourceHut, and Gitea.
   ([sobolevn](https://github.com/sobolevn))
+
+- Fixed a bug with Erlang code generation for discard utf8 patterns in bit
+  arrays.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.4.1 - 2024-08-04
 
