@@ -138,7 +138,8 @@
 - Fixed a bug which affected inference of function calls in pipe expressions.
   ([sobolevn](https://github.com/sobolevn))
 
-- Improved an error message when using discarded names in constructs like:
+- Improved an error message when using variable names
+  starting with an underscore in constructs like:
   `let some = _func()` or `case { 1 -> _func() }`
   ([sobolevn](https://github.com/sobolevn))
 
