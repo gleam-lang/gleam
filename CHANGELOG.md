@@ -110,6 +110,11 @@
   arrays.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug which affected inference of function
+  calls in pipe expressions.
+
+  ([sobolevn](https://github.com/sobolevn))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
