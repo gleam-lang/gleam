@@ -115,9 +115,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     let fun = self.expr_typer.infer(*fun)?;
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
-                        Some((args, return_))
-                            if args.len() == arguments.len() && return_.fn_arity() == Some(1) =>
-                        {
+                        Some((args, _)) if args.len() == arguments.len() => {
                             self.infer_apply_to_call_pipe(fun, arguments, location)
                         }
                         // Rewrite as right(left, ..args)
