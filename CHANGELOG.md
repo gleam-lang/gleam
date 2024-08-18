@@ -10,6 +10,9 @@
 
 ### Compiler
 
+- Now compiler progress is now printed in stderr, not in stdout
+([Victor Kobinski](https://github.com/vkobinski))
+
 - It is now possible to omit the `:utf8` option for literal strings used in a
   `BitArray` segment.
 
