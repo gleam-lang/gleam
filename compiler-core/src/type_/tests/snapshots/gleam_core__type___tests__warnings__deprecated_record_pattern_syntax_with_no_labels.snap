@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub type Wibble {\n  Wibble(one: Int, two: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(one: 1, two: 2)\n  case wibble {\n    Wibble(one ..) -> one\n  }\n}\n"
+---
+warning: Deprecated record pattern matching syntax
+  ┌─ test/path:9:16
+  │
+9 │     Wibble(one ..) -> one
+  │                ^^ This should be preceded by a comma
+
+This syntax for pattern matching on a record is deprecated.
