@@ -1845,16 +1845,11 @@ where
     fn add_anon_function_hint(&self, mut err: ParseError) -> ParseError {
         if let ParseErrorType::UnexpectedToken {
             ref mut hint,
-            ref token,
+            token: Token::Name { .. },
             ..
         } = err.error
         {
-            match token {
-                Token::Name { .. } => {
-                    *hint = Some("Only module-level functions can be named.".into());
-                }
-                _ => (),
-            }
+            *hint = Some("Only module-level functions can be named.".into());
         }
         err
     }
