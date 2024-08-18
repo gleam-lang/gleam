@@ -1414,3 +1414,25 @@ fn doc_comment_before_comment_is_not_attached_to_following_constant() {
         " Doc!\n"
     );
 }
+
+#[test]
+fn non_module_level_function_with_a_name() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  fn my() { 1 }
+}
+"#
+    );
+}
+
+#[test]
+fn non_module_level_function_with_not_a_name() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  fn @() { 1 }  // wrong token and not a name
+}
+"#
+    );
+}

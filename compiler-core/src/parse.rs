@@ -1772,7 +1772,9 @@ where
                 n,
             ));
         }
-        let _ = self.expect_one(&Token::LeftParen)?;
+        let _ = self
+            .expect_one(&Token::LeftParen)
+            .map_err(|e| self.add_anon_function_hint(e))?;
         let args = Parser::series_of(
             self,
             &|parser| Parser::parse_fn_param(parser, is_anon),
@@ -1838,6 +1840,23 @@ where
                 uses_javascript_externals: false,
             },
         })))
+    }
+
+    fn add_anon_function_hint(&self, mut err: ParseError) -> ParseError {
+        if let ParseErrorType::UnexpectedToken {
+            ref mut hint,
+            ref token,
+            ..
+        } = err.error
+        {
+            match token {
+                Token::Name { .. } => {
+                    *hint = Some("Only module-level functions can be named.".into());
+                }
+                _ => (),
+            }
+        }
+        err
     }
 
     fn publicity(
