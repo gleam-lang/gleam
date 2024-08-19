@@ -42,6 +42,13 @@ pub struct PackageCompiler<'a, IO> {
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
     pub perform_codegen: bool,
+    /// If set to true the compiler won't try and analyse any of the package's
+    /// modules and always succeed compilation returning no compile modules.
+    ///
+    /// Code generation is still carried out so that a root package will have an
+    /// entry point nonetheless.
+    ///
+    pub skip_analysis: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
@@ -75,6 +82,7 @@ where
             target,
             write_metadata: true,
             perform_codegen: true,
+            skip_analysis: false,
             write_entrypoint: false,
             copy_native_files: true,
             compile_beam_bytecode: true,
@@ -156,17 +164,22 @@ where
 
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
-        let outcome = analyse(
-            &self.config,
-            self.target.target(),
-            self.mode,
-            &self.ids,
-            loaded.to_compile,
-            existing_modules,
-            warnings,
-            self.target_support,
-            incomplete_modules,
-        );
+        let outcome = if self.skip_analysis {
+            Outcome::Ok(vec![])
+        } else {
+            analyse(
+                &self.config,
+                self.target.target(),
+                self.mode,
+                &self.ids,
+                loaded.to_compile,
+                existing_modules,
+                warnings,
+                self.target_support,
+                incomplete_modules,
+            )
+        };
+
         let modules = match outcome {
             Outcome::Ok(modules) => modules,
             Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,

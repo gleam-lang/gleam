@@ -77,7 +77,7 @@ pub use gleam_core::error::{Error, Result};
 
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Mode, NullTelemetry, Options, Runtime, Target},
+    build::{Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target},
     hex::RetirementReason,
     paths::ProjectPaths,
     version::COMPILER_VERSION,
@@ -553,6 +553,7 @@ fn command_check(target: Option<Target>) -> Result<()> {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::DepsOnly,
+            compile: Compile::All,
             mode: Mode::Dev,
             target,
             no_print_progress: false,
@@ -577,6 +578,7 @@ fn command_build(
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors,
             codegen: Codegen::All,
+            compile: Compile::All,
             mode: Mode::Dev,
             target,
             no_print_progress,

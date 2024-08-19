@@ -5,7 +5,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use crate::{cli, fs::ProjectIO, hex::ApiKeyCommand, http::HttpClient};
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Mode, Options, Package, Target},
+    build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{DocsPage, PackageConfig},
     docs::DocContext,
     error::Error,
@@ -73,6 +73,7 @@ pub fn build(options: BuildOptions) -> Result<()> {
             mode: Mode::Prod,
             target: options.target,
             codegen: Codegen::All,
+            compile: Compile::All,
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
@@ -167,6 +168,7 @@ impl PublishCommand {
                 root_target_support: TargetSupport::Enforced,
                 warnings_as_errors: false,
                 codegen: Codegen::All,
+                compile: Compile::All,
                 mode: Mode::Prod,
                 target: None,
                 no_print_progress: false,
