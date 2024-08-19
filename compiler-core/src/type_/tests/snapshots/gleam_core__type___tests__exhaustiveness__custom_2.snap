@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 799
 expression: "\npub type Type {\n  One\n  Two\n  Three(Type)\n}\n\npub fn main(x) {\n  case x {\n    One -> 1\n    Two -> 2\n    Three(One) -> 4\n  }\n}\n"
 ---
 error: Inexhaustive patterns
@@ -12,8 +13,8 @@ error: Inexhaustive patterns
 13 │ │   }
    │ ╰───^
 
-This case expression does not have a pattern for all possible values.
-If it is run on one of the values without a pattern then it will crash.
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 

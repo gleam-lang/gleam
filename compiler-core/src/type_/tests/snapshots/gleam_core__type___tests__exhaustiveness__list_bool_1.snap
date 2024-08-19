@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 585
 expression: "\npub fn main(x) {\n  case x {\n    [] -> 1\n    [True] -> 2\n    [_, _, ..] -> 2\n  }\n}\n"
 ---
 error: Inexhaustive patterns
@@ -12,8 +13,8 @@ error: Inexhaustive patterns
 7 │ │   }
   │ ╰───^
 
-This case expression does not have a pattern for all possible values.
-If it is run on one of the values without a pattern then it will crash.
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 

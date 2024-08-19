@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 764
 expression: "fn go(x: List(a, b)) -> Int { 1 }"
 ---
 error: Incorrect arity
@@ -8,5 +9,5 @@ error: Incorrect arity
 1 │ fn go(x: List(a, b)) -> Int { 1 }
   │          ^^^^^^^^^^ Expected 1 argument, got 2
 
-Functions and constructors have to be called with their expected
-number of arguments.
+Functions and constructors have to be called with their expected number
+of arguments.

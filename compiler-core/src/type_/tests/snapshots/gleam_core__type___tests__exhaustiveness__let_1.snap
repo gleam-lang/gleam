@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 900
 expression: "\npub fn main(x) {\n  let True = x\n  0\n}\n"
 ---
 error: Inexhaustive pattern
@@ -8,9 +9,8 @@ error: Inexhaustive pattern
 3 │   let True = x
   │   ^^^^^^^^^^^^
 
-This assignment uses a pattern that does not match all possible
-values. If one of the other values is used then the assignment
-will crash.
+This assignment uses a pattern that does not match all possible values. If
+one of the other values is used then the assignment will crash.
 
 The missing patterns are:
 

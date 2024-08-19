@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 960
 expression: "\npub fn main(x: something) {\n  case x {\n  }\n}\n"
 ---
 error: Inexhaustive patterns
@@ -9,8 +10,8 @@ error: Inexhaustive patterns
 4 │ │   }
   │ ╰───^
 
-This case expression does not have a pattern for all possible values.
-If it is run on one of the values without a pattern then it will crash.
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 
