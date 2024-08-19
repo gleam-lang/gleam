@@ -10,8 +10,8 @@
 
 ### Compiler
 
-- Now compiler progress is now printed in stderr, not in stdout
-([Victor Kobinski](https://github.com/vkobinski))
+- Compiler progress is now printed to stderr, instead of stdout.
+  ([Victor Kobinski](https://github.com/vkobinski))
 
 - It is now possible to omit the `:utf8` option for literal strings used in a
   `BitArray` segment.
@@ -37,50 +37,68 @@
   was imported then the alias would be shown.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
-- Improves how inference works for anonymous functions followed by call
-  arguments. For example:
+- Anonymous functions that are immediately called with a record or a tuple as an
+  argument are now inferred correctly without the need to add type annotations.
+  For example you can now write:
 
   ```gleam
   fn(x) { x.0 }(#(1, 2))
+  // ^ you no lonfer need to annotate this!
   ```
 
-  would be infered as `fn() -> Int` in this context.
   ([sobolevn](https://github.com/sobolevn))
 
-- Improves how inference works for anonymous functions inside a pipe.
-  For example:
+- Anonymous functions that are being piped a record or a tuple as an argument
+  are now inferred correctly without the need to add type annotations. For
+  example you can now write:
 
   ```gleam
+  pub type User {
+    User(name: String)
+  }
+
   pub fn main() {
-  let a = 1
-     |> fn (x) { #(x, x + 1) }
-     |> fn (x) { x.0 }
-     |> fn (x) { x }
+    User("Giacomo")
+    |> fn(user) { user.name }
+    //    ^^^^ you no longer need to annotate this!
+    |> io.debug
   }
   ```
 
-  Now inferes correctly to return `Int`.
   ([sobolevn](https://github.com/sobolevn))
 
 - The record pattern matching syntax `Record(a ..)` is now deprecated in favour
   of the `Record(a, ..)` syntax.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Adds a better error message when module names are used as values. Example:
+- Adds a better error message when module names are used as values. For example
+  the following code:
 
   ```gleam
-  import wibble/wobble
+  import gleam/list
 
   pub fn main() {
-    wobble  // error: Module name "wobble" is used as a value
+    list
   }
   ```
 
-  It used to be a plain "Unknown variable" error.
+  Results in the error:
+
+  ```txt
+  error: Module `list` used as a value
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:4:3
+    │
+  4 │   list
+    │   ^^^^
+
+  Modules are not values, so you cannot assign them to variables, pass them to
+  functions, or anything else that you would do with a value.
+  ```
+
   ([sobolevn](https://github.com/sobolevn))
 
-- Adds a hint to syntax error when defining named function
-  inside another function.
+- Adds a hint to syntax error when defining named function inside another
+  function.
   ([sobolevn](https://github.com/sobolevn))
 
 ### Formatter
@@ -89,16 +107,16 @@
 
 ### Bug Fixes
 
-- Fixed a bug which caused the language server and compiler to crash when
-  two constructors of the same name were created.
+- Fixed a bug which caused the language server and compiler to crash when two
+  constructors of the same name were created.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug where jumping to the definition of an unqualified function would
   produce the correct location, but remain in the same file.
   ([Surya Rose](https://github.com/gearsdatapacks))
 
-- Fixed a bug where incorrect syntax error message were shown,
-  when using `:` or `=` in wrong possitions in expressions.
+- Fixed a bug where incorrect syntax error message were shown, when using `:` or
+  `=` in wrong possitions in expressions.
   ([Ankit Goel](https://github.com/crazymerlyn))
 
 - Fixed a bug where the compiler would crash when pattern matching on a type
@@ -117,9 +135,7 @@
   arrays.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- Fixed a bug which affected inference of function
-  calls in pipe expressions.
-
+- Fixed a bug which affected inference of function calls in pipe expressions.
   ([sobolevn](https://github.com/sobolevn))
 
 ## v1.4.1 - 2024-08-04
