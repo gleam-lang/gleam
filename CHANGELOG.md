@@ -263,6 +263,26 @@
 
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+- The Language Server can now suggest a code action to fill in the missing
+  patterns of a case expression:
+
+  ```gleam
+  let a = True
+  case a {}
+  ```
+
+  Becomes:
+
+  ```gleam
+  let a = True
+  case a {
+    False -> todo
+    True -> todo
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Bug Fixes
 
 - Fixed a bug where the warnings were printed above the errors without any new line between them.
@@ -277,7 +297,7 @@
   ([Surya Rose](https://github.com/gearsdatapacks))
 
 - Fixed a bug where incorrect syntax error message were shown, when using `:` or
-  `=` in wrong possitions in expressions.
+  `=` in wrong positions in expressions.
   ([Ankit Goel](https://github.com/crazymerlyn))
 
 - Fixed a bug where the compiler would crash when pattern matching on a type

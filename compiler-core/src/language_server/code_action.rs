@@ -13,7 +13,7 @@ use crate::{
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
-    type_::{error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
+    type_::{self, error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
     Error,
 };
 use ecow::EcoString;
@@ -664,7 +664,7 @@ pub fn code_action_import_module(
     let missing_imports = errors
         .into_iter()
         .filter_map(|e| match e {
-            crate::type_::Error::UnknownModule {
+            type_::Error::UnknownModule {
                 location,
                 suggestions,
                 ..
@@ -751,5 +751,69 @@ fn suggest_imports(
             location,
             suggestions,
         })
+    }
+}
+
+pub fn code_action_add_missing_patterns(
+    module: &Module,
+    params: &CodeActionParams,
+    error: &Option<Error>,
+    actions: &mut Vec<CodeAction>,
+) {
+    let uri = &params.text_document.uri;
+    let Some(Error::Type { errors, .. }) = error else {
+        return;
+    };
+    let missing_patterns = errors
+        .iter()
+        .filter_map(|error| match error {
+            type_::Error::InexhaustiveCaseExpression { location, missing } => {
+                Some((*location, missing))
+            }
+            _ => None,
+        })
+        .collect_vec();
+
+    if missing_patterns.is_empty() {
+        return;
+    }
+
+    let line_numbers = LineNumbers::new(&module.code);
+
+    for (location, missing) in missing_patterns {
+        let range = src_span_to_lsp_range(location, &line_numbers);
+        if !overlaps(params.range, range) {
+            return;
+        }
+
+        let mut edits = Vec::new();
+        // Add 2 to the indent for nesting
+        let indent = " ".repeat(range.start.character as usize + 2);
+        // Insert the missing patterns just before the closing brace
+        let insert_range = src_span_to_lsp_range(
+            SrcSpan {
+                start: location.end - 1,
+                end: location.end - 1,
+            },
+            &line_numbers,
+        );
+        let len = missing.len();
+        for (i, pattern) in missing.iter().enumerate() {
+            let new_text = format!(
+                "\n{indent}{pattern} -> todo{}",
+                // Add a newline to the last pattern
+                if i == len - 1 { "\n" } else { "" }
+            );
+            edits.push(TextEdit {
+                range: insert_range,
+                new_text,
+            })
+        }
+
+        CodeActionBuilder::new("Add missing patterns")
+            .kind(CodeActionKind::QUICKFIX)
+            .changes(uri.clone(), edits)
+            .preferred(true)
+            .push_to(actions);
     }
 }

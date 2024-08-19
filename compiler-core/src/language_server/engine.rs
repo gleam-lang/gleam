@@ -30,8 +30,9 @@ use std::sync::Arc;
 
 use super::{
     code_action::{
-        code_action_import_module, CodeActionBuilder, FillInMissingLabelledArgs,
-        LabelShorthandSyntax, LetAssertToCase, RedundantTupleInCaseSubject,
+        code_action_add_missing_patterns, code_action_import_module, CodeActionBuilder,
+        FillInMissingLabelledArgs, LabelShorthandSyntax, LetAssertToCase,
+        RedundantTupleInCaseSubject,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
@@ -297,6 +298,7 @@ where
             code_action_unused_imports(module, &params, &mut actions);
             code_action_fix_names(module, &params, &this.error, &mut actions);
             code_action_import_module(module, &params, &this.error, &mut actions);
+            code_action_add_missing_patterns(module, &params, &this.error, &mut actions);
             actions.extend(LetAssertToCase::new(module, &params).code_actions());
             actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
             actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());

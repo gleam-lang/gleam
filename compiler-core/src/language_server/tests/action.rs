@@ -79,6 +79,7 @@ const CONVERT_TO_CASE: &str = "Convert to case";
 const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
 const FILL_LABELS: &str = "Fill labels";
 const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
+const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -1418,6 +1419,91 @@ fn test_no_action_to_import_module_with_constructor_named_same_as_type() {
         TestProject::for_source(src)
             .add_hex_module("shapes", "pub type Shape { Rectangle, Circle }"),
         find_position_of("shapes").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn add_missing_patterns_bool() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+pub fn main() {
+  let bool = True
+  case bool {}
+}
+",
+        find_position_of("case").select_until(find_position_of("bool {"))
+    );
+}
+
+#[test]
+fn add_missing_patterns_custom_type() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+type Wibble {
+  Wibble
+  Wobble
+  Wubble
+}
+
+pub fn main() {
+  let wibble = Wobble
+  case wibble {
+    Wobble -> Nil
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("wibble {"))
+    );
+}
+
+#[test]
+fn add_missing_patterns_tuple() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+pub fn main() {
+  let two_at_once = #(True, Ok(1))
+  case two_at_once {
+    #(False, Error(_)) -> Nil
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("two_at_once {"))
+    );
+}
+
+#[test]
+fn add_missing_patterns_list() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        "
+pub fn main() {
+  let list = [1, 2, 3]
+  case list {
+    [a, b, c, 4 as d] -> d
+  }
+}
+",
+        find_position_of("case").select_until(find_position_of("list {"))
+    );
+}
+
+fn add_missing_patterns_infinite() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        r#"
+pub fn main() {
+  let value = 3
+  case value {
+    1 -> "one"
+    2 -> "two"
+    3 -> "three"
+  }
+}
+"#,
+        find_position_of("case").select_until(find_position_of("value {"))
     );
 }
 
