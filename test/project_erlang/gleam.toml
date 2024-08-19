@@ -23,6 +23,7 @@ ssl_verify_fun = "~> 1.1"
 # TODO: replace this with a package with a nif that compiles super fast. Perhaps
 # just a hello world.
 bcrypt = "~> 1.1"
+ezstd = "~> 1.1"
 
 # This is a rebar3 dep where the application name (hpack, used by the BEAM)
 # doesn't match the package name (hpack_erl, used by Hex).
