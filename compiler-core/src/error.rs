@@ -1928,8 +1928,9 @@ but no type in scope with that name."
                     // - is taken as an argument by this public function
                     // - is taken as an argument by this public enum constructor
                     // etc
-                    let text = format!(
-                        "The following type is private, but is being used by this public export.
+                    let text = wrap_format!(
+                        "The following type is private, but is \
+being used by this public export.
 
 {}
 
@@ -2043,14 +2044,13 @@ Private types can only be used within the module that defines them.",
                     location,
                     name
                 } => {
-                    let text =wrap(
-
+                    let text = wrap(
 "Modules are not values, so you cannot assign them to variables, pass\
 them to functions, or anything else that you would do with a value."
                         );
                     Diagnostic {
                         title: format!("Module `{name}` used as a value"),
-                        text: text.into(),
+                        text,
                         hint: None,
                         level: Level::Error,
                         location: Some(Location {
