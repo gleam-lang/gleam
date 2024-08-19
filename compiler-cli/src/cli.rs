@@ -191,11 +191,6 @@ pub fn stderr_buffer_writer() -> BufferWriter {
     BufferWriter::stderr(color_choice())
 }
 
-pub fn stdout_buffer_writer() -> BufferWriter {
-    // Don't add color codes to the output if standard error isn't connected to a terminal
-    BufferWriter::stdout(color_choice())
-}
-
 fn colour_forced() -> bool {
     if let Ok(force) = std::env::var("FORCE_COLOR") {
         !force.is_empty()
