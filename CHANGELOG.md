@@ -212,6 +212,9 @@
   underscore in expression like: `let some = _func()` or `case { 1 -> _func() }`
   ([sobolevn](https://github.com/sobolevn))
 
+- Fixed a bug where the provided `REBAR_BARE_COMPILER_OUTPUT_DIR` env var would use relative path instead of absolute path causing compilation errors in some packages.
+  ([Gustavo Inacio](https://github.com/gusinacio))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
