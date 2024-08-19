@@ -76,6 +76,10 @@
   It used to be a plain "Unknown variable" error.
   ([sobolevn](https://github.com/sobolevn))
 
+- Adds a hint to syntax error when defining named function
+  inside another function.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server
