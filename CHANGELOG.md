@@ -105,6 +105,9 @@
 
 ### Language Server
 
+- The language server can now suggest a code action to assign `_` to unused value.
+  ([Jiangda Wang](https://github.com/frank-iii))
+
 ### Bug Fixes
 
 - Fixed a bug which caused the language server and compiler to crash when two
