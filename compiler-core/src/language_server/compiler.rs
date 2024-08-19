@@ -69,6 +69,7 @@ where
             mode: Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
+            compile: build::Compile::All,
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
         };

@@ -1,7 +1,7 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Mode, Options, Target},
+    build::{Codegen, Compile, Mode, Options, Target},
     Result,
 };
 
@@ -45,6 +45,7 @@ pub(crate) fn erlang_shipment() -> Result<()> {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::All,
+            compile: Compile::All,
             mode,
             target: Some(target),
             no_print_progress: false,
@@ -135,6 +136,7 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
             mode: Mode::Prod,
             target: None,
             codegen: Codegen::All,
+            compile: Compile::All,
             warnings_as_errors: false,
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,

@@ -2,7 +2,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Codegen, Mode, Options, Package, Target},
+    build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
     hex,
@@ -262,6 +262,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
             mode: Mode::Prod,
             target: Some(target),
             codegen: Codegen::All,
+            compile: Compile::All,
             no_print_progress: false,
         },
         build::download_dependencies(cli::Reporter::new())?,

@@ -4,7 +4,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
-    build::{Built, Codegen, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
+    build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
@@ -74,8 +74,17 @@ pub fn command(
 
     let target = target.unwrap_or(mod_config.target);
 
+    println!("{:#?}", package_kind);
+
     let options = Options {
         warnings_as_errors: false,
+        compile: match package_kind {
+            // If we're trying to run a dependecy module we do not compile and
+            // check the root package. So we can run the main function from a
+            // dependency's module even if the root package doesn't compile.
+            PackageKind::Dependency => Compile::DepsOnly,
+            PackageKind::Root => Compile::All,
+        },
         codegen: Codegen::All,
         mode: Mode::Dev,
         target: Some(target),

@@ -29,7 +29,7 @@ use std::{
 };
 
 use super::{
-    elixir_libraries::ElixirLibraries, package_compiler::CachedWarnings, Codegen,
+    elixir_libraries::ElixirLibraries, package_compiler::CachedWarnings, Codegen, Compile,
     ErlangAppCodegenConfiguration, Outcome,
 };
 
@@ -51,6 +51,7 @@ const ELIXIR_EXECUTABLE: &str = "elixir.bat";
 pub struct Options {
     pub mode: Mode,
     pub target: Option<Target>,
+    pub compile: Compile,
     pub codegen: Codegen,
     pub warnings_as_errors: bool,
     pub root_target_support: TargetSupport,
@@ -553,6 +554,7 @@ where
         compiler.write_entrypoint = is_root;
         compiler.perform_codegen = self.options.codegen.should_codegen(is_root);
         compiler.compile_beam_bytecode = self.options.codegen.should_codegen(is_root);
+        compiler.skip_analysis = self.options.compile == Compile::DepsOnly && is_root;
         compiler.subprocess_stdio = self.subprocess_stdio;
         compiler.target_support = if is_root {
             // When compiling the root package it is context specific as to whether we need to
