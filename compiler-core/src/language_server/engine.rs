@@ -914,7 +914,7 @@ fn code_action_unused_values(
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let unused: Vec<&SrcSpan> = module
+    let mut unused_values: Vec<&SrcSpan> = module
         .ast
         .type_info
         .warnings
@@ -925,29 +925,32 @@ fn code_action_unused_values(
         })
         .collect();
 
-    if unused.is_empty() {
+    if unused_values.is_empty() {
         return;
     }
 
     // Convert src spans to lsp range
     let line_numbers = LineNumbers::new(&module.code);
 
-    for unused in unused {
-        let SrcSpan { start, end } = *unused;
+    // Sort spans by start position, with longer spans coming first
+    unused_values.sort_by_key(|span| (span.start, -(span.end as i64 - span.start as i64)));
 
+    let mut processed_lsp_range = Vec::new();
+
+    for unused in unused_values {
+        let SrcSpan { start, end } = *unused;
         let hover_range = src_span_to_lsp_range(SrcSpan::new(start, end), &line_numbers);
 
-        let start_char = module
-            .code
-            .get(start as usize..start as usize + 1)
-            .unwrap_or_default();
-
-        // only show actions for the most inner span
-        if (start_char == "{"
-            && params.range.start.line != hover_range.start.line
-            && params.range.end.line != hover_range.end.line)
-            || !overlaps(params.range, hover_range)
+        // Check if this span is contained within any previously processed span
+        if processed_lsp_range
+            .iter()
+            .any(|&prev_lsp_range| within(hover_range, prev_lsp_range))
         {
+            continue;
+        }
+
+        // Check if the cursor is within this span
+        if !within(params.range, hover_range) {
             continue;
         }
 
@@ -961,6 +964,8 @@ fn code_action_unused_values(
             .changes(uri.clone(), vec![edit])
             .preferred(true)
             .push_to(actions);
+
+        processed_lsp_range.push(hover_range);
     }
 }
 
