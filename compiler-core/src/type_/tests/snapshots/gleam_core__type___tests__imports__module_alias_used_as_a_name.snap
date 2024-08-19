@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 318
 expression: "\nimport one/two\n\npub fn main() {\n  two\n}\n"
 ---
 error: Module `two` used as a value
@@ -9,5 +8,5 @@ error: Module `two` used as a value
 5 │   two
   │   ^^^
 
-Modules are not values, so you cannot assign them to variables, passthem to
-functions, or anything else that you would do with a value.
+Modules are not values, so you cannot assign them to variables, pass them
+to functions, or anything else that you would do with a value.

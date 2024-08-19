@@ -2045,7 +2045,7 @@ Private types can only be used within the module that defines them.",
                     name
                 } => {
                     let text = wrap(
-"Modules are not values, so you cannot assign them to variables, pass\
+"Modules are not values, so you cannot assign them to variables, pass \
 them to functions, or anything else that you would do with a value."
                         );
                     Diagnostic {
