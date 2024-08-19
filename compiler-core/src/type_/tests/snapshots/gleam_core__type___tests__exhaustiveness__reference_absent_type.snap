@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 974
 expression: "\ntype Wibble {\n    One(Int)\n    Two(Absent)\n}\n\npub fn main(wibble) {\n    case wibble {\n        One(x) -> x\n    }\n}\n"
 ---
 error: Unknown type
@@ -30,8 +31,8 @@ error: Inexhaustive patterns
 10 │ │     }
    │ ╰─────^
 
-This case expression does not have a pattern for all possible values.
-If it is run on one of the values without a pattern then it will crash.
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 

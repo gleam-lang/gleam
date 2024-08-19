@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
+assertion_line: 516
 expression: "\npub fn main() {\n   fn(x) { x.2 }(z)\n}\n"
 ---
 error: Type mismatch
@@ -8,9 +9,8 @@ error: Type mismatch
 3 │    fn(x) { x.2 }(z)
   │            ^ What type is this?
 
-To index into a tuple we need to know it size, but we don't know
-anything about this type yet. Please add some type annotations so
-we can continue.
+To index into a tuple we need to know it size, but we don't know anything
+about this type yet. Please add some type annotations so we can continue.
 
 error: Unknown variable
   ┌─ /src/one/two.gleam:3:18

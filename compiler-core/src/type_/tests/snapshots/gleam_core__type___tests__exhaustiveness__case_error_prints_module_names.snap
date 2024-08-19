@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 992
 expression: "\nimport wibble\npub type Things { Thing1 Thing2(Int) }\npub fn main() {\n    let wobble_thing = #(wibble.Wobble, Thing2(23))\n    case wobble_thing {\n        #(wibble.Wibble, Thing1) -> Nil\n    }\n}\n"
 ---
 error: Inexhaustive patterns
@@ -10,8 +11,8 @@ error: Inexhaustive patterns
 8 │ │     }
   │ ╰─────^
 
-This case expression does not have a pattern for all possible values.
-If it is run on one of the values without a pattern then it will crash.
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
 
 The missing patterns are:
 

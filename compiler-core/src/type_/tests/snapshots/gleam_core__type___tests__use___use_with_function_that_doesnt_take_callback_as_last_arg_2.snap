@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
+assertion_line: 126
 expression: "\nlet f = fn() { 1 }\nuse <- f\n123\n"
 ---
 error: Incorrect arity
@@ -8,7 +9,7 @@ error: Incorrect arity
 3 │ use <- f
   │        ^ Expected no arguments, got 1
 
-The function on the right of `<-` here takes no arguments.
-But it has to take at least one argument, a callback function.
+The function on the right of `<-` here takes no arguments, but it has to
+take at least one argument, a callback function.
 
 See: https://tour.gleam.run/advanced-features/use/
