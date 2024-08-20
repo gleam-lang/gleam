@@ -97,8 +97,13 @@
 
   ([sobolevn](https://github.com/sobolevn))
 
-- Adds a hint to syntax error when defining named function inside another
-  function.
+- An helpful error message has been added for if the programmer attempted to
+  write a function within a custom type definition, likely trying to declare an
+  OOP class.
+
+  ([sobolevn](https://github.com/sobolevn))
+
+- Adds a hint to syntax error when defining a function inside a type.
   ([sobolevn](https://github.com/sobolevn))
 
 ### Formatter
