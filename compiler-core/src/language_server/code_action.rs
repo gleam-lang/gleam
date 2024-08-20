@@ -10,7 +10,7 @@ use crate::{
         AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
         TypedPattern, TypedRecordUpdateArg,
     },
-    build::Module,
+    build::{Located, Module},
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
     type_::{self, error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
@@ -787,26 +787,62 @@ pub fn code_action_add_missing_patterns(
         }
 
         let mut edits = Vec::new();
-        // Add 2 to the indent for nesting
-        let indent = " ".repeat(range.start.character as usize + 2);
-        // Insert the missing patterns just before the closing brace
-        let insert_range = src_span_to_lsp_range(
-            SrcSpan {
+
+        let Some(Located::Expression(TypedExpr::Case { clauses, .. })) =
+            module.find_node(location.start)
+        else {
+            continue;
+        };
+
+        let indent = " ".repeat(range.start.character as usize);
+
+        // Insert the missing patterns just after the final clause, or just before
+        // the closing brace if there are no clauses
+        let insert_span = clauses
+            .last()
+            .map(|clause| SrcSpan {
+                start: clause.location.end,
+                end: clause.location.end,
+            })
+            .unwrap_or(SrcSpan {
                 start: location.end - 1,
                 end: location.end - 1,
-            },
-            &line_numbers,
-        );
-        let len = missing.len();
-        for (i, pattern) in missing.iter().enumerate() {
-            let new_text = format!(
-                "\n{indent}{pattern} -> todo{}",
-                // Add a newline to the last pattern
-                if i == len - 1 { "\n" } else { "" }
-            );
+            });
+
+        let insert_range = src_span_to_lsp_range(insert_span, &line_numbers);
+
+        for pattern in missing {
+            let new_text = format!("\n{indent}  {pattern} -> todo");
             edits.push(TextEdit {
                 range: insert_range,
                 new_text,
+            })
+        }
+
+        // Add a newline + indent after the last pattern if there are no clauses
+        //
+        // This improves the generated code for this case:
+        // ```gleam
+        // case True {}
+        // ```
+        // This produces (or should, once the exhaustiveness checker is improved):
+        // ```gleam
+        // case True {
+        //   True -> todo
+        //   False -> todo
+        // }
+        // ```
+        // Instead of:
+        // ```gleam
+        // case True {
+        //   True -> todo
+        //   False -> todo}
+        // ```
+        //
+        if clauses.is_empty() {
+            edits.push(TextEdit {
+                range: insert_range,
+                new_text: format!("\n{indent}"),
             })
         }
 

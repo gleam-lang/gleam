@@ -16,6 +16,7 @@ pub fn main() {
 pub fn main() {
   let bool = True
   case bool {
-    _ -> todo
-}
+    False -> todo
+    True -> todo
+  }
 }

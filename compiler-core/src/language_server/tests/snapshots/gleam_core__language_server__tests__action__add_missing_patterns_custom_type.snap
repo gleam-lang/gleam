@@ -31,8 +31,7 @@ pub fn main() {
   let wibble = Wobble
   case wibble {
     Wobble -> Nil
-  
     Wibble -> todo
     Wubble -> todo
-}
+  }
 }

@@ -1490,6 +1490,7 @@ pub fn main() {
     );
 }
 
+#[test]
 fn add_missing_patterns_infinite() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,

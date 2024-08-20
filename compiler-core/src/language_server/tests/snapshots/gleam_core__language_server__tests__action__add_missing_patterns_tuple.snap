@@ -19,8 +19,7 @@ pub fn main() {
   let two_at_once = #(True, Ok(1))
   case two_at_once {
     #(False, Error(_)) -> Nil
-  
     #(True, Error(_)) -> todo
     #(_, Ok(_)) -> todo
-}
+  }
 }
