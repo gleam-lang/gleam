@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 26
 expression: "\nfn go(x) {\n  let assert #(a, #(b, c, 2) as t, _, 1) = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -7,11 +8,11 @@ import { makeError } from "../gleam.mjs";
 function go(x) {
   if (x[1][2] !== 2 || x[3] !== 1) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not match",
+      "Assertion pattern match failed",
       { value: x }
     )
   }

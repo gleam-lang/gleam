@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 424
+assertion_line: 435
 expression: "\nfn go(x) {\n  let assert <<a:float-little, b:int>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -8,11 +8,11 @@ import { makeError } from "../gleam.mjs";
 function go(x) {
   if (!(x.length == 9)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not match",
+      "Assertion pattern match failed",
       { value: x }
     )
   }

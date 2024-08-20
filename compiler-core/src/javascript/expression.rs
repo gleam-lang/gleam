@@ -701,8 +701,8 @@ impl<'module> Generator<'module> {
 
     fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {
         Ok(self.throw_error(
-            "assignment_no_match",
-            &string("Assignment pattern did not match"),
+            "let_assert",
+            &string("Assertion pattern match failed"),
             location,
             [("value", subject)],
         ))
