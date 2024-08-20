@@ -28,13 +28,41 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- In inexhaustive pattern match errors the missing variants variants are now
-  printed using the correct syntax for the module the error is emitted in,
-  rather than the module it was defined in.
+- In inexhaustive pattern match errors the missing variants are now printed
+  using the correct syntax for the module the error is emitted in, rather than
+  the module it was defined in. For example, if you had this code:
 
-  For example, if the variant would need be qualified by the name of the
-  defining module then that would be shown. If the variant was aliased when it
-  was imported then the alias would be shown.
+  ```gleam
+  import gleam/option
+
+  pub fn main() {
+    let an_option = option.Some("wibble!")
+    case an_option {
+      option.None -> "missing"
+    }
+  }
+  ```
+
+  The error message would show the qualified `option.Some(_)` as the missing
+  pattern:
+
+  ```txt
+  error: Inexhaustive patterns
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:5:3
+    │
+  5 │ ╭   case an_option {
+  6 │ │     option.None -> "missing"
+  7 │ │   }
+    │ ╰───^
+
+  This case expression does not have a pattern for all possible values. If it
+  is run on one of the values without a pattern then it will crash.
+
+  The missing patterns are:
+
+      option.Some(_)
+  ```
+
   ([Surya Rose](https://github.com/gearsdatapacks))
 
 - Anonymous functions that are immediately called with a record or a tuple as an
@@ -97,20 +125,44 @@
 
   ([sobolevn](https://github.com/sobolevn))
 
-- An helpful error message has been added for if the programmer attempted to
-  write a function within a custom type definition, likely trying to declare an
-  OOP class.
+- An helpful error message has been added when the programmer attempts to write
+  a function within a custom type definition, likely trying to declare an OOP
+  class. For example:
 
-  ([sobolevn](https://github.com/sobolevn))
+  ```gleam
+  pub type User {
+    User(name: String)
 
-- Adds a hint to syntax error when defining a function inside a type.
+    fn greet(user: User) -> String {
+      "hello " <> user.name
+    }
+  }
+  ```
+
+  Now results in the following error:
+
+  ```txt
+  error: Syntax error
+    ┌─ /Users/giacomocavalieri/Desktop/prova/src/prova.gleam:8:3
+    │
+  8 │   fn greet(user: User) -> String {
+    │   ^^ I was not expecting this
+
+  Found the keyword `fn`, expected one of:
+  - `}`
+  - a record constructor
+  Hint: Gleam is not an object oriented programming language so
+  functions are declared separately from types.
+  ```
+
   ([sobolevn](https://github.com/sobolevn))
 
 ### Formatter
 
 ### Language Server
 
-- The language server can now suggest a code action to assign `_` to unused value.
+- The language server can now suggest a code action to assign an unused value to
+  `_`.
   ([Jiangda Wang](https://github.com/frank-iii))
 
 ### Bug Fixes
@@ -146,9 +198,8 @@
 - Fixed a bug which affected inference of function calls in pipe expressions.
   ([sobolevn](https://github.com/sobolevn))
 
-- Improved an error message when using variable names
-  starting with an underscore in constructs like:
-  `let some = _func()` or `case { 1 -> _func() }`
+- Improved an error message when using variable names starting with an
+  underscore in expression like: `let some = _func()` or `case { 1 -> _func() }`
   ([sobolevn](https://github.com/sobolevn))
 
 ## v1.4.1 - 2024-08-04
