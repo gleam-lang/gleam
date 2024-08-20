@@ -43,7 +43,7 @@
 
   ```gleam
   fn(x) { x.0 }(#(1, 2))
-  // ^ you no lonfer need to annotate this!
+  // ^ you no longer need to annotate this!
   ```
 
   ([sobolevn](https://github.com/sobolevn))
