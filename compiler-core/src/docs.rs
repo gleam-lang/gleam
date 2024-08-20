@@ -96,7 +96,7 @@ pub fn generate_html<IO: FileSystemReader>(
             let path = [&m.name, ".html"].concat();
             Link {
                 path,
-                name: m.name.to_string(),
+                name: m.name.split('/').join("<wbr />/"),
             }
         })
         .sorted()
