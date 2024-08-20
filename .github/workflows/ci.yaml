@@ -173,9 +173,9 @@ jobs:
         env:
           GLEAM_COMMAND: gleam
 
-      - name: test/root_package_not_compile_when_running_dep
+      - name: test/root_package_not_compiled_when_running_dep
         run: ./test.sh
-        working-directory: ./test/root_package_not_compile_when_running_dep
+        working-directory: ./test/root_package_not_compiled_when_running_dep
         if: ${{ matrix.run-integration-tests }}
         env:
           GLEAM_COMMAND: gleam

@@ -87,8 +87,16 @@ impl Target {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
+/// This is used to skip compiling the root package when running the main
+/// function coming from a dependency. This way a dependency can be run even
+/// there's compilation errors in the root package.
+///
 pub enum Compile {
+    /// The default compiler behaviour, compile all packages.
+    ///
     All,
+    /// Only compile the dependency packages, skipping the root package.
+    ///
     DepsOnly,
 }
 
