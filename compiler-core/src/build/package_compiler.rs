@@ -113,60 +113,61 @@ where
             return e.into();
         }
 
-        let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
-        let codegen_required = if self.perform_codegen {
-            CodegenRequired::Yes
-        } else {
-            CodegenRequired::No
-        };
-        let loader = PackageLoader::new(
-            self.io.clone(),
-            self.ids.clone(),
-            self.mode,
-            self.root,
-            self.cached_warnings,
-            warnings,
-            codegen_required,
-            &artefact_directory,
-            self.target.target(),
-            &self.config.name,
-            stale_modules,
-            already_defined_modules,
-            incomplete_modules,
-        );
-        let loaded = match loader.run() {
-            Ok(loaded) => loaded,
-            Err(error) => return error.into(),
-        };
-
-        // Load the cached modules that have previously been compiled
-        for module in loaded.cached.into_iter() {
-            // Emit any cached warnings.
-            // Note that `self.cached_warnings` is set to `Ignore` (such as for
-            // dependency packages) then this field will not be populated.
-            if let Err(e) = self.emit_warnings(warnings, &module) {
-                return e.into();
-            }
-
-            // Register the cached module so its type information etc can be
-            // used for compiling futher modules.
-            _ = existing_modules.insert(module.name.clone(), module);
-        }
-
-        if !loaded.to_compile.is_empty() {
-            // Print that work is being done
-            if self.perform_codegen {
-                telemetry.compiling_package(&self.config.name);
-            } else {
-                telemetry.checking_package(&self.config.name)
-            }
-        }
-
-        // Type check the modules that are new or have changed
-        tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
         let outcome = if self.skip_analysis {
             Outcome::Ok(vec![])
         } else {
+            let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
+            let codegen_required = if self.perform_codegen {
+                CodegenRequired::Yes
+            } else {
+                CodegenRequired::No
+            };
+
+            let loader = PackageLoader::new(
+                self.io.clone(),
+                self.ids.clone(),
+                self.mode,
+                self.root,
+                self.cached_warnings,
+                warnings,
+                codegen_required,
+                &artefact_directory,
+                self.target.target(),
+                &self.config.name,
+                stale_modules,
+                already_defined_modules,
+                incomplete_modules,
+            );
+            let loaded = match loader.run() {
+                Ok(loaded) => loaded,
+                Err(error) => return error.into(),
+            };
+
+            // Load the cached modules that have previously been compiled
+            for module in loaded.cached.into_iter() {
+                // Emit any cached warnings.
+                // Note that `self.cached_warnings` is set to `Ignore` (such as for
+                // dependency packages) then this field will not be populated.
+                if let Err(e) = self.emit_warnings(warnings, &module) {
+                    return e.into();
+                }
+
+                // Register the cached module so its type information etc can be
+                // used for compiling futher modules.
+                _ = existing_modules.insert(module.name.clone(), module);
+            }
+
+            if !loaded.to_compile.is_empty() {
+                // Print that work is being done
+                if self.perform_codegen {
+                    telemetry.compiling_package(&self.config.name);
+                } else {
+                    telemetry.checking_package(&self.config.name)
+                }
+            }
+
+            // Type check the modules that are new or have changed
+            tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
             analyse(
                 &self.config,
                 self.target.target(),
