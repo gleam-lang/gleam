@@ -12,6 +12,9 @@
   even when there's compilation errors in your own project's code.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- HTML docs: make module names in sidebar wrap before a / when possible
+  ([Jiangda Wang](https://github.com/frank-iii))
+
 ### Compiler
 
 - Compiler progress is now printed to stderr, instead of stdout.
