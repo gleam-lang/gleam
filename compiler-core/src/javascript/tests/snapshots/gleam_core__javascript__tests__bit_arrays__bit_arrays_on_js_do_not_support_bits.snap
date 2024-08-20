@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn main() {\n  case <<1, 2>> {\n    <<b:bits>> -> 1\n    _ -> 0\n  }\n}\n"
+---
+error: Unsupported feature for compilation target
+  ┌─ /src/javascript/error.gleam:4:7
+  │
+4 │     <<b:bits>> -> 1
+  │       ^^^^^^
+
+This bit array segment option in patterns is not supported for JavaScript compilation.

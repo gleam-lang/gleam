@@ -39,7 +39,7 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 macro_rules! assert_js_with_multiple_imports {
     ($(($name:literal, $module_src:literal)),+; $src:literal) => {
         let output =
-            $crate::javascript::tests::compile_js($src, vec![$((CURRENT_PACKAGE, $name, $module_src)),*]);
+            $crate::javascript::tests::compile_js($src, vec![$((CURRENT_PACKAGE, $name, $module_src)),*]).expect("compilation failed");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -48,24 +48,36 @@ macro_rules! assert_js_with_multiple_imports {
 macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)]);
+            $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)])
+                .expect("compilation failed");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr, $js:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)));
+            $crate::javascript::tests::compile_js($src, Some(($dep_package, $dep_name, $dep_src)))
+                .expect("compilation failed");
         assert_eq!(($src, output), ($src, $js.to_string()));
     }};
 
     ($src:expr $(,)?) => {{
-        let output = $crate::javascript::tests::compile_js($src, vec![]);
+        let output =
+            $crate::javascript::tests::compile_js($src, vec![]).expect("compilation failed");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr, $js:expr $(,)?) => {{
-        let output = $crate::javascript::tests::compile_js($src, vec![]);
+        let output =
+            $crate::javascript::tests::compile_js($src, vec![]).expect("compilation failed");
         assert_eq!(($src, output), ($src, $js.to_string()));
+    }};
+}
+
+#[macro_export]
+macro_rules! assert_js_error {
+    ($src:expr $(,)?) => {{
+        let output = $crate::javascript::tests::expect_js_error($src, vec![]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
 
@@ -73,12 +85,14 @@ macro_rules! assert_js {
 macro_rules! assert_ts_def {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let output =
-            $crate::javascript::tests::compile_ts($src, vec![($dep_package, $dep_name, $dep_src)]);
+            $crate::javascript::tests::compile_ts($src, vec![($dep_package, $dep_name, $dep_src)])
+                .expect("compilation failed");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr $(,)?) => {{
-        let output = $crate::javascript::tests::compile_ts($src, vec![]);
+        let output =
+            $crate::javascript::tests::compile_ts($src, vec![]).expect("compilation failed");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
@@ -148,7 +162,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
     .expect("should successfully infer")
 }
 
-pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
+pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     module(
@@ -156,13 +170,28 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
         &line_numbers,
         Utf8Path::new(""),
         &"".into(),
-        TargetSupport::NotEnforced,
+        TargetSupport::Enforced,
         TypeScriptDeclarations::None,
     )
-    .unwrap()
 }
 
-pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
+pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
-    ts_declaration(&ast, Utf8Path::new(""), &src.into()).unwrap()
+    ts_declaration(&ast, Utf8Path::new(""), &src.into())
+}
+
+pub fn expect_js_error(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
+    let error = compile_js(src, deps).expect_err("should not compile");
+    println!("er: {:#?}", error);
+    let better_error = match error {
+        crate::Error::JavaScript {
+            error: inner_error, ..
+        } => crate::Error::JavaScript {
+            src: src.into(),
+            path: Utf8PathBuf::from("/src/javascript/error.gleam"),
+            error: inner_error,
+        },
+        _ => panic!("expected js error, got {:#?}", error),
+    };
+    better_error.pretty_string()
 }
