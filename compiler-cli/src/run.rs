@@ -74,8 +74,6 @@ pub fn command(
 
     let target = target.unwrap_or(mod_config.target);
 
-    println!("{:#?}", package_kind);
-
     let options = Options {
         warnings_as_errors: false,
         compile: match package_kind {
