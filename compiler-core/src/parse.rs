@@ -66,6 +66,7 @@ use crate::ast::{
     CAPTURE_VARIABLE,
 };
 use crate::build::Target;
+use crate::error::wrap;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::expression::Implementations;
 use crate::type_::Deprecation;
@@ -3125,9 +3126,13 @@ where
                         Token::Name { name } => name,
                         token => {
                             let hint = match (&token, self.tok0.take()) {
-                                (&Token::Fn { .. }, _) | (&Token::Pub, Some((_, Token::Fn { .. }, _))) => {
-                                    Some("unlike some other languages, functions are declared separately from types.".into())
-                                },
+                                (&Token::Fn { .. }, _)
+                                | (&Token::Pub, Some((_, Token::Fn { .. }, _))) => {
+                                    let text =
+                                        "Gleam is not an object oriented programming language so
+functions are declared separately from types.";
+                                    Some(wrap(text).into())
+                                }
                                 (_, _) => None,
                             };
 

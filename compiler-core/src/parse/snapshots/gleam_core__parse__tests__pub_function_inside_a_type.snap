@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
+assertion_line: 1477
 expression: "\ntype Wibble {\n  pub fn wobble() {}\n}\n"
 ---
 error: Syntax error
@@ -11,4 +12,5 @@ error: Syntax error
 Found the keyword `pub`, expected one of: 
 - `}`
 - a record constructor
-Hint: unlike some other languages, functions are declared separately from types.
+Hint: Gleam is not an object oriented programming language so
+functions are declared separately from types.
