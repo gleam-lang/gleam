@@ -569,21 +569,6 @@ fn go() {
     );
 }
 
-#[test]
-fn bit_arrays_on_js_do_not_support_bits() {
-    // https://github.com/gleam-lang/gleam/issues/3524
-    assert_js_error!(
-        r#"
-fn main() {
-  case <<1, 2>> {
-    <<b:bits>> -> 1
-    _ -> 0
-  }
-}
-"#
-    );
-}
-
 // This test would ideally also result in go() being deleted like the previous tests
 // but we can not know for sure what the value of a variable is going to be
 // so right now go() is not deleted.
