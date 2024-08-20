@@ -1,4 +1,4 @@
-use crate::{assert_js, assert_ts_def};
+use crate::{assert_js, assert_js_error, assert_ts_def};
 
 #[test]
 fn empty() {
@@ -545,7 +545,7 @@ fn go() {
 // https://github.com/gleam-lang/gleam/issues/1591
 #[test]
 fn not_byte_aligned() {
-    assert_js!(
+    assert_js_error!(
         r#"
 fn thing() {
   4
@@ -560,12 +560,27 @@ fn go() {
 
 #[test]
 fn not_byte_aligned_explicit_sized() {
-    assert_js!(
+    assert_js_error!(
         r#"
 fn go() {
   <<256:size(4)>>
 }
 "#,
+    );
+}
+
+#[test]
+fn bit_arrays_on_js_do_not_support_bits() {
+    // https://github.com/gleam-lang/gleam/issues/3524
+    assert_js_error!(
+        r#"
+fn main() {
+  case <<1, 2>> {
+    <<b:bits>> -> 1
+    _ -> 0
+  }
+}
+"#
     );
 }
 

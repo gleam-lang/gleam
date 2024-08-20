@@ -2,8 +2,10 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\nfn thing() {\n  4\n}\n\nfn go() {\n  <<256:4>>\n}\n"
 ---
-import { toBitArray } from "../gleam.mjs";
+error: Unsupported feature for compilation target
+  ┌─ /src/javascript/error.gleam:7:5
+  │
+7 │   <<256:4>>
+  │     ^^^^^
 
-function thing() {
-  return 4;
-}
+Non byte aligned array is not supported for JavaScript compilation.
