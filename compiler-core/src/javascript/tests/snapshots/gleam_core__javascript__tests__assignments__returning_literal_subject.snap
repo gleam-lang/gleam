@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
+assertion_line: 83
 expression: "fn go(x) { let assert 1 = x + 1 }"
 ---
 import { makeError } from "../gleam.mjs";
@@ -8,11 +9,11 @@ function go(x) {
   let $ = x + 1;
   if ($ !== 1) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       1,
       "go",
-      "Assignment pattern did not match",
+      "Assertion pattern match failed",
       { value: $ }
     )
   }

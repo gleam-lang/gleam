@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 501
 expression: "\nfn go(x) {\n  let assert <<_, a:2-bytes>> = x\n  let assert <<_, b:bytes-size(2)>> = x\n}\n"
 ---
 import { makeError } from "../gleam.mjs";
@@ -7,22 +8,22 @@ import { makeError } from "../gleam.mjs";
 function go(x) {
   if (!(x.length == 3)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not match",
+      "Assertion pattern match failed",
       { value: x }
     )
   }
   let a = x.binaryFromSlice(1, 3);
   if (!(x.length == 3)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       4,
       "go",
-      "Assignment pattern did not match",
+      "Assertion pattern match failed",
       { value: x }
     )
   }

@@ -170,18 +170,18 @@ export function sizedInt(value, size, isBigEndian) {
 
   // Convert negative number to two's complement representation
   if (value < 0) {
-    value = (2 ** size) + value;
+    value = 2 ** size + value;
   }
 
   if (isBigEndian) {
     for (let i = 0; i < byteArray.length; i++) {
-      const byte = value % 256
+      const byte = value % 256;
       byteArray[i] = byte;
       value = (value - byte) / 256;
     }
   } else {
     for (let i = byteArray.length - 1; i >= 0; i--) {
-      const byte = value % 256
+      const byte = value % 256;
       byteArray[i] = byte;
       value = (value - byte) / 256;
     }
@@ -227,9 +227,9 @@ export function byteArrayToFloat(byteArray, start, end, isBigEndian) {
   const byteSize = end - start;
 
   if (byteSize === 8) {
-    return view.getFloat64(start, !isBigEndian)
+    return view.getFloat64(start, !isBigEndian);
   } else if (byteSize === 4) {
-    return view.getFloat32(start, !isBigEndian)
+    return view.getFloat32(start, !isBigEndian);
   } else {
     const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${byteSize * 8} bits`;
     throw new globalThis.Error(msg);
@@ -262,7 +262,7 @@ export function sizedFloat(float, size, isBigEndian) {
   } else if (size === 32) {
     view.setFloat32(0, float, !isBigEndian);
   }
-  
+
   return byteArray;
 }
 
@@ -415,6 +415,8 @@ export function makeError(variant, module, line, fn, message, extra) {
   error.gleam_error = variant;
   error.module = module;
   error.line = line;
+  error.function = fn;
+  // TODO: Remove this with Gleam v2.0.0
   error.fn = fn;
   for (let k in extra) error[k] = extra[k];
   return error;
