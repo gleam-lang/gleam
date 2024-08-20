@@ -171,6 +171,9 @@
 
 ### Bug Fixes
 
+- Fixed a bug where the warnings were printed above the errors without any new line between them.
+([Victor Kobinski](https://github.com/vkobinski))
+
 - Fixed a bug which caused the language server and compiler to crash when two
   constructors of the same name were created.
   ([Surya Rose](https://github.com/GearsDatapacks))
