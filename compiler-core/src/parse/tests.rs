@@ -1471,3 +1471,14 @@ type Wibble {
 "#
     );
 }
+
+#[test]
+fn pub_function_inside_a_type() {
+    assert_module_error!(
+        r#"
+type Wibble {
+  pub fn wobble() {}
+}
+"#
+    );
+}
