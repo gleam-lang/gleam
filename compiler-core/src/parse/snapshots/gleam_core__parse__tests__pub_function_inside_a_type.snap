@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\ntype Wibble {\n  pub fn wobble() {}\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:3
+  │
+3 │   pub fn wobble() {}
+  │   ^^^ I was not expecting this
+
+Found the keyword `pub`, expected one of: 
+- `}`
+- a record constructor
+Hint: unlike some other languages, functions are declared separately from types.

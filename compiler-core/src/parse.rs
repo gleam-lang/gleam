@@ -3124,10 +3124,13 @@ where
                     let field = match token {
                         Token::Name { name } => name,
                         token => {
-                            let mut hint = None;
-                            if let Token::Fn { .. } = token {
-                                hint = Some("unlike some other languages, functions are declared separately from types.".into());
-                            }
+                            let hint = match (&token, self.tok0.take()) {
+                                (&Token::Fn { .. }, _) | (&Token::Pub, Some((_, Token::Fn { .. }, _))) => {
+                                    Some("unlike some other languages, functions are declared separately from types.".into())
+                                },
+                                (_, _) => None,
+                            };
+
                             return parse_error(
                                 ParseErrorType::UnexpectedToken {
                                     token,
