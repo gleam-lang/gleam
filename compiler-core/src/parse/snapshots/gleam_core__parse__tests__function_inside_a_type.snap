@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1442
 expression: "\ntype Wibble {\n  fn wobble() {}\n}\n"
 ---
 error: Syntax error
