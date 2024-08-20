@@ -1460,3 +1460,14 @@ fn error_message_on_variable_starting_with_underscore2() {
   }"
     );
 }
+
+#[test]
+fn function_inside_a_type() {
+    assert_module_error!(
+        r#"
+type Wibble {
+  fn wobble() {}
+}
+"#
+    );
+}

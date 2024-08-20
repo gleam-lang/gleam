@@ -3123,7 +3123,11 @@ where
                     // Else, handle as an unexpected token.
                     let field = match token {
                         Token::Name { name } => name,
-                        _ => {
+                        token => {
+                            let mut hint = None;
+                            if let Token::Fn { .. } = token {
+                                hint = Some("unlike some other languages, functions are declared separately from types.".into());
+                            }
                             return parse_error(
                                 ParseErrorType::UnexpectedToken {
                                     token,
@@ -3131,10 +3135,10 @@ where
                                         Token::RightBrace.to_string().into(),
                                         "a record constructor".into(),
                                     ],
-                                    hint: None,
+                                    hint,
                                 },
                                 SrcSpan { start, end },
-                            )
+                            );
                         }
                     };
                     let field_type = match self.parse_type_annotation(&Token::Colon) {

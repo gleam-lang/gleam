@@ -101,6 +101,9 @@
   function.
   ([sobolevn](https://github.com/sobolevn))
 
+- Adds a hint to syntax error when defining a function inside a type.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server
