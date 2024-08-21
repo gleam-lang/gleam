@@ -419,6 +419,7 @@ p a code {
   padding-top: var(--gap);
   padding-bottom: calc(3 * var(--gap));
   padding-left: var(--gap);
+  padding-right: var(--gap);
   position: fixed;
   top: var(--header-height);
   transition: transform 0.5s ease;
@@ -439,6 +440,13 @@ p a code {
 .sidebar li {
   line-height: 1.2;
   margin-bottom: 4px;
+}
+
+.module-link {
+  display: inline-block;
+  padding-left: 0.5em;
+  text-indent: -0.5em;
+  line-height: 1.2;
 }
 
 .sidebar .sidebar-toggle {

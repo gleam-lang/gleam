@@ -218,7 +218,7 @@ expression: "compile(config, modules)"
         <h2>Modules</h2>
         <ul>
         
-          <li><a href="./app.html">app</a></li>
+          <li><a href="./app.html" class="module-link">app</a></li>
         
         </ul>
 
@@ -349,7 +349,7 @@ expression: "compile(config, modules)"
       });
       hljs.highlightAll();
     </script>
-    <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>    
+    <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
 
     <!-- Load the search index using JSONP to avoid CORS issues -->
