@@ -253,7 +253,7 @@ impl<T: PartialEq> RecordConstructorArg<T> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstConstructor {
     pub location: SrcSpan,
-    pub module: Option<EcoString>,
+    pub module: Option<(EcoString, SrcSpan)>,
     pub name: EcoString,
     pub arguments: Vec<TypeAst>,
 }
@@ -461,7 +461,7 @@ impl TypeAst {
                 func.return_.print(buffer);
             }
             TypeAst::Constructor(constructor) => {
-                if let Some(module) = &constructor.module {
+                if let Some((module, _)) = &constructor.module {
                     buffer.push_str(module);
                     buffer.push('.');
                 }
@@ -510,7 +510,7 @@ fn type_ast_print_constructor() {
     let mut buffer = EcoString::new();
     let ast = TypeAst::Constructor(TypeAstConstructor {
         name: "SomeType".into(),
-        module: Some("some_module".into()),
+        module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
         location: SrcSpan { start: 1, end: 1 },
         arguments: vec![
             TypeAst::Var(TypeAstVar {
@@ -535,7 +535,7 @@ fn type_ast_print_tuple() {
         elems: vec![
             TypeAst::Constructor(TypeAstConstructor {
                 name: "SomeType".into(),
-                module: Some("some_module".into()),
+                module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
                 location: SrcSpan { start: 1, end: 1 },
                 arguments: vec![
                     TypeAst::Var(TypeAstVar {

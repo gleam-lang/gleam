@@ -1,7 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
-use crate::type_::error::{MissingAnnotation, ModuleSuggestion, UnknownTypeHint};
+use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::error::{Named, RecordVariants};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
@@ -619,7 +619,7 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     (distance <= limit).then_some(distance)
 }
 
-fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize> {
+pub fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize> {
     let n = a.chars().count();
     let m = b.chars().count();
 
@@ -680,27 +680,6 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
         })
         .min_by_key(|&(_, distance)| distance)
         .map(|(option, _)| format!("Did you mean `{}`?", option))
-}
-
-fn suggest_module(name: &str, suggestions: &[ModuleSuggestion]) -> Option<String> {
-    // If a module matches, suggest that
-    if let Some(suggestion @ ModuleSuggestion::Matching(_)) = suggestions.first() {
-        return Some(suggestion.suggestion());
-    }
-
-    // Calculate the threshold as one third of the name's length, with a minimum of 1.
-    let threshold = std::cmp::max(name.chars().count() / 3, 1);
-
-    // Filter and sort options based on edit distance.
-    suggestions
-        .iter()
-        .sorted()
-        .filter_map(|suggestion| {
-            edit_distance_with_substrings(name, suggestion.last_name_component(), threshold)
-                .map(|distance| (suggestion, distance))
-        })
-        .min_by_key(|&(_, distance)| distance)
-        .map(|(suggestion, _)| suggestion.suggestion())
 }
 
 impl Error {
@@ -1982,7 +1961,7 @@ Private types can only be used within the module that defines them.",
                 } => Diagnostic {
                     title: "Unknown module".into(),
                     text: format!("No module has been found with the name `{name}`."),
-                    hint: suggest_module(name, suggestions),
+                    hint: suggestions.first().map(|suggestion| suggestion.suggestion(name)),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
