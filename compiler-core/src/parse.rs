@@ -2353,7 +2353,12 @@ where
                 self.advance();
                 if self.maybe_one(&Token::Dot).is_some() {
                     let (_, upname, upname_e) = self.expect_upname()?;
-                    self.parse_type_name_finish(start, Some(mod_name), upname, upname_e)
+                    self.parse_type_name_finish(
+                        start,
+                        Some((mod_name, SrcSpan { start, end })),
+                        upname,
+                        upname_e,
+                    )
                 } else {
                     Ok(Some(TypeAst::Var(TypeAstVar {
                         location: SrcSpan { start, end },
@@ -2373,7 +2378,7 @@ where
     fn parse_type_name_finish(
         &mut self,
         start: u32,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
@@ -2711,14 +2716,21 @@ where
                 self.parse_const_record_finish(start, None, name, end)
             }
 
-            Some((start, Token::Name { name }, _)) if self.peek_tok1() == Some(&Token::Dot) => {
+            Some((start, Token::Name { name }, module_end))
+                if self.peek_tok1() == Some(&Token::Dot) =>
+            {
                 self.advance(); // name
                 self.advance(); // dot
 
                 match self.tok0.take() {
                     Some((_, Token::UpName { name: upname }, end)) => {
                         self.advance(); // upname
-                        self.parse_const_record_finish(start, Some(name), upname, end)
+                        self.parse_const_record_finish(
+                            start,
+                            Some((name, SrcSpan::new(start, module_end))),
+                            upname,
+                            end,
+                        )
                     }
                     Some((_, Token::Name { name: end_name }, end)) => {
                         self.advance(); // name
@@ -2733,7 +2745,7 @@ where
                             ),
                             _ => Ok(Some(Constant::Var {
                                 location: SrcSpan { start, end },
-                                module: Some(name),
+                                module: Some((name, SrcSpan::new(start, module_end))),
                                 name: end_name,
                                 constructor: None,
                                 type_: (),
@@ -2825,7 +2837,7 @@ where
     fn parse_const_record_finish(
         &mut self,
         start: u32,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {

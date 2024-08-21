@@ -9,4 +9,4 @@ error: Unknown module
   │   ^^^^^
 
 No module has been found with the name `woble`.
-Hint: Did you mean to import `wibble/wobble`, and reference `wobble`?
+Hint: Did you mean to import `wibble/wobble` and reference `wobble`?

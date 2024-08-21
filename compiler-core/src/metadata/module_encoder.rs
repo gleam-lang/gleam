@@ -383,7 +383,7 @@ impl<'a> ModuleEncoder<'a> {
             } => {
                 let mut builder = builder.init_var();
                 match module {
-                    Some(name) => builder.set_module(name),
+                    Some((name, _)) => builder.set_module(name),
                     None => builder.set_module(""),
                 };
                 builder.set_name(name);

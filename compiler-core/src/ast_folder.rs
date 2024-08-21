@@ -926,7 +926,7 @@ pub trait UntypedConstantFolder {
     fn fold_constant_record(
         &mut self,
         location: SrcSpan,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         args: Vec<CallArg<UntypedConstant>>,
     ) -> UntypedConstant {
@@ -952,7 +952,7 @@ pub trait UntypedConstantFolder {
     fn fold_constant_var(
         &mut self,
         location: SrcSpan,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
     ) -> UntypedConstant {
         Constant::Var {

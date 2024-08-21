@@ -2,6 +2,7 @@ use crate::{
     analyse::TargetSupport,
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
+    error::edit_distance_with_substrings,
     exhaustiveness::printer::ValueNames,
     uid::UniqueIdGenerator,
 };
@@ -333,7 +334,7 @@ impl<'a> Environment<'a> {
     ///
     pub fn get_type_constructor(
         &mut self,
-        module_alias: &Option<EcoString>,
+        module_alias: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         let t = match module_alias {
@@ -345,7 +346,7 @@ impl<'a> Environment<'a> {
                     hint: self.unknown_type_hint(name),
                 }),
 
-            Some(module_name) => {
+            Some((module_name, _)) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
                         name: module_name.clone(),
@@ -676,37 +677,44 @@ impl<'a> Environment<'a> {
             .importable_modules
             .iter()
             .filter_map(|(importable, module_info)| {
-                if importable.split('/').last().unwrap_or(importable) != module {
-                    return None;
-                }
-
                 match &imported {
+                    // Don't suggest importing modules if they are already imported
+                    _ if self
+                        .imported_modules
+                        .contains_key(importable.split('/').last().unwrap_or(importable)) =>
+                    {
+                        None
+                    }
                     Imported::Type(name) if module_info.get_public_type(name).is_some() => {
-                        Some(ModuleSuggestion::Matching(importable.clone()))
+                        Some(ModuleSuggestion::Importable(importable.clone()))
                     }
                     Imported::Value(name) if module_info.get_public_value(name).is_some() => {
-                        Some(ModuleSuggestion::Matching(importable.clone()))
+                        Some(ModuleSuggestion::Importable(importable.clone()))
                     }
                     _ => None,
                 }
             })
             .collect_vec();
 
-        suggestions.sort();
-
         suggestions.extend(
             self.imported_modules
                 .keys()
                 .map(|module| ModuleSuggestion::Imported(module.clone())),
         );
-        suggestions.extend(
-            self.importable_modules
-                .keys()
-                .filter(|&module| module != PRELUDE_MODULE_NAME)
-                .map(|module| ModuleSuggestion::Importable(module.clone())),
-        );
 
+        let threshold = std::cmp::max(module.chars().count() / 3, 1);
+
+        // Filter and sort options based on edit distance.
         suggestions
+            .into_iter()
+            .sorted()
+            .filter_map(|suggestion| {
+                edit_distance_with_substrings(module, suggestion.last_name_component(), threshold)
+                    .map(|distance| (suggestion, distance))
+            })
+            .sorted_by_key(|&(_, distance)| distance)
+            .map(|(suggestion, _)| suggestion)
+            .collect()
     }
 }
 

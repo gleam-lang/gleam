@@ -74,40 +74,40 @@ pub enum RecordVariants {
 /// A suggestion for an unknown module
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ModuleSuggestion {
-    /// A module which which has a matching name, and an
+    /// A module which which has a similar name, and an
     /// exported value matching the one being accessed
-    Matching(EcoString),
+    Importable(EcoString),
     /// A module already imported in the current scope
     Imported(EcoString),
-    /// A module which can be imported
-    Importable(EcoString),
 }
 
 impl ModuleSuggestion {
-    pub fn suggestion(&self) -> String {
+    pub fn suggestion(&self, module: &str) -> String {
         match self {
-            ModuleSuggestion::Matching(name) => format!("Did you mean to import `{name}`?"),
+            ModuleSuggestion::Importable(name) => {
+                // Add a little extra information if the names don't match
+                let imported_name = self.last_name_component();
+                if module == imported_name {
+                    format!("Did you mean to import `{name}`?")
+                } else {
+                    format!("Did you mean to import `{name}` and reference `{imported_name}`?")
+                }
+            }
             ModuleSuggestion::Imported(name) => format!("Did you mean `{name}`?"),
-            ModuleSuggestion::Importable(name) => format!(
-                "Did you mean to import `{name}`, and reference `{}`?",
-                self.last_name_component()
-            ),
         }
     }
 
     pub fn name(&self) -> &EcoString {
         match self {
-            ModuleSuggestion::Matching(name)
-            | ModuleSuggestion::Imported(name)
-            | ModuleSuggestion::Importable(name) => name,
+            ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => name,
         }
     }
 
     pub fn last_name_component(&self) -> &str {
         match self {
-            ModuleSuggestion::Matching(name)
-            | ModuleSuggestion::Imported(name)
-            | ModuleSuggestion::Importable(name) => name.split('/').last().unwrap_or(name),
+            ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => {
+                name.split('/').last().unwrap_or(name)
+            }
         }
     }
 }
@@ -1042,6 +1042,7 @@ pub enum UnknownTypeConstructorError {
 pub fn convert_get_type_constructor_error(
     e: UnknownTypeConstructorError,
     location: &SrcSpan,
+    module_location: Option<SrcSpan>,
 ) -> Error {
     match e {
         UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
@@ -1051,7 +1052,7 @@ pub fn convert_get_type_constructor_error(
         },
 
         UnknownTypeConstructorError::Module { name, suggestions } => Error::UnknownModule {
-            location: *location,
+            location: module_location.unwrap_or(*location),
             name,
             suggestions,
         },

@@ -1309,6 +1309,39 @@ pub fn main() {
 }
 
 #[test]
+fn test_rename_module_for_imported() {
+    let src = r#"
+import gleam/io
+
+pub fn main() {
+  i.println("Hello, world!")
+}
+"#;
+
+    assert_code_action!(
+        "Did you mean `io`",
+        TestProject::for_source(src)
+            .add_hex_module("gleam/io", "pub fn println(message: String) {}"),
+        find_position_of("i.").select_until(find_position_of("println"))
+    );
+}
+
+#[test]
+fn test_import_similar_module() {
+    let src = "
+pub fn main() {
+  reul.is_ok()
+}
+";
+
+    assert_code_action!(
+        "Import `result`",
+        TestProject::for_source(src).add_hex_module("result", "pub fn is_ok() {}"),
+        find_position_of("reul").select_until(find_position_of("."))
+    );
+}
+
+#[test]
 fn test_no_action_to_import_module_without_value() {
     // The language server should not suggest a code action
     // to import a module if it doesn't have a value with

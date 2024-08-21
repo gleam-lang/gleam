@@ -34,7 +34,7 @@ pub enum Constant<T, RecordTag> {
 
     Record {
         location: SrcSpan,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         args: Vec<CallArg<Self>>,
         tag: RecordTag,
@@ -49,7 +49,7 @@ pub enum Constant<T, RecordTag> {
 
     Var {
         location: SrcSpan,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         constructor: Option<Box<ValueConstructor>>,
         type_: T,

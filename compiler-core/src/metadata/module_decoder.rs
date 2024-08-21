@@ -337,7 +337,7 @@ impl ModuleDecoder {
         let constructor = self.value_constructor(&reader.get_constructor()?)?;
         Ok(Constant::Var {
             location: Default::default(),
-            module: module.map(EcoString::from),
+            module: module.map(|module| (EcoString::from(module), Default::default())),
             name: name.into(),
             constructor: Some(Box::from(constructor)),
             type_,

@@ -6,6 +6,6 @@ error: Unknown module
   ┌─ /src/one/two.gleam:2:11
   │
 2 │ const x = unknown.X
-  │           ^^^^^^^^^
+  │           ^^^^^^^
 
 No module has been found with the name `unknown`.

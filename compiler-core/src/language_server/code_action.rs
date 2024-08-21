@@ -640,7 +640,14 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
 
 struct MissingImport {
     location: SrcSpan,
-    suggestions: Vec<EcoString>,
+    suggestions: Vec<ImportSuggestion>,
+}
+
+struct ImportSuggestion {
+    // The name to replace with, if the user made a typo
+    name: EcoString,
+    // The optional module to import, if suggesting an importable module
+    import: Option<EcoString>,
 }
 
 pub fn code_action_import_module(
@@ -654,17 +661,17 @@ pub fn code_action_import_module(
         return;
     };
 
-    let missing_imports: Vec<_> = errors
+    let missing_imports = errors
         .into_iter()
         .filter_map(|e| match e {
             crate::type_::Error::UnknownModule {
                 location,
-                name,
                 suggestions,
-            } => suggest_imports(name, *location, suggestions),
+                ..
+            } => suggest_imports(*location, suggestions),
             _ => None,
         })
-        .collect();
+        .collect_vec();
 
     if missing_imports.is_empty() {
         return;
@@ -686,13 +693,25 @@ pub fn code_action_import_module(
         }
 
         for suggestion in missing_import.suggestions {
-            let edits = vec![get_import_edit(
-                first_import_pos,
-                &suggestion,
-                &after_import_newlines,
-            )];
+            let mut edits = vec![TextEdit {
+                range,
+                new_text: suggestion.name.to_string(),
+            }];
+            if let Some(import) = &suggestion.import {
+                edits.push(get_import_edit(
+                    first_import_pos,
+                    import,
+                    &after_import_newlines,
+                ))
+            };
 
-            CodeActionBuilder::new(&format!("Import `{}`", suggestion))
+            let title = if let Some(import) = &suggestion.import {
+                &format!("Import `{import}`")
+            } else {
+                &format!("Did you mean `{}`", suggestion.name)
+            };
+
+            CodeActionBuilder::new(title)
                 .kind(CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), edits)
                 .preferred(true)
@@ -702,21 +721,25 @@ pub fn code_action_import_module(
 }
 
 fn suggest_imports(
-    module_name: &str,
     location: SrcSpan,
     importable_modules: &[ModuleSuggestion],
 ) -> Option<MissingImport> {
-    let suggestions: Vec<_> = importable_modules
+    let suggestions = importable_modules
         .iter()
-        .filter_map(|suggestion| match suggestion {
-            ModuleSuggestion::Matching(name)
-                if name.split('/').last().unwrap_or(name) == module_name =>
-            {
-                Some(name.clone())
+        .map(|suggestion| {
+            let imported_name = suggestion.last_name_component();
+            match suggestion {
+                ModuleSuggestion::Importable(name) => ImportSuggestion {
+                    name: imported_name.into(),
+                    import: Some(name.clone()),
+                },
+                ModuleSuggestion::Imported(_) => ImportSuggestion {
+                    name: imported_name.into(),
+                    import: None,
+                },
             }
-            _ => None,
         })
-        .collect();
+        .collect_vec();
 
     if suggestions.is_empty() {
         None

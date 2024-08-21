@@ -1243,7 +1243,11 @@ pub(crate) fn guard_constant_expression<'a>(
                 .iter()
                 .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(module.as_deref(), name, field_values))
+            Ok(construct_record(
+                module.as_ref().map(|(module, _)| module.as_str()),
+                name,
+                field_values,
+            ))
         }
 
         Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {
@@ -1346,7 +1350,11 @@ pub(crate) fn constant_expression<'a>(
                 .map(|arg| constant_expression(context, tracker, &arg.value))
                 .try_collect()?;
 
-            let constructor = construct_record(module.as_deref(), name, field_values);
+            let constructor = construct_record(
+                module.as_ref().map(|(module, _)| module.as_str()),
+                name,
+                field_values,
+            );
             match context {
                 Context::Constant => Ok(docvec!["/* @__PURE__ */ ", constructor]),
                 Context::Function => Ok(constructor),
@@ -1366,7 +1374,7 @@ pub(crate) fn constant_expression<'a>(
         Constant::Var { name, module, .. } => Ok({
             match module {
                 None => maybe_escape_identifier_doc(name),
-                Some(module) => {
+                Some((module, _)) => {
                     // JS keywords can be accessed here, but we must escape anyway
                     // as we escape when exporting such names in the first place,
                     // and the imported name has to match the exported name.
