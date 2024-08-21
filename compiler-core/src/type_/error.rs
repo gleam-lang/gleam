@@ -107,6 +107,7 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         imported_modules: Vec<EcoString>,
+        hint: Option<String>,
     },
 
     UnknownModuleType {
@@ -958,6 +959,7 @@ pub fn convert_get_value_constructor_error(
             location,
             name,
             imported_modules,
+            hint: None,
         },
 
         UnknownValueConstructorError::ModuleValue {
@@ -1019,6 +1021,7 @@ pub fn convert_get_type_constructor_error(
             location: *location,
             name,
             imported_modules,
+            hint: None,
         },
 
         UnknownTypeConstructorError::ModuleType {

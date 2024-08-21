@@ -1,4 +1,5 @@
 use ecow::EcoString;
+use itertools::Itertools;
 
 use crate::{
     ast::{SrcSpan, UnqualifiedImport, UntypedImport},
@@ -48,9 +49,28 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         // Find imported module
         let Some(module_info) = self.environment.importable_modules.get(&name) else {
+            // Improve error message when users confuse `import one/two`
+            // with `import one.{two}`.
+            let mut modpath = name.split("/").collect_vec();
+            let last_part = match modpath.last() {
+                Some(name) => name,
+                None => "",
+            };
+            modpath.truncate(modpath.len() - 1);
+            let basename = EcoString::from(modpath.join("/"));
+
+            let mut hint = None;
+            if let Some(module) = self.environment.importable_modules.get(&basename) {
+                if module.get_public_value(last_part).is_some() {
+                    hint = Some(format!(
+                        "Maybe you meant `import {basename}.{{{last_part}}}`?"
+                    ));
+                }
+            }
             self.problems.error(Error::UnknownModule {
                 location,
                 name: name.clone(),
+                hint,
                 imported_modules: self.environment.imported_modules.keys().cloned().collect(),
             });
             return;

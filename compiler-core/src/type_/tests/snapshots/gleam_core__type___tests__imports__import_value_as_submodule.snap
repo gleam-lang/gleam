@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+expression: "\n        import one/wibble\n        "
+---
+error: Unknown module
+  ┌─ /src/one/two.gleam:2:9
+  │
+2 │         import one/wibble
+  │         ^^^^^^^^^^^^^^^^^
+
+No module has been found with the name `one/wibble`.
+Hint: Maybe you meant `import one.{wibble}`?

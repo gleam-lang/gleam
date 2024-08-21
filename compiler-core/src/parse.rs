@@ -2410,6 +2410,7 @@ where
     //   import a
     //   import a/b
     //   import a/b.{c}
+    //   import a/b.{type C}
     //   import a/b.{c as d} as e
     fn parse_import(&mut self, import_start: u32) -> Result<Option<UntypedDefinition>, ParseError> {
         let mut start = 0;
@@ -2450,7 +2451,9 @@ where
         let mut unqualified_types = vec![];
 
         if self.maybe_one(&Token::Dot).is_some() {
-            let _ = self.expect_one(&Token::LeftBrace)?;
+            let _ = self
+                .expect_one(&Token::LeftBrace)
+                .map_err(|err| self.add_import_syntax_hint(err, &module))?;
             let parsed = self.parse_unqualified_imports()?;
             unqualified_types = parsed.types;
             unqualified_values = parsed.values;
@@ -2485,6 +2488,36 @@ where
             as_name,
             package: (),
         })))
+    }
+
+    fn add_import_syntax_hint(&self, err: ParseError, module: &String) -> ParseError {
+        match err.error {
+            ParseErrorType::UnexpectedToken {
+                token: Token::Name { ref name },
+                ..
+            } => ParseError {
+                location: err.location,
+                error: ParseErrorType::InvalidImportSyntax {
+                    module: module.into(),
+                    name: name.clone(),
+                    upname: false,
+                },
+            },
+
+            ParseErrorType::UnexpectedToken {
+                token: Token::UpName { ref name },
+                ..
+            } => ParseError {
+                location: err.location,
+                error: ParseErrorType::InvalidImportSyntax {
+                    module: module.into(),
+                    name: name.clone(),
+                    upname: true,
+                },
+            },
+
+            _ => err,
+        }
     }
 
     // [Name (as Name)? | UpName (as Name)? ](, [Name (as Name)? | UpName (as Name)?])*,?

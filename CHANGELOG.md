@@ -106,6 +106,12 @@
 - Adds a hint to syntax error when defining a function inside a type.
   ([sobolevn](https://github.com/sobolevn))
 
+- Improve import error messages.
+
+  Now we recommend fixes for `import a.b`
+  and have better suggestions for `import a/b` when `b` is acutally a value.
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server

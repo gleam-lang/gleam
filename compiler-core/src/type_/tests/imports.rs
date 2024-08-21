@@ -326,3 +326,23 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn import_value_as_submodule() {
+    assert_with_module_error!(
+        ("one", "pub fn wibble() {}"),
+        "
+        import one/wibble
+        "
+    );
+}
+
+#[test]
+fn import_value_as_submodule2() {
+    assert_with_module_error!(
+        ("one/two", "pub fn wibble() {}"),
+        "
+        import one/two/wibble
+        "
+    );
+}

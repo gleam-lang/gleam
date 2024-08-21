@@ -1482,3 +1482,21 @@ type Wibble {
 "#
     );
 }
+
+#[test]
+fn import_dotted_name() {
+    assert_module_error!(
+        r#"
+import one.two
+"#
+    );
+}
+
+#[test]
+fn import_dotted_upname() {
+    assert_module_error!(
+        r#"
+import one.Two
+"#
+    );
+}

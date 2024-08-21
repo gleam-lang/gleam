@@ -1958,10 +1958,11 @@ Private types can only be used within the module that defines them.",
                     location,
                     name,
                     imported_modules,
+                    hint,
                 } => Diagnostic {
                     title: "Unknown module".into(),
                     text: format!("No module has been found with the name `{name}`."),
-                    hint: None,
+                    hint: hint.clone(),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {
