@@ -23,6 +23,8 @@ ssl_verify_fun = "~> 1.1"
 # TODO: replace this with a package with a nif that compiles super fast. Perhaps
 # just a hello world.
 bcrypt = "~> 1.1"
+# This is a rebar3 dep that output files in $REBAR_BARE_COMPILER_OUTPUT_DIR/priv
+# and requires absolute paths
 ezstd = "~> 1.1"
 
 # This is a rebar3 dep where the application name (hpack, used by the BEAM)
