@@ -8,11 +8,11 @@
   printing messages as the project is built.
   ([Ankit Goel](https://github.com/crazymerlyn))
 
-### Compiler
-
 - The compiler is now able to run a dependency's module using `gleam run -m`
   even when there's compilation errors in your own project's code.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+### Compiler
 
 - Compiler progress is now printed to stderr, instead of stdout.
   ([Victor Kobinski](https://github.com/vkobinski))
