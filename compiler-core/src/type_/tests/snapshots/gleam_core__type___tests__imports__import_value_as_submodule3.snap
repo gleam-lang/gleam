@@ -6,7 +6,7 @@ error: Unknown module
   ┌─ /src/one/two.gleam:1:1
   │
 1 │ import one/wibble
-  │ ^^^^^^^^^^^^^^^^^
+  │ ^^^^^^^^^^^^^^^^^ Did you mean `one/wobble`?
 
 No module has been found with the name `one/wibble`.
 Hint: Did you mean `import one.{wibble}`?

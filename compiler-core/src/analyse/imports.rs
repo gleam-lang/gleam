@@ -4,6 +4,7 @@ use itertools::Itertools;
 use crate::{
     ast::{SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
+    error::wrap,
     type_::{
         EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
         ValueConstructorVariant,
@@ -62,16 +63,38 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             let mut hint = None;
             if let Some(module) = self.environment.importable_modules.get(&basename) {
                 if module.get_public_value(last_part).is_some() {
-                    hint = Some(format!(
-                        "Maybe you meant `import {basename}.{{{last_part}}}`?"
-                    ));
+                    hint = Some(
+                        wrap(
+                            format!(
+                                "Did you mean `import {basename}.{{{last_part}}}`?
+
+See: https://tour.gleam.run/basics/unqualified-imports
+                        "
+                            )
+                            .as_str(),
+                        )
+                        .to_string(),
+                    );
                 }
             }
+            let importable_modules = self
+                .environment
+                .importable_modules
+                .keys()
+                .cloned()
+                .collect_vec();
+            // If we have a single module here, it means that it is `gleam` module.
+            // We don't want to suggest that.
+            let modules_to_suggest = if importable_modules.len() == 1 {
+                vec![]
+            } else {
+                importable_modules
+            };
             self.problems.error(Error::UnknownModule {
                 location,
                 name: name.clone(),
                 hint,
-                imported_modules: self.environment.imported_modules.keys().cloned().collect(),
+                imported_modules: modules_to_suggest,
             });
             return;
         };

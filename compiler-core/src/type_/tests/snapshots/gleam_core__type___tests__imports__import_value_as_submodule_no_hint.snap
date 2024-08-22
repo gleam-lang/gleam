@@ -9,6 +9,3 @@ error: Unknown module
   │ ^^^^^^^^^^^^^^^^^^^^^ Did you mean `one/two`?
 
 No module has been found with the name `one/two/wibble`.
-Hint: Did you mean `import one/two.{wibble}`?
-
-See: https://tour.gleam.run/basics/unqualified-imports
