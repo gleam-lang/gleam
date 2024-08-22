@@ -13,6 +13,7 @@ use crate::{
     build::Target,
     exhaustiveness,
 };
+use hexpm::version::Version;
 use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
@@ -209,6 +210,9 @@ pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) implementations: Implementations,
     pub(crate) current_function_definition: FunctionDefinition,
 
+    // The minimum Gleam version required to compile the typed expression.
+    pub(crate) required_version: Version,
+
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
 
@@ -243,6 +247,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
+            required_version: Version::new(1, 0, 0),
             problems,
         }
     }
@@ -1018,6 +1023,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         index: u64,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        // Nested tuple access was introduced in 1.1
+        if let UntypedExpr::TupleIndex { .. } = tuple {
+            self.require_version(Version::new(1, 1, 0));
+        }
+
         let tuple = self.infer(tuple)?;
         match collapse_links(tuple.type_()).as_ref() {
             Type::Tuple { elems } => {
@@ -1060,6 +1070,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 let options = match s.value.as_ref() {
+                    // Allowing literal string segments to omit the `:utf8` option
+                    // was introduced in v1.5
                     UntypedExpr::String { .. } if s.options.is_empty() => {
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
@@ -1087,9 +1099,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 let options = match s.value.as_ref() {
-                    Constant::String { .. } => vec![BitArrayOption::Utf8 {
-                        location: SrcSpan::default(),
-                    }],
+                    Constant::String { .. } if s.options.is_empty() => {
+                        // Allowing literal string segments to omit the `:utf8` option
+                        // was introduced in v1.5
+                        self.require_version(Version::new(1, 5, 0));
+                        vec![BitArrayOption::Utf8 {
+                            location: SrcSpan::default(),
+                        }]
+                    }
                     _ => s.options,
                 };
                 self.infer_bit_segment(*s.value, options, s.location, |env, expr| {
@@ -1284,15 +1301,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
-        let pattern =
-            match pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems)
-                .unify(pattern, value_typ.clone())
-            {
-                Ok(pattern) => pattern,
-                Err(error) => {
-                    self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
-                }
-            };
+        let mut pattern_typer =
+            pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems);
+        let unify_result = pattern_typer.unify(pattern, value_typ.clone());
+
+        let version = pattern_typer.required_version;
+        self.require_version(version);
+
+        let pattern = match unify_result {
+            Ok(pattern) => pattern,
+            Err(error) => {
+                self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
+            }
+        };
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
@@ -1506,6 +1527,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_alternatives
                 .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location)?);
         }
+
+        let version = pattern_typer.required_version;
+        self.require_version(version);
 
         Ok((typed_pattern, typed_alternatives))
     }
@@ -1847,6 +1871,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // + in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1865,6 +1891,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // +. in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1884,6 +1912,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // - in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1902,6 +1932,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // -. in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1921,6 +1953,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // * in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1939,6 +1973,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // *. in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1958,6 +1994,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // / in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1976,6 +2014,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // /. in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1995,6 +2035,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                // % in a guard was introduced in v1.3
+                self.require_version(Version::new(1, 3, 0));
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2658,6 +2700,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .iter_mut()
                     .zip(args)
                     .map(|(type_, arg): (&mut Arc<Type>, _)| {
+                        // label shorthand syntax was introduced in v1.4
+                        if arg.uses_label_shorthand() {
+                            self.require_version(Version::new(1, 4, 0));
+                        }
                         let CallArg {
                             label,
                             value,
@@ -2723,6 +2769,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 left,
                 right,
             } => {
+                // string concatenation in constants was introduced in v1.4
+                self.require_version(Version::new(1, 4, 0));
                 let left = self.infer_const(&None, *left);
                 unify(string(), left.type_()).map_err(|e| {
                     e.operator_situation(BinOp::Concatenate)
@@ -3079,6 +3127,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .zip(args)
             .enumerate()
             .map(|(i, (type_, arg))| {
+                // label shorthand syntax was introduced in v1.4
+                if arg.uses_label_shorthand() {
+                    self.require_version(Version::new(1, 4, 0));
+                }
+
                 let CallArg {
                     label,
                     value,
@@ -3427,6 +3480,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
+    }
+
+    fn require_version(&mut self, version: Version) {
+        if version > self.required_version {
+            self.required_version = version;
+        }
     }
 }
 

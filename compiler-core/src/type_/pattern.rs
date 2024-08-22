@@ -1,3 +1,4 @@
+use hexpm::version::Version;
 use im::hashmap;
 use itertools::Itertools;
 
@@ -19,6 +20,7 @@ pub struct PatternTyper<'a, 'b> {
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
     problems: &'a mut Problems,
+    pub(crate) required_version: Version,
 }
 
 enum PatternMode {
@@ -37,6 +39,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
+            required_version: Version::new(1, 0, 0),
             problems,
         }
     }
@@ -182,9 +185,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         } = segment;
 
         let options = match value.as_ref() {
-            Pattern::String { .. } if options.is_empty() => vec![BitArrayOption::Utf8 {
-                location: SrcSpan::default(),
-            }],
+            Pattern::String { .. } if options.is_empty() => {
+                // Allowing literal string patterns to omit the `:utf8` option
+                // was introduced in v1.5
+                self.require_version(Version::new(1, 5, 0));
+                vec![BitArrayOption::Utf8 {
+                    location: SrcSpan::default(),
+                }]
+            }
             _ => options,
         };
 
@@ -627,6 +635,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .into_iter()
                                 .zip(args)
                                 .map(|(arg, type_)| {
+                                    // Label shorthand syntax for patterns was introduced in
+                                    // v 1.4
+                                    if !arg.is_implicit() && arg.uses_label_shorthand() {
+                                        self.require_version(Version::new(1, 4, 0));
+                                    }
+
                                     let CallArg {
                                         value,
                                         location,
@@ -695,6 +709,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
             self.problems.error(error);
+        }
+    }
+
+    fn require_version(&mut self, version: Version) {
+        if version > self.required_version {
+            self.required_version = version;
         }
     }
 }
