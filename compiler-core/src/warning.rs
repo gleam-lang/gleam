@@ -20,7 +20,6 @@ use termcolor::Buffer;
 
 pub trait WarningEmitterIO {
     fn emit_warning(&self, warning: Warning);
-    fn new_line(&self);
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -28,7 +27,6 @@ pub struct NullWarningEmitterIO;
 
 impl WarningEmitterIO for NullWarningEmitterIO {
     fn emit_warning(&self, _warning: Warning) {}
-    fn new_line(&self) {}
 }
 
 #[derive(Debug, Clone, Default)]
@@ -66,8 +64,6 @@ impl WarningEmitterIO for VectorWarningEmitterIO {
         let mut warnings = self.write_lock();
         warnings.push(warning);
     }
-
-    fn new_line(&self) {}
 }
 
 #[derive(Debug, Clone)]
@@ -103,10 +99,6 @@ impl WarningEmitter {
     pub fn emit(&self, warning: Warning) {
         _ = self.count.fetch_add(1, Ordering::Relaxed);
         self.emitter.emit_warning(warning);
-    }
-
-    pub fn new_line(&self) {
-        self.emitter.new_line();
     }
 
     pub fn vector() -> (Self, Arc<VectorWarningEmitterIO>) {
@@ -1012,7 +1004,7 @@ See: https://tour.gleam.run/functions/pipelines/",
         self.to_diagnostic().write(buffer);
         buffer
             .write_all(b"\n")
-            .expect("error pretty buffer write space before");
+            .expect("error pretty buffer write space after");
     }
 
     pub fn to_pretty_string(&self) -> String {
