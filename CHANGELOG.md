@@ -106,10 +106,15 @@
 - Adds a hint to syntax error when defining a function inside a type.
   ([sobolevn](https://github.com/sobolevn))
 
-- Improve import error messages.
+- Improve import error messages. Now this code produces:
 
-  Now we recommend fixes for `import a.b`
-  and have better suggestions for `import a/b` when `b` is acutally a value.
+  ```gleam
+  import gleam.io
+               ^^
+               I was not expecting this.
+
+  Hint: did you mean `import gleam/io`?
+  ```
   ([sobolevn](https://github.com/sobolevn))
 
 ### Formatter
