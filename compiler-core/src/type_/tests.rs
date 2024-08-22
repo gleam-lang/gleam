@@ -28,7 +28,6 @@ mod guards;
 mod imports;
 mod pipes;
 mod pretty;
-mod required_version;
 mod target_implementations;
 mod type_alias;
 mod use_;
