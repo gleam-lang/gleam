@@ -1001,10 +1001,10 @@ See: https://tour.gleam.run/functions/pipelines/",
     }
 
     pub fn pretty(&self, buffer: &mut Buffer) {
+        self.to_diagnostic().write(buffer);
         buffer
             .write_all(b"\n")
             .expect("error pretty buffer write space before");
-        self.to_diagnostic().write(buffer);
     }
 
     pub fn to_pretty_string(&self) -> String {
