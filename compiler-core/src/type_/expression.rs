@@ -1073,6 +1073,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     // Allowing literal string segments to omit the `:utf8` option
                     // was introduced in v1.5
                     UntypedExpr::String { .. } if s.options.is_empty() => {
+                        self.require_version(Version::new(1, 5, 0));
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
                         }]

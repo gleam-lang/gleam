@@ -782,6 +782,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = t;
 
+        if publicity.is_internal() {
+            self.require_version(Version::new(1, 1, 0));
+        }
+
         let constructors = constructors
             .into_iter()
             .map(
