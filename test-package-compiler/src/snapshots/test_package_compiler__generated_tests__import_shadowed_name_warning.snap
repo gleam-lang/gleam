@@ -51,7 +51,6 @@ use_type(Port) ->
 
 
 //// Warning
-
 warning: Unused private constructor
   ┌─ src/two.gleam:9:3
   │
@@ -61,8 +60,8 @@ warning: Unused private constructor
 Hint: You can safely remove it.
 
 
-//// Warning
 
+//// Warning
 warning: Unused private type
   ┌─ src/two.gleam:7:1
   │
