@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 96
 expression: "./cases/erlang_nested"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
@@ -14,6 +15,7 @@ expression: "./cases/erlang_nested"
 
 -export([main/0]).
 
+-file("src/one/two.gleam", 1).
 -spec main() -> binary().
 main() ->
     <<"Hi there"/utf8>>.

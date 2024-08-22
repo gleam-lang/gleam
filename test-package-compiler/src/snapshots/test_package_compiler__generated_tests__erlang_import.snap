@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 74
 expression: "./cases/erlang_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -14,6 +15,7 @@ expression: "./cases/erlang_import"
 
 -export([unbox/1]).
 
+-file("src/one.gleam", 3).
 -spec unbox(two:box()) -> integer().
 unbox(X) ->
     {box, I} = X,
