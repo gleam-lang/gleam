@@ -29,6 +29,13 @@ struct Module {
   lineNumbers @6 :LineNumbers;
   srcPath @7 :Text;
   isInternal @8 :Bool;
+  requiredVersion @9 :Version;
+}
+
+struct Version {
+  major @0 :UInt32;
+  minor @1 :UInt32;
+  patch @2 :UInt32;
 }
 
 struct TypesVariantConstructors {

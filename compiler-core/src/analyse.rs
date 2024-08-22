@@ -329,6 +329,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
                 warnings,
+                required_version: self.required_version,
             },
         };
 
