@@ -1,0 +1,285 @@
+use hexpm::version::Version;
+
+use super::compile_module;
+
+fn infer_version(module: &str) -> Version {
+    compile_module("test_module", module, None, vec![])
+        .expect("module to compile")
+        .type_info
+        .required_version
+}
+
+#[test]
+fn internal_annotation_on_constant_requires_v1_1() {
+    let version = infer_version(
+        "
+@internal
+pub const wibble = 1
+",
+    );
+    assert_eq!(version, Version::new(1, 1, 0));
+}
+
+#[test]
+fn internal_annotation_on_type_requires_v1_1() {
+    let version = infer_version(
+        "
+@internal
+pub type Wibble
+",
+    );
+    assert_eq!(version, Version::new(1, 1, 0));
+}
+
+#[test]
+fn internal_annotation_on_function_requires_v1_1() {
+    let version = infer_version(
+        "
+@internal
+pub fn wibble() {}
+",
+    );
+    assert_eq!(version, Version::new(1, 1, 0));
+}
+
+#[test]
+fn nested_tuple_access_requires_v1_1() {
+    let version = infer_version(
+        "
+pub fn main() {
+  let tuple = #(1, #(1, 1))
+  tuple.1.0
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 1, 0));
+}
+
+#[test]
+fn javascript_external_module_with_at_requires_v1_2() {
+    let version = infer_version(
+        "
+@external(javascript, \"module@module\", \"func\")
+pub fn main() {}
+",
+    );
+    assert_eq!(version, Version::new(1, 2, 0));
+}
+
+#[test]
+fn int_plus_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1 + 1 == 2 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn float_plus_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1.0 +. 1.0 == 2.0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn int_minus_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1 - 1 == 0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn float_minus_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1.0 -. 1.0 == 0.0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn int_multiplication_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1 * 1 == 0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn float_multiplication_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1.0 *. 1.0 == 0.0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn int_divide_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1 / 1 == 0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn float_divide_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1.0 /. 1.0 == 0.0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn int_remainder_in_guards_requires_v1_3() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    _ if 1 % 1 == 0 -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 3, 0));
+}
+
+#[test]
+fn label_shorthand_in_constand_requires_v1_4() {
+    let version = infer_version(
+        "
+pub type Wibble { Wibble(wibble: Int) }
+
+pub const wibble = 1
+pub const wobble = Wibble(wibble:)
+",
+    );
+    assert_eq!(version, Version::new(1, 4, 0));
+}
+
+#[test]
+fn label_shorthand_in_call_requires_v1_4() {
+    let version = infer_version(
+        "
+pub type Wibble { Wibble(wibble: Int) }
+
+pub fn main() {
+  let wibble = 1
+  Wibble(wibble:)
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 4, 0));
+}
+
+#[test]
+fn label_shorthand_in_pattern_requires_v1_4() {
+    let version = infer_version(
+        "
+pub type Wibble { Wibble(wibble: Int) }
+
+pub fn main() {
+  case Wibble(1) {
+    Wibble(wibble:) -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 4, 0));
+}
+
+#[test]
+fn constant_string_concatenation_requires_v1_4() {
+    let version = infer_version("pub const string = \"wibble\" <> \"wobble\"");
+    assert_eq!(version, Version::new(1, 4, 0));
+}
+
+#[test]
+fn missing_utf_8_option_in_bit_array_segment_requires_v1_5() {
+    let version = infer_version(
+        "
+pub fn main() {
+  <<\"hello\", \" world!\">>
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 5, 0));
+}
+
+#[test]
+fn missing_utf_8_option_in_bit_array_constant_segment_requires_v1_5() {
+    let version = infer_version("const bits = <<\"hello\", \" world!\">>");
+    assert_eq!(version, Version::new(1, 5, 0));
+}
+
+#[test]
+fn missing_utf_8_option_in_bit_array_pattern_segment_requires_v1_5() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    <<\"hello\", \" world!\">> -> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 5, 0));
+}
