@@ -718,6 +718,7 @@ fn infer_module_type_retention_test() {
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),
+            required_version: Version::new(1, 0, 0),
         }
     );
 }

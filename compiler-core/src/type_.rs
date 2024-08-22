@@ -17,6 +17,7 @@ pub use environment::*;
 pub use error::{Error, Problems, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
+use hexpm::version::Version;
 pub use prelude::*;
 use serde::Serialize;
 
@@ -610,6 +611,8 @@ pub struct ModuleInterface {
     pub is_internal: bool,
     /// Warnings emitted during analysis of this module.
     pub warnings: Vec<Warning>,
+    /// The minimum Gleam version needed to use this module.
+    pub required_version: Version,
 }
 
 impl ModuleInterface {
@@ -681,28 +684,6 @@ pub struct TypeValueConstructorField {
 }
 
 impl ModuleInterface {
-    pub fn new(
-        name: EcoString,
-        origin: Origin,
-        package: EcoString,
-        line_numbers: LineNumbers,
-        src_path: Utf8PathBuf,
-    ) -> Self {
-        Self {
-            name,
-            origin,
-            package,
-            types: Default::default(),
-            types_value_constructors: Default::default(),
-            values: Default::default(),
-            accessors: Default::default(),
-            is_internal: false,
-            line_numbers,
-            src_path,
-            warnings: vec![],
-        }
-    }
-
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
         if value.publicity.is_importable() {

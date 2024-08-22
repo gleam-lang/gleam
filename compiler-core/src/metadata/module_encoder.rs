@@ -47,6 +47,7 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
         self.set_line_numbers(&mut module);
+        self.set_version(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
@@ -148,6 +149,13 @@ impl<'a> ModuleEncoder<'a> {
             property.set_key(name);
             self.build_value_constructor(property.init_value(), value)
         }
+    }
+
+    fn set_version(&mut self, module: &mut module::Builder<'_>) {
+        let mut version = module.reborrow().init_required_version();
+        version.set_major(self.data.required_version.major);
+        version.set_minor(self.data.required_version.minor);
+        version.set_patch(self.data.required_version.patch);
     }
 
     fn build_type_constructor(

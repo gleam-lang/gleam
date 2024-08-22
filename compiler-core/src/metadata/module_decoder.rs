@@ -81,6 +81,7 @@ impl ModuleDecoder {
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
             warnings: vec![],
+            required_version: self.version(&reader.get_required_version()?),
         })
     }
 
@@ -553,5 +554,9 @@ impl ModuleDecoder {
             length: reader.get_length(),
             line_starts: read_vec!(reader.get_line_starts()?, self, line_starts),
         })
+    }
+
+    fn version(&self, reader: &version::Reader<'_>) -> hexpm::version::Version {
+        hexpm::version::Version::new(reader.get_major(), reader.get_minor(), reader.get_patch())
     }
 }
