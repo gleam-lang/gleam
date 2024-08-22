@@ -32,6 +32,7 @@ mod required_version;
 mod target_implementations;
 mod type_alias;
 mod use_;
+mod version_inference;
 mod warnings;
 
 #[macro_export]
