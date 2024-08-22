@@ -268,6 +268,10 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
 
         let mut deps: Map<String, PubgrubRange> = Default::default();
         for (name, d) in &release.requirements {
+            // skip optional dependencies and let the user provide them if they want
+            if d.optional {
+                continue;
+            }
             let range = d.requirement.to_pubgrub()?;
             let _ = deps.insert(name.clone(), range);
         }
@@ -430,6 +434,31 @@ mod tests {
                 ],
             },
         );
+
+        let _ = deps.insert(
+            "package_with_optional".into(),
+            hexpm::Package {
+                name: "package_with_optional".into(),
+                repository: "hexpm".into(),
+                releases: vec![Release {
+                    version: Version::try_from("0.1.0").unwrap(),
+                    requirements: [(
+                        "gleam_stdlib".into(),
+                        Dependency {
+                            app: None,
+                            optional: true,
+                            repository: None,
+                            requirement: Range::new(">= 0.1.0".into()),
+                        },
+                    )]
+                    .into(),
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                    meta: (),
+                }],
+            },
+        );
+
         Box::new(Remote { deps })
     }
 
@@ -497,6 +526,55 @@ mod tests {
             result,
             vec![
                 ("gleam_otp".into(), Version::try_from("0.2.0").unwrap()),
+                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap())
+            ]
+            .into_iter()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn resolution_with_optional_deps() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![("package_with_optional".into(), Range::new("~> 0.1".into()))].into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![(
+                "package_with_optional".into(),
+                Version::try_from("0.1.0").unwrap()
+            )]
+            .into_iter()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn resolution_with_optional_deps_explicitly_provided() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![
+                ("package_with_optional".into(), Range::new("~> 0.1".into())),
+                ("gleam_stdlib".into(), Range::new("~> 0.1".into())),
+            ]
+            .into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![
+                (
+                    "package_with_optional".into(),
+                    Version::try_from("0.1.0").unwrap()
+                ),
                 ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap())
             ]
             .into_iter()
