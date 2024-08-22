@@ -27,10 +27,15 @@ print_error(Class, Error, Stacktrace) ->
         error_message(Error),
         "\n\n",
         error_details(Error),
-        "stacktrace:\n",
-        [error_frame(Line) || Line <- Stacktrace]
+        ?grey, "stacktrace:\n", ?reset_all,
+        [error_frame(Line) || Line <- refine_first(Error, Stacktrace)]
     ],
     io:format("~ts~n", [Printed]).
+
+refine_first(#{gleam_error := _, line := L}, [{M, F, A, [{file, Fi} | _]} | S]) ->
+    [{M, F, A, [{file, Fi}, {line, L}]} | S];
+refine_first(_, S) ->
+    S.
 
 error_class(_, #{gleam_error := panic}) -> "panic";
 error_class(_, #{gleam_error := todo}) -> "todo";
@@ -41,11 +46,11 @@ error_message(#{gleam_error := _, message := M}) -> M;
 error_message(_) -> <<"External error"/utf8>>.
 
 error_details(#{gleam_error := let_assert, value := V}) ->
-    ["\n\nunmatched value:\n    ", print_term(V)];
+    [?grey, "\n\nunmatched value:\n  ", ?reset_all, print_term(V)];
 error_details(#{gleam_error := _}) ->
     [];
 error_details(E) ->
-    ["\n\nerlang error:\n    ", print_term(E)].
+    [?grey, "\n\nerlang error:\n  ", ?reset_all, print_term(E)].
 
 print_term(T) ->
     try
@@ -59,7 +64,9 @@ error_frame({erl_eval, _, _, _}) -> [];
 error_frame({init, _, _, _}) -> [];
 error_frame({M, F, _, O}) ->
     M1 = string:replace(atom_to_binary(M), "@", "/", all),
-    ["    ", M1, $., atom_to_binary(F), error_frame_end(O), $\n].
+    ["  ", M1, $., atom_to_binary(F), error_frame_end(O), $\n].
 
 error_frame_end([{file, Fi}, {line, L} | _]) ->
-    [$\s, ?grey, Fi, $:, integer_to_binary(L), ?reset_all].
+    [?grey, $\s, Fi, $:, integer_to_binary(L), ?reset_all];
+error_frame_end(_) ->
+    [?grey, " unknown source", ?reset_all].
