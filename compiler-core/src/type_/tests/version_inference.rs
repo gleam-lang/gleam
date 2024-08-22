@@ -283,3 +283,33 @@ pub fn main() {
     );
     assert_eq!(version, Version::new(1, 5, 0));
 }
+
+#[test]
+fn inference_picks_the_bigger_of_two_versions() {
+    let version = infer_version(
+        "
+pub fn main() {
+  case todo {
+    <<\"hello\", \" world!\">> -> todo
+    _ if 1 + 1 == 2-> todo
+    _ -> todo
+  }
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 5, 0));
+}
+
+#[test]
+fn inference_picks_the_bigger_of_two_versions_2() {
+    let version = infer_version(
+        "
+@external(javascript, \"module@module\", \"func\")
+pub fn main() {
+  let tuple = #(1, #(1, 1))
+  tuple.1.0
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 2, 0));
+}
