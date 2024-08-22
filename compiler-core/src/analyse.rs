@@ -37,6 +37,7 @@ use crate::{
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
 use std::{
@@ -164,6 +165,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
+            required_version: Version::new(1, 0, 0),
         }
         .infer_module(module)
     }
@@ -177,6 +179,7 @@ struct ModuleAnalyzer<'a, A> {
     warnings: &'a TypeWarningEmitter,
     direct_dependencies: &'a HashMap<EcoString, A>,
     target_support: TargetSupport,
+    required_version: Version,
     package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
     src_path: Utf8PathBuf,
@@ -367,6 +370,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
 
+        let required_version = expr_typer.required_version;
+        self.require_version(required_version);
+        if publicity.is_internal() {
+            // The internal annotation was added in v1.1
+            self.require_version(Version::new(1, 1, 0));
+        }
+
         let variant = ValueConstructor {
             publicity,
             deprecation: deprecation.clone(),
@@ -500,15 +510,22 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             )?;
             let args_types = args.iter().map(|a| a.type_.clone()).collect();
             let type_ = fn_(args_types, body.last().type_());
-            Ok((type_, body, expr_typer.implementations))
+            Ok((
+                type_,
+                body,
+                expr_typer.implementations,
+                expr_typer.required_version,
+            ))
         });
 
         // If we could not successfully infer the type etc information of the
         // function then register the error and continue anaylsis using the best
         // information that we have, so we can still learn about the rest of the
         // module.
-        let (type_, body, implementations) = match result {
-            Ok((type_, body, implementations)) => (type_, body, implementations),
+        let (type_, body, implementations, required_version) = match result {
+            Ok((type_, body, implementations, required_version)) => {
+                (type_, body, implementations, required_version)
+            }
             Err(error) => {
                 self.problems.error(error);
                 let type_ = preregistered_type.clone();
@@ -520,9 +537,22 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     },
                 }));
                 let implementations = Implementations::supporting_all();
-                (type_, body, implementations)
+                (type_, body, implementations, Version::new(1, 0, 0))
             }
         };
+
+        self.require_version(required_version);
+        if publicity.is_internal() {
+            // The @internal annotation was added in v1.1
+            self.require_version(Version::new(1, 1, 0));
+        }
+
+        if let Some((module, _)) = &external_javascript {
+            // Javascript modules are allowed to contain a `@` from v1.2
+            if module.contains('@') {
+                self.require_version(Version::new(1, 2, 0))
+            }
+        }
 
         // Assert that the inferred type matches the type of any recursive call
         if let Err(error) = unify(preregistered_type.clone(), type_) {
@@ -1270,6 +1300,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
             self.problems.error(error);
+        }
+    }
+
+    fn require_version(&mut self, required_version: Version) {
+        if required_version > self.required_version {
+            self.required_version = required_version;
         }
     }
 }
