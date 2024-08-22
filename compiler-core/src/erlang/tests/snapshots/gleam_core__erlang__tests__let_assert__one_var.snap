@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
+assertion_line: 6
 expression: "pub fn go() {\n  let assert Ok(y) = Ok(1)\n  y\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn go() {\n  let assert Ok(y) = Ok(1)\n  y\n}"
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
     _assert_subject = {ok, 1},

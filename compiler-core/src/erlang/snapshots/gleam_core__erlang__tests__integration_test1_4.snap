@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 181
 expression: "fn inc(x) { x + 1 }\n                    pub fn go() { 1 |> inc |> inc |> inc }"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "fn inc(x) { x + 1 }\n                    pub fn go() { 1 |> inc |> 
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec inc(integer()) -> integer().
 inc(X) ->
     X + 1.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec go() -> integer().
 go() ->
     _pipe = 1,

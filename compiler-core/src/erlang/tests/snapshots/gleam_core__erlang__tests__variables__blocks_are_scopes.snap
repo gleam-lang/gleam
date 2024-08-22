@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
+assertion_line: 100
 expression: "\npub fn main() {\n  let x = 1\n  {\n    let x = 2\n  }\n  x\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  let x = 1\n  {\n    let x = 2\n  }\n  x\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     X = 1,

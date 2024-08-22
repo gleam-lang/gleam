@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 167
 expression: "\nconst a = <<\"hello\", \" \", \"world\">>\npub fn main() { a }\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\nconst a = <<\"hello\", \" \", \"world\">>\npub fn main() { a }\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec main() -> bitstring().
 main() ->
     <<"hello"/utf8, " "/utf8, "world"/utf8>>.

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 471
 expression: "\nconst big_concat_list = [\"a\" <> \"b\" <> \"c\" <> \"d\" <> \"e\" <> \"f\" <> \"g\" <> \"h\" <> \"i\" <> \"j\" <> \"k\" <> \"l\" <> \"m\" <> \"n\" <> \"o\" <> \"p\" <> \"q\" <> \"r\" <> \"s\" <> \"t\" <> \"u\" <> \"v\" <> \"w\" <> \"x\" <> \"y\" <> \"z\"]\n\npub fn main() {\n  big_concat_list\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\nconst big_concat_list = [\"a\" <> \"b\" <> \"c\" <> \"d\" <> \"e\
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec main() -> list(binary()).
 main() ->
     [<<"a"/utf8,

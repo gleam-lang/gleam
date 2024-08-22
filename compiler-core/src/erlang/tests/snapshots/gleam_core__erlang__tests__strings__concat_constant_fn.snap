@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 389
 expression: "\nconst cs = s\n\nfn s() {\n  \"s\"\n}\n\npub fn go() {\n  cs() <> cs()\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\nconst cs = s\n\nfn s() {\n  \"s\"\n}\n\npub fn go() {\n  cs() <> 
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec s() -> binary().
 s() ->
     <<"s"/utf8>>.
 
+-file("/root/project/test/my/mod.gleam", 8).
 -spec go() -> binary().
 go() ->
     <<(s())/binary, (s())/binary>>.

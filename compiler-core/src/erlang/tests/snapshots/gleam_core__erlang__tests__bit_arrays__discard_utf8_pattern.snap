@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 200
 expression: "\npub fn main() {\n    let assert <<_:utf8, rest:bits>> = <<>>\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n    let assert <<_:utf8, rest:bits>> = <<>>\n}"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
     _assert_subject = <<>>,

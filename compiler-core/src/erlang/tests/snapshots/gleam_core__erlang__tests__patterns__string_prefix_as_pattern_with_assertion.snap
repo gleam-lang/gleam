@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
+assertion_line: 118
 expression: "pub fn a(x) {\n  let assert \"a\" as a <> rest = \"wibble\"\n  a\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn a(x) {\n  let assert \"a\" as a <> rest = \"wibble\"\n  a\n}
 
 -export([a/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec a(any()) -> binary().
 a(X) ->
     _assert_subject = <<"wibble"/utf8>>,

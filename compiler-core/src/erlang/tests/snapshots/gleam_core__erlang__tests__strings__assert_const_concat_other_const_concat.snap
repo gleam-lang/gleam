@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 484
 expression: "\nconst cute_bee = \"cute\" <> \"bee\"\nconst cute_cute_bee_buzz = cute_bee <> \"buzz\"\n\npub fn main() {\n  cute_cute_bee_buzz\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\nconst cute_bee = \"cute\" <> \"bee\"\nconst cute_cute_bee_buzz = 
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 5).
 -spec main() -> binary().
 main() ->
     <<"cute"/utf8, "bee"/utf8, "buzz"/utf8>>.

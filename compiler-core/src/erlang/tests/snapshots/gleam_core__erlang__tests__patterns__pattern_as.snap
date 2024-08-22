@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
+assertion_line: 70
 expression: "pub fn a(x) {\n  case x {\n    Ok(1 as y) -> 1\n    _ -> 0\n  }\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn a(x) {\n  case x {\n    Ok(1 as y) -> 1\n    _ -> 0\n  }\n}"
 
 -export([a/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec a({ok, integer()} | {error, any()}) -> integer().
 a(X) ->
     case X of

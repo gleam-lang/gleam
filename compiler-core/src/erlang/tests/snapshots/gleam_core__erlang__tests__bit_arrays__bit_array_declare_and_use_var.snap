@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 124
 expression: "pub fn go(x) {\n  let assert <<name_size:8, name:bytes-size(name_size)>> = x\n  name\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn go(x) {\n  let assert <<name_size:8, name:bytes-size(name_si
 
 -export([go/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go(bitstring()) -> bitstring().
 go(X) ->
     <<Name_size@1:8, Name:Name_size@1/binary>> = case X of

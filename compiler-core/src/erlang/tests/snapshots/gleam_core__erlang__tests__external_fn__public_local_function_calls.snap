@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 40
 expression: "\n@external(erlang, \"m\", \"f\")\npub fn go(x x: Int, y y: Int) -> Int\nfn x() { go(x: 1, y: 2) go(y: 3, x: 4) }\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\n@external(erlang, \"m\", \"f\")\npub fn go(x x: Int, y y: Int) ->
 
 -export([go/2]).
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec go(integer(), integer()) -> integer().
 go(X, Y) ->
     m:f(X, Y).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec x() -> integer().
 x() ->
     m:f(1, 2),

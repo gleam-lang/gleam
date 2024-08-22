@@ -215,11 +215,13 @@ fn module_document<'a>(
         join(type_defs, lines(2)).append(lines(2))
     };
 
+    let src_path = EcoString::from(module.type_info.src_path.as_str());
+
     let statements = join(
         module
             .definitions
             .iter()
-            .flat_map(|s| module_statement(s, &module.name, line_numbers)),
+            .flat_map(|s| module_statement(s, &module.name, line_numbers, &src_path)),
         lines(2),
     );
 
@@ -350,6 +352,7 @@ fn module_statement<'a>(
     statement: &'a TypedDefinition,
     module: &'a str,
     line_numbers: &'a LineNumbers,
+    src_path: &EcoString,
 ) -> Option<Document<'a>> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
@@ -357,7 +360,9 @@ fn module_statement<'a>(
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. }) => None,
 
-        Definition::Function(function) => module_function(function, module, line_numbers),
+        Definition::Function(function) => {
+            module_function(function, module, line_numbers, src_path.clone())
+        }
     }
 }
 
@@ -365,6 +370,7 @@ fn module_function<'a>(
     function: &'a TypedFunction,
     module: &'a str,
     line_numbers: &'a LineNumbers,
+    src_path: EcoString,
 ) -> Option<Document<'a>> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
@@ -383,6 +389,7 @@ fn module_function<'a>(
         .as_ref()
         .expect("A module's function must be named");
     let function_name = escape_erlang_existing_name(function_name);
+    let file_attribute = file_attribute(src_path, function, line_numbers);
 
     let mut env = Env::new(module, function_name, line_numbers);
     let var_usages = collect_type_var_usages(
@@ -395,6 +402,7 @@ fn module_function<'a>(
         .iter()
         .map(|a| type_printer.print(&a.type_));
     let return_spec = type_printer.print(&function.return_type);
+
     let spec = fun_spec(function_name, args_spec, return_spec);
     let arguments = fun_args(&function.arguments, &mut env);
 
@@ -411,15 +419,25 @@ fn module_function<'a>(
         })
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
-    let doc = spec
-        .append(atom_string(
-            escape_erlang_existing_name(function_name).to_string(),
-        ))
-        .append(arguments)
-        .append(" ->")
-        .append(line().append(body).nest(INDENT).group())
-        .append(".");
-    Some(doc)
+    Some(docvec![
+        file_attribute,
+        line(),
+        spec,
+        atom_string(escape_erlang_existing_name(function_name).to_string()),
+        arguments,
+        " ->",
+        line().append(body).nest(INDENT).group(),
+        ".",
+    ])
+}
+
+fn file_attribute<'a>(
+    path: EcoString,
+    function: &'a TypedFunction,
+    line_numbers: &'a LineNumbers,
+) -> Document<'a> {
+    let line = line_numbers.line_number(function.location.start);
+    docvec!["-file(\"", path, "\", ", line, ")."]
 }
 
 fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {

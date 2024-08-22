@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
+assertion_line: 31
 expression: "\npub fn main() {\n  let assert 100_000 = 1\n  let assert 100_000.00101 = 1.\n  1\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  let assert 100_000 = 1\n  let assert 100_000.0
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     _assert_subject = 1,

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 5
 expression: "\n@external(erlang, \"Elixir.MyApp\", \"run\")\npub fn run() -> Int\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\n@external(erlang, \"Elixir.MyApp\", \"run\")\npub fn run() -> Int
 
 -export([run/0]).
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec run() -> integer().
 run() ->
     'Elixir.MyApp':run().

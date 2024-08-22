@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 5
 expression: "\npub fn emoji() -> String {\n  \"\\u{1f600}\"\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn emoji() -> String {\n  \"\\u{1f600}\"\n}\n"
 
 -export([emoji/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec emoji() -> binary().
 emoji() ->
     <<"\x{1f600}"/utf8>>.

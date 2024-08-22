@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 360
 expression: "\nfn x() {\n  \"\"\n}\n\npub fn go() {\n  x() <> x()\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\nfn x() {\n  \"\"\n}\n\npub fn go() {\n  x() <> x()\n}\n"
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec x() -> binary().
 x() ->
     <<""/utf8>>.
 
+-file("/root/project/test/my/mod.gleam", 6).
 -spec go() -> binary().
 go() ->
     <<(x())/binary, (x())/binary>>.

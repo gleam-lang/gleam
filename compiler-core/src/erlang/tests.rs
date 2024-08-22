@@ -73,9 +73,9 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
-    let parsed =
-        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
-            .expect("syntax error");
+    let path = Utf8PathBuf::from("/root/project/test/my/mod.gleam");
+    let parsed = crate::parse::parse_module(path.clone(), src, &WarningEmitter::null())
+        .expect("syntax error");
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
     let mut ast = parsed.module;
@@ -91,7 +91,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         target_support: TargetSupport::NotEnforced,
         package_config: &config,
     }
-    .infer_module(ast, line_numbers, "".into())
+    .infer_module(ast, line_numbers, path)
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
     module(&ast, &line_numbers).unwrap()

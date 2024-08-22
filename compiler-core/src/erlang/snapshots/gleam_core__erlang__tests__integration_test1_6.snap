@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 197
 expression: "pub fn and(x, y) { x && y }\npub fn or(x, y) { x || y }\npub fn remainder(x, y) { x % y }\npub fn fdiv(x, y) { x /. y }\n            "
 ---
 -module(my@mod).
@@ -7,14 +8,17 @@ expression: "pub fn and(x, y) { x && y }\npub fn or(x, y) { x || y }\npub fn rem
 
 -export(['and'/2, 'or'/2, remainder/2, fdiv/2]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec 'and'(boolean(), boolean()) -> boolean().
 'and'(X, Y) ->
     X andalso Y.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec 'or'(boolean(), boolean()) -> boolean().
 'or'(X, Y) ->
     X orelse Y.
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec remainder(integer(), integer()) -> integer().
 remainder(X, Y) ->
     case Y of
@@ -22,6 +26,7 @@ remainder(X, Y) ->
         Gleam@denominator -> X rem Gleam@denominator
     end.
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec fdiv(float(), float()) -> float().
 fdiv(X, Y) ->
     case Y of

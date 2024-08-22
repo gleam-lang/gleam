@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
+assertion_line: 5
 expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n        }\n\n        type Wobble(a) {\n            Wobble\n        }\n\n        fn wobble() -> Result(a, Wobble(a)) {\n            todo\n        }\n        "
 ---
 -module(my@mod).
@@ -9,6 +10,7 @@ expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n 
 
 -type wobble(I) :: wobble | {gleam_phantom, I}.
 
+-file("/root/project/test/my/mod.gleam", 10).
 -spec wobble() -> {ok, any()} | {error, wobble(any())}.
 wobble() ->
     erlang:error(#{gleam_error => todo,
@@ -17,6 +19,7 @@ wobble() ->
             function => <<"wobble"/utf8>>,
             line => 11}).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec wibble() -> {ok, any()} | {error, wobble(any())}.
 wibble() ->
     _assert_subject = wobble(),

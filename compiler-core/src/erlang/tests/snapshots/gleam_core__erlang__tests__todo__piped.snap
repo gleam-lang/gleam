@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
+assertion_line: 52
 expression: "\n     pub fn main() {\n      \"lets\"\n      |> todo as \"pipe\"\n      |> todo as \"other todo\"\n    }\n    "
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\n     pub fn main() {\n      \"lets\"\n      |> todo as \"pipe\"\n
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     _pipe = <<"lets"/utf8>>,

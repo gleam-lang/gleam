@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 261
 expression: "type Point { Point(x: Int, y: Int) }\n                fn x() { Point(x: 4, y: 6) Point(y: 1, x: 9) }"
 ---
 -module(my@mod).
@@ -9,6 +10,7 @@ expression: "type Point { Point(x: Int, y: Int) }\n                fn x() { Poin
 
 -type point() :: {point, integer(), integer()}.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec x() -> point().
 x() ->
     {point, 4, 6},

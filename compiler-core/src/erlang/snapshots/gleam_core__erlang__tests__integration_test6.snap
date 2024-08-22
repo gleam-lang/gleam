@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 229
 expression: "pub fn x() { let x = 1 let x = x + 1 x }"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn x() { let x = 1 let x = x + 1 x }"
 
 -export([x/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x() -> integer().
 x() ->
     X = 1,
