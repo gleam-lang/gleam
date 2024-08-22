@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 650
 expression: "\npub type Else {\n  Else\n}\n\npub fn main() {\n  Else\n}\n"
 ---
 -module(my@mod).
@@ -10,6 +11,7 @@ expression: "\npub type Else {\n  Else\n}\n\npub fn main() {\n  Else\n}\n"
 
 -type 'else'() :: 'else'.
 
+-file("/root/project/test/my/mod.gleam", 6).
 -spec main() -> 'else'().
 main() ->
     'else'.

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 49
 expression: "\npub fn main(x) -> String {\n  x <> \"\\\\\\u{0308}\"\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main(x) -> String {\n  x <> \"\\\\\\u{0308}\"\n}\n"
 
 -export([main/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main(binary()) -> binary().
 main(X) ->
     <<X/binary, "\\\x{0308}"/utf8>>.

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
+assertion_line: 100
 expression: "\npub type Person {\n    Teacher(name: String, title: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }"
 ---
 -module(my@mod).
@@ -10,6 +11,7 @@ expression: "\npub type Person {\n    Teacher(name: String, title: String)\n    
 
 -type person() :: {teacher, binary(), binary()} | {student, binary(), integer()}.
 
+-file("/root/project/test/my/mod.gleam", 6).
 -spec get_name(person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).

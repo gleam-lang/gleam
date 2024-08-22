@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
+assertion_line: 27
 expression: "\npub fn retstring() {\n  \"wibble\"\n}\npub fn main() {\n  panic as { retstring() <> \"wobble\" }\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\npub fn retstring() {\n  \"wibble\"\n}\npub fn main() {\n  panic a
 
 -export([retstring/0, main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec retstring() -> binary().
 retstring() ->
     <<"wibble"/utf8>>.
 
+-file("/root/project/test/my/mod.gleam", 5).
 -spec main() -> any().
 main() ->
     erlang:error(#{gleam_error => panic,

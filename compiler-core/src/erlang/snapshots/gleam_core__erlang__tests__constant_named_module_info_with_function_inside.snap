@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 800
 expression: "\npub fn function() {\n    1\n}\n\npub const module_info = function\n\npub fn main() {\n    module_info()\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\npub fn function() {\n    1\n}\n\npub const module_info = function
 
 -export([function/0, main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec function() -> integer().
 function() ->
     1.
 
+-file("/root/project/test/my/mod.gleam", 8).
 -spec main() -> integer().
 main() ->
     function().

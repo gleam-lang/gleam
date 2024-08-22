@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
+assertion_line: 56
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     Thingy = fun(F) -> F() end,

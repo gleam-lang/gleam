@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 146
 expression: "\n    pub fn main() {\n        let emoji = \"\\u{1F600}\"\n        let arr = <<emoji:utf8>>\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\n    pub fn main() {\n        let emoji = \"\\u{1F600}\"\n        
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
     Emoji = <<"\x{1F600}"/utf8>>,

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 163
 expression: "pub fn t() { True }"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn t() { True }"
 
 -export([t/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec t() -> boolean().
 t() ->
     true.

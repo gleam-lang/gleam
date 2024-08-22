@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 128
 expression: "\npub fn go(x, y, z) {\n  x <> y <> z\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn go(x, y, z) {\n  x <> y <> z\n}\n"
 
 -export([go/3]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec go(binary(), binary(), binary()) -> binary().
 go(X, Y, Z) ->
     <<<<X/binary, Y/binary>>/binary, Z/binary>>.

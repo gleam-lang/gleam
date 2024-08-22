@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
+assertion_line: 22
 expression: "\npub fn main() {\n  use <- pair(1.0)\n  123\n}\n\nfn pair(x, f) {\n  let y = f()\n  #(x, y)\n}\n"
 ---
 -module(my@mod).
@@ -7,11 +8,13 @@ expression: "\npub fn main() {\n  use <- pair(1.0)\n  123\n}\n\nfn pair(x, f) {\
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 7).
 -spec pair(J, fun(() -> M)) -> {J, M}.
 pair(X, F) ->
     Y = F(),
     {X, Y}.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> {float(), integer()}.
 main() ->
     pair(1.0, fun() -> 123 end).

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/let_assert.rs
+assertion_line: 28
 expression: "pub fn go(x) {\n  let assert [1 as a, b, c] = x\n  [a, b, c]\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn go(x) {\n  let assert [1 as a, b, c] = x\n  [a, b, c]\n}"
 
 -export([go/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
     [1 = A, B, C] = case X of

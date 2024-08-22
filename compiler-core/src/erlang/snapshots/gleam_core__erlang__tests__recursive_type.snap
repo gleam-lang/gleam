@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 444
 expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  id(id)\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  id(id)\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec id(I) -> I.
 id(X) ->
     X.
 
+-file("/root/project/test/my/mod.gleam", 6).
 -spec main() -> fun((M) -> M).
 main() ->
     id(fun id/1).

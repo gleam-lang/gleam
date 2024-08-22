@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 106
 expression: "\npub fn main() {\n  { 1 |> add }(1)\n}\n\npub fn add(x) {\n  fn(y) { x + y }\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\npub fn main() {\n  { 1 |> add }(1)\n}\n\npub fn add(x) {\n  fn(y)
 
 -export([add/1, main/0]).
 
+-file("/root/project/test/my/mod.gleam", 6).
 -spec add(integer()) -> fun((integer()) -> integer()).
 add(X) ->
     fun(Y) -> X + Y end.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     begin

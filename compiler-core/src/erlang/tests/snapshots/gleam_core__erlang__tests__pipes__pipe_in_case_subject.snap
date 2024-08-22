@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 62
 expression: "pub fn x(f) {\n  case 1 |> f {\n    x -> x\n  }\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn x(f) {\n  case 1 |> f {\n    x -> x\n  }\n}"
 
 -export([x/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x(fun((integer()) -> L)) -> L.
 x(F) ->
     case begin

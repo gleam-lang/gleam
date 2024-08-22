@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 363
 expression: "\npub fn main(args) {\n  case args {\n    _ -> {\n      let a = 1\n      a\n    }\n  }\n  let a = 2\n  a\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main(args) {\n  case args {\n    _ -> {\n      let a = 1\n
 
 -export([main/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main(any()) -> integer().
 main(Args) ->
     case Args of

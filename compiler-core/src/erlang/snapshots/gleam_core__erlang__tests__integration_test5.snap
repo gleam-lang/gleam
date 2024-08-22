@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 217
 expression: "pub fn tail(list) {\n  case list {\n    [x, ..] -> x\n    _ -> 0\n  }\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn tail(list) {\n  case list {\n    [x, ..] -> x\n    _ -> 0\n 
 
 -export([tail/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec tail(list(integer())) -> integer().
 tail(List) ->
     case List of

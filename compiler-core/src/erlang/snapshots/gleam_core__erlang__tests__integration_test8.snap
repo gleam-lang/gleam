@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 235
 expression: "pub fn x() { 1. <. 2.3 }"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn x() { 1. <. 2.3 }"
 
 -export([x/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x() -> boolean().
 x() ->
     1.0 < 2.3.

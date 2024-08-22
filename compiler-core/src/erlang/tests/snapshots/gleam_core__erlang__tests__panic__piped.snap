@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
+assertion_line: 42
 expression: "\npub fn main() {\n  \"lets\"\n  |> panic\n}\n    "
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  \"lets\"\n  |> panic\n}\n    "
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     _pipe = <<"lets"/utf8>>,

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 168
 expression: "pub type Money { Pound(Int) }\n                    fn pound(x) { Pound(x) }"
 ---
 -module(my@mod).
@@ -9,6 +10,7 @@ expression: "pub type Money { Pound(Int) }\n                    fn pound(x) { Po
 
 -type money() :: {pound, integer()}.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec pound(integer()) -> money().
 pound(X) ->
     {pound, X}.

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
+assertion_line: 6
 expression: "\npub type X {\n  X(Int)\n}\n\npub const z = X\n\npub fn main() {\n  z\n}"
 ---
 -module(my@mod).
@@ -10,6 +11,7 @@ expression: "\npub type X {\n  X(Int)\n}\n\npub const z = X\n\npub fn main() {\n
 
 -type x() :: {x, integer()}.
 
+-file("/root/project/test/my/mod.gleam", 8).
 -spec main() -> fun((integer()) -> x()).
 main() ->
     fun(Field@0) -> {x, Field@0} end.

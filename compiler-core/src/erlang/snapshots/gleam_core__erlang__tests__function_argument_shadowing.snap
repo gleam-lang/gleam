@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 586
 expression: "pub fn main(a) {\n  Box\n}\n\npub type Box {\n  Box(Int)\n}\n"
 ---
 -module(my@mod).
@@ -10,6 +11,7 @@ expression: "pub fn main(a) {\n  Box\n}\n\npub type Box {\n  Box(Int)\n}\n"
 
 -type box() :: {box, integer()}.
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec main(any()) -> fun((integer()) -> box()).
 main(A) ->
     fun(Field@0) -> {box, Field@0} end.

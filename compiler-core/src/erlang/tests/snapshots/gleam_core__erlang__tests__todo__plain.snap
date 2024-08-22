@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
+assertion_line: 5
 expression: "\npub fn main() {\n  todo\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  todo\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     erlang:error(#{gleam_error => todo,

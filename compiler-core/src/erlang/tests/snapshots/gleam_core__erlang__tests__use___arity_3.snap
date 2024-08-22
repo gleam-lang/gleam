@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
+assertion_line: 39
 expression: "\npub fn main() {\n  use <- trip(1.0, \"\")\n  123\n}\n\nfn trip(x, y, f) {\n  let z = f()\n  #(x, y, z)\n}\n"
 ---
 -module(my@mod).
@@ -7,11 +8,13 @@ expression: "\npub fn main() {\n  use <- trip(1.0, \"\")\n  123\n}\n\nfn trip(x,
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 7).
 -spec trip(J, K, fun(() -> N)) -> {J, K, N}.
 trip(X, Y, F) ->
     Z = F(),
     {X, Y, Z}.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> {float(), binary(), integer()}.
 main() ->
     trip(1.0, <<""/utf8>>, fun() -> 123 end).

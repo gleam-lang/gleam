@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
+assertion_line: 5
 expression: "\npub fn main() {\n  panic as \"wibble\"\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  panic as \"wibble\"\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     erlang:error(#{gleam_error => panic,

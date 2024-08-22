@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
+assertion_line: 44
 expression: "\nconst i = 100.001e523\nconst j = -100.001e-523\n\nconst k = 100.001e1_230\nconst l = -100.001e-1_230\n\nconst m = 100.001e123_456_789\nconst n = -100.001e-123_456_789\n\npub fn main() {\n  i\n  j\n  k\n  l\n  m\n  n\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\nconst i = 100.001e523\nconst j = -100.001e-523\n\nconst k = 100.0
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 11).
 -spec main() -> float().
 main() ->
     100.001e523,

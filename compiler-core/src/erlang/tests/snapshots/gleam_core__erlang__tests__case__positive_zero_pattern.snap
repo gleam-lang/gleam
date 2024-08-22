@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/case.rs
+assertion_line: 24
 expression: "\npub fn main(x) {\n  case x {\n    0.0 -> 1\n    _ -> 2\n  }\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main(x) {\n  case x {\n    0.0 -> 1\n    _ -> 2\n  }\n}\n"
 
 -export([main/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main(float()) -> integer().
 main(X) ->
     case X of

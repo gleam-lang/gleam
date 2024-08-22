@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 538
 expression: "pub fn negate(x) {\n  !{\n    123\n    x\n  }\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn negate(x) {\n  !{\n    123\n    x\n  }\n}"
 
 -export([negate/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec negate(boolean()) -> boolean().
 negate(X) ->
     not begin

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/functions.rs
+assertion_line: 101
 expression: "\nimport some/other.{wibble as wobble}\n\npub fn main() {\n  wobble()\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\nimport some/other.{wibble as wobble}\n\npub fn main() {\n  wobble
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec main() -> nil.
 main() ->
     some@other:wibble().

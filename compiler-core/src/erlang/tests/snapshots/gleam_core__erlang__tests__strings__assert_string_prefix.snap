@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 421
 expression: "\npub fn main(x) {\n  let assert \"m-\" <> rest = x\n  rest\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main(x) {\n  let assert \"m-\" <> rest = x\n  rest\n}\n"
 
 -export([main/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main(binary()) -> binary().
 main(X) ->
     <<"m-"/utf8, Rest/binary>> = case X of

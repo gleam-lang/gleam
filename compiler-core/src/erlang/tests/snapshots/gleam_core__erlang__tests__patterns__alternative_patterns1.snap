@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
+assertion_line: 25
 expression: "\npub fn main() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(d
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     case {ok, 1} of

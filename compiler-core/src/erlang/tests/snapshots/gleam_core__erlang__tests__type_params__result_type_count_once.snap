@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
+assertion_line: 24
 expression: "\n        pub fn wibble() -> Result(a, a) {\n            todo\n        }\n        "
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\n        pub fn wibble() -> Result(a, a) {\n            todo\n    
 
 -export([wibble/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec wibble() -> {ok, any()} | {error, any()}.
 wibble() ->
     erlang:error(#{gleam_error => todo,
