@@ -107,7 +107,13 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         imported_modules: Vec<EcoString>,
-        hint: Option<String>,
+    },
+
+    UnknownModuleWithRichSuggestions {
+        location: SrcSpan,
+        name: EcoString,
+        name_parts: (EcoString, EcoString),
+        importable_modules: Vec<EcoString>,
     },
 
     UnknownModuleType {
@@ -776,6 +782,7 @@ impl Error {
             | Error::UnknownVariable { location, .. }
             | Error::UnknownType { location, .. }
             | Error::UnknownModule { location, .. }
+            | Error::UnknownModuleWithRichSuggestions { location, .. }
             | Error::UnknownModuleType { location, .. }
             | Error::UnknownModuleValue { location, .. }
             | Error::ModuleAliasUsedAsName { location, .. }
@@ -959,7 +966,6 @@ pub fn convert_get_value_constructor_error(
             location,
             name,
             imported_modules,
-            hint: None,
         },
 
         UnknownValueConstructorError::ModuleValue {
@@ -1021,7 +1027,6 @@ pub fn convert_get_type_constructor_error(
             location: *location,
             name,
             imported_modules,
-            hint: None,
         },
 
         UnknownTypeConstructorError::ModuleType {

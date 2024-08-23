@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nimport one.two.three\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:12
+  │
+2 │ import one.two.three
+  │            ^^^ I was not expecting this
+
+This syntax for import is not correct. Probably, you meant:
+- `import one/two` to import module `two` from package `one`
+- `import one.{two}` to import value `two` from module `one`

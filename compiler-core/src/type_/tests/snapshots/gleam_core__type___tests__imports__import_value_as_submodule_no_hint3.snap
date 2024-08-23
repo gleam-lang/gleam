@@ -6,6 +6,6 @@ error: Unknown module
   ┌─ /src/one/two.gleam:1:1
   │
 1 │ import some/other
-  │ ^^^^^^^^^^^^^^^^^
+  │ ^^^^^^^^^^^^^^^^^ Did you mean `gleam`?
 
 No module has been found with the name `some/other`.

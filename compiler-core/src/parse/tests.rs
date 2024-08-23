@@ -1493,6 +1493,15 @@ import one.two
 }
 
 #[test]
+fn import_dotted_name_multiple_dots() {
+    assert_module_error!(
+        r#"
+import one.two.three
+"#
+    );
+}
+
+#[test]
 fn import_dotted_upname() {
     assert_module_error!(
         r#"

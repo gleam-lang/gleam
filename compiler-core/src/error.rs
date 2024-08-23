@@ -1958,21 +1958,58 @@ Private types can only be used within the module that defines them.",
                     location,
                     name,
                     imported_modules,
-                    hint,
                 } => Diagnostic {
-                    title: "Unknown module".into(),
-                    text: format!("No module has been found with the name `{name}`."),
-                    hint: hint.clone(),
-                    level: Level::Error,
-                    location: Some(Location {
-                        label: Label {
-                            text: did_you_mean(name, imported_modules),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
+                        title: "Unknown module".into(),
+                        text: format!("No module has been found with the name `{name}`."),
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, imported_modules),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                },
+
+                TypeError::UnknownModuleWithRichSuggestions {
+                    location,
+                    name,
+                    name_parts,
+                    importable_modules,
+                } => {
+                    // Improve error message when users confuse `import one/two`
+                    // with `import one.{two}`.
+                    let (basename, last_part) = name_parts;
+                    let hint = Some(
+                        wrap(
+                            format!(
+                                "Did you mean `import {basename}.{{{last_part}}}`?
+
+See: https://tour.gleam.run/basics/unqualified-imports
+                        "
+                            )
+                            .as_str(),
+                        )
+                        .to_string(),
+                    );
+                    Diagnostic {
+                        title: "Unknown module".into(),
+                        text: format!("No module has been found with the name `{name}`."),
+                        hint,
+                        level: Level::Error,
+                        location: Some(Location {
+                            label: Label {
+                                text: did_you_mean(name, importable_modules),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
                 },
 
                 TypeError::UnknownModuleType {

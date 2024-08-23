@@ -292,7 +292,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Unsupported expression",
                 vec!["Functions cannot be called in clause guards.".into()],
             ),
-            ParseErrorType::InvalidImportSyntax {
+            ParseErrorType::ImportDottedName {
                 module,
                 name,
                 upname,
@@ -388,7 +388,8 @@ pub enum ParseErrorType {
         field_type: Option<TypeAst>,
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
-    InvalidImportSyntax {
+    ImportDottedName {
+        // import x.y
         module: EcoString,
         name: EcoString,
         upname: bool,

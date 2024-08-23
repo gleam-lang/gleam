@@ -2098,7 +2098,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     name: module_alias.clone(),
                     location: *module_location,
                     imported_modules: self.environment.imported_modules.keys().cloned().collect(),
-                    hint: None,
                 })?;
 
             let constructor =
@@ -2408,7 +2407,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .ok_or_else(|| Error::UnknownModule {
                         location: *location,
                         name: module_name.clone(),
-                        hint: None,
                         imported_modules: self
                             .environment
                             .imported_modules

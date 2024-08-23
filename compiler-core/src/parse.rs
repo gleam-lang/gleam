@@ -2497,7 +2497,7 @@ where
                 ..
             } => ParseError {
                 location: err.location,
-                error: ParseErrorType::InvalidImportSyntax {
+                error: ParseErrorType::ImportDottedName {
                     module: module.into(),
                     name: name.clone(),
                     upname: false,
@@ -2509,7 +2509,7 @@ where
                 ..
             } => ParseError {
                 location: err.location,
-                error: ParseErrorType::InvalidImportSyntax {
+                error: ParseErrorType::ImportDottedName {
                     module: module.into(),
                     name: name.clone(),
                     upname: true,

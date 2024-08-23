@@ -1,10 +1,8 @@
 use ecow::EcoString;
-use itertools::Itertools;
 
 use crate::{
     ast::{SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
-    error::wrap,
     type_::{
         EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
         ValueConstructorVariant,
@@ -50,52 +48,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         // Find imported module
         let Some(module_info) = self.environment.importable_modules.get(&name) else {
-            // Improve error message when users confuse `import one/two`
-            // with `import one.{two}`.
-            let mut modpath = name.split("/").collect_vec();
-            let last_part = match modpath.last() {
-                Some(name) => name,
-                None => "",
-            };
-            modpath.truncate(modpath.len() - 1);
-            let basename = EcoString::from(modpath.join("/"));
-
-            let mut hint = None;
-            if let Some(module) = self.environment.importable_modules.get(&basename) {
-                if module.get_public_value(last_part).is_some() {
-                    hint = Some(
-                        wrap(
-                            format!(
-                                "Did you mean `import {basename}.{{{last_part}}}`?
-
-See: https://tour.gleam.run/basics/unqualified-imports
-                        "
-                            )
-                            .as_str(),
-                        )
-                        .to_string(),
-                    );
-                }
-            }
-            let importable_modules = self
-                .environment
-                .importable_modules
-                .keys()
-                .cloned()
-                .collect_vec();
-            // If we have a single module here, it means that it is `gleam` module.
-            // We don't want to suggest that.
-            let modules_to_suggest = if importable_modules.len() == 1 {
-                vec![]
-            } else {
-                importable_modules
-            };
-            self.problems.error(Error::UnknownModule {
-                location,
-                name: name.clone(),
-                hint,
-                imported_modules: modules_to_suggest,
-            });
+            self.module_not_found_error(name, location);
             return;
         };
 
@@ -116,6 +69,37 @@ See: https://tour.gleam.run/basics/unqualified-imports
         for value in &import.unqualified_values {
             self.register_unqualified_value(value, module_info);
         }
+    }
+
+    fn module_not_found_error(&mut self, name: EcoString, location: SrcSpan) {
+        let importable_modules = self
+            .environment
+            .importable_modules // many modules might not be loaded for now
+            .keys()
+            .cloned()
+            .collect();
+
+        if let Some((basename, last_part)) = name.rsplit_once("/") {
+            let basename = EcoString::from(basename);
+            if let Some(module) = self.environment.importable_modules.get(&basename) {
+                if module.get_public_value(last_part).is_some() {
+                    self.problems
+                        .error(Error::UnknownModuleWithRichSuggestions {
+                            location,
+                            name: name.clone(),
+                            name_parts: (basename, EcoString::from(last_part)),
+                            importable_modules,
+                        });
+                    return;
+                }
+            };
+        }
+
+        self.problems.error(Error::UnknownModule {
+            location,
+            name: name.clone(),
+            imported_modules: importable_modules,
+        });
     }
 
     fn register_unqualified_type(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
