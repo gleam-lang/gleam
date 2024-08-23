@@ -292,6 +292,36 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Unsupported expression",
                 vec!["Functions cannot be called in clause guards.".into()],
             ),
+            ParseErrorType::ImportDottedName {
+                module,
+                name,
+                upname,
+            } => {
+                let mut hint = vec![wrap(
+                    "This syntax for import is not correct. Probably, you meant:",
+                )];
+                if *upname {
+                    let l_name = name.to_lowercase();
+                    hint.push(wrap(format!(
+                        "- `import {module}/{l_name}` to import module `{l_name}` from package `{module}`").as_str(),
+                    ));
+                    hint.push(wrap(format!(
+                        "- `import {module}.{{{name}}}` to import value `{name}` from module `{module}`").as_str(),
+                    ));
+                    hint.push(wrap(format!(
+                        "- `import {module}.{{type {name}}}` to import type `{name}` from module `{module}`").as_str(),
+                    ));
+                } else {
+                    hint.push(wrap(format!(
+                        "- `import {module}/{name}` to import module `{name}` from package `{module}`").as_str(),
+                    ));
+                    hint.push(wrap(format!(
+                        "- `import {module}.{{{name}}}` to import value `{name}` from module `{module}`").as_str(),
+                    ));
+                }
+
+                ("I was not expecting this", hint)
+            }
         }
     }
 }
@@ -358,6 +388,12 @@ pub enum ParseErrorType {
         field_type: Option<TypeAst>,
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
+    ImportDottedName {
+        // import x.y
+        module: EcoString,
+        name: EcoString,
+        upname: bool,
+    },
 }
 
 impl LexicalError {

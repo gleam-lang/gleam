@@ -48,11 +48,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         // Find imported module
         let Some(module_info) = self.environment.importable_modules.get(&name) else {
-            self.problems.error(Error::UnknownModule {
-                location,
-                name: name.clone(),
-                imported_modules: self.environment.imported_modules.keys().cloned().collect(),
-            });
+            self.module_not_found_error(name, location);
             return;
         };
 
@@ -73,6 +69,37 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         for value in &import.unqualified_values {
             self.register_unqualified_value(value, module_info);
         }
+    }
+
+    fn module_not_found_error(&mut self, name: EcoString, location: SrcSpan) {
+        let importable_modules = self
+            .environment
+            .importable_modules // many modules might not be loaded for now
+            .keys()
+            .cloned()
+            .collect();
+
+        if let Some((basename, last_part)) = name.rsplit_once("/") {
+            let basename = EcoString::from(basename);
+            if let Some(module) = self.environment.importable_modules.get(&basename) {
+                if module.get_public_value(last_part).is_some() {
+                    self.problems
+                        .error(Error::UnknownModuleWithRichSuggestions {
+                            location,
+                            name: name.clone(),
+                            name_parts: (basename, EcoString::from(last_part)),
+                            importable_modules,
+                        });
+                    return;
+                }
+            };
+        }
+
+        self.problems.error(Error::UnknownModule {
+            location,
+            name: name.clone(),
+            imported_modules: importable_modules,
+        });
     }
 
     fn register_unqualified_type(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {

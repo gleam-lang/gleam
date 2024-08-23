@@ -164,6 +164,19 @@
 
   ([sobolevn](https://github.com/sobolevn))
 
+- Improve import error messages. Now this code produces:
+
+  ```gleam
+  import gleam.io
+               ^^
+               I was not expecting this.
+
+  This syntax for import is not correct. Probably, you meant:
+  - `import gleam/io` to import module `io` from package `gleam`
+  - `import gleam.{io}` to import value `io` from module `gleam`
+  ```
+  ([sobolevn](https://github.com/sobolevn))
+
 ### Formatter
 
 ### Language Server

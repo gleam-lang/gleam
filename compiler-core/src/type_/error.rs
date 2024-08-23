@@ -109,6 +109,13 @@ pub enum Error {
         imported_modules: Vec<EcoString>,
     },
 
+    UnknownModuleWithRichSuggestions {
+        location: SrcSpan,
+        name: EcoString,
+        name_parts: (EcoString, EcoString),
+        importable_modules: Vec<EcoString>,
+    },
+
     UnknownModuleType {
         location: SrcSpan,
         name: EcoString,
@@ -775,6 +782,7 @@ impl Error {
             | Error::UnknownVariable { location, .. }
             | Error::UnknownType { location, .. }
             | Error::UnknownModule { location, .. }
+            | Error::UnknownModuleWithRichSuggestions { location, .. }
             | Error::UnknownModuleType { location, .. }
             | Error::UnknownModuleValue { location, .. }
             | Error::ModuleAliasUsedAsName { location, .. }

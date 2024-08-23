@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nimport one.Two\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:12
+  │
+2 │ import one.Two
+  │            ^^^ I was not expecting this
+
+This syntax for import is not correct. Probably, you meant:
+- `import one/two` to import module `two` from package `one`
+- `import one.{Two}` to import value `Two` from module `one`
+- `import one.{type Two}` to import type `Two` from module `one`

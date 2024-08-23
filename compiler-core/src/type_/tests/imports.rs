@@ -326,3 +326,49 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn import_value_as_submodule() {
+    assert_with_module_error!(("one", "pub fn wibble() {}"), "import one/wibble");
+}
+
+#[test]
+fn import_value_as_submodule2() {
+    assert_with_module_error!(("one/two", "pub fn wibble() {}"), "import one/two/wibble");
+}
+#[test]
+fn import_value_as_submodule3() {
+    // Two possible suggestions: `import one/wobble` or `import one.{wibble}`
+    // One via hint, one via `did_you_mean`.
+    assert_with_module_error!(
+        ("one", "pub fn wibble() {}"),
+        ("one/wobble", ""),
+        "import one/wibble"
+    );
+}
+
+#[test]
+fn import_value_as_submodule_very_long_name() {
+    assert_with_module_error!(
+        (
+            "this_is_a_very_long_name_for_a_module_even_hard_to_read",
+            "pub fn this_is_a_very_long_submodule_name() {}"
+        ),
+        "import this_is_a_very_long_name_for_a_module_even_hard_to_read/this_is_a_very_long_submodule_name"
+    );
+}
+
+#[test]
+fn import_value_as_submodule_no_hint() {
+    assert_with_module_error!(("one/two", ""), "import one/two/wibble");
+}
+
+#[test]
+fn import_value_as_submodule_no_hint2() {
+    assert_with_module_error!(("one/two", "pub fn wibble() {}"), "import some/other");
+}
+
+#[test]
+fn import_value_as_submodule_no_hint3() {
+    assert_module_error!("import some/other");
+}
