@@ -113,7 +113,9 @@
                ^^
                I was not expecting this.
 
-  Hint: did you mean `import gleam/io`?
+  This syntax for import is not correct. Probably, you meant:
+  - `import gleam/io` to import module `io` from package `gleam`
+  - `import gleam.{io}` to import value `io` from module `gleam`
   ```
   ([sobolevn](https://github.com/sobolevn))
 
