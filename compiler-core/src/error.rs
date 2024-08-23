@@ -512,7 +512,7 @@ impl FileKind {
 }
 
 // https://github.com/rust-lang/rust/blob/03994e498df79aa1f97f7bbcfd52d57c8e865049/compiler/rustc_span/src/edit_distance.rs
-fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
+pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     let mut a = &a.chars().collect::<Vec<_>>()[..];
     let mut b = &b.chars().collect::<Vec<_>>()[..];
 
@@ -619,7 +619,7 @@ fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
     (distance <= limit).then_some(distance)
 }
 
-pub fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize> {
+fn edit_distance_with_substrings(a: &str, b: &str, limit: usize) -> Option<usize> {
     let n = a.chars().count();
     let m = b.chars().count();
 

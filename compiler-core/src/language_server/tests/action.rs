@@ -1330,14 +1330,14 @@ pub fn main() {
 fn test_import_similar_module() {
     let src = "
 pub fn main() {
-  reul.is_ok()
+  reult.is_ok()
 }
 ";
 
     assert_code_action!(
         "Import `result`",
         TestProject::for_source(src).add_hex_module("result", "pub fn is_ok() {}"),
-        find_position_of("reul").select_until(find_position_of("."))
+        find_position_of("reult").select_until(find_position_of("."))
     );
 }
 

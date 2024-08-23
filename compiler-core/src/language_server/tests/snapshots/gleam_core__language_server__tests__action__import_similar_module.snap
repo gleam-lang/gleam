@@ -1,12 +1,12 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\npub fn main() {\n  reul.is_ok()\n}\n"
+expression: "\npub fn main() {\n  reult.is_ok()\n}\n"
 ---
 ----- BEFORE ACTION
 
 pub fn main() {
-  reul.is_ok()
-  ▔▔▔▔↑       
+  reult.is_ok()
+  ▔▔▔▔▔↑       
 }
 
 

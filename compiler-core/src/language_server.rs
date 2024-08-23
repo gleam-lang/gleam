@@ -1,10 +1,10 @@
 mod code_action;
 mod compiler;
 mod completer;
+mod edits;
 mod engine;
 mod feedback;
 mod files;
-mod imports;
 mod messages;
 mod progress;
 mod router;
