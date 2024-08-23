@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+expression: import this_is_a_very_long_name_for_a_module_even_hard_to_read/this_is_a_very_long_submodule_name
+---
+error: Unknown module
+  ┌─ /src/one/two.gleam:1:1
+  │
+1 │ import this_is_a_very_long_name_for_a_module_even_hard_to_read/this_is_a_very_long_submodule_name
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ Did you mean `this_is_a_very_long_name_for_a_module_even_hard_to_read`?
+
+No module has been found with the name `this_is_a_very_long_name_for_a_module_even_hard_to_read/this_is_a_very_long_submodule_name`.
+Hint: Did you mean `import
+this_is_a_very_long_name_for_a_module_even_hard_to_read.
+{this_is_a_very_long_submodule_name}`?
+
+See: https://tour.gleam.run/basics/unqualified-imports
