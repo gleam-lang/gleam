@@ -23,10 +23,11 @@ use crate::{
 
 use super::{
     compiler::LspProjectCompiler,
-    files::FileSystemProxy,
-    imports::{
-        add_newlines_after_import, first_import_in_module, get_import, get_import_edit, Newlines,
+    edits::{
+        add_newlines_after_import, get_import, get_import_edit,
+        position_of_first_definition_if_import, Newlines,
     },
+    files::FileSystemProxy,
     DownloadDependencies, MakeLocker,
 };
 
@@ -465,10 +466,13 @@ where
         }
 
         // Importable modules
-        let (first_import_pos, first_is_import) =
-            first_import_in_module(self.module, &self.src_line_numbers);
+        let first_import_pos =
+            position_of_first_definition_if_import(self.module, &self.src_line_numbers);
+        let first_is_import = first_import_pos.is_some();
+        let import_location = first_import_pos.unwrap_or_default();
+
         let after_import_newlines = add_newlines_after_import(
-            first_import_pos,
+            import_location,
             first_is_import,
             &self.src_line_numbers,
             self.src,
@@ -508,7 +512,7 @@ where
                 );
                 add_import_to_completion(
                     &mut completion,
-                    first_import_pos,
+                    import_location,
                     module_full_name,
                     &after_import_newlines,
                 );
@@ -603,10 +607,12 @@ where
         }
 
         // Importable modules
-        let (first_import_pos, first_is_import) =
-            first_import_in_module(self.module, &self.src_line_numbers);
+        let first_import_pos =
+            position_of_first_definition_if_import(self.module, &self.src_line_numbers);
+        let first_is_import = first_import_pos.is_some();
+        let import_location = first_import_pos.unwrap_or_default();
         let after_import_newlines = add_newlines_after_import(
-            first_import_pos,
+            import_location,
             first_is_import,
             &self.src_line_numbers,
             self.src,
@@ -646,7 +652,7 @@ where
 
                 add_import_to_completion(
                     &mut completion,
-                    first_import_pos,
+                    import_location,
                     module_full_name,
                     &after_import_newlines,
                 );

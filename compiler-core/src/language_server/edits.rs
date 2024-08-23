@@ -7,10 +7,13 @@ use crate::{
     line_numbers::LineNumbers,
 };
 
+use super::src_span_to_lsp_range;
+
 // Gets the position of the import statement if it's the first definition in the module.
-// If the 1st definition is not an import statement, then it returns the 1st line.
-// 2nd element in the pair is true if the first definition is an import statement.
-pub fn first_import_in_module(module: &Module, line_numbers: &LineNumbers) -> (Position, bool) {
+pub fn position_of_first_definition_if_import(
+    module: &Module,
+    line_numbers: &LineNumbers,
+) -> Option<Position> {
     // As "self.module.ast.definitions"  could be sorted, let's find the actual first definition by position.
     let first_definition = module
         .ast
@@ -18,9 +21,7 @@ pub fn first_import_in_module(module: &Module, line_numbers: &LineNumbers) -> (P
         .iter()
         .min_by(|a, b| a.location().start.cmp(&b.location().start));
     let import = first_definition.and_then(get_import);
-    let import_start = import.map_or(0, |i| i.location.start);
-    let import_line = line_numbers.line_number(import_start);
-    (Position::new(import_line - 1, 0), import.is_some())
+    import.map(|import| src_span_to_lsp_range(import.location, line_numbers).start)
 }
 
 pub fn get_import(statement: &TypedDefinition) -> Option<&Import<EcoString>> {

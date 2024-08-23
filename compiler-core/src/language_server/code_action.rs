@@ -22,8 +22,8 @@ use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
 
 use super::{
+    edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
-    imports::{add_newlines_after_import, first_import_in_module, get_import_edit},
     src_span_to_lsp_range,
 };
 
@@ -678,9 +678,12 @@ pub fn code_action_import_module(
     }
 
     let line_numbers = LineNumbers::new(&module.code);
-    let (first_import_pos, first_is_import) = first_import_in_module(module, &line_numbers);
+    let first_import_pos = position_of_first_definition_if_import(module, &line_numbers);
+    let first_is_import = first_import_pos.is_some();
+    let import_location = first_import_pos.unwrap_or_default();
+
     let after_import_newlines = add_newlines_after_import(
-        first_import_pos,
+        import_location,
         first_is_import,
         &line_numbers,
         &module.code,
@@ -699,7 +702,7 @@ pub fn code_action_import_module(
             }];
             if let Some(import) = &suggestion.import {
                 edits.push(get_import_edit(
-                    first_import_pos,
+                    import_location,
                     import,
                     &after_import_newlines,
                 ))

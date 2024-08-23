@@ -2,7 +2,7 @@ use crate::{
     analyse::TargetSupport,
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
-    error::edit_distance_with_substrings,
+    error::edit_distance,
     exhaustiveness::printer::ValueNames,
     uid::UniqueIdGenerator,
 };
@@ -709,7 +709,7 @@ impl<'a> Environment<'a> {
             .into_iter()
             .sorted()
             .filter_map(|suggestion| {
-                edit_distance_with_substrings(module, suggestion.last_name_component(), threshold)
+                edit_distance(module, suggestion.last_name_component(), threshold)
                     .map(|distance| (suggestion, distance))
             })
             .sorted_by_key(|&(_, distance)| distance)
