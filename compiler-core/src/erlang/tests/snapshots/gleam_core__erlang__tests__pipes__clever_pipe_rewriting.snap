@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 6
 expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
 ---
 -module(my@mod).
@@ -9,7 +8,7 @@ expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
 -export([apply/2]).
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec apply(fun((I) -> J), I) -> J.
+-spec apply(fun((W) -> X), W) -> X.
 apply(F, A) ->
     _pipe = A,
     F(_pipe).

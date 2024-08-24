@@ -2,6 +2,6 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "pub type Queue(a)\n\n@external(javascript, \"queue\", \"new\")\npub fn new() -> Queue(a)\n"
 ---
-export type Queue$<I> = any;
+export type Queue$<W> = any;
 
 export function new$(): Queue$<any>;

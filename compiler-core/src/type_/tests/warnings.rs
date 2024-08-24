@@ -458,6 +458,25 @@ pub const make_two = one.Two
     );
 }
 
+#[test]
+fn imported_construct_same_name_in_type_alias() {
+    assert_warning!(
+        ("thepackage", "wibble", "pub type Wibble { Wibble(String) }"),
+        "
+import wibble.{Wibble}
+
+type Wibble =
+  Int
+
+pub fn main() {
+  let _ = Wibble
+  1
+}
+
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
 fn double_unary_integer_literal() {

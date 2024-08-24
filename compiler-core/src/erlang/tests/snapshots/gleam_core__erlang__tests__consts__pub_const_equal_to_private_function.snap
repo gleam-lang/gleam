@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 70
 expression: "\n          fn identity(a) {\n            a\n          }\n\n          pub const id = identity\n        "
 ---
 -module(my@mod).
@@ -9,6 +8,6 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -export([identity/1]).
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec identity(I) -> I.
+-spec identity(W) -> W.
 identity(A) ->
     A.

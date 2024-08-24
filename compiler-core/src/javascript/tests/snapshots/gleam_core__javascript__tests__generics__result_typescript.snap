@@ -4,7 +4,7 @@ expression: "pub fn map(result, fun) {\n            case result {\n             
 ---
 import type * as _ from "../gleam.d.mts";
 
-export function map<S, T, V>(result: _.Result<T, S>, fun: (x0: T) => V): _.Result<
-  V,
-  S
+export function map<AK, AL, AO>(result: _.Result<AL, AK>, fun: (x0: AL) => AO): _.Result<
+  AO,
+  AK
 >;

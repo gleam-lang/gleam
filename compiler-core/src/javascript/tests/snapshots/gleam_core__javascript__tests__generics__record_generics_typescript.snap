@@ -4,18 +4,18 @@ expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn
 ---
 import type * as _ from "../gleam.d.mts";
 
-export class Cat<I> extends _.CustomType {
-  constructor(type_: I);
+export class Cat<W> extends _.CustomType {
+  constructor(type_: W);
   
-  type_: I;
+  type_: W;
 }
 
-export class Dog<I> extends _.CustomType {
-  constructor(type_: I);
+export class Dog<W> extends _.CustomType {
+  constructor(type_: W);
   
-  type_: I;
+  type_: W;
 }
 
-export type Animal$<I> = Cat<I> | Dog<I>;
+export type Animal$<W> = Cat<W> | Dog<W>;
 
 export function main(): Animal$<number>;

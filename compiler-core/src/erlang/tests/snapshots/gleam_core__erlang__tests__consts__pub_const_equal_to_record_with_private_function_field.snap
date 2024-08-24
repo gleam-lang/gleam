@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 83
 expression: "\n          fn identity(a) {\n            a\n          }\n\n          pub type Mapper(b) {\n            Mapper(fn(b) -> b)\n          }\n\n          pub const id_mapper = Mapper(identity)\n        "
 ---
 -module(my@mod).
@@ -9,9 +8,9 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -export([identity/1]).
 -export_type([mapper/1]).
 
--type mapper(I) :: {mapper, fun((I) -> I)}.
+-type mapper(W) :: {mapper, fun((W) -> W)}.
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec identity(J) -> J.
+-spec identity(Y) -> Y.
 identity(A) ->
     A.

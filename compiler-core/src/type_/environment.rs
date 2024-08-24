@@ -1,3 +1,4 @@
+use ecow::eco_format;
 use pubgrub::range::Range;
 
 use crate::{
@@ -40,10 +41,12 @@ pub struct Environment<'a> {
     pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
-    pub scope: im::HashMap<EcoString, ValueConstructor>,
+    pub scope: im::HashMap<EcoString, (u64, ValueConstructor)>,
+    pub value_usage_graph: HashMap<u64, (ValueConstructor, EcoString, Vec<SrcSpan>)>,
 
     /// Types defined in the current module (or the prelude)
-    pub module_types: HashMap<EcoString, TypeConstructor>,
+    pub module_types: HashMap<EcoString, (u64, TypeConstructor)>,
+    pub type_usage_graph: HashMap<u64, (TypeConstructor, EcoString, Vec<SrcSpan>)>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
     pub module_types_constructors: HashMap<EcoString, TypeVariantConstructors>,
@@ -53,12 +56,6 @@ pub struct Environment<'a> {
 
     /// Accessors defined in the current module
     pub accessors: HashMap<EcoString, AccessorsMap>,
-
-    /// entity_usages is a stack of scopes. When an entity is created it is
-    /// added to the top scope. When an entity is used we crawl down the scope
-    /// stack for an entity with that name and mark it as used.
-    /// NOTE: The bool in the tuple here tracks if the entity has been used
-    pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
 
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
@@ -94,9 +91,13 @@ impl<'a> Environment<'a> {
             current_package: current_package.clone(),
             gleam_version,
             previous_id: ids.next(),
-            ids,
             target,
-            module_types: prelude.types.clone(),
+            module_types: prelude
+                .types
+                .iter()
+                .map(|(name, type_)| (name.clone(), (ids.next(), type_.clone())))
+                .collect(),
+            type_usage_graph: HashMap::new(),
             module_types_constructors: prelude.types_value_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
@@ -104,12 +105,17 @@ impl<'a> Environment<'a> {
             unqualified_imported_names: HashMap::new(),
             unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
-            scope: prelude.values.clone().into(),
+            scope: prelude
+                .values
+                .iter()
+                .map(|(name, value)| (name.clone(), (ids.next(), value.clone())))
+                .collect(),
+            value_usage_graph: HashMap::new(),
+            ids,
             importable_modules,
             imported_module_aliases: HashMap::new(),
             unused_module_aliases: HashMap::new(),
             current_module,
-            entity_usages: vec![HashMap::new()],
             target_support,
             value_names,
         }
@@ -122,26 +128,9 @@ pub struct UnusedModuleAlias {
     pub module_name: EcoString,
 }
 
-/// For Keeping track of entity usages and knowing which error to display.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EntityKind {
-    PrivateConstant,
-    // String here is the type constructor's type name
-    PrivateTypeConstructor(EcoString),
-    PrivateFunction,
-    ImportedConstructor,
-    ImportedType,
-    ImportedValue,
-    PrivateType,
-    Variable {
-        /// How the variable could be rewritten to ignore it when unused
-        how_to_ignore: Option<EcoString>,
-    },
-}
-
 #[derive(Debug)]
 pub struct ScopeResetData {
-    local_values: im::HashMap<EcoString, ValueConstructor>,
+    local_values: im::HashMap<EcoString, (u64, ValueConstructor)>,
 }
 
 impl<'a> Environment<'a> {
@@ -156,7 +145,7 @@ impl<'a> Environment<'a> {
         // Process scope
         let result = process_scope(self, problems);
 
-        self.close_scope(initial, result.is_ok(), problems);
+        self.close_scope(initial);
 
         // Return result of typing the scope
         result
@@ -164,28 +153,10 @@ impl<'a> Environment<'a> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.scope.clone();
-        self.entity_usages.push(HashMap::new());
         ScopeResetData { local_values }
     }
 
-    pub fn close_scope(
-        &mut self,
-        data: ScopeResetData,
-        was_successful: bool,
-        problems: &mut Problems,
-    ) {
-        let unused = self
-            .entity_usages
-            .pop()
-            .expect("There was no top entity scope.");
-
-        // We only check for unused entities if the scope was successfully
-        // processed. If it was not then any seemingly unused entities may have
-        // been used beyond the point where the error occurred, so we don't want
-        // to incorrectly warn about them.
-        if was_successful {
-            self.handle_unused(unused, problems);
-        }
+    pub fn close_scope(&mut self, data: ScopeResetData) {
         self.scope = data.local_values;
     }
 
@@ -215,34 +186,19 @@ impl<'a> Environment<'a> {
     /// Insert a variable in the current scope.
     ///
     pub fn insert_local_variable(&mut self, name: EcoString, location: SrcSpan, type_: Arc<Type>) {
-        let _ = self.scope.insert(
-            name,
-            ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
-                publicity: Publicity::Private,
-                variant: ValueConstructorVariant::LocalVariable { location },
-                type_,
-            },
-        );
-    }
-
-    /// Insert a constant in the current scope
-    pub fn insert_local_constant(
-        &mut self,
-        name: EcoString,
-        literal: Constant<Arc<Type>, EcoString>,
-    ) {
-        let _ = self.scope.insert(
-            name,
-            ValueConstructor {
-                deprecation: Deprecation::NotDeprecated,
-                publicity: Publicity::Private,
-                variant: ValueConstructorVariant::LocalConstant {
-                    literal: literal.clone(),
-                },
-                type_: literal.type_(),
-            },
-        );
+        let id = self.ids.next();
+        let val = ValueConstructor {
+            deprecation: Deprecation::NotDeprecated,
+            publicity: Publicity::Private,
+            variant: ValueConstructorVariant::LocalVariable { location },
+            type_,
+        };
+        if name != PIPE_VARIABLE {
+            let _ = self
+                .value_usage_graph
+                .insert(id, (val.clone(), name.clone(), Vec::new()));
+        }
+        let _ = self.scope.insert(name, (id, val));
     }
 
     /// Insert a variable in the current scope.
@@ -255,15 +211,19 @@ impl<'a> Environment<'a> {
         publicity: Publicity,
         deprecation: Deprecation,
     ) {
-        let _ = self.scope.insert(
-            name,
-            ValueConstructor {
-                publicity,
-                deprecation,
-                variant,
-                type_,
-            },
-        );
+        let id = self.ids.next();
+        let val = ValueConstructor {
+            deprecation,
+            publicity,
+            variant,
+            type_,
+        };
+        if name != PIPE_VARIABLE {
+            let _ = self
+                .value_usage_graph
+                .insert(id, (val.clone(), name.clone(), Vec::new()));
+        }
+        let _ = self.scope.insert(name, (id, val));
     }
 
     /// Insert (or overwrites) a value into the current module.
@@ -274,19 +234,37 @@ impl<'a> Environment<'a> {
 
     /// Lookup a variable in the current scope.
     ///
-    pub fn get_variable(&self, name: &EcoString) -> Option<&ValueConstructor> {
-        self.scope.get(name)
-    }
-
-    /// Lookup a module constant in the current scope.
-    ///
-    pub fn get_module_const(&mut self, name: &EcoString) -> Option<&ValueConstructor> {
-        self.increment_usage(name);
-        self.module_values
-            .get(name)
-            .filter(|ValueConstructor { variant, .. }| {
-                matches!(variant, ValueConstructorVariant::ModuleConstant { .. })
-            })
+    pub fn get_variable(
+        &mut self,
+        name: &EcoString,
+        location: &SrcSpan,
+    ) -> Option<&ValueConstructor> {
+        self.scope.get(name).map(|(id, v)| {
+            if let Some((_, _, usages)) = self.value_usage_graph.get_mut(id) {
+                match v.variant.clone() {
+                    // Do not register usage of constructor during constructor instantiation
+                    ValueConstructorVariant::Record {
+                        location: record_location,
+                        ..
+                    } if *location == record_location => (),
+                    _ => {
+                        usages.push(*location);
+                        // If a private constructor is used then its type is also used
+                        if v.publicity.is_private() {
+                            if let Some((_, type_name)) = v.type_.named_type_name() {
+                                let _ = self.module_types.get(&type_name).map(|(id, _)| {
+                                    let _ = self
+                                        .type_usage_graph
+                                        .get_mut(id)
+                                        .map(|(_, _, usages)| usages.push(*location));
+                                });
+                            }
+                        }
+                    }
+                }
+            }
+            v
+        })
     }
 
     /// Map a type in the current scope.
@@ -300,10 +278,14 @@ impl<'a> Environment<'a> {
     ) -> Result<(), Error> {
         let name = type_name.clone();
         let location = info.origin;
-        match self.module_types.insert(type_name, info) {
+        let id = self.ids.next();
+        let _ = self
+            .type_usage_graph
+            .insert(id, (info.clone(), name.clone(), Vec::new()));
+        match self.module_types.insert(type_name, (id, info)) {
             None => Ok(()),
-            Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
-            Some(previous) => Err(Error::DuplicateTypeName {
+            Some((_, prelude_type)) if is_prelude_module(&prelude_type.module) => Ok(()),
+            Some((_, previous)) => Err(Error::DuplicateTypeName {
                 name,
                 location,
                 previous_location: previous.origin,
@@ -318,8 +300,8 @@ impl<'a> Environment<'a> {
     ) -> Result<(), Error> {
         match self.module_types.get(name) {
             None => Ok(()),
-            Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
-            Some(previous) => Err(Error::DuplicateTypeName {
+            Some((_, prelude_type)) if is_prelude_module(&prelude_type.module) => Ok(()),
+            Some((_, previous)) => Err(Error::DuplicateTypeName {
                 name: name.clone(),
                 location,
                 previous_location: previous.origin,
@@ -345,11 +327,20 @@ impl<'a> Environment<'a> {
         &mut self,
         module_alias: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
+        location: &SrcSpan,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         let t = match module_alias {
             None => self
                 .module_types
                 .get(name)
+                .map(|(id, t)| {
+                    if let Some((_, _, usages)) = self.type_usage_graph.get_mut(id) {
+                        if *location != t.origin {
+                            usages.push(*location)
+                        }
+                    }
+                    t
+                })
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
@@ -432,16 +423,38 @@ impl<'a> Environment<'a> {
         &mut self,
         module: Option<&EcoString>,
         name: &EcoString,
+        location: &SrcSpan,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self.scope.get(name).ok_or_else(|| {
-                let type_with_name_in_scope = self.module_types.keys().any(|type_| type_ == name);
-                UnknownValueConstructorError::Variable {
-                    name: name.clone(),
-                    variables: self.local_value_names(),
-                    type_with_name_in_scope,
-                }
-            }),
+            None => self
+                .scope
+                .get(name)
+                .map(|(id, v)| {
+                    if let Some((_, _, usages)) = self.value_usage_graph.get_mut(id) {
+                        usages.push(*location);
+                        // If a private constructor is used then its type is also used
+                        if v.publicity.is_private() {
+                            if let Some((_, type_name)) = v.type_.named_type_name() {
+                                let _ = self.module_types.get(&type_name).map(|(id, _)| {
+                                    let _ = self
+                                        .type_usage_graph
+                                        .get_mut(id)
+                                        .map(|(_, _, usages)| usages.push(*location));
+                                });
+                            }
+                        }
+                    }
+                    v
+                })
+                .ok_or_else(|| {
+                    let type_with_name_in_scope =
+                        self.module_types.keys().any(|type_| type_ == name);
+                    UnknownValueConstructorError::Variable {
+                        name: name.clone(),
+                        variables: self.local_value_names(),
+                        type_with_name_in_scope,
+                    }
+                }),
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
@@ -543,70 +556,98 @@ impl<'a> Environment<'a> {
         }
     }
 
-    /// Inserts an entity at the current scope for usage tracking.
-    pub fn init_usage(
-        &mut self,
-        name: EcoString,
-        kind: EntityKind,
-        location: SrcSpan,
-        problems: &mut Problems,
-    ) {
-        use EntityKind::*;
-
-        match self
-            .entity_usages
-            .last_mut()
-            .expect("Attempted to access non-existent entity usages scope")
-            .insert(name.clone(), (kind, location, false))
-        {
-            // Private types can be shadowed by a constructor with the same name
-            //
-            // TODO: Improve this so that we can tell if an imported overridden
-            // type is actually used or not by tracking whether usages apply to
-            // the value or type scope
-            Some((ImportedType | PrivateType, _, _)) => {}
-
-            Some((kind, location, false)) => {
-                // an entity was overwritten in the top most scope without being used
-                let mut unused = HashMap::with_capacity(1);
-                let _ = unused.insert(name, (kind, location, false));
-                self.handle_unused(unused, problems);
-            }
-
-            _ => {}
-        }
-    }
-
-    /// Increments an entity's usage in the current or nearest enclosing scope
-    pub fn increment_usage(&mut self, name: &EcoString) {
-        let mut name = name.clone();
-
-        while let Some((kind, _, used)) = self
-            .entity_usages
-            .iter_mut()
-            .rev()
-            .find_map(|scope| scope.get_mut(&name))
-        {
-            *used = true;
-
-            match kind {
-                // If a type constructor is used, we consider its type also used
-                EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
-                    name = type_name.clone();
-                }
-                _ => break,
-            }
-        }
-    }
-
     /// Converts entities with a usage count of 0 to warnings.
     /// Returns the list of unused imported module location for the removed unused lsp action.
     pub fn convert_unused_to_warnings(&mut self, problems: &mut Problems) {
-        let unused = self
-            .entity_usages
-            .pop()
-            .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused, problems);
+        for (_, (type_constructor, name, usages)) in self.type_usage_graph.iter() {
+            if usages.is_empty() {
+                let imported = type_constructor.module != self.current_module;
+                if !imported && type_constructor.publicity != Publicity::Private {
+                    continue;
+                }
+                let warning = Warning::UnusedType {
+                    location: type_constructor.origin,
+                    imported,
+                    name: name.clone(),
+                };
+                problems.warning(warning);
+            }
+        }
+
+        for (_, (value_constructor, name, usages)) in self.value_usage_graph.iter() {
+            if usages.is_empty() {
+                let warning = match (&value_constructor.variant, &value_constructor.publicity) {
+                    (ValueConstructorVariant::LocalVariable { location }, _) => {
+                        Warning::UnusedVariable {
+                            location: *location,
+                            how_to_ignore: Some(eco_format!("_{name}")),
+                        }
+                    }
+                    (ValueConstructorVariant::LocalConstant { literal }, Publicity::Private) => {
+                        Warning::UnusedLiteral {
+                            location: literal.location(),
+                        }
+                    }
+                    (
+                        ValueConstructorVariant::Record {
+                            name,
+                            location,
+                            module,
+                            ..
+                        },
+                        Publicity::Private,
+                    ) => Warning::UnusedConstructor {
+                        location: *location,
+                        imported: *module != self.current_module,
+                        name: name.clone(),
+                    },
+                    (
+                        ValueConstructorVariant::ModuleFn { name, location, .. },
+                        Publicity::Private,
+                    ) => Warning::UnusedPrivateFunction {
+                        location: *location,
+                        name: name.clone(),
+                    },
+                    (
+                        ValueConstructorVariant::ModuleFn {
+                            name,
+                            module,
+                            location,
+                            implementations,
+                            ..
+                        },
+                        _,
+                    ) if *module != self.current_module && implementations.gleam => {
+                        let location = self
+                            .unqualified_imported_names
+                            .get(name)
+                            .unwrap_or(location);
+                        Warning::UnusedImportedValue {
+                            location: *location,
+                            name: name.clone(),
+                        }
+                    }
+                    (
+                        ValueConstructorVariant::ModuleConstant { location, .. },
+                        Publicity::Private,
+                    ) => Warning::UnusedPrivateModuleConstant {
+                        location: *location,
+                        name: name.clone(),
+                    },
+                    (
+                        ValueConstructorVariant::ModuleConstant {
+                            module, location, ..
+                        },
+                        _,
+                    ) if *module != self.current_module => Warning::UnusedImportedValue {
+                        location: *location,
+                        name: name.clone(),
+                    },
+                    _ => continue,
+                };
+                problems.warning(warning);
+            };
+        }
 
         for (name, location) in self.unused_modules.clone().into_iter() {
             problems.warning(Warning::UnusedImportedModule {
@@ -623,48 +664,6 @@ impl<'a> Environment<'a> {
                     module_name: info.module_name.clone(),
                 });
             }
-        }
-    }
-
-    fn handle_unused(
-        &mut self,
-        unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>,
-        problems: &mut Problems,
-    ) {
-        for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
-            let warning = match kind {
-                EntityKind::ImportedType => Warning::UnusedType {
-                    name,
-                    imported: true,
-                    location,
-                },
-                EntityKind::ImportedConstructor => Warning::UnusedConstructor {
-                    name,
-                    imported: true,
-                    location,
-                },
-                EntityKind::PrivateConstant => {
-                    Warning::UnusedPrivateModuleConstant { name, location }
-                }
-                EntityKind::PrivateTypeConstructor(_) => Warning::UnusedConstructor {
-                    name,
-                    imported: false,
-                    location,
-                },
-                EntityKind::PrivateFunction => Warning::UnusedPrivateFunction { name, location },
-                EntityKind::PrivateType => Warning::UnusedType {
-                    name,
-                    imported: false,
-                    location,
-                },
-                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::Variable { how_to_ignore } => Warning::UnusedVariable {
-                    location,
-                    how_to_ignore,
-                },
-            };
-
-            problems.warning(warning);
         }
     }
 

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
-assertion_line: 72
 expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n        }\n\n        pub fn wibble() -> Wibble(a, a) {\n            todo\n        }\n        "
 ---
 -module(my@mod).
@@ -9,10 +8,10 @@ expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n      
 -export([wibble/0]).
 -export_type([wibble/2]).
 
--type wibble(I, J) :: {wibble, I, J}.
+-type wibble(W, X) :: {wibble, W, X}.
 
 -file("/root/project/test/my/mod.gleam", 6).
--spec wibble() -> wibble(K, K).
+-spec wibble() -> wibble(Z, Z).
 wibble() ->
     erlang:error(#{gleam_error => todo,
             message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,

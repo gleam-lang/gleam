@@ -7,4 +7,4 @@ expression: "pub type Map(k, v)"
 
 -export_type([map_/2]).
 
--type map_(I, J) :: any() | {gleam_phantom, I, J}.
+-type map_(W, X) :: any() | {gleam_phantom, W, X}.
