@@ -152,7 +152,11 @@ fn package_from_module(module: Module) -> Package {
                 ],
                 build: Some("build".into()),
             },
-            gleam_version: Some("1.0.0".into()),
+            gleam_version: Some(
+                hexpm::version::Range::new("1.0.0".into())
+                    .to_pubgrub()
+                    .unwrap(),
+            ),
             licences: vec![],
             description: "description".into(),
             documentation: Docs { pages: vec![] },
