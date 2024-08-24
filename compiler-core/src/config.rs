@@ -7,7 +7,7 @@ use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::Version;
+use hexpm::version::{self, Version};
 use http::Uri;
 use serde::Deserialize;
 use std::collections::{HashMap, HashSet};
@@ -73,8 +73,13 @@ pub struct PackageConfig {
     pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
-    #[serde(default, rename = "gleam")]
-    pub gleam_version: Option<EcoString>,
+    #[serde(
+        default,
+        rename = "gleam",
+        serialize_with = "serialise_range",
+        deserialize_with = "deserialise_range"
+    )]
+    pub gleam_version: Option<pubgrub::range::Range<Version>>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
@@ -97,6 +102,35 @@ pub struct PackageConfig {
     pub target: Target,
     #[serde(default)]
     pub internal_modules: Option<Vec<Glob>>,
+}
+
+pub fn serialise_range<S>(
+    range: Option<pubgrub::range::Range<Version>>,
+    serialiser: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match range {
+        Some(range) => serialiser.serialize_some(&range.to_string()),
+        None => serialiser.serialize_none(),
+    }
+}
+
+pub fn deserialise_range<'de, D>(
+    deserialiser: D,
+) -> Result<Option<pubgrub::range::Range<Version>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match Deserialize::deserialize(deserialiser)? {
+        Some(range_string) => Ok(Some(
+            version::Range::new(range_string)
+                .to_pubgrub()
+                .map_err(serde::de::Error::custom)?,
+        )),
+        None => Ok(None),
+    }
 }
 
 impl PackageConfig {
@@ -183,15 +217,9 @@ impl PackageConfig {
     // Checks to see if the gleam version specified in the config is compatible
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
-        if let Some(required_version) = &self.gleam_version {
+        if let Some(range) = &self.gleam_version {
             let compiler_version =
                 Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
-            let range = hexpm::version::Range::new(required_version.to_string())
-                .to_pubgrub()
-                .map_err(|error| Error::InvalidVersionFormat {
-                    input: required_version.to_string(),
-                    error: error.to_string(),
-                })?;
 
             // We ignore the pre-release and build metadata when checking compatibility
             let mut version_without_pre = compiler_version.clone();
@@ -200,7 +228,7 @@ impl PackageConfig {
             if !range.contains(&version_without_pre) {
                 return Err(Error::IncompatibleCompilerVersion {
                     package: self.name.to_string(),
-                    required_version: required_version.to_string(),
+                    required_version: range.to_string(),
                     gleam_version: COMPILER_VERSION.to_string(),
                 });
             }
