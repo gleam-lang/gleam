@@ -197,6 +197,36 @@
 
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+  - The compiler now provides improved suggestions in the error for an
+    inexhaustive case expression. The following code:
+
+    ```gleam
+    let a = True
+    case a {}
+    ```
+
+    Now produces this error:
+
+    ```
+    error: Inexhaustive patterns
+      ┌─ /src/file.gleam:3:3
+      │
+    3 │   case a {}
+      │   ^^^^^^^^^
+
+    This case expression does not have a pattern for all possible values. If it
+    is run on one of the values without a pattern then it will crash.
+
+    The missing patterns are:
+
+        False
+        True
+    ```
+
+    Whereas before, it would suggest `_` as the only missing pattern.
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Language Server
