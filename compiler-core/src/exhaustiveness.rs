@@ -240,6 +240,7 @@ pub struct Compiler<'a> {
     diagnostics: Diagnostics,
     patterns: Arena<Pattern>,
     environment: &'a Environment<'a>,
+    subject_variables: Vec<Variable>,
 }
 
 impl<'a> Compiler<'a> {
@@ -248,11 +249,18 @@ impl<'a> Compiler<'a> {
             environment,
             patterns,
             variable_id: 0,
+            subject_variables: Vec::new(),
             diagnostics: Diagnostics {
                 missing: false,
                 reachable: Vec::new(),
             },
         }
+    }
+
+    pub fn subject_variable(&mut self, type_: Arc<Type>) -> Variable {
+        let variable = self.new_variable(type_);
+        self.subject_variables.push(variable.clone());
+        variable
     }
 
     pub fn compile(mut self, rows: Vec<Row>) -> Match {
@@ -290,6 +298,33 @@ impl<'a> Compiler<'a> {
     }
 
     fn compile_rows(&mut self, rows: Vec<Row>) -> Decision {
+        // If there are no rows, we get an immediate decision failure,
+        // which gives a pretty unhelpful error message. Instead, we
+        // run one pass of compiling to ensure we don't just suggest `_`
+        if rows.is_empty() {
+            // Even though we run a compile pass, an empty case expression is always
+            // invalid, so we make sure to report than here
+            self.diagnostics.missing = true;
+            let tree = self.compile_cases(
+                self.subject_variables
+                    .first()
+                    .expect("Must have at least one subject")
+                    .clone(),
+                Vec::new(),
+            );
+            match tree {
+                // If there are no known constructors, we simply return failure since that
+                // better describes the state than an empty switch, and allows us to report
+                // `_` as the missing pattern.
+                Decision::Switch(_, cases, _) if cases.is_empty() => Decision::Failure,
+                _ => tree,
+            }
+        } else {
+            self.do_compile_rows(rows)
+        }
+    }
+
+    fn do_compile_rows(&mut self, rows: Vec<Row>) -> Decision {
         if rows.is_empty() {
             self.diagnostics.missing = true;
             return Decision::Failure;
@@ -309,12 +344,34 @@ impl<'a> Compiler<'a> {
             self.diagnostics.reachable.push(row.body.clause_index);
 
             return match row.guard {
-                Some(guard) => Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows))),
+                Some(guard) => {
+                    Decision::Guard(guard, row.body, Box::new(self.do_compile_rows(rows)))
+                }
                 None => Decision::Success(row.body),
             };
         }
 
-        match self.branch_mode(&rows) {
+        let mut counts = HashMap::new();
+        for row in rows.iter() {
+            for col in &row.columns {
+                *counts.entry(col.variable.id).or_insert(0_usize) += 1
+            }
+        }
+
+        let variable = rows
+            .first()
+            .expect("Must have at least one row")
+            .columns
+            .iter()
+            .map(|col| col.variable.clone())
+            .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
+            .expect("The first row must have at least one column");
+
+        self.compile_cases(variable, rows)
+    }
+
+    fn compile_cases(&mut self, variable: Variable, rows: Vec<Row>) -> Decision {
+        match self.branch_mode(variable) {
             BranchMode::Infinite { variable } => {
                 let (cases, fallback) = self.compile_infinite_cases(rows, variable.clone());
                 Decision::Switch(variable, cases, Some(fallback))
@@ -458,10 +515,10 @@ impl<'a> Compiler<'a> {
 
         let cases = raw_cases
             .into_iter()
-            .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
+            .map(|(cons, vars, rows)| Case::new(cons, vars, self.do_compile_rows(rows)))
             .collect();
 
-        (cases, Box::new(self.compile_rows(fallback_rows)))
+        (cases, Box::new(self.do_compile_rows(fallback_rows)))
     }
 
     /// Compiles the cases and sub cases for the constructor located at the
@@ -547,7 +604,7 @@ impl<'a> Compiler<'a> {
 
         cases
             .into_iter()
-            .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
+            .map(|(cons, vars, rows)| Case::new(cons, vars, self.do_compile_rows(rows)))
             .collect()
     }
 
@@ -613,11 +670,11 @@ impl<'a> Compiler<'a> {
 
         Decision::List {
             variable: branch_var,
-            empty: Box::new(self.compile_rows(empty_rows)),
+            empty: Box::new(self.do_compile_rows(empty_rows)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: first_var,
                 rest: rest_var,
-                decision: self.compile_rows(non_empty_rows),
+                decision: self.do_compile_rows(non_empty_rows),
             }),
         }
     }
@@ -701,24 +758,7 @@ impl<'a> Compiler<'a> {
     ///
     /// Panics if there or no rows, or if the first row has no columns.
     ///
-    fn branch_mode(&self, all_rows: &[Row]) -> BranchMode {
-        let mut counts = HashMap::new();
-
-        for row in all_rows {
-            for col in &row.columns {
-                *counts.entry(col.variable.id).or_insert(0_usize) += 1
-            }
-        }
-
-        let variable = all_rows
-            .first()
-            .expect("Must have at least one row")
-            .columns
-            .iter()
-            .map(|col| col.variable.clone())
-            .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
-            .expect("The first row must have at least one column");
-
+    fn branch_mode(&self, variable: Variable) -> BranchMode {
         match collapse_links(variable.type_.clone()).as_ref() {
             Type::Fn { .. } | Type::Var { .. } => BranchMode::Infinite { variable },
 
@@ -763,7 +803,7 @@ impl<'a> Compiler<'a> {
     ///
     /// In a real compiler you'd have to ensure these variables don't conflict
     /// with other variables.
-    pub fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
+    fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
         let var = Variable {
             id: self.variable_id,
             type_,

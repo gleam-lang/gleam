@@ -3332,7 +3332,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut compiler = Compiler::new(self.environment, Arena::new());
         let mut arena = PatternArena::new();
 
-        let subject_variable = compiler.new_variable(subject.clone());
+        let subject_variable = compiler.subject_variable(subject.clone());
 
         let mut rows = Vec::with_capacity(1);
 
@@ -3371,7 +3371,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let subject_variables = subject_types
             .iter()
-            .map(|t| compiler.new_variable(t.clone()))
+            .map(|t| compiler.subject_variable(t.clone()))
             .collect_vec();
 
         let mut rows = Vec::with_capacity(clauses.iter().map(Clause::pattern_count).sum::<usize>());
