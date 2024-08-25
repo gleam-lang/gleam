@@ -273,7 +273,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // Generate warnings for unused items
-        let unused_imports = env.convert_unused_to_warnings(&mut self.problems);
+        env.convert_unused_to_warnings(&mut self.problems);
 
         // Remove imported types and values to create the public interface
         // Private types and values are retained so they can be used in the language
@@ -323,7 +323,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 origin: self.origin,
                 package: self.package_config.name.clone(),
                 is_internal,
-                unused_imports,
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
                 warnings,

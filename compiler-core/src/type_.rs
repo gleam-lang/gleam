@@ -600,7 +600,6 @@ pub struct ModuleInterface {
     pub types_value_constructors: HashMap<EcoString, TypeVariantConstructors>,
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
-    pub unused_imports: Vec<SrcSpan>,
     /// Used for mapping to original source locations on disk
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
@@ -697,7 +696,6 @@ impl ModuleInterface {
             types_value_constructors: Default::default(),
             values: Default::default(),
             accessors: Default::default(),
-            unused_imports: Default::default(),
             is_internal: false,
             line_numbers,
             src_path,
