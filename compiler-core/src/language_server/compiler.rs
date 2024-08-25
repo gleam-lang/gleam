@@ -6,7 +6,7 @@ use crate::{
     analyse::TargetSupport,
     build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
     line_numbers::LineNumbers,
     manifest::Manifest,
@@ -41,7 +41,7 @@ pub struct LspProjectCompiler<IO> {
 
 impl<IO> LspProjectCompiler<IO>
 where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
     pub fn new(
         manifest: Manifest,

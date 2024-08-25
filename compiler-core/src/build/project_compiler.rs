@@ -8,7 +8,7 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
     paths::{self, ProjectPaths},
@@ -121,7 +121,7 @@ pub struct ProjectCompiler<IO> {
 
 impl<IO> ProjectCompiler<IO>
 where
-    IO: CommandExecutor + FileSystemWriter + FileSystemReader + Clone,
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
     pub fn new(
         config: PackageConfig,
@@ -370,6 +370,7 @@ where
             "--paths".into(),
             "../*/ebin".into(),
         ];
+
         let status = self.io.exec(
             REBAR_EXECUTABLE,
             &args,

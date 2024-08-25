@@ -12,7 +12,7 @@ use strum::IntoEnumIterator;
 use crate::{
     ast::{self, Arg, CallArg, Definition, Function, Pattern, Publicity, TypedExpr},
     build::Module,
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
         self, collapse_links, pretty::Printer, AccessorsMap, FieldMap, ModuleInterface,
@@ -93,6 +93,7 @@ where
     // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
         + FileSystemWriter
+        + BeamCompiler
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker

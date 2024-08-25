@@ -12,7 +12,7 @@ use crate::{
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
     dep_tree, error,
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     metadata::ModuleEncoder,
     parse::extra::ModuleExtra,
     paths, type_,
@@ -59,7 +59,7 @@ pub struct PackageCompiler<'a, IO> {
 
 impl<'a, IO> PackageCompiler<'a, IO>
 where
-    IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
+    IO: FileSystemReader + FileSystemWriter + CommandExecutor + BeamCompiler + Clone,
 {
     pub fn new(
         config: &'a PackageConfig,
@@ -208,42 +208,12 @@ where
 
         tracing::debug!("compiling_erlang");
 
-        let escript_path = self
-            .out
-            .join(paths::ARTEFACT_DIRECTORY_NAME)
-            .join("gleam@@compile.erl");
-        if !self.io.is_file(&escript_path) {
-            let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
-            self.io.write(&escript_path, escript_source)?;
-        }
-
-        let mut args = vec![
-            escript_path.to_string(),
-            // Tell the compiler where to find other libraries
-            "--lib".into(),
-            self.lib.to_string(),
-            // Write compiled .beam to ./ebin
-            "--out".into(),
-            self.out.join("ebin").to_string(),
-        ];
-        // Add the list of modules to compile
-        for module in modules {
-            let path = self.out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module);
-            args.push(path.to_string());
-        }
-        // Compile Erlang and Elixir modules
-        let status = self
-            .io
-            .exec("escript", &args, &[], None, self.subprocess_stdio)?;
-
-        if status == 0 {
-            Ok(())
-        } else {
-            Err(Error::ShellCommand {
-                program: "escript".into(),
-                err: None,
-            })
-        }
+        self.io.compile_beam(
+            self.out,
+            self.lib,
+            modules,
+            self.subprocess_stdio,
+        )
     }
 
     fn copy_project_native_files(
