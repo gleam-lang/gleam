@@ -78,7 +78,6 @@ impl ModuleDecoder {
                 type_variants_constructors
             ),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
-            unused_imports: read_vec!(reader.get_unused_imports()?, self, src_span),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
             warnings: vec![],

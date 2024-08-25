@@ -976,7 +976,17 @@ fn code_action_unused_imports(
     actions: &mut Vec<CodeAction>,
 ) {
     let uri = &params.text_document.uri;
-    let unused = &module.ast.type_info.unused_imports;
+    let unused: Vec<&SrcSpan> = module
+        .ast
+        .type_info
+        .warnings
+        .iter()
+        .filter_map(|warning| match warning {
+            type_::Warning::UnusedImportedModuleAlias { location, .. }
+            | type_::Warning::UnusedImportedModule { location, .. } => Some(location),
+            _ => None,
+        })
+        .collect();
 
     if unused.is_empty() {
         return;
