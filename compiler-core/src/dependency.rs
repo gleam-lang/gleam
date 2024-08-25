@@ -19,6 +19,10 @@ pub type ResolutionError = PubGrubError<String, Version>;
 
 type PubgrubRange = pubgrub::range::Range<Version>;
 
+/// Special version range that gets used when adding packages without an explicit
+/// version constraint.
+pub const RANGE_UNCONSTRAINED: &str = ">= 0.0.0";
+
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
     provided_packages: HashMap<EcoString, hexpm::Package>,

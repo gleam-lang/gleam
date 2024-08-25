@@ -121,7 +121,10 @@ pub fn update() -> Result<()> {
 pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
     let Some((package, version)) = package.split_once('@') else {
         // Default to the latest version available.
-        return Ok((package.into(), Requirement::hex(">= 0.0.0")));
+        return Ok((
+            package.into(),
+            Requirement::hex(dependency::RANGE_UNCONSTRAINED),
+        ));
     };
 
     // Parse the major and minor from the provided semantic version.
@@ -182,7 +185,7 @@ fn parse_gleam_add_specifier_non_numeric_version() {
 #[test]
 fn parse_gleam_add_specifier_default() {
     let provided = "some_package";
-    let expected = ">= 0.0.0";
+    let expected = dependency::RANGE_UNCONSTRAINED;
     let (package, version) = parse_gleam_add_specifier(provided).unwrap();
     match &version {
         Requirement::Hex { version: v } => {
@@ -277,7 +280,7 @@ pub fn download<Telem: Telemetry>(
             // If we get a hex dependency of >= 0.0.0 here, we assume the user
             // did not specify a version constraint and we should instead fetch
             // the latest major version.
-            let requirement = if requirement == Requirement::hex(">= 0.0.0") {
+            let requirement = if requirement == Requirement::hex(dependency::RANGE_UNCONSTRAINED) {
                 // Default to the latest major version available.
                 let package = package_fetcher
                     .get_dependencies(package.as_ref())
