@@ -266,9 +266,42 @@ pub fn download<Telem: Telemetry>(
     let mut config = crate::config::read(paths.root_config())?;
     let project_name = config.name.clone();
 
-    // Insert the new packages to add, if it exists
+    // Start event loop so we can run async functions to call the Hex API
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher: Box<dyn dependency::PackageFetcher> =
+        PackageFetcher::boxed(runtime.handle().clone());
+
+    // Insert the new packages to add, if it exists.
     if let Some((packages, dev)) = new_package {
         for (package, requirement) in packages {
+            // If we get a hex dependency of >= 0.0.0 here, we assume the user
+            // did not specify a version constraint and we should instead fetch
+            // the latest major version.
+            let requirement = if requirement == Requirement::hex(">= 0.0.0") {
+                // Default to the latest major version available.
+                let package = package_fetcher
+                    .get_dependencies(package.as_ref())
+                    .map_err(|e| Error::Hex(e.to_string()))?;
+
+                let latest_release = package
+                    .releases
+                    .iter()
+                    .max_by_key(|release| &release.version);
+
+                if let Some(latest_release) = latest_release {
+                    let major = latest_release.version.major;
+                    let range_str = format!(">= {}.0.0 and < {}.0.0", major, major + 1);
+                    Requirement::hex(&range_str)
+                } else {
+                    // we got an empty list of releases back from  Hex.
+                    // Add the package without a constraint; if it really can't
+                    // be resolved, this will error again later.
+                    requirement
+                }
+            } else {
+                requirement
+            };
+
             if dev {
                 _ = config.dev_dependencies.insert(package, requirement);
             } else {
@@ -276,9 +309,6 @@ pub fn download<Telem: Telemetry>(
             };
         }
     }
-
-    // Start event loop so we can run async functions to call the Hex API
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
 
     // Determine what versions we need
     let (manifest_updated, manifest) = get_manifest(
