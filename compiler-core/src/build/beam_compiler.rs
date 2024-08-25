@@ -69,7 +69,7 @@ impl BeamCompiler {
         })?;
 
         let mut buf = String::new();
-        while let Ok(_) = inner.stdout.read_line(&mut buf) {
+        while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
             match buf.trim() {
                 "ok" => return Ok(()),
                 "err" => {

@@ -22,8 +22,8 @@ use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Ur
 use crate::{
     config::PackageConfig,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        WrappedReader,
+        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
+        FileSystemWriter, ReadDir, WrappedReader,
     },
     language_server::{
         engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
@@ -233,7 +233,7 @@ impl BeamCompiler for LanguageServerTestIO {
         out: &Utf8Path,
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
-        stdio: crate::io::Stdio
+        stdio: crate::io::Stdio,
     ) -> Result<()> {
         panic!(
             "compile_beam({:?}, {:?}, {:?}, {:?}) is not implemented",
@@ -241,7 +241,6 @@ impl BeamCompiler for LanguageServerTestIO {
         )
     }
 }
-
 
 impl MakeLocker for LanguageServerTestIO {
     fn make_locker(
