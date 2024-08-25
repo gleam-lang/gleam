@@ -1,6 +1,11 @@
 use super::*;
 use std::ops::Deref;
-use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, HashSet},
+    rc::Rc,
+    time::Duration,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -300,5 +305,17 @@ impl CommandExecutor for InMemoryFileSystem {
         _stdio: Stdio,
     ) -> Result<i32, Error> {
         Ok(0) // Always succeed.
+    }
+}
+
+impl BeamCompiler for InMemoryFileSystem {
+    fn compile_beam(
+        &self,
+        _out: &Utf8Path,
+        _lib: &Utf8Path,
+        _modules: &HashSet<Utf8PathBuf>,
+        _stdio: Stdio,
+    ) -> Result<(), Error> {
+        Ok(()) // Always succeed.
     }
 }

@@ -1,11 +1,12 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     io::{
-        memory::InMemoryFileSystem, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        Stdio, WrappedReader,
+        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
+        FileSystemWriter, ReadDir, Stdio, WrappedReader,
     },
     Error, Result,
 };
+use std::collections::HashSet;
 
 #[derive(Clone, Debug, Default)]
 pub struct WasmFileSystem {
@@ -28,6 +29,18 @@ impl CommandExecutor for WasmFileSystem {
         _stdio: Stdio,
     ) -> Result<i32, Error> {
         Ok(0) // Always succeed.
+    }
+}
+
+impl BeamCompiler for WasmFileSystem {
+    fn compile_beam(
+        &self,
+        _out: &Utf8Path,
+        _lib: &Utf8Path,
+        _modules: &HashSet<Utf8PathBuf>,
+        _stdio: Stdio,
+    ) -> Result<(), Error> {
+        Ok(()) // Always succeed.
     }
 }
 
