@@ -5,7 +5,18 @@
 
 -record(arguments, {lib = "./", out = "./", modules = []}).
 
-main(Args) ->
+main(_) -> main().
+
+main() ->
+    case io:get_line("") of
+        eof -> ok;
+        Line ->
+            Args = string:split(string:trim(Line), [31], all), % Unit Separator
+            erlang:display(run(Args)),
+            main()
+    end.
+
+run(Args) ->
     #arguments{out = Out, lib = Lib, modules = Modules} = parse(Args),
     IsElixirModule = fun(Module) ->
         filename:extension(Module) =:= ".ex"
@@ -19,9 +30,10 @@ main(Args) ->
         true -> compile_elixir(ElixirModules, Out);
         false -> {false, []}
     end,
+    ok = del_lib_from_erlang_path(Lib),
     case ErlangOk and ElixirOk of
         true -> ok;
-        false -> erlang:halt(1)
+        false -> err
     end.
 
 compile_erlang(Modules, Out) ->
@@ -133,6 +145,9 @@ do_compile_elixir(Modules, Out) ->
 
 add_lib_to_erlang_path(Lib) ->
     code:add_paths(filelib:wildcard([Lib, "/*/ebin"])).
+
+del_lib_from_erlang_path(Lib) ->
+    code:del_paths(filelib:wildcard([Lib, "/*/ebin"])).
 
 parse(Args) ->
     parse(Args, #arguments{}).
