@@ -208,12 +208,8 @@ where
 
         tracing::debug!("compiling_erlang");
 
-        self.io.compile_beam(
-            self.out,
-            self.lib,
-            modules,
-            self.subprocess_stdio,
-        )
+        self.io
+            .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
     }
 
     fn copy_project_native_files(
