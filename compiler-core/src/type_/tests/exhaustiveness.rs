@@ -1166,3 +1166,33 @@ case list {}
 "
     );
 }
+
+#[test]
+fn empty_case_of_int() {
+    assert_error!(
+        "
+let num = 24
+case num {}
+"
+    );
+}
+
+#[test]
+fn empty_case_of_float() {
+    assert_error!(
+        "
+let age = 10.6
+case age {}
+"
+    );
+}
+
+#[test]
+fn empty_case_of_string() {
+    assert_error!(
+        r#"
+let name = "John Doe"
+case name {}
+"#
+    );
+}
