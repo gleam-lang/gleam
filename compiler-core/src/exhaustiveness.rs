@@ -265,7 +265,7 @@ impl<'a> Compiler<'a> {
 
     pub fn compile(mut self, rows: Vec<Row>) -> Match {
         Match {
-            tree: self.compile_rows(rows),
+            tree: self.check_empty_rows(rows),
             diagnostics: self.diagnostics,
         }
     }
@@ -297,7 +297,7 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn compile_rows(&mut self, rows: Vec<Row>) -> Decision {
+    fn check_empty_rows(&mut self, rows: Vec<Row>) -> Decision {
         // If there are no rows, we get an immediate decision failure,
         // which gives a pretty unhelpful error message. Instead, we
         // run one pass of compiling to ensure we don't just suggest `_`
@@ -305,7 +305,7 @@ impl<'a> Compiler<'a> {
             // Even though we run a compile pass, an empty case expression is always
             // invalid, so we make sure to report that here
             self.diagnostics.missing = true;
-            let tree = self.compile_cases(
+            let tree = self.compile_rows_for_variable(
                 self.subject_variables
                     .first()
                     .expect("Must have at least one subject")
@@ -320,11 +320,11 @@ impl<'a> Compiler<'a> {
                 _ => tree,
             }
         } else {
-            self.do_compile_rows(rows)
+            self.compile_rows(rows)
         }
     }
 
-    fn do_compile_rows(&mut self, rows: Vec<Row>) -> Decision {
+    fn compile_rows(&mut self, rows: Vec<Row>) -> Decision {
         if rows.is_empty() {
             self.diagnostics.missing = true;
             return Decision::Failure;
@@ -344,9 +344,7 @@ impl<'a> Compiler<'a> {
             self.diagnostics.reachable.push(row.body.clause_index);
 
             return match row.guard {
-                Some(guard) => {
-                    Decision::Guard(guard, row.body, Box::new(self.do_compile_rows(rows)))
-                }
+                Some(guard) => Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows))),
                 None => Decision::Success(row.body),
             };
         }
@@ -368,10 +366,10 @@ impl<'a> Compiler<'a> {
             .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
             .expect("The first row must have at least one column");
 
-        self.compile_cases(variable, rows)
+        self.compile_rows_for_variable(variable, rows)
     }
 
-    fn compile_cases(&mut self, variable: Variable, rows: Vec<Row>) -> Decision {
+    fn compile_rows_for_variable(&mut self, variable: Variable, rows: Vec<Row>) -> Decision {
         match self.branch_mode(variable) {
             BranchMode::Infinite { variable } => {
                 let (cases, fallback) = self.compile_infinite_cases(rows, variable.clone());
@@ -516,10 +514,10 @@ impl<'a> Compiler<'a> {
 
         let cases = raw_cases
             .into_iter()
-            .map(|(cons, vars, rows)| Case::new(cons, vars, self.do_compile_rows(rows)))
+            .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
             .collect();
 
-        (cases, Box::new(self.do_compile_rows(fallback_rows)))
+        (cases, Box::new(self.compile_rows(fallback_rows)))
     }
 
     /// Compiles the cases and sub cases for the constructor located at the
@@ -605,7 +603,7 @@ impl<'a> Compiler<'a> {
 
         cases
             .into_iter()
-            .map(|(cons, vars, rows)| Case::new(cons, vars, self.do_compile_rows(rows)))
+            .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
             .collect()
     }
 
@@ -671,11 +669,11 @@ impl<'a> Compiler<'a> {
 
         Decision::List {
             variable: branch_var,
-            empty: Box::new(self.do_compile_rows(empty_rows)),
+            empty: Box::new(self.compile_rows(empty_rows)),
             non_empty: Box::new(NonEmptyListDecision {
                 first: first_var,
                 rest: rest_var,
-                decision: self.do_compile_rows(non_empty_rows),
+                decision: self.compile_rows(non_empty_rows),
             }),
         }
     }
