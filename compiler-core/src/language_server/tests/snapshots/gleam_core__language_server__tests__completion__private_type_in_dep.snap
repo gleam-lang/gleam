@@ -1,9 +1,9 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 454
 expression: import dep
 ---
 |import dep
 
 
 ----- Completion content -----
-[]

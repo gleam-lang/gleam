@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 477
 expression: "\npub opaque type Wibble {\n  Wobble\n}\n"
 ---
 |
@@ -9,54 +10,10 @@ pub opaque type Wibble {
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "Wobble",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            EnumMember,
-        ),
-        detail: Some(
-            "Wibble",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "2_Wobble",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "Wobble",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+Wobble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   2_Wobble
+  desc:   app
+  edits:
+    [1:0-1:0]: "Wobble"

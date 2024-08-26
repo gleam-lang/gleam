@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 273
 expression: "\nimport dep\n"
 ---
 |
@@ -7,54 +8,10 @@ import dep
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "dep.wobble",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            Function,
-        ),
-        detail: Some(
-            "fn() -> Nil",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "3_dep.wobble",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.wobble",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+dep.wobble
+  kind:   Function
+  detail: fn() -> Nil
+  sort:   3_dep.wobble
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.wobble"

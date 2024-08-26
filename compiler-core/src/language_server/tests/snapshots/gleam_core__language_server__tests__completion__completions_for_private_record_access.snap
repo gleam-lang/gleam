@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 1362
 expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n  Wobble(wabble: Int, wobble: Int)\n}\n\nfn fun() {\n  let wibble = Wibble(1, 2)\n  wibble.wobble\n}\n"
 ---
 type Wibble {
@@ -14,31 +15,7 @@ fn fun() {
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "wobble",
-        label_details: None,
-        kind: Some(
-            Field,
-        ),
-        detail: Some(
-            "Int",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "1_wobble",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+wobble
+  kind:   Field
+  detail: Int
+  sort:   1_wobble

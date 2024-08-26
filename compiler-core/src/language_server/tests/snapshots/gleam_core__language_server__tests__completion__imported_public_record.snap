@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 398
 expression: "\nimport dep\n"
 ---
 |
@@ -7,54 +8,10 @@ import dep
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "dep.Box",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            Constructor,
-        ),
-        detail: Some(
-            "fn(Int) -> Box",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "3_dep.Box",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.Box",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+dep.Box
+  kind:   Constructor
+  detail: fn(Int) -> Box
+  sort:   3_dep.Box
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.Box"

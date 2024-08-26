@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 234
 expression: "\npub type Box {\n/// Hello\n  Box(Int, Int, Float)\n}\n"
 ---
 |
@@ -10,61 +11,11 @@ pub type Box {
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "Box",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            Constructor,
-        ),
-        detail: Some(
-            "fn(Int, Int, Float) -> Box",
-        ),
-        documentation: Some(
-            MarkupContent(
-                MarkupContent {
-                    kind: Markdown,
-                    value: " Hello\n",
-                },
-            ),
-        ),
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "2_Box",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 1,
-                            character: 0,
-                        },
-                    },
-                    new_text: "Box",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+Box
+  kind:   Constructor
+  detail: fn(Int, Int, Float) -> Box
+  sort:   2_Box
+  desc:   app
+  docs:   " Hello\n"
+  edits:
+    [1:0-1:0]: "Box"

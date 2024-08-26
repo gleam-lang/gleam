@@ -1,72 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 364
 expression: ""
 ---
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "dep.wobble",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "dep",
-                ),
-            },
-        ),
-        kind: Some(
-            Function,
-        ),
-        detail: Some(
-            "fn() -> Nil",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "5_dep.wobble",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 2,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 2,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.wobble",
-                },
-            ),
-        ),
-        additional_text_edits: Some(
-            [
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 0,
-                        },
-                    },
-                    new_text: "import dep\n",
-                },
-            ],
-        ),
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+dep.wobble
+  kind:   Function
+  detail: fn() -> Nil
+  sort:   5_dep.wobble
+  desc:   dep
+  edits:
+    [2:0-2:0]: "dep.wobble"
+    [0:0-0:0]: "import dep\n"

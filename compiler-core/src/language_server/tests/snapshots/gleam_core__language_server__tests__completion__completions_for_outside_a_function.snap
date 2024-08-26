@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 142
 expression: "\n\npub fn main() {\n  0\n}"
 ---
 |
@@ -10,4 +11,3 @@ pub fn main() {
 
 
 ----- Completion content -----
-[]

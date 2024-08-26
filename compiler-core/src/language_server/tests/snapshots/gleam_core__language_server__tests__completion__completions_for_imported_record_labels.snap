@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 1421
 expression: "\nimport dep\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.Wibble()\n}\n"
 ---
 import dep
@@ -10,155 +11,25 @@ fn fun() { // completion inside parens below includes labels
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "dep.Wibble",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            Constructor,
-        ),
-        detail: Some(
-            "fn(String, Int) -> Wibble",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "3_dep.Wibble",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 4,
-                            character: 26,
-                        },
-                        end: Position {
-                            line: 4,
-                            character: 26,
-                        },
-                    },
-                    new_text: "dep.Wibble",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "fun",
-        label_details: Some(
-            CompletionItemLabelDetails {
-                detail: None,
-                description: Some(
-                    "app",
-                ),
-            },
-        ),
-        kind: Some(
-            Function,
-        ),
-        detail: Some(
-            "fn() -> Wibble",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "2_fun",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 4,
-                            character: 26,
-                        },
-                        end: Position {
-                            line: 4,
-                            character: 26,
-                        },
-                    },
-                    new_text: "fun",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "wibble:",
-        label_details: None,
-        kind: Some(
-            Field,
-        ),
-        detail: Some(
-            "String",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "0_wibble:",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "wobble:",
-        label_details: None,
-        kind: Some(
-            Field,
-        ),
-        detail: Some(
-            "Int",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "0_wobble:",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+dep.Wibble
+  kind:   Constructor
+  detail: fn(String, Int) -> Wibble
+  sort:   3_dep.Wibble
+  desc:   app
+  edits:
+    [4:26-4:26]: "dep.Wibble"
+fun
+  kind:   Function
+  detail: fn() -> Wibble
+  sort:   2_fun
+  desc:   app
+  edits:
+    [4:26-4:26]: "fun"
+wibble:
+  kind:   Field
+  detail: String
+  sort:   0_wibble:
+wobble:
+  kind:   Field
+  detail: Int
+  sort:   0_wobble:

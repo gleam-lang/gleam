@@ -28,9 +28,9 @@ macro_rules! assert_completion {
         let src = $project.src;
         let result = completion_with_prefix($project, "");
         let output = format!(
-            "{}\n\n----- Completion content -----\n{:#?}",
+            "{}\n\n----- Completion content -----\n{}",
             show_complete(src, Position::new(0, 0)),
-            result
+            format_completion_results(result)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
@@ -38,9 +38,9 @@ macro_rules! assert_completion {
         let src = $project.src;
         let result = completion($project, $position);
         let output = format!(
-            "{}\n\n----- Completion content -----\n{:#?}",
+            "{}\n\n----- Completion content -----\n{}",
             show_complete(src, $position),
-            result
+            format_completion_results(result)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
@@ -53,12 +53,108 @@ macro_rules! assert_completion_with_prefix {
         let result = completion_with_prefix($project, $prefix);
         let line = 1 + $prefix.lines().count();
         let output = format!(
-            "{}\n\n----- Completion content -----\n{:#?}",
+            "{}\n\n----- Completion content -----\n{}",
             show_complete(src, Position::new(line as u32, 0)),
-            result
+            format_completion_results(result)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
+}
+
+fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
+    use std::fmt::Write;
+    let mut buffer: EcoString = "".into();
+
+    for CompletionItem {
+        label,
+        label_details,
+        kind,
+        detail,
+        documentation,
+        deprecated,
+        preselect,
+        sort_text,
+        filter_text,
+        insert_text,
+        insert_text_format,
+        insert_text_mode,
+        text_edit,
+        additional_text_edits,
+        command,
+        commit_characters,
+        data,
+        tags,
+    } in completions
+    {
+        assert!(deprecated.is_none());
+        assert!(preselect.is_none());
+        assert!(filter_text.is_none());
+        assert!(insert_text.is_none());
+        assert!(insert_text_format.is_none());
+        assert!(insert_text_mode.is_none());
+        assert!(command.is_none());
+        assert!(commit_characters.is_none());
+        assert!(data.is_none());
+        assert!(tags.is_none());
+
+        buffer.push_str(&label);
+
+        if let Some(kind) = kind {
+            write!(buffer, "\n  kind:   {:?}", kind).unwrap();
+        }
+
+        if let Some(detail) = detail {
+            write!(buffer, "\n  detail: {}", detail).unwrap();
+        }
+
+        if let Some(sort_text) = sort_text {
+            write!(buffer, "\n  sort:   {}", sort_text).unwrap();
+        }
+
+        if let Some(label_details) = label_details {
+            assert!(label_details.detail.is_none());
+            if let Some(desc) = label_details.description {
+                write!(buffer, "\n  desc:   {}", desc).unwrap();
+            }
+        }
+
+        if let Some(documentation) = documentation {
+            let lsp_types::Documentation::MarkupContent(m) = documentation else {
+                panic!("unexpected docs in test {:?}", documentation);
+            };
+            match m.kind {
+                lsp_types::MarkupKind::Markdown => (),
+                lsp_types::MarkupKind::PlainText => {
+                    panic!("unexpected docs markup kind {:?}", m.kind)
+                }
+            };
+            write!(buffer, "\n  docs:   {:?}", m.value).unwrap();
+        }
+
+        let edit = |buffer: &mut EcoString, e: lsp_types::TextEdit| {
+            let a = e.range.start.line;
+            let b = e.range.start.character;
+            let c = e.range.start.line;
+            let d = e.range.start.character;
+            write!(buffer, "\n    [{a}:{b}-{c}:{d}]: {:?}", e.new_text).unwrap();
+        };
+
+        if let Some(text_edit) = text_edit {
+            let lsp_types::CompletionTextEdit::Edit(e) = text_edit else {
+                panic!("unexpected text edit in test {:?}", text_edit);
+            };
+            buffer.push_str("\n  edits:");
+            edit(&mut buffer, e);
+        }
+
+        for e in additional_text_edits.unwrap_or_default() {
+            edit(&mut buffer, e);
+        }
+
+        buffer.push('\n');
+    }
+
+    buffer
 }
 
 fn completion(tester: TestProject<'_>, position: Position) -> Vec<CompletionItem> {

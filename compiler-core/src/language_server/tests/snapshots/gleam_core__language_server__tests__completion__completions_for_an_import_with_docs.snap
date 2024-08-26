@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 985
 expression: "import gleam\n\npub fn main() {\n  0\n}"
 ---
 import gle|am
@@ -10,43 +11,7 @@ pub fn main() {
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "dep",
-        label_details: None,
-        kind: Some(
-            Module,
-        ),
-        detail: None,
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: None,
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 0,
-                            character: 7,
-                        },
-                        end: Position {
-                            line: 0,
-                            character: 12,
-                        },
-                    },
-                    new_text: "dep",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+dep
+  kind:   Module
+  edits:
+    [0:7-0:7]: "dep"

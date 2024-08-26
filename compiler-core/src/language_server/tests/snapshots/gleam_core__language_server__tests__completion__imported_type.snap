@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 566
 expression: "import dep\n\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
 import dep
@@ -12,281 +13,45 @@ pub fn wibble(
 
 
 ----- Completion content -----
-[
-    CompletionItem {
-        label: "BitArray",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_BitArray",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "Bool",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_Bool",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "Float",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_Float",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "Int",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_Int",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "List",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_List",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "Nil",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_Nil",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "Result",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_Result",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "String",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_String",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "UtfCodepoint",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "4_UtfCodepoint",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: None,
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-    CompletionItem {
-        label: "dep.Zoo",
-        label_details: None,
-        kind: Some(
-            Class,
-        ),
-        detail: Some(
-            "Type",
-        ),
-        documentation: None,
-        deprecated: None,
-        preselect: None,
-        sort_text: Some(
-            "3_dep.Zoo",
-        ),
-        filter_text: None,
-        insert_text: None,
-        insert_text_format: None,
-        insert_text_mode: None,
-        text_edit: Some(
-            Edit(
-                TextEdit {
-                    range: Range {
-                        start: Position {
-                            line: 3,
-                            character: 0,
-                        },
-                        end: Position {
-                            line: 3,
-                            character: 0,
-                        },
-                    },
-                    new_text: "dep.Zoo",
-                },
-            ),
-        ),
-        additional_text_edits: None,
-        command: None,
-        commit_characters: None,
-        data: None,
-        tags: None,
-    },
-]
+BitArray
+  kind:   Class
+  detail: Type
+  sort:   4_BitArray
+Bool
+  kind:   Class
+  detail: Type
+  sort:   4_Bool
+Float
+  kind:   Class
+  detail: Type
+  sort:   4_Float
+Int
+  kind:   Class
+  detail: Type
+  sort:   4_Int
+List
+  kind:   Class
+  detail: Type
+  sort:   4_List
+Nil
+  kind:   Class
+  detail: Type
+  sort:   4_Nil
+Result
+  kind:   Class
+  detail: Type
+  sort:   4_Result
+String
+  kind:   Class
+  detail: Type
+  sort:   4_String
+UtfCodepoint
+  kind:   Class
+  detail: Type
+  sort:   4_UtfCodepoint
+dep.Zoo
+  kind:   Class
+  detail: Type
+  sort:   3_dep.Zoo
+  edits:
+    [3:0-3:0]: "dep.Zoo"
