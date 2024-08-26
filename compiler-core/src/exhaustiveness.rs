@@ -303,7 +303,7 @@ impl<'a> Compiler<'a> {
         // run one pass of compiling to ensure we don't just suggest `_`
         if rows.is_empty() {
             // Even though we run a compile pass, an empty case expression is always
-            // invalid, so we make sure to report than here
+            // invalid, so we make sure to report that here
             self.diagnostics.missing = true;
             let tree = self.compile_cases(
                 self.subject_variables
@@ -351,6 +351,7 @@ impl<'a> Compiler<'a> {
             };
         }
 
+        // Get the most referred to variable across all rows
         let mut counts = HashMap::new();
         for row in rows.iter() {
             for col in &row.columns {
@@ -360,7 +361,7 @@ impl<'a> Compiler<'a> {
 
         let variable = rows
             .first()
-            .expect("Must have at least one row")
+            .expect("Must have at least one row, otherwise we don't reach this point")
             .columns
             .iter()
             .map(|col| col.variable.clone())
@@ -751,13 +752,8 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    /// Given a row, returns the kind of branch that is referred to the
-    /// most across all rows.
-    ///
-    /// # Panics
-    ///
-    /// Panics if there or no rows, or if the first row has no columns.
-    ///
+    /// Given a variable, returns the kind of branch associated with
+    /// that variable.
     fn branch_mode(&self, variable: Variable) -> BranchMode {
         match collapse_links(variable.type_.clone()).as_ref() {
             Type::Fn { .. } | Type::Var { .. } => BranchMode::Infinite { variable },
