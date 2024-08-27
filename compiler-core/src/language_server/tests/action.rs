@@ -1541,6 +1541,25 @@ pub fn main() {
     );
 }
 
+#[test]
+fn import_module_from_pattern() {
+    let src = "
+pub fn main(res) {
+  case res {
+    result.Ok(_) -> Nil
+    result.Error(_) -> Nil
+  }
+}
+";
+
+    assert_code_action!(
+        "Import `result`",
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub type Result(v, e) { Ok(v) Error(e) }"),
+        find_position_of("result").select_until(find_position_of("."))
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

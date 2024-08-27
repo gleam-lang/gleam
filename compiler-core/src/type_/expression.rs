@@ -2265,8 +2265,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             TypedExpr::ModuleSelect {
                 module_alias,
                 label,
+                location,
                 ..
-            } => (Some(module_alias), label),
+            } => (Some((module_alias, location)), label),
 
             TypedExpr::Var { name, .. } => (None, name),
 
@@ -2279,8 +2280,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_constructor = self
             .environment
-            .get_value_constructor(module.as_ref(), &name)
-            .map_err(|e| convert_get_value_constructor_error(e, location))?
+            .get_value_constructor(module.as_ref().map(|(module, _)| module), &name)
+            .map_err(|e| {
+                convert_get_value_constructor_error(
+                    e,
+                    location,
+                    module.as_ref().map(|(_, location)| *location),
+                )
+            })?
             .clone();
 
         // It must be a record with a field map for us to be able to update it
@@ -2633,7 +2640,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // Potentially this could be improved later
                 match self
                     .get_field_map(&fun)
-                    .map_err(|e| convert_get_value_constructor_error(e, location))?
+                    .map_err(|e| convert_get_value_constructor_error(e, location, None))?
                 {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
                     Some(field_map) => field_map.reorder(&mut args, location)?,
@@ -2951,7 +2958,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Check to see if the function accepts labelled arguments
         let field_map = self
             .get_field_map(&fun)
-            .map_err(|e| convert_get_value_constructor_error(e, location))
+            .map_err(|e| convert_get_value_constructor_error(e, location, None))
             .and_then(|field_map| {
                 match field_map {
                     // The fun has a field map so labelled arguments may be present and need to be reordered.
