@@ -221,6 +221,7 @@ pub struct Diagnostics {
 pub struct Match {
     pub tree: Decision,
     pub diagnostics: Diagnostics,
+    pub subject_variables: Vec<Variable>,
 }
 
 impl Match {
@@ -267,6 +268,7 @@ impl<'a> Compiler<'a> {
         Match {
             tree: self.check_empty_rows(rows),
             diagnostics: self.diagnostics,
+            subject_variables: self.subject_variables,
         }
     }
 

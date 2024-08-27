@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ecow::EcoString;
 
-use super::missing_patterns::Term;
+use super::{missing_patterns::Term, Variable};
 
 #[derive(Debug, Default)]
 pub struct ValueNames {
@@ -160,19 +160,31 @@ impl<'a> Printer<'a> {
         Printer { names }
     }
 
-    pub fn print_term(
-        &mut self,
-        term: &Term,
+    pub fn print_terms(
+        &self,
+        subjects: &[Variable],
         terms: &[Term],
         mapping: &HashMap<usize, usize>,
     ) -> EcoString {
         let mut buffer = EcoString::new();
-        self.print(term, terms, mapping, &mut buffer);
+        for (i, subject) in subjects.iter().enumerate() {
+            if i != 0 {
+                buffer.push_str(", ");
+            }
+
+            match mapping.get(&subject.id) {
+                Some(&index) => {
+                    let term = terms.get(index).expect("Term must exist");
+                    self.print(term, terms, mapping, &mut buffer);
+                }
+                None => buffer.push('_'),
+            }
+        }
         buffer
     }
 
     fn print(
-        &mut self,
+        &self,
         term: &Term,
         terms: &[Term],
         mapping: &HashMap<usize, usize>,
@@ -252,7 +264,7 @@ impl<'a> Printer<'a> {
     }
 
     fn print_list(
-        &mut self,
+        &self,
         term: &Term,
         terms: &[Term],
         mapping: &HashMap<usize, usize>,
@@ -311,13 +323,13 @@ mod tests {
         }
     }
 
-    fn get_terms_and_mapping(terms: Vec<Term>) -> (Vec<Term>, HashMap<usize, usize>) {
+    fn get_mapping(terms: &[Term]) -> HashMap<usize, usize> {
         let mut mapping: HashMap<usize, usize> = HashMap::new();
 
         for (index, term) in terms.iter().enumerate() {
             _ = mapping.insert(term.variable().id, index);
         }
-        (terms, mapping)
+        mapping
     }
 
     #[test]
@@ -326,19 +338,20 @@ mod tests {
 
         names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
 
-        let mut printer = Printer::new(&mut names);
+        let printer = Printer::new(&names);
 
+        let subjects = &[make_variable(0)];
         let term = Term::Variant {
-            variable: make_variable(0),
+            variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
             arguments: Vec::new(),
         };
 
-        assert_eq!(
-            printer.print_term(&term, &Vec::new(), &HashMap::new()),
-            "Wibble"
-        );
+        let terms = &[term];
+        let mapping = get_mapping(terms);
+
+        assert_eq!(printer.print_terms(subjects, terms, &mapping), "Wibble");
     }
 
     #[test]
@@ -347,25 +360,31 @@ mod tests {
 
         names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
 
-        let mut printer = Printer::new(&mut names);
+        let printer = Printer::new(&names);
 
         let var1 = make_variable(1);
 
         let var2 = make_variable(2);
 
+        let subjects = &[make_variable(0)];
         let term = Term::Variant {
-            variable: make_variable(0),
+            variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
             arguments: vec![var1.clone(), var2.clone()],
         };
 
-        let (terms, mapping) = get_terms_and_mapping(vec![
+        let terms = &[
+            term,
             Term::EmptyList { variable: var1 },
             Term::Infinite { variable: var2 },
-        ]);
+        ];
+        let mapping = get_mapping(terms);
 
-        assert_eq!(printer.print_term(&term, &terms, &mapping), "Wibble([], _)");
+        assert_eq!(
+            printer.print_terms(subjects, terms, &mapping),
+            "Wibble([], _)"
+        );
     }
 
     #[test]
@@ -374,17 +393,21 @@ mod tests {
 
         names.imported_module("mod".into(), "shapes".into());
 
-        let mut printer = Printer::new(&mut names);
+        let printer = Printer::new(&names);
 
+        let subjects = &[make_variable(0)];
         let term = Term::Variant {
-            variable: make_variable(0),
+            variable: subjects[0].clone(),
             name: "Rectangle".into(),
             module: "mod".into(),
             arguments: Vec::new(),
         };
 
+        let terms = &[term];
+        let mapping = get_mapping(terms);
+
         assert_eq!(
-            printer.print_term(&term, &Vec::new(), &HashMap::new()),
+            printer.print_terms(subjects, terms, &mapping),
             "shapes.Rectangle"
         );
     }
@@ -395,20 +418,22 @@ mod tests {
 
         names.named_constructor_in_scope("regex".into(), "Regex".into(), "Regex".into());
 
-        let mut printer = Printer::new(&mut names);
+        let printer = Printer::new(&names);
 
         let arg = make_variable(1);
 
+        let subjects = &[make_variable(0)];
         let term = Term::Variant {
-            variable: make_variable(0),
+            variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
             arguments: vec![arg.clone()],
         };
 
-        let (terms, mapping) = get_terms_and_mapping(vec![Term::Infinite { variable: arg }]);
+        let terms = &[term, Term::Infinite { variable: arg }];
+        let mapping = get_mapping(terms);
 
-        assert_eq!(printer.print_term(&term, &terms, &mapping), "Regex(_)");
+        assert_eq!(printer.print_terms(subjects, terms, &mapping), "Regex(_)");
     }
 
     #[test]
@@ -418,25 +443,30 @@ mod tests {
         names.named_constructor_in_scope("regex".into(), "Regex".into(), "Reg".into());
         names.named_constructor_in_scope("gleam".into(), "None".into(), "None".into());
 
-        let mut printer = Printer::new(&mut names);
+        let printer = Printer::new(&names);
 
         let arg = make_variable(1);
 
+        let subjects = &[make_variable(0)];
         let term = Term::Variant {
-            variable: make_variable(0),
+            variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
             arguments: vec![arg.clone()],
         };
 
-        let (terms, mapping) = get_terms_and_mapping(vec![Term::Variant {
-            variable: arg,
-            name: "None".into(),
-            module: "gleam".into(),
-            arguments: vec![],
-        }]);
+        let terms = &[
+            term,
+            Term::Variant {
+                variable: arg,
+                name: "None".into(),
+                module: "gleam".into(),
+                arguments: vec![],
+            },
+        ];
+        let mapping = get_mapping(terms);
 
-        assert_eq!(printer.print_term(&term, &terms, &mapping), "Reg(None)");
+        assert_eq!(printer.print_terms(subjects, terms, &mapping), "Reg(None)");
     }
 
     #[test]
@@ -445,19 +475,21 @@ mod tests {
 
         names.named_constructor_in_scope("module".into(), "Type".into(), "Type".into());
 
-        let mut printer = Printer::new(&mut names);
+        let printer = Printer::new(&names);
 
         let var1 = make_variable(1);
         let var2 = make_variable(2);
         let var3 = make_variable(3);
 
+        let subjects = &[make_variable(0)];
         let term = Term::List {
-            variable: make_variable(0),
+            variable: subjects[0].clone(),
             first: var1.clone(),
             rest: var2.clone(),
         };
 
-        let (terms, mapping) = get_terms_and_mapping(vec![
+        let terms = &[
+            term,
             Term::Variant {
                 variable: var1,
                 name: "Type".into(),
@@ -467,11 +499,48 @@ mod tests {
             Term::List {
                 variable: var2,
                 first: var3.clone(),
-                rest: make_variable(0),
+                rest: make_variable(4),
             },
             Term::Infinite { variable: var3 },
-        ]);
+        ];
+        let mapping = get_mapping(terms);
 
-        assert_eq!(printer.print_term(&term, &terms, &mapping), "[Type, _, ..]");
+        assert_eq!(
+            printer.print_terms(subjects, terms, &mapping),
+            "[Type, _, ..]"
+        );
+    }
+
+    #[test]
+    fn test_multi_pattern() {
+        let mut names = ValueNames::new();
+
+        names.named_constructor_in_scope("gleam".into(), "Ok".into(), "Ok".into());
+        names.named_constructor_in_scope("gleam".into(), "False".into(), "False".into());
+
+        let printer = Printer::new(&names);
+
+        let subjects = &[make_variable(0), make_variable(1), make_variable(2)];
+
+        let terms = &[
+            Term::Variant {
+                variable: subjects[0].clone(),
+                name: "Ok".into(),
+                module: "gleam".into(),
+                arguments: vec![make_variable(3)],
+            },
+            Term::Variant {
+                variable: subjects[2].clone(),
+                name: "False".into(),
+                module: "gleam".into(),
+                arguments: Vec::new(),
+            },
+        ];
+        let mapping = get_mapping(terms);
+
+        assert_eq!(
+            printer.print_terms(subjects, terms, &mapping),
+            "Ok(_), _, False"
+        );
     }
 }

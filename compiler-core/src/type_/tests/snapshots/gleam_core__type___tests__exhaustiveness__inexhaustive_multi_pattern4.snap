@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\nlet a = 12\nlet b = 3.14\nlet c = False\ncase a, b, c {\n  1, 2.0, True -> Nil\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:5:1
+  │  
+5 │ ╭ case a, b, c {
+6 │ │   1, 2.0, True -> Nil
+7 │ │ }
+  │ ╰─^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _, _, False
+    _, _, True

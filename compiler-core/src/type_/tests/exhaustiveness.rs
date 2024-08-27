@@ -1196,3 +1196,81 @@ case name {}
 "#
     );
 }
+
+#[test]
+fn empty_case_of_multi_pattern() {
+    assert_error!(
+        "
+let a = Ok(1)
+let b = True
+case a, b {}
+"
+    );
+}
+
+#[test]
+fn inexhaustive_multi_pattern() {
+    assert_error!(
+        "
+let a = Ok(1)
+let b = True
+case a, b {
+  Error(_), _ -> Nil
+}
+"
+    );
+}
+
+#[test]
+fn inexhaustive_multi_pattern2() {
+    assert_error!(
+        "
+let a = Ok(1)
+let b = True
+case a, b {
+  Ok(1), True -> Nil
+}
+"
+    );
+}
+
+#[test]
+fn inexhaustive_multi_pattern3() {
+    assert_error!(
+        "
+let a = Ok(1)
+let b = True
+case a, b {
+  _, False -> Nil
+}
+"
+    );
+}
+
+#[test]
+fn inexhaustive_multi_pattern4() {
+    assert_error!(
+        "
+let a = 12
+let b = 3.14
+let c = False
+case a, b, c {
+  1, 2.0, True -> Nil
+}
+"
+    );
+}
+
+#[test]
+fn inexhaustive_multi_pattern5() {
+    assert_error!(
+        "
+let a = 12
+let b = 3.14
+let c = False
+case a, b, c {
+  12, _, False -> Nil
+}
+"
+    );
+}
