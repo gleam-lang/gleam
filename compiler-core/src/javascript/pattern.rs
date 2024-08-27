@@ -536,7 +536,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     _ if type_.is_result() => {
                         self.push_result_check(subject.clone(), record_name == "Ok")
                     }
-                    Some(m) => self.push_variant_check(subject.clone(), docvec!["$", m, ".", name]),
+                    Some((m, _)) => {
+                        self.push_variant_check(subject.clone(), docvec!["$", m, ".", name])
+                    }
                     None => self.push_variant_check(subject.clone(), name.to_doc()),
                 }
 

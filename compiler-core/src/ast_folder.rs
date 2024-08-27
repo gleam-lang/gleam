@@ -1219,7 +1219,7 @@ pub trait PatternFolder {
         location: SrcSpan,
         name: EcoString,
         arguments: Vec<CallArg<UntypedPattern>>,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         spread: Option<SrcSpan>,
     ) -> UntypedPattern {
         Pattern::Constructor {

@@ -1626,7 +1626,7 @@ where
         Ok(Pattern::Constructor {
             location: SrcSpan { start, end },
             arguments: args,
-            module: module.map(|(_, n, _)| n),
+            module: module.map(|(start, n, end)| (n, SrcSpan { start, end })),
             name,
             spread,
             constructor: Inferred::Unknown,

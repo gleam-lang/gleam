@@ -1732,7 +1732,7 @@ pub enum Pattern<Type> {
         location: SrcSpan,
         name: EcoString,
         arguments: Vec<CallArg<Self>>,
-        module: Option<EcoString>,
+        module: Option<(EcoString, SrcSpan)>,
         constructor: Inferred<PatternConstructor>,
         spread: Option<SrcSpan>,
         type_: Type,
