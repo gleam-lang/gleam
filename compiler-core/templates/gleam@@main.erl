@@ -26,7 +26,7 @@ print_error(Class, Error, Stacktrace) ->
         "\n\n",
         error_message(Error),
         "\n\n",
-        error_details(Error),
+        error_details(Class, Error),
         "stacktrace:\n",
         [error_frame(Line) || Line <- refine_first(Error, Stacktrace)]
     ],
@@ -55,20 +55,20 @@ error_message(function_clause) ->
 error_message(_) ->
     <<"An error occurred outside of Gleam."/utf8>>.
 
-error_details(#{gleam_error := let_assert, value := V}) ->
+error_details(_, #{gleam_error := let_assert, value := V}) ->
     ["unmatched value:\n  ", print_term(V), $\n, $\n];
-error_details({case_clause, V}) ->
+error_details(_, {case_clause, V}) ->
     ["unmatched value:\n  ", print_term(V), $\n, $\n];
-error_details({badmatch, V}) ->
+error_details(_, {badmatch, V}) ->
     ["unmatched value:\n  ", print_term(V), $\n, $\n];
-error_details(#{gleam_error := _}) ->
+error_details(_, #{gleam_error := _}) ->
     [];
-error_details(function_clause) ->
+error_details(error, function_clause) ->
     [];
-error_details(undef) ->
+error_details(error, undef) ->
     [];
-error_details(E) ->
-    ["erlang error:\n  ", print_term(E), $\n, $\n].
+error_details(C, E) ->
+    ["erlang:", atom_to_binary(C), $(, print_term(E), $), $\n, $\n].
 
 print_term(T) ->
     try
