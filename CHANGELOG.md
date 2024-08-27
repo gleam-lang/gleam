@@ -299,6 +299,10 @@
 - Fixed a bug where the provided `REBAR_BARE_COMPILER_OUTPUT_DIR` env var would use relative path instead of absolute path causing compilation errors in some packages.
   ([Gustavo Inacio](https://github.com/gusinacio))
 
+- Fixed a bug where the compiler would print incorrect missing patterns for
+  inexhaustive case expressions matching on more than one subject.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes

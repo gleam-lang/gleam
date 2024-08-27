@@ -8,7 +8,13 @@ pub fn missing_patterns(matches: &Match, environment: &Environment<'_>) -> Vec<E
     let mut names = HashSet::new();
     let mut steps = Vec::new();
 
-    add_missing_patterns(&matches.tree, &mut steps, &mut names, environment);
+    add_missing_patterns(
+        &matches.tree,
+        &matches.subject_variables,
+        &mut steps,
+        &mut names,
+        environment,
+    );
 
     let mut missing: Vec<EcoString> = names.into_iter().collect();
 
@@ -58,16 +64,17 @@ impl Term {
 
 fn add_missing_patterns(
     node: &Decision,
+    subjects: &Vec<Variable>,
     terms: &mut Vec<Term>,
     missing: &mut HashSet<EcoString>,
     environment: &Environment<'_>,
 ) {
-    let mut printer = Printer::new(&environment.value_names);
     match node {
         Decision::Success(_) => {}
 
         Decision::Failure => {
             let mut mapping = HashMap::new();
+            let printer = Printer::new(&environment.value_names);
 
             // At this point the terms stack looks something like this:
             // `[term, term + arguments, term, ...]`. To construct a pattern
@@ -86,16 +93,13 @@ fn add_missing_patterns(
                 _ = mapping.insert(step.variable().id, index);
             }
 
-            let name = terms
-                .first()
-                .map(|term| printer.print_term(term, terms, &mapping))
-                .unwrap_or_else(|| "_".into());
+            let pattern = printer.print_terms(subjects, terms, &mapping);
 
-            _ = missing.insert(name);
+            _ = missing.insert(pattern);
         }
 
         Decision::Guard(_, _, fallback) => {
-            add_missing_patterns(fallback, terms, missing, environment);
+            add_missing_patterns(fallback, subjects, terms, missing, environment);
         }
 
         Decision::Switch(variable, cases, fallback) => {
@@ -139,12 +143,12 @@ fn add_missing_patterns(
                     }
                 }
 
-                add_missing_patterns(&case.body, terms, missing, environment);
+                add_missing_patterns(&case.body, subjects, terms, missing, environment);
                 _ = terms.pop();
             }
 
             if let Some(node) = fallback {
-                add_missing_patterns(node, terms, missing, environment);
+                add_missing_patterns(node, subjects, terms, missing, environment);
             }
         }
 
@@ -156,7 +160,7 @@ fn add_missing_patterns(
             terms.push(Term::EmptyList {
                 variable: variable.clone(),
             });
-            add_missing_patterns(empty, terms, missing, environment);
+            add_missing_patterns(empty, subjects, terms, missing, environment);
             _ = terms.pop();
 
             terms.push(Term::List {
@@ -164,7 +168,7 @@ fn add_missing_patterns(
                 first: non_empty.first.clone(),
                 rest: non_empty.rest.clone(),
             });
-            add_missing_patterns(&non_empty.decision, terms, missing, environment);
+            add_missing_patterns(&non_empty.decision, subjects, terms, missing, environment);
             _ = terms.pop();
         }
     }
