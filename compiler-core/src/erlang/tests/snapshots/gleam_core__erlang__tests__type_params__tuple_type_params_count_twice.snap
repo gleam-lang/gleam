@@ -12,7 +12,7 @@ expression: "\n        pub fn wibble() -> #(a, b) {\n            todo\n        }
 -spec wibble() -> {any(), any()}.
 wibble() ->
     erlang:error(#{gleam_error => todo,
-            message => <<"This has not yet been implemented"/utf8>>,
+            message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,
             module => <<"my/mod"/utf8>>,
             function => <<"wibble"/utf8>>,
             line => 3}).

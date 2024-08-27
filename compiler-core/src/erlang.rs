@@ -1005,7 +1005,7 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
             line(),
             erlang_error(
                 "let_assert",
-                &string("Assertion pattern match failed"),
+                &string("Pattern match failed, no pattern matched the value."),
                 pat.location(),
                 vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
                 env,
@@ -1673,7 +1673,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
 fn todo<'a>(message: Option<&'a TypedExpr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
     let message = match message {
         Some(m) => expr(m, env),
-        None => string("This has not yet been implemented"),
+        None => string("`todo` expression evaluated. This code has not yet been implemented."),
     };
     erlang_error("todo", &message, location, vec![], env)
 }
@@ -1681,7 +1681,7 @@ fn todo<'a>(message: Option<&'a TypedExpr>, location: SrcSpan, env: &mut Env<'a>
 fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a>) -> Document<'a> {
     let message = match message {
         Some(m) => expr(m, env),
-        None => string("panic expression evaluated"),
+        None => string("`panic` expression evaluated."),
     };
     erlang_error("panic", &message, location, vec![], env)
 }

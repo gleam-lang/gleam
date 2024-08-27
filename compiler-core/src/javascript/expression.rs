@@ -702,7 +702,7 @@ impl<'module> Generator<'module> {
     fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {
         Ok(self.throw_error(
             "let_assert",
-            &string("Assertion pattern match failed"),
+            &string("Pattern match failed, no pattern matched the value."),
             location,
             [("value", subject)],
         ))
@@ -980,7 +980,7 @@ impl<'module> Generator<'module> {
     fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
         let message = match message {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
-            None => string("This has not yet been implemented"),
+            None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
         let doc = self.throw_error("todo", &message, *location, vec![]);
 
@@ -990,7 +990,7 @@ impl<'module> Generator<'module> {
     fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
         let message = match message {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
-            None => string("panic expression evaluated"),
+            None => string("`panic` expression evaluated."),
         };
         let doc = self.throw_error("panic", &message, *location, vec![]);
 

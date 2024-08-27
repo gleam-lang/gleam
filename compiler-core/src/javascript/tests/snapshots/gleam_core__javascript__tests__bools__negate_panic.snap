@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 198
 expression: "pub fn negate(x) {\n  !panic\n}"
 ---
 import { makeError } from "../gleam.mjs";
@@ -11,7 +12,7 @@ export function negate(x) {
       "my/mod",
       2,
       "negate",
-      "panic expression evaluated",
+      "`panic` expression evaluated.",
       {}
     )
   })();

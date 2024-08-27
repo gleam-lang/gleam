@@ -123,7 +123,7 @@ impl TestCompileOutput {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
                 Content::Text(text) => {
-                    buffer.push_str(&text.replace(&path.as_str(), &normalised_path))
+                    buffer.push_str(&text.replace(path.as_str(), &normalised_path))
                 }
             };
             buffer.push('\n');
