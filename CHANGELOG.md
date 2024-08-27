@@ -15,7 +15,11 @@
 - HTML docs: make module names in sidebar wrap before a / when possible
   ([Jiangda Wang](https://github.com/frank-iii))
 
-- The printing of runtime errors has been improved.
+- The printing of runtime errors has been improved, including those from linked
+  processes.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- OTP application trees are now shut down gracefully when `main` exits.
   ([Louis Pilfold](https://github.com/lpil))
 
 ### Compiler
