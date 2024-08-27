@@ -15,6 +15,9 @@
 - HTML docs: make module names in sidebar wrap before a / when possible
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- The printing of runtime errors has been improved.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Compiler
 
 - Compiler progress is now printed to stderr, instead of stdout.
