@@ -16,7 +16,7 @@ function go(x, wibble) {
       "my/mod",
       8,
       "go",
-      "Assertion pattern match failed",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }

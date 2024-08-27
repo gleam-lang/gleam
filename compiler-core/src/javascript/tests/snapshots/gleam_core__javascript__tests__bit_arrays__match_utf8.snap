@@ -24,7 +24,7 @@ function go(x) {
       "my/mod",
       3,
       "go",
-      "Assertion pattern match failed",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }

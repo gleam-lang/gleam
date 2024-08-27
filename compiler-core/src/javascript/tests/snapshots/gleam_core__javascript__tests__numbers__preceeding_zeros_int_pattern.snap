@@ -12,7 +12,7 @@ function main(x) {
       "my/mod",
       3,
       "main",
-      "Assertion pattern match failed",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }

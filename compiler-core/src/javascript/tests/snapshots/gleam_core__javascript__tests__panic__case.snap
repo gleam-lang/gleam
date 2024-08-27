@@ -12,7 +12,7 @@ function go(x) {
       "my/mod",
       4,
       "go",
-      "panic expression evaluated",
+      "`panic` expression evaluated.",
       {}
     )
   }

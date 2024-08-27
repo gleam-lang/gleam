@@ -18,7 +18,7 @@ function go(x, y) {
       "my/mod",
       4,
       "go",
-      "Assertion pattern match failed",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }
@@ -28,7 +28,7 @@ function go(x, y) {
       "my/mod",
       5,
       "go",
-      "Assertion pattern match failed",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }
@@ -38,7 +38,7 @@ function go(x, y) {
       "my/mod",
       6,
       "go",
-      "Assertion pattern match failed",
+      "Pattern match failed, no pattern matched the value.",
       { value: y }
     )
   }
