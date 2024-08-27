@@ -21,7 +21,7 @@ use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -103,6 +103,8 @@ fn normalise_diagnostic(text: &str) -> String {
         .replace('\\', "/")
 }
 
+static FILE_LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+
 #[derive(Debug)]
 pub struct TestCompileOutput {
     files: HashMap<Utf8PathBuf, Content>,
@@ -123,7 +125,16 @@ impl TestCompileOutput {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
                 Content::Text(text) => {
-                    buffer.push_str(&text.replace(path.as_str(), &normalised_path))
+                    let text = FILE_LINE_REGEX
+                        .get_or_init(|| {
+                            Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
+                        })
+                        .replace_all(&text, |caps: &regex::Captures| {
+                            let path = caps.get(1).expect("file path").as_str().replace("\\", "/");
+                            let line_number = caps.get(2).expect("line number").as_str();
+                            format!("-file(\"{}\", {}).", path, line_number)
+                        });
+                    buffer.push_str(&text)
                 }
             };
             buffer.push('\n');
