@@ -27,7 +27,7 @@ print_error(Class, Error, Stacktrace) ->
         error_message(Error),
         "\n\n",
         error_details(Error),
-        ?grey, "stacktrace:\n", ?reset_all,
+        "stacktrace:\n",
         [error_frame(Line) || Line <- refine_first(Error, Stacktrace)]
     ],
     io:format(standard_error, "~ts~n", [Printed]).
@@ -42,15 +42,33 @@ error_class(_, #{gleam_error := todo}) -> "todo";
 error_class(_, #{gleam_error := let_assert}) -> "let assert";
 error_class(Class, _) -> ["Erlang ", atom_to_binary(Class)].
 
-error_message(#{gleam_error := _, message := M}) -> M;
-error_message(_) -> <<"External error"/utf8>>.
+error_message(#{gleam_error := _, message := M}) ->
+    M;
+error_message(undef) ->
+    <<"A function was called but it did not exist.\n"/utf8 >>;
+error_message({case_clause, _}) ->
+    <<"No pattern matched in an Erlang case expression."/utf8>>;
+error_message({badmatch, _}) ->
+    <<"An Erlang assignment pattern did not match."/utf8>>;
+error_message(function_clause) ->
+    <<"No Erlang function clause matched the arguments it was called with."/utf8>>;
+error_message(_) ->
+    <<"An error occurred outside of Gleam."/utf8>>.
 
 error_details(#{gleam_error := let_assert, value := V}) ->
-    [?grey, "\n\nunmatched value:\n  ", ?reset_all, print_term(V)];
+    ["unmatched value:\n  ", print_term(V), $\n, $\n];
+error_details({case_clause, V}) ->
+    ["unmatched value:\n  ", print_term(V), $\n, $\n];
+error_details({badmatch, V}) ->
+    ["unmatched value:\n  ", print_term(V), $\n, $\n];
 error_details(#{gleam_error := _}) ->
     [];
+error_details(function_clause) ->
+    [];
+error_details(undef) ->
+    [];
 error_details(E) ->
-    [?grey, "\n\nerlang error:\n  ", ?reset_all, print_term(E)].
+    ["erlang error:\n  ", print_term(E), $\n, $\n].
 
 print_term(T) ->
     try
