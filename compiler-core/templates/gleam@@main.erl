@@ -9,6 +9,15 @@
 run(Module) ->
     io:setopts(standard_io, [binary, {encoding, utf8}]),
     io:setopts(standard_error, [{encoding, utf8}]),
+    process_flag(trap_exit, true),
+    Pid = spawn_link(fun() -> run_module(Module) end),
+    receive
+        {'EXIT', Pid, {Reason, StackTrace}} ->
+            print_error(exit, Reason, StackTrace),
+            init:stop(1)
+    end.
+
+run_module(Module) ->
     try
         {ok, _} = application:ensure_all_started('{{ application }}'),
         erlang:process_flag(trap_exit, false),
@@ -17,7 +26,7 @@ run(Module) ->
     catch
         Class:Reason:StackTrace ->
             print_error(Class, Reason, StackTrace),
-            erlang:halt(127, [{flush, true}])
+            init:stop(1)
     end.
 
 print_error(Class, Error, Stacktrace) ->
