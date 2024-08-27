@@ -788,8 +788,9 @@ pub fn code_action_add_missing_patterns(
 
         let mut edits = Vec::new();
 
-        let Some(Located::Expression(TypedExpr::Case { clauses, .. })) =
-            module.find_node(location.start)
+        let Some(Located::Expression(TypedExpr::Case {
+            clauses, subjects, ..
+        })) = module.find_node(location.start)
         else {
             continue;
         };
@@ -825,7 +826,7 @@ pub fn code_action_add_missing_patterns(
         // ```gleam
         // case True {}
         // ```
-        // This produces (or should, once the exhaustiveness checker is improved):
+        // This produces:
         // ```gleam
         // case True {
         //   True -> todo
@@ -840,6 +841,34 @@ pub fn code_action_add_missing_patterns(
         // ```
         //
         if clauses.is_empty() {
+            let last_subject_location = subjects
+                .last()
+                .expect("Case expressions have at least one subject")
+                .location()
+                .end;
+
+            // Find the opening brace of the case expression
+            let chars = module.code.chars();
+            let chars = chars.skip(last_subject_location as usize);
+            let mut start_brace_location = last_subject_location;
+            for char in chars {
+                start_brace_location += 1;
+                if char == '{' {
+                    break;
+                }
+            }
+
+            let range = src_span_to_lsp_range(
+                SrcSpan::new(start_brace_location, insert_span.start),
+                &line_numbers,
+            );
+
+            // Remove any blank spaces/lines between the start brace and end brace
+            edits.push(TextEdit {
+                range,
+                new_text: String::new(),
+            });
+
             edits.push(TextEdit {
                 range: insert_range,
                 new_text: format!("\n{indent}"),

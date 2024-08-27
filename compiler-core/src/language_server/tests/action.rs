@@ -1508,6 +1508,23 @@ pub fn main() {
     );
 }
 
+#[test]
+fn add_missing_patterns_multi() {
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        r#"
+pub fn main() {
+  let a = True
+  let b = 1
+  case a, b {
+
+  }
+}
+"#,
+        find_position_of("case").select_until(find_position_of("b {"))
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let a = True\n  let b = 1\n  case a, b {\n\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let a = True
+  let b = 1
+  case a, b {
+  ▔▔▔▔▔▔▔▔↑  
+
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let a = True
+  let b = 1
+  case a, b {
+    False, _ -> todo
+    True, _ -> todo
+  }
+}
