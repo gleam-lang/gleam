@@ -30,7 +30,7 @@ print_error(Class, Error, Stacktrace) ->
         ?grey, "stacktrace:\n", ?reset_all,
         [error_frame(Line) || Line <- refine_first(Error, Stacktrace)]
     ],
-    io:format("~ts~n", [Printed]).
+    io:format(standard_error, "~ts~n", [Printed]).
 
 refine_first(#{gleam_error := _, line := L}, [{M, F, A, [{file, Fi} | _]} | S]) ->
     [{M, F, A, [{file, Fi}, {line, L}]} | S];
