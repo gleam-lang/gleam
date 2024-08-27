@@ -113,15 +113,18 @@ impl TestCompileOutput {
     pub fn as_overview_text(&self) -> String {
         let mut buffer = String::new();
         for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+            let normalised_path = path.as_str().replace('\\', "/");
             buffer.push_str("//// ");
-            buffer.push_str(&path.as_str().replace('\\', "/"));
+            buffer.push_str(&normalised_path);
             buffer.push('\n');
 
             let extension = path.extension();
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
-                Content::Text(text) => buffer.push_str(text),
+                Content::Text(text) => {
+                    buffer.push_str(&text.replace(&path.as_str(), &normalised_path))
+                }
             };
             buffer.push('\n');
             buffer.push('\n');
