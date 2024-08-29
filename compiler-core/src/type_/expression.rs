@@ -1370,6 +1370,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut all_patterns_are_discards = true;
         // NOTE: if there are 0 clauses then there are 0 panics
         let mut all_clauses_panic = !clauses.is_empty();
+
+        self.check_single_case(&clauses);
+
         for clause in clauses {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
@@ -3356,6 +3359,39 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
+    }
+
+    fn check_single_case(&mut self, clauses: &[UntypedClause]) {
+        if clauses.len() > 1 {
+            return;
+        }
+
+        let _ = clauses
+            .first()
+            .and_then(|pats| pats.pattern.first())
+            .map(|pat| {
+                if let Pattern::Constructor {
+                    name,
+                    arguments,
+                    location,
+                    ..
+                } = pat
+                {
+                    let args = arguments
+                        .iter()
+                        .filter_map(|call| match &call.value {
+                            Pattern::Variable { name, .. } => Some(name),
+                            Pattern::Discard { name, .. } => Some(name),
+                            _ => None,
+                        })
+                        .join(", ");
+                    let hint = EcoString::from(format!("let {name}({args}) = ..."));
+                    self.problems.warning(Warning::SingleCaseClause {
+                        location: *location,
+                        hint,
+                    });
+                }
+            });
     }
 
     fn check_case_exhaustiveness(

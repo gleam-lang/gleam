@@ -17,6 +17,10 @@
 
 ### Compiler
 
+- The compiler issues a warning when a single-case pattern match is detected
+  and suggests changing it to let destructuring.
+  ([Victor Kobinski](https://github.com/vkobinski))
+
 - Compiler progress is now printed to stderr, instead of stdout.
   ([Victor Kobinski](https://github.com/vkobinski))
 
