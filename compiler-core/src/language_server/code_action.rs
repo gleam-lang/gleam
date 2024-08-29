@@ -806,8 +806,12 @@ pub fn code_action_add_missing_patterns(
         // we think we are more indented than we actually are
         //
         let mut indent_size = 0;
+        let line_start = *line_numbers
+            .line_starts
+            .get(range.start.line as usize)
+            .expect("Line number should be valid");
         let chars = module.code.chars();
-        let mut chars = chars.skip(line_numbers.line_starts[range.start.line as usize] as usize);
+        let mut chars = chars.skip(line_start as usize);
         // Count indentation
         while chars.next() == Some(' ') {
             indent_size += 1;
@@ -871,10 +875,7 @@ pub fn code_action_add_missing_patterns(
             // last subject, to skip, so we can find the opening brace.
             // That is: the location we want to get to, minus the start of the line which we skipped to begin with,
             // minus the number we skipped for the indent, minus one more because we go one past the end of indentation
-            let num_to_skip = last_subject_location
-                - line_numbers.line_starts[range.start.line as usize]
-                - indent_size as u32
-                - 1;
+            let num_to_skip = last_subject_location - line_start - indent_size as u32 - 1;
             let chars = chars.skip(num_to_skip as usize);
             let mut start_brace_location = last_subject_location;
             for char in chars {
