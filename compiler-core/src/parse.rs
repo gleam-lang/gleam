@@ -3535,7 +3535,7 @@ functions are declared separately from types.";
         let target = match name.as_str() {
             "erlang" => Target::Erlang,
             "javascript" => Target::JavaScript,
-            _ => return parse_error(ParseErrorType::UnknownAttribute, SrcSpan::new(start, end)),
+            _ => return parse_error(ParseErrorType::UnknownTarget, SrcSpan::new(start, end)),
         };
 
         let _ = self.expect_one(&Token::Comma)?;
