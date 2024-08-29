@@ -234,6 +234,9 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Improve error message for using @external with unknown target
+  ([Jiangda Wang](https://github.com/frank-iii))
+
 ### Formatter
 
 ### Language Server
