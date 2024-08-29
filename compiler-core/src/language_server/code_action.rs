@@ -795,7 +795,25 @@ pub fn code_action_add_missing_patterns(
             continue;
         };
 
-        let indent = " ".repeat(range.start.character as usize);
+        // Find the start of the line. We can't just use the start of the case
+        // expression for cases like:
+        //
+        //```gleam
+        // let value = case a {}
+        //```
+        //
+        // Here, the start of the expression is part-way through the line, meaning
+        // we think we are more indented than we actually are
+        //
+        let mut indent_size = 0;
+        let chars = module.code.chars();
+        let mut chars = chars.skip(line_numbers.line_starts[range.start.line as usize] as usize);
+        // Count indentation
+        while chars.next() == Some(' ') {
+            indent_size += 1;
+        }
+
+        let indent = " ".repeat(indent_size);
 
         // Insert the missing patterns just after the final clause, or just before
         // the closing brace if there are no clauses
@@ -848,8 +866,16 @@ pub fn code_action_add_missing_patterns(
                 .end;
 
             // Find the opening brace of the case expression
-            let chars = module.code.chars();
-            let chars = chars.skip(last_subject_location as usize);
+
+            // Calculate the number of characters from the start of the line to the end of the
+            // last subject, to skip, so we can find the opening brace.
+            // That is: the location we want to get to, minus the start of the line which we skipped to begin with,
+            // minus the number we skipped for the indent, minus one more because we go one past the end of indentation
+            let num_to_skip = last_subject_location
+                - line_numbers.line_starts[range.start.line as usize]
+                - indent_size as u32
+                - 1;
+            let chars = chars.skip(num_to_skip as usize);
             let mut start_brace_location = last_subject_location;
             for char in chars {
                 start_brace_location += 1;

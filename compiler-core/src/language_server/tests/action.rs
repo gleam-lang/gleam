@@ -1525,6 +1525,22 @@ pub fn main() {
     );
 }
 
+#[test]
+fn add_missing_patterns_inline() {
+    // Ensure we correctly detect the indentation, if the case expression
+    // does not start at the beginning of the line
+    assert_code_action!(
+        ADD_MISSING_PATTERNS,
+        r#"
+pub fn main() {
+  let a = True
+  let value = case a {}
+}
+"#,
+        find_position_of("case").select_until(find_position_of("a {"))
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
