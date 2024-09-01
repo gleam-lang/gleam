@@ -32,7 +32,7 @@ export class BitArray {
     isBigEndian: boolean,
     isSigned: boolean
   ): number;
-  binaryFromSlice(state: number, end: number): BitArray;
+  binaryFromSlice(start: number, end: number): BitArray;
   sliceAfter(index: number): BitArray;
 }
 
