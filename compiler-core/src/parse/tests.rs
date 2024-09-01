@@ -591,6 +591,17 @@ pub fn one(x: Int) -> Int {
 }
 
 #[test]
+fn unknown_external_target() {
+    assert_module_error!(
+        r#"
+@external(erl, "one", "two")
+pub fn one(x: Int) -> Int {
+  todo
+}"#
+    );
+}
+
+#[test]
 fn unknown_attribute() {
     assert_module_error!(
         r#"@go_faster()
