@@ -119,6 +119,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
         // Register the unqualified import if it is a value
         let variant = match module.get_public_value(import_name) {
             Some(value) => {
+                let implementations = value.variant.implementations();
+                // Check the target support of the imported value
+                if self.environment.target_support.is_enforced()
+                    && !implementations.supports(self.environment.target)
+                {
+                    self.problems.error(Error::UnsupportedExpressionTarget {
+                        target: self.environment.target,
+                        location,
+                    })
+                }
+
                 self.environment.insert_variable(
                     used_name.clone(),
                     value.variant.clone(),
