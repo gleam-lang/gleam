@@ -54,7 +54,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/amscotti">Anthony Scotti</a> -
   <a href="https://github.com/oz">Arnaud Berthomier</a> -
   <a href="https://github.com/aweagel">Arthur Weagel</a> -
-  <a href="https://github.com/austinDaily">Austin Daily</a> -
   <a href="https://github.com/azureflash">Azure Flash</a> -
   <a href="https://github.com/chiroptical">Barry Moore</a> -
   <a href="https://github.com/bartekgorny">Bartek Górny</a> -
@@ -98,6 +97,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/dvic">Damir Vandic</a> -
   <a href="https://github.com/ddresselhaus">Dan Dresselhaus</a> -
   <a href="https://github.com/danielelli">Daniel</a> -
+  <a href="https://github.com/DanielleMaywood">Danielle Maywood</a> -
   <a href="https://github.com/pinnet">Danny Arnold</a> -
   <a href="https://github.com/despairblue">Danny Martini</a> -
   <a href="https://github.com/dar5hak">Darshak Parikh</a> -
@@ -276,7 +276,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/philipgiuliani">Philip Giuliani</a> -
   <a href="https://github.com/pierrot-lc">Pierrot</a> -
   <a href="https://github.com/sz-piotr">Piotr Szlachciak</a> -
-  <a href="https://github.com/praveenperera">Praveen Perera</a> -
   <a href="https://github.com/sanjutoyou">Pushpendra Jaiswal</a> -
   <a href="https://github.com/qdentity">Qdentity</a> -
   <a href="https://github.com/qingliangcn">qingliangcn</a> -
@@ -335,6 +334,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/tsloughter">Tristan Sloughter</a> -
   <a href="https://github.com/unionmedia">Union Test Prep</a> -
   <a href="https://github.com/upsidedownsweetfood">upsidedowncake</a> -
+  <a href="https://github.com/vvzen">Valerio Viperino</a> -
   <a href="https://github.com/bondiano">Vassiliy Kuzenkov</a> -
   <a href="https://github.com/sandsower">Vic Valenzuela</a> -
   <a href="https://github.com/rodrigues">Victor Rodrigues</a> -
