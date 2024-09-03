@@ -1,6 +1,6 @@
 use crate::{
-    assert_js_module_error, assert_js_module_infer, assert_module_error, assert_module_infer,
-    assert_with_module_error,
+    assert_infer_with_module, assert_js_module_error, assert_js_module_infer, assert_module_error,
+    assert_module_infer, assert_with_module_error,
 };
 
 // https://github.com/gleam-lang/gleam/issues/2324
@@ -181,7 +181,7 @@ fn javascript_only_constant() {
             r#"@external(javascript, "one", "two")
 fn javascript_only() -> Int
 const constant = javascript_only
-pub const javascript_only_constant = constant 
+pub const javascript_only_constant = constant
 "#
         ),
         "import module
@@ -207,4 +207,30 @@ pub fn main() -> Int
 "#;
     assert_module_infer!(module, vec![("main", "fn() -> Int")]);
     assert_js_module_error!(module);
+}
+
+#[test]
+fn unsupported_target_for_unused_import() {
+    // If we import a function which doesn't support the current target,
+    // even if we don't use it, the compiler should error
+    assert_with_module_error!(
+        (
+            "mod",
+            r#"@external(javascript, "wibble", "wobble") pub fn wobble()"#
+        ),
+        "import mod.{wobble}"
+    );
+}
+
+#[test]
+fn supported_target_for_imported_value() {
+    assert_infer_with_module!(
+        (
+            "mod",
+            r#"@external(erlang, "wibble", "wobble") pub fn wobble() -> Int"#
+        ),
+        "import mod.{wobble}
+pub const wobble = wobble",
+        vec![("wobble", "fn() -> Int")],
+    );
 }
