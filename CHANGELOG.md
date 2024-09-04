@@ -8,6 +8,10 @@
   `javascript` to specify what target to use, with `erlang` being the default.
   ([Mohammed Khouni](https://github.com/Tar-Tarus))
 
+- The Erlang/Elixir compiler process is now re-used for all packages, shaving
+  off 0.3-0.5s per compiled package.
+  ([yoshi](https://github.com/joshi-monster))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
