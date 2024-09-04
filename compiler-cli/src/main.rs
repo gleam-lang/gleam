@@ -49,6 +49,7 @@
 extern crate pretty_assertions;
 
 mod add;
+mod beam_compiler;
 mod build;
 mod build_lock;
 mod cli;
