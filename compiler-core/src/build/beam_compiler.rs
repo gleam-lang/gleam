@@ -137,7 +137,8 @@ impl BeamCompiler {
 impl Drop for BeamCompiler {
     fn drop(&mut self) {
         if let Some(mut inner) = self.inner.take() {
-            let _ = inner.process.kill();
+            // closing stdin will cause the erlang process to exit.
+            std::mem::drop(inner.stdin);
             let _ = inner.process.wait();
         }
     }
