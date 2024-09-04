@@ -5,18 +5,23 @@
 
 -record(arguments, {lib = "./", out = "./", modules = []}).
 
-main(_) -> main().
+main(_) -> compile_package_loop().
 
-main() ->
+compile_package_loop() ->
     case io:get_line("") of
         eof -> ok;
         Line ->
-            Args = string:split(string:trim(Line), [31], all), % Unit Separator
-            erlang:display(run(Args)),
-            main()
+            % $\x1f is the "unit separator" character
+            Args = string:split(string:trim(Line), "\x1f", all),
+            case compile_package(Args) of
+                ok -> io:put_chars("ok\n");
+                err -> io:put_chars("err\n")
+            end,
+            compile_package(Args),
+            compile_package_loop()
     end.
 
-run(Args) ->
+compile_package(Args) ->
     #arguments{out = Out, lib = Lib, modules = Modules} = parse(Args),
     IsElixirModule = fun(Module) ->
         filename:extension(Module) =:= ".ex"
