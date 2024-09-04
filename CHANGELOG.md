@@ -330,6 +330,10 @@
   inexhaustive case expressions matching on more than one subject.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the compiler would not check the target support of a function
+  if it was imported and not used, and generate invalid code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
