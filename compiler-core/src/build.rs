@@ -1,6 +1,5 @@
 #![allow(warnings)]
 
-mod beam_compiler;
 mod elixir_libraries;
 mod module_loader;
 mod native_file_copier;
@@ -12,7 +11,6 @@ mod telemetry;
 #[cfg(test)]
 mod tests;
 
-pub use self::beam_compiler::BeamCompiler;
 pub use self::package_compiler::PackageCompiler;
 pub use self::package_loader::StaleTracker;
 pub use self::project_compiler::{Built, Options, ProjectCompiler};

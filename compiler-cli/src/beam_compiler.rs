@@ -1,4 +1,4 @@
-use crate::{
+use gleam_core::{
     error::Error,
     io::{FileSystemWriter, Stdio},
     paths, Result,
@@ -7,7 +7,7 @@ use crate::{
 use std::{
     collections::HashSet,
     io::{self, BufRead, BufReader, Write},
-    process::{Child, ChildStdin, ChildStdout, Command},
+    process::{Child, ChildStdin, ChildStdout},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -25,10 +25,6 @@ pub struct BeamCompiler {
 }
 
 impl BeamCompiler {
-    pub fn new() -> Self {
-        Default::default()
-    }
-
     pub fn compile<IO: FileSystemWriter>(
         &mut self,
         io: &IO,
@@ -103,7 +99,7 @@ impl BeamCompiler {
             .join(paths::ARTEFACT_DIRECTORY_NAME)
             .join("gleam@@compile.erl");
 
-        let escript_source = std::include_str!("../../templates/gleam@@compile.erl");
+        let escript_source = std::include_str!("../templates/gleam@@compile.erl");
         io.write(&escript_path, escript_source)?;
 
         tracing::trace!(escript_path=?escript_path, "spawn_beam_compiler");
@@ -138,7 +134,7 @@ impl Drop for BeamCompiler {
     fn drop(&mut self) {
         if let Some(mut inner) = self.inner.take() {
             // closing stdin will cause the erlang process to exit.
-            std::mem::drop(inner.stdin);
+            drop(inner.stdin);
             let _ = inner.process.wait();
         }
     }

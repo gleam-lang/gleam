@@ -58,7 +58,7 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone)]
 pub struct ProjectIO {
-    beam_compiler: Arc<Mutex<gleam_core::build::BeamCompiler>>,
+    beam_compiler: Arc<Mutex<crate::beam_compiler::BeamCompiler>>,
 }
 
 impl ProjectIO {
