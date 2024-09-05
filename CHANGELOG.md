@@ -233,8 +233,11 @@
   Whereas before, it would suggest `_` as the only missing pattern.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Improve error message for using @external with unknown target
+- Improve error message for using `@external` with unknown target
   ([Jiangda Wang](https://github.com/frank-iii))
+
+- Improved error title when using an unknown module value.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
 
@@ -363,7 +366,8 @@
   unused.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The Language Server now correctly shows completions for values in the Gleam prelude.
+- The Language Server now correctly shows completions for values in the Gleam
+  prelude.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.4.1 - 2024-08-04

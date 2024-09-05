@@ -2020,7 +2020,7 @@ Private types can only be used within the module that defines them.",
                         format!("The module `{module_name}` does not have a `{name}` value.")
                     };
                     Diagnostic {
-                        title: "Unknown module field".into(),
+                        title: "Unknown module value".into(),
                         text,
                         hint: None,
                         level: Level::Error,
