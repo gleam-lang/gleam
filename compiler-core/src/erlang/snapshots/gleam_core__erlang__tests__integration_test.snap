@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 118
 expression: "pub fn go() {\nlet x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)\n  x\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn go() {\nlet x = #(100000000000000000, #(2000000000, 30000000
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go() -> {integer(),
     {integer(), integer(), integer()},
     integer(),

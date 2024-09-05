@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 16
 expression: "\npub fn y_with_dieresis() -> String {\n  \"\\u{0308}y\"\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn y_with_dieresis() -> String {\n  \"\\u{0308}y\"\n}\n"
 
 -export([y_with_dieresis/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec y_with_dieresis() -> binary().
 y_with_dieresis() ->
     <<"\x{0308}y"/utf8>>.

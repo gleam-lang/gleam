@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 82
 expression: "const bit_size = 8\npub fn main() {\n  let a = <<10:size(bit_size)>>\n  a\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "const bit_size = 8\npub fn main() {\n  let a = <<10:size(bit_size)>
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
     A = <<10:(lists:max([(8), 0]))>>,

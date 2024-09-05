@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
+assertion_line: 94
 expression: "pub fn a(x) {\n  case x, x {\n    _, \"a\" as a <> rest if rest == \"a\" -> a\n    _, _ -> \"a\"\n  }\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn a(x) {\n  case x, x {\n    _, \"a\" as a <> rest if rest == 
 
 -export([a/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec a(binary()) -> binary().
 a(X) ->
     case {X, X} of

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 73
 expression: "\npub fn not_unicode_escape_sequence() -> String {\n  \"\\\\\\\\u{03a9}\"\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn not_unicode_escape_sequence() -> String {\n  \"\\\\\\\\u{0
 
 -export([not_unicode_escape_sequence/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec not_unicode_escape_sequence() -> binary().
 not_unicode_escape_sequence() ->
     <<"\\\\u{03a9}"/utf8>>.

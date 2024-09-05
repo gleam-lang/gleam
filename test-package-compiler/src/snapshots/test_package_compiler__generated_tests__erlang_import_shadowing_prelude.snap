@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 85
 expression: "./cases/erlang_import_shadowing_prelude"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -31,6 +32,7 @@ expression: "./cases/erlang_import_shadowing_prelude"
 
 -export([main/0]).
 
+-file("src/two.gleam", 4).
 -spec main() -> one:error().
 main() ->
     error.

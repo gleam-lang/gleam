@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@external(erl, \"one\", \"two\")\npub fn one(x: Int) -> Int {\n  todo\n}"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ @external(erl, "one", "two")
+  │ ^^^^^^^^^ I don't recognise this target
+
+Try `erlang`, `javascript`.

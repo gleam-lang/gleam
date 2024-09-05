@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 134
 expression: "\npub fn main() {\n  <<1:size(-1)>>\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  <<1:size(-1)>>\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
     <<1:0>>.

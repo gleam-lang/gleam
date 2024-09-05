@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let value = 3\n  case value {\n    1 -> \"one\"\n    2 -> \"two\"\n    3 -> \"three\"\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let value = 3
+  case value {
+  ▔▔▔▔▔↑      
+    1 -> "one"
+    2 -> "two"
+    3 -> "three"
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let value = 3
+  case value {
+    1 -> "one"
+    2 -> "two"
+    3 -> "three"
+    _ -> todo
+  }
+}

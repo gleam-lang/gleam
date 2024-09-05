@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 758
 expression: "\nimport some_module\n\npub fn main() {\n    some_module.module_info\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\nimport some_module\n\npub fn main() {\n    some_module.module_inf
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec main() -> integer().
 main() ->
     1.

@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 162
 expression: "./cases/imported_constants"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -35,47 +36,57 @@ expression: "./cases/imported_constants"
 
 -export([accessors/1, destructure_qualified/1, destructure_unqualified/1, destructure_aliased/1, qualified_fn_a/0, qualified_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0]).
 
+-file("src/two.gleam", 45).
 -spec accessors(one:user()) -> {binary(), integer()}.
 accessors(User) ->
     Name = erlang:element(2, User),
     Score = erlang:element(3, User),
     {Name, Score}.
 
+-file("src/two.gleam", 52).
 -spec destructure_qualified(one:user()) -> {binary(), integer()}.
 destructure_qualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
+-file("src/two.gleam", 57).
 -spec destructure_unqualified(one:user()) -> {binary(), integer()}.
 destructure_unqualified(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
+-file("src/two.gleam", 62).
 -spec destructure_aliased(one:user()) -> {binary(), integer()}.
 destructure_aliased(User) ->
     {user, Name, Score} = User,
     {Name, Score}.
 
+-file("src/two.gleam", 6).
 -spec qualified_fn_a() -> one:a().
 qualified_fn_a() ->
     a.
 
+-file("src/two.gleam", 12).
 -spec qualified_fn_b() -> one:b().
 qualified_fn_b() ->
     {b, a, a}.
 
+-file("src/two.gleam", 19).
 -spec unqualified_fn_a() -> one:a().
 unqualified_fn_a() ->
     a.
 
+-file("src/two.gleam", 25).
 -spec unqualified_fn_b() -> one:b().
 unqualified_fn_b() ->
     {b, a, a}.
 
+-file("src/two.gleam", 33).
 -spec aliased_fn_a() -> one:a().
 aliased_fn_a() ->
     a.
 
+-file("src/two.gleam", 39).
 -spec aliased_fn_b() -> one:b().
 aliased_fn_b() ->
     {b, a, a}.

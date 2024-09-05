@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
+assertion_line: 16
 expression: "\npub fn main() {\n  panic\n}\n"
 ---
 -module(my@mod).
@@ -7,10 +8,11 @@ expression: "\npub fn main() {\n  panic\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     erlang:error(#{gleam_error => panic,
-            message => <<"panic expression evaluated"/utf8>>,
+            message => <<"`panic` expression evaluated."/utf8>>,
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 3}).

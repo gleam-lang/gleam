@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
+assertion_line: 53
 expression: "\nfn identity(a: a) -> a {\na\n}\n\nconst id  = identity\n\npub fn main(){\n  let num  = id(1)\n  let word = id(\"Word\")\n}"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "\nfn identity(a: a) -> a {\na\n}\n\nconst id  = identity\n\npub fn 
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec identity(I) -> I.
 identity(A) ->
     A.
 
+-file("/root/project/test/my/mod.gleam", 8).
 -spec main() -> binary().
 main() ->
     Num = identity(1),

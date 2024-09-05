@@ -221,6 +221,7 @@ pub struct Diagnostics {
 pub struct Match {
     pub tree: Decision,
     pub diagnostics: Diagnostics,
+    pub subject_variables: Vec<Variable>,
 }
 
 impl Match {
@@ -240,6 +241,7 @@ pub struct Compiler<'a> {
     diagnostics: Diagnostics,
     patterns: Arena<Pattern>,
     environment: &'a Environment<'a>,
+    subject_variables: Vec<Variable>,
 }
 
 impl<'a> Compiler<'a> {
@@ -248,6 +250,7 @@ impl<'a> Compiler<'a> {
             environment,
             patterns,
             variable_id: 0,
+            subject_variables: Vec::new(),
             diagnostics: Diagnostics {
                 missing: false,
                 reachable: Vec::new(),
@@ -255,10 +258,41 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    pub fn subject_variable(&mut self, type_: Arc<Type>) -> Variable {
+        let variable = self.new_variable(type_);
+        self.subject_variables.push(variable.clone());
+        variable
+    }
+
     pub fn compile(mut self, rows: Vec<Row>) -> Match {
+        // If there are no rows, we get an immediate decision failure,
+        // which gives a pretty unhelpful error message. Instead, we
+        // run one pass of compiling to ensure we don't just suggest `_`
+        let tree = if rows.is_empty() {
+            // Even though we run a compile pass, an empty case expression is always
+            // invalid, so we make sure to report that here
+            self.diagnostics.missing = true;
+            let tree = self.compile_rows_for_variable(
+                self.subject_variables
+                    .first()
+                    .expect("Must have at least one subject")
+                    .clone(),
+                Vec::new(),
+            );
+            match tree {
+                // If there are no known constructors, we return failure since that
+                // better describes the state than an empty switch, and allows us to report
+                // `_` as the missing pattern.
+                Decision::Switch(_, cases, _) if cases.is_empty() => Decision::Failure,
+                _ => tree,
+            }
+        } else {
+            self.compile_rows(rows)
+        };
         Match {
-            tree: self.compile_rows(rows),
+            tree,
             diagnostics: self.diagnostics,
+            subject_variables: self.subject_variables,
         }
     }
 
@@ -314,7 +348,28 @@ impl<'a> Compiler<'a> {
             };
         }
 
-        match self.branch_mode(&rows) {
+        // Get the most referred to variable across all rows
+        let mut counts = HashMap::new();
+        for row in rows.iter() {
+            for col in &row.columns {
+                *counts.entry(col.variable.id).or_insert(0_usize) += 1
+            }
+        }
+
+        let variable = rows
+            .first()
+            .expect("Must have at least one row, otherwise we don't reach this point")
+            .columns
+            .iter()
+            .map(|col| col.variable.clone())
+            .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
+            .expect("The first row must have at least one column");
+
+        self.compile_rows_for_variable(variable, rows)
+    }
+
+    fn compile_rows_for_variable(&mut self, variable: Variable, rows: Vec<Row>) -> Decision {
+        match self.branch_mode(variable) {
             BranchMode::Infinite { variable } => {
                 let (cases, fallback) = self.compile_infinite_cases(rows, variable.clone());
                 Decision::Switch(variable, cases, Some(fallback))
@@ -694,31 +749,9 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    /// Given a row, returns the kind of branch that is referred to the
-    /// most across all rows.
-    ///
-    /// # Panics
-    ///
-    /// Panics if there or no rows, or if the first row has no columns.
-    ///
-    fn branch_mode(&self, all_rows: &[Row]) -> BranchMode {
-        let mut counts = HashMap::new();
-
-        for row in all_rows {
-            for col in &row.columns {
-                *counts.entry(col.variable.id).or_insert(0_usize) += 1
-            }
-        }
-
-        let variable = all_rows
-            .first()
-            .expect("Must have at least one row")
-            .columns
-            .iter()
-            .map(|col| col.variable.clone())
-            .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
-            .expect("The first row must have at least one column");
-
+    /// Given a variable, returns the kind of branch associated with
+    /// that variable.
+    fn branch_mode(&self, variable: Variable) -> BranchMode {
         match collapse_links(variable.type_.clone()).as_ref() {
             Type::Fn { .. } | Type::Var { .. } => BranchMode::Infinite { variable },
 
@@ -763,7 +796,7 @@ impl<'a> Compiler<'a> {
     ///
     /// In a real compiler you'd have to ensure these variables don't conflict
     /// with other variables.
-    pub fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
+    fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
         let var = Variable {
             id: self.variable_id,
             type_,

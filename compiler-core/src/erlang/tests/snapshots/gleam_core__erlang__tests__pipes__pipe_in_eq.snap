@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 92
 expression: "fn id(x) {\n  x\n}\n        \npub fn main() {\n    1 == 1 |> id\n}"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "fn id(x) {\n  x\n}\n        \npub fn main() {\n    1 == 1 |> id\n}"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec id(I) -> I.
 id(X) ->
     X.
 
+-file("/root/project/test/my/mod.gleam", 5).
 -spec main() -> boolean().
 main() ->
     1 =:= begin

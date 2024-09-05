@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\nlet age = 10.6\ncase age {}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:1
+  │
+3 │ case age {}
+  │ ^^^^^^^^^^^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _

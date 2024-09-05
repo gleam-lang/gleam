@@ -21,7 +21,7 @@ use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
-    sync::Arc,
+    sync::{Arc, OnceLock},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -103,6 +103,8 @@ fn normalise_diagnostic(text: &str) -> String {
         .replace('\\', "/")
 }
 
+static FILE_LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+
 #[derive(Debug)]
 pub struct TestCompileOutput {
     files: HashMap<Utf8PathBuf, Content>,
@@ -113,15 +115,27 @@ impl TestCompileOutput {
     pub fn as_overview_text(&self) -> String {
         let mut buffer = String::new();
         for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+            let normalised_path = path.as_str().replace('\\', "/");
             buffer.push_str("//// ");
-            buffer.push_str(&path.as_str().replace('\\', "/"));
+            buffer.push_str(&normalised_path);
             buffer.push('\n');
 
             let extension = path.extension();
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
-                Content::Text(text) => buffer.push_str(text),
+                Content::Text(text) => {
+                    let text = FILE_LINE_REGEX
+                        .get_or_init(|| {
+                            Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
+                        })
+                        .replace_all(text, |caps: &regex::Captures| {
+                            let path = caps.get(1).expect("file path").as_str().replace("\\", "/");
+                            let line_number = caps.get(2).expect("line number").as_str();
+                            format!("-file(\"{}\", {}).", path, line_number)
+                        });
+                    buffer.push_str(&text)
+                }
             };
             buffer.push('\n');
             buffer.push('\n');

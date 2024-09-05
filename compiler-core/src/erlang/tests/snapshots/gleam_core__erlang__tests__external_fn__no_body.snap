@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 214
 expression: "\n@external(erlang, \"one\", \"one\")\npub fn one(x: Int) -> Int\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\n@external(erlang, \"one\", \"one\")\npub fn one(x: Int) -> Int\n"
 
 -export([one/1]).
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec one(integer()) -> integer().
 one(X) ->
     one:one(X).

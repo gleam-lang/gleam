@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 284
 expression: "fn go(x xx, y yy) { xx }\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }"
 ---
 -module(my@mod).
@@ -7,10 +8,12 @@ expression: "fn go(x xx, y yy) { xx }\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4
 
 -export([x/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go(I, any()) -> I.
 go(Xx, Yy) ->
     Xx.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec x() -> integer().
 x() ->
     go(1, 2),

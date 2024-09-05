@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 490
 expression: "\nfn go(x) {\n  let assert <<_, b:bytes>> = <<1,2,3>>\n}\n"
 ---
 import { makeError, toBitArray } from "../gleam.mjs";
@@ -8,11 +9,11 @@ function go(x) {
   let $ = toBitArray([1, 2, 3]);
   if (!($.length >= 1)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: $ }
     )
   }

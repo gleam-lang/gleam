@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
+assertion_line: 51
 expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn x(f) {\n  #(\n    1 |> f\n  )\n}"
 
 -export([x/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x(fun((integer()) -> K)) -> {K}.
 x(F) ->
     {begin

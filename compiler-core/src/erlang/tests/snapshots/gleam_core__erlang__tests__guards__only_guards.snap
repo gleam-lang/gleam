@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
+assertion_line: 388
 expression: "\npub const string_value = \"constant value\"\n\npub fn main(arg) {\n  case arg {\n    _ if arg == string_value -> 1\n    _ -> 0\n  }\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub const string_value = \"constant value\"\n\npub fn main(arg) {
 
 -export([main/1]).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec main(binary()) -> integer().
 main(Arg) ->
     case Arg of

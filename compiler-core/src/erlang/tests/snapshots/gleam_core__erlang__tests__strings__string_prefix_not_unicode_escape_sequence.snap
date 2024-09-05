@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
+assertion_line: 266
 expression: "\npub fn go(x) {\n  let _ = case x {\n    \"\\\\u{9}\" <> rest -> \"test\"\n    \"\\\\u{000009}\" <> rest -> \"test\"\n    \"\\\\u{21}\" <> rest -> \"test\"\n    \"\\\\u{100}\" <> rest -> \"test\"\n    \"\\\\u{1000}\" <> rest -> \"test\"\n    \"\\\\u{1F600}\" <> rest -> \"test\"\n    \"\\\\u{1f600}\" <> rest -> \"test\"\n    \"\\\\u{01F600}\" <> rest -> \"test\"\n    \"\\\\u{01f600}\" <> rest -> \"test\"\n    \"\\\\u{9} \\\\u{000009} \\\\u{21} \\\\u{100} \\\\u{1000} \\\\u{1F600} \\\\u{01F600}\" <> rest -> \"test\"\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn go(x) {\n  let _ = case x {\n    \"\\\\u{9}\" <> rest -> \
 
 -export([go/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec go(binary()) -> binary().
 go(X) ->
     _ = case X of

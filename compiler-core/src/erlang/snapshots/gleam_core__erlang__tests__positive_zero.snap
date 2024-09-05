@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 625
 expression: "\npub fn main() {\n  0.0\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  0.0\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> float().
 main() ->
     +0.0.

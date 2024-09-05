@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 316
 expression: "./cases/variable_or_module"
 ---
 //// /out/lib/the_package/_gleam_artefacts/main.cache
@@ -14,10 +15,12 @@ expression: "./cases/variable_or_module"
 
 -export([module_function/1, record_field/1]).
 
+-file("src/main.gleam", 4).
 -spec module_function(power:power()) -> integer().
 module_function(Power) ->
     power:to_int(Power).
 
+-file("src/main.gleam", 10).
 -spec record_field(power:power()) -> integer().
 record_field(Power) ->
     erlang:element(2, Power).
@@ -38,6 +41,7 @@ record_field(Power) ->
 
 -type power() :: {power, integer()}.
 
+-file("src/power.gleam", 6).
 -spec to_int(power()) -> integer().
 to_int(P) ->
     erlang:element(2, P) * 9000.

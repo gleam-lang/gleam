@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let bool = True\n  case bool {}\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let bool = True
+  case bool {}
+  ▔▔▔▔▔↑      
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let bool = True
+  case bool {
+    False -> todo
+    True -> todo
+  }
+}

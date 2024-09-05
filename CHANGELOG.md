@@ -15,6 +15,13 @@
 - HTML docs: make module names in sidebar wrap before a / when possible
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- The printing of runtime errors has been improved, including those from linked
+  processes.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- OTP application trees are now shut down gracefully when `main` exits.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Compiler
 
 - The compiler issues a warning when a single-case pattern match is detected
@@ -201,6 +208,39 @@
 
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+  - The compiler now provides improved suggestions in the error for an
+    inexhaustive case expression. The following code:
+
+    ```gleam
+    let a = True
+    case a {}
+    ```
+
+    Now produces this error:
+
+    ```
+    error: Inexhaustive patterns
+      ┌─ /src/file.gleam:3:3
+      │
+    3 │   case a {}
+      │   ^^^^^^^^^
+
+    This case expression does not have a pattern for all possible values. If it
+    is run on one of the values without a pattern then it will crash.
+
+    The missing patterns are:
+
+        False
+        True
+    ```
+
+    Whereas before, it would suggest `_` as the only missing pattern.
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Improve error message for using @external with unknown target
+  ([Jiangda Wang](https://github.com/frank-iii))
+
 ### Formatter
 
 ### Language Server
@@ -230,6 +270,26 @@
 
   ([Surya Rose](https://github.com/gearsdatapacks))
 
+- The Language Server can now suggest a code action to fill in the missing
+  patterns of a case expression:
+
+  ```gleam
+  let a = True
+  case a {}
+  ```
+
+  Becomes:
+
+  ```gleam
+  let a = True
+  case a {
+    False -> todo
+    True -> todo
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Bug Fixes
 
 - Fixed a bug where the warnings were printed above the errors without any new line between them.
@@ -244,7 +304,7 @@
   ([Surya Rose](https://github.com/gearsdatapacks))
 
 - Fixed a bug where incorrect syntax error message were shown, when using `:` or
-  `=` in wrong possitions in expressions.
+  `=` in wrong positions in expressions.
   ([Ankit Goel](https://github.com/crazymerlyn))
 
 - Fixed a bug where the compiler would crash when pattern matching on a type
@@ -272,6 +332,14 @@
 
 - Fixed a bug where the provided `REBAR_BARE_COMPILER_OUTPUT_DIR` env var would use relative path instead of absolute path causing compilation errors in some packages.
   ([Gustavo Inacio](https://github.com/gusinacio))
+
+- Fixed a bug where the compiler would print incorrect missing patterns for
+  inexhaustive case expressions matching on more than one subject.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the compiler would not check the target support of a function
+  if it was imported and not used, and generate invalid code.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.4.1 - 2024-08-04
 

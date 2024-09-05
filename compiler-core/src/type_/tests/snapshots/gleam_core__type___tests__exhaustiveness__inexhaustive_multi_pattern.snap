@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\nlet a = Ok(1)\nlet b = True\ncase a, b {\n  Error(_), _ -> Nil\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:4:1
+  │  
+4 │ ╭ case a, b {
+5 │ │   Error(_), _ -> Nil
+6 │ │ }
+  │ ╰─^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Ok(_), _

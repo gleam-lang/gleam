@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
+assertion_line: 207
 expression: "pub fn negate(x) {\n  !todo\n}"
 ---
 import { makeError } from "../gleam.mjs";
@@ -11,7 +12,7 @@ export function negate(x) {
       "my/mod",
       2,
       "negate",
-      "This has not yet been implemented",
+      "`todo` expression evaluated. This code has not yet been implemented.",
       {}
     )
   })();

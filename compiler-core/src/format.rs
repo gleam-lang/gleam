@@ -1107,7 +1107,7 @@ impl<'comments> Formatter<'comments> {
         &mut self,
         name: &'a str,
         args: &'a [CallArg<UntypedPattern>],
-        module: &'a Option<EcoString>,
+        module: &'a Option<(EcoString, SrcSpan)>,
         spread: Option<SrcSpan>,
         location: &SrcSpan,
     ) -> Document<'a> {
@@ -1122,7 +1122,7 @@ impl<'comments> Formatter<'comments> {
         }
 
         let name = match module {
-            Some(m) => m.to_doc().append(".").append(name),
+            Some((m, _)) => m.to_doc().append(".").append(name),
             None => name.to_doc(),
         };
 

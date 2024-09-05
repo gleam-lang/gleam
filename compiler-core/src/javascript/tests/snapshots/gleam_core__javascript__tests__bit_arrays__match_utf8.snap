@@ -20,11 +20,11 @@ function go(x) {
     !(x.length == 10)
   ) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }

@@ -18,21 +18,22 @@ shell() {
 }
 
 case "$COMMAND" in
-  run)
-    shift
-    run "$@"
+run)
+  shift
+  run "$@"
   ;;
 
-  shell)
-    shell
+shell)
+  shell
   ;;
 
-  *)
-    echo "usage:" >&2
-    echo "  entrypoint.sh \$COMMAND" >&2
-    echo "" >&2
-    echo "commands:" >&2
-    echo "  run    Run the project main function" >&2
-    echo "  shell  Run an Erlang shell" >&2
-    exit 1
+*)
+  echo "usage:" >&2
+  echo "  entrypoint.sh \$COMMAND" >&2
+  echo "" >&2
+  echo "commands:" >&2
+  echo "  run    Run the project main function" >&2
+  echo "  shell  Run an Erlang shell" >&2
+  exit 1
+  ;;
 esac

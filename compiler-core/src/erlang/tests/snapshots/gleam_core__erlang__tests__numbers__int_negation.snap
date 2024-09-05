@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
+assertion_line: 69
 expression: "\npub fn main() {\n  let a = 3\n  let b = -a\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "\npub fn main() {\n  let a = 3\n  let b = -a\n}\n"
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     A = 3,

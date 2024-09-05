@@ -239,7 +239,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Duplicate attribute",
                 vec!["This attribute has already been given.".into()],
             ),
-            ParseErrorType::UnknownTarget => ("I don't know what this attribute is", vec![]),
+            ParseErrorType::UnknownTarget => (
+                "I don't recognise this target",
+                vec!["Try `erlang`, `javascript`.".into()],
+            ),
             ParseErrorType::ExpectedFunctionBody => ("This function does not have a body", vec![]),
             ParseErrorType::RedundantInternalAttribute => (
                 "Redundant internal attribute",

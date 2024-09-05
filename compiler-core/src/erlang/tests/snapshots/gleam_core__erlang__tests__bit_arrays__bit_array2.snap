@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 46
 expression: "pub fn main() {\n  let a = 1\n  let assert <<b, 1>> = <<1, a>>\n  b\n}\n"
 ---
 -module(my@mod).
@@ -7,6 +8,7 @@ expression: "pub fn main() {\n  let a = 1\n  let assert <<b, 1>> = <<1, a>>\n  b
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec main() -> integer().
 main() ->
     A = 1,
@@ -15,7 +17,7 @@ main() ->
         <<_, 1>> -> _assert_subject;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
-                        message => <<"Assertion pattern match failed"/utf8>>,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
                         module => <<"my/mod"/utf8>>,
                         function => <<"main"/utf8>>,

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests.rs
+assertion_line: 666
 expression: "\npub type ModuleInfo {\n    ModuleInfo\n}\n\npub fn main() {\n    ModuleInfo\n}\n"
 ---
 -module(my@mod).
@@ -10,6 +11,7 @@ expression: "\npub type ModuleInfo {\n    ModuleInfo\n}\n\npub fn main() {\n    
 
 -type module_info() :: module_info.
 
+-file("/root/project/test/my/mod.gleam", 6).
 -spec main() -> module_info().
 main() ->
     module_info.

@@ -1,5 +1,6 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
+assertion_line: 63
 expression: "./cases/erlang_escape_names"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
@@ -14,6 +15,7 @@ expression: "./cases/erlang_escape_names"
 
 -export(['receive'/1]).
 
+-file("src/one.gleam", 2).
 -spec 'receive'(I) -> I.
 'receive'(X) ->
     X.
@@ -31,18 +33,22 @@ expression: "./cases/erlang_escape_names"
 
 -export([qualified_call/0, qualified_value/0, unqualified_call/0, unqualified_value/0]).
 
+-file("src/two.gleam", 4).
 -spec qualified_call() -> integer().
 qualified_call() ->
     one:'receive'(1).
 
+-file("src/two.gleam", 8).
 -spec qualified_value() -> fun((Q) -> Q).
 qualified_value() ->
     fun one:'receive'/1.
 
+-file("src/two.gleam", 12).
 -spec unqualified_call() -> integer().
 unqualified_call() ->
     one:'receive'(1).
 
+-file("src/two.gleam", 16).
 -spec unqualified_value() -> fun((S) -> S).
 unqualified_value() ->
     fun one:'receive'/1.

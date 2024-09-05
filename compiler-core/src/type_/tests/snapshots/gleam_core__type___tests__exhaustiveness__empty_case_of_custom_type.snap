@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\ntype Wibble { Wibble Wobble Wubble }\npub fn main() {\n  let wibble = Wobble\n  case wibble {}\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   case wibble {}
+  │   ^^^^^^^^^^^^^^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Wibble
+    Wobble
+    Wubble
