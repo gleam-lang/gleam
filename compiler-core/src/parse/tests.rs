@@ -1493,3 +1493,16 @@ type Wibble {
 "#
     );
 }
+
+#[test]
+fn if_like_expression() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = if wibble {
+    wobble
+  }
+}
+"#
+    );
+}

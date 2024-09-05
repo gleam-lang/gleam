@@ -239,6 +239,38 @@
 - Improved error title when using an unknown module value.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now shows an helpful error message if you try writing an `if`
+  expression instead of a case. For example, this code:
+
+  ```gleam
+  pub fn main() {
+    let a = if wibble {
+      1
+    }
+  }
+  ```
+
+  Results in the following error:
+
+  ```txt
+  error: Syntax error
+    ┌─ /src/parse/error.gleam:3:11
+    │
+  3 │   let a = if wibble {
+    │           ^^ Gleam doesn't have if expressions
+
+  If you want to write a conditional expression you can use a `case`:
+
+      case condition {
+        True -> todo
+        False -> todo
+      }
+
+  See: https://tour.gleam.run/flow-control/case-expressions/
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now adds a `todo` after a `use` expression if it is the last

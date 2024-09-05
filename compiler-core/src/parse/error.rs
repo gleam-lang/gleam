@@ -295,6 +295,19 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "Unsupported expression",
                 vec!["Functions cannot be called in clause guards.".into()],
             ),
+            ParseErrorType::IfExpression => (
+                "Gleam doesn't have if expressions",
+                vec![
+                    "If you want to write a conditional expression you can use a `case`:".into(),
+                    "".into(),
+                    "    case condition {".into(),
+                    "      True -> todo".into(),
+                    "      False -> todo".into(),
+                    "    }".into(),
+                    "".into(),
+                    "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
+                ],
+            ),
         }
     }
 }
@@ -361,6 +374,7 @@ pub enum ParseErrorType {
         field_type: Option<TypeAst>,
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
+    IfExpression,
 }
 
 impl LexicalError {
