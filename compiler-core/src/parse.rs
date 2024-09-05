@@ -715,6 +715,12 @@ where
                 }
             }
 
+            // Helpful error if trying to write an if expression instead of a
+            // case.
+            Some((start, Token::If, end)) => {
+                return parse_error(ParseErrorType::IfExpression, SrcSpan { start, end });
+            }
+
             // helpful error on possibly trying to group with ""
             Some((start, Token::LeftParen, _)) => {
                 return parse_error(ParseErrorType::ExprLparStart, SrcSpan { start, end: start });
