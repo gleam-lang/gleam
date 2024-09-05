@@ -681,7 +681,6 @@ pub enum Warning {
 
     SingleCaseClause {
         location: SrcSpan,
-        hint: EcoString,
     },
 
     UnreachableCaseClause {

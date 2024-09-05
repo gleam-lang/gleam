@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\ntype Wibble { Wibble(Int) }\n\npub fn main() {\n  let wibble = Wibble(1)\n  case wibble {\n    Wibble(_i) -> 1\n  }\n}\n"
+---
+warning: Pattern Matching with just one case
+  ┌─ /src/warning/wrn.gleam:6:3
+  │  
+6 │ ╭   case wibble {
+7 │ │     Wibble(_i) -> 1
+8 │ │   }
+  │ ╰───^
+
+This case expression can be simplified using a let destructuring.

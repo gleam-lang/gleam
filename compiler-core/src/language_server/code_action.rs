@@ -1,4 +1,4 @@
-use std::{iter, sync::Arc};
+use std::{cmp::Ordering, iter, sync::Arc};
 
 use crate::{
     ast::{
@@ -13,7 +13,7 @@ use crate::{
     build::Module,
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
-    type_::{error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
+    type_::{self, error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
     Error,
 };
 use ecow::EcoString;
@@ -289,6 +289,188 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
             range: src_span_to_lsp_range(discard_location, &self.line_numbers),
             new_text: itertools::intersperse(iter::repeat("_").take(tuple_items), ", ").collect(),
         }
+    }
+}
+
+pub struct SingleCasePatternMatch<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    actions: Vec<CodeAction>,
+    line_numbers: LineNumbers,
+    then: Option<Vec<EcoString>>,
+    single_case_locations: Vec<&'a SrcSpan>,
+}
+
+impl<'ast> ast::visit::Visit<'ast> for SingleCasePatternMatch<'_> {
+    fn visit_typed_expr_case(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        subjects: &'ast [TypedExpr],
+        clauses: &'ast [ast::TypedClause],
+    ) {
+        let code_action_location = *location;
+        let code_action_range = src_span_to_lsp_range(code_action_location, &self.line_numbers);
+
+        // Only offer the code action if the cursor is over the statement
+        if !overlaps(code_action_range, self.params.range) {
+            return;
+        }
+
+        if !self.single_case_locations.iter().any(|loc| {
+            overlaps(
+                code_action_range,
+                src_span_to_lsp_range(**loc, &self.line_numbers),
+            )
+        }) {
+            return;
+        }
+
+        let clause = clauses
+            .first()
+            .expect("Case expression must have one pattern");
+
+        self.visit_typed_clause(clause);
+
+        let minimum = self
+            .then
+            .as_ref()
+            .expect("Must have then")
+            .iter()
+            .min_by(|x, y| {
+                let x_trim = x.trim_start();
+                let y_trim = y.trim_start();
+
+                if (x.len() - x_trim.len()) > (y.len() - y_trim.len()) {
+                    Ordering::Greater
+                } else {
+                    Ordering::Less
+                }
+            })
+            .expect("Must have block");
+
+        let indent_size = code_action_range.start.character as usize;
+
+        let size = minimum.len() - minimum.trim_start().len();
+
+        let mut indent = " ".repeat(indent_size);
+
+        let lines = self
+            .then
+            .as_ref()
+            .expect("Must have then")
+            .iter()
+            .map(|line| {
+                let final_line = line.trim_start();
+                let trim_size = line.len() - final_line.len();
+
+                if trim_size == line.len() {
+                    indent = " ".repeat(indent_size);
+                } else {
+                    let difference = trim_size.checked_sub(size).map(|size| indent_size + size);
+
+                    if let Some(diff) = difference {
+                        indent = " ".repeat(diff);
+                    }
+                }
+
+                format!("{indent}{final_line}")
+            })
+            .join("\n");
+
+        let variable = subjects
+            .first()
+            .and_then(|sub| {
+                if let TypedExpr::Var { name, .. } = sub {
+                    Some(name.clone())
+                } else {
+                    None
+                }
+            })
+            .unwrap_or(EcoString::from("_"));
+
+        let clause = clauses.first().expect("Must have at least one clause");
+        let guard = clause.pattern.first().expect("").location();
+        let guard_location = guard;
+
+        let guard_code = self
+            .module
+            .code
+            .get(guard_location.start as usize..guard_location.end as usize)
+            .expect("Location must be valid");
+
+        let edit = format!("let {guard_code} = {variable}\n{lines}");
+
+        let edit = TextEdit {
+            range: code_action_range,
+            new_text: edit,
+        };
+
+        let uri = &self.params.text_document.uri;
+
+        CodeActionBuilder::new("Simplify to let destructuring")
+            .kind(CodeActionKind::REFACTOR)
+            .changes(uri.clone(), vec![edit])
+            .preferred(true)
+            .push_to(&mut self.actions);
+    }
+
+    fn visit_typed_clause(&mut self, clause: &'ast ast::TypedClause) {
+        let location = clause.then.location();
+        let code = self
+            .module
+            .code
+            .get(location.start as usize..location.end as usize)
+            .expect("Location must be valid");
+
+        let code = code
+            .strip_prefix("{")
+            .and_then(|code| code.strip_suffix("}"))
+            .map(|code| {
+                code.lines()
+                    .filter_map(|line| {
+                        if !line.trim().is_empty() {
+                            Some(EcoString::from(line))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect_vec()
+            })
+            .or(Some(vec![EcoString::from(code)]));
+
+        self.then = code;
+    }
+}
+
+impl<'a> SingleCasePatternMatch<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+
+        let single_case_locations: Vec<&SrcSpan> = module
+            .ast
+            .type_info
+            .warnings
+            .iter()
+            .filter_map(|warning| match warning {
+                type_::Warning::SingleCaseClause { location } => Some(location),
+                _ => None,
+            })
+            .collect();
+
+        Self {
+            module,
+            params,
+            actions: Vec::new(),
+            line_numbers,
+            then: None,
+            single_case_locations,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        self.actions
     }
 }
 
@@ -664,7 +846,7 @@ pub fn code_action_import_module(
     let missing_imports = errors
         .into_iter()
         .filter_map(|e| match e {
-            crate::type_::Error::UnknownModule {
+            type_::Error::UnknownModule {
                 location,
                 suggestions,
                 ..

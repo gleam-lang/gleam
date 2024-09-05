@@ -726,14 +726,12 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
-                type_::Warning::SingleCaseClause { location, hint } => Diagnostic {
+                type_::Warning::SingleCaseClause { location, .. } => Diagnostic {
                     title: "Pattern Matching with just one case".into(),
                     text: "This case expression can be simplified using a let destructuring."
                         .into(),
                     level: diagnostic::Level::Warning,
-                    hint: Some(format!(
-                        "You can replace the entire case expression with `{hint}`."
-                    )),
+                    hint: None,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),

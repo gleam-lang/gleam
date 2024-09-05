@@ -18,9 +18,7 @@ fn nil() {
     assert_no_warnings!(
         "
 pub fn main(x) {
-  case x {
-    Nil -> 0
-  }
+  let Nil = x
 }
 "
     );
@@ -620,9 +618,7 @@ pub type Thing {
 }
 
 pub fn main(x) {
-  case x {
-    Thing(..) -> 1
-  }
+  let Thing(..) = x
 }
 "#
     );

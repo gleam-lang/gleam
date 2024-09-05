@@ -9,3 +9,13 @@ warning: Deprecated record pattern matching syntax
   │                 ^^ This should be preceded by a comma
 
 This syntax for pattern matching on a record is deprecated.
+
+warning: Pattern Matching with just one case
+   ┌─ /src/warning/wrn.gleam:8:3
+   │  
+ 8 │ ╭   case wibble {
+ 9 │ │     Wibble(one: ..) -> one
+10 │ │   }
+   │ ╰───^
+
+This case expression can be simplified using a let destructuring.

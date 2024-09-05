@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\ntype X { X }\n\npub fn a() {\n  let b = X\n  case b {\n    X -> 1\n  }\n}"
+---
+warning: Pattern Matching with just one case
+  ┌─ /src/warning/wrn.gleam:6:3
+  │  
+6 │ ╭   case b {
+7 │ │     X -> 1
+8 │ │   }
+  │ ╰───^
+
+This case expression can be simplified using a let destructuring.

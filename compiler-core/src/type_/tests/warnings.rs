@@ -231,7 +231,7 @@ fn unused_private_type_warnings_test7() {
 
 #[test]
 fn unused_private_type_warnings_test8() {
-    assert_no_warnings!(
+    assert_warning!(
         "
 type X { X }
 
@@ -241,6 +241,22 @@ pub fn a() {
     X -> 1
   }
 }"
+    );
+}
+
+#[test]
+fn let_destructuring_warning_test() {
+    assert_warning!(
+        "
+type Wibble { Wibble(Int) }
+
+pub fn main() {
+  let wibble = Wibble(1)
+  case wibble {
+    Wibble(_i) -> 1
+  }
+}
+"
     );
 }
 
@@ -391,7 +407,7 @@ fn imported_module_with_alias_no_warning_when_only_used_in_case_test() {
             "gleam/wibble",
             "pub type Wibble { Wibble(Int) }"
         ),
-        "import gleam/wibble as f\npub fn wibble(a) { case a { f.Wibble(int) -> { int } }  }",
+        "import gleam/wibble as f\npub fn wibble(a) { let f.Wibble(int) = a { int }  }",
     );
 }
 
@@ -2051,9 +2067,7 @@ pub type Wibble {
 
 pub fn main() {
   let wibble = Wibble(one: 1, two: 2)
-  case wibble {
-    Wibble(..) -> 1
-  }
+  let Wibble(_one, _two) = wibble
 }
 "#
     );
@@ -2069,9 +2083,8 @@ pub type Wibble {
 
 pub fn main() {
   let wibble = Wibble(one: 1, two: 2)
-  case wibble {
-    Wibble(one: one, ..) -> one
-  }
+  let Wibble(one, ..) = wibble
+  one
 }
 "#
     );
