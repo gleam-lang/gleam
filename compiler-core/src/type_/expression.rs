@@ -20,7 +20,7 @@ use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
 pub struct Implementations {
-    /// Wether the function has a pure-gleam implementation.
+    /// Whether the function has a pure-gleam implementation.
     ///
     /// It's important to notice that, even if all individual targets are
     /// supported, it would not be the same as being pure Gleam.
@@ -38,10 +38,10 @@ pub struct Implementations {
     pub gleam: bool,
     pub can_run_on_erlang: bool,
     pub can_run_on_javascript: bool,
-    /// Wether the function has an implementation that uses external erlang
+    /// Whether the function has an implementation that uses external erlang
     /// code.
     pub uses_erlang_externals: bool,
-    /// Wether the function has an implementation that uses external javascript
+    /// Whether the function has an implementation that uses external javascript
     /// code.
     pub uses_javascript_externals: bool,
 }
