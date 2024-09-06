@@ -19,8 +19,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use itertools::Itertools;
 use lsp_types::{
-    self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
-    Range, TextEdit, Url,
+    self as lsp, GlobPattern, HoverProviderCapability, InitializeParams, Position,
+    PublishDiagnosticsParams, Range, TextEdit, Url,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -180,15 +180,47 @@ where
 
         // Register gleam.toml as a watched file so we get a notification when
         // it changes and thus know that we need to rebuild the entire project.
+        #[allow(deprecated)]
+        let root_uri = self.initialise_params.root_uri.clone();
+        let roots = if let Some(folders) = self
+            .initialise_params
+            .capabilities
+            .workspace
+            .as_ref()
+            .is_some_and(|workspace| workspace.workspace_folders.unwrap_or_default())
+            .then(|| self.initialise_params.workspace_folders.clone())
+            .flatten()
+        {
+            folders
+                .into_iter()
+                .map(|folder| folder.uri.clone())
+                .collect::<Vec<_>>()
+        } else if let Some(uri) = root_uri {
+            vec![uri]
+        } else {
+            vec![]
+        };
+
+        let watchers = roots
+            .into_iter()
+            .filter_map(|uri| {
+                let mut path = uri.to_file_path().ok()?.to_str()?.to_owned();
+                if !path.ends_with(std::path::MAIN_SEPARATOR) {
+                    path.push(std::path::MAIN_SEPARATOR)
+                }
+                path.push_str("**/gleam.toml");
+                Some(lsp::FileSystemWatcher {
+                    glob_pattern: GlobPattern::String(path),
+                    kind: Some(lsp::WatchKind::Change),
+                })
+            })
+            .collect();
         let watch_config = lsp::Registration {
             id: "watch-gleam-toml".into(),
             method: "workspace/didChangeWatchedFiles".into(),
             register_options: Some(
                 serde_json::value::to_value(lsp::DidChangeWatchedFilesRegistrationOptions {
-                    watchers: vec![lsp::FileSystemWatcher {
-                        glob_pattern: "**/gleam.toml".to_string().into(),
-                        kind: Some(lsp::WatchKind::Change),
-                    }],
+                    watchers,
                 })
                 .expect("workspace/didChangeWatchedFiles to json"),
             ),
