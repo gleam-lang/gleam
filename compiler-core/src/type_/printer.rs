@@ -1,7 +1,5 @@
-#![allow(dead_code)]
-
 use ecow::EcoString;
-use im::{HashMap, HashSet};
+use im::HashMap;
 use std::sync::Arc;
 
 use crate::type_::{Type, TypeVar};
@@ -9,11 +7,8 @@ use crate::type_::{Type, TypeVar};
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
 ///
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct TypeNames {
-    uid: u64,
-    current_module: EcoString,
-
     /// Types that exist in the current module, either defined or imported in an
     /// unqualified fashion.
     ///
@@ -92,18 +87,14 @@ pub struct TypeNames {
     /// value: `"something"`
     ///
     type_variables: HashMap<u64, EcoString>,
-    type_variable_names: HashSet<EcoString>,
 }
 
 impl TypeNames {
-    pub fn new(current_module: EcoString) -> Self {
+    pub fn new() -> Self {
         Self {
-            uid: Default::default(),
-            current_module,
             local_types: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
-            type_variable_names: Default::default(),
         }
     }
 
@@ -122,7 +113,6 @@ impl TypeNames {
     /// Record a type variable in this module.
     pub fn type_variable_in_scope(&mut self, id: u64, local_alias: EcoString) {
         _ = self.type_variables.insert(id, local_alias.clone());
-        _ = self.type_variable_names.insert(local_alias);
     }
 
     /// Record an imported module in this module.
@@ -150,44 +140,6 @@ impl TypeNames {
 
         return NamedTypeNames::Unimported(name.as_str());
     }
-
-    /// A suitable name of a type variable.
-    pub fn type_variable(&mut self, id: u64) -> EcoString {
-        if let Some(name) = self.type_variables.get(&id) {
-            return name.clone();
-        }
-
-        loop {
-            let name = self.next_letter();
-            if !self.type_variable_names.contains(&name) {
-                _ = self.type_variable_names.insert(name.clone());
-                _ = self.type_variables.insert(id, name.clone());
-                return name;
-            }
-        }
-    }
-
-    fn next_letter(&mut self) -> EcoString {
-        let alphabet_length = 26;
-        let char_offset = 97;
-        let mut chars = vec![];
-        let mut n;
-        let mut rest = self.uid;
-
-        loop {
-            n = rest % alphabet_length;
-            rest /= alphabet_length;
-            chars.push((n as u8 + char_offset) as char);
-
-            if rest == 0 {
-                break;
-            }
-            rest -= 1
-        }
-
-        self.uid += 1;
-        chars.into_iter().rev().collect()
-    }
 }
 
 #[derive(Debug)]
@@ -204,12 +156,16 @@ pub enum NamedTypeNames<'a> {
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
 pub struct Printer<'a> {
-    names: &'a mut TypeNames,
+    names: &'a TypeNames,
+    uid: u64,
 }
 
 impl<'a> Printer<'a> {
-    pub fn new(names: &'a mut TypeNames) -> Self {
-        Printer { names }
+    pub fn new(names: &'a TypeNames) -> Self {
+        Printer {
+            names,
+            uid: Default::default(),
+        }
     }
 
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
@@ -256,7 +212,7 @@ impl<'a> Printer<'a> {
             Type::Var { type_, .. } => match *type_.borrow() {
                 TypeVar::Link { ref type_, .. } => self.print(type_, buffer),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
-                    buffer.push_str(&self.names.type_variable(id))
+                    buffer.push_str(&self.type_variable(id))
                 }
             },
 
@@ -276,13 +232,44 @@ impl<'a> Printer<'a> {
             }
         }
     }
+
+    /// A suitable name of a type variable.
+    pub fn type_variable(&mut self, id: u64) -> EcoString {
+        if let Some(name) = self.names.type_variables.get(&id) {
+            return name.clone();
+        }
+
+        self.next_letter()
+    }
+
+    fn next_letter(&mut self) -> EcoString {
+        let alphabet_length = 26;
+        let char_offset = 97;
+        let mut chars = vec![];
+        let mut n;
+        let mut rest = self.uid;
+
+        loop {
+            n = rest % alphabet_length;
+            rest /= alphabet_length;
+            chars.push((n as u8 + char_offset) as char);
+
+            if rest == 0 {
+                break;
+            }
+            rest -= 1
+        }
+
+        self.uid += 1;
+        chars.into_iter().rev().collect()
+    }
 }
 
 #[test]
 fn test_local_type() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
     names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Tiger".into(),
@@ -297,9 +284,9 @@ fn test_local_type() {
 
 #[test]
 fn test_generic_type_annotation() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
     names.type_variable_in_scope(0, "one".into());
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id: 0 })),
@@ -310,8 +297,8 @@ fn test_generic_type_annotation() {
 
 #[test]
 fn test_generic_type_var() {
-    let mut names = TypeNames::new("module".into());
-    let mut printer = Printer::new(&mut names);
+    let names = TypeNames::new();
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Unbound { id: 0 })),
@@ -327,8 +314,8 @@ fn test_generic_type_var() {
 
 #[test]
 fn test_tuple_type() {
-    let mut names = TypeNames::new("module".into());
-    let mut printer = Printer::new(&mut names);
+    let names = TypeNames::new();
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Tuple {
         elems: vec![
@@ -354,10 +341,10 @@ fn test_tuple_type() {
 
 #[test]
 fn test_fn_type() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
     names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
     names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Fn {
         args: vec![
@@ -390,9 +377,9 @@ fn test_fn_type() {
 
 #[test]
 fn test_module_alias() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
     names.imported_module("mod1".into(), "animals".into());
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Cat".into(),
@@ -407,13 +394,13 @@ fn test_module_alias() {
 
 #[test]
 fn test_type_alias_and_generics() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
 
     names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
 
     names.type_variable_in_scope(0, "one".into());
 
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Tiger".into(),
@@ -430,13 +417,13 @@ fn test_type_alias_and_generics() {
 
 #[test]
 fn test_unqualified_import_and_generic() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
 
     names.named_type_in_scope("mod".into(), "Cat".into(), "C".into());
 
     names.type_variable_in_scope(0, "one".into());
 
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Cat".into(),
@@ -453,8 +440,8 @@ fn test_unqualified_import_and_generic() {
 
 #[test]
 fn nested_module() {
-    let mut names = TypeNames::new("module".into());
-    let mut printer = Printer::new(&mut names);
+    let names = TypeNames::new();
+    let mut printer = Printer::new(&names);
     let type_ = Type::Named {
         name: "Cat".into(),
         args: vec![],
@@ -468,7 +455,7 @@ fn nested_module() {
 
 #[test]
 fn test_unqualified_import_and_module_alias() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
 
     names.imported_module("mod1".into(), "animals".into());
 
@@ -476,7 +463,7 @@ fn test_unqualified_import_and_module_alias() {
         .local_types
         .insert(("mod1".into(), "Cat".into()), "C".into());
 
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Cat".into(),
@@ -491,13 +478,13 @@ fn test_unqualified_import_and_module_alias() {
 
 #[test]
 fn test_module_imports() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
     names.imported_module("mod".into(), "animals".into());
     let _ = names
         .local_types
         .insert(("mod2".into(), "Cat".into()), "Cat".into());
 
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Cat".into(),
@@ -521,12 +508,12 @@ fn test_module_imports() {
 
 #[test]
 fn test_multiple_generic_annotations() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
 
     names.type_variable_in_scope(0, "one".into());
     names.type_variable_in_scope(1, "two".into());
 
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
         name: "Tiger".into(),
@@ -553,12 +540,12 @@ fn test_multiple_generic_annotations() {
 
 #[test]
 fn test_variable_name_already_in_scope() {
-    let mut names = TypeNames::new("module".into());
+    let mut names = TypeNames::new();
 
     names.type_variable_in_scope(1, "a".into());
     names.type_variable_in_scope(2, "b".into());
 
-    let mut printer = Printer::new(&mut names);
+    let mut printer = Printer::new(&names);
 
     let type_ = |id| Type::Var {
         type_: Arc::new(std::cell::RefCell::new(TypeVar::Generic { id })),

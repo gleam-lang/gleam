@@ -666,6 +666,7 @@ fn infer_module_type_retention_test() {
         name: "ok".into(),
         definitions: vec![],
         type_info: (),
+        extra: (),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();

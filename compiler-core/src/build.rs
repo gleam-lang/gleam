@@ -20,6 +20,7 @@ use crate::ast::{
     CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
     TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
+use crate::type_::printer::TypeNames;
 use crate::type_::Type;
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},

@@ -13,7 +13,7 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, pretty::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
+        self, printer::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
         ValueConstructorVariant,
     },
     Error, Result, Warning,
@@ -360,7 +360,9 @@ where
                         symbols.push(DocumentSymbol {
                             name: name.to_string(),
                             detail: Some(
-                                Printer::new().pretty_print(&get_function_type(function), 0),
+                                Printer::new(&module.ast.extra)
+                                    .print_type(&get_function_type(function))
+                                    .to_string(),
                             ),
                             kind: SymbolKind::FUNCTION,
                             tags: make_deprecated_symbol_tag(&function.deprecation),
@@ -386,7 +388,11 @@ where
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: alias.alias.to_string(),
-                            detail: Some(Printer::new().pretty_print(&alias.type_, 0)),
+                            detail: Some(
+                                Printer::new(&module.ast.extra)
+                                    .print_type(&alias.type_)
+                                    .to_string(),
+                            ),
                             kind: SymbolKind::CLASS,
                             tags: make_deprecated_symbol_tag(&alias.deprecation),
                             deprecated: None,
@@ -400,7 +406,7 @@ where
                     }
 
                     Definition::CustomType(type_) => {
-                        symbols.push(custom_type_symbol(type_, &line_numbers));
+                        symbols.push(custom_type_symbol(type_, &line_numbers, module));
                     }
 
                     Definition::ModuleConstant(constant) => {
@@ -425,7 +431,11 @@ where
                         #[allow(deprecated)]
                         symbols.push(DocumentSymbol {
                             name: constant.name.to_string(),
-                            detail: Some(Printer::new().pretty_print(&constant.type_, 0)),
+                            detail: Some(
+                                Printer::new(&module.ast.extra)
+                                    .print_type(&constant.type_)
+                                    .to_string(),
+                            ),
                             kind: SymbolKind::CONSTANT,
                             tags: make_deprecated_symbol_tag(&constant.deprecation),
                             deprecated: None,
@@ -471,40 +481,50 @@ where
                 None => return Ok(None),
             };
 
+            let Some(module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
+            };
+
             Ok(match found {
                 Located::Statement(_) => None, // TODO: hover for statement
                 Located::ModuleStatement(Definition::Function(fun)) => {
-                    Some(hover_for_function_head(fun, lines))
+                    Some(hover_for_function_head(fun, lines, module))
                 }
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
-                    Some(hover_for_module_constant(constant, lines))
+                    Some(hover_for_module_constant(constant, lines, module))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
-                    module,
+                    module: module_name,
                     is_type,
                     location,
                 }) => this
                     .compiler
-                    .get_module_interface(module.as_str())
-                    .and_then(|module| {
+                    .get_module_interface(module_name.as_str())
+                    .and_then(|module_interface| {
                         if is_type {
-                            module.types.get(name).map(|t| {
-                                hover_for_annotation(*location, t.type_.as_ref(), Some(t), lines)
+                            module_interface.types.get(name).map(|t| {
+                                hover_for_annotation(
+                                    *location,
+                                    t.type_.as_ref(),
+                                    Some(t),
+                                    lines,
+                                    module,
+                                )
                             })
                         } else {
-                            module.values.get(name).map(|v| {
-                                let m = if this.hex_deps.contains(&module.package) {
-                                    Some(module)
+                            module_interface.values.get(name).map(|v| {
+                                let m = if this.hex_deps.contains(&module_interface.package) {
+                                    Some(module_interface)
                                 } else {
                                     None
                                 };
-                                hover_for_imported_value(v, location, lines, m, name)
+                                hover_for_imported_value(v, location, lines, m, name, module)
                             })
                         }
                     }),
-                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
+                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines, module)),
                 Located::PatternSpread {
                     spread_location,
                     arguments,
@@ -521,7 +541,8 @@ where
                             continue;
                         }
 
-                        let type_ = Printer::new().pretty_print(argument.value.type_().as_ref(), 0);
+                        let type_ = Printer::new(&module.ast.extra)
+                            .print_type(argument.value.type_().as_ref());
                         match &argument.label {
                             Some(label) => labelled.push(format!("- `{label}: {type_}`")),
                             None => positional.push(format!("- `{type_}`")),
@@ -547,17 +568,13 @@ Unused labelled fields:
                         range,
                     })
                 }
-                Located::Expression(expression) => {
-                    let module = this.module_for_uri(&params.text_document.uri);
-
-                    Some(hover_for_expression(
-                        expression,
-                        lines,
-                        module,
-                        &this.hex_deps,
-                    ))
-                }
-                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
+                Located::Expression(expression) => Some(hover_for_expression(
+                    expression,
+                    lines,
+                    module,
+                    &this.hex_deps,
+                )),
+                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines, module)),
                 Located::FunctionBody(_) => None,
                 Located::Annotation(annotation, type_) => {
                     let type_constructor = type_constructor_from_modules(
@@ -569,6 +586,7 @@ Unused labelled fields:
                         &type_,
                         type_constructor,
                         lines,
+                        module,
                     ))
                 }
             })
@@ -633,7 +651,11 @@ Unused labelled fields:
     }
 }
 
-fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers) -> DocumentSymbol {
+fn custom_type_symbol(
+    type_: &CustomType<Arc<Type>>,
+    line_numbers: &LineNumbers,
+    module: &Module,
+) -> DocumentSymbol {
     let constructors = type_
         .constructors
         .iter()
@@ -660,7 +682,11 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
                 #[allow(deprecated)]
                 arguments.push(DocumentSymbol {
                     name: label.to_string(),
-                    detail: Some(Printer::new().pretty_print(&argument.type_, 0)),
+                    detail: Some(
+                        Printer::new(&module.ast.extra)
+                            .print_type(&argument.type_)
+                            .to_string(),
+                    ),
                     kind: SymbolKind::FIELD,
                     tags: None,
                     deprecated: None,
@@ -742,11 +768,11 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
     }
 }
 
-fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
+fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: &Module) -> Hover {
     let documentation = pattern.get_documentation().unwrap_or_default();
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(pattern.type_().as_ref(), 0);
+    let type_ = Printer::new(&module.ast.extra).print_type(pattern.type_().as_ref());
     let contents = format!(
         "```gleam
 {type_}
@@ -766,7 +792,11 @@ fn get_function_type(fun: &TypedFunction) -> Type {
     }
 }
 
-fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
+fn hover_for_function_head(
+    fun: &TypedFunction,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun
         .documentation
@@ -774,7 +804,7 @@ fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Ho
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
     let function_type = get_function_type(fun);
-    let formatted_type = Printer::new().pretty_print(&function_type, 0);
+    let formatted_type = Printer::new(&module.ast.extra).print_type(&function_type);
     let contents = format!(
         "```gleam
 {formatted_type}
@@ -787,8 +817,12 @@ fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Ho
     }
 }
 
-fn hover_for_function_argument(argument: &TypedArg, line_numbers: LineNumbers) -> Hover {
-    let type_ = Printer::new().pretty_print(&argument.type_, 0);
+fn hover_for_function_argument(
+    argument: &TypedArg,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let type_ = Printer::new(&module.ast.extra).print_type(&argument.type_);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -801,12 +835,13 @@ fn hover_for_annotation(
     annotation_type: &Type,
     type_constructor: Option<&TypeConstructor>,
     line_numbers: LineNumbers,
+    module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = type_constructor
         .and_then(|t| t.documentation.as_ref())
         .unwrap_or(&empty_str);
-    let type_ = Printer::new().pretty_print(annotation_type, 0);
+    let type_ = Printer::new(&module.ast.extra).print_type(annotation_type);
     let contents = format!(
         "```gleam
 {type_}
@@ -822,9 +857,10 @@ fn hover_for_annotation(
 fn hover_for_module_constant(
     constant: &ModuleConstant<Arc<Type>, EcoString>,
     line_numbers: LineNumbers,
+    module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
-    let type_ = Printer::new().pretty_print(&constant.type_, 0);
+    let type_ = Printer::new(&module.ast.extra).print_type(&constant.type_);
     let documentation = constant
         .documentation
         .as_ref()
@@ -840,20 +876,19 @@ fn hover_for_module_constant(
 fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
-    module: Option<&Module>,
+    module: &Module,
     hex_deps: &std::collections::HashSet<EcoString>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
-    let link_section = module
-        .and_then(|m: &Module| {
-            let (module_name, name) = get_expr_qualified_name(expression)?;
-            get_hexdocs_link_section(module_name, name, &m.ast, hex_deps)
+    let link_section = get_expr_qualified_name(expression)
+        .and_then(|(module_name, name)| {
+            get_hexdocs_link_section(module_name, name, &module.ast, hex_deps)
         })
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(expression.type_().as_ref(), 0);
+    let type_ = Printer::new(&module.ast.extra).print_type(expression.type_().as_ref());
     let contents = format!(
         "```gleam
 {type_}
@@ -872,6 +907,7 @@ fn hover_for_imported_value(
     line_numbers: LineNumbers,
     hex_module_imported_from: Option<&ModuleInterface>,
     name: &EcoString,
+    module: &Module,
 ) -> Hover {
     let documentation = value.get_documentation().unwrap_or_default();
 
@@ -880,7 +916,7 @@ fn hover_for_imported_value(
     });
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new().pretty_print(value.type_.as_ref(), 0);
+    let type_ = Printer::new(&module.ast.extra).print_type(value.type_.as_ref());
     let contents = format!(
         "```gleam
 {type_}

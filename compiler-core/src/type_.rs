@@ -19,6 +19,7 @@ pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
 use hexpm::version::Version;
 pub use prelude::*;
+use printer::TypeNames;
 use serde::Serialize;
 
 use crate::{
