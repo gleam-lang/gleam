@@ -185,10 +185,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         } = segment;
 
         let options = match value.as_ref() {
-            Pattern::String { .. } if options.is_empty() => {
+            Pattern::String { location, .. } if options.is_empty() => {
                 // Allowing literal string patterns to omit the `:utf8` option
                 // was introduced in v1.5
-                self.require_version(Version::new(1, 5, 0));
+                self.require_version(
+                    Version::new(1, 5, 0),
+                    FeatureKind::UnannotatedUtf8StringSegment,
+                    location.clone(),
+                );
                 vec![BitArrayOption::Utf8 {
                     location: SrcSpan::default(),
                 }]
@@ -638,7 +642,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     // Label shorthand syntax for patterns was introduced in
                                     // v 1.4
                                     if !arg.is_implicit() && arg.uses_label_shorthand() {
-                                        self.require_version(Version::new(1, 4, 0));
+                                        self.require_version(
+                                            Version::new(1, 4, 0),
+                                            FeatureKind::LabelShorthandSyntax,
+                                            arg.location,
+                                        );
                                     }
 
                                     let CallArg {
@@ -712,7 +720,27 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn require_version(&mut self, version: Version) {
+    fn require_version(&mut self, version: Version, feature_kind: FeatureKind, location: SrcSpan) {
+        // Then if the required version is not in the specified version for the
+        // range we emit a warning highlighting the usage of the feature.
+        if let Some(gleam_version) = &self.environment.gleam_version {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                // There is a version in the specified range that is lower than
+                // the one required by this feature! This means that the
+                // specified range is wrong and would allow someone to run a
+                // compiler that is too old to know of this feature.
+                if version > lowest_allowed_version {
+                    self.problems
+                        .warning(Warning::FeatureRequiresHigherGleamVersion {
+                            location,
+                            feature_kind,
+                            minimum_required_version: version.clone(),
+                            wrongfully_allowed_version: lowest_allowed_version,
+                        })
+                }
+            }
+        }
+
         if version > self.required_version {
             self.required_version = version;
         }

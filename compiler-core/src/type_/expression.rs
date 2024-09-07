@@ -1024,8 +1024,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
         // Nested tuple access was introduced in 1.1
-        if let UntypedExpr::TupleIndex { .. } = tuple {
-            self.require_version(Version::new(1, 1, 0));
+        if let UntypedExpr::TupleIndex { location, .. } = tuple {
+            self.require_version(
+                Version::new(1, 1, 0),
+                FeatureKind::NestedTupleAccess,
+                location,
+            );
         }
 
         let tuple = self.infer(tuple)?;
@@ -1072,8 +1076,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let options = match s.value.as_ref() {
                     // Allowing literal string segments to omit the `:utf8` option
                     // was introduced in v1.5
-                    UntypedExpr::String { .. } if s.options.is_empty() => {
-                        self.require_version(Version::new(1, 5, 0));
+                    UntypedExpr::String { location, .. } if s.options.is_empty() => {
+                        self.require_version(
+                            Version::new(1, 5, 0),
+                            FeatureKind::UnannotatedUtf8StringSegment,
+                            location.clone(),
+                        );
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
                         }]
@@ -1100,10 +1108,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 let options = match s.value.as_ref() {
-                    Constant::String { .. } if s.options.is_empty() => {
+                    Constant::String { location, .. } if s.options.is_empty() => {
                         // Allowing literal string segments to omit the `:utf8` option
                         // was introduced in v1.5
-                        self.require_version(Version::new(1, 5, 0));
+                        self.require_version(
+                            Version::new(1, 5, 0),
+                            FeatureKind::UnannotatedUtf8StringSegment,
+                            location.clone(),
+                        );
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
                         }]
@@ -1307,7 +1319,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let unify_result = pattern_typer.unify(pattern, value_typ.clone());
 
         let version = pattern_typer.required_version;
-        self.require_version(version);
+        if version > self.required_version {
+            self.required_version = version;
+        }
 
         let pattern = match unify_result {
             Ok(pattern) => pattern,
@@ -1530,7 +1544,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         let version = pattern_typer.required_version;
-        self.require_version(version);
+        if version > self.required_version {
+            self.required_version = version;
+        }
 
         Ok((typed_pattern, typed_alternatives))
     }
@@ -1873,7 +1889,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // + in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1893,7 +1913,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // +. in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1914,7 +1938,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // - in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1934,7 +1962,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // -. in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1955,7 +1987,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // * in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1975,7 +2011,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // *. in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1996,7 +2036,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // / in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2016,7 +2060,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // /. in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -2037,7 +2085,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 // % in a guard was introduced in v1.3
-                self.require_version(Version::new(1, 3, 0));
+                self.require_version(
+                    Version::new(1, 3, 0),
+                    FeatureKind::ArithmeticInGuards,
+                    location,
+                );
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2703,7 +2755,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .map(|(type_, arg): (&mut Arc<Type>, _)| {
                         // label shorthand syntax was introduced in v1.4
                         if arg.uses_label_shorthand() {
-                            self.require_version(Version::new(1, 4, 0));
+                            self.require_version(
+                                Version::new(1, 4, 0),
+                                FeatureKind::LabelShorthandSyntax,
+                                arg.location,
+                            );
                         }
                         let CallArg {
                             label,
@@ -2771,7 +2827,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
             } => {
                 // string concatenation in constants was introduced in v1.4
-                self.require_version(Version::new(1, 4, 0));
+                self.require_version(
+                    Version::new(1, 4, 0),
+                    FeatureKind::ConstantStringConcatenation,
+                    location,
+                );
                 let left = self.infer_const(&None, *left);
                 unify(string(), left.type_()).map_err(|e| {
                     e.operator_situation(BinOp::Concatenate)
@@ -3130,7 +3190,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map(|(i, (type_, arg))| {
                 // label shorthand syntax was introduced in v1.4
                 if arg.uses_label_shorthand() {
-                    self.require_version(Version::new(1, 4, 0));
+                    self.require_version(
+                        Version::new(1, 4, 0),
+                        FeatureKind::LabelShorthandSyntax,
+                        arg.location,
+                    );
                 }
 
                 let CallArg {
@@ -3483,7 +3547,27 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(())
     }
 
-    fn require_version(&mut self, version: Version) {
+    fn require_version(&mut self, version: Version, feature_kind: FeatureKind, location: SrcSpan) {
+        // Then if the required version is not in the specified version for the
+        // range we emit a warning highlighting the usage of the feature.
+        if let Some(gleam_version) = &self.environment.gleam_version {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                // There is a version in the specified range that is lower than
+                // the one required by this feature! This means that the
+                // specified range is wrong and would allow someone to run a
+                // compiler that is too old to know of this feature.
+                if version > lowest_allowed_version {
+                    self.problems
+                        .warning(Warning::FeatureRequiresHigherGleamVersion {
+                            location,
+                            feature_kind,
+                            minimum_required_version: version.clone(),
+                            wrongfully_allowed_version: lowest_allowed_version,
+                        })
+                }
+            }
+        }
+
         if version > self.required_version {
             self.required_version = version;
         }

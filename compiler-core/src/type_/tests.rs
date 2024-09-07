@@ -264,6 +264,7 @@ fn compile_statement_sequence(
         &mut Environment::new(
             ids,
             "thepackage".into(),
+            None,
             "themodule".into(),
             Target::Erlang,
             &modules,

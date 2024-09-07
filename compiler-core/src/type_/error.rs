@@ -10,6 +10,7 @@ use crate::{
 
 use camino::Utf8PathBuf;
 use ecow::EcoString;
+use hexpm::version::Version;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use std::sync::Arc;
@@ -40,7 +41,7 @@ impl Problems {
         self.errors.push(error)
     }
 
-    /// Register an warning.
+    /// Register a warning.
     ///
     pub fn warning(&mut self, warning: Warning) {
         self.warnings.push(warning)
@@ -785,6 +786,34 @@ pub enum Warning {
     RedundantPipeFunctionCapture {
         location: SrcSpan,
     },
+
+    /// When the `gleam` range specified in the package's `gleam.toml` is too
+    /// low and would include a version that's too low to support this feature.
+    ///
+    /// For example, let's say that a package is saying `gleam = ">=1.1.0"`
+    /// but it is using label shorthand syntax: `wibble(label:)`.
+    /// That requires a version that is `>=1.4.0`, so the constraint expressed
+    /// in the `gleam.toml` is too permissive and if someone were to run this
+    /// code with v1.1.0 they would run into compilation errors since the
+    /// compiler cannot know of label shorthands!
+    ///
+    FeatureRequiresHigherGleamVersion {
+        location: SrcSpan,
+        minimum_required_version: Version,
+        wrongfully_allowed_version: Version,
+        feature_kind: FeatureKind,
+    },
+}
+
+#[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
+pub enum FeatureKind {
+    LabelShorthandSyntax,
+    ConstantStringConcatenation,
+    ArithmeticInGuards,
+    UnannotatedUtf8StringSegment,
+    NestedTupleAccess,
+    InternalAnnotation,
+    AtInJavascriptModules,
 }
 
 #[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -943,7 +972,8 @@ impl Warning {
             | Warning::RedundantAssertAssignment { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
             | Warning::UnreachableCodeAfterPanic { location, .. }
-            | Warning::RedundantPipeFunctionCapture { location, .. } => *location,
+            | Warning::RedundantPipeFunctionCapture { location, .. }
+            | Warning::FeatureRequiresHigherGleamVersion { location, .. } => *location,
         }
     }
 

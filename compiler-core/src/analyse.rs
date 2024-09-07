@@ -22,14 +22,14 @@ use crate::{
     type_::{
         self,
         environment::*,
-        error::{convert_unify_error, Error, MissingAnnotation, Named, Problems},
+        error::{convert_unify_error, Error, FeatureKind, MissingAnnotation, Named, Problems},
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant,
+        ValueConstructor, ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -199,6 +199,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let env = Environment::new(
             self.ids.clone(),
             self.package_config.name.clone(),
+            self.package_config.gleam_version.clone(),
             self.module_name.clone(),
             self.target,
             self.importable_modules,
@@ -372,10 +373,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let implementations = expr_typer.implementations;
 
         let required_version = expr_typer.required_version;
-        self.require_version(required_version);
+        if required_version > self.required_version {
+            self.required_version = required_version;
+        }
+
         if publicity.is_internal() {
             // The internal annotation was added in v1.1
-            self.require_version(Version::new(1, 1, 0));
+            self.require_version(
+                Version::new(1, 1, 0),
+                FeatureKind::InternalAnnotation,
+                location,
+            );
         }
 
         let variant = ValueConstructor {
@@ -542,16 +550,27 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             }
         };
 
-        self.require_version(required_version);
+        if required_version > self.required_version {
+            self.required_version = required_version;
+        }
+
         if publicity.is_internal() {
             // The @internal annotation was added in v1.1
-            self.require_version(Version::new(1, 1, 0));
+            self.require_version(
+                Version::new(1, 1, 0),
+                FeatureKind::InternalAnnotation,
+                location,
+            );
         }
 
         if let Some((module, _)) = &external_javascript {
             // Javascript modules are allowed to contain a `@` from v1.2
             if module.contains('@') {
-                self.require_version(Version::new(1, 2, 0))
+                self.require_version(
+                    Version::new(1, 2, 0),
+                    FeatureKind::AtInJavascriptModules,
+                    location,
+                )
             }
         }
 
@@ -723,12 +742,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             && module_info.package != self.package_config.name
             && !self.direct_dependencies.contains_key(&module_info.package)
         {
-            self.warnings
-                .emit(type_::Warning::TransitiveDependencyImported {
-                    location,
-                    module: module_info.name.clone(),
-                    package: module_info.package.clone(),
-                })
+            self.warnings.emit(Warning::TransitiveDependencyImported {
+                location,
+                module: module_info.name.clone(),
+                package: module_info.package.clone(),
+            })
         }
 
         Some(Definition::Import(Import {
@@ -783,7 +801,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = t;
 
         if publicity.is_internal() {
-            self.require_version(Version::new(1, 1, 0));
+            self.require_version(
+                Version::new(1, 1, 0),
+                FeatureKind::InternalAnnotation,
+                location,
+            );
         }
 
         let constructors = constructors
@@ -1090,7 +1112,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("name uniqueness checked above");
 
         if *opaque && constructors.is_empty() {
-            self.problems.warning(type_::Warning::OpaqueExternalType {
+            self.problems.warning(Warning::OpaqueExternalType {
                 location: *location,
             });
         }
@@ -1308,9 +1330,29 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
     }
 
-    fn require_version(&mut self, required_version: Version) {
-        if required_version > self.required_version {
-            self.required_version = required_version;
+    fn require_version(&mut self, version: Version, feature_kind: FeatureKind, location: SrcSpan) {
+        // Then if the required version is not in the specified version for the
+        // range we emit a warning highlighting the usage of the feature.
+        if let Some(gleam_version) = &self.package_config.gleam_version {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                // There is a version in the specified range that is lower than
+                // the one required by this feature! This means that the
+                // specified range is wrong and would allow someone to run a
+                // compiler that is too old to know of this feature.
+                if version > lowest_allowed_version {
+                    self.problems
+                        .warning(Warning::FeatureRequiresHigherGleamVersion {
+                            location,
+                            feature_kind,
+                            minimum_required_version: version.clone(),
+                            wrongfully_allowed_version: lowest_allowed_version,
+                        })
+                }
+            }
+        }
+
+        if version > self.required_version {
+            self.required_version = version;
         }
     }
 }
