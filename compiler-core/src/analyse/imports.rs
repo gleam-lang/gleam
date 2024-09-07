@@ -109,6 +109,12 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             import.location,
             self.problems,
         );
+
+        self.environment.type_names.named_type_in_scope(
+            module.name.clone(),
+            import.name.clone(),
+            imported_name.clone(),
+        )
     }
 
     fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
@@ -249,7 +255,11 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
             self.environment
                 .value_names
-                .imported_module(import.module.clone(), used_name)
+                .imported_module(import.module.clone(), used_name.clone());
+
+            self.environment
+                .type_names
+                .imported_module(import.module.clone(), used_name);
         };
 
         Ok(())

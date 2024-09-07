@@ -64,7 +64,9 @@ pub struct Environment<'a> {
     /// compilation target.
     pub target_support: TargetSupport,
 
+    // TODO: Merge these into one struct
     pub value_names: ValueNames,
+    pub type_names: TypeNames,
 }
 
 impl<'a> Environment<'a> {
@@ -90,6 +92,11 @@ impl<'a> Environment<'a> {
             );
         }
 
+        let mut type_names = TypeNames::new();
+        for name in prelude.types.keys() {
+            type_names.named_type_in_scope(PRELUDE_MODULE_NAME.into(), name.clone(), name.clone());
+        }
+
         Self {
             current_package: current_package.clone(),
             gleam_version,
@@ -112,6 +119,7 @@ impl<'a> Environment<'a> {
             entity_usages: vec![HashMap::new()],
             target_support,
             value_names,
+            type_names,
         }
     }
 }

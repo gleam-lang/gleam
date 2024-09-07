@@ -298,6 +298,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_types_constructors: types_constructors,
             module_values: values,
             accessors,
+            type_names,
             ..
         } = env;
 
@@ -334,6 +335,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 warnings,
                 minimum_required_version: self.minimum_required_version,
             },
+            extra: type_names,
         };
 
         match Vec1::try_from_vec(self.problems.take_errors()) {
@@ -1125,6 +1127,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             )
             .expect("name uniqueness checked above");
 
+        environment.type_names.named_type_in_scope(
+            environment.current_module.clone(),
+            name.clone(),
+            name.clone(),
+        );
+
         if *opaque && constructors.is_empty() {
             self.problems.warning(Warning::OpaqueExternalType {
                 location: *location,
@@ -1172,6 +1180,19 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let tryblock = || {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
+
+            match type_.as_ref() {
+                Type::Named {
+                    module,
+                    name: type_name,
+                    ..
+                } => environment.type_names.named_type_in_scope(
+                    module.clone(),
+                    type_name.clone(),
+                    name.clone(),
+                ),
+                _ => {}
+            }
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
