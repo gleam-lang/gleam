@@ -2137,3 +2137,19 @@ pub fn main() {
 "#
     );
 }
+
+//#[test]
+//fn unused_label_shorthand_pattern_arg_shadowing() {
+//    assert_warning_with_version_constraint!(
+//        ">= 1.1.0",
+//        r#"
+//pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }
+//
+//pub fn main() {
+//  let Wibble(arg1:, arg2:) = Wibble(1, True)
+//  let arg1 = False
+//  arg1
+//}
+//"#
+//    );
+//}

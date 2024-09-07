@@ -1,3 +1,5 @@
+use pubgrub::range::Range;
+
 use crate::{
     analyse::TargetSupport,
     ast::{Publicity, PIPE_VARIABLE},
@@ -13,6 +15,11 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct Environment<'a> {
     pub current_package: EcoString,
+
+    /// The gleam version range required by the current package as stated in its
+    /// gleam.toml
+    pub gleam_version: Option<Range<Version>>,
+
     pub current_module: EcoString,
     pub target: Target,
     pub ids: UniqueIdGenerator,
@@ -64,6 +71,7 @@ impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
         current_package: EcoString,
+        gleam_version: Option<Range<Version>>,
         current_module: EcoString,
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
@@ -84,6 +92,7 @@ impl<'a> Environment<'a> {
 
         Self {
             current_package: current_package.clone(),
+            gleam_version,
             previous_id: ids.next(),
             ids,
             target,

@@ -77,6 +77,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     let mut environment = Environment::new(
         ids,
         "mypackage".into(),
+        None,
         "mymod".into(),
         Target::Erlang,
         &modules,
