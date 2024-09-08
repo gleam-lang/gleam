@@ -796,13 +796,6 @@ fn get_function_type(fun: &TypedFunction) -> Type {
     }
 }
 
-fn get_function_type(fun: &TypedFunction) -> Type {
-    Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-        retrn: fun.return_type.clone(),
-    }
-}
-
 fn hover_for_function_head(fun: &TypedFunction, line_numbers: LineNumbers) -> Hover {
     let empty_str = EcoString::from("");
     let documentation = fun
