@@ -105,8 +105,8 @@ the {file} script.
 
 pub fn hex_tarball() -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let config = crate::config::root_config()?;
-    let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &config)?;
+    let mut config = crate::config::root_config()?;
+    let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &mut config)?;
 
     let path = paths.build_export_hex_tarball(&config.name, &config.version.to_string());
     crate::fs::write_bytes(&path, &data)?;

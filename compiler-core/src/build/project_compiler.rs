@@ -19,8 +19,11 @@ use crate::{
     Error, Result, Warning,
 };
 use ecow::EcoString;
+use hexpm::version::Version;
 use itertools::Itertools;
+use pubgrub::range::Range;
 use std::{
+    cmp,
     collections::{HashMap, HashSet},
     fmt::Write,
     io::BufReader,
@@ -78,6 +81,15 @@ impl Built {
                 suggestion: None,
             }),
         }
+    }
+
+    pub fn minimum_required_version(&self) -> Version {
+        self.module_interfaces
+            .values()
+            .map(|interface| &interface.required_version)
+            .reduce(|one_version, other_version| cmp::max(one_version, other_version))
+            .map(|minimum_required_version| minimum_required_version.clone())
+            .unwrap_or(Version::new(1, 0, 0))
     }
 }
 

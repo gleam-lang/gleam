@@ -36,7 +36,7 @@ pub struct PublishCommand {
 impl PublishCommand {
     pub fn setup(replace: bool, i_am_sure: bool) -> Result<Option<Self>> {
         let paths = crate::find_project_paths()?;
-        let config = crate::config::root_config()?;
+        let mut config = crate::config::root_config()?;
 
         let should_publish = check_for_gleam_prefix(&config, i_am_sure)?
             && check_for_version_zero(&config, i_am_sure)?
@@ -52,7 +52,7 @@ impl PublishCommand {
             data: package_tarball,
             src_files_added,
             generated_files_added,
-        } = do_build_hex_tarball(&paths, &config)?;
+        } = do_build_hex_tarball(&paths, &mut config)?;
 
         check_for_name_squatting(&compile_result)?;
 
@@ -242,12 +242,12 @@ struct Tarball {
     generated_files_added: Vec<(Utf8PathBuf, String)>,
 }
 
-pub fn build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Vec<u8>> {
+pub fn build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Result<Vec<u8>> {
     let Tarball { data, .. } = do_build_hex_tarball(paths, config)?;
     Ok(data)
 }
 
-fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Tarball> {
+fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Result<Tarball> {
     let target = config.target;
     check_config_for_publishing(config)?;
 
@@ -267,6 +267,31 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<
         },
         build::download_dependencies(cli::Reporter::new())?,
     )?;
+
+    let minimum_required_version = built.minimum_required_version();
+    match &config.gleam_version {
+        // If the package has no explicit `gleam` version in its `gleam.toml`
+        // then we want to add the automatically inferred one so we know it's
+        // correct and folks getting the package from Hex won't have unpleasant
+        // surprises if the author forgot to manualy write it down.
+        None => {
+            let inferred_version_range =
+                pubgrub::range::Range::higher_than(minimum_required_version);
+            config.gleam_version = Some(inferred_version_range);
+        }
+        // Otherwise we need to check that the annotated version range is
+        // correct and includes the minimum required version.
+        Some(gleam_version) => {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                if lowest_allowed_version < minimum_required_version {
+                    return Err(Error::CannotPublishWrongVersion {
+                        minimum_required_version,
+                        wrongfully_allowed_version: lowest_allowed_version,
+                    });
+                }
+            }
+        }
+    }
 
     // If any of the modules in the package contain a todo then refuse to
     // publish as the package is not yet finished.
