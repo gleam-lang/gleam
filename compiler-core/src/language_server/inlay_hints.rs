@@ -70,7 +70,7 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
 
             prev_hint = Some((
                 this_line,
-                if (&assign.value).is_simple_lit() {
+                if assign.value.is_simple_lit() {
                     None
                 } else {
                     Some(this_hint)
