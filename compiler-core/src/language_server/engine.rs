@@ -23,10 +23,8 @@ use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    
-    self as lsp, DocumentSymbol, Hover, HoverContents, InlayHint, InlayHintKind, InlayHintLabel, MarkedString, Position, Range,
+    self as lsp, DocumentSymbol, Hover, HoverContents, InlayHint, MarkedString, Position, Range,
     SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
-,
 };
 use std::sync::Arc;
 
