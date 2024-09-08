@@ -284,16 +284,16 @@ impl FileSystemReader for InMemoryFileSystem {
         self.files
             .deref()
             .borrow()
-            .iter()
-            .any(|(filepath, file)| !file.is_directory() && filepath == path)
+            .get(path)
+            .is_some_and(|file| !file.is_directory())
     }
 
     fn is_directory(&self, path: &Utf8Path) -> bool {
         self.files
             .deref()
             .borrow()
-            .iter()
-            .any(|(filepath, file)| file.is_directory() && filepath == path)
+            .get(path)
+            .is_some_and(|file| file.is_directory())
     }
 
     fn reader(&self, _path: &Utf8Path) -> Result<WrappedReader, Error> {
