@@ -1,4 +1,7 @@
-use crate::language_server::tests::{setup_engine, LanguageServerTestIO};
+use crate::language_server::{
+    configuration::{Configuration, InlayHintsConfig},
+    tests::{setup_engine, LanguageServerTestIO},
+};
 use lsp_types::{InlayHintParams, Position, Range};
 
 #[test]
@@ -137,9 +140,46 @@ fn hints_in_use() {
     insta::assert_snapshot!(hints);
 }
 
+#[test]
+fn do_not_show_hints_by_default() {
+    let src = r#"
+          const int_val = 0
+
+          fn identity(x) {
+            x
+          }
+
+          fn ret_str(_x) {
+            "abc"
+          }
+
+          pub fn example_pipe() {
+            int_val
+            |> ret_str()
+            |> identity()
+          }
+      "#;
+
+    let hints = inlay_hints_for_config(src, Configuration::default());
+    insta::assert_snapshot!(hints);
+}
+
 fn inlay_hints(src: &str) -> String {
+    inlay_hints_for_config(
+        src,
+        Configuration {
+            inlay_hints: InlayHintsConfig { pipelines: true },
+        },
+    )
+}
+
+fn inlay_hints_for_config(src: &str, user_config: Configuration) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
+    {
+        let mut config = engine.user_config.write().expect("cannot write config");
+        *config = user_config;
+    }
 
     _ = io.src_module("app", src);
     let response = engine.compile_please();

@@ -7,7 +7,7 @@ mod hover;
 mod inlay_hints;
 mod signature_help;
 
-use super::configuration::{Configuration, InlayHintsConfig};
+use super::configuration::Configuration;
 use crate::{
     config::PackageConfig,
     io::{
@@ -354,13 +354,6 @@ fn add_path_dep<B>(engine: &mut LanguageServerEngine<LanguageServerTestIO, B>, n
     )
 }
 
-/// For testing purposes, turn all the flags on
-fn default_test_config() -> Configuration {
-    Configuration {
-        inlay_hints: InlayHintsConfig { pipelines: true },
-    }
-}
-
 fn setup_engine(
     io: &LanguageServerTestIO,
 ) -> LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO> {
@@ -371,7 +364,7 @@ fn setup_engine(
         io.clone(),
         FileSystemProxy::new(io.clone()),
         io.paths.clone(),
-        Arc::new(RwLock::new(default_test_config())),
+        Arc::new(RwLock::new(Configuration::default())),
     )
     .unwrap()
 }
