@@ -8,7 +8,7 @@ use gleam_core::{
         TargetCodegenConfiguration,
     },
     config::PackageConfig,
-    io::FileSystemWriter,
+    io::{FileSystemReader, FileSystemWriter},
     warning::{VectorWarningEmitterIO, WarningEmitter},
 };
 use std::{
@@ -69,7 +69,11 @@ pub fn prepare(path: &str) -> String {
     match result {
         Outcome::Ok(_) => {
             for path in initial_files {
-                filesystem.delete_file(&path).unwrap();
+                if filesystem.is_directory(&path) {
+                    filesystem.delete_directory(&path).unwrap();
+                } else {
+                    filesystem.delete_file(&path).unwrap();
+                }
             }
             let files = filesystem.into_contents();
             let warnings = warnings.take();
