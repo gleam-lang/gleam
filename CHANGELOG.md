@@ -363,6 +363,9 @@
   unused.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The Language Server now correctly shows completions for values in the Gleam prelude.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes

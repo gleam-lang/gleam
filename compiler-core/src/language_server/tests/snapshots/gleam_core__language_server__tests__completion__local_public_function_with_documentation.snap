@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 210
 expression: "\n/// Hello\npub fn main() {\n  0\n}"
 ---
 |
@@ -11,6 +10,26 @@ pub fn main() {
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 main
   kind:   Function
   detail: fn() -> Int

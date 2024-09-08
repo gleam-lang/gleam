@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1345
 expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Int)\n  Wobble(wabble: Int, wobble: Int)\n}\n\nfn fun() {\n  let wibble = Wibble(1, 2)\n  wibble.wobble\n}\n"
 ---
 pub type Wibble {
@@ -15,6 +14,26 @@ fn fun() {
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 wobble
   kind:   Field
   detail: Int

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 854
 expression: "\n@external(erlang, \"rand\", \"uniform\")\n@internal pub fn random_float() -> Float\n@internal pub fn main() { 0 }\n@internal pub type Wibble { Wobble }\n@internal pub const wibble = 1\n"
 ---
 |
@@ -12,6 +11,26 @@ expression: "\n@external(erlang, \"rand\", \"uniform\")\n@internal pub fn random
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 Wobble
   kind:   EnumMember
   detail: Wibble

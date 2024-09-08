@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 441
 expression: "\nimport dep.{Box}\n"
 ---
 |
@@ -15,6 +14,26 @@ Box
   desc:   app
   edits:
     [1:0-1:0]: "Box"
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 dep.Box
   kind:   Constructor
   detail: fn(Int) -> Box
