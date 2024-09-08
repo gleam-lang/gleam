@@ -20,7 +20,7 @@ pub struct PatternTyper<'a, 'b> {
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
     problems: &'a mut Problems,
-    pub(crate) required_version: Version,
+    pub(crate) minimum_required_version: Version,
 }
 
 enum PatternMode {
@@ -39,7 +39,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
-            required_version: Version::new(1, 0, 0),
+            minimum_required_version: Version::new(1, 0, 0),
             problems,
         }
     }
@@ -186,13 +186,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let options = match value.as_ref() {
             Pattern::String { location, .. } if options.is_empty() => {
-                // Allowing literal string patterns to omit the `:utf8` option
-                // was introduced in v1.5
-                self.require_version(
-                    Version::new(1, 5, 0),
-                    FeatureKind::UnannotatedUtf8StringSegment,
-                    location.clone(),
-                );
+                self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
                 vec![BitArrayOption::Utf8 {
                     location: SrcSpan::default(),
                 }]
@@ -639,11 +633,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .into_iter()
                                 .zip(args)
                                 .map(|(arg, type_)| {
-                                    // Label shorthand syntax for patterns was introduced in
-                                    // v 1.4
                                     if !arg.is_implicit() && arg.uses_label_shorthand() {
-                                        self.require_version(
-                                            Version::new(1, 4, 0),
+                                        self.track_feature_usage(
                                             FeatureKind::LabelShorthandSyntax,
                                             arg.location,
                                         );
@@ -720,7 +711,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn require_version(&mut self, version: Version, feature_kind: FeatureKind, location: SrcSpan) {
+    fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {
+        let minimum_required_version = feature_kind.required_version();
+
         // Then if the required version is not in the specified version for the
         // range we emit a warning highlighting the usage of the feature.
         if let Some(gleam_version) = &self.environment.gleam_version {
@@ -729,20 +722,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // the one required by this feature! This means that the
                 // specified range is wrong and would allow someone to run a
                 // compiler that is too old to know of this feature.
-                if version > lowest_allowed_version {
+                if minimum_required_version > lowest_allowed_version {
                     self.problems
                         .warning(Warning::FeatureRequiresHigherGleamVersion {
                             location,
                             feature_kind,
-                            minimum_required_version: version.clone(),
+                            minimum_required_version: minimum_required_version.clone(),
                             wrongfully_allowed_version: lowest_allowed_version,
                         })
                 }
             }
         }
 
-        if version > self.required_version {
-            self.required_version = version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
     }
 }

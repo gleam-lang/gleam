@@ -195,6 +195,9 @@ pub enum ArgumentKind {
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
+    /// The minimum Gleam version required to compile the typed expression.
+    pub minimum_required_version: Version,
+
     // This is set to true if the previous expression that has been typed is
     // determined to always panic.
     // For example when typing a literal `panic`, this flag will be set to true.
@@ -209,9 +212,6 @@ pub(crate) struct ExprTyper<'a, 'b> {
 
     pub(crate) implementations: Implementations,
     pub(crate) current_function_definition: FunctionDefinition,
-
-    // The minimum Gleam version required to compile the typed expression.
-    pub(crate) required_version: Version,
 
     // Type hydrator for creating types from annotations
     pub(crate) hydrator: Hydrator,
@@ -247,7 +247,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
-            required_version: Version::new(1, 0, 0),
+            minimum_required_version: Version::new(1, 0, 0),
             problems,
         }
     }
@@ -1023,13 +1023,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         index: u64,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        // Nested tuple access was introduced in 1.1
         if let UntypedExpr::TupleIndex { location, .. } = tuple {
-            self.require_version(
-                Version::new(1, 1, 0),
-                FeatureKind::NestedTupleAccess,
-                location,
-            );
+            self.track_feature_usage(FeatureKind::NestedTupleAccess, location);
         }
 
         let tuple = self.infer(tuple)?;
@@ -1074,13 +1069,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 let options = match s.value.as_ref() {
-                    // Allowing literal string segments to omit the `:utf8` option
-                    // was introduced in v1.5
                     UntypedExpr::String { location, .. } if s.options.is_empty() => {
-                        self.require_version(
-                            Version::new(1, 5, 0),
+                        self.track_feature_usage(
                             FeatureKind::UnannotatedUtf8StringSegment,
-                            location.clone(),
+                            *location,
                         );
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
@@ -1109,12 +1101,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map(|s| {
                 let options = match s.value.as_ref() {
                     Constant::String { location, .. } if s.options.is_empty() => {
-                        // Allowing literal string segments to omit the `:utf8` option
-                        // was introduced in v1.5
-                        self.require_version(
-                            Version::new(1, 5, 0),
+                        self.track_feature_usage(
                             FeatureKind::UnannotatedUtf8StringSegment,
-                            location.clone(),
+                            *location,
                         );
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
@@ -1318,9 +1307,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems);
         let unify_result = pattern_typer.unify(pattern, value_typ.clone());
 
-        let version = pattern_typer.required_version;
-        if version > self.required_version {
-            self.required_version = version;
+        let minimum_required_version = pattern_typer.minimum_required_version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
 
         let pattern = match unify_result {
@@ -1543,9 +1532,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location)?);
         }
 
-        let version = pattern_typer.required_version;
-        if version > self.required_version {
-            self.required_version = version;
+        let minimum_required_version = pattern_typer.minimum_required_version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
 
         Ok((typed_pattern, typed_alternatives))
@@ -1888,12 +1877,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // + in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1912,12 +1896,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // +. in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1937,12 +1916,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // - in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1961,12 +1935,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // -. in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1986,12 +1955,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // * in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2010,12 +1974,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // *. in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -2035,12 +1994,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // / in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2059,12 +2013,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // /. in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -2084,12 +2033,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
-                // % in a guard was introduced in v1.3
-                self.require_version(
-                    Version::new(1, 3, 0),
-                    FeatureKind::ArithmeticInGuards,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2753,10 +2697,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .iter_mut()
                     .zip(args)
                     .map(|(type_, arg): (&mut Arc<Type>, _)| {
-                        // label shorthand syntax was introduced in v1.4
                         if arg.uses_label_shorthand() {
-                            self.require_version(
-                                Version::new(1, 4, 0),
+                            self.track_feature_usage(
                                 FeatureKind::LabelShorthandSyntax,
                                 arg.location,
                             );
@@ -2826,12 +2768,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 left,
                 right,
             } => {
-                // string concatenation in constants was introduced in v1.4
-                self.require_version(
-                    Version::new(1, 4, 0),
-                    FeatureKind::ConstantStringConcatenation,
-                    location,
-                );
+                self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
                 let left = self.infer_const(&None, *left);
                 unify(string(), left.type_()).map_err(|e| {
                     e.operator_situation(BinOp::Concatenate)
@@ -3188,13 +3125,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .zip(args)
             .enumerate()
             .map(|(i, (type_, arg))| {
-                // label shorthand syntax was introduced in v1.4
                 if arg.uses_label_shorthand() {
-                    self.require_version(
-                        Version::new(1, 4, 0),
-                        FeatureKind::LabelShorthandSyntax,
-                        arg.location,
-                    );
+                    self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
                 }
 
                 let CallArg {
@@ -3547,7 +3479,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(())
     }
 
-    fn require_version(&mut self, version: Version, feature_kind: FeatureKind, location: SrcSpan) {
+    fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {
+        let minimum_required_version = feature_kind.required_version();
+
         // Then if the required version is not in the specified version for the
         // range we emit a warning highlighting the usage of the feature.
         if let Some(gleam_version) = &self.environment.gleam_version {
@@ -3556,20 +3490,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // the one required by this feature! This means that the
                 // specified range is wrong and would allow someone to run a
                 // compiler that is too old to know of this feature.
-                if version > lowest_allowed_version {
+                if minimum_required_version > lowest_allowed_version {
                     self.problems
                         .warning(Warning::FeatureRequiresHigherGleamVersion {
                             location,
                             feature_kind,
-                            minimum_required_version: version.clone(),
+                            minimum_required_version: minimum_required_version.clone(),
                             wrongfully_allowed_version: lowest_allowed_version,
                         })
                 }
             }
         }
 
-        if version > self.required_version {
-            self.required_version = version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
     }
 }

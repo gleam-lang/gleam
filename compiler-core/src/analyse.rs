@@ -372,18 +372,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let type_ = typed_expr.type_();
         let implementations = expr_typer.implementations;
 
-        let required_version = expr_typer.required_version;
-        if required_version > self.required_version {
-            self.required_version = required_version;
+        let minimum_required_version = expr_typer.minimum_required_version;
+        if minimum_required_version > self.required_version {
+            self.required_version = minimum_required_version;
         }
 
         if publicity.is_internal() {
-            // The internal annotation was added in v1.1
-            self.require_version(
-                Version::new(1, 1, 0),
-                FeatureKind::InternalAnnotation,
-                location,
-            );
+            self.track_feature_usage(FeatureKind::InternalAnnotation, location);
         }
 
         let variant = ValueConstructor {
@@ -523,7 +518,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 type_,
                 body,
                 expr_typer.implementations,
-                expr_typer.required_version,
+                expr_typer.minimum_required_version,
             ))
         });
 
@@ -555,22 +550,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         if publicity.is_internal() {
-            // The @internal annotation was added in v1.1
-            self.require_version(
-                Version::new(1, 1, 0),
-                FeatureKind::InternalAnnotation,
-                location,
-            );
+            self.track_feature_usage(FeatureKind::InternalAnnotation, location);
         }
 
         if let Some((module, _)) = &external_javascript {
-            // Javascript modules are allowed to contain a `@` from v1.2
             if module.contains('@') {
-                self.require_version(
-                    Version::new(1, 2, 0),
-                    FeatureKind::AtInJavascriptModules,
-                    location,
-                )
+                self.track_feature_usage(FeatureKind::AtInJavascriptModules, location)
             }
         }
 
@@ -801,11 +786,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = t;
 
         if publicity.is_internal() {
-            self.require_version(
-                Version::new(1, 1, 0),
-                FeatureKind::InternalAnnotation,
-                location,
-            );
+            self.track_feature_usage(FeatureKind::InternalAnnotation, location);
         }
 
         let constructors = constructors
@@ -1330,7 +1311,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
     }
 
-    fn require_version(&mut self, version: Version, feature_kind: FeatureKind, location: SrcSpan) {
+    fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {
+        let minimum_required_version = feature_kind.required_version();
+
         // Then if the required version is not in the specified version for the
         // range we emit a warning highlighting the usage of the feature.
         if let Some(gleam_version) = &self.package_config.gleam_version {
@@ -1339,20 +1322,20 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 // the one required by this feature! This means that the
                 // specified range is wrong and would allow someone to run a
                 // compiler that is too old to know of this feature.
-                if version > lowest_allowed_version {
+                if minimum_required_version > lowest_allowed_version {
                     self.problems
                         .warning(Warning::FeatureRequiresHigherGleamVersion {
                             location,
                             feature_kind,
-                            minimum_required_version: version.clone(),
+                            minimum_required_version: minimum_required_version.clone(),
                             wrongfully_allowed_version: lowest_allowed_version,
                         })
                 }
             }
         }
 
-        if version > self.required_version {
-            self.required_version = version;
+        if minimum_required_version > self.required_version {
+            self.required_version = minimum_required_version;
         }
     }
 }

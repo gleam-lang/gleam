@@ -816,6 +816,20 @@ pub enum FeatureKind {
     AtInJavascriptModules,
 }
 
+impl FeatureKind {
+    pub fn required_version(&self) -> Version {
+        match self {
+            FeatureKind::InternalAnnotation => Version::new(1, 1, 0),
+            FeatureKind::NestedTupleAccess => Version::new(1, 1, 0),
+            FeatureKind::AtInJavascriptModules => Version::new(1, 2, 0),
+            FeatureKind::ArithmeticInGuards => Version::new(1, 3, 0),
+            FeatureKind::LabelShorthandSyntax => Version::new(1, 4, 0),
+            FeatureKind::ConstantStringConcatenation => Version::new(1, 4, 0),
+            FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
+        }
+    }
+}
+
 #[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum PanicPosition {
     /// When the unreachable part is a function argument, this means that one
