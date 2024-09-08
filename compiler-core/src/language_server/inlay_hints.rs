@@ -11,18 +11,6 @@ use crate::{
 
 use super::src_offset_to_lsp_position;
 
-/// Determines if the expression is a simple literal whose inlayHints must not be showed
-/// in a pipeline chain
-fn is_simple_lit(expr: &TypedExpr) -> bool {
-    matches!(
-        expr,
-        TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::BitArray { .. }
-    )
-}
-
 struct InlayHintsVisitor<'a> {
     hints: Vec<InlayHint>,
     line_numbers: &'a LineNumbers,
@@ -82,7 +70,7 @@ impl<'a, 'ast> Visit<'ast> for InlayHintsVisitor<'a> {
 
             prev_hint = Some((
                 this_line,
-                if is_simple_lit(&assign.value) {
+                if (&assign.value).is_simple_lit() {
                     None
                 } else {
                     Some(this_hint)
