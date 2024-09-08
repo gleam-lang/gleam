@@ -52,6 +52,7 @@ Parsed {
                 target: None,
             },
         ],
+        names: (),
     },
     extra: ModuleExtra {
         module_comments: [],
