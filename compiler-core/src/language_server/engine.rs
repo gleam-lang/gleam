@@ -360,7 +360,7 @@ where
                         symbols.push(DocumentSymbol {
                             name: name.to_string(),
                             detail: Some(
-                                Printer::new(&module.ast.extra)
+                                Printer::new(&module.ast.names)
                                     .print_type(&get_function_type(function))
                                     .to_string(),
                             ),
@@ -389,7 +389,7 @@ where
                         symbols.push(DocumentSymbol {
                             name: alias.alias.to_string(),
                             detail: Some(
-                                Printer::new(&module.ast.extra)
+                                Printer::new(&module.ast.names)
                                     .print_type(&alias.type_)
                                     .to_string(),
                             ),
@@ -432,7 +432,7 @@ where
                         symbols.push(DocumentSymbol {
                             name: constant.name.to_string(),
                             detail: Some(
-                                Printer::new(&module.ast.extra)
+                                Printer::new(&module.ast.names)
                                     .print_type(&constant.type_)
                                     .to_string(),
                             ),
@@ -541,7 +541,7 @@ where
                             continue;
                         }
 
-                        let type_ = Printer::new(&module.ast.extra)
+                        let type_ = Printer::new(&module.ast.names)
                             .print_type(argument.value.type_().as_ref());
                         match &argument.label {
                             Some(label) => labelled.push(format!("- `{label}: {type_}`")),
@@ -683,7 +683,7 @@ fn custom_type_symbol(
                 arguments.push(DocumentSymbol {
                     name: label.to_string(),
                     detail: Some(
-                        Printer::new(&module.ast.extra)
+                        Printer::new(&module.ast.names)
                             .print_type(&argument.type_)
                             .to_string(),
                     ),
@@ -772,7 +772,7 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: 
     let documentation = pattern.get_documentation().unwrap_or_default();
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.extra).print_type(pattern.type_().as_ref());
+    let type_ = Printer::new(&module.ast.names).print_type(pattern.type_().as_ref());
     let contents = format!(
         "```gleam
 {type_}
@@ -804,7 +804,7 @@ fn hover_for_function_head(
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
     let function_type = get_function_type(fun);
-    let formatted_type = Printer::new(&module.ast.extra).print_type(&function_type);
+    let formatted_type = Printer::new(&module.ast.names).print_type(&function_type);
     let contents = format!(
         "```gleam
 {formatted_type}
@@ -822,7 +822,7 @@ fn hover_for_function_argument(
     line_numbers: LineNumbers,
     module: &Module,
 ) -> Hover {
-    let type_ = Printer::new(&module.ast.extra).print_type(&argument.type_);
+    let type_ = Printer::new(&module.ast.names).print_type(&argument.type_);
     let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -841,7 +841,7 @@ fn hover_for_annotation(
     let documentation = type_constructor
         .and_then(|t| t.documentation.as_ref())
         .unwrap_or(&empty_str);
-    let type_ = Printer::new(&module.ast.extra).print_type(annotation_type);
+    let type_ = Printer::new(&module.ast.names).print_type(annotation_type);
     let contents = format!(
         "```gleam
 {type_}
@@ -860,7 +860,7 @@ fn hover_for_module_constant(
     module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
-    let type_ = Printer::new(&module.ast.extra).print_type(&constant.type_);
+    let type_ = Printer::new(&module.ast.names).print_type(&constant.type_);
     let documentation = constant
         .documentation
         .as_ref()
@@ -888,7 +888,7 @@ fn hover_for_expression(
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.extra).print_type(expression.type_().as_ref());
+    let type_ = Printer::new(&module.ast.names).print_type(expression.type_().as_ref());
     let contents = format!(
         "```gleam
 {type_}
@@ -916,7 +916,7 @@ fn hover_for_imported_value(
     });
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.extra).print_type(value.type_.as_ref());
+    let type_ = Printer::new(&module.ast.names).print_type(value.type_.as_ref());
     let contents = format!(
         "```gleam
 {type_}

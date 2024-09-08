@@ -42,12 +42,12 @@ pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition, TypeNames
 pub type UntypedModule = Module<(), TargetedDefinition, ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module<Info, Statements, Extra> {
+pub struct Module<Info, Statements, Names> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
     pub definitions: Vec<Statements>,
-    pub extra: Extra,
+    pub names: Names,
 }
 
 impl TypedModule {

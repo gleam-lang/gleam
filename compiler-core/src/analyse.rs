@@ -335,7 +335,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 warnings,
                 minimum_required_version: self.minimum_required_version,
             },
-            extra: type_names,
+            names: type_names,
         };
 
         match Vec1::try_from_vec(self.problems.take_errors()) {
@@ -1181,17 +1181,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
 
-            match type_.as_ref() {
-                Type::Named {
-                    module,
-                    name: type_name,
-                    ..
-                } => environment.type_names.named_type_in_scope(
+            if let Type::Named {
+                module,
+                name: type_name,
+                ..
+            } = type_.as_ref()
+            {
+                environment.type_names.named_type_in_scope(
                     module.clone(),
                     type_name.clone(),
                     name.clone(),
-                ),
-                _ => {}
+                );
             }
 
             // Insert the alias so that it can be used by other code.
