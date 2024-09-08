@@ -50,11 +50,11 @@ where
         self.io.mkdir(&self.destination_dir)?;
 
         let src = self.root.join("src");
-        self.copy_files(&src)?;
+        self.copy_files(&src, None)?;
 
         let test = self.root.join("test");
         if self.io.is_directory(&test) {
-            self.copy_files(&test)?;
+            self.copy_files(&test, None)?;
         }
 
         Ok(CopiedNativeFiles {
@@ -63,21 +63,33 @@ where
         })
     }
 
-    fn copy_files(&mut self, src_root: &Utf8Path) -> Result<()> {
+    fn copy_files(&mut self, src_root: &Utf8Path, nested_path: Option<&Utf8Path>) -> Result<()> {
         let mut check_elixir_libs = true;
 
-        for entry in self.io.read_dir(src_root)? {
+        for entry in self
+            .io
+            .read_dir(nested_path.as_deref().unwrap_or(src_root))?
+        {
             let path = entry.expect("copy_native_files dir_entry").pathbuf;
-            self.copy(path, src_root)?;
+
+            if self.io.is_directory(&path) {
+                // Recursively copy files in subdirectories as well.
+                self.copy_files(src_root, Some(&path))?;
+            } else {
+                self.copy(path, src_root, nested_path.is_some())?;
+            }
         }
         Ok(())
     }
 
-    fn copy(&mut self, file: Utf8PathBuf, src_root: &Utf8Path) -> Result<()> {
+    fn copy(&mut self, file: Utf8PathBuf, src_root: &Utf8Path, in_subdir: bool) -> Result<()> {
         let extension = file.extension().unwrap_or_default();
 
         // Skip unknown file formats that are not supported native files
-        if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
+        // Erlang FFI files in subdirectories are not currently supported either
+        if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex")
+            || in_subdir && matches!(extension, "hrl" | "erl" | "ex")
+        {
             return Ok(());
         }
 

@@ -136,6 +136,61 @@ fn typescript_files_are_copied_from_test() {
 }
 
 #[test]
+fn all_javascript_files_are_copied_from_src_subfolders() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/src/abc/def/wibble.mjs"), "1")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/abc/ghi/wibble.js"), "2")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/def/wobble.ts"), "3").unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    let copied = copier.run().unwrap();
+
+    assert!(!copied.any_elixir);
+    assert!(copied.to_compile.is_empty());
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/src/abc/def/wibble.mjs"), "1".into()),
+            (Utf8PathBuf::from("/out/abc/def/wibble.mjs"), "1".into()),
+            (Utf8PathBuf::from("/src/abc/ghi/wibble.js"), "2".into()),
+            (Utf8PathBuf::from("/out/abc/ghi/wibble.js"), "2".into()),
+            (Utf8PathBuf::from("/src/def/wobble.ts"), "3".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ts"), "3".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
+fn all_javascript_files_are_copied_from_test_subfolders() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/test/abc/def/wibble.mjs"), "1")
+        .unwrap();
+    fs.write(&Utf8Path::new("/test/abc/ghi/wibble.js"), "2")
+        .unwrap();
+    fs.write(&Utf8Path::new("/test/def/wobble.ts"), "3")
+        .unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    let copied = copier.run().unwrap();
+
+    assert!(!copied.any_elixir);
+    assert!(copied.to_compile.is_empty());
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/test/abc/def/wibble.mjs"), "1".into()),
+            (Utf8PathBuf::from("/out/abc/def/wibble.mjs"), "1".into()),
+            (Utf8PathBuf::from("/test/abc/ghi/wibble.js"), "2".into()),
+            (Utf8PathBuf::from("/out/abc/ghi/wibble.js"), "2".into()),
+            (Utf8PathBuf::from("/test/def/wobble.ts"), "3".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ts"), "3".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
 fn erlang_header_files_are_copied_from_src() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.hrl"), "1").unwrap();
