@@ -818,6 +818,7 @@ dependencies = [
  "lsp-types",
  "opener",
  "pretty_assertions",
+ "pubgrub",
  "regex",
  "reqwest",
  "rpassword",

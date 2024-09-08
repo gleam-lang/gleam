@@ -289,6 +289,12 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Version already published")]
     HexPublishReplaceRequired { version: String },
+
+    #[error("Auga")]
+    CannotPublishWrongVersion {
+        minimum_required_version: hexpm::version::Version,
+        wrongfully_allowed_version: hexpm::version::Version,
+    },
 }
 
 impl Error {
@@ -896,6 +902,24 @@ Please remove them and try again.
                 ),
                 level: Level::Error,
                 hint: None,
+                location: None,
+            }],
+
+            Error::CannotPublishWrongVersion { minimum_required_version, wrongfully_allowed_version } => vec![Diagnostic {
+                title: "Cannot publish package with wrong Gleam version range".into(),
+                text: wrap(&format!(
+                    "Your package uses features that require at least v{minimum_required_version}.
+But the Gleam version range specified in your `gleam.toml` would allow this \
+code to run on an earlier version like v{wrongfully_allowed_version}, \
+resulting in compilation errors!"
+                )),
+                level: Level::Error,
+                hint: Some(format!(
+                    "Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = \">= {}\"",
+                    minimum_required_version
+                )),
                 location: None,
             }],
 
