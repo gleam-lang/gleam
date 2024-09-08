@@ -1,5 +1,8 @@
 use super::*;
-use crate::{assert_no_warnings, assert_warning, assert_warnings_with_imports};
+use crate::{
+    assert_no_warnings, assert_warning, assert_warnings_with_gleam_version,
+    assert_warnings_with_imports,
+};
 
 #[test]
 fn unknown_label() {
@@ -2138,18 +2141,281 @@ pub fn main() {
     );
 }
 
-//#[test]
-//fn unused_label_shorthand_pattern_arg_shadowing() {
-//    assert_warning_with_version_constraint!(
-//        ">= 1.1.0",
-//        r#"
-//pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }
-//
-//pub fn main() {
-//  let Wibble(arg1:, arg2:) = Wibble(1, True)
-//  let arg1 = False
-//  arg1
-//}
-//"#
-//    );
-//}
+#[test]
+fn internal_annotation_on_constant_requires_v1_1() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+@internal
+pub const wibble = 1
+",
+    );
+}
+
+#[test]
+fn internal_annotation_on_type_requires_v1_1() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+@internal
+pub type Wibble
+",
+    );
+}
+
+#[test]
+fn internal_annotation_on_function_requires_v1_1() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+@internal
+pub fn wibble() { Nil }
+",
+    );
+}
+
+#[test]
+fn nested_tuple_access_requires_v1_1() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  let tuple = #(1, #(1, 1))
+  tuple.1.0
+}
+",
+    );
+}
+
+#[test]
+fn javascript_external_module_with_at_requires_v1_2() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+@external(javascript, \"module@module\", \"func\")
+pub fn main() { Nil }
+",
+    );
+}
+
+#[test]
+fn int_plus_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+    _ if 1 + 1 == 2 -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn float_plus_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+    _ if 1.0 +. 1.0 == 2.0 -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn int_minus_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+    _ if 1 - 1 == 0 -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn float_minus_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+    _ if 1.0 -. 1.0 == 0.0 -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn int_multiplication_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+  _ if 1 * 1 == 0 -> Nil
+  _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn float_multiplication_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+  _ if 1.0 *. 1.0 == 0.0 -> Nil
+  _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn int_divide_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+  _ if 1 / 1 == 0 -> Nil
+  _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn float_divide_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+  _ if 1.0 /. 1.0 == 0.0 -> Nil
+  _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn int_remainder_in_guards_requires_v1_3() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  case Nil {
+  _ if 1 % 1 == 0 -> Nil
+  _ -> Nil
+  }
+}
+",
+    );
+}
+
+#[test]
+fn label_shorthand_in_constand_requires_v1_4() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub type Wibble { Wibble(wibble: Int) }
+
+pub const wibble = 1
+pub const wobble = Wibble(wibble:)
+",
+    );
+}
+
+#[test]
+fn label_shorthand_in_call_requires_v1_4() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub type Wibble { Wibble(wibble: Int) }
+
+pub fn main() {
+  let wibble = 1
+  Wibble(wibble:)
+}
+",
+    );
+}
+
+#[test]
+fn label_shorthand_in_pattern_requires_v1_4() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub type Wibble { Wibble(wibble: Int) }
+
+pub fn main(wibble) {
+  case wibble {
+    Wibble(wibble:) -> wibble
+  }
+}
+",
+    );
+}
+
+#[test]
+fn constant_string_concatenation_requires_v1_4() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "pub const string = \"wibble\" <> \"wobble\""
+    );
+}
+
+#[test]
+fn missing_utf_8_option_in_bit_array_segment_requires_v1_5() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  <<\"hello\">>
+}
+",
+    );
+}
+
+#[test]
+fn missing_utf_8_option_in_bit_array_constant_segment_requires_v1_5() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "pub const bits = <<\"hello\">>"
+    );
+}
+
+#[test]
+fn missing_utf_8_option_in_bit_array_pattern_segment_requires_v1_5() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main(a) {
+  case a {
+    <<\"hello\">> -> Nil
+    _ -> Nil
+  }
+}
+",
+    );
+}
