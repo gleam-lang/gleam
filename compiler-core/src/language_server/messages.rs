@@ -251,14 +251,8 @@ impl MessageBuffer {
     }
 
     fn configuration_update_received(&mut self, result: serde_json::Value) -> Next {
-        let Some(first_el) = result.as_array().and_then(|a| a.first()) else {
-            return Next::MorePlease;
-        };
-
-        let parsed_config_result: Result<Configuration, _> =
-            serde_json::from_value(first_el.clone());
-
-        let Ok(parsed_config) = parsed_config_result else {
+        let parsed_update_items: Result<(Configuration,), _> = serde_json::from_value(result);
+        let Ok((parsed_config,)) = parsed_update_items else {
             return Next::MorePlease;
         };
 

@@ -4,14 +4,12 @@ use std::sync::{Arc, RwLock};
 pub type SharedConfig = Arc<RwLock<Configuration>>;
 
 #[derive(Debug, Default, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub struct Configuration {
     #[serde(default = "InlayHintsConfig::default")]
     pub inlay_hints: InlayHintsConfig,
 }
 
 #[derive(Debug, Clone, Deserialize)]
-#[serde(rename_all = "snake_case")]
 pub struct InlayHintsConfig {
     /// Whether to show type inlay hints of multiline pipelines
     #[serde(default = "InlayHintsConfig::default_pipelines")]
