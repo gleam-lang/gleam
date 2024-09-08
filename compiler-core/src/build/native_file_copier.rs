@@ -115,6 +115,14 @@ where
         }
 
         tracing::debug!(?file, "copying_native_file");
+
+        // Ensure destination exists (subdir might not exist yet in the output)
+        if in_subdir {
+            if let Some(parent) = destination.parent() {
+                self.io.mkdir(parent)?;
+            }
+        }
+
         self.io.copy(&file, &destination)?;
         self.elixir_files_copied = self.elixir_files_copied || extension == "ex";
 
