@@ -121,8 +121,40 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn mkdir(&self, path: &Utf8Path) -> Result<(), Error> {
-        // Basic check to ensure we don't leave the in-memory directory root
-        if path.components().next() == Some(camino::Utf8Component::ParentDir) {
+        let mut parent_counter = 0;
+
+        // Traverse ancestors from parent to root
+        // Create each missing ancestor
+        for ancestor in path.ancestors() {
+            if ancestor == "" || ancestor.ends_with(".") {
+                continue;
+            }
+            if ancestor.ends_with("..") {
+                // Skip the upcoming parent
+                parent_counter += 1;
+                continue;
+            }
+            if parent_counter > 0 {
+                parent_counter -= 1;
+                continue;
+            }
+            // Ensure we don't overwrite an existing file.
+            // We can ignore existing directories though.
+            let mut files = self.files.deref().borrow_mut();
+            if files.get(ancestor).is_some_and(|f| !f.is_directory()) {
+                return Err(Error::FileIo {
+                    kind: FileKind::Directory,
+                    action: FileIoAction::Create,
+                    path: ancestor.to_path_buf(),
+                    err: None,
+                });
+            }
+            let dir = InMemoryFile::directory();
+            _ = files.insert(ancestor.to_path_buf(), dir);
+        }
+
+        // Ensure we don't leave the in-memory directory root
+        if parent_counter > 0 {
             return Err(Error::FileIo {
                 kind: FileKind::Directory,
                 action: FileIoAction::Create,
@@ -131,20 +163,6 @@ impl FileSystemWriter for InMemoryFileSystem {
             });
         }
 
-        for path in path.ancestors() {
-            if matches!(path.as_str(), "" | "/" | ".." | ".")
-                || path.ends_with("/..")
-                || path.ends_with("/.")
-            {
-                continue;
-            }
-            let dir = InMemoryFile::directory();
-            _ = self
-                .files
-                .deref()
-                .borrow_mut()
-                .insert(path.to_path_buf(), dir);
-        }
         Ok(())
     }
 
@@ -290,8 +308,9 @@ impl FileSystemReader for InMemoryFileSystem {
                 .borrow()
                 .iter()
                 .map(|(file_path, _)| file_path.to_path_buf())
-                .filter(|file_path| {
-                    file_path.parent().is_some_and(|parent| parent == path) || path == "/"
+                .filter(|file_path| match file_path.parent() {
+                    Some(parent) => path == parent,
+                    None => path == "/" || path == "",
                 })
                 .map(DirEntry::from_pathbuf)
                 .map(Ok),
