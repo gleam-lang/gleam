@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1439
 expression: "\nfn wibble(wibble arg1: String, wobble arg2: String) {\n  arg1 <> arg2\n}\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = wibble()\n}\n"
 ---
 fn wibble(wibble arg1: String, wobble arg2: String) {
@@ -13,6 +12,26 @@ fn fun() { // completion inside parens below includes labels
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 fun
   kind:   Function
   detail: fn() -> String

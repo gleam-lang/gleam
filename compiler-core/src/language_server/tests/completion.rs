@@ -1479,3 +1479,14 @@ fn fun() {
     );
     assert_eq!(completions, vec![],);
 }
+
+#[test]
+fn completions_for_prelude_values() {
+    let code = "
+pub fn main() {
+  let my_bool = T
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(2, 17));
+}

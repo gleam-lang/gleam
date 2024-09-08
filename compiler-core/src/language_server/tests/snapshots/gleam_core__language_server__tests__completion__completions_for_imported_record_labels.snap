@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1421
 expression: "\nimport dep\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.Wibble()\n}\n"
 ---
 import dep
@@ -11,6 +10,26 @@ fn fun() { // completion inside parens below includes labels
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 dep.Wibble
   kind:   Constructor
   detail: fn(String, Int) -> Wibble

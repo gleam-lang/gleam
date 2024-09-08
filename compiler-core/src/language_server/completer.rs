@@ -16,7 +16,7 @@ use crate::{
     line_numbers::LineNumbers,
     type_::{
         collapse_links, pretty::Printer, AccessorsMap, FieldMap, ModuleInterface, PreludeType,
-        Type, TypeConstructor, ValueConstructorVariant,
+        Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
     },
     Result,
 };
@@ -42,7 +42,7 @@ enum CompletionKind {
     LocallyDefined,
     // Values or types defined in an already imported module
     ImportedModule,
-    // Types defined in the prelude
+    // Types or values defined in the prelude
     Prelude,
     // Types defined in a module that has not been imported
     ImportableModule,
@@ -530,6 +530,41 @@ where
         let mod_name = self.module.name.as_str();
 
         let (insert_range, module_select) = surrounding_completion;
+
+        let mut push_prelude_completion = |label: &str, kind| {
+            let label = label.to_string();
+            let sort_text = Some(sort_text(CompletionKind::Prelude, &label));
+            completions.push(CompletionItem {
+                label,
+                detail: Some(PRELUDE_MODULE_NAME.into()),
+                kind: Some(kind),
+                sort_text,
+                ..Default::default()
+            });
+        };
+
+        // Prelude values
+        for type_ in PreludeType::iter() {
+            match type_ {
+                PreludeType::Bool => {
+                    push_prelude_completion("True", CompletionItemKind::ENUM_MEMBER);
+                    push_prelude_completion("False", CompletionItemKind::ENUM_MEMBER);
+                }
+                PreludeType::Nil => {
+                    push_prelude_completion("Nil", CompletionItemKind::ENUM_MEMBER);
+                }
+                PreludeType::Result => {
+                    push_prelude_completion("Ok", CompletionItemKind::CONSTRUCTOR);
+                    push_prelude_completion("Error", CompletionItemKind::CONSTRUCTOR);
+                }
+                PreludeType::BitArray
+                | PreludeType::Float
+                | PreludeType::Int
+                | PreludeType::List
+                | PreludeType::String
+                | PreludeType::UtfCodepoint => {}
+            }
+        }
 
         // Module values
         // Do not complete direct module values if the user has already started typing a module select.

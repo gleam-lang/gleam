@@ -1,12 +1,10 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "\n//// Some module comments\n// Some other whitespace\n\nimport dep2\n"
+expression: "\npub fn main() {\n  let my_bool = T\n}\n"
 ---
-|
-//// Some module comments
-// Some other whitespace
-
-import dep2
+pub fn main() {
+  let my_bool = T|
+}
 
 
 ----- Completion content -----
@@ -30,18 +28,10 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   4_True
-dep.wobble
+main
   kind:   Function
-  detail: fn() -> Nil
-  sort:   5_dep.wobble
-  desc:   dep
-  edits:
-    [1:0-1:0]: "dep.wobble"
-    [0:0-0:0]: "import dep\n\n"
-dep2.wobble
-  kind:   Function
-  detail: fn() -> Nil
-  sort:   3_dep2.wobble
+  detail: fn() -> a
+  sort:   2_main
   desc:   app
   edits:
-    [1:0-1:0]: "dep2.wobble"
+    [2:16-2:16]: "main"
