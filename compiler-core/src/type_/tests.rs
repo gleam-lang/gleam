@@ -11,6 +11,7 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
+use pubgrub::range::Range;
 use std::sync::Arc;
 use vec1::Vec1;
 
@@ -173,14 +174,30 @@ macro_rules! assert_with_module_error {
     };
 }
 
-fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<crate::warning::Warning> {
+fn get_warnings(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    gleam_version: Option<Range<Version>>,
+) -> Vec<crate::warning::Warning> {
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module("test_module", src, Some(Arc::new(warnings.clone())), deps).unwrap();
+    _ = compile_module_with_opts(
+        "test_module",
+        src,
+        Some(Arc::new(warnings.clone())),
+        deps,
+        Target::Erlang,
+        TargetSupport::NotEnforced,
+        gleam_version,
+    );
     warnings.take().into_iter().collect_vec()
 }
 
-fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
-    print_warnings(get_warnings(src, deps))
+fn get_printed_warnings(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    gleam_version: Option<Range<Version>>,
+) -> String {
+    print_warnings(get_warnings(src, deps, gleam_version))
 }
 
 fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
@@ -194,14 +211,13 @@ fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
 #[macro_export]
 macro_rules! assert_warnings_with_imports {
     ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
-        let warnings = $crate::type_::tests::get_warnings(
+        let output = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![
                 $(("thepackage", $name, $module_src)),*
             ],
+            None
         );
-        assert!(!warnings.is_empty());
-        let output = $crate::type_::tests::print_warnings(warnings);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -209,7 +225,7 @@ macro_rules! assert_warnings_with_imports {
 #[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let output = $crate::type_::tests::get_printed_warnings($src, vec![]);
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![], None);
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
@@ -217,7 +233,8 @@ macro_rules! assert_warning {
     ($(($name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(("thepackage", $name, $module_src)),*]
+            vec![$(("thepackage", $name, $module_src)),*],
+            None
         );
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -226,8 +243,18 @@ macro_rules! assert_warning {
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(($package, $name, $module_src)),*]
+            vec![$(($package, $name, $module_src)),*],
+            None
         );
+        assert!(!output.is_empty());
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_warnings_with_gleam_version {
+    ($gleam_version:expr, $src:expr$(,)?) => {
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![], Some($gleam_version));
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
@@ -236,13 +263,14 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![]);
+        let warnings = $crate::type_::tests::get_warnings($src, vec![], None);
         assert_eq!(warnings, vec![]);
     };
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
+            None,
         );
         assert_eq!(warnings, vec![]);
     };
@@ -322,6 +350,7 @@ pub fn infer_module_with_target(
         dep,
         target,
         TargetSupport::NotEnforced,
+        None,
     )
     .expect("should successfully infer");
     ast.type_info
@@ -349,6 +378,7 @@ pub fn compile_module(
         dep,
         Target::Erlang,
         TargetSupport::NotEnforced,
+        None,
     )
 }
 
@@ -359,6 +389,7 @@ pub fn compile_module_with_opts(
     dep: Vec<DependencyModule<'_>>,
     target: Target,
     target_support: TargetSupport,
+    gleam_version: Option<Range<Version>>,
 ) -> Result<TypedModule, Vec<crate::type_::Error>> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
@@ -408,6 +439,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
+    config.gleam_version = gleam_version;
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
     let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
@@ -445,6 +477,7 @@ pub fn module_error_with_target(
         deps,
         target,
         TargetSupport::NotEnforced,
+        None,
     )
     .expect_err("should infer an error");
     let error = Error::Type {
@@ -471,6 +504,7 @@ pub fn internal_module_error_with_target(
         deps,
         target,
         TargetSupport::NotEnforced,
+        None,
     )
     .expect_err("should infer an error");
     let error = Error::Type {

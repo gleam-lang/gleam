@@ -1023,7 +1023,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         index: u64,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        if let UntypedExpr::TupleIndex { location, .. } = tuple {
+        if let UntypedExpr::TupleIndex { .. } = tuple {
             self.track_feature_usage(FeatureKind::NestedTupleAccess, location);
         }
 
