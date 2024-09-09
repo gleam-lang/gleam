@@ -553,9 +553,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.track_feature_usage(FeatureKind::InternalAnnotation, location);
         }
 
-        if let Some((module, _)) = &external_javascript {
+        if let Some((module, _, location)) = &external_javascript {
             if module.contains('@') {
-                self.track_feature_usage(FeatureKind::AtInJavascriptModules, location)
+                self.track_feature_usage(FeatureKind::AtInJavascriptModules, location.clone())
             }
         }
 
@@ -625,7 +625,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn assert_valid_javascript_external(
         &mut self,
         function_name: &EcoString,
-        external_javascript: Option<&(EcoString, EcoString)>,
+        external_javascript: Option<&(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
     ) {
         use regex::Regex;
@@ -635,7 +635,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         let (module, function) = match external_javascript {
             None => return,
-            Some(external) => external,
+            Some((module, function, _location)) => (module, function),
         };
         if !MODULE
             .get_or_init(|| Regex::new("^[@a-zA-Z0-9\\./:_-]+$").expect("regex"))
@@ -685,8 +685,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     fn ensure_function_has_an_implementation(
         &mut self,
         body: &Vec1<UntypedStatement>,
-        external_erlang: &Option<(EcoString, EcoString)>,
-        external_javascript: &Option<(EcoString, EcoString)>,
+        external_erlang: &Option<(EcoString, EcoString, SrcSpan)>,
+        external_javascript: &Option<(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
     ) -> bool {
         match (external_erlang, external_javascript) {
@@ -1366,21 +1366,21 @@ fn validate_module_name(name: &EcoString) -> Result<(), Error> {
 /// same as the name of the module and function. If the function has an external
 /// implementation then it is the name of the external module and function.
 fn implementation_names(
-    external: &Option<(EcoString, EcoString)>,
+    external: &Option<(EcoString, EcoString, SrcSpan)>,
     module_name: &EcoString,
     name: &EcoString,
 ) -> (EcoString, EcoString) {
     match external {
         None => (module_name.clone(), name.clone()),
-        Some((m, f)) => (m.clone(), f.clone()),
+        Some((m, f, _)) => (m.clone(), f.clone()),
     }
 }
 
 fn target_function_implementation<'a>(
     target: Target,
-    external_erlang: &'a Option<(EcoString, EcoString)>,
-    external_javascript: &'a Option<(EcoString, EcoString)>,
-) -> &'a Option<(EcoString, EcoString)> {
+    external_erlang: &'a Option<(EcoString, EcoString, SrcSpan)>,
+    external_javascript: &'a Option<(EcoString, EcoString, SrcSpan)>,
+) -> &'a Option<(EcoString, EcoString, SrcSpan)> {
     match target {
         Target::Erlang => external_erlang,
         Target::JavaScript => external_javascript,

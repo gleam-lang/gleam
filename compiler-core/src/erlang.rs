@@ -409,7 +409,7 @@ fn module_function<'a>(
     let body = function
         .external_erlang
         .as_ref()
-        .map(|(module, function)| {
+        .map(|(module, function, _location)| {
             docvec![
                 atom(module),
                 ":",
