@@ -153,9 +153,9 @@ impl<'a> ModuleEncoder<'a> {
 
     fn set_version(&mut self, module: &mut module::Builder<'_>) {
         let mut version = module.reborrow().init_required_version();
-        version.set_major(self.data.required_version.major);
-        version.set_minor(self.data.required_version.minor);
-        version.set_patch(self.data.required_version.patch);
+        version.set_major(self.data.minimum_required_version.major);
+        version.set_minor(self.data.minimum_required_version.minor);
+        version.set_patch(self.data.minimum_required_version.patch);
     }
 
     fn build_type_constructor(

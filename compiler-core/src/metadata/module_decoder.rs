@@ -81,7 +81,7 @@ impl ModuleDecoder {
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
             warnings: vec![],
-            required_version: self.version(&reader.get_required_version()?),
+            minimum_required_version: self.version(&reader.get_required_version()?),
         })
     }
 

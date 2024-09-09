@@ -165,7 +165,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
-            required_version: Version::new(1, 0, 0),
+            minimum_required_version: Version::new(1, 0, 0),
         }
         .infer_module(module)
     }
@@ -179,7 +179,7 @@ struct ModuleAnalyzer<'a, A> {
     warnings: &'a TypeWarningEmitter,
     direct_dependencies: &'a HashMap<EcoString, A>,
     target_support: TargetSupport,
-    required_version: Version,
+    minimum_required_version: Version,
     package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
     src_path: Utf8PathBuf,
@@ -330,7 +330,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 line_numbers: self.line_numbers,
                 src_path: self.src_path,
                 warnings,
-                required_version: self.required_version,
+                minimum_required_version: self.minimum_required_version,
             },
         };
 
@@ -373,8 +373,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let implementations = expr_typer.implementations;
 
         let minimum_required_version = expr_typer.minimum_required_version;
-        if minimum_required_version > self.required_version {
-            self.required_version = minimum_required_version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
 
         match publicity {
@@ -553,8 +553,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             }
         };
 
-        if required_version > self.required_version {
-            self.required_version = required_version;
+        if required_version > self.minimum_required_version {
+            self.minimum_required_version = required_version;
         }
 
         match publicity {
@@ -1360,8 +1360,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             }
         }
 
-        if minimum_required_version > self.required_version {
-            self.required_version = minimum_required_version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
     }
 }

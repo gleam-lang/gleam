@@ -86,7 +86,7 @@ impl Built {
     pub fn minimum_required_version(&self) -> Version {
         self.module_interfaces
             .values()
-            .map(|interface| &interface.required_version)
+            .map(|interface| &interface.minimum_required_version)
             .reduce(|one_version, other_version| cmp::max(one_version, other_version))
             .map(|minimum_required_version| minimum_required_version.clone())
             .unwrap_or(Version::new(1, 0, 0))

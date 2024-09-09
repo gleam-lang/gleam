@@ -6,7 +6,7 @@ fn infer_version(module: &str) -> Version {
     compile_module("test_module", module, None, vec![])
         .expect("module to compile")
         .type_info
-        .required_version
+        .minimum_required_version
 }
 
 #[test]
