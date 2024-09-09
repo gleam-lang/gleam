@@ -1,10 +1,11 @@
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 #[test]
 fn use_1() {
     assert_format!(
         r#"pub fn main() {
   use <- benchmark("thingy")
+  todo
 }
 "#
     );
@@ -15,6 +16,7 @@ fn use_2() {
     assert_format!(
         r#"pub fn main() {
   use user <- login()
+  todo
 }
 "#
     );
@@ -25,6 +27,7 @@ fn use_3() {
     assert_format!(
         r#"pub fn main() {
   use one, two, three, four <- get_multiple_things()
+  todo
 }
 "#
     );
@@ -49,6 +52,7 @@ fn use_4() {
     twelve,
     thirteen
   <- get_multiple_things_with_a_longer_function
+  todo
 }
 "#
     );
@@ -73,6 +77,7 @@ fn use_5() {
     twelve,
     thirteen
   <- get_multiple_things_with_a_longer_function(a, b, c, d)
+  todo
 }
 "#
     );
@@ -106,6 +111,7 @@ fn use_6() {
     "seven",
     "eight",
   )
+  todo
 }
 "#
     );
@@ -130,6 +136,7 @@ fn use_pipe_everything() {
         r#"pub fn main() {
   {
     use <- a
+    todo
   }
   |> b
   c
@@ -152,6 +159,7 @@ fn long_right_hand_side_0_arguments() {
     "seven",
     "eight",
   )
+  todo
 }
 "#
     );
@@ -171,6 +179,7 @@ fn long_right_hand_side_1_argument() {
     "seven",
     "eight",
   )
+  todo
 }
 "#
     );
@@ -190,6 +199,7 @@ fn long_right_hand_side_2_arguments() {
     "seven",
     "eight",
   )
+  todo
 }
 "#
     );
@@ -203,6 +213,7 @@ fn arity_1_var_call() {
     file.read()
     |> promise.map(something),
   )
+  todo
 }
 "#
     );
@@ -216,6 +227,7 @@ fn arity_1_access_call() {
     file.read()
     |> promise.map(something),
   )
+  todo
 }
 "#
     );
@@ -322,6 +334,23 @@ fn comment() {
         r#"fn main() {
   // comment
   use x <- result.then(y)
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3605
+#[test]
+fn use_with_empty_callback_body_is_rewritten_to_have_a_todo() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  use wibble, wobble <- woo
+}
+"#,
+        r#"fn main() {
+  use wibble, wobble <- woo
+  todo
 }
 "#
     );

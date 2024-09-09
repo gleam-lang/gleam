@@ -238,6 +238,26 @@
 
 ### Formatter
 
+- The formatter now adds a `todo` after a `use` expression if it is the last
+  expression in a block. For example, the following code:
+
+  ```gleam
+  pub fn main() {
+    use user <- result.try(fetch_user())
+  }
+  ```
+
+  Is rewritten as:
+
+  ```gleam
+  pub fn main() {
+    use user <- result.try(fetch_user())
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Language Server
 
 - The language server can now suggest a code action to assign an unused value to
