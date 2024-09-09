@@ -60,7 +60,7 @@ fn write_cache(
         is_internal: false,
         src_path: Utf8PathBuf::from(format!("/src/{}.gleam", name)),
         warnings: vec![],
-        required_version: Version::new(1, 0, 0),
+        minimum_required_version: Version::new(1, 0, 0),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(

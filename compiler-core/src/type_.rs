@@ -612,7 +612,7 @@ pub struct ModuleInterface {
     /// Warnings emitted during analysis of this module.
     pub warnings: Vec<Warning>,
     /// The minimum Gleam version needed to use this module.
-    pub required_version: Version,
+    pub minimum_required_version: Version,
 }
 
 impl ModuleInterface {
