@@ -571,7 +571,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         if let Some((module, _, location)) = &external_javascript {
             if module.contains('@') {
-                self.track_feature_usage(FeatureKind::AtInJavascriptModules, location.clone())
+                self.track_feature_usage(FeatureKind::AtInJavascriptModules, *location)
             }
         }
 

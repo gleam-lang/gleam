@@ -5,6 +5,7 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
+    error::SmallVersion,
     hex,
     paths::{self, ProjectPaths},
     requirement::Requirement,
@@ -285,8 +286,12 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
                 if lowest_allowed_version < minimum_required_version {
                     return Err(Error::CannotPublishWrongVersion {
-                        minimum_required_version,
-                        wrongfully_allowed_version: lowest_allowed_version,
+                        minimum_required_version: SmallVersion::from_hexpm(
+                            minimum_required_version,
+                        ),
+                        wrongfully_allowed_version: SmallVersion::from_hexpm(
+                            lowest_allowed_version,
+                        ),
                     });
                 }
             }
