@@ -846,10 +846,17 @@ impl<'comments> Formatter<'comments> {
             if i != 0 && preceding_newline {
                 documents.push(lines(2));
             } else if i != 0 {
-                documents.push(lines(1));
+                documents.push(line());
             }
             previous_position = statement.location().end;
             documents.push(self.statement(statement).group());
+
+            // If the last statement is a use we make sure it's followed by a
+            // todo to make it explicit it has an unimplemented callback.
+            if statement.is_use() && i == count - 1 {
+                documents.push(line());
+                documents.push("todo".to_doc());
+            }
         }
         if count == 1 && statements.first().is_expression() {
             documents.to_doc()
@@ -1867,7 +1874,7 @@ impl<'comments> Formatter<'comments> {
         } else if space_before {
             lines(2).append(clause_doc)
         } else {
-            lines(1).append(clause_doc)
+            line().append(clause_doc)
         }
     }
 
