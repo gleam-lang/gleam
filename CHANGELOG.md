@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Build tool
+
+- JavaScript FFI files (`.mjs`, `.js` and `.ts`) are now permitted in
+subdirectories of `src/` and `test/`.
+([PgBiel](https://github.com/PgBiel))
+
 ## v1.5.0-rc1 - 2024-09-14
 
 ### Build tool
