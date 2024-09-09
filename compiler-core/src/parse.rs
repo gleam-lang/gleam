@@ -1882,7 +1882,7 @@ where
             (InternalAttribute::Missing, true) => Ok(Publicity::Public),
             (InternalAttribute::Missing, false) => Ok(Publicity::Private),
             (InternalAttribute::Present(location), true) => Ok(Publicity::Internal {
-                attribute_location: Some(location.clone()),
+                attribute_location: Some(location),
             }),
             (InternalAttribute::Present(location), false) => Err(ParseError {
                 error: ParseErrorType::RedundantInternalAttribute,

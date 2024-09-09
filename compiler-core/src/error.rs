@@ -20,7 +20,7 @@ use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
 use std::collections::HashSet;
 use std::env;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
 use termcolor::Buffer;
@@ -290,11 +290,39 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Version already published")]
     HexPublishReplaceRequired { version: String },
 
-    #[error("Auga")]
+    #[error("The gleam version constraint is wrong and so cannot be published")]
     CannotPublishWrongVersion {
-        minimum_required_version: hexpm::version::Version,
-        wrongfully_allowed_version: hexpm::version::Version,
+        minimum_required_version: SmallVersion,
+        wrongfully_allowed_version: SmallVersion,
     },
+}
+
+/// This is to make clippy happy and not make the error variant too big by
+/// storing an entire `hexpm::version::Version` in the error.
+///
+/// This is enough to report wrong Gleam compiler versions.
+///
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct SmallVersion {
+    major: u8,
+    minor: u8,
+    patch: u8,
+}
+
+impl Display for SmallVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{}.{}.{}", self.major, self.minor, self.patch))
+    }
+}
+
+impl SmallVersion {
+    pub fn from_hexpm(version: hexpm::version::Version) -> Self {
+        Self {
+            major: version.major as u8,
+            minor: version.minor as u8,
+            patch: version.patch as u8,
+        }
+    }
 }
 
 impl Error {
