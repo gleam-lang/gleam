@@ -377,8 +377,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.required_version = minimum_required_version;
         }
 
-        if publicity.is_internal() {
-            self.track_feature_usage(FeatureKind::InternalAnnotation, location);
+        match publicity {
+            Publicity::Private
+            | Publicity::Public
+            | Publicity::Internal {
+                attribute_location: None,
+            } => (),
+
+            Publicity::Internal {
+                attribute_location: Some(location),
+            } => self.track_feature_usage(FeatureKind::InternalAnnotation, location),
         }
 
         let variant = ValueConstructor {
@@ -549,8 +557,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.required_version = required_version;
         }
 
-        if publicity.is_internal() {
-            self.track_feature_usage(FeatureKind::InternalAnnotation, location);
+        match publicity {
+            Publicity::Private
+            | Publicity::Public
+            | Publicity::Internal {
+                attribute_location: None,
+            } => (),
+
+            Publicity::Internal {
+                attribute_location: Some(location),
+            } => self.track_feature_usage(FeatureKind::InternalAnnotation, location),
         }
 
         if let Some((module, _, location)) = &external_javascript {
@@ -785,8 +801,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             ..
         } = t;
 
-        if publicity.is_internal() {
-            self.track_feature_usage(FeatureKind::InternalAnnotation, location);
+        match publicity {
+            Publicity::Private
+            | Publicity::Public
+            | Publicity::Internal {
+                attribute_location: None,
+            } => (),
+
+            Publicity::Internal {
+                attribute_location: Some(location),
+            } => self.track_feature_usage(FeatureKind::InternalAnnotation, location),
         }
 
         let constructors = constructors
@@ -1061,12 +1085,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let publicity = match publicity {
             // It's important we only restrict the publicity of public types.
             Publicity::Public if self.package_config.is_internal_module(&self.module_name) => {
-                Publicity::Internal
+                Publicity::Internal {
+                    attribute_location: None,
+                }
             }
             // If a type is private we don't want to make it internal just because
             // it comes from an internal module, so in that case the publicity is
             // left unchanged.
-            Publicity::Public | Publicity::Private | Publicity::Internal => *publicity,
+            Publicity::Public | Publicity::Private | Publicity::Internal { .. } => *publicity,
         };
 
         let type_ = Arc::new(Type::Named {

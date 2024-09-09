@@ -107,10 +107,12 @@ struct ValueConstructor {
   deprecated @3 :Text;
 }
 
-enum Publicity {
-  public @0;
-  private @1;
-  internal @2;
+struct Publicity {
+    union {
+        public @0 :Void;
+        private @1 :Void;
+        internal @2 :Option(SrcSpan);
+    }
 }
 
 struct Implementations {
