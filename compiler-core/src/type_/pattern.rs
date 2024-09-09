@@ -20,7 +20,9 @@ pub struct PatternTyper<'a, 'b> {
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
     problems: &'a mut Problems,
-    pub(crate) minimum_required_version: Version,
+
+    /// The minimum Gleam version required to compile the typed pattern.
+    pub minimum_required_version: Version,
 }
 
 enum PatternMode {

@@ -179,7 +179,6 @@ struct ModuleAnalyzer<'a, A> {
     warnings: &'a TypeWarningEmitter,
     direct_dependencies: &'a HashMap<EcoString, A>,
     target_support: TargetSupport,
-    minimum_required_version: Version,
     package_config: &'a PackageConfig,
     line_numbers: LineNumbers,
     src_path: Utf8PathBuf,
@@ -187,6 +186,9 @@ struct ModuleAnalyzer<'a, A> {
     value_names: HashMap<EcoString, SrcSpan>,
     hydrators: HashMap<EcoString, Hydrator>,
     module_name: EcoString,
+
+    /// The minimum Gleam version required to compile the analysed module.
+    minimum_required_version: Version,
 }
 
 impl<'a, A> ModuleAnalyzer<'a, A> {
