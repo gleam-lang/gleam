@@ -32,6 +32,10 @@
 
   ([Jason Sipula](https://github.com/SnakeDoc))
 
+- JavaScript FFI files (`.mjs`, `.js` and `.ts`) are now permitted in
+subdirectories of `src/` and `test/`.
+([PgBiel](https://github.com/PgBiel))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
