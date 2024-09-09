@@ -168,7 +168,7 @@ impl<'a> ModuleEncoder<'a> {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
-        builder.set_publicity(self.publicity(constructor.publicity));
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.type_);
         self.build_types(
@@ -219,16 +219,29 @@ impl<'a> ModuleEncoder<'a> {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
-        builder.set_publicity(self.publicity(constructor.publicity));
+
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
         self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
     }
 
-    fn publicity(&self, publicity: Publicity) -> crate::schema_capnp::Publicity {
+    fn build_publicity(&mut self, mut builder: publicity::Builder<'_>, publicity: Publicity) {
         match publicity {
-            Publicity::Public => crate::schema_capnp::Publicity::Public,
-            Publicity::Private => crate::schema_capnp::Publicity::Private,
-            Publicity::Internal => crate::schema_capnp::Publicity::Internal,
+            Publicity::Public => builder.set_public(()),
+            Publicity::Private => builder.set_private(()),
+            Publicity::Internal {
+                attribute_location: None,
+            } => {
+                let mut builder = builder.init_internal();
+                builder.set_none(());
+            }
+            Publicity::Internal {
+                attribute_location: Some(location),
+            } => {
+                let builder = builder.init_internal();
+                let builder = builder.init_some();
+                self.build_src_span(builder, location);
+            }
         }
     }
 

@@ -2655,7 +2655,7 @@ impl<'a> Documentable<'a> for &'a ArgNames {
 
 fn pub_(publicity: Publicity) -> Document<'static> {
     match publicity {
-        Publicity::Public | Publicity::Internal => "pub ".to_doc(),
+        Publicity::Public | Publicity::Internal { .. } => "pub ".to_doc(),
         Publicity::Private => nil(),
     }
 }

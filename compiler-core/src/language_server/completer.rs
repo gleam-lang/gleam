@@ -800,8 +800,8 @@ where
             Publicity::Private => false,
             // We only skip internal types if those are not defined in
             // the root package.
-            Publicity::Internal if package != self.root_package_name() => false,
-            Publicity::Internal => true,
+            Publicity::Internal { .. } if package != self.root_package_name() => false,
+            Publicity::Internal { .. } => true,
             // We never skip public types.
             Publicity::Public => true,
         }

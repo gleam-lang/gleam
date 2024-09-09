@@ -302,7 +302,7 @@ fn module_with_type_links() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    type_: type_,
+                    type_,
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
@@ -339,7 +339,7 @@ fn module_with_type_constructor_documentation() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    type_: type_,
+                    type_,
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
@@ -376,7 +376,7 @@ fn module_with_type_constructor_origin() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    type_: type_,
+                    type_,
                     publicity: Publicity::Public,
                     origin: SrcSpan {
                         start: 535,
@@ -1278,7 +1278,60 @@ fn internal_module_fn() {
         values: [(
             "one".into(),
             ValueConstructor {
-                publicity: Publicity::Internal,
+                publicity: Publicity::Internal {
+                    attribute_location: None,
+                },
+                deprecation: Deprecation::NotDeprecated,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wabble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
+                    implementations: Implementations {
+                        gleam: false,
+                        uses_erlang_externals: true,
+                        uses_javascript_externals: true,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
+                },
+            },
+        )]
+        .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        required_version: Version::new(1, 0, 0),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn internal_annotated_module_fn() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                publicity: Publicity::Internal {
+                    attribute_location: Some(SrcSpan {
+                        start: 11,
+                        end: 111,
+                    }),
+                },
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {

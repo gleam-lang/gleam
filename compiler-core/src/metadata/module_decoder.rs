@@ -97,7 +97,7 @@ impl ModuleDecoder {
             },
         };
         Ok(TypeConstructor {
-            publicity: self.publicity(reader.get_publicity()?),
+            publicity: self.publicity(reader.get_publicity()?)?,
             origin: self.src_span(&reader.get_origin()?)?,
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
@@ -212,7 +212,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
-        let publicity = self.publicity(reader.get_publicity()?);
+        let publicity = self.publicity(reader.get_publicity()?)?;
         let deprecation = match reader.get_deprecated()? {
             "" => Deprecation::NotDeprecated,
             message => Deprecation::Deprecated {
@@ -227,11 +227,18 @@ impl ModuleDecoder {
         })
     }
 
-    fn publicity(&self, publicity: crate::schema_capnp::Publicity) -> Publicity {
-        match publicity {
-            schema::Publicity::Public => Publicity::Public,
-            schema::Publicity::Private => Publicity::Private,
-            schema::Publicity::Internal => Publicity::Internal,
+    fn publicity(&self, reader: publicity::Reader<'_>) -> Result<Publicity> {
+        match reader.which()? {
+            publicity::Which::Public(()) => Ok(Publicity::Public),
+            publicity::Which::Private(()) => Ok(Publicity::Private),
+            publicity::Which::Internal(reader) => match reader?.which()? {
+                option::Which::None(()) => Ok(Publicity::Internal {
+                    attribute_location: None,
+                }),
+                option::Which::Some(reader) => Ok(Publicity::Internal {
+                    attribute_location: Some(self.src_span(&reader?)?),
+                }),
+            },
         }
     }
 
