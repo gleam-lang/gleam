@@ -2969,8 +2969,8 @@ fn constant_call_arg_formatting<A, B>(
 }
 
 struct AttributesPrinter<'a> {
-    external_erlang: &'a Option<(EcoString, EcoString)>,
-    external_javascript: &'a Option<(EcoString, EcoString)>,
+    external_erlang: &'a Option<(EcoString, EcoString, SrcSpan)>,
+    external_javascript: &'a Option<(EcoString, EcoString, SrcSpan)>,
     deprecation: &'a Deprecation,
     internal: bool,
 }
@@ -2985,12 +2985,18 @@ impl<'a> AttributesPrinter<'a> {
         }
     }
 
-    pub fn set_external_erlang(mut self, external: &'a Option<(EcoString, EcoString)>) -> Self {
+    pub fn set_external_erlang(
+        mut self,
+        external: &'a Option<(EcoString, EcoString, SrcSpan)>,
+    ) -> Self {
         self.external_erlang = external;
         self
     }
 
-    pub fn set_external_javascript(mut self, external: &'a Option<(EcoString, EcoString)>) -> Self {
+    pub fn set_external_javascript(
+        mut self,
+        external: &'a Option<(EcoString, EcoString, SrcSpan)>,
+    ) -> Self {
         self.external_javascript = external;
         self
     }
@@ -3016,11 +3022,11 @@ impl<'a> Documentable<'a> for AttributesPrinter<'a> {
         };
 
         // @external attributes
-        if let Some((m, f)) = self.external_erlang {
+        if let Some((m, f, _)) = self.external_erlang {
             attributes.push(docvec!["@external(erlang, \"", m, "\", \"", f, "\")"])
         };
 
-        if let Some((m, f)) = self.external_javascript {
+        if let Some((m, f, _)) = self.external_javascript {
             attributes.push(docvec!["@external(javascript, \"", m, "\", \"", f, "\")"])
         };
 
