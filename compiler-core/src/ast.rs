@@ -15,7 +15,7 @@ use crate::analyse::Inferred;
 use crate::build::{Located, Target};
 use crate::parse::SpannedString;
 use crate::type_::expression::Implementations;
-use crate::type_::printer::TypeNames;
+use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
@@ -37,7 +37,7 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition, TypeNames>;
+pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition, Names>;
 
 pub type UntypedModule = Module<(), TargetedDefinition, ()>;
 

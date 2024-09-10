@@ -8,7 +8,7 @@ use crate::type_::{Type, TypeVar};
 /// scope, so they can be printed in errors, etc.
 ///
 #[derive(Debug, Default)]
-pub struct TypeNames {
+pub struct Names {
     /// Types that exist in the current module, either defined or imported in an
     /// unqualified fashion.
     ///
@@ -87,14 +87,66 @@ pub struct TypeNames {
     /// value: `"something"`
     ///
     type_variables: HashMap<u64, EcoString>,
+
+    /// Constructors which are imported in the current module in an
+    /// unqualified fashion.
+    ///
+    /// key:   (Defining module name, type name)
+    /// value: Alias name
+    ///
+    /// # Example 1
+    ///
+    /// ```gleam
+    /// import wibble.{Wobble}
+    /// ```
+    /// would result in
+    /// - key:   `("wibble", "Wobble")`
+    /// - value: `"Wobble"`
+    ///
+    /// # Example 2
+    ///
+    /// ```gleam
+    /// import wibble.{Wobble as Woo}
+    /// ```
+    /// would result in
+    /// - key:   `("wibble", "Wobble")`
+    /// - value: `"Woo"`
+    ///
+    local_constructors: HashMap<(EcoString, EcoString), EcoString>,
+
+    /// A map from local constructor names to the modules which they refer to.
+    /// This helps resolve cases like:
+    /// ```gleam
+    /// import wibble.{Wobble}
+    /// type Wibble { Wobble }
+    /// ```
+    /// Here, `Wobble` is shadowed, causing `Wobble` not to be valid syntax
+    /// for `wibble.Wobble`.
+    ///
+    /// Each key is the local name of the constructor, and the value is the module
+    /// for which the unqualified version is valid. In the above example,
+    /// it would result in
+    /// - key:   `"Wobble"`
+    /// - value: `"module"` (Whatever the current module is)
+    ///
+    /// But in this case:
+    /// ```gleam
+    /// import wibble.{Wobble as Wubble}
+    /// type Wibble { Wobble }
+    /// ```
+    /// No shadowing occurs, so this isn't needed.
+    ///
+    constructor_names: HashMap<EcoString, EcoString>,
 }
 
-impl TypeNames {
+impl Names {
     pub fn new() -> Self {
         Self {
             local_types: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
+            local_constructors: Default::default(),
+            constructor_names: Default::default(),
         }
     }
 
@@ -125,25 +177,68 @@ impl TypeNames {
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
-    ) -> NamedTypeNames<'a> {
+    ) -> NameQualifier<'a> {
         let key = (module.clone(), name.clone());
 
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
-            return NamedTypeNames::Unqualified(name.as_str());
+            return NameQualifier::Unqualified(name.as_str());
         }
 
         // This type is from a module that has been imported
         if let Some(module) = self.imported_modules.get(module) {
-            return NamedTypeNames::Qualified(module, name.as_str());
+            return NameQualifier::Qualified(module, name.as_str());
         };
 
-        return NamedTypeNames::Unimported(name.as_str());
+        return NameQualifier::Unimported(name.as_str());
+    }
+
+    /// Record a named value in this module.
+    pub fn named_constructor_in_scope(
+        &mut self,
+        module_name: EcoString,
+        value_name: EcoString,
+        local_alias: EcoString,
+    ) {
+        _ = self
+            .local_constructors
+            .insert((module_name.clone(), value_name), local_alias.clone());
+        _ = self.constructor_names.insert(local_alias, module_name);
+    }
+
+    /// Get the name and optional module qualifier for a named constructor.
+    pub fn named_constructor<'a>(
+        &'a self,
+        module: &'a EcoString,
+        name: &'a EcoString,
+    ) -> NameQualifier<'a> {
+        let key: (EcoString, EcoString) = (module.clone(), name.clone());
+
+        // There is a local name for this value, use that.
+        if let Some(name) = self.local_constructors.get(&key) {
+            // Only return unqualified syntax if the constructor is not shadowed,
+            // and unqualified syntax is valid.
+            if self
+                .constructor_names
+                .get(name)
+                .expect("Constructors must be added to both maps")
+                == module
+            {
+                return NameQualifier::Unqualified(name.as_str());
+            }
+        }
+
+        // This value is from a module that has been imported
+        if let Some(module) = self.imported_modules.get(module) {
+            return NameQualifier::Qualified(module, name.as_str());
+        };
+
+        NameQualifier::Unimported(name.as_str())
     }
 }
 
 #[derive(Debug)]
-pub enum NamedTypeNames<'a> {
+pub enum NameQualifier<'a> {
     /// This type is from a module that has not been imported in this module.
     Unimported(&'a str),
     /// This type has been imported in an unqualifid fashion in this module.
@@ -156,7 +251,7 @@ pub enum NamedTypeNames<'a> {
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
 pub struct Printer<'a> {
-    names: &'a TypeNames,
+    names: &'a Names,
     uid: u64,
 
     /// Some type variables aren't bound to names, so when trying to print those,
@@ -175,7 +270,7 @@ pub struct Printer<'a> {
 }
 
 impl<'a> Printer<'a> {
-    pub fn new(names: &'a TypeNames) -> Self {
+    pub fn new(names: &'a Names) -> Self {
         Printer {
             names,
             uid: Default::default(),
@@ -196,11 +291,11 @@ impl<'a> Printer<'a> {
                 name, args, module, ..
             } => {
                 let (module, name) = match self.names.named_type(module, name) {
-                    NamedTypeNames::Qualified(m, n) => (Some(m), n),
-                    NamedTypeNames::Unqualified(n) => (None, n),
+                    NameQualifier::Qualified(m, n) => (Some(m), n),
+                    NameQualifier::Unqualified(n) => (None, n),
                     // TODO: indicate that the module is not import and as such
                     // needs to be, as well as how.
-                    NamedTypeNames::Unimported(n) => {
+                    NameQualifier::Unimported(n) => {
                         (Some(module.split('/').last().unwrap_or(module)), n)
                     }
                 };
@@ -294,7 +389,7 @@ impl<'a> Printer<'a> {
 
 #[test]
 fn test_local_type() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
     names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
     let mut printer = Printer::new(&names);
 
@@ -311,7 +406,7 @@ fn test_local_type() {
 
 #[test]
 fn test_generic_type_annotation() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
     names.type_variable_in_scope(0, "one".into());
     let mut printer = Printer::new(&names);
 
@@ -324,7 +419,7 @@ fn test_generic_type_annotation() {
 
 #[test]
 fn test_generic_type_var() {
-    let names = TypeNames::new();
+    let names = Names::new();
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Var {
@@ -341,7 +436,7 @@ fn test_generic_type_var() {
 
 #[test]
 fn test_tuple_type() {
-    let names = TypeNames::new();
+    let names = Names::new();
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Tuple {
@@ -368,7 +463,7 @@ fn test_tuple_type() {
 
 #[test]
 fn test_fn_type() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
     names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
     names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
     let mut printer = Printer::new(&names);
@@ -404,7 +499,7 @@ fn test_fn_type() {
 
 #[test]
 fn test_module_alias() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
     names.imported_module("mod1".into(), "animals".into());
     let mut printer = Printer::new(&names);
 
@@ -421,7 +516,7 @@ fn test_module_alias() {
 
 #[test]
 fn test_type_alias_and_generics() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
 
     names.named_type_in_scope("mod".into(), "Tiger".into(), "Cat".into());
 
@@ -444,7 +539,7 @@ fn test_type_alias_and_generics() {
 
 #[test]
 fn test_unqualified_import_and_generic() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
 
     names.named_type_in_scope("mod".into(), "Cat".into(), "C".into());
 
@@ -467,7 +562,7 @@ fn test_unqualified_import_and_generic() {
 
 #[test]
 fn nested_module() {
-    let names = TypeNames::new();
+    let names = Names::new();
     let mut printer = Printer::new(&names);
     let type_ = Type::Named {
         name: "Cat".into(),
@@ -482,7 +577,7 @@ fn nested_module() {
 
 #[test]
 fn test_unqualified_import_and_module_alias() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
 
     names.imported_module("mod1".into(), "animals".into());
 
@@ -505,7 +600,7 @@ fn test_unqualified_import_and_module_alias() {
 
 #[test]
 fn test_module_imports() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
     names.imported_module("mod".into(), "animals".into());
     let _ = names
         .local_types
@@ -535,7 +630,7 @@ fn test_module_imports() {
 
 #[test]
 fn test_multiple_generic_annotations() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
 
     names.type_variable_in_scope(0, "one".into());
     names.type_variable_in_scope(1, "two".into());
@@ -567,7 +662,7 @@ fn test_multiple_generic_annotations() {
 
 #[test]
 fn test_variable_name_already_in_scope() {
-    let mut names = TypeNames::new();
+    let mut names = Names::new();
 
     names.type_variable_in_scope(1, "a".into());
     names.type_variable_in_scope(2, "b".into());

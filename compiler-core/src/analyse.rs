@@ -298,7 +298,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_types_constructors: types_constructors,
             module_values: values,
             accessors,
-            type_names,
+            names: type_names,
             ..
         } = env;
 
@@ -1040,7 +1040,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 deprecation.clone(),
             );
 
-            environment.value_names.named_constructor_in_scope(
+            environment.names.named_constructor_in_scope(
                 environment.current_module.clone(),
                 constructor.name.clone(),
                 constructor.name.clone(),
@@ -1127,7 +1127,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             )
             .expect("name uniqueness checked above");
 
-        environment.type_names.named_type_in_scope(
+        environment.names.named_type_in_scope(
             environment.current_module.clone(),
             name.clone(),
             name.clone(),
@@ -1187,7 +1187,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 ..
             } = type_.as_ref()
             {
-                environment.type_names.named_type_in_scope(
+                environment.names.named_type_in_scope(
                     module.clone(),
                     type_name.clone(),
                     name.clone(),
