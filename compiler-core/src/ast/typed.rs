@@ -518,12 +518,22 @@ impl TypedExpr {
             | TypedExpr::RecordAccess { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Fn { .. } => true,
 
             TypedExpr::NegateBool { value, .. } | TypedExpr::NegateInt { value, .. } => {
                 value.is_pure_value_constructor()
             }
+
+            // A module select is a pure value constructor only if it is a
+            // record, in all other cases it could be a side-effecting function.
+            // For example `option.Some(1)` is pure but `io.println("a")` is
+            // not.
+            TypedExpr::ModuleSelect { constructor, .. } => match constructor {
+                ModuleValueConstructor::Record { .. } => true,
+                ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
+                    false
+                }
+            },
 
             // A pipeline is a pure value constructor if its last step is a record builder.
             // For example `wibble() |> wobble() |> Ok`
@@ -550,6 +560,10 @@ impl TypedExpr {
         match self {
             TypedExpr::Call { fun, .. } => fun.is_record_builder(),
             TypedExpr::Var { constructor, .. } => constructor.variant.is_record(),
+            TypedExpr::ModuleSelect {
+                constructor: ModuleValueConstructor::Record { .. },
+                ..
+            } => true,
             _ => false,
         }
     }

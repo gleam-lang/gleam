@@ -1333,6 +1333,23 @@ pub fn main() {
 }
 
 #[test]
+fn unused_pipeline_ending_with_variant_raises_a_warning_2() {
+    assert_warning!(
+        ("wibble", "pub type Wibble { Wibble(Int) }"),
+        r#"
+import wibble
+
+pub fn wobble(a) { a }
+
+pub fn main() {
+  1 |> wobble |> wibble.Wibble
+  1
+}
+"#
+    );
+}
+
+#[test]
 fn unused_pipeline_not_ending_with_variant_raises_no_warnings() {
     assert_no_warnings!(
         r#"
@@ -1341,6 +1358,21 @@ pub fn wibble(a) { a }
 
 pub fn main() {
   1 |> wibble |> wibble
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_module_select_constructor() {
+    assert_warning!(
+        ("wibble", "pub type Wibble { Wibble(Int) }"),
+        r#"
+import wibble
+
+pub fn main() {
+  wibble.Wibble(1)
   1
 }
 "#
