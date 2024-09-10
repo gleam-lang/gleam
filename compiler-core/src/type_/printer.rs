@@ -192,18 +192,26 @@ impl Names {
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
+        print_mode: PrintMode,
     ) -> NameQualifier<'a> {
+        if print_mode == PrintMode::Raw {
+            if let Some(module) = self.imported_modules.get(module) {
+                return NameQualifier::Qualified(module, name.as_str());
+            };
+
+            return NameQualifier::Unimported(name.as_str());
+        }
+
         let key = (module.clone(), name.clone());
 
+        // Only check for local aliases if we want to print aliases
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
             return NameQualifier::Unqualified(name.as_str());
         }
 
-        if module == PRELUDE_MODULE_NAME {
-            if let Some(prelude_type) = self.unshadowed_prelude_types.get(name) {
-                return NameQualifier::Unqualified(prelude_type.as_str());
-            }
+        if module == PRELUDE_MODULE_NAME && self.unshadowed_prelude_types.contains(name) {
+            return NameQualifier::Unqualified(name.as_str());
         }
 
         // This type is from a module that has been imported
@@ -268,6 +276,15 @@ pub enum NameQualifier<'a> {
     Qualified(&'a str, &'a str),
 }
 
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum PrintMode {
+    /// Prints the context-specific representation of a type
+    Normal,
+    /// Prints the raw type, always qualified. Useful for providing
+    /// more detail to the user.
+    Raw,
+}
+
 /// A type printer that does not wrap and indent, but does take into account the
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
@@ -302,16 +319,22 @@ impl<'a> Printer<'a> {
 
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
-        self.print(type_, &mut buffer);
+        self.print(type_, &mut buffer, PrintMode::Normal);
         buffer
     }
 
-    fn print(&mut self, type_: &Type, buffer: &mut EcoString) {
+    pub fn print_type_without_aliases(&mut self, type_: &Type) -> EcoString {
+        let mut buffer = EcoString::new();
+        self.print(type_, &mut buffer, PrintMode::Raw);
+        buffer
+    }
+
+    fn print(&mut self, type_: &Type, buffer: &mut EcoString, print_mode: PrintMode) {
         match type_ {
             Type::Named {
                 name, args, module, ..
             } => {
-                let (module, name) = match self.names.named_type(module, name) {
+                let (module, name) = match self.names.named_type(module, name, print_mode) {
                     NameQualifier::Qualified(m, n) => (Some(m), n),
                     NameQualifier::Unqualified(n) => (None, n),
                     // TODO: indicate that the module is not import and as such
@@ -329,20 +352,20 @@ impl<'a> Printer<'a> {
 
                 if !args.is_empty() {
                     buffer.push('(');
-                    self.print_arguments(args, buffer);
+                    self.print_arguments(args, buffer, print_mode);
                     buffer.push(')');
                 }
             }
 
             Type::Fn { args, retrn } => {
                 buffer.push_str("fn(");
-                self.print_arguments(args, buffer);
+                self.print_arguments(args, buffer, print_mode);
                 buffer.push_str(") -> ");
-                self.print(retrn, buffer);
+                self.print(retrn, buffer, print_mode);
             }
 
             Type::Var { type_, .. } => match *type_.borrow() {
-                TypeVar::Link { ref type_, .. } => self.print(type_, buffer),
+                TypeVar::Link { ref type_, .. } => self.print(type_, buffer, print_mode),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                     buffer.push_str(&self.type_variable(id))
                 }
@@ -350,15 +373,20 @@ impl<'a> Printer<'a> {
 
             Type::Tuple { elems, .. } => {
                 buffer.push_str("#(");
-                self.print_arguments(elems, buffer);
+                self.print_arguments(elems, buffer, print_mode);
                 buffer.push(')');
             }
         }
     }
 
-    fn print_arguments(&mut self, args: &[Arc<Type>], typ_str: &mut EcoString) {
+    fn print_arguments(
+        &mut self,
+        args: &[Arc<Type>],
+        typ_str: &mut EcoString,
+        print_mode: PrintMode,
+    ) {
         for (i, arg) in args.iter().enumerate() {
-            self.print(arg, typ_str);
+            self.print(arg, typ_str, print_mode);
             if i < args.len() - 1 {
                 typ_str.push_str(", ");
             }

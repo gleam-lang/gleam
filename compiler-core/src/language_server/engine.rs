@@ -390,7 +390,10 @@ where
                             name: alias.alias.to_string(),
                             detail: Some(
                                 Printer::new(&module.ast.names)
-                                    .print_type(&alias.type_)
+                                    // If we print with aliases, we end up printing the alias which the user
+                                    // is currently hovering, which is not helpful. Instead, we print the
+                                    // raw type, so the user can see which type the alias represents
+                                    .print_type_without_aliases(&alias.type_)
                                     .to_string(),
                             ),
                             kind: SymbolKind::CLASS,
@@ -841,7 +844,11 @@ fn hover_for_annotation(
     let documentation = type_constructor
         .and_then(|t| t.documentation.as_ref())
         .unwrap_or(&empty_str);
-    let type_ = Printer::new(&module.ast.names).print_type(annotation_type);
+    // If a user is hovering an annotation, it's not very useful to show the
+    // local representation of that type, since that's probably what they see
+    // in the source code anyway. So here, we print the raw type,
+    // which is probably more helpful.
+    let type_ = Printer::new(&module.ast.names).print_type_without_aliases(annotation_type);
     let contents = format!(
         "```gleam
 {type_}
