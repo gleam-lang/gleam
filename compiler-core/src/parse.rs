@@ -242,7 +242,7 @@ where
             documentation: vec![],
             type_info: (),
             definitions,
-            names: (),
+            names: Default::default(),
         };
         Ok(Parsed {
             module,

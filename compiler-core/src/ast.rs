@@ -37,12 +37,12 @@ pub trait HasLocation {
     fn location(&self) -> SrcSpan;
 }
 
-pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition, Names>;
+pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 
-pub type UntypedModule = Module<(), TargetedDefinition, ()>;
+pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module<Info, Statements, Names> {
+pub struct Module<Info, Statements> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
