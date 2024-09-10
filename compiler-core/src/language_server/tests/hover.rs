@@ -1021,3 +1021,16 @@ fn make_ok(value: a) {
         find_position_of("result =").under_char('s')
     );
 }
+
+#[test]
+fn hover_print_imported_alias() {
+    let code = "
+import aliases.{type Aliased}
+const thing: Aliased = 10
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("aliases", "pub type Aliased = Int"),
+        find_position_of("thing").under_char('g')
+    );
+}
