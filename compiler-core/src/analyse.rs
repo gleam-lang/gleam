@@ -1184,14 +1184,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             if let Type::Named {
                 module,
                 name: type_name,
+                args,
                 ..
             } = type_.as_ref()
             {
-                environment.names.named_type_in_scope(
-                    module.clone(),
-                    type_name.clone(),
-                    name.clone(),
-                );
+                // If the alias or type itself have any parameters, it requires a
+                // lot of work to reconstruct and correctly print the alias,
+                // so we just don't register it.
+                //
+                // Maybe in future we could do this extra work, but for the time
+                // being, it's simpler not to.
+                if parameters.is_empty() && args.is_empty() {
+                    environment.names.named_type_in_scope(
+                        module.clone(),
+                        type_name.clone(),
+                        name.clone(),
+                    );
+                }
             }
 
             // Insert the alias so that it can be used by other code.
