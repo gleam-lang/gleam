@@ -1152,3 +1152,19 @@ fn main(wibble: Wubble) {
         find_position_of(": Wubble").under_char('e')
     );
 }
+
+#[test]
+fn hover_print_underlying_for_alias_with_parameters() {
+    let code = "
+type LocalResult = Result(String, Int)
+
+fn do_thing() -> LocalResult {
+  Error(1)
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("do_thing").under_char('d')
+    );
+}
