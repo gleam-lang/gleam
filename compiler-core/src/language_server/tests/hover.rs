@@ -976,3 +976,48 @@ fn make_wibble() -> wobble.Wibble { wobble.Wibble }
         find_position_of("-> wobble").under_char('o')
     );
 }
+
+#[test]
+fn hover_print_type_variable_names() {
+    let code = "
+fn main(value: Result(ok, error)) {
+  let v = value
+  v
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("let v").under_char('v')
+    );
+}
+
+#[test]
+fn hover_print_unbound_type_variable_names() {
+    let code = "
+fn make_ok(value: some_type) {
+  let result = Ok(value)
+  result
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("result =").under_char('s')
+    );
+}
+
+#[test]
+fn hover_print_unbound_type_variable_name_without_conflicts() {
+    let code = "
+fn make_ok(value: a) {
+  let result = Ok(value)
+  result
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("result =").under_char('s')
+    );
+}
