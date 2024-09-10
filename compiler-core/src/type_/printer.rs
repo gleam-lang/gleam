@@ -1,6 +1,6 @@
 use ecow::EcoString;
 use im::HashMap;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use crate::type_::{Type, TypeVar};
 
@@ -158,6 +158,20 @@ pub enum NamedTypeNames<'a> {
 pub struct Printer<'a> {
     names: &'a TypeNames,
     uid: u64,
+
+    /// Some type variables aren't bound to names, so when trying to print those,
+    /// we need to create our own names which don't overlap with existing type variables.
+    /// These two data structures store a mapping of IDs to created type-variable names,
+    /// to ensure consistent printing, and the set of all printed names so that we don't
+    /// create a type variable name which matches an existing one.
+    ///
+    /// Note: These are stored per printer, not per TypeNames struct, because:
+    /// - It doesn't really matter what these are, as long as they are consistent.
+    /// - We would need mutable access to the names struct, which isn't really possible
+    ///   in many contexts.
+    ///
+    printed_type_variables: HashMap<u64, EcoString>,
+    printed_type_variable_names: HashSet<EcoString>,
 }
 
 impl<'a> Printer<'a> {
@@ -165,6 +179,8 @@ impl<'a> Printer<'a> {
         Printer {
             names,
             uid: Default::default(),
+            printed_type_variables: Default::default(),
+            printed_type_variable_names: names.type_variables.values().cloned().collect(),
         }
     }
 
@@ -239,7 +255,18 @@ impl<'a> Printer<'a> {
             return name.clone();
         }
 
-        self.next_letter()
+        if let Some(name) = self.printed_type_variables.get(&id) {
+            return name.clone();
+        }
+
+        loop {
+            let name = self.next_letter();
+            if !self.printed_type_variable_names.contains(&name) {
+                _ = self.printed_type_variable_names.insert(name.clone());
+                _ = self.printed_type_variables.insert(id, name.clone());
+                return name;
+            }
+        }
     }
 
     fn next_letter(&mut self) -> EcoString {
