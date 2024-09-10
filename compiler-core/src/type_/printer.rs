@@ -165,12 +165,22 @@ impl Names {
         type_name: EcoString,
         local_alias: EcoString,
     ) {
-        // If this is a type in the prelude, it is now shadowed.
-        _ = self.unshadowed_prelude_types.remove(&local_alias);
-
+        self.type_exists_in_scope(&local_alias);
         _ = self
             .local_types
             .insert((module_name, type_name), local_alias);
+    }
+
+    /// Record a type existing in the current module. This is for types
+    /// which define a name in the current scope, but do not represent a
+    /// named type (aliases). This exists so we can correctly print
+    /// prelude types, even if they are shadowed by an alias like:
+    /// ```gleam
+    /// type Pair = #(String, Int)
+    /// ```
+    pub fn type_exists_in_scope(&mut self, name: &EcoString) {
+        // If this is a type in the prelude, it is now shadowed.
+        _ = self.unshadowed_prelude_types.remove(name);
     }
 
     pub fn prelude_type(&mut self, name: EcoString) {

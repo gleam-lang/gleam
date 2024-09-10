@@ -1168,3 +1168,29 @@ fn do_thing() -> LocalResult {
         find_position_of("do_thing").under_char('d')
     );
 }
+
+#[test]
+fn hover_print_qualified_prelude_type_when_shadowed_by_alias() {
+    let code = "
+type Result = #(Bool, String)
+const ok = Ok(10)
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("ok").under_char('k')
+    );
+}
+
+#[test]
+fn hover_print_qualified_prelude_type_when_shadowed_by_imported_alias() {
+    let code = "
+import alias.{type Bool}
+const value = True
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("alias", "pub type Bool = #(Int, Int)"),
+        find_position_of("value").under_char('v')
+    );
+}
