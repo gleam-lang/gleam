@@ -4,7 +4,7 @@ use crate::{
     ast::{SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
     type_::{
-        EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
+        EntityKind, Environment, Error, ModuleInterface, Problems, Type, UnusedModuleAlias,
         ValueConstructorVariant,
     },
 };
@@ -95,6 +95,15 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         let type_info = type_info.clone().with_location(import.location);
 
+        // We only register types if they are named
+        if let Type::Named { module, name, .. } = type_info.type_.as_ref() {
+            self.environment.names.named_type_in_scope(
+                module.clone(),
+                name.clone(),
+                imported_name.clone(),
+            );
+        }
+
         if let Err(e) = self
             .environment
             .insert_type_constructor(imported_name.clone(), type_info)
@@ -109,12 +118,6 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             import.location,
             self.problems,
         );
-
-        self.environment.names.named_type_in_scope(
-            module.name.clone(),
-            import.name.clone(),
-            imported_name.clone(),
-        )
     }
 
     fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
