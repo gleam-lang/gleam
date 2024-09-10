@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nfn main(value: Result(ok, error)) {\n  let v = value\n  v\n}\n"
+---
+fn main(value: Result(ok, error)) {
+  let v = value
+      ↑        
+  v
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nResult(ok, error)\n```\n",
+    ),
+)
