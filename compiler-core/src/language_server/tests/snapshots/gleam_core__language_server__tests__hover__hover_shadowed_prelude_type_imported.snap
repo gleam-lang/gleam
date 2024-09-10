@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport numbers.{type Int}\nconst number = 100\n"
+---
+import numbers.{type Int}
+const number = 100
+▔▔▔▔▔▔▔▔▔↑▔▔      
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\ngleam.Int\n```\n",
+    ),
+)

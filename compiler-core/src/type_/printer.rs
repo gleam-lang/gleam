@@ -4,6 +4,8 @@ use std::{collections::HashSet, sync::Arc};
 
 use crate::type_::{Type, TypeVar};
 
+use super::PRELUDE_MODULE_NAME;
+
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
 ///
@@ -43,6 +45,11 @@ pub struct Names {
     /// - value: `"Wobble"`
     ///
     local_types: HashMap<(EcoString, EcoString), EcoString>,
+
+    /// Types which exist in the prelude, and haven't been shadowed by a local type.
+    /// These are a special case, because they are unqualified by default, but can be
+    /// shadowed and then must be qualified.
+    unshadowed_prelude_types: HashSet<EcoString>,
 
     /// Mapping of imported modules to their locally used named
     ///
@@ -143,6 +150,7 @@ impl Names {
     pub fn new() -> Self {
         Self {
             local_types: Default::default(),
+            unshadowed_prelude_types: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_constructors: Default::default(),
@@ -157,9 +165,16 @@ impl Names {
         type_name: EcoString,
         local_alias: EcoString,
     ) {
+        // If this is a type in the prelude, it is now shadowed.
+        _ = self.unshadowed_prelude_types.remove(&local_alias);
+
         _ = self
             .local_types
             .insert((module_name, type_name), local_alias);
+    }
+
+    pub fn prelude_type(&mut self, name: EcoString) {
+        _ = self.unshadowed_prelude_types.insert(name);
     }
 
     /// Record a type variable in this module.
@@ -183,6 +198,12 @@ impl Names {
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
             return NameQualifier::Unqualified(name.as_str());
+        }
+
+        if module == PRELUDE_MODULE_NAME {
+            if let Some(prelude_type) = self.unshadowed_prelude_types.get(name) {
+                return NameQualifier::Unqualified(prelude_type.as_str());
+            }
         }
 
         // This type is from a module that has been imported
@@ -405,6 +426,43 @@ fn test_local_type() {
 }
 
 #[test]
+fn test_prelude_type() {
+    let mut names = Names::new();
+    names.prelude_type("Int".into());
+    let mut printer = Printer::new(&names);
+
+    let type_ = Type::Named {
+        name: "Int".into(),
+        args: vec![],
+        module: "gleam".into(),
+        publicity: crate::ast::Publicity::Public,
+        package: "".into(),
+    };
+
+    assert_eq!(printer.print_type(&type_), "Int");
+}
+
+#[test]
+fn test_shadowed_prelude_type() {
+    let mut names = Names::new();
+
+    names.prelude_type("Int".into());
+    names.named_type_in_scope("mod".into(), "Int".into(), "Int".into());
+
+    let mut printer = Printer::new(&names);
+
+    let type_ = Type::Named {
+        name: "Int".into(),
+        args: vec![],
+        module: "gleam".into(),
+        publicity: crate::ast::Publicity::Public,
+        package: "".into(),
+    };
+
+    assert_eq!(printer.print_type(&type_), "gleam.Int");
+}
+
+#[test]
 fn test_generic_type_annotation() {
     let mut names = Names::new();
     names.type_variable_in_scope(0, "one".into());
@@ -464,8 +522,8 @@ fn test_tuple_type() {
 #[test]
 fn test_fn_type() {
     let mut names = Names::new();
-    names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
-    names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
+    names.prelude_type("Int".into());
+    names.prelude_type("Bool".into());
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Fn {
