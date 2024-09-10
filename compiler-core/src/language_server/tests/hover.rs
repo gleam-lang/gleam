@@ -1034,3 +1034,41 @@ const thing: Aliased = 10
         find_position_of("thing").under_char('g')
     );
 }
+
+#[test]
+fn hover_prelude_type() {
+    let code = "
+const number = 100
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("number").under_char('b')
+    );
+}
+
+#[test]
+fn hover_shadowed_prelude_type() {
+    let code = "
+type Int { Int }
+const number = 100
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("number").under_char('b')
+    );
+}
+
+#[test]
+fn hover_shadowed_prelude_type_imported() {
+    let code = "
+import numbers.{type Int}
+const number = 100
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("numbers", "pub type Int"),
+        find_position_of("number =").under_char('b')
+    );
+}

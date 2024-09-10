@@ -90,7 +90,7 @@ impl<'a> Environment<'a> {
         }
 
         for name in prelude.types.keys() {
-            names.named_type_in_scope(PRELUDE_MODULE_NAME.into(), name.clone(), name.clone());
+            names.prelude_type(name.clone());
         }
 
         Self {
