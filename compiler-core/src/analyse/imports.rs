@@ -110,7 +110,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             self.problems,
         );
 
-        self.environment.type_names.named_type_in_scope(
+        self.environment.names.named_type_in_scope(
             module.name.clone(),
             import.name.clone(),
             imported_name.clone(),
@@ -165,7 +165,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     location,
                     self.problems,
                 );
-                self.environment.value_names.named_constructor_in_scope(
+                self.environment.names.named_constructor_in_scope(
                     module.clone(),
                     name.clone(),
                     used_name.clone(),
@@ -254,11 +254,11 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 .insert(used_name.clone(), (import.location, import_info));
 
             self.environment
-                .value_names
+                .names
                 .imported_module(import.module.clone(), used_name.clone());
 
             self.environment
-                .type_names
+                .names
                 .imported_module(import.module.clone(), used_name);
         };
 

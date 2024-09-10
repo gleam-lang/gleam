@@ -2,161 +2,17 @@ use std::collections::HashMap;
 
 use ecow::EcoString;
 
+use crate::type_::printer::{NameQualifier, Names};
+
 use super::{missing_patterns::Term, Variable};
-
-#[derive(Debug, Default)]
-pub struct ValueNames {
-    /// Mapping of imported modules to their locally used named
-    ///
-    /// key:   The name of the module
-    /// value: The name the module is aliased to
-    ///
-    /// # Example 1
-    ///
-    /// ```gleam
-    /// import mod1 as my_mod
-    /// ```
-    /// would result in:
-    /// - key:   "mod1"
-    /// - value: "my_mod"
-    ///
-    /// # Example 2
-    ///
-    /// ```gleam
-    /// import mod1
-    /// ```
-    /// would result in:
-    /// - key:   "mod1"
-    /// - value: "mod1"
-    ///
-    imported_modules: HashMap<EcoString, EcoString>,
-
-    /// Constructors which are imported in the current module in an
-    /// unqualified fashion.
-    ///
-    /// key:   (Defining module name, type name)
-    /// value: Alias name
-    ///
-    /// # Example 1
-    ///
-    /// ```gleam
-    /// import wibble.{Wobble}
-    /// ```
-    /// would result in
-    /// - key:   `("wibble", "Wobble")`
-    /// - value: `"Wobble"`
-    ///
-    /// # Example 2
-    ///
-    /// ```gleam
-    /// import wibble.{Wobble as Woo}
-    /// ```
-    /// would result in
-    /// - key:   `("wibble", "Wobble")`
-    /// - value: `"Woo"`
-    ///
-    local_constructors: HashMap<(EcoString, EcoString), EcoString>,
-
-    /// A map from local constructor names to the modules which they refer to.
-    /// This helps resolve cases like:
-    /// ```gleam
-    /// import wibble.{Wobble}
-    /// type Wibble { Wobble }
-    /// ```
-    /// Here, `Wobble` is shadowed, causing `Wobble` not to be valid syntax
-    /// for `wibble.Wobble`.
-    ///
-    /// Each key is the local name of the constructor, and the value is the module
-    /// for which the unqualified version is valid. In the above example,
-    /// it would result in
-    /// - key:   `"Wobble"`
-    /// - value: `"module"` (Whatever the current module is)
-    ///
-    /// But in this case:
-    /// ```gleam
-    /// import wibble.{Wobble as Wubble}
-    /// type Wibble { Wobble }
-    /// ```
-    /// No shadowing occurs, so this isn't needed.
-    ///
-    constructor_names: HashMap<EcoString, EcoString>,
-}
-
-impl ValueNames {
-    pub fn new() -> Self {
-        Self {
-            local_constructors: Default::default(),
-            imported_modules: Default::default(),
-            constructor_names: Default::default(),
-        }
-    }
-
-    /// Record a named value in this module.
-    pub fn named_constructor_in_scope(
-        &mut self,
-        module_name: EcoString,
-        value_name: EcoString,
-        local_alias: EcoString,
-    ) {
-        _ = self
-            .local_constructors
-            .insert((module_name.clone(), value_name), local_alias.clone());
-        _ = self.constructor_names.insert(local_alias, module_name);
-    }
-
-    /// Record an imported module in this module.
-    pub fn imported_module(&mut self, module_name: EcoString, module_alias: EcoString) {
-        _ = self.imported_modules.insert(module_name, module_alias)
-    }
-
-    /// Get the name and optional module qualifier for a named constructor.
-    pub fn named_constructor<'a>(
-        &'a self,
-        module: &'a EcoString,
-        name: &'a EcoString,
-    ) -> NamedValueNames<'a> {
-        let key: (EcoString, EcoString) = (module.clone(), name.clone());
-
-        // There is a local name for this value, use that.
-        if let Some(name) = self.local_constructors.get(&key) {
-            // Only return unqualified syntax if the constructor is not shadowed,
-            // and unqualified syntax is valid.
-            if self
-                .constructor_names
-                .get(name)
-                .expect("Constructors must be added to both maps")
-                == module
-            {
-                return NamedValueNames::Unqualified(name.as_str());
-            }
-        }
-
-        // This value is from a module that has been imported
-        if let Some(module) = self.imported_modules.get(module) {
-            return NamedValueNames::Qualified(module, name.as_str());
-        };
-
-        NamedValueNames::Unimported(name.as_str())
-    }
-}
-
-#[derive(Debug)]
-pub enum NamedValueNames<'a> {
-    /// This value is from a module that has not been imported in this module.
-    Unimported(&'a str),
-    /// This value has been imported in an unqualified fashion in this module.
-    Unqualified(&'a str),
-    /// This value is from a module that has been imported.
-    Qualified(&'a str, &'a str),
-}
 
 #[derive(Debug)]
 pub struct Printer<'a> {
-    names: &'a ValueNames,
+    names: &'a Names,
 }
 
 impl<'a> Printer<'a> {
-    pub fn new(names: &'a ValueNames) -> Self {
+    pub fn new(names: &'a Names) -> Self {
         Printer { names }
     }
 
@@ -198,9 +54,9 @@ impl<'a> Printer<'a> {
                 ..
             } => {
                 let (module, name) = match self.names.named_constructor(module, name) {
-                    NamedValueNames::Qualified(m, n) => (Some(m), n),
-                    NamedValueNames::Unqualified(n) => (None, n),
-                    NamedValueNames::Unimported(n) => {
+                    NameQualifier::Qualified(m, n) => (Some(m), n),
+                    NameQualifier::Unqualified(n) => (None, n),
+                    NameQualifier::Unimported(n) => {
                         (Some(module.split('/').last().unwrap_or(module)), n)
                     }
                 };
@@ -307,12 +163,12 @@ impl<'a> Printer<'a> {
 
 #[cfg(test)]
 mod tests {
-    use super::{Printer, ValueNames};
+    use super::Printer;
     use std::{collections::HashMap, sync::Arc};
 
     use crate::{
         exhaustiveness::{missing_patterns::Term, Variable},
-        type_::Type,
+        type_::{printer::Names, Type},
     };
 
     /// Create a variable with a dummy type, for ease of writing tests
@@ -334,7 +190,7 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
 
@@ -356,7 +212,7 @@ mod tests {
 
     #[test]
     fn test_value_in_current_module_with_arguments() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.named_constructor_in_scope("module".into(), "Wibble".into(), "Wibble".into());
 
@@ -389,7 +245,7 @@ mod tests {
 
     #[test]
     fn test_module_alias() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.imported_module("mod".into(), "shapes".into());
 
@@ -414,7 +270,7 @@ mod tests {
 
     #[test]
     fn test_unqualified_value() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.named_constructor_in_scope("regex".into(), "Regex".into(), "Regex".into());
 
@@ -438,7 +294,7 @@ mod tests {
 
     #[test]
     fn test_unqualified_value_with_alias() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.named_constructor_in_scope("regex".into(), "Regex".into(), "Reg".into());
         names.named_constructor_in_scope("gleam".into(), "None".into(), "None".into());
@@ -471,7 +327,7 @@ mod tests {
 
     #[test]
     fn test_list_pattern() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.named_constructor_in_scope("module".into(), "Type".into(), "Type".into());
 
@@ -513,7 +369,7 @@ mod tests {
 
     #[test]
     fn test_multi_pattern() {
-        let mut names = ValueNames::new();
+        let mut names = Names::new();
 
         names.named_constructor_in_scope("gleam".into(), "Ok".into(), "Ok".into());
         names.named_constructor_in_scope("gleam".into(), "False".into(), "False".into());

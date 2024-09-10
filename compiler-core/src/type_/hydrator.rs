@@ -226,7 +226,7 @@ impl Hydrator {
                             .rigid_type_names
                             .insert(environment.previous_uid(), name.clone());
                         environment
-                            .type_names
+                            .names
                             .type_variable_in_scope(environment.previous_uid(), name.clone());
                         let _ = self.created_type_variables.insert(
                             name.clone(),
@@ -290,7 +290,7 @@ impl Hydrator {
         };
 
         environment
-            .type_names
+            .names
             .type_variable_in_scope(environment.previous_uid(), name.clone());
         match self.created_type_variables.insert(name.clone(), v) {
             Some(_) => Err(t),
