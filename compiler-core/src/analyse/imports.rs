@@ -260,10 +260,6 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
             self.environment
                 .names
-                .imported_module(import.module.clone(), used_name.clone());
-
-            self.environment
-                .names
                 .imported_module(import.module.clone(), used_name);
         };
 

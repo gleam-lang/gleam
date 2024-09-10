@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use ecow::EcoString;
 
-use crate::type_::printer::{NameQualifier, Names};
+use crate::type_::printer::{NameContextInformation, Names};
 
 use super::{missing_patterns::Term, Variable};
 
@@ -54,9 +54,9 @@ impl<'a> Printer<'a> {
                 ..
             } => {
                 let (module, name) = match self.names.named_constructor(module, name) {
-                    NameQualifier::Qualified(m, n) => (Some(m), n),
-                    NameQualifier::Unqualified(n) => (None, n),
-                    NameQualifier::Unimported(n) => {
+                    NameContextInformation::Qualified(m, n) => (Some(m), n),
+                    NameContextInformation::Unqualified(n) => (None, n),
+                    NameContextInformation::Unimported(n) => {
                         (Some(module.split('/').last().unwrap_or(module)), n)
                     }
                 };

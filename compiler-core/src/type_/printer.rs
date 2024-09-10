@@ -9,7 +9,7 @@ use super::PRELUDE_MODULE_NAME;
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
 ///
-#[derive(Debug, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct Names {
     /// Types that exist in the current module, either defined or imported in an
     /// unqualified fashion.
@@ -119,7 +119,7 @@ pub struct Names {
     /// - key:   `("wibble", "Wobble")`
     /// - value: `"Woo"`
     ///
-    local_constructors: HashMap<(EcoString, EcoString), EcoString>,
+    local_value_constructors: HashMap<(EcoString, EcoString), EcoString>,
 
     /// A map from local constructor names to the modules which they refer to.
     /// This helps resolve cases like:
@@ -153,7 +153,7 @@ impl Names {
             unshadowed_prelude_types: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
-            local_constructors: Default::default(),
+            local_value_constructors: Default::default(),
             constructor_names: Default::default(),
         }
     }
@@ -203,13 +203,13 @@ impl Names {
         module: &'a EcoString,
         name: &'a EcoString,
         print_mode: PrintMode,
-    ) -> NameQualifier<'a> {
-        if print_mode == PrintMode::Raw {
+    ) -> NameContextInformation<'a> {
+        if print_mode == PrintMode::ExpandAliases {
             if let Some(module) = self.imported_modules.get(module) {
-                return NameQualifier::Qualified(module, name.as_str());
+                return NameContextInformation::Qualified(module, name.as_str());
             };
 
-            return NameQualifier::Unimported(name.as_str());
+            return NameContextInformation::Unimported(name.as_str());
         }
 
         let key = (module.clone(), name.clone());
@@ -217,19 +217,19 @@ impl Names {
         // Only check for local aliases if we want to print aliases
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
-            return NameQualifier::Unqualified(name.as_str());
+            return NameContextInformation::Unqualified(name.as_str());
         }
 
         if module == PRELUDE_MODULE_NAME && self.unshadowed_prelude_types.contains(name) {
-            return NameQualifier::Unqualified(name.as_str());
+            return NameContextInformation::Unqualified(name.as_str());
         }
 
         // This type is from a module that has been imported
         if let Some(module) = self.imported_modules.get(module) {
-            return NameQualifier::Qualified(module, name.as_str());
+            return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        return NameQualifier::Unimported(name.as_str());
+        return NameContextInformation::Unimported(name.as_str());
     }
 
     /// Record a named value in this module.
@@ -240,7 +240,7 @@ impl Names {
         local_alias: EcoString,
     ) {
         _ = self
-            .local_constructors
+            .local_value_constructors
             .insert((module_name.clone(), value_name), local_alias.clone());
         _ = self.constructor_names.insert(local_alias, module_name);
     }
@@ -250,11 +250,11 @@ impl Names {
         &'a self,
         module: &'a EcoString,
         name: &'a EcoString,
-    ) -> NameQualifier<'a> {
+    ) -> NameContextInformation<'a> {
         let key: (EcoString, EcoString) = (module.clone(), name.clone());
 
         // There is a local name for this value, use that.
-        if let Some(name) = self.local_constructors.get(&key) {
+        if let Some(name) = self.local_value_constructors.get(&key) {
             // Only return unqualified syntax if the constructor is not shadowed,
             // and unqualified syntax is valid.
             if self
@@ -263,21 +263,21 @@ impl Names {
                 .expect("Constructors must be added to both maps")
                 == module
             {
-                return NameQualifier::Unqualified(name.as_str());
+                return NameContextInformation::Unqualified(name.as_str());
             }
         }
 
         // This value is from a module that has been imported
         if let Some(module) = self.imported_modules.get(module) {
-            return NameQualifier::Qualified(module, name.as_str());
+            return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        NameQualifier::Unimported(name.as_str())
+        NameContextInformation::Unimported(name.as_str())
     }
 }
 
 #[derive(Debug)]
-pub enum NameQualifier<'a> {
+pub enum NameContextInformation<'a> {
     /// This type is from a module that has not been imported in this module.
     Unimported(&'a str),
     /// This type has been imported in an unqualifid fashion in this module.
@@ -288,11 +288,24 @@ pub enum NameQualifier<'a> {
 
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum PrintMode {
-    /// Prints the context-specific representation of a type
+    /// Prints the context-specific representation of a type.
     Normal,
-    /// Prints the raw type, always qualified. Useful for providing
-    /// more detail to the user.
-    Raw,
+    /// Prints full detail of the given type, always qualified.
+    /// Useful for providing more detail to the user.
+    ///
+    /// For example, with this code:
+    /// ```gleam
+    /// type A = Int
+    /// ```
+    /// If the type `gleam.Int` were printed using the `Normal` mode,
+    /// we would print `A`, since that is the local alias for the `Int` type.
+    ///
+    /// However, if the user were hovering over the type `A` itself, it wouldn't be
+    /// particularly helpful to print `A`.
+    /// So with `ExpandAliases`, it would print `gleam.Int`,
+    /// which tells the user exactly what type `A` represents.
+    ///
+    ExpandAliases,
 }
 
 /// A type printer that does not wrap and indent, but does take into account the
@@ -335,7 +348,7 @@ impl<'a> Printer<'a> {
 
     pub fn print_type_without_aliases(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
-        self.print(type_, &mut buffer, PrintMode::Raw);
+        self.print(type_, &mut buffer, PrintMode::ExpandAliases);
         buffer
     }
 
@@ -345,11 +358,11 @@ impl<'a> Printer<'a> {
                 name, args, module, ..
             } => {
                 let (module, name) = match self.names.named_type(module, name, print_mode) {
-                    NameQualifier::Qualified(m, n) => (Some(m), n),
-                    NameQualifier::Unqualified(n) => (None, n),
+                    NameContextInformation::Qualified(m, n) => (Some(m), n),
+                    NameContextInformation::Unqualified(n) => (None, n),
                     // TODO: indicate that the module is not import and as such
                     // needs to be, as well as how.
-                    NameQualifier::Unimported(n) => {
+                    NameContextInformation::Unimported(n) => {
                         (Some(module.split('/').last().unwrap_or(module)), n)
                     }
                 };
