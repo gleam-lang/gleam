@@ -289,7 +289,7 @@
 ### Bug Fixes
 
 - Fixed a bug where the warnings were printed above the errors without any new line between them.
-([Victor Kobinski](https://github.com/vkobinski))
+  ([Victor Kobinski](https://github.com/vkobinski))
 
 - Fixed a bug which caused the language server and compiler to crash when two
   constructors of the same name were created.
@@ -336,6 +336,10 @@
 - Fixed a bug where the compiler would not check the target support of a function
   if it was imported and not used, and generate invalid code.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where an qualified unused constructor wouldn't be reported as
+  unused.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.4.1 - 2024-08-04
 
