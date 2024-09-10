@@ -17,6 +17,6 @@ fn identity(x: Wibble) -> Wibble {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nWibble\n```\n Exciting documentation\n Maybe even multiple lines\n",
+        "```gleam\napp.Wibble\n```\n Exciting documentation\n Maybe even multiple lines\n",
     ),
 )

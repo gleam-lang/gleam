@@ -1,9 +1,11 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: type Wibble = Int
+expression: "\nfn add_one(a: Int) -> Int {\n  a + 1\n}\n"
 ---
-type Wibble = Int
-              ▔↑▔
+fn add_one(a: Int) -> Int {
+                      ↑▔▔  
+  a + 1
+}
 
 
 ----- Hover content -----

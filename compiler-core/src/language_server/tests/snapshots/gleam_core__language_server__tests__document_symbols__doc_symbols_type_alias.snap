@@ -6,7 +6,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
     DocumentSymbol {
         name: "FFF",
         detail: Some(
-            "Int",
+            "gleam.Int",
         ),
         kind: Class,
         tags: None,
@@ -36,7 +36,7 @@ expression: "doc_symbols(TestProject::for_source(code))"
     DocumentSymbol {
         name: "FFFF",
         detail: Some(
-            "List(Int)",
+            "gleam.List(gleam.Int)",
         ),
         kind: Class,
         tags: None,

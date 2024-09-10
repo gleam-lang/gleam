@@ -11,6 +11,6 @@ const one: Int = 1
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nInt\n```\n",
+        "```gleam\ngleam.Int\n```\n",
     ),
 )
