@@ -2,7 +2,7 @@
 source: compiler-core/src/language_server/tests/definition.rs
 expression: output
 ---
----------- Jumping from: 
+----- Jumping from `src/app.gleam`
 
 import example_module
 fn make_var() -> example_module.Rec {
@@ -10,7 +10,7 @@ fn make_var() -> example_module.Rec {
   example_module.Var1(1)
 }
 
----------- Jumped to:
+----- Jumped to `build/packages/hex/src/example_module.gleam`
 
 pub type Rec {
 ↑▔▔▔▔▔▔▔▔▔▔▔  

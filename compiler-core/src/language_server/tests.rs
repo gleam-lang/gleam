@@ -393,7 +393,7 @@ impl<'a> TestProject<'a> {
         }
     }
 
-    pub fn src_from_module_url(&self, url: Url) -> Option<&str> {
+    pub fn src_from_module_url(&self, url: &Url) -> Option<&str> {
         let module_name: EcoString = url
             .path_segments()?
             .skip_while(|segment| *segment != "src")
