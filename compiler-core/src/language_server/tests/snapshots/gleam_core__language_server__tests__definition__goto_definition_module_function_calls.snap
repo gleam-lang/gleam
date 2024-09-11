@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+import example_module
+fn main() {
+  example_module.my_fn
+                 ↑    
+}
+
+---------- Jumped to:
+pub fn my_fn() { Nil }
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔

@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+fn add_2(x) {
+  x + 2
+}
+
+pub fn main() {
+  add_2(1)
+  ↑       
+}
+
+---------- Jumped to:
+
+fn add_2(x) {
+↑▔▔▔▔▔▔▔▔▔▔  
+  x + 2
+}
+
+pub fn main() {
+  add_2(1)
+}

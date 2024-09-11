@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+pub fn main() {
+  let x = 1
+  x
+  ↑
+}
+
+---------- Jumped to:
+
+pub fn main() {
+  let x = 1
+      ↑    
+  x
+}

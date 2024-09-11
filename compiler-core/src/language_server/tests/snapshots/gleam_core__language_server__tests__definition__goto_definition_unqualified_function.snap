@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+import wibble.{wobble}
+fn main() {
+  wobble()
+   ↑      
+}
+
+---------- Jumped to:
+pub fn wobble() {}
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔

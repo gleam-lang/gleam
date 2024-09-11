@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+import example_module
+fn make_var() -> example_module.Wabble(example_module.Wibble(example_module.Wobble)) {
+                                                                             ↑        
+  example_module.Wabble(example_module.Wibble(example_module.Wobble(1)))
+}
+
+---------- Jumped to:
+
+pub type Wobble {
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔  
+  Wobble(Int)
+}
+
+pub type Wibble(a) {
+  Wibble(a)
+}
+
+pub type Wabble(a) {
+  Wabble(a)
+}

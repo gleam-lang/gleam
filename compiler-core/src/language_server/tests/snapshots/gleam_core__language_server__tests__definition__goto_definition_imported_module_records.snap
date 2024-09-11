@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+import example_module
+fn main() {
+  example_module.Var1(1)
+                 ↑      
+}
+
+---------- Jumped to:
+
+pub type Rec {
+  Var1(Int)
+  ↑▔▔▔▔▔▔▔▔
+  Var2(Int, Int)
+}

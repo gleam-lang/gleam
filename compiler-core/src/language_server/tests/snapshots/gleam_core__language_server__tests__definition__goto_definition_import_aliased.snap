@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+import example_module as example
+                          ↑     
+fn main() {
+  example.my_num
+}
+
+---------- Jumped to:
+pub const my_num = 1
+↑

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+pub type Rec {
+  Var1(Int)
+  Var2(Int, Int)
+}
+
+pub fn make_var() -> Rec {
+                     ↑    
+  Var1(1)
+}
+
+---------- Jumped to:
+
+pub type Rec {
+↑▔▔▔▔▔▔▔▔▔▔▔  
+  Var1(Int)
+  Var2(Int, Int)
+}
+
+pub fn make_var() -> Rec {
+  Var1(1)
+}

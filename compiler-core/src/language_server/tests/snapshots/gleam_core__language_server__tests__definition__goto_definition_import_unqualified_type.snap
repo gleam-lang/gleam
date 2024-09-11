@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+---------- Jumping from: 
+
+import example_module.{type MyType}
+                              ↑    
+fn main() -> MyType {
+  0
+}
+
+---------- Jumped to:
+pub type MyType = Int
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
