@@ -447,6 +447,10 @@
   prelude.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the language server wouldn't let you jump to the definition
+  of a function with an external implementation defined in the same module.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.4.1 - 2024-08-04
 
 ### Bug Fixes
