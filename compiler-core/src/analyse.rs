@@ -478,7 +478,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Find the external implementation for the current target, if one has been given.
         let external =
             target_function_implementation(target, &external_erlang, &external_javascript);
-        let (impl_module, impl_function) = implementation_names(external, &self.module_name, &name);
 
         // The function must have at least one implementation somewhere.
         let has_implementation = self.ensure_function_has_an_implementation(
@@ -605,9 +604,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         let variant = ValueConstructorVariant::ModuleFn {
             documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
-            name: impl_function,
+            name: name.clone(),
             field_map,
-            module: impl_module,
+            module: environment.current_module.clone(),
             arity: typed_args.len(),
             location,
             implementations,
@@ -1285,17 +1284,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let type_ = fn_(arg_types, return_type);
         let _ = self.hydrators.insert(name.clone(), hydrator);
 
-        let external = target_function_implementation(
-            environment.target,
-            external_erlang,
-            external_javascript,
-        );
-        let (impl_module, impl_function) = implementation_names(external, &self.module_name, name);
         let variant = ValueConstructorVariant::ModuleFn {
             documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-            name: impl_function,
+            name: name.clone(),
             field_map,
-            module: impl_module,
+            module: environment.current_module.clone(),
             arity: args.len(),
             location: *location,
             implementations: *implementations,
@@ -1387,21 +1380,6 @@ fn validate_module_name(name: &EcoString) -> Result<(), Error> {
         }
     }
     Ok(())
-}
-
-/// Returns the module name and function name of the implementation of a
-/// function. If the function is implemented as a Gleam function then it is the
-/// same as the name of the module and function. If the function has an external
-/// implementation then it is the name of the external module and function.
-fn implementation_names(
-    external: &Option<(EcoString, EcoString, SrcSpan)>,
-    module_name: &EcoString,
-    name: &EcoString,
-) -> (EcoString, EcoString) {
-    match external {
-        None => (module_name.clone(), name.clone()),
-        Some((m, f, _)) => (m.clone(), f.clone()),
-    }
 }
 
 fn target_function_implementation<'a>(
@@ -1604,15 +1582,11 @@ fn generalise_function(
     let type_ = type_::generalise(type_);
 
     // Insert the function into the module's interface
-    let external =
-        target_function_implementation(environment.target, &external_erlang, &external_javascript);
-    let (impl_module, impl_function) = implementation_names(external, module_name, &name);
-
     let variant = ValueConstructorVariant::ModuleFn {
         documentation: doc.as_ref().map(|(_, doc)| doc.clone()),
-        name: impl_function,
+        name: name.clone(),
         field_map,
-        module: impl_module,
+        module: module_name.clone(),
         arity: args.len(),
         location,
         implementations,

@@ -175,6 +175,11 @@ where
                 None => return Ok(None),
             };
 
+            let a =
+                node.definition_location(this.compiler.project_compiler.get_importable_modules());
+            tracing::info!("{:#?}", node);
+            tracing::info!("{:#?}", a);
+
             let location = match node
                 .definition_location(this.compiler.project_compiler.get_importable_modules())
             {
