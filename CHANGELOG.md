@@ -17,6 +17,21 @@
   symlinks.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The cli can now update individual dependencies.
+
+  `gleam update` and `gleam deps update` now take an optional list of package names to update:
+
+  ```shell
+  gleam update package_a
+  gleam deps update package_b package_c
+  ```
+
+  This allows for selective updating of dependencies.
+  When package names are provided, only those packages and their unique dependencies are unlocked and updated.
+  If no package names are specified, the command behaves as before, updating all dependencies.
+
+  ([Jason Sipula](https://github.com/SnakeDoc))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
