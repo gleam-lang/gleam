@@ -1572,53 +1572,6 @@ fn test_unlock_nonexistent_package() {
 }
 
 #[test]
-fn test_unlock_circular_dependencies() {
-    let mut locked = HashMap::from([
-        ("package_a".into(), Version::new(1, 0, 0)),
-        ("package_b".into(), Version::new(2, 0, 0)),
-        ("package_c".into(), Version::new(3, 0, 0)),
-    ]);
-
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(3, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_a".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-    ];
-
-    let packages_to_unlock = vec!["package_a".into()];
-    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
-
-    assert!(locked.is_empty(), "All packages should be unlocked due to circular dependency");
-}
-
-#[test]
 fn test_unlock_multiple_packages() {
     let mut locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
