@@ -43,7 +43,7 @@ pub fn list() -> Result<()> {
         &config,
         &cli::Reporter::new(),
         UseManifest::Yes,
-        None,
+        Vec::new(),
     )?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
@@ -118,11 +118,11 @@ pub fn update(packages: Vec<String>) -> Result<()> {
 
     if packages.is_empty() {
         // Update all packages
-        _ = download(&paths, cli::Reporter::new(), None, None, UseManifest::No)?;
+        _ = download(&paths, cli::Reporter::new(), None, Vec::new(), UseManifest::No)?;
     } else {
         // Update specific packages
         let packages_to_update = packages.into_iter().map(EcoString::from).collect();
-        _ = download(&paths, cli::Reporter::new(), None, Some(packages_to_update), UseManifest::Yes)?;
+        _ = download(&paths, cli::Reporter::new(), None, packages_to_update, UseManifest::Yes)?;
     }
 
     Ok(())
@@ -253,7 +253,7 @@ pub fn download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
     new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
-    packages_to_update: Option<Vec<EcoString>>,
+    packages_to_update: Vec<EcoString>,
     // If true we read the manifest from disc. If not set then we ignore any
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
@@ -299,7 +299,7 @@ pub fn download<Telem: Telemetry>(
         &config,
         &telemetry,
         use_manifest,
-        packages_to_update.as_ref(),
+        packages_to_update,
     )?;
     let local = LocalPackages::read_from_disc(paths)?;
 
@@ -615,7 +615,7 @@ fn get_manifest<Telem: Telemetry>(
     config: &PackageConfig,
     telemetry: &Telem,
     use_manifest: UseManifest,
-    packages_to_update: Option<&Vec<EcoString>>,
+    packages_to_update: Vec<EcoString>,
 ) -> Result<(bool, Manifest)> {
     // If there's no manifest (or we have been asked not to use it) then resolve
     // the versions anew
@@ -632,7 +632,7 @@ fn get_manifest<Telem: Telemetry>(
     };
 
     if should_resolve {
-        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry, None)?;
+        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry, Vec::new())?;
         return Ok((true, manifest));
     }
 
@@ -640,7 +640,7 @@ fn get_manifest<Telem: Telemetry>(
 
     // If there are no requested updates, and the config is unchanged
     // since the manifest was written then it is up to date so we can return it unmodified.
-    if packages_to_update.is_none() && is_same_requirements(
+    if packages_to_update.is_empty() && is_same_requirements(
         &manifest.requirements,
         &config.all_drect_dependencies()?,
         paths.root(),
@@ -803,16 +803,16 @@ fn resolve_versions<Telem: Telemetry>(
     config: &PackageConfig,
     manifest: Option<&Manifest>,
     telemetry: &Telem,
-    packages_to_update: Option<&Vec<EcoString>>,
+    packages_to_update: Vec<EcoString>,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
     let dependencies = config.dependencies_for(mode)?;
     let mut locked = config.locked(manifest)?;
 
-    if let (Some(packages_to_update), Some(manifest)) = (packages_to_update, manifest) {
-        locked = unlock_packages(packages_to_update, &locked, Some(&manifest.packages))?;
+    if !packages_to_update.is_empty() {
+        let manifest_packages = manifest.map(|m| &m.packages[..]);
+        unlock_packages(&mut locked, &packages_to_update, manifest_packages)?;
     }
-    let locked = locked.clone();
 
     // Packages which are provided directly instead of downloaded from hex
     let mut provided_packages = HashMap::new();
@@ -997,24 +997,23 @@ fn provide_package(
 /// Unlocks specified packages and optionally their dependencies
 /// If `manifest_packages` is provided, the dependencies of the packages are also unlocked
 fn unlock_packages(
+    locked: &mut HashMap<EcoString, Version>,
     packages_to_unlock: &[EcoString],
-    locked: &HashMap<EcoString, Version>,
     manifest_packages: Option<&[ManifestPackage]>,
-) -> Result<HashMap<EcoString, Version>> {
-    let mut new_locked = locked.clone();
-    let mut queue = packages_to_unlock.to_owned();
+) -> Result<()> {
+    let mut packages_to_unlock = packages_to_unlock.to_vec();
 
-    while let Some(package_name) = queue.pop() {
-        if new_locked.remove(&package_name).is_some() {
+    while let Some(package_name) = packages_to_unlock.pop() {
+        if locked.remove(&package_name).is_some() {
             if let Some(deps) = manifest_packages {
                 if let Some(package) = deps.iter().find(|p| p.name == package_name) {
-                    queue.extend(package.requirements.iter().cloned());
+                    packages_to_unlock.extend(package.requirements.iter().cloned());
                 }
             }
         }
     }
 
-    Ok(new_locked)
+    Ok(())
 }
 
 #[test]
