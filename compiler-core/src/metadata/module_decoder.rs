@@ -489,6 +489,8 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
             implementations: self.implementations(reader.get_implementations()?),
+            external_erlang: self.optional_external(reader.get_external_erlang()?)?,
+            external_javascript: self.optional_external(reader.get_external_javascript()?)?,
         })
     }
 
@@ -565,5 +567,20 @@ impl ModuleDecoder {
 
     fn version(&self, reader: &version::Reader<'_>) -> hexpm::version::Version {
         hexpm::version::Version::new(reader.get_major(), reader.get_minor(), reader.get_patch())
+    }
+
+    fn optional_external(
+        &self,
+        reader: option::Reader<'_, external::Owned>,
+    ) -> Result<Option<(EcoString, EcoString)>> {
+        match reader.which()? {
+            option::Which::None(()) => Ok(None),
+            option::Which::Some(reader) => {
+                let reader = reader?;
+                let module = EcoString::from(reader.get_module()?);
+                let function = EcoString::from(reader.get_function()?);
+                Ok(Some((module, function)))
+            }
+        }
     }
 }

@@ -308,12 +308,19 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 documentation: doc,
                 implementations,
+                external_erlang,
+                external_javascript,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
+                self.build_external(builder.reborrow().init_external_erlang(), external_erlang);
+                self.build_external(
+                    builder.reborrow().init_external_javascript(),
+                    external_javascript,
+                );
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_implementations(builder.init_implementations(), *implementations);
@@ -556,5 +563,20 @@ impl<'a> ModuleEncoder<'a> {
         builder.set_uses_javascript_externals(implementations.uses_javascript_externals);
         builder.set_can_run_on_erlang(implementations.can_run_on_erlang);
         builder.set_can_run_on_javascript(implementations.can_run_on_javascript);
+    }
+
+    fn build_external(
+        &self,
+        mut builder: option::Builder<'_, external::Owned>,
+        external: &Option<(EcoString, EcoString)>,
+    ) {
+        match external {
+            None => builder.set_none(()),
+            Some((module, function)) => {
+                let mut builder = builder.init_some();
+                builder.set_module(module);
+                builder.set_function(function);
+            }
+        }
     }
 }

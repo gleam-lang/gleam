@@ -458,6 +458,8 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -505,6 +507,8 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -550,6 +554,8 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -597,6 +603,8 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -640,6 +648,8 @@ fn module_fn_value_with_field_map() {
                         arity: 20,
                         fields: [("ok".into(), 5), ("ko".into(), 7)].into(),
                     }),
+                    external_erlang: None,
+                    external_javascript: None,
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
@@ -1245,6 +1255,8 @@ fn module_fn_value_with_external_implementations() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
                     implementations: Implementations {
                         gleam: false,
                         uses_erlang_externals: true,
@@ -1293,6 +1305,8 @@ fn internal_module_fn() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
                     implementations: Implementations {
                         gleam: false,
                         uses_erlang_externals: true,

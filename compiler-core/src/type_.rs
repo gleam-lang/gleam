@@ -396,6 +396,8 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         documentation: Option<EcoString>,
         implementations: Implementations,
+        external_erlang: Option<(EcoString, EcoString)>,
+        external_javascript: Option<(EcoString, EcoString)>,
     },
 
     /// A constructor for a custom type
