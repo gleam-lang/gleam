@@ -1096,26 +1096,38 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
         | ValueConstructorVariant::LocalConstant { literal } => const_inline(literal, env),
 
         ValueConstructorVariant::ModuleFn {
+            arity,
+            external_erlang: Some((module, name)),
+            ..
+        } if module == env.module => function_reference(None, name, *arity),
+
+        ValueConstructorVariant::ModuleFn {
+            arity,
+            external_erlang: Some((module, name)),
+            ..
+        } => function_reference(Some(module), name, *arity),
+
+        ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
-        } if module == env.module => "fun "
-            .to_doc()
-            .append(atom(escape_erlang_existing_name(name)))
-            .append("/")
-            .append(*arity),
+        } if module == env.module => function_reference(None, name, *arity),
 
         ValueConstructorVariant::ModuleFn {
             arity,
             module,
             name,
             ..
-        } => "fun "
-            .to_doc()
-            .append(module_name_atom(module))
-            .append(":")
-            .append(atom(escape_erlang_existing_name(name)))
-            .append("/")
-            .append(*arity),
+        } => function_reference(Some(module), name, *arity),
     }
+}
+
+fn function_reference<'a>(module: Option<&'a str>, name: &'a str, arity: usize) -> Document<'a> {
+    match module {
+        None => "fun ".to_doc(),
+        Some(module) => "fun ".to_doc().append(module_name_atom(module)).append(":"),
+    }
+    .append(atom(escape_erlang_existing_name(name)))
+    .append("/")
+    .append(arity)
 }
 
 fn int<'a>(value: &str) -> Document<'a> {
