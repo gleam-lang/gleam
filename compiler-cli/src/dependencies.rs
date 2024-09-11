@@ -118,11 +118,23 @@ pub fn update(packages: Vec<String>) -> Result<()> {
 
     if packages.is_empty() {
         // Update all packages
-        _ = download(&paths, cli::Reporter::new(), None, Vec::new(), UseManifest::No)?;
+        _ = download(
+            &paths,
+            cli::Reporter::new(),
+            None,
+            Vec::new(),
+            UseManifest::No,
+        )?;
     } else {
         // Update specific packages
         let packages_to_update = packages.into_iter().map(EcoString::from).collect();
-        _ = download(&paths, cli::Reporter::new(), None, packages_to_update, UseManifest::Yes)?;
+        _ = download(
+            &paths,
+            cli::Reporter::new(),
+            None,
+            packages_to_update,
+            UseManifest::Yes,
+        )?;
     }
 
     Ok(())
@@ -640,16 +652,26 @@ fn get_manifest<Telem: Telemetry>(
 
     // If there are no requested updates, and the config is unchanged
     // since the manifest was written then it is up to date so we can return it unmodified.
-    if packages_to_update.is_empty() && is_same_requirements(
-        &manifest.requirements,
-        &config.all_drect_dependencies()?,
-        paths.root(),
-    )? {
+    if packages_to_update.is_empty()
+        && is_same_requirements(
+            &manifest.requirements,
+            &config.all_drect_dependencies()?,
+            paths.root(),
+        )?
+    {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
         tracing::debug!("manifest_outdated");
-        let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry, packages_to_update)?;
+        let manifest = resolve_versions(
+            runtime,
+            mode,
+            paths,
+            config,
+            Some(&manifest),
+            telemetry,
+            packages_to_update,
+        )?;
         Ok((true, manifest))
     }
 }
@@ -1568,7 +1590,10 @@ fn test_unlock_nonexistent_package() {
     let mut locked = initial_locked.clone();
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert_eq!(initial_locked, locked, "Locked packages should remain unchanged");
+    assert_eq!(
+        initial_locked, locked,
+        "Locked packages should remain unchanged"
+    );
 }
 
 #[test]
@@ -1678,5 +1703,8 @@ fn test_unlock_packages_empty_input() {
     let mut locked = initial_locked.clone();
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert_eq!(initial_locked, locked, "Locked packages should remain unchanged when no packages are specified to unlock");
+    assert_eq!(
+        initial_locked, locked,
+        "Locked packages should remain unchanged when no packages are specified to unlock"
+    );
 }

@@ -636,6 +636,12 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
 
 fn download_dependencies() -> Result<()> {
     let paths = find_project_paths()?;
-    _ = dependencies::download(&paths, cli::Reporter::new(), None, Vec::new(), UseManifest::Yes)?;
+    _ = dependencies::download(
+        &paths,
+        cli::Reporter::new(),
+        None,
+        Vec::new(),
+        UseManifest::Yes,
+    )?;
     Ok(())
 }
