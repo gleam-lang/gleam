@@ -1043,3 +1043,169 @@ impl<'a> AddAnnotations<'a> {
             .push_to(actions);
     }
 }
+
+/// Builder for code action to convert qualified imports into unqualified imports.
+pub struct QualifiedToUnqualifiedImport<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    import: Option<&'a ast::Import<EcoString>>,
+    edits: Vec<TextEdit>,
+}
+
+impl<'a> QualifiedToUnqualifiedImport<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+        Self {
+            module,
+            params,
+            line_numbers,
+            edits: vec![],
+            import: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.edits.is_empty() {
+            return vec![];
+        }
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Convert to unqualified import")
+            .kind(CodeActionKind::REFACTOR)
+            .changes(self.params.text_document.uri.clone(), self.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    fn get_module_import(&mut self, module_name: &EcoString) {
+        self.import = self
+            .module
+            .ast
+            .definitions
+            .iter()
+            .find_map(|def| match def {
+                ast::Definition::Import(import)
+                    if import.module == *module_name && import.as_name.is_none() =>
+                {
+                    Some(import)
+                }
+                _ => None,
+            })
+    }
+
+    fn has_brace(&self) -> bool {
+        self.import.is_some_and(|import| {
+            self.module
+                .code
+                .chars()
+                .skip(import.location.end as usize - 1)
+                .take(1)
+                .next()
+                .is_some_and(|c| c == '}')
+        })
+    }
+    fn trailing_comma_pos(&self) -> Option<usize> {
+        self.import.and_then(|import| {
+            self.module
+                .code
+                .chars()
+                .enumerate()
+                .skip(import.location.start as usize - 1)
+                .take_while(|(i, _)| *i < import.location.end as usize)
+                .filter(|(_, c)| *c == ',')
+                .last()
+                .map(|(i, _)| i)
+        })
+    }
+    fn edit_import(
+        &self,
+        has_brace: bool,
+        trailing_comma_pos: Option<usize>,
+        name: &str,
+    ) -> (SrcSpan, String) {
+        let import = self.import.expect("import should be set");
+        match (has_brace, trailing_comma_pos) {
+            // eg: import gleam/option
+            (false, None) => (
+                SrcSpan::new(import.location.end, import.location.end),
+                format!(".{{{name}}}"),
+            ),
+            // eg: import gleam/option.{} or import gleam/option.{Some}
+            (true, None) => (
+                SrcSpan::new(import.location.end - 1, import.location.end - 1),
+                format!(", {name}"),
+            ),
+            // eg: import gleam/option.{Some,}
+            (true, Some(pos)) if pos == import.location.end as usize - 1 => (
+                SrcSpan::new(import.location.end - 1, import.location.end - 1),
+                format!(" {name}"),
+            ),
+            // eg: import gleam/option.{Some,  }
+            (true, Some(pos)) => (
+                SrcSpan::new(pos as u32 + 1, pos as u32 + 1),
+                format!(" {name}"),
+            ),
+            // syntax error
+            (false, Some(_)) => unreachable!(),
+        }
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
+    fn visit_typed_expr_module_select(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
+    ) {
+        let select_range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if within(self.params.range, select_range) {
+            self.get_module_import(module_name);
+            if let Some(import) = self.import {
+                if let Some(name) = constructor.name() {
+                    if import
+                        .unqualified_values
+                        .iter()
+                        .find(|value| value.used_name() == name)
+                        .is_none()
+                    {
+                        let has_brace = self.has_brace();
+                        let trailing_comma_pos =
+                            has_brace.then(|| self.trailing_comma_pos()).flatten();
+                        let (end, new_text) = self.edit_import(has_brace, trailing_comma_pos, name);
+                        self.edits.push(TextEdit {
+                            range: src_span_to_lsp_range(end, &self.line_numbers),
+                            new_text,
+                        });
+                    }
+                    // Remove the module qualifier
+                    self.edits.push(TextEdit {
+                        range: src_span_to_lsp_range(
+                            SrcSpan::new(
+                                location.start - module_alias.len() as u32,
+                                location.start + 1,
+                            ),
+                            &self.line_numbers,
+                        ),
+                        new_text: "".to_string(),
+                    });
+                }
+            }
+
+            ast::visit::visit_typed_expr_module_select(
+                self,
+                location,
+                type_,
+                label,
+                module_name,
+                module_alias,
+                constructor,
+            )
+        }
+    }
+}

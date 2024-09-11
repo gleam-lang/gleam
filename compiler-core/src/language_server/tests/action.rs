@@ -1852,6 +1852,219 @@ pub fn main() {
     );
 }
 
+#[test]
+fn test_qualified_to_unqualified_import_basic() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_existing_unqualified() {
+    let src = r#"
+import option.{None}
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_when_unqualified_exists() {
+    let src = r#"
+import option.{Some}
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_comma() {
+    let src = r#"
+import option.{None, }
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_comma_pos_not_end() {
+    let src = r#"
+import option.{None,   }
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_uses() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.Some(1)
+  option.None
+}"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_no_action_when_already_unqualified() {
+    let src = r#"
+import option.{Some, None}
+
+pub fn main() {
+  Some(1)
+}
+"#;
+    assert_no_code_actions!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some(").select_until(find_position_of("1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_alias() {
+    let src = r#"
+import option as opt
+
+pub fn main() {
+  opt.Some(1)
+}
+"#;
+    assert_no_code_actions!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_imports() {
+    let src = r#"
+import option
+import option2
+
+pub fn main() {
+  option.Some(1)
+  option2.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("option2", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_case() {
+    let src = r#"
+import option
+
+pub fn main(x) {
+  case option.Some(1) {
+    option.Some(value) -> value
+    option.None -> 0
+  }
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some(").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_type() {
+    let src = r#"
+import option
+
+pub fn main(x) -> option.Option(Int) {
+    option.Some(1)
+}
+"#;
+    assert_no_code_actions!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Option").select_until(find_position_of("(Int)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_pattern() {
+    let src = r#"
+import gleam/option
+
+pub fn main(x) {
+  case x {
+    option.Some(value) -> value
+    option.None -> 0
+  }
+}
+"#;
+    assert_no_code_actions!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(value)")),
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

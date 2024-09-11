@@ -617,6 +617,14 @@ impl ModuleValueConstructor {
             | ModuleValueConstructor::Constant { documentation, .. } => documentation.as_deref(),
         }
     }
+
+    pub fn name(&self) -> Option<&str> {
+        match self {
+            ModuleValueConstructor::Record { name, .. }
+            | ModuleValueConstructor::Fn { name, .. } => Some(name.as_str()),
+            ModuleValueConstructor::Constant { .. } => None,
+        }
+    }
 }
 
 #[derive(Debug, Clone)]
