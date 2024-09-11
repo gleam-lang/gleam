@@ -4,6 +4,16 @@
 
 ### Build tool
 
+- `gleam update` and `gleam deps update` now take an optional list of package names to update:
+
+  ```shell
+  gleam update package_a
+  gleam deps update package_b package_c
+  ```
+  If no package names are provided, all dependencies will be updated.
+
+  ([Jason Sipula](https://github.com/SnakeDoc))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
