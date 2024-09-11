@@ -1459,7 +1459,7 @@ fn verified_requirements_equality_with_canonicalized_paths() {
 
 #[test]
 fn test_unlock_package() {
-    let locked = HashMap::from([
+    let mut locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
         ("package_b".into(), Version::new(2, 0, 0)),
         ("package_c".into(), Version::new(3, 0, 0)),
@@ -1510,33 +1510,33 @@ fn test_unlock_package() {
     ];
 
     let packages_to_unlock = vec!["package_a".into()];
-    let result = unlock_packages(&packages_to_unlock, &locked, Some(&manifest_packages)).unwrap();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert!(!result.contains_key("package_a"));
-    assert!(!result.contains_key("package_b"));
-    assert!(!result.contains_key("package_c"));
-    assert!(result.contains_key("package_d"));
+    assert!(!locked.contains_key("package_a"));
+    assert!(!locked.contains_key("package_b"));
+    assert!(!locked.contains_key("package_c"));
+    assert!(locked.contains_key("package_d"));
 }
 
 #[test]
 fn test_unlock_package_without_manifest() {
-    let locked = HashMap::from([
+    let mut locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
         ("package_b".into(), Version::new(2, 0, 0)),
         ("package_c".into(), Version::new(3, 0, 0)),
     ]);
 
     let packages_to_unlock = vec!["package_a".into()];
-    let result = unlock_packages(&packages_to_unlock, &locked, None).unwrap();
+    unlock_packages(&mut locked, &packages_to_unlock, None).unwrap();
 
-    assert!(!result.contains_key("package_a"));
-    assert!(result.contains_key("package_b"));
-    assert!(result.contains_key("package_c"));
+    assert!(!locked.contains_key("package_a"));
+    assert!(locked.contains_key("package_b"));
+    assert!(locked.contains_key("package_c"));
 }
 
 #[test]
 fn test_unlock_nonexistent_package() {
-    let locked = HashMap::from([
+    let initial_locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
         ("package_b".into(), Version::new(2, 0, 0)),
     ]);
@@ -1565,14 +1565,15 @@ fn test_unlock_nonexistent_package() {
     ];
 
     let packages_to_unlock = vec!["nonexistent_package".into()];
-    let result = unlock_packages(&packages_to_unlock, &locked, Some(&manifest_packages)).unwrap();
+    let mut locked = initial_locked.clone();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert_eq!(result, locked, "Locked packages should remain unchanged");
+    assert_eq!(initial_locked, locked, "Locked packages should remain unchanged");
 }
 
 #[test]
 fn test_unlock_circular_dependencies() {
-    let locked = HashMap::from([
+    let mut locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
         ("package_b".into(), Version::new(2, 0, 0)),
         ("package_c".into(), Version::new(3, 0, 0)),
@@ -1612,14 +1613,14 @@ fn test_unlock_circular_dependencies() {
     ];
 
     let packages_to_unlock = vec!["package_a".into()];
-    let result = unlock_packages(&packages_to_unlock, &locked, Some(&manifest_packages)).unwrap();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert!(result.is_empty(), "All packages should be unlocked due to circular dependency");
+    assert!(locked.is_empty(), "All packages should be unlocked due to circular dependency");
 }
 
 #[test]
 fn test_unlock_multiple_packages() {
-    let locked = HashMap::from([
+    let mut locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
         ("package_b".into(), Version::new(2, 0, 0)),
         ("package_c".into(), Version::new(3, 0, 0)),
@@ -1681,18 +1682,18 @@ fn test_unlock_multiple_packages() {
     ];
 
     let packages_to_unlock = vec!["package_a".into(), "package_d".into()];
-    let result = unlock_packages(&packages_to_unlock, &locked, Some(&manifest_packages)).unwrap();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert!(!result.contains_key("package_a"));
-    assert!(!result.contains_key("package_b"));
-    assert!(!result.contains_key("package_c"));
-    assert!(!result.contains_key("package_d"));
-    assert!(!result.contains_key("package_e"));
+    assert!(!locked.contains_key("package_a"));
+    assert!(!locked.contains_key("package_b"));
+    assert!(!locked.contains_key("package_c"));
+    assert!(!locked.contains_key("package_d"));
+    assert!(!locked.contains_key("package_e"));
 }
 
 #[test]
 fn test_unlock_packages_empty_input() {
-    let locked = HashMap::from([
+    let initial_locked = HashMap::from([
         ("package_a".into(), Version::new(1, 0, 0)),
         ("package_b".into(), Version::new(2, 0, 0)),
     ]);
@@ -1721,7 +1722,8 @@ fn test_unlock_packages_empty_input() {
     ];
 
     let packages_to_unlock: Vec<EcoString> = vec![];
-    let result = unlock_packages(&packages_to_unlock, &locked, Some(&manifest_packages)).unwrap();
+    let mut locked = initial_locked.clone();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest_packages)).unwrap();
 
-    assert_eq!(result, locked, "Locked packages should remain unchanged when no packages are specified to unlock");
+    assert_eq!(initial_locked, locked, "Locked packages should remain unchanged when no packages are specified to unlock");
 }
