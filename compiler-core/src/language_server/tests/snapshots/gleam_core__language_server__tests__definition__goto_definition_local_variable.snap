@@ -2,7 +2,7 @@
 source: compiler-core/src/language_server/tests/definition.rs
 expression: output
 ---
----------- Jumping from: 
+----- Jumping from `src/app.gleam`
 
 pub fn main() {
   let x = 1
@@ -10,7 +10,7 @@ pub fn main() {
   ↑
 }
 
----------- Jumped to:
+----- Jumped to `src/app.gleam`
 
 pub fn main() {
   let x = 1

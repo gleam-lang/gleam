@@ -18,6 +18,12 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
 fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
     let position = position_finder.find_position(project.src);
     let location = definition(&project, position).expect("a location to jump to");
+    let pretty_destination = location
+        .uri
+        .path_segments()
+        .expect("a location to jump to")
+        .join("/");
+
     let src = hover::show_hover(
         project.src,
         Range {
@@ -29,13 +35,18 @@ fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) 
 
     let destination = hover::show_hover(
         project
-            .src_from_module_url(location.uri)
+            .src_from_module_url(&location.uri)
             .expect("a module to jump to"),
         location.range,
         location.range.start,
     );
 
-    format!("---------- Jumping from:\n{src}\n---------- Jumped to:\n{destination}")
+    format!(
+        "----- Jumping from `src/app.gleam`
+{src}
+----- Jumped to `{pretty_destination}`
+{destination}",
+    )
 }
 
 #[macro_export]
@@ -573,5 +584,25 @@ fn main() -> MyType {
     assert_goto!(
         TestProject::for_source(code).add_module("example_module", "pub type MyType = Int"),
         find_position_of("MyType").under_char('T')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3610
+#[test]
+fn goto_definition_of_external_function_in_same_module() {
+    let code = "
+@external(erlang, \"wibble\", \"wobble\")
+fn external_function() -> Nil
+
+fn main() {
+  external_function()
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code),
+        find_position_of("external_function")
+            .nth_occurrence(2)
+            .under_char('l')
     );
 }

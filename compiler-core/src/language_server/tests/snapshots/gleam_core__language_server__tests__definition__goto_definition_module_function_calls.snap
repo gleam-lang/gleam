@@ -2,7 +2,7 @@
 source: compiler-core/src/language_server/tests/definition.rs
 expression: output
 ---
----------- Jumping from: 
+----- Jumping from `src/app.gleam`
 
 import example_module
 fn main() {
@@ -10,6 +10,6 @@ fn main() {
                  ↑    
 }
 
----------- Jumped to:
+----- Jumped to `src/example_module.gleam`
 pub fn my_fn() { Nil }
 ↑▔▔▔▔▔▔▔▔▔▔▔▔▔

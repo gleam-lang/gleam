@@ -2,7 +2,7 @@
 source: compiler-core/src/language_server/tests/definition.rs
 expression: output
 ---
----------- Jumping from: 
+----- Jumping from `src/app.gleam`
 
 pub type Rec {
   Var1(Int)
@@ -14,7 +14,7 @@ pub fn make_var() -> Rec {
   Var1(1)
 }
 
----------- Jumped to:
+----- Jumped to `src/app.gleam`
 
 pub type Rec {
 ↑▔▔▔▔▔▔▔▔▔▔▔  
