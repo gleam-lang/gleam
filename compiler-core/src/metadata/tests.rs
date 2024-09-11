@@ -1358,6 +1358,8 @@ fn internal_annotated_module_fn() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
                     implementations: Implementations {
                         gleam: false,
                         uses_erlang_externals: true,
