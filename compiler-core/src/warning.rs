@@ -11,11 +11,11 @@ use crate::{
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
-use std::sync::atomic::AtomicUsize;
 use std::{
     io::Write,
     sync::{atomic::Ordering, Arc},
 };
+use std::{rc::Rc, sync::atomic::AtomicUsize};
 use termcolor::Buffer;
 
 pub trait WarningEmitterIO {
@@ -73,11 +73,11 @@ pub struct WarningEmitter {
     /// package only, the count is reset back to zero after the dependencies are
     /// compiled.
     count: Arc<AtomicUsize>,
-    emitter: DebugIgnore<Arc<dyn WarningEmitterIO>>,
+    emitter: DebugIgnore<Rc<dyn WarningEmitterIO>>,
 }
 
 impl WarningEmitter {
-    pub fn new(emitter: Arc<dyn WarningEmitterIO>) -> Self {
+    pub fn new(emitter: Rc<dyn WarningEmitterIO>) -> Self {
         Self {
             count: Arc::new(AtomicUsize::new(0)),
             emitter: DebugIgnore(emitter),
@@ -85,7 +85,7 @@ impl WarningEmitter {
     }
 
     pub fn null() -> Self {
-        Self::new(Arc::new(NullWarningEmitterIO))
+        Self::new(Rc::new(NullWarningEmitterIO))
     }
 
     pub fn reset_count(&self) {
@@ -101,10 +101,10 @@ impl WarningEmitter {
         self.emitter.emit_warning(warning);
     }
 
-    pub fn vector() -> (Self, Arc<VectorWarningEmitterIO>) {
-        let io = Arc::new(VectorWarningEmitterIO::default());
+    pub fn vector() -> (Self, Rc<VectorWarningEmitterIO>) {
+        let io = Rc::new(VectorWarningEmitterIO::default());
         let emitter = Self::new(io.clone());
-        (emitter, Arc::clone(&io))
+        (emitter, Rc::clone(&io))
     }
 }
 
@@ -128,7 +128,7 @@ impl TypeWarningEmitter {
         Self {
             module_path: Utf8PathBuf::new(),
             module_src: EcoString::from(""),
-            emitter: WarningEmitter::new(Arc::new(NullWarningEmitterIO)),
+            emitter: WarningEmitter::new(Rc::new(NullWarningEmitterIO)),
         }
     }
 

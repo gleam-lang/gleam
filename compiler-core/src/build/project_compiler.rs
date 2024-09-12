@@ -27,6 +27,7 @@ use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
     io::BufReader,
+    rc::Rc,
     sync::Arc,
     time::Instant,
 };
@@ -127,7 +128,7 @@ where
         options: Options,
         packages: Vec<ManifestPackage>,
         telemetry: &'static dyn Telemetry,
-        warning_emitter: Arc<dyn WarningEmitterIO>,
+        warning_emitter: Rc<dyn WarningEmitterIO>,
         paths: ProjectPaths,
         io: IO,
     ) -> Self {

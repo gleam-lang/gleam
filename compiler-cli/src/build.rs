@@ -1,4 +1,4 @@
-use std::{sync::Arc, time::Instant};
+use std::{rc::Rc, time::Instant};
 
 use gleam_core::{
     build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
@@ -21,13 +21,13 @@ pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
-    main_with_warnings(options, manifest, Arc::new(ConsoleWarningEmitter))
+    main_with_warnings(options, manifest, Rc::new(ConsoleWarningEmitter))
 }
 
 pub(crate) fn main_with_warnings(
     options: Options,
     manifest: Manifest,
-    warnings: Arc<dyn WarningEmitterIO>,
+    warnings: Rc<dyn WarningEmitterIO>,
 ) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
