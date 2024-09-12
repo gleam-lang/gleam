@@ -377,3 +377,15 @@ fn duplicate_native_files_result_in_an_error() {
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     assert!(copier.run().is_err());
 }
+
+#[test]
+fn conflicting_erlang_modules_result_in_an_error() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/src/a/b/c/wibble.erl"), "1")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/e/f/wibble.erl"), "1")
+        .unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    assert!(copier.run().is_err());
+}
