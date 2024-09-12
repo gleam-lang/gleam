@@ -1,7 +1,7 @@
 #[cfg(test)]
 mod tests;
 
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -21,6 +21,7 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     root: &'a Utf8Path,
     destination_dir: &'a Utf8Path,
     seen_native_files: HashSet<Utf8PathBuf>,
+    seen_erlang_modules: HashMap<String, Utf8PathBuf>,
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
 }
@@ -36,6 +37,7 @@ where
             destination_dir: out,
             to_compile: Vec::new(),
             seen_native_files: HashSet::new(),
+            seen_erlang_modules: HashMap::new(),
             elixir_files_copied: false,
         }
     }
@@ -86,10 +88,7 @@ where
         let extension = file.extension().unwrap_or_default();
 
         // Skip unknown file formats that are not supported native files
-        // Erlang FFI files in subdirectories are not currently supported either
-        if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex")
-            || in_subdir && matches!(extension, "hrl" | "erl" | "ex")
-        {
+        if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
             return Ok(());
         }
 
@@ -101,6 +100,9 @@ where
 
         // Check that this native file was not already copied
         self.check_for_duplicate(&relative_path)?;
+
+        // Check for Erlang modules conflicting between each other
+        self.check_for_conflicting_erlang_modules(&relative_path)?;
 
         // If the source file's mtime is older than the destination file's mtime
         // then it has not changed and as such does not need to be copied.
@@ -140,6 +142,35 @@ where
                 file: relative_path.to_string(),
             });
         }
+        Ok(())
+    }
+
+    /// Erlang module files cannot have the same name regardless of their
+    /// relative positions within the project. Ensure we raise an error if the
+    /// user attempts to create `.erl` files with the same name.
+    fn check_for_conflicting_erlang_modules(
+        &mut self,
+        relative_path: &Utf8PathBuf,
+    ) -> Result<(), Error> {
+        if !matches!(relative_path.extension(), Some("erl")) {
+            return Ok(());
+        }
+        let Some(filename) = relative_path.file_name().map(String::from) else {
+            return Ok(());
+        };
+
+        if let Some(first) = self
+            .seen_erlang_modules
+            .insert(filename.clone(), relative_path.clone())
+        {
+            // TODO: Dedicated error
+            return Err(Error::DuplicateModule {
+                module: ecow::eco_format!("{}", filename),
+                first,
+                second: relative_path.clone(),
+            });
+        }
+
         Ok(())
     }
 }
