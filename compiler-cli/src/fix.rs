@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::rc::Rc;
 
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
@@ -22,7 +22,7 @@ pub fn run() -> Result<()> {
     // When running gleam fix we want all the compilation warnings to be hidden,
     // at the same time we need to access those to apply the fixes: so we
     // accumulate those into a vector.
-    let warnings = Arc::new(VectorWarningEmitterIO::new());
+    let warnings = Rc::new(VectorWarningEmitterIO::new());
     let _built = build::main_with_warnings(
         Options {
             root_target_support: TargetSupport::Enforced,

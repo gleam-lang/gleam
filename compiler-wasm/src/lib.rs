@@ -16,7 +16,7 @@ use gleam_core::{
 };
 use hexpm::version::Version;
 use im::HashMap;
-use std::{cell::RefCell, collections::HashSet, sync::Arc};
+use std::{cell::RefCell, collections::HashSet, rc::Rc};
 use wasm_filesystem::WasmFileSystem;
 
 use wasm_bindgen::prelude::*;
@@ -169,7 +169,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     let mut type_manifests = im::HashMap::new();
     let mut defined_modules = im::HashMap::new();
     #[allow(clippy::arc_with_non_send_sync)]
-    let warning_emitter = WarningEmitter::new(Arc::new(project.warnings));
+    let warning_emitter = WarningEmitter::new(Rc::new(project.warnings));
     let config = PackageConfig {
         name: "library".into(),
         version: Version::new(1, 0, 0),

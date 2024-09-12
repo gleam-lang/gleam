@@ -16,13 +16,13 @@ use gleam_core::{
     warning::WarningEmitter,
     Error, Result,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, rc::Rc};
 
 pub fn command(options: CompilePackage) -> Result<()> {
     let ids = UniqueIdGenerator::new();
     let mut type_manifests = load_libraries(&ids, &options.libraries_directory)?;
     let mut defined_modules = im::HashMap::new();
-    let warnings = WarningEmitter::new(Arc::new(ConsoleWarningEmitter));
+    let warnings = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
     let paths = ProjectPaths::new(options.package_directory.clone());
     let config = config::read(paths.root_config())?;
 

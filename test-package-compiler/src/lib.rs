@@ -21,7 +21,8 @@ use regex::Regex;
 use std::{
     collections::{HashMap, HashSet},
     fmt::Write,
-    sync::{Arc, OnceLock},
+    rc::Rc,
+    sync::OnceLock,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -48,7 +49,7 @@ pub fn prepare(path: &str) -> String {
     let ids = gleam_core::uid::UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     let warnings = VectorWarningEmitterIO::default();
-    let warning_emitter = WarningEmitter::new(Arc::new(warnings.clone()));
+    let warning_emitter = WarningEmitter::new(Rc::new(warnings.clone()));
     let filesystem = to_in_memory_filesystem(&root);
     let initial_files = filesystem.paths();
     let root = Utf8PathBuf::from("");
