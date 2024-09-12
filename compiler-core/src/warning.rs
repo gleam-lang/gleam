@@ -31,7 +31,7 @@ impl WarningEmitterIO for NullWarningEmitterIO {
 
 #[derive(Debug, Clone, Default)]
 pub struct VectorWarningEmitterIO {
-    pub warnings: Arc<std::sync::RwLock<Vec<Warning>>>,
+    pub warnings: Rc<std::sync::RwLock<Vec<Warning>>>,
 }
 
 impl VectorWarningEmitterIO {
