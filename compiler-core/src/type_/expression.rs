@@ -247,7 +247,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
-            minimum_required_version: Version::new(1, 0, 0),
+            minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
     }

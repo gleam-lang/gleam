@@ -41,7 +41,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
-            minimum_required_version: Version::new(1, 0, 0),
+            minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
     }

@@ -165,7 +165,7 @@ impl<'a, A> ModuleAnalyzerConstructor<'a, A> {
             value_names: HashMap::with_capacity(module.definitions.len()),
             hydrators: HashMap::with_capacity(module.definitions.len()),
             module_name: module.name.clone(),
-            minimum_required_version: Version::new(1, 0, 0),
+            minimum_required_version: Version::new(0, 1, 0),
         }
         .infer_module(module)
     }

@@ -90,7 +90,7 @@ impl Built {
             .map(|interface| &interface.minimum_required_version)
             .reduce(|one_version, other_version| cmp::max(one_version, other_version))
             .map(|minimum_required_version| minimum_required_version.clone())
-            .unwrap_or(Version::new(1, 0, 0))
+            .unwrap_or(Version::new(0, 1, 0))
     }
 }
 
