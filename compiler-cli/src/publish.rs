@@ -276,6 +276,11 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         // correct and folks getting the package from Hex won't have unpleasant
         // surprises if the author forgot to manualy write it down.
         None => {
+            // If we're automatically adding the minimum required version
+            // constraint we want it to at least be `>= 1.0.0`, even if the
+            // inferred lower bound could be lower.
+            let minimum_required_version =
+                std::cmp::max(minimum_required_version, Version::new(1, 0, 0));
             let inferred_version_range =
                 pubgrub::range::Range::higher_than(minimum_required_version);
             config.gleam_version = Some(inferred_version_range);
