@@ -22,6 +22,9 @@ fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) 
         .uri
         .path_segments()
         .expect("a location to jump to")
+        // To make snapshots the same both on windows and unix systems we need
+        // to discard windows' `C:` path segment at the beginning of a uri.
+        .skip_while(|segment| *segment == "C:")
         .join("/");
 
     let src = hover::show_hover(
