@@ -115,6 +115,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/ducdetronquito">ducdetronquito</a> -
   <a href="https://github.com/gdcrisp">Dylan Carlson</a> -
   <a href="https://github.com/edongashi">Edon Gashi</a> -
+  <a href="https://github.com/eeeli24">eeeli24</a> -
   <a href="https://github.com/enoonan">Eileen Noonan</a> -
   <a href="https://github.com/dropwhile">eli</a> -
   <a href="https://github.com/Emma-Fuller">Emma</a> -
