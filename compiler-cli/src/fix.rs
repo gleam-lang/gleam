@@ -91,5 +91,5 @@ fn minimum_required_version_from_warnings(warnings: Vec<Warning>) -> Option<Vers
             _ => None,
         })
         .reduce(std::cmp::max)
-        .map(|version| version.clone())
+        .cloned()
 }
