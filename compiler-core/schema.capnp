@@ -108,11 +108,11 @@ struct ValueConstructor {
 }
 
 struct Publicity {
-    union {
-        public @0 :Void;
-        private @1 :Void;
-        internal @2 :Option(SrcSpan);
-    }
+  union {
+    public @0 :Void;
+    private @1 :Void;
+    internal @2 :Option(SrcSpan);
+  }
 }
 
 struct Implementations {
@@ -159,8 +159,8 @@ struct ValueConstructorVariant {
 }
 
 struct External {
-    module @0 :Text;
-    function @1 :Text;
+  module @0 :Text;
+  function @1 :Text;
 }
 
 struct SrcSpan {

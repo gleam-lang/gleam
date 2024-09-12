@@ -414,11 +414,11 @@ impl<'a> TestProject<'a> {
         };
 
         find_module(&self.root_package_modules)
-            .or(find_module(&self.dependency_modules))
-            .or(find_module(&self.test_modules))
-            .or(find_module(&self.hex_modules))
-            .or(find_module(&self.dev_hex_modules))
-            .or(find_module(&self.indirect_hex_modules))
+            .or_else(|| find_module(&self.dependency_modules))
+            .or_else(|| find_module(&self.test_modules))
+            .or_else(|| find_module(&self.hex_modules))
+            .or_else(|| find_module(&self.dev_hex_modules))
+            .or_else(|| find_module(&self.indirect_hex_modules))
     }
 
     pub fn add_module(mut self, name: &'a str, src: &'a str) -> Self {
