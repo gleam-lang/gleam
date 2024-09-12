@@ -22,6 +22,20 @@
 - OTP application trees are now shut down gracefully when `main` exits.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The `gleam fix` command can now update a project's `gleam` version contraint
+  to make sure it respects the inferred minimum required version.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The build tool now refuses to publish a project where the `gleam` version
+  constraint would include a compiler version that doesn't support the features
+  used by the package.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- If a project doesn't specify a `gleam` version constraint, the build tool will
+  automatically infer it and add it to the project's `gleam.toml` before
+  publishing it.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Compiler
 
 - Compiler progress is now printed to stderr, instead of stdout.
@@ -267,6 +281,37 @@
       }
 
   See: https://tour.gleam.run/flow-control/case-expressions/
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The compiler can now infer the minimum Gleam version needed for your code to
+  compile and emits a warning if the project's `gleam` version constraint
+  doesn't include it.
+  For example, let's say your `gleam.toml` has the constraint
+  `gleam = ">= 1.1.0"` and your code is using some feature introduced in a later
+  version:
+
+  ```gleam
+  // Concatenating constant strings was introduced in v1.4.0!
+  pub const greeting = "hello " <> "world!"
+  ```
+
+  You would now get the following warning:
+
+  ```txt
+  warning: Incompatible gleam version range
+    ┌─ /Users/giacomocavalieri/Desktop/datalog/src/datalog.gleam:1:22
+    │
+  1 │ pub const greeting = "hello " <> "world!"
+    │                      ^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.4.0
+
+  Constant strings concatenation was introduced in version v1.4.0. But the
+  Gleam version range specified in your `gleam.toml` would allow this code to
+  run on an earlier version like v1.1.0, resulting in compilation errors!
+  Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+      gleam = ">= 1.4.0"
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
