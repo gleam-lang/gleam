@@ -9,18 +9,18 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-// An in memory sharable collection of pretend files that can be used in place
-// of a real file system. It is a shared reference to a set of buffer than can
-// be cheaply cloned, all resulting copies pointing to the same internal
-// buffers.
-//
-// Useful in tests and in environments like the browser where there is no file
-// system.
-//
-// Not thread safe. The compiler is single threaded, so that's OK.
-//
-// Only supports absolute paths.
-//
+/// An in memory sharable collection of pretend files that can be used in place
+/// of a real file system. It is a shared reference to a set of buffer than can
+/// be cheaply cloned, all resulting copies pointing to the same internal
+/// buffers.
+///
+/// Useful in tests and in environments like the browser where there is no file
+/// system.
+///
+/// Not thread safe. The compiler is single threaded, so that's OK.
+///
+/// Only supports absolute paths.
+///
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
     files: Rc<RefCell<HashMap<Utf8PathBuf, InMemoryFile>>>,
@@ -121,21 +121,10 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn mkdir(&self, path: &Utf8Path) -> Result<(), Error> {
-        let mut parent_counter = 0;
-
         // Traverse ancestors from parent to root
         // Create each missing ancestor
         for ancestor in path.ancestors() {
-            if ancestor == "" || ancestor.ends_with(".") {
-                continue;
-            }
-            if ancestor.ends_with("..") {
-                // Skip the upcoming parent
-                parent_counter += 1;
-                continue;
-            }
-            if parent_counter > 0 {
-                parent_counter -= 1;
+            if ancestor == "" {
                 continue;
             }
             // Ensure we don't overwrite an existing file.
@@ -151,16 +140,6 @@ impl FileSystemWriter for InMemoryFileSystem {
             }
             let dir = InMemoryFile::directory();
             _ = files.insert(ancestor.to_path_buf(), dir);
-        }
-
-        // Ensure we don't leave the in-memory directory root
-        if parent_counter > 0 {
-            return Err(Error::FileIo {
-                kind: FileKind::Directory,
-                action: FileIoAction::Create,
-                path: path.to_path_buf(),
-                err: None,
-            });
         }
 
         Ok(())
@@ -247,7 +226,7 @@ impl FileSystemReader for InMemoryFileSystem {
         let files = self.files.deref().borrow();
         let buffer = files
             .get(&path)
-            .and_then(|file| file.repr.as_file_buffer())
+            .and_then(|file| file.node.as_file_buffer())
             .ok_or_else(|| Error::FileIo {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
@@ -269,7 +248,7 @@ impl FileSystemReader for InMemoryFileSystem {
         let files = self.files.deref().borrow();
         let buffer = files
             .get(&path)
-            .and_then(|file| file.repr.as_file_buffer())
+            .and_then(|file| file.node.as_file_buffer())
             .ok_or_else(|| Error::FileIo {
                 kind: FileKind::File,
                 action: FileIoAction::Open,
@@ -328,13 +307,17 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 }
 
+/// The representation of a file or directory in the in-memory filesystem.
+///
+/// Stores a file's buffer of contents.
+///
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InMemoryFileRepr {
+pub enum InMemoryFileNode {
     File(Rc<RefCell<Vec<u8>>>),
     Directory,
 }
 
-impl InMemoryFileRepr {
+impl InMemoryFileNode {
     /// Returns this file's file buffer if this isn't a directory.
     fn as_file_buffer(&self) -> Option<&Rc<RefCell<Vec<u8>>>> {
         match self {
@@ -352,18 +335,22 @@ impl InMemoryFileRepr {
     }
 }
 
-// An in memory sharable that can be used in place of a real file. It is a
-// shared reference to a buffer than can be cheaply cloned, all resulting copies
-// pointing to the same internal buffer.
-//
-// Useful in tests and in environments like the browser where there is no file
-// system.
-//
-// Not thread safe. The compiler is single threaded, so that's OK.
-//
+/// An in memory sharable that can be used in place of a real file. It is a
+/// shared reference to a buffer than can be cheaply cloned, all resulting copies
+/// pointing to the same internal buffer.
+///
+/// Useful in tests and in environments like the browser where there is no file
+/// system.
+///
+/// This struct holds common properties of different types of filesystem nodes
+/// (files and directories). The `node` field contains the file's content
+/// buffer, if this is not a directory.
+///
+/// Not thread safe. The compiler is single threaded, so that's OK.
+///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InMemoryFile {
-    repr: InMemoryFileRepr,
+    node: InMemoryFileNode,
     modification_time: SystemTime,
 }
 
@@ -371,13 +358,14 @@ impl InMemoryFile {
     /// Creates a directory.
     pub fn directory() -> Self {
         Self {
-            repr: InMemoryFileRepr::Directory,
+            node: InMemoryFileNode::Directory,
             ..Default::default()
         }
     }
 
+    /// Checks whether this is a directory's entry.
     pub fn is_directory(&self) -> bool {
-        matches!(self.repr, InMemoryFileRepr::Directory)
+        matches!(self.node, InMemoryFileNode::Directory)
     }
 
     /// Returns this file's contents if this is not a directory.
@@ -387,7 +375,7 @@ impl InMemoryFile {
     /// Panics if this is not the only reference to the underlying files.
     ///
     pub fn into_content(self) -> Option<Content> {
-        let buffer = self.repr.into_file_buffer()?;
+        let buffer = self.node.into_file_buffer()?;
         let contents = Rc::try_unwrap(buffer)
             .expect("InMemoryFile::into_content called with multiple references")
             .into_inner();
@@ -401,7 +389,7 @@ impl InMemoryFile {
 impl Default for InMemoryFile {
     fn default() -> Self {
         Self {
-            repr: InMemoryFileRepr::File(Default::default()),
+            node: InMemoryFileNode::File(Default::default()),
             // We use a fixed time here so that the tests are deterministic. In
             // future we may want to inject this in some fashion.
             modification_time: SystemTime::UNIX_EPOCH + Duration::from_secs(663112800),
@@ -411,7 +399,7 @@ impl Default for InMemoryFile {
 
 impl io::Write for InMemoryFile {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let Some(buffer) = self.repr.as_file_buffer() else {
+        let Some(buffer) = self.node.as_file_buffer() else {
             // Not a file
             return Err(io::Error::from(io::ErrorKind::NotFound));
         };
@@ -420,7 +408,7 @@ impl io::Write for InMemoryFile {
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        let Some(buffer) = self.repr.as_file_buffer() else {
+        let Some(buffer) = self.node.as_file_buffer() else {
             // Not a file
             return Err(io::Error::from(io::ErrorKind::NotFound));
         };
