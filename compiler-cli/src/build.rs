@@ -4,6 +4,7 @@ use gleam_core::{
     build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
     paths::ProjectPaths,
+    warning::WarningEmitterIO,
     Result,
 };
 
@@ -20,6 +21,14 @@ pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
+    main_with_warnings(options, manifest, Arc::new(ConsoleWarningEmitter))
+}
+
+pub(crate) fn main_with_warnings(
+    options: Options,
+    manifest: Manifest,
+    warnings: Arc<dyn WarningEmitterIO>,
+) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config()?;
@@ -45,7 +54,7 @@ pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
             options,
             manifest.packages,
             telemetry,
-            Arc::new(ConsoleWarningEmitter),
+            warnings,
             ProjectPaths::new(current_dir),
             io,
         );
