@@ -13,6 +13,11 @@ use hexpm::version::Version;
 
 use crate::{build, cli};
 
+enum FixResult {
+    FixedSomething,
+    NothingToFix,
+}
+
 pub fn run() -> Result<()> {
     // When running gleam fix we want all the compilation warnings to be hidden,
     // at the same time we need to access those to apply the fixes: so we
@@ -33,14 +38,19 @@ pub fn run() -> Result<()> {
     )?;
     let warnings = warnings.take();
 
-    fix_minimum_required_version(warnings)?;
+    let result = fix_minimum_required_version(warnings)?;
+
+    match result {
+        FixResult::FixedSomething => println!("Your Gleam code has been fixed!"),
+        FixResult::NothingToFix => println!("Nothing to fix."),
+    };
 
     Ok(())
 }
 
-fn fix_minimum_required_version(warnings: Vec<Warning>) -> Result<()> {
+fn fix_minimum_required_version(warnings: Vec<Warning>) -> Result<FixResult> {
     let Some(minimum_required_version) = minimum_required_version_from_warnings(warnings) else {
-        return Ok(());
+        return Ok(FixResult::NothingToFix);
     };
 
     // Set the version requirement in gleam.toml
@@ -60,7 +70,7 @@ fn fix_minimum_required_version(warnings: Vec<Warning>) -> Result<()> {
 
     // Write the updated config
     crate::fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
-    Ok(())
+    Ok(FixResult::FixedSomething)
 }
 
 /// Returns the highest minimum required version among all warnings requiring a
