@@ -1024,6 +1024,16 @@ fn wibble() {
 }
 
 #[test]
+fn local_variable_ignore_within_function() {
+    let code = "
+fn main(a, b, z) {
+    Nil
+}
+";
+    assert_completion!(TestProject::for_source(code), Position::new(1, 14));
+}
+
+#[test]
 fn internal_values_from_root_package_are_in_the_completions() {
     let dep = r#"
 @external(erlang, "rand", "uniform")
