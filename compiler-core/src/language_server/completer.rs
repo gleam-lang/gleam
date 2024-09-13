@@ -10,7 +10,7 @@ use lsp_types::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    ast::{self, Arg, CallArg, Definition, Pattern, Publicity, Statement, TypedExpr},
+    ast::{self, Arg, CallArg, Definition, Function, Pattern, Publicity, TypedExpr},
     build::Module,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
@@ -575,18 +575,15 @@ where
                 .src_line_numbers
                 .byte_index(self.cursor_position.line, self.cursor_position.character);
 
-            // Function arguments and variables
-            // Find the function that the cursor is in
-            // and push the arguments and local variables
+            // Find the function that the cursor is in and push completions for
+            // its arguments and local variables.
             if let Some(fun) = self.module.ast.definitions.iter().find_map(|d| match d {
                 Definition::Function(f) if f.full_location().contains(cursor) => Some(f),
                 _ => None,
             }) {
                 let mut local_completition_extractor =
                     LocalCompletion::new(mod_name, insert_range, cursor);
-                local_completition_extractor.visit_fn_args(&fun.arguments);
-                local_completition_extractor.visit_statements(&fun.body);
-                completions.extend(local_completition_extractor.completions());
+                completions.extend(local_completition_extractor.fn_completions(fun));
             }
 
             for (name, value) in &self.module.ast.type_info.values {
@@ -985,17 +982,28 @@ impl<'a> LocalCompletion<'a> {
         }
     }
 
-    pub fn completions(&self) -> Vec<CompletionItem> {
-        self.completions.clone()
-    }
+    /// Generates completion items for a given function, including its arguments
+    /// and local variables.
+    pub fn fn_completions(
+        &mut self,
+        fun: &'a Function<Arc<Type>, TypedExpr>,
+    ) -> Vec<CompletionItem> {
+        // Add function arguments to completions
+        self.visit_fn_args(&fun.arguments);
 
-    pub fn visit_statements(&mut self, statements: &'a [Statement<Arc<Type>, TypedExpr>]) {
-        for statement in statements {
+        // Visit the function body statements
+        for statement in &fun.body {
+            // We only want to suggest local variables that are defined before
+            // the cursor
             if statement.location().start >= self.cursor {
                 continue;
             }
+
+            // Visit the statement to find local variables
             ast::visit::visit_typed_statement(self, statement);
         }
+
+        self.completions.clone()
     }
 
     pub fn visit_fn_args(&mut self, args: &[Arg<Arc<Type>>]) {
@@ -1021,6 +1029,12 @@ impl<'a> LocalCompletion<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
+    /// Visits a typed assignment, selectively processing either the value or the pattern
+    /// based on the cursor position.
+    /// - If the cursor is within the assignment It visits only the value expression.
+    ///   This avoids suggesting variables that are being defined in the assignment itself.
+    /// - If the cursor is outside the assignment It visits only the pattern.
+    ///   This prevents suggesting variables that might be out of scope.
     fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
         if assignment.location.contains(self.cursor) {
             self.visit_typed_expr(&assignment.value);
