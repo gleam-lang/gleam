@@ -1006,7 +1006,7 @@ impl<'a> LocalCompletion<'a> {
         self.completions.clone()
     }
 
-    pub fn visit_fn_args(&mut self, args: &[Arg<Arc<Type>>]) {
+    fn visit_fn_args(&mut self, args: &[Arg<Arc<Type>>]) {
         for arg in args {
             if let Some(name) = arg.get_variable_name() {
                 self.push_completion(name, arg.type_.clone());
