@@ -92,10 +92,14 @@ where
             .expect("copy_native_files strip prefix")
             .to_path_buf();
 
-        // Check for JavaScript modules conflicting between each other within
-        // the same relative path. We do this beforehand as '.gleam' files can
-        // also cause a conflict, despite not being native files.
-        self.check_for_conflicting_javascript_modules(&relative_path)?;
+        // No need to run duplicate native file checks for .gleam files, but we
+        // still need to check for conflicting `.gleam` and `.mjs` files, so we
+        // add a special case for `.gleam`.
+        if extension == "gleam" {
+            self.check_for_conflicting_javascript_modules(&relative_path)?;
+
+            return Ok(());
+        }
 
         // Skip unknown file formats that are not supported native files
         if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
@@ -106,6 +110,12 @@ where
 
         // Check that this native file was not already copied
         self.check_for_duplicate(&relative_path)?;
+
+        // Check for JavaScript modules conflicting between each other within
+        // the same relative path. We need to do this as '.gleam' files can
+        // also cause a conflict, despite not being native files, as they are
+        // compiled to `.mjs`.
+        self.check_for_conflicting_javascript_modules(&relative_path)?;
 
         // Check for Erlang modules conflicting between each other anywhere in
         // the tree.
@@ -164,6 +174,9 @@ where
             _ => return Ok(()),
         };
 
+        // Insert the full relative `.mjs` path in `seen_modules` as there is
+        // no conflict if two `.mjs` files have the same name but are in
+        // different subpaths, unlike Erlang files.
         if let Some(first) = self
             .seen_modules
             .insert(mjs_name.clone(), relative_path.clone())
@@ -194,6 +207,9 @@ where
             return Ok(());
         }
 
+        // Insert just the `.erl` module filename in `seen_modules` instead of
+        // its full relative path, because `.erl` files with the same name
+        // cause a conflict when targetting Erlang regardless of subpath.
         let erl_name = relative_path
             .file_name()
             .expect("path has file name")
