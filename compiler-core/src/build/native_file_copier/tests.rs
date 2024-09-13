@@ -411,3 +411,25 @@ fn conflicting_nested_gleam_and_erlang_modules_result_in_an_error() {
     let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
     assert!(copier.run().is_err());
 }
+
+#[test]
+fn conflicting_gleam_and_javascript_modules_result_in_an_error() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/src/wibble.gleam"), "1").unwrap();
+    fs.write(&Utf8Path::new("/src/wibble.mjs"), "1").unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    assert!(copier.run().is_err());
+}
+
+#[test]
+fn differently_nested_gleam_and_javascript_modules_with_same_name_are_ok() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/src/a/b/c/wibble.gleam"), "1")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/d/e/wibble.mjs"), "1")
+        .unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    assert!(copier.run().is_ok());
+}
