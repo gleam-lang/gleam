@@ -87,22 +87,25 @@ where
     fn copy(&mut self, file: Utf8PathBuf, src_root: &Utf8Path, in_subdir: bool) -> Result<()> {
         let extension = file.extension().unwrap_or_default();
 
+        let relative_path = file
+            .strip_prefix(src_root)
+            .expect("copy_native_files strip prefix")
+            .to_path_buf();
+
+        // Check for Erlang modules conflicting between each other anywhere in
+        // the tree. We do this beforehand as '.gleam' files can also cause
+        // a conflict, despite not being native files.
+        self.check_for_conflicting_erlang_modules(&relative_path)?;
+
         // Skip unknown file formats that are not supported native files
         if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
             return Ok(());
         }
 
-        let relative_path = file
-            .strip_prefix(src_root)
-            .expect("copy_native_files strip prefix")
-            .to_path_buf();
         let destination = self.destination_dir.join(&relative_path);
 
         // Check that this native file was not already copied
         self.check_for_duplicate(&relative_path)?;
-
-        // Check for Erlang modules conflicting between each other
-        self.check_for_conflicting_erlang_modules(&relative_path)?;
 
         // If the source file's mtime is older than the destination file's mtime
         // then it has not changed and as such does not need to be copied.
@@ -152,20 +155,25 @@ where
         &mut self,
         relative_path: &Utf8PathBuf,
     ) -> Result<(), Error> {
-        if !matches!(relative_path.extension(), Some("erl")) {
-            return Ok(());
-        }
-        let Some(filename) = relative_path.file_name().map(String::from) else {
-            return Ok(());
+        let erl_name = match relative_path.extension() {
+            Some("gleam") => relative_path
+                .with_extension("erl")
+                .as_str()
+                .replace("/", "@"),
+            Some("erl") => relative_path
+                .file_name()
+                .expect("path has file name")
+                .to_owned(),
+            _ => return Ok(()),
         };
 
         if let Some(first) = self
             .seen_erlang_modules
-            .insert(filename.clone(), relative_path.clone())
+            .insert(erl_name.clone(), relative_path.clone())
         {
             // TODO: Dedicated error
             return Err(Error::DuplicateModule {
-                module: ecow::eco_format!("{}", filename),
+                module: ecow::eco_format!("{}", erl_name),
                 first,
                 second: relative_path.clone(),
             });
