@@ -97,11 +97,6 @@ where
         // also cause a conflict, despite not being native files.
         self.check_for_conflicting_javascript_modules(&relative_path)?;
 
-        // Check for Erlang modules conflicting between each other anywhere in
-        // the tree. We do this beforehand as '.gleam' files can also cause
-        // a conflict, despite not being native files.
-        self.check_for_conflicting_erlang_modules(&relative_path)?;
-
         // Skip unknown file formats that are not supported native files
         if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
             return Ok(());
@@ -111,6 +106,10 @@ where
 
         // Check that this native file was not already copied
         self.check_for_duplicate(&relative_path)?;
+
+        // Check for Erlang modules conflicting between each other anywhere in
+        // the tree.
+        self.check_for_conflicting_erlang_modules(&relative_path)?;
 
         // If the source file's mtime is older than the destination file's mtime
         // then it has not changed and as such does not need to be copied.
@@ -187,17 +186,18 @@ where
         &mut self,
         relative_path: &Utf8PathBuf,
     ) -> Result<(), Error> {
-        let erl_name = match relative_path.extension() {
-            Some("gleam") => relative_path
-                .with_extension("erl")
-                .as_str()
-                .replace("/", "@"),
-            Some("erl") => relative_path
-                .file_name()
-                .expect("path has file name")
-                .to_owned(),
-            _ => return Ok(()),
-        };
+        // Ideally we'd check for `.gleam` files here as well. However, it is
+        // actually entirely legitimate to receive precompiled `.erl` files for
+        // each `.gleam` file from Hex, so this would prompt an error for every
+        // package downloaded from Hex, which we do not want.
+        if !matches!(relative_path.extension(), Some("erl")) {
+            return Ok(());
+        }
+
+        let erl_name = relative_path
+            .file_name()
+            .expect("path has file name")
+            .to_owned();
 
         if let Some(first) = self
             .seen_modules
