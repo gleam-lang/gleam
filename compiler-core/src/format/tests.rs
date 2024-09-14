@@ -3166,7 +3166,7 @@ fn tuple_access2() {
 fn tuple_access3() {
     assert_format!(
         r#"fn main() {
-  { tup.1 }.2
+  tup.1.2
 }
 "#
     );
