@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 1800
+expression: "\nimport option\nimport wobble\npub fn main(x) -> option.Option(wobble.Wibble) {\n    option.Some(1)\n}\n"
+---
+----- BEFORE ACTION
+
+import option
+import wobble
+pub fn main(x) -> option.Option(wobble.Wibble) {
+                                      ▔▔↑       
+    option.Some(1)
+}
+
+
+----- AFTER ACTION
+
+import option.{type Option}
+import wobble.{type Wibble}
+pub fn main(x) -> Option(Wibble) {
+    option.Some(1)
+}

@@ -1972,6 +1972,22 @@ pub fn main() {
 }
 
 #[test]
+fn test_qualified_to_unqualified_import_function() {
+    let src = r#"
+import result
+
+pub fn main() {
+  result.is_ok()
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src).add_hex_module("result", "pub fn is_ok() {}"),
+        find_position_of(".is_ok").select_until(find_position_of("()")),
+    );
+}
+
+#[test]
 fn test_qualified_to_unqualified_import_with_alias() {
     let src = r#"
 import option as opt
@@ -1992,19 +2008,19 @@ pub fn main() {
 fn test_qualified_to_unqualified_import_multiple_imports() {
     let src = r#"
 import option
-import option2
+import result
 
 pub fn main() {
   option.Some(1)
-  option2.Some(1)
+  result.Ok(1)
 }
 "#;
     assert_code_action!(
         CONVERT_TO_UNQUALIFIED_IMPORT,
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }")
-            .add_hex_module("option2", "pub type Option(v) { Some(v) None }"),
-        find_position_of(".Some").select_until(find_position_of("(1)")),
+            .add_hex_module("result", "pub type Result(v,e) { Ok(v) Err(e)}"),
+        find_position_of(".Ok").select_until(find_position_of("(1)")),
     );
 }
 
@@ -2037,7 +2053,7 @@ pub fn main(x) -> option.Option(Int) {
     option.Some(1)
 }
 "#;
-    assert_no_code_actions!(
+    assert_code_action!(
         CONVERT_TO_UNQUALIFIED_IMPORT,
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
@@ -2046,9 +2062,45 @@ pub fn main(x) -> option.Option(Int) {
 }
 
 #[test]
+fn test_qualified_to_unqualified_import_nested_type_outer() {
+    let src = r#"
+import option
+import wobble
+pub fn main(x) -> option.Option(wobble.Wibble) {
+    option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wibble { Wibble(Int) }"),
+        find_position_of(".Option").select_until(find_position_of("(")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_nested_type_inner() {
+    let src = r#"
+import option
+import wobble
+pub fn main(x) -> option.Option(wobble.Wibble) {
+    option.Some(1)
+}
+"#;
+    assert_code_action!(
+        CONVERT_TO_UNQUALIFIED_IMPORT,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wibble { Wibble(Int) }"),
+        find_position_of(".W").select_until(find_position_of("ibble")),
+    );
+}
+
+#[test]
 fn test_qualified_to_unqualified_import_in_pattern() {
     let src = r#"
-import gleam/option
+import option
 
 pub fn main(x) {
   case x {

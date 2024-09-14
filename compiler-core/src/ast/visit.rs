@@ -447,6 +447,45 @@ pub trait Visit<'ast> {
             right_side_assignment,
         );
     }
+
+    fn visit_type_ast(&mut self, node: &'ast TypeAst) {
+        visit_type_ast(self, node);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<TypeAst>,
+    ) {
+        visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_type_ast_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        arguments: &'ast Vec<TypeAst>,
+        return_: &'ast TypeAst,
+    ) {
+        visit_type_ast_fn(self, location, arguments, return_);
+    }
+
+    fn visit_type_ast_var(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        visit_type_ast_var(self, location, name);
+    }
+
+    fn visit_type_ast_tuple(&mut self, location: &'ast SrcSpan, elems: &'ast Vec<TypeAst>) {
+        visit_type_ast_tuple(self, location, elems);
+    }
+
+    fn visit_type_ast_hole(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        visit_type_ast_hole(self, location, name);
+    }
+
+    fn visit_typed_arg(&mut self, arg: &'ast TypedArg) {
+        visit_typed_arg(self, arg);
+    }
 }
 
 pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
@@ -474,9 +513,100 @@ pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
 where
     V: Visit<'a> + ?Sized,
 {
+    for arg in &fun.arguments {
+        if let Some(annotation) = &arg.annotation {
+            v.visit_type_ast(annotation);
+        }
+    }
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
     }
+    if let Some(return_annotation) = &fun.return_annotation {
+        v.visit_type_ast(return_annotation);
+    }
+}
+
+pub fn visit_type_ast<'a, V>(v: &mut V, node: &'a TypeAst)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match node {
+        TypeAst::Constructor(super::TypeAstConstructor {
+            location,
+            arguments,
+            module,
+            name,
+        }) => {
+            v.visit_type_ast_constructor(location, module, name, arguments);
+        }
+        TypeAst::Fn(super::TypeAstFn {
+            location,
+            arguments,
+            return_,
+        }) => {
+            v.visit_type_ast_fn(location, arguments, return_);
+        }
+        TypeAst::Var(super::TypeAstVar { location, name }) => {
+            v.visit_type_ast_var(location, name);
+        }
+        TypeAst::Tuple(super::TypeAstTuple { location, elems }) => {
+            v.visit_type_ast_tuple(location, elems);
+        }
+        TypeAst::Hole(super::TypeAstHole { location, name }) => {
+            v.visit_type_ast_hole(location, name);
+        }
+    }
+}
+
+pub fn visit_type_ast_constructor<'a, V>(
+    v: &mut V,
+    location: &'a SrcSpan,
+    module: &'a Option<(EcoString, SrcSpan)>,
+    name: &'a EcoString,
+    arguments: &'a Vec<TypeAst>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_type_ast(argument);
+    }
+}
+
+pub fn visit_type_ast_fn<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    arguments: &'a Vec<TypeAst>,
+    return_: &'a TypeAst,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_type_ast(argument);
+    }
+    v.visit_type_ast(return_);
+}
+
+pub fn visit_type_ast_var<'a, V>(v: &mut V, location: &'a SrcSpan, name: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+    // No further traversal needed for variables
+}
+
+pub fn visit_type_ast_tuple<'a, V>(v: &mut V, location: &'a SrcSpan, elems: &'a Vec<TypeAst>)
+where
+    V: Visit<'a> + ?Sized,
+{
+    for elem in elems {
+        v.visit_type_ast(elem);
+    }
+}
+
+pub fn visit_type_ast_hole<'a, V>(v: &mut V, location: &'a SrcSpan, name: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+    // No further traversal needed for holes
 }
 
 pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)
@@ -688,14 +818,29 @@ pub fn visit_typed_expr_fn<'a, V>(
     _location: &'a SrcSpan,
     _typ: &'a Arc<Type>,
     _is_capture: &'a bool,
-    _args: &'a [TypedArg],
+    args: &'a [TypedArg],
     body: &'a [TypedStatement],
-    _return_annotation: &'a Option<TypeAst>,
+    return_annotation: &'a Option<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
 {
+    for arg in args {
+        v.visit_typed_arg(arg);
+    }
     for stmt in body {
         v.visit_typed_statement(stmt);
+    }
+    if let Some(return_) = return_annotation {
+        v.visit_type_ast(return_);
+    }
+}
+
+pub fn visit_typed_arg<'a, V>(v: &mut V, arg: &'a TypedArg)
+where
+    V: Visit<'a> + ?Sized,
+{
+    if let Some(annotation) = &arg.annotation {
+        v.visit_type_ast(annotation);
     }
 }
 
