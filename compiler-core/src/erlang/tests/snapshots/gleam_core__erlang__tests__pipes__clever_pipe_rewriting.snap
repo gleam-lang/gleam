@@ -8,7 +8,7 @@ expression: "\npub fn apply(f: fn(a) -> b, a: a) { a |> f }\n"
 -export([apply/2]).
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec apply(fun((W) -> X), W) -> X.
+-spec apply(fun((R) -> S), R) -> S.
 apply(F, A) ->
     _pipe = A,
     F(_pipe).

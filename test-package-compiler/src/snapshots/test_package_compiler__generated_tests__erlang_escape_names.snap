@@ -15,7 +15,7 @@ expression: "./cases/erlang_escape_names"
 -export(['receive'/1]).
 
 -file("src/one.gleam", 2).
--spec 'receive'(W) -> W.
+-spec 'receive'(R) -> R.
 'receive'(X) ->
     X.
 
@@ -38,7 +38,7 @@ qualified_call() ->
     one:'receive'(1).
 
 -file("src/two.gleam", 8).
--spec qualified_value() -> fun((BD) -> BD).
+-spec qualified_value() -> fun((AI) -> AI).
 qualified_value() ->
     fun one:'receive'/1.
 
@@ -48,7 +48,7 @@ unqualified_call() ->
     one:'receive'(1).
 
 -file("src/two.gleam", 16).
--spec unqualified_value() -> fun((BJ) -> BJ).
+-spec unqualified_value() -> fun((AK) -> AK).
 unqualified_value() ->
     fun one:'receive'/1.
 

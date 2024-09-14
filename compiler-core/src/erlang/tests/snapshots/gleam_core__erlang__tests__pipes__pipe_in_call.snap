@@ -8,7 +8,7 @@ expression: "\npub fn main() {\n  123\n  |> two(\n    1 |> two(2),\n    _,\n  )\
 -export([two/2, main/0]).
 
 -file("/root/project/test/my/mod.gleam", 10).
--spec two(Y, any()) -> Y.
+-spec two(S, any()) -> S.
 two(A, B) ->
     A.
 

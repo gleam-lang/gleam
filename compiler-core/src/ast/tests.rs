@@ -105,12 +105,14 @@ fn compile_expression(src: &str) -> TypedStatement {
         module: "mymod".into(),
         constructor_index: 0,
     };
+    let variable_index = environment.register_variable();
     environment.insert_variable(
         "Cat".into(),
         variant,
         type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
         Publicity::Public,
         Deprecation::NotDeprecated,
+        Some(variable_index),
     );
 
     environment.insert_accessors(

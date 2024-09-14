@@ -8,7 +8,7 @@ expression: "pub fn main(board) {\nfn(board) { board }\n  board\n}"
 -export([main/1]).
 
 -file("/root/project/test/my/mod.gleam", 1).
--spec main(W) -> W.
+-spec main(R) -> R.
 main(Board) ->
     fun(Board@1) -> Board@1 end,
     Board.

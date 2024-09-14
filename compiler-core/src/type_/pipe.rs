@@ -203,6 +203,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             PIPE_VARIABLE.into(),
             location,
             expression.type_(),
+            None,
         );
         // Add the assignment to the AST
         let assignment = Assignment {

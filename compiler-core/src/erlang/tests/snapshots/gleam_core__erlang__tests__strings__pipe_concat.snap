@@ -8,7 +8,7 @@ expression: "\nfn id(x) {\n  x\n}\n\npub fn main() {\n  { \"\" |> id } <> { \"\"
 -export([main/0]).
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec id(W) -> W.
+-spec id(R) -> R.
 id(X) ->
     X.
 

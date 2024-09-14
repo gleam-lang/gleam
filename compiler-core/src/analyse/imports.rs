@@ -121,12 +121,14 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     })
                 }
 
+                let variable_index = self.environment.register_variable();
                 self.environment.insert_variable(
                     used_name.clone(),
                     value.variant.clone(),
                     value.type_.clone(),
                     value.publicity,
                     value.deprecation.clone(),
+                    Some(variable_index),
                 );
                 &value.variant
             }

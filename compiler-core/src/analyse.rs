@@ -378,6 +378,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             has_erlang_external: false,
             has_javascript_external: false,
         };
+
+        let variable_index = environment.register_variable();
+        let old_referencing_source = environment.referencing_source_indices.clone();
+        environment.referencing_source_indices = vec![variable_index];
         let mut expr_typer = ExprTyper::new(environment, definition, &mut self.problems);
         let typed_expr = expr_typer.infer_const(&annotation, *value);
         let type_ = typed_expr.type_();
@@ -419,7 +423,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             type_.clone(),
             publicity,
             Deprecation::NotDeprecated,
+            Some(variable_index),
         );
+        environment.referencing_source_indices = old_referencing_source;
         environment.insert_module_value(name.clone(), variant);
 
         Definition::ModuleConstant(ModuleConstant {
@@ -507,6 +513,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .zip(&prereg_args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect_vec();
+
+        let variable_index = environment
+            .scope
+            .get(&name)
+            .expect("function already registered")
+            .0
+            .expect("function already registered");
+        let old_referencing_source = environment.referencing_source_indices.clone();
+        environment.referencing_source_indices = vec![variable_index];
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -624,7 +639,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             preregistered_type.clone(),
             publicity,
             deprecation.clone(),
+            Some(variable_index),
         );
+        environment.referencing_source_indices = old_referencing_source;
 
         Definition::Function(Function {
             documentation: doc,
@@ -1022,12 +1039,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 name: constructor.name.clone(),
                 parameters: fields,
             });
+            let variable_index = environment.register_variable();
             environment.insert_variable(
                 constructor.name.clone(),
                 constructor_info,
                 type_,
                 value_constructor_publicity,
                 deprecation.clone(),
+                Some(variable_index),
             );
 
             environment.value_names.named_constructor_in_scope(
@@ -1279,12 +1298,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             location: *location,
             implementations: *implementations,
         };
+        let variable_index = environment.register_variable();
         environment.insert_variable(
             name.clone(),
             variant,
             type_,
             *publicity,
             deprecation.clone(),
+            Some(variable_index),
         );
         Ok(())
     }
@@ -1495,16 +1516,18 @@ fn generalise_module_constant(
         module: module_name.clone(),
         implementations,
     };
-    // HACK: We insert the same constant twice. Once on definition and once on generalization
-    // This means that they appear as 2 separate variables for usage
-    // We do a get on the replaced constant to force a usage of it
-    let _ = environment.get_variable(&name, &location);
+    let variable_index = environment
+        .scope
+        .get(&name)
+        .expect("constant already exists")
+        .0;
     environment.insert_variable(
         name.clone(),
         variant.clone(),
         type_.clone(),
         publicity,
         deprecation.clone(),
+        variable_index,
     );
 
     environment.insert_module_value(
@@ -1579,12 +1602,18 @@ fn generalise_function(
         location,
         implementations,
     };
+    let variable_index = environment
+        .scope
+        .get(&name)
+        .expect("function already exists")
+        .0;
     environment.insert_variable(
         name.clone(),
         variant.clone(),
         type_.clone(),
         publicity,
         deprecation.clone(),
+        variable_index,
     );
     environment.insert_module_value(
         name.clone(),

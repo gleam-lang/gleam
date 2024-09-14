@@ -8,7 +8,7 @@ expression: "fn go(x xx, y yy) { xx }\npub fn x() { go(x: 1, y: 2) go(y: 3, x: 4
 -export([x/0]).
 
 -file("/root/project/test/my/mod.gleam", 1).
--spec go(W, any()) -> W.
+-spec go(R, any()) -> R.
 go(Xx, Yy) ->
     Xx.
 

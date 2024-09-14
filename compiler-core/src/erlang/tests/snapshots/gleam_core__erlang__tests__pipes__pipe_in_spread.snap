@@ -11,7 +11,7 @@ expression: "pub type X {\n  X(a: Int, b: Int)\n}\n\nfn id(x) {\n  x\n}\n       
 -type x() :: {x, integer(), integer()}.
 
 -file("/root/project/test/my/mod.gleam", 5).
--spec id(X) -> X.
+-spec id(S) -> S.
 id(X) ->
     X.
 

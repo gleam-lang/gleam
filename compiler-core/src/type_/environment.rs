@@ -1,4 +1,5 @@
 use ecow::eco_format;
+use petgraph::{graph::NodeIndex, prelude::StableGraph, Directed};
 use pubgrub::range::Range;
 
 use crate::{
@@ -41,8 +42,15 @@ pub struct Environment<'a> {
     pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
-    pub scope: im::HashMap<EcoString, (u64, ValueConstructor)>,
-    pub value_usage_graph: HashMap<u64, (ValueConstructor, EcoString, Vec<SrcSpan>)>,
+    pub scope: im::HashMap<EcoString, (Option<NodeIndex<u32>>, ValueConstructor)>,
+    /// Call graph connecting value dependencies.
+    /// Nodes are the value constructor definitions.
+    /// They are options because we need placeholder values when creating a new variable.
+    /// Edges are the locations of the value usages.
+    /// Value constructors are stored for convenience of creating unused warnings.
+    /// When stored in cache should be transformed into just locations.
+    pub value_usage_graph: StableGraph<Option<(EcoString, ValueConstructor)>, SrcSpan, Directed>,
+    pub referencing_source_indices: Vec<NodeIndex<u32>>,
 
     /// Types defined in the current module (or the prelude)
     pub module_types: HashMap<EcoString, (u64, TypeConstructor)>,
@@ -108,9 +116,10 @@ impl<'a> Environment<'a> {
             scope: prelude
                 .values
                 .iter()
-                .map(|(name, value)| (name.clone(), (ids.next(), value.clone())))
+                .map(|(name, value)| (name.clone(), (None, value.clone())))
                 .collect(),
-            value_usage_graph: HashMap::new(),
+            value_usage_graph: StableGraph::new(),
+            referencing_source_indices: Vec::new(),
             ids,
             importable_modules,
             imported_module_aliases: HashMap::new(),
@@ -130,7 +139,7 @@ pub struct UnusedModuleAlias {
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    local_values: im::HashMap<EcoString, (u64, ValueConstructor)>,
+    local_values: im::HashMap<EcoString, (Option<NodeIndex<u32>>, ValueConstructor)>,
 }
 
 impl<'a> Environment<'a> {
@@ -185,20 +194,29 @@ impl<'a> Environment<'a> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_local_variable(&mut self, name: EcoString, location: SrcSpan, type_: Arc<Type>) {
-        let id = self.ids.next();
-        let val = ValueConstructor {
-            deprecation: Deprecation::NotDeprecated,
-            publicity: Publicity::Private,
-            variant: ValueConstructorVariant::LocalVariable { location },
+    pub fn insert_local_variable(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+        type_: Arc<Type>,
+        node_index: Option<NodeIndex>,
+    ) {
+        self.insert_variable(
+            name,
+            ValueConstructorVariant::LocalVariable { location },
             type_,
-        };
-        if name != PIPE_VARIABLE {
-            let _ = self
-                .value_usage_graph
-                .insert(id, (val.clone(), name.clone(), Vec::new()));
-        }
-        let _ = self.scope.insert(name, (id, val));
+            Publicity::Private,
+            Deprecation::NotDeprecated,
+            node_index,
+        )
+    }
+
+    /// Registers the existence of a variable to be put in scope.
+    /// Called as a prerequisite to insert_variable so that
+    /// the variable can be added to the usage graph while being created.
+    ///
+    pub fn register_variable(&mut self) -> NodeIndex {
+        self.value_usage_graph.add_node(None)
     }
 
     /// Insert a variable in the current scope.
@@ -210,20 +228,22 @@ impl<'a> Environment<'a> {
         type_: Arc<Type>,
         publicity: Publicity,
         deprecation: Deprecation,
+        node_index: Option<NodeIndex>,
     ) {
-        let id = self.ids.next();
         let val = ValueConstructor {
             deprecation,
             publicity,
             variant,
             type_,
         };
-        if name != PIPE_VARIABLE {
+
+        if let Some(ind) = node_index {
             let _ = self
                 .value_usage_graph
-                .insert(id, (val.clone(), name.clone(), Vec::new()));
-        }
-        let _ = self.scope.insert(name, (id, val));
+                .node_weight_mut(ind)
+                .and_then(|w| w.replace((name.clone(), val.clone())));
+        };
+        let _ = self.scope.insert(name, (node_index, val));
     }
 
     /// Insert (or overwrites) a value into the current module.
@@ -240,7 +260,7 @@ impl<'a> Environment<'a> {
         location: &SrcSpan,
     ) -> Option<&ValueConstructor> {
         self.scope.get(name).map(|(id, v)| {
-            if let Some((_, _, usages)) = self.value_usage_graph.get_mut(id) {
+            if let Some(node_index) = id {
                 match v.variant.clone() {
                     // Do not register usage of constructor during constructor instantiation
                     ValueConstructorVariant::Record {
@@ -248,7 +268,9 @@ impl<'a> Environment<'a> {
                         ..
                     } if *location == record_location => (),
                     _ => {
-                        usages.push(*location);
+                        self.referencing_source_indices.iter_mut().for_each(|i| {
+                            let _ = self.value_usage_graph.add_edge(*i, *node_index, *location);
+                        });
                         // If a private constructor is used then its type is also used
                         if v.publicity.is_private() {
                             if let Some((_, type_name)) = v.type_.named_type_name() {
@@ -426,35 +448,17 @@ impl<'a> Environment<'a> {
         location: &SrcSpan,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
-            None => self
-                .scope
-                .get(name)
-                .map(|(id, v)| {
-                    if let Some((_, _, usages)) = self.value_usage_graph.get_mut(id) {
-                        usages.push(*location);
-                        // If a private constructor is used then its type is also used
-                        if v.publicity.is_private() {
-                            if let Some((_, type_name)) = v.type_.named_type_name() {
-                                let _ = self.module_types.get(&type_name).map(|(id, _)| {
-                                    let _ = self
-                                        .type_usage_graph
-                                        .get_mut(id)
-                                        .map(|(_, _, usages)| usages.push(*location));
-                                });
-                            }
-                        }
-                    }
-                    v
-                })
-                .ok_or_else(|| {
-                    let type_with_name_in_scope =
-                        self.module_types.keys().any(|type_| type_ == name);
+            None => {
+                let type_with_name_in_scope = self.module_types.keys().any(|type_| type_ == name);
+                let variables = self.local_value_names();
+                self.get_variable(name, location).ok_or_else(|| {
                     UnknownValueConstructorError::Variable {
                         name: name.clone(),
-                        variables: self.local_value_names(),
+                        variables,
                         type_with_name_in_scope,
                     }
-                }),
+                })
+            }
 
             Some(module_name) => {
                 let (_, module) = self.imported_modules.get(module_name).ok_or_else(|| {
@@ -574,79 +578,81 @@ impl<'a> Environment<'a> {
             }
         }
 
-        for (_, (value_constructor, name, usages)) in self.value_usage_graph.iter() {
-            if usages.is_empty() {
-                let warning = match (&value_constructor.variant, &value_constructor.publicity) {
-                    (ValueConstructorVariant::LocalVariable { location }, _) => {
-                        Warning::UnusedVariable {
-                            location: *location,
-                            how_to_ignore: Some(eco_format!("_{name}")),
-                        }
+        let usage_graph_copy = self.value_usage_graph.clone();
+        for node_index in usage_graph_copy.externals(petgraph::Direction::Incoming) {
+            let (name, value_constructor) = usage_graph_copy
+                .node_weight(node_index)
+                .expect("node must exist in graph")
+                .as_ref()
+                .expect("variable constructor must not be none");
+            let warning = match (&value_constructor.variant, &value_constructor.publicity) {
+                (ValueConstructorVariant::LocalVariable { location }, _) => {
+                    Warning::UnusedVariable {
+                        location: *location,
+                        how_to_ignore: Some(eco_format!("_{name}")),
                     }
-                    (ValueConstructorVariant::LocalConstant { literal }, Publicity::Private) => {
-                        Warning::UnusedLiteral {
-                            location: literal.location(),
-                        }
+                }
+                (ValueConstructorVariant::LocalConstant { literal }, Publicity::Private) => {
+                    Warning::UnusedLiteral {
+                        location: literal.location(),
                     }
-                    (
-                        ValueConstructorVariant::Record {
-                            name,
-                            location,
-                            module,
-                            ..
-                        },
-                        Publicity::Private,
-                    ) => Warning::UnusedConstructor {
-                        location: *location,
-                        imported: *module != self.current_module,
-                        name: name.clone(),
+                }
+                (
+                    ValueConstructorVariant::Record {
+                        name,
+                        location,
+                        module,
+                        ..
                     },
-                    (
-                        ValueConstructorVariant::ModuleFn { name, location, .. },
-                        Publicity::Private,
-                    ) => Warning::UnusedPrivateFunction {
+                    Publicity::Private,
+                ) => Warning::UnusedConstructor {
+                    location: *location,
+                    imported: *module != self.current_module,
+                    name: name.clone(),
+                },
+                (ValueConstructorVariant::ModuleFn { name, location, .. }, Publicity::Private) => {
+                    Warning::UnusedPrivateFunction {
                         location: *location,
                         name: name.clone(),
-                    },
-                    (
-                        ValueConstructorVariant::ModuleFn {
-                            name,
-                            module,
-                            location,
-                            implementations,
-                            ..
-                        },
-                        _,
-                    ) if *module != self.current_module && implementations.gleam => {
-                        let location = self
-                            .unqualified_imported_names
-                            .get(name)
-                            .unwrap_or(location);
-                        Warning::UnusedImportedValue {
-                            location: *location,
-                            name: name.clone(),
-                        }
                     }
-                    (
-                        ValueConstructorVariant::ModuleConstant { location, .. },
-                        Publicity::Private,
-                    ) => Warning::UnusedPrivateModuleConstant {
+                }
+                (
+                    ValueConstructorVariant::ModuleFn {
+                        name,
+                        module,
+                        location,
+                        implementations,
+                        ..
+                    },
+                    _,
+                ) if *module != self.current_module && implementations.gleam => {
+                    let location = self
+                        .unqualified_imported_names
+                        .get(name)
+                        .unwrap_or(location);
+                    Warning::UnusedImportedValue {
                         location: *location,
                         name: name.clone(),
-                    },
-                    (
-                        ValueConstructorVariant::ModuleConstant {
-                            module, location, ..
-                        },
-                        _,
-                    ) if *module != self.current_module => Warning::UnusedImportedValue {
+                    }
+                }
+                (ValueConstructorVariant::ModuleConstant { location, .. }, Publicity::Private) => {
+                    Warning::UnusedPrivateModuleConstant {
                         location: *location,
                         name: name.clone(),
+                    }
+                }
+                (
+                    ValueConstructorVariant::ModuleConstant {
+                        module, location, ..
                     },
-                    _ => continue,
-                };
-                problems.warning(warning);
+                    _,
+                ) if *module != self.current_module => Warning::UnusedImportedValue {
+                    location: *location,
+                    name: name.clone(),
+                },
+                _ => continue,
             };
+            problems.warning(warning);
         }
 
         for (name, location) in self.unused_modules.clone().into_iter() {

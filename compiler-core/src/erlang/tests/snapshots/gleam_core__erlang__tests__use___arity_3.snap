@@ -8,7 +8,7 @@ expression: "\npub fn main() {\n  use <- trip(1.0, \"\")\n  123\n}\n\nfn trip(x,
 -export([main/0]).
 
 -file("/root/project/test/my/mod.gleam", 7).
--spec trip(Y, Z, fun(() -> AG)) -> {Y, Z, AG}.
+-spec trip(S, T, fun(() -> W)) -> {S, T, W}.
 trip(X, Y, F) ->
     Z = F(),
     {X, Y, Z}.

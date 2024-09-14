@@ -8,7 +8,7 @@ expression: "fn id(x) {\n  x\n}\n\npub fn bool_expr(x, y) {\n  y || x |> id\n}"
 -export([bool_expr/2]).
 
 -file("/root/project/test/my/mod.gleam", 1).
--spec id(W) -> W.
+-spec id(R) -> R.
 id(X) ->
     X.
 

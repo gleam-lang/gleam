@@ -1292,6 +1292,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             annotation,
             location,
         } = assignment;
+        let old_referencing_source = self.environment.referencing_source_indices.clone();
+        // self.environment.referencing_source_indices = vec![];
+        // TODO: actually register referencing source indices
+
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
             Ok(value) => value,
@@ -1317,6 +1321,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
             }
         };
+
+        self.environment.referencing_source_indices = old_referencing_source;
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
@@ -3307,10 +3313,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                         if !body.first().is_placeholder() {
                             // Insert a variable for the argument into the environment
+                            let variable_index = body_typer.environment.register_variable();
                             body_typer.environment.insert_local_variable(
                                 name.clone(),
                                 arg.location,
                                 t,
+                                Some(variable_index),
                             );
                         }
                     }

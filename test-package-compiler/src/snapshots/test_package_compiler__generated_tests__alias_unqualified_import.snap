@@ -18,7 +18,7 @@ expression: "./cases/alias_unqualified_import"
 -type empty() :: empty.
 
 -file("src/one.gleam", 2).
--spec id(X) -> X.
+-spec id(S) -> S.
 id(X) ->
     X.
 

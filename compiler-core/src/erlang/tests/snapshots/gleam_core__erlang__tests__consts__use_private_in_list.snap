@@ -8,6 +8,6 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -export([identity/1]).
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec identity(W) -> W.
+-spec identity(R) -> R.
 identity(A) ->
     A.
