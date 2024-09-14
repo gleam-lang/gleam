@@ -1080,6 +1080,11 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
 
     fn get_module_import(&mut self, module_name: &EcoString) {
+        // If we've already found an import, clear the edits and start over
+        // since we only edit the most inner span
+        if self.import.is_some() {
+            self.edits.clear();
+        }
         self.import = self
             .module
             .ast
@@ -1209,7 +1214,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         let Some((module_name, _)) = module else {
             return;
         };
-        tracing::info!("visit_type_ast_constructor: {name} {module_name:?}");
+        // tracing::info!("visit_type_ast_constructor: {name} {module_name:?}");
         self.get_module_import(module_name);
         if self.import.is_some() {
             self.add_import_edits(name, true);

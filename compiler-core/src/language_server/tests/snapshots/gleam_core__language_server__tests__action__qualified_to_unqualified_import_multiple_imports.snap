@@ -16,10 +16,10 @@ pub fn main() {
 
 ----- AFTER ACTION
 
-import option.{Some}
+import option
 import result.{Ok}
 
 pub fn main() {
-  Some(1)
+  option.Some(1)
   Ok(1)
 }
