@@ -348,13 +348,12 @@ impl<'a> Environment<'a> {
             None => self
                 .module_types
                 .get(name)
-                .map(|t| {
+                .inspect(|t| {
                     if let Some((_, usages)) = self.type_usage_graph.get_mut(name) {
                         if *location != t.origin {
                             usages.push(*location)
                         }
                     }
-                    t
                 })
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
