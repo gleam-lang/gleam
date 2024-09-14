@@ -1715,3 +1715,41 @@ pub fn main() {
 
     assert_completion!(TestProject::for_source(code), Position::new(2, 17));
 }
+
+#[test]
+fn variable_shadowing() {
+    let code = "
+pub fn main() {
+  let x = 1
+  let x = [1, 2]
+
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(4, 0));
+}
+
+#[test]
+fn argument_shadowing() {
+    let code = "
+pub fn main(x: Int) {
+  fn(x: Float) {
+
+  }
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}
+
+#[test]
+fn argument_variable_shadowing() {
+    let code = "
+pub fn main(x: Int) {
+  let x = [1, 2]
+
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}

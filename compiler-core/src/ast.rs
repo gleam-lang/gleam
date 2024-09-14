@@ -1780,7 +1780,7 @@ pub enum AssignName {
 }
 
 impl AssignName {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &EcoString {
         match self {
             AssignName::Variable(name) | AssignName::Discard(name) => name,
         }

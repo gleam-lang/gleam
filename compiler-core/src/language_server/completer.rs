@@ -1,4 +1,4 @@
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use ecow::EcoString;
 use itertools::Itertools;
@@ -581,9 +581,9 @@ where
                 Definition::Function(f) if f.full_location().contains(cursor) => Some(f),
                 _ => None,
             }) {
-                let mut local_completition_extractor =
-                    LocalCompletion::new(mod_name, insert_range, cursor);
-                completions.extend(local_completition_extractor.fn_completions(fun));
+                completions.extend(
+                    LocalCompletion::new(mod_name, insert_range, cursor).fn_completions(fun),
+                );
             }
 
             for (name, value) in &self.module.ast.type_info.values {
@@ -969,7 +969,7 @@ pub struct LocalCompletion<'a> {
     mod_name: &'a str,
     insert_range: Range,
     cursor: u32,
-    completions: Vec<CompletionItem>,
+    completions: HashMap<EcoString, CompletionItem>,
 }
 
 impl<'a> LocalCompletion<'a> {
@@ -978,14 +978,14 @@ impl<'a> LocalCompletion<'a> {
             mod_name,
             insert_range,
             cursor,
-            completions: Vec::new(),
+            completions: HashMap::new(),
         }
     }
 
     /// Generates completion items for a given function, including its arguments
     /// and local variables.
     pub fn fn_completions(
-        &mut self,
+        mut self,
         fun: &'a Function<Arc<Type>, TypedExpr>,
     ) -> Vec<CompletionItem> {
         // Add function arguments to completions
@@ -1000,10 +1000,10 @@ impl<'a> LocalCompletion<'a> {
             }
 
             // Visit the statement to find local variables
-            ast::visit::visit_typed_statement(self, statement);
+            ast::visit::visit_typed_statement(&mut self, statement);
         }
 
-        self.completions.clone()
+        self.completions.into_values().collect_vec()
     }
 
     fn visit_fn_args(&mut self, args: &[Arg<Arc<Type>>]) {
@@ -1014,17 +1014,15 @@ impl<'a> LocalCompletion<'a> {
         }
     }
 
-    fn push_completion(&mut self, name: &str, type_: Arc<Type>) {
+    fn push_completion(&mut self, name: &EcoString, type_: Arc<Type>) {
         if name.is_empty() || name.starts_with('_') {
             return;
         }
 
-        self.completions.push(local_value_completion(
-            self.mod_name,
-            name,
-            type_,
-            self.insert_range,
-        ));
+        _ = self.completions.insert(
+            name.clone(),
+            local_value_completion(self.mod_name, name, type_, self.insert_range),
+        );
     }
 }
 
