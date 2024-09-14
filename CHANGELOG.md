@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Fixed a bug where nested tuple access wouldn't be formatted properly.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.5.0-rc1 - 2024-09-14
 
 ### Build tool
