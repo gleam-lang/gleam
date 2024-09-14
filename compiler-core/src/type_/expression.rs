@@ -1294,7 +1294,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = assignment;
         let old_referencing_source = self.environment.referencing_source_indices.clone();
         // self.environment.referencing_source_indices = vec![];
-        // TODO: actually register referencing source indices
+        // TODO: currently local variables are "referenced" by the function they are in. Ideally
+        // they should be referenced from the assignment they are used for so we can properly follow
+        // unused reference chains.
+        // This requires moving pattern variable registration to be separate from unification.
 
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {

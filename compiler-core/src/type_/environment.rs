@@ -578,8 +578,11 @@ impl<'a> Environment<'a> {
             }
         }
 
-        let usage_graph_copy = self.value_usage_graph.clone();
-        for node_index in usage_graph_copy.externals(petgraph::Direction::Incoming) {
+        let mut usage_graph_copy = self.value_usage_graph.clone();
+        let mut unused_vars = self
+            .value_usage_graph
+            .externals(petgraph::Direction::Incoming);
+        while let Some(node_index) = unused_vars.next() {
             let (name, value_constructor) = usage_graph_copy
                 .node_weight(node_index)
                 .expect("node must exist in graph")
@@ -653,6 +656,9 @@ impl<'a> Environment<'a> {
                 _ => continue,
             };
             problems.warning(warning);
+            // Removing node here so that in cases where we need to continue we don't remove the node
+            let _ = usage_graph_copy.remove_node(node_index);
+            unused_vars = usage_graph_copy.externals(petgraph::Direction::Incoming);
         }
 
         for (name, location) in self.unused_modules.clone().into_iter() {
