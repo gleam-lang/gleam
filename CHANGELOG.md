@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Bug Fixes
+
+- Fix a bug that caused the compiler to crash when accessing a field of a const record, that had a function param in a guard clause.
+  ([Neil Wadden](https://github.com/Neilerino))
+
 ## v1.5.0-rc1 - 2024-09-14
 
 ### Build tool
