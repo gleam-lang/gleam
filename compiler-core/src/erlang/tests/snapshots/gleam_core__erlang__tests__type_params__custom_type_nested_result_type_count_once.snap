@@ -8,7 +8,7 @@ expression: "\n        pub type Wibble(a) {\n            Oops\n        }\n\n    
 -export([wibble/0]).
 -export_type([wibble/1]).
 
--type wibble(R) :: oops | {gleam_phantom, R}.
+-type wibble(I) :: oops | {gleam_phantom, I}.
 
 -file("/root/project/test/my/mod.gleam", 6).
 -spec wibble() -> {ok, any()} | {error, wibble(any())}.

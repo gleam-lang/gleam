@@ -11,7 +11,7 @@ expression: "\npub fn factory(f, i) {\n  f(i)\n}\n\npub type Box {\n  Box(i: Int
 -type box() :: {box, integer()}.
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec factory(fun((T) -> X), T) -> X.
+-spec factory(fun((J) -> N), J) -> N.
 factory(F, I) ->
     F(I).
 

@@ -14,7 +14,7 @@ expression: "./cases/erlang_bug_752"
 
 -export_type([one/1]).
 
--type one(R) :: {one, R}.
+-type one(I) :: {one, I}.
 
 
 
@@ -31,7 +31,7 @@ expression: "./cases/erlang_bug_752"
 
 -export_type([two/1]).
 
--type two(AE) :: {two, one:one(integer())} | {gleam_phantom, AE}.
+-type two(K) :: {two, one:one(integer())} | {gleam_phantom, K}.
 
 
 

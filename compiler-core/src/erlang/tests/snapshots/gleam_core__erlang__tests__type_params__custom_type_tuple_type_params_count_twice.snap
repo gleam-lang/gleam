@@ -8,10 +8,10 @@ expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n      
 -export([wibble/0]).
 -export_type([wibble/2]).
 
--type wibble(R, S) :: {wibble, R, S}.
+-type wibble(I, J) :: {wibble, I, J}.
 
 -file("/root/project/test/my/mod.gleam", 6).
--spec wibble() -> {U, wibble(U, any())}.
+-spec wibble() -> {K, wibble(K, any())}.
 wibble() ->
     erlang:error(#{gleam_error => todo,
             message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,

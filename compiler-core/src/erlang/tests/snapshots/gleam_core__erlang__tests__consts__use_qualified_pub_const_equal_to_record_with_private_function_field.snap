@@ -8,9 +8,9 @@ expression: "\n              fn identity(a) {\n                a\n              
 -export([identity/1]).
 -export_type([mapper/1]).
 
--type mapper(R) :: {mapper, fun((R) -> R)}.
+-type mapper(I) :: {mapper, fun((I) -> I)}.
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec identity(T) -> T.
+-spec identity(J) -> J.
 identity(A) ->
     A.

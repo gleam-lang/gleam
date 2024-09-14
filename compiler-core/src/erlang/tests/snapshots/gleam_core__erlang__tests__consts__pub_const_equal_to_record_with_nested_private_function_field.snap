@@ -8,11 +8,11 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 -export([identity/1]).
 -export_type([mapper/1, funcs/1]).
 
--type mapper(R) :: {mapper, fun((R) -> R)}.
+-type mapper(I) :: {mapper, fun((I) -> I)}.
 
--type funcs(T) :: {funcs, mapper(T)}.
+-type funcs(J) :: {funcs, mapper(J)}.
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec identity(V) -> V.
+-spec identity(K) -> K.
 identity(A) ->
     A.

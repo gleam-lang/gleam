@@ -8,7 +8,7 @@ expression: "pub fn x(f) {\n  case 1 |> f {\n    x -> x\n  }\n}"
 -export([x/1]).
 
 -file("/root/project/test/my/mod.gleam", 1).
--spec x(fun((integer()) -> U)) -> U.
+-spec x(fun((integer()) -> L)) -> L.
 x(F) ->
     case begin
         _pipe = 1,

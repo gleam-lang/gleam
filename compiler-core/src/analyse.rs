@@ -286,7 +286,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // server, but are filtered out when type checking to prevent using private
         // items.
         env.module_types
-            .retain(|_, (_, info)| info.module == self.module_name);
+            .retain(|_, info| info.module == self.module_name);
 
         // Ensure no exported values have private types in their type signature
         for value in env.module_values.values() {
@@ -294,21 +294,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let Environment {
-            module_types,
+            module_types: types,
             module_types_constructors: types_constructors,
             module_values: values,
             accessors,
             ..
         } = env;
-
-        let types = module_types
-            .iter()
-            .map(
-                |(name, (_, type_)): (&EcoString, &(u64, TypeConstructor))| {
-                    (name.clone(), type_.clone())
-                },
-            )
-            .collect();
 
         let is_internal = self
             .package_config
@@ -932,7 +923,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .module_types
             .get(name)
             .expect("Type for custom type not found in register_values")
-            .1
             .type_
             .clone();
         if let Some(accessors) =

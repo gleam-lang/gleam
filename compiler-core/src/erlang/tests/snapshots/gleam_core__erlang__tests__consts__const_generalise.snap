@@ -8,7 +8,7 @@ expression: "\nfn identity(a: a) -> a {\na\n}\n\nconst id  = identity\n\npub fn 
 -export([main/0]).
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec identity(R) -> R.
+-spec identity(I) -> I.
 identity(A) ->
     A.
 

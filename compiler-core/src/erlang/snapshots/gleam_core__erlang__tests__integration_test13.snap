@@ -11,7 +11,7 @@ expression: "pub type State{ Start(Int) End(Int) }\n            pub fn build(con
 -type state() :: {start, integer()} | {'end', integer()}.
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec build(fun((integer()) -> S)) -> S.
+-spec build(fun((integer()) -> I)) -> I.
 build(Constructor) ->
     Constructor(1).
 

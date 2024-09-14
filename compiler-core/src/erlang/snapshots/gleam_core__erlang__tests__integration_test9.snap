@@ -8,7 +8,7 @@ expression: "pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pa
 -export([x/0]).
 -export_type([pair/2]).
 
--type pair(R, S) :: {pair, R, S}.
+-type pair(I, J) :: {pair, I, J}.
 
 -file("/root/project/test/my/mod.gleam", 1).
 -spec x() -> pair(float(), float()).

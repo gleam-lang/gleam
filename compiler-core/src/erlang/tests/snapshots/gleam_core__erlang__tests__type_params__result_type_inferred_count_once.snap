@@ -7,7 +7,7 @@ expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n 
 
 -export_type([wobble/1]).
 
--type wobble(R) :: wobble | {gleam_phantom, R}.
+-type wobble(I) :: wobble | {gleam_phantom, I}.
 
 -file("/root/project/test/my/mod.gleam", 10).
 -spec wobble() -> {ok, any()} | {error, wobble(any())}.

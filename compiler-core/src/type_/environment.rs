@@ -53,8 +53,8 @@ pub struct Environment<'a> {
     pub referencing_source_indices: Vec<NodeIndex<u32>>,
 
     /// Types defined in the current module (or the prelude)
-    pub module_types: HashMap<EcoString, (u64, TypeConstructor)>,
-    pub type_usage_graph: HashMap<u64, (TypeConstructor, EcoString, Vec<SrcSpan>)>,
+    pub module_types: HashMap<EcoString, TypeConstructor>,
+    pub type_usage_graph: HashMap<EcoString, (TypeConstructor, Vec<SrcSpan>)>,
 
     /// Mapping from types to constructor names in the current module (or the prelude)
     pub module_types_constructors: HashMap<EcoString, TypeVariantConstructors>,
@@ -100,11 +100,7 @@ impl<'a> Environment<'a> {
             gleam_version,
             previous_id: ids.next(),
             target,
-            module_types: prelude
-                .types
-                .iter()
-                .map(|(name, type_)| (name.clone(), (ids.next(), type_.clone())))
-                .collect(),
+            module_types: prelude.types.clone(),
             type_usage_graph: HashMap::new(),
             module_types_constructors: prelude.types_value_constructors.clone(),
             module_values: HashMap::new(),
@@ -274,12 +270,10 @@ impl<'a> Environment<'a> {
                         // If a private constructor is used then its type is also used
                         if v.publicity.is_private() {
                             if let Some((_, type_name)) = v.type_.named_type_name() {
-                                let _ = self.module_types.get(&type_name).map(|(id, _)| {
-                                    let _ = self
-                                        .type_usage_graph
-                                        .get_mut(id)
-                                        .map(|(_, _, usages)| usages.push(*location));
-                                });
+                                let _ = self
+                                    .type_usage_graph
+                                    .get_mut(&type_name)
+                                    .map(|(_, usages)| usages.push(*location));
                             }
                         }
                     }
@@ -300,14 +294,13 @@ impl<'a> Environment<'a> {
     ) -> Result<(), Error> {
         let name = type_name.clone();
         let location = info.origin;
-        let id = self.ids.next();
         let _ = self
             .type_usage_graph
-            .insert(id, (info.clone(), name.clone(), Vec::new()));
-        match self.module_types.insert(type_name, (id, info)) {
+            .insert(name.clone(), (info.clone(), Vec::new()));
+        match self.module_types.insert(type_name, info) {
             None => Ok(()),
-            Some((_, prelude_type)) if is_prelude_module(&prelude_type.module) => Ok(()),
-            Some((_, previous)) => Err(Error::DuplicateTypeName {
+            Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
+            Some(previous) => Err(Error::DuplicateTypeName {
                 name,
                 location,
                 previous_location: previous.origin,
@@ -322,8 +315,8 @@ impl<'a> Environment<'a> {
     ) -> Result<(), Error> {
         match self.module_types.get(name) {
             None => Ok(()),
-            Some((_, prelude_type)) if is_prelude_module(&prelude_type.module) => Ok(()),
-            Some((_, previous)) => Err(Error::DuplicateTypeName {
+            Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
+            Some(previous) => Err(Error::DuplicateTypeName {
                 name: name.clone(),
                 location,
                 previous_location: previous.origin,
@@ -355,8 +348,8 @@ impl<'a> Environment<'a> {
             None => self
                 .module_types
                 .get(name)
-                .map(|(id, t)| {
-                    if let Some((_, _, usages)) = self.type_usage_graph.get_mut(id) {
+                .map(|t| {
+                    if let Some((_, usages)) = self.type_usage_graph.get_mut(name) {
                         if *location != t.origin {
                             usages.push(*location)
                         }
@@ -563,7 +556,7 @@ impl<'a> Environment<'a> {
     /// Converts entities with a usage count of 0 to warnings.
     /// Returns the list of unused imported module location for the removed unused lsp action.
     pub fn convert_unused_to_warnings(&mut self, problems: &mut Problems) {
-        for (_, (type_constructor, name, usages)) in self.type_usage_graph.iter() {
+        for (name, (type_constructor, usages)) in self.type_usage_graph.iter() {
             if usages.is_empty() {
                 let imported = type_constructor.module != self.current_module;
                 if !imported && type_constructor.publicity != Publicity::Private {

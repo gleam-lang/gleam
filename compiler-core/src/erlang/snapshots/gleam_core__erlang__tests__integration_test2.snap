@@ -19,7 +19,7 @@ second(List) ->
     end.
 
 -file("/root/project/test/my/mod.gleam", 2).
--spec tail(list(Y)) -> list(Y).
+-spec tail(list(P)) -> list(P).
 tail(List) ->
     case List of
         [X | Xs] ->

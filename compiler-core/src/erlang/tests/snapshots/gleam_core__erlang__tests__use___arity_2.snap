@@ -8,7 +8,7 @@ expression: "\npub fn main() {\n  use <- pair(1.0)\n  123\n}\n\nfn pair(x, f) {\
 -export([main/0]).
 
 -file("/root/project/test/my/mod.gleam", 7).
--spec pair(S, fun(() -> V)) -> {S, V}.
+-spec pair(J, fun(() -> M)) -> {J, M}.
 pair(X, F) ->
     Y = F(),
     {X, Y}.
