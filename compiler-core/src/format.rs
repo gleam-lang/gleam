@@ -1779,7 +1779,23 @@ impl<'comments> Formatter<'comments> {
 
     fn tuple_index<'a>(&mut self, tuple: &'a UntypedExpr, index: u64) -> Document<'a> {
         match tuple {
-            UntypedExpr::TupleIndex { .. } => self.expr(tuple).surround("{", "}"),
+            // In case we have a block with a single variable tuple access we
+            // remove that redundat wrapper:
+            //
+            //     {tuple.1}.0 becomes
+            //     tuple.1.0
+            //
+            UntypedExpr::Block { statements, .. } => match statements.as_slice() {
+                [Statement::Expression(tuple @ UntypedExpr::TupleIndex { tuple: inner, .. })]
+                    // We can't apply this change if the inner thing is a
+                    // literal tuple because the compiler cannot currently parse
+                    // it:  `#(1, #(2, 3)).1.0` is a syntax error at the moment.
+                    if !inner.is_tuple() =>
+                {
+                    self.expr(tuple)
+                }
+                _ => self.expr(tuple),
+            },
             _ => self.expr(tuple),
         }
         .append(".")
