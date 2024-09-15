@@ -1387,11 +1387,38 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
 
         ClauseGuard::FieldAccess {
             container, index, ..
-        } => tuple_index_inline(container, index.expect("Unable to find index") + 1, env),
+        } => handle_guard_field_access(container, index.expect("Unable to find index"), env),
 
         ClauseGuard::ModuleSelect { literal, .. } => const_inline(literal, env),
 
         ClauseGuard::Constant(constant) => const_inline(constant, env),
+    }
+}
+
+fn handle_guard_field_access<'a>(
+    container: &'a TypedClauseGuard,
+    index: u64,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    /// In Erlang, including function references directly in guard expressions is invalid.
+    /// This function ensures that when we have a field access in a guard, and the container
+    /// is a constant record that may contain function references, we avoid inlining the entire
+    /// record into the guard.
+    ///
+    /// Specifically, if the `container` is a module-selected constant record (`ClauseGuard::ModuleSelect`),
+    /// and the literal is a `TypedConstant::Record`, we extract the specific field value from the record's
+    /// arguments and generate code for that value. This avoids inlining the entire
+    /// record (which may contain function references) into the guard.
+    match container {
+        ClauseGuard::ModuleSelect { literal, .. } => match literal {
+            TypedConstant::Record { args, .. } => {
+                let index = index as usize;
+                let field = args.get(index).expect("Unable to find field");
+                const_inline(&field.value, env)
+            }
+            _ => tuple_index_inline(container, index + 1, env),
+        },
+        _ => tuple_index_inline(container, index + 1, env),
     }
 }
 
