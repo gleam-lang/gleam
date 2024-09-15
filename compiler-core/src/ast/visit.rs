@@ -513,16 +513,8 @@ pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
 where
     V: Visit<'a> + ?Sized,
 {
-    for arg in &fun.arguments {
-        if let Some(annotation) = &arg.annotation {
-            v.visit_type_ast(annotation);
-        }
-    }
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
-    }
-    if let Some(return_annotation) = &fun.return_annotation {
-        v.visit_type_ast(return_annotation);
     }
 }
 
@@ -560,9 +552,9 @@ where
 
 pub fn visit_type_ast_constructor<'a, V>(
     v: &mut V,
-    location: &'a SrcSpan,
-    module: &'a Option<(EcoString, SrcSpan)>,
-    name: &'a EcoString,
+    _location: &'a SrcSpan,
+    _module: &'a Option<(EcoString, SrcSpan)>,
+    _name: &'a EcoString,
     arguments: &'a Vec<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
@@ -586,14 +578,14 @@ pub fn visit_type_ast_fn<'a, V>(
     v.visit_type_ast(return_);
 }
 
-pub fn visit_type_ast_var<'a, V>(v: &mut V, location: &'a SrcSpan, name: &'a EcoString)
+pub fn visit_type_ast_var<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
 where
     V: Visit<'a> + ?Sized,
 {
     // No further traversal needed for variables
 }
 
-pub fn visit_type_ast_tuple<'a, V>(v: &mut V, location: &'a SrcSpan, elems: &'a Vec<TypeAst>)
+pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elems: &'a Vec<TypeAst>)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -602,7 +594,7 @@ where
     }
 }
 
-pub fn visit_type_ast_hole<'a, V>(v: &mut V, location: &'a SrcSpan, name: &'a EcoString)
+pub fn visit_type_ast_hole<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -818,20 +810,14 @@ pub fn visit_typed_expr_fn<'a, V>(
     _location: &'a SrcSpan,
     _typ: &'a Arc<Type>,
     _is_capture: &'a bool,
-    args: &'a [TypedArg],
+    _args: &'a [TypedArg],
     body: &'a [TypedStatement],
-    return_annotation: &'a Option<TypeAst>,
+    _return_annotation: &'a Option<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for arg in args {
-        v.visit_typed_arg(arg);
-    }
     for stmt in body {
         v.visit_typed_statement(stmt);
-    }
-    if let Some(return_) = return_annotation {
-        v.visit_type_ast(return_);
     }
 }
 
