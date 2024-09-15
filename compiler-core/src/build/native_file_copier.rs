@@ -171,12 +171,28 @@ where
             .seen_modules
             .insert(mjs_name.clone(), relative_path.clone())
         {
-            // TODO: Dedicated error
-            return Err(Error::DuplicateModule {
-                module: mjs_name,
-                first,
-                second: relative_path.clone(),
-            });
+            let first_is_gleam = first.extension() == Some("gleam");
+            return Err(
+                if relative_path.extension() == Some("gleam") || first_is_gleam {
+                    let (gleam_file, native_file) = if first_is_gleam {
+                        (&first, relative_path)
+                    } else {
+                        (relative_path, &first)
+                    };
+                    Error::ClashingGleamModuleAndNativeFileName {
+                        module: eco_format!("{}", gleam_file.with_extension("")),
+                        gleam_file: gleam_file.clone(),
+                        native_file: native_file.clone(),
+                    }
+                } else {
+                    // TODO: Dedicated error
+                    Error::DuplicateModule {
+                        module: mjs_name,
+                        first,
+                        second: relative_path.clone(),
+                    }
+                },
+            );
         }
 
         Ok(())
