@@ -3,7 +3,7 @@ pub fn submodule_main() {
   parent_println(elixir_message())
 }
 
-@external(erlang, "erlang", "display")
+@external(erlang, "project_ffi", "log")
 @external(javascript, "../project_ffi.mjs", "log")
 fn parent_println(a: String) -> Nil
 
