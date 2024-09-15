@@ -2,7 +2,7 @@
 
 -export([main/0, main2/0]).
 
--include("submodule_ffi_header.hrl").
+-include("../headers/submodule_ffi_header.hrl").
 
 main() ->
   String = header_function(),

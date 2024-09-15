@@ -7,7 +7,7 @@ pub fn main() {
   println(subdir_elixir_message())
 }
 
-@external(erlang, "erlang", "display")
+@external(erlang, "project_ffi", "log")
 @external(javascript, "./project_ffi.mjs", "log")
 fn println(a: String) -> Nil
 
