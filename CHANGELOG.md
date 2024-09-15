@@ -4,7 +4,7 @@
 
 ### Build tool
 
-- JavaScript FFI files (`.mjs`, `.js` and `.ts`) are now permitted in
+- FFI files (such as `.mjs` and `.erl`) are now permitted in
 subdirectories of `src/` and `test/`.
 ([PgBiel](https://github.com/PgBiel))
 
