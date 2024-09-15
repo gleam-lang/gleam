@@ -2087,7 +2087,7 @@ fn test_qualified_to_unqualified_import_nested_constructor_inner() {
 import option
 import wobble
 
-pub fn main(x) -> option.Option(Wibble) {
+pub fn main(x) -> option.Option(wobble.Wibble) {
     option.Some(wobble.Wobble(1))
 }
 "#;
@@ -2105,6 +2105,7 @@ fn test_qualified_to_unqualified_import_nested_type_inner() {
     let src = r#"
 import option
 import wobble
+
 pub fn main(x) -> option.Option(wobble.Wibble) {
     todo
 }

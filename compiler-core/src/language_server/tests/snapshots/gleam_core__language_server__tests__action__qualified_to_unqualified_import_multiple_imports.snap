@@ -1,25 +1,25 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\nimport option\nimport result\n\npub fn main() {\n  option.Some(1)\n  result.Ok(1)\n}\n"
+expression: "\nimport option\nimport wobble\n\npub fn main() {\n  option.Some(1)\n  wobble.Wibble(1)\n}\n"
 ---
 ----- BEFORE ACTION
 
 import option
-import result
+import wobble
 
 pub fn main() {
   option.Some(1)
              ↑  
-  result.Ok(1)
+  wobble.Wibble(1)
 }
 
 
 ----- AFTER ACTION
 
 import option
-import result.{Ok}
+import wobble.{Wibble}
 
 pub fn main() {
   option.Some(1)
-  Ok(1)
+  Wibble(1)
 }
