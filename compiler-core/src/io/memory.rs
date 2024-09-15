@@ -1,5 +1,6 @@
 use super::*;
 use std::ops::Deref;
+use std::path::Path;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -85,6 +86,24 @@ impl InMemoryFileSystem {
             })?
             .modification_time = time;
         Ok(())
+    }
+
+    /// Search for files inside a directory and its subdirectories using a
+    /// certain path filter.
+    pub fn search_files_recursively(
+        &self,
+        dir: impl AsRef<Path>,
+        path_filter: impl Fn(&Utf8PathBuf) -> bool,
+    ) -> Vec<Utf8PathBuf> {
+        self.files
+            .deref()
+            .borrow()
+            .iter()
+            .filter(|(_, file)| !file.is_directory())
+            .map(|(file_path, _)| file_path.to_path_buf())
+            .filter(|file_path| file_path.starts_with(&dir))
+            .filter(path_filter)
+            .collect()
     }
 }
 
@@ -198,27 +217,20 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 
     fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.files
-            .deref()
-            .borrow()
-            .iter()
-            .filter(|(_, file)| !file.is_directory())
-            .map(|(file_path, _)| file_path.to_path_buf())
-            .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some("gleam"))
-            .collect()
+        self.search_files_recursively(dir, |file_path| file_path.extension() == Some("gleam"))
     }
 
     fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.files
-            .deref()
-            .borrow()
-            .iter()
-            .filter(|(_, file)| !file.is_directory())
-            .map(|(file_path, _)| file_path.to_path_buf())
-            .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some("cache"))
-            .collect()
+        self.search_files_recursively(dir, |file_path| file_path.extension() == Some("cache"))
+    }
+
+    fn gleam_source_and_native_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+        self.search_files_recursively(dir, |file_path| {
+            matches!(
+                file_path.extension(),
+                Some("gleam" | "mjs" | "js" | "ts" | "hrl" | "erl" | "ex")
+            )
+        })
     }
 
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {
