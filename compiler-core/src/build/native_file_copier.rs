@@ -53,12 +53,15 @@ where
         self.io.mkdir(&self.destination_dir)?;
 
         let src = self.root.join("src");
-        self.copy_files(&src, None)?;
+        self.copy_files(&src)?;
 
         let test = self.root.join("test");
         if self.io.is_directory(&test) {
-            self.copy_files(&test, None)?;
+            self.copy_files(&test)?;
         }
+
+        // Sort for deterministic output
+        self.to_compile.sort_unstable();
 
         Ok(CopiedNativeFiles {
             to_compile: self.to_compile,
@@ -66,26 +69,14 @@ where
         })
     }
 
-    fn copy_files(&mut self, src_root: &Utf8Path, nested_path: Option<&Utf8Path>) -> Result<()> {
-        let mut check_elixir_libs = true;
-
-        for entry in self
-            .io
-            .read_dir(nested_path.as_deref().unwrap_or(src_root))?
-        {
-            let path = entry.expect("copy_native_files dir_entry").pathbuf;
-
-            if self.io.is_directory(&path) {
-                // Recursively copy files in subdirectories as well.
-                self.copy_files(src_root, Some(&path))?;
-            } else {
-                self.copy(path, src_root, nested_path.is_some())?;
-            }
+    fn copy_files(&mut self, src_root: &Utf8Path) -> Result<()> {
+        for path in self.io.gleam_source_and_native_files(src_root) {
+            self.copy(path, src_root)?;
         }
         Ok(())
     }
 
-    fn copy(&mut self, file: Utf8PathBuf, src_root: &Utf8Path, in_subdir: bool) -> Result<()> {
+    fn copy(&mut self, file: Utf8PathBuf, src_root: &Utf8Path) -> Result<()> {
         let extension = file.extension().unwrap_or_default();
 
         let relative_path = file
@@ -137,10 +128,8 @@ where
         tracing::debug!(?file, "copying_native_file");
 
         // Ensure destination exists (subdir might not exist yet in the output)
-        if in_subdir {
-            if let Some(parent) = destination.parent() {
-                self.io.mkdir(parent)?;
-            }
+        if let Some(parent) = destination.parent() {
+            self.io.mkdir(parent)?;
         }
 
         self.io.copy(&file, &destination)?;
