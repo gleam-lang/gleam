@@ -17,6 +17,7 @@ use std::{
     fmt::Debug,
     fs::File,
     io::{self, BufRead, BufReader, Write},
+    path::PathBuf,
     sync::{Arc, Mutex, OnceLock},
     time::SystemTime,
 };
@@ -73,37 +74,43 @@ impl ProjectIO {
     }
 }
 
+fn search_files_recursively(
+    dir: &Utf8Path,
+    path_filter: impl Fn(&PathBuf) -> bool,
+) -> Vec<Utf8PathBuf> {
+    if !dir.is_dir() {
+        return vec![];
+    }
+    let dir = dir.to_path_buf();
+    walkdir::WalkDir::new(dir)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .map(|d| d.into_path())
+        .filter(path_filter)
+        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .collect()
+}
+
 impl FileSystemReader for ProjectIO {
     fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        if !dir.is_dir() {
-            return vec![];
-        }
-        let dir = dir.to_path_buf();
-        walkdir::WalkDir::new(dir)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-            .map(|d| d.into_path())
-            .filter(move |d| d.extension() == Some(OsStr::new("gleam")))
-            .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
-            .collect()
+        search_files_recursively(dir, |d| d.extension() == Some(OsStr::new("gleam")))
     }
 
     fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        if !dir.is_dir() {
-            return vec![];
-        }
-        let dir = dir.to_path_buf();
-        walkdir::WalkDir::new(dir)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-            .map(|d| d.into_path())
-            .filter(|p| p.extension().and_then(OsStr::to_str) == Some("cache"))
-            .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
-            .collect()
+        search_files_recursively(dir, |p| {
+            p.extension().and_then(OsStr::to_str) == Some("cache")
+        })
+    }
+
+    fn gleam_source_and_native_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+        search_files_recursively(dir, |d| {
+            matches!(
+                d.extension().and_then(OsStr::to_str),
+                Some("gleam" | "mjs" | "js" | "ts" | "hrl" | "erl" | "ex")
+            )
+        })
     }
 
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {

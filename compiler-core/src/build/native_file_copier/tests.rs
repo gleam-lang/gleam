@@ -320,8 +320,8 @@ fn all_erlang_files_are_copied_from_src_subfolders() {
     assert_eq!(
         copied.to_compile,
         vec![
-            Utf8PathBuf::from("def/wobble.ex"),
-            Utf8PathBuf::from("abc/def/wibble.erl")
+            Utf8PathBuf::from("abc/def/wibble.erl"),
+            Utf8PathBuf::from("def/wobble.ex")
         ]
     );
     assert_eq!(

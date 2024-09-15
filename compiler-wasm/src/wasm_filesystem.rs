@@ -96,8 +96,13 @@ impl FileSystemReader for WasmFileSystem {
     }
 
     fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        tracing::trace!("gleam_metadata_files {:?}", dir);
+        tracing::trace!("gleam_cache_files {:?}", dir);
         self.imfs.gleam_cache_files(dir)
+    }
+
+    fn gleam_source_and_native_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+        tracing::trace!("gleam_source_and_native_files {:?}", dir);
+        self.imfs.gleam_source_and_native_files(dir)
     }
 
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {
@@ -112,7 +117,7 @@ impl FileSystemReader for WasmFileSystem {
 
     fn is_directory(&self, path: &Utf8Path) -> bool {
         tracing::trace!("is_directory {:?}", path);
-        false
+        self.imfs.is_directory(path)
     }
 
     fn reader(&self, path: &Utf8Path) -> Result<WrappedReader, Error> {

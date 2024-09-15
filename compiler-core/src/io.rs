@@ -192,6 +192,7 @@ impl DirEntry {
 pub trait FileSystemReader {
     fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
     fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
+    fn gleam_source_and_native_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
     fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir>;
     fn read(&self, path: &Utf8Path) -> Result<String, Error>;
     fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>, Error>;
