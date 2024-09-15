@@ -305,6 +305,85 @@ fn elixir_files_are_copied_from_test() {
 }
 
 #[test]
+fn all_erlang_files_are_copied_from_src_subfolders() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/src/abc/def/wibble.erl"), "1")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/abc/ghi/wibble_header.hrl"), "2")
+        .unwrap();
+    fs.write(&Utf8Path::new("/src/def/wobble.ex"), "3").unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    let copied = copier.run().unwrap();
+
+    assert!(copied.any_elixir);
+    assert_eq!(
+        copied.to_compile,
+        vec![
+            Utf8PathBuf::from("def/wobble.ex"),
+            Utf8PathBuf::from("abc/def/wibble.erl")
+        ]
+    );
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/src/abc/def/wibble.erl"), "1".into()),
+            (Utf8PathBuf::from("/out/abc/def/wibble.erl"), "1".into()),
+            (
+                Utf8PathBuf::from("/src/abc/ghi/wibble_header.hrl"),
+                "2".into()
+            ),
+            (
+                Utf8PathBuf::from("/out/abc/ghi/wibble_header.hrl"),
+                "2".into()
+            ),
+            (Utf8PathBuf::from("/src/def/wobble.ex"), "3".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ex"), "3".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
+fn all_erlang_files_are_copied_from_test_subfolders() {
+    let fs = InMemoryFileSystem::new();
+    fs.write(&Utf8Path::new("/test/abc/def/wibble.erl"), "1")
+        .unwrap();
+    fs.write(&Utf8Path::new("/test/abc/ghi/wibble_header.hrl"), "2")
+        .unwrap();
+    fs.write(&Utf8Path::new("/test/def/wobble.ex"), "3")
+        .unwrap();
+
+    let copier = NativeFileCopier::new(fs.clone(), root(), root_out());
+    let copied = copier.run().unwrap();
+
+    assert!(copied.any_elixir);
+    assert_eq!(
+        copied.to_compile,
+        vec![
+            Utf8PathBuf::from("abc/def/wibble.erl"),
+            Utf8PathBuf::from("def/wobble.ex")
+        ]
+    );
+    assert_eq!(
+        HashMap::from([
+            (Utf8PathBuf::from("/test/abc/def/wibble.erl"), "1".into()),
+            (Utf8PathBuf::from("/out/abc/def/wibble.erl"), "1".into()),
+            (
+                Utf8PathBuf::from("/test/abc/ghi/wibble_header.hrl"),
+                "2".into()
+            ),
+            (
+                Utf8PathBuf::from("/out/abc/ghi/wibble_header.hrl"),
+                "2".into()
+            ),
+            (Utf8PathBuf::from("/test/def/wobble.ex"), "3".into()),
+            (Utf8PathBuf::from("/out/def/wobble.ex"), "3".into())
+        ]),
+        fs.into_contents(),
+    );
+}
+
+#[test]
 fn other_files_are_ignored() {
     let fs = InMemoryFileSystem::new();
     fs.write(&Utf8Path::new("/src/wibble.cpp"), "1").unwrap();

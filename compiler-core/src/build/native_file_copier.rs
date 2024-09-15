@@ -4,6 +4,7 @@ mod tests;
 use std::collections::{HashMap, HashSet};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::{eco_format, EcoString};
 
 use crate::{
     io::{FileSystemReader, FileSystemWriter},
@@ -21,7 +22,7 @@ pub(crate) struct NativeFileCopier<'a, IO> {
     root: &'a Utf8Path,
     destination_dir: &'a Utf8Path,
     seen_native_files: HashSet<Utf8PathBuf>,
-    seen_modules: HashMap<String, Utf8PathBuf>,
+    seen_modules: HashMap<EcoString, Utf8PathBuf>,
     to_compile: Vec<Utf8PathBuf>,
     elixir_files_copied: bool,
 }
@@ -169,8 +170,8 @@ where
         relative_path: &Utf8PathBuf,
     ) -> Result<(), Error> {
         let mjs_name = match relative_path.extension() {
-            Some("gleam") => relative_path.with_extension("mjs").as_str().to_owned(),
-            Some("mjs") => relative_path.as_str().to_owned(),
+            Some("gleam") => eco_format!("{}", relative_path.with_extension("mjs")),
+            Some("mjs") => eco_format!("{}", relative_path.as_str().to_owned()),
             _ => return Ok(()),
         };
 
@@ -183,7 +184,7 @@ where
         {
             // TODO: Dedicated error
             return Err(Error::DuplicateModule {
-                module: ecow::eco_format!("{}", mjs_name),
+                module: mjs_name,
                 first,
                 second: relative_path.clone(),
             });
@@ -210,10 +211,7 @@ where
         // Insert just the `.erl` module filename in `seen_modules` instead of
         // its full relative path, because `.erl` files with the same name
         // cause a conflict when targetting Erlang regardless of subpath.
-        let erl_name = relative_path
-            .file_name()
-            .expect("path has file name")
-            .to_owned();
+        let erl_name = eco_format!("{}", relative_path.file_name().expect("path has file name"));
 
         if let Some(first) = self
             .seen_modules
@@ -221,7 +219,7 @@ where
         {
             // TODO: Dedicated error
             return Err(Error::DuplicateModule {
-                module: ecow::eco_format!("{}", erl_name),
+                module: erl_name,
                 first,
                 second: relative_path.clone(),
             });
