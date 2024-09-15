@@ -1972,22 +1972,6 @@ pub fn main() {
 }
 
 #[test]
-fn test_qualified_to_unqualified_import_function() {
-    let src = r#"
-import result
-
-pub fn main() {
-  result.is_ok()
-}
-"#;
-    assert_code_action!(
-        CONVERT_TO_UNQUALIFIED_IMPORT,
-        TestProject::for_source(src).add_hex_module("result", "pub fn is_ok() {}"),
-        find_position_of(".is_ok").select_until(find_position_of("()")),
-    );
-}
-
-#[test]
 fn test_qualified_to_unqualified_import_with_alias() {
     let src = r#"
 import option as opt
@@ -2008,19 +1992,19 @@ pub fn main() {
 fn test_qualified_to_unqualified_import_multiple_imports() {
     let src = r#"
 import option
-import result
+import wobble
 
 pub fn main() {
   option.Some(1)
-  result.Ok(1)
+  wobble.Wibble(1)
 }
 "#;
     assert_code_action!(
         CONVERT_TO_UNQUALIFIED_IMPORT,
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }")
-            .add_hex_module("result", "pub type Result(v,e) { Ok(v) Err(e)}"),
-        find_position_of(".Ok").select_until(find_position_of("(1)")),
+            .add_hex_module("wobble", "pub type Wobble { Wibble(Int)} "),
+        find_position_of(".Wibble").select_until(find_position_of("(1)")),
     );
 }
 
@@ -2074,7 +2058,7 @@ pub fn main(x) -> option.Option(wobble.Wibble) {
         CONVERT_TO_UNQUALIFIED_IMPORT,
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }")
-            .add_hex_module("wobble", "pub type Wibble { W0obble(Int) }"),
+            .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
         find_position_of(".Option").select_until(find_position_of("(")),
     );
 }
@@ -2102,6 +2086,7 @@ fn test_qualified_to_unqualified_import_nested_constructor_inner() {
     let src = r#"
 import option
 import wobble
+
 pub fn main(x) -> option.Option(Wibble) {
     option.Some(wobble.Wobble(1))
 }
@@ -2111,7 +2096,7 @@ pub fn main(x) -> option.Option(Wibble) {
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }")
             .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
-        find_position_of("wobble.").select_until(find_position_of("Wobble(1)")),
+        find_position_of(".Wobble").select_until(find_position_of("(")),
     );
 }
 
@@ -2129,7 +2114,7 @@ pub fn main(x) -> option.Option(wobble.Wibble) {
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }")
             .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
-        find_position_of(".W").select_until(find_position_of("ibble")),
+        find_position_of("wobble.").select_until(find_position_of("Wibble")),
     );
 }
 

@@ -1080,8 +1080,8 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
 
     fn get_module_import(&mut self, module_name: &EcoString) {
-        // If we've already found an import, clear the edits and start over
-        // since we only edit the most inner span
+        // If we've already found an import overlapped by current span, clear the edits and start over
+        // since we only edit the inner most span
         if self.import.is_some() {
             self.edits.clear();
         }
@@ -1113,25 +1113,21 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
     fn trailing_comma_pos(&self) -> Option<usize> {
         self.import.and_then(|import| {
+            tracing::info!("trailing_comma_pos: {:?}", import.location);
             self.module
                 .code
                 .chars()
                 .enumerate()
-                .skip(import.location.start as usize - 1)
+                .skip(import.location.start as usize)
                 .take_while(|(i, _)| *i < import.location.end as usize)
                 .filter(|(_, c)| *c == ',')
                 .last()
                 .map(|(i, _)| i)
         })
     }
-    fn edit_import(
-        &self,
-        has_brace: bool,
-        trailing_comma_pos: Option<usize>,
-        name: String,
-    ) -> (SrcSpan, String) {
+    fn edit_import(&mut self, has_brace: bool, trailing_comma_pos: Option<usize>, name: String) {
         let import = self.import.expect("import should be set");
-        match (has_brace, trailing_comma_pos) {
+        let (end, new_text) = match (has_brace, trailing_comma_pos) {
             // case: import gleam/option
             (false, None) => (
                 SrcSpan::new(import.location.end, import.location.end),
@@ -1153,7 +1149,11 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                 format!(" {name}"),
             ),
             (false, Some(_)) => unreachable!("Syntax error: trailing comma found without braces."),
-        }
+        };
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(end, &self.line_numbers),
+            new_text,
+        });
     }
     fn add_import_edits(&mut self, name: &str, is_type: bool) {
         let import = self.import.expect("import should be set");
@@ -1176,16 +1176,51 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         if need_imported {
             let has_brace = self.has_brace();
             let trailing_comma_pos = has_brace.then(|| self.trailing_comma_pos()).flatten();
-            let (end, new_text) = self.edit_import(has_brace, trailing_comma_pos, name);
-            self.edits.push(TextEdit {
-                range: src_span_to_lsp_range(end, &self.line_numbers),
-                new_text,
-            });
+            self.edit_import(has_brace, trailing_comma_pos, name);
         }
     }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        for arg in args {
+            self.visit_typed_arg(arg);
+        }
+        if let Some(return_) = return_annotation {
+            self.visit_type_ast(return_);
+        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+
+        if let Some(return_annotation) = &fun.return_annotation {
+            self.visit_type_ast(return_annotation);
+        }
+        ast::visit::visit_typed_function(self, fun);
+    }
+
     fn visit_type_ast(&mut self, node: &'ast ast::TypeAst) {
         match node {
             ast::TypeAst::Constructor(ast::TypeAstConstructor {
@@ -1208,27 +1243,32 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
         let range = src_span_to_lsp_range(*location, &self.line_numbers);
-        if !overlaps(self.params.range, range) {
-            return;
-        }
-        let Some((module_name, _)) = module else {
-            return;
-        };
-        // tracing::info!("visit_type_ast_constructor: {name} {module_name:?}");
-        self.get_module_import(module_name);
-        if self.import.is_some() {
-            self.add_import_edits(name, true);
+        if overlaps(self.params.range, range) {
+            if let Some((module_name, module_location)) = module {
+                // tracing::info!("visit_type_ast_constructor: {name} {module_name:?}");
+                let _ = self.module.find_node(module_location.start).map(|node| {
+                    if let Located::Annotation(_, ty) = node {
+                        let _ = ty.named_type_name().map(|(module, _)| {
+                            self.edits.clear();
+                            self.get_module_import(&module);
+                        });
+                    }
+                });
+                if self.import.is_some() {
+                    self.add_import_edits(name, true);
 
-            self.edits.push(TextEdit {
-                range: src_span_to_lsp_range(
-                    SrcSpan::new(
-                        location.start,
-                        location.start + module_name.len() as u32 + 1,
-                    ),
-                    &self.line_numbers,
-                ),
-                new_text: "".to_string(),
-            });
+                    self.edits.push(TextEdit {
+                        range: src_span_to_lsp_range(
+                            SrcSpan::new(
+                                location.start,
+                                location.start + module_name.len() as u32 + 1,
+                            ),
+                            &self.line_numbers,
+                        ),
+                        new_text: "".to_string(),
+                    });
+                }
+            };
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
     }
@@ -1243,25 +1283,25 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         constructor: &'ast ModuleValueConstructor,
     ) {
         let select_range = src_span_to_lsp_range(*location, &self.line_numbers);
-        if !overlaps(self.params.range, select_range) {
-            return;
-        }
-        self.get_module_import(module_name);
-        if self.import.is_some() {
-            let _ = constructor
-                .name()
-                .map(|name| self.add_import_edits(name, false));
-            // Remove the module qualifier
-            self.edits.push(TextEdit {
-                range: src_span_to_lsp_range(
-                    SrcSpan::new(
-                        location.start - module_alias.len() as u32,
-                        location.start + 1,
-                    ),
-                    &self.line_numbers,
-                ),
-                new_text: "".to_string(),
-            });
+        if overlaps(self.params.range, select_range) {
+            self.get_module_import(module_name);
+            if self.import.is_some() {
+                if let ModuleValueConstructor::Record { name, .. } = constructor {
+                    self.add_import_edits(name, false);
+
+                    // Remove the module qualifier
+                    self.edits.push(TextEdit {
+                        range: src_span_to_lsp_range(
+                            SrcSpan::new(
+                                location.start - module_alias.len() as u32,
+                                location.start + 1,
+                            ),
+                            &self.line_numbers,
+                        ),
+                        new_text: "".to_string(),
+                    });
+                }
+            }
         }
         ast::visit::visit_typed_expr_module_select(
             self,
