@@ -158,26 +158,26 @@ where
         &mut self,
         relative_path: &Utf8PathBuf,
     ) -> Result<(), Error> {
-        let mjs_name = match relative_path.extension() {
+        let mjs_path = match relative_path.extension() {
             Some("gleam") => eco_format!("{}", relative_path.with_extension("mjs")),
-            Some("mjs") => eco_format!("{}", relative_path.as_str().to_owned()),
+            Some("mjs") => eco_format!("{}", relative_path),
             _ => return Ok(()),
         };
 
         // Insert the full relative `.mjs` path in `seen_modules` as there is
         // no conflict if two `.mjs` files have the same name but are in
         // different subpaths, unlike Erlang files.
-        if let Some(first) = self
+        if let Some(existing) = self
             .seen_modules
-            .insert(mjs_name.clone(), relative_path.clone())
+            .insert(mjs_path.clone(), relative_path.clone())
         {
-            let first_is_gleam = first.extension() == Some("gleam");
+            let existing_is_gleam = existing.extension() == Some("gleam");
             return Err(
-                if relative_path.extension() == Some("gleam") || first_is_gleam {
-                    let (gleam_file, native_file) = if first_is_gleam {
-                        (&first, relative_path)
+                if existing_is_gleam || relative_path.extension() == Some("gleam") {
+                    let (gleam_file, native_file) = if existing_is_gleam {
+                        (&existing, relative_path)
                     } else {
-                        (relative_path, &first)
+                        (relative_path, &existing)
                     };
                     Error::ClashingGleamModuleAndNativeFileName {
                         module: eco_format!("{}", gleam_file.with_extension("")),
@@ -187,9 +187,9 @@ where
                 } else {
                     // The only way for two `.mjs` files to clash is by having
                     // the exact same path.
-                    assert_eq!(&first, relative_path);
+                    assert_eq!(&existing, relative_path);
                     Error::DuplicateSourceFile {
-                        file: first.to_string(),
+                        file: existing.to_string(),
                     }
                 },
             );
@@ -220,7 +220,7 @@ where
         let erl_string = eco_format!("{}", erl_file);
 
         if let Some(first) = self.seen_modules.insert(erl_string, relative_path.clone()) {
-            return Err(Error::DuplicateErlangModule {
+            return Err(Error::DuplicateNativeErlangModule {
                 module: eco_format!("{}", relative_path.file_stem().expect("path has file stem")),
                 first,
                 second: relative_path.clone(),
