@@ -42,6 +42,10 @@
   exist with `gleam add`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- FFI files (such as `.mjs` and `.erl`) are now permitted in subdirectories of
+  `src/` and `test/`.
+  ([PgBiel](https://github.com/PgBiel))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
@@ -100,3 +104,8 @@
 ### Bug fixed
 
 - Fixed a bug where `gleam update` would fail to update versions.
+  ([Jason Sipula](https://github.com/SnakeDoc))
+
+- Fixed a bug where a `module.mjs` file would be overwritten by a `module.gleam`
+  file of same name without warning. It now produces an error.
+  ([PgBiel](https://github.com/PgBiel))
