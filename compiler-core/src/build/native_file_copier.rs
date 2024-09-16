@@ -185,11 +185,11 @@ where
                         native_file: native_file.clone(),
                     }
                 } else {
-                    // TODO: Dedicated error
-                    Error::DuplicateModule {
-                        module: mjs_name,
-                        first,
-                        second: relative_path.clone(),
+                    // The only way for two `.mjs` files to clash is by having
+                    // the exact same path.
+                    assert_eq!(&first, relative_path);
+                    Error::DuplicateSourceFile {
+                        file: first.to_string(),
                     }
                 },
             );
@@ -216,15 +216,12 @@ where
         // Insert just the `.erl` module filename in `seen_modules` instead of
         // its full relative path, because `.erl` files with the same name
         // cause a conflict when targetting Erlang regardless of subpath.
-        let erl_name = eco_format!("{}", relative_path.file_name().expect("path has file name"));
+        let erl_file = relative_path.file_name().expect("path has file name");
+        let erl_string = eco_format!("{}", erl_file);
 
-        if let Some(first) = self
-            .seen_modules
-            .insert(erl_name.clone(), relative_path.clone())
-        {
-            // TODO: Dedicated error
-            return Err(Error::DuplicateModule {
-                module: erl_name,
+        if let Some(first) = self.seen_modules.insert(erl_string, relative_path.clone()) {
+            return Err(Error::DuplicateErlangModule {
+                module: eco_format!("{}", relative_path.file_stem().expect("path has file stem")),
                 first,
                 second: relative_path.clone(),
             });
