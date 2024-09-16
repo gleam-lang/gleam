@@ -88,6 +88,13 @@ pub enum Error {
     #[error("duplicate source file {file}")]
     DuplicateSourceFile { file: String },
 
+    #[error("duplicate Erlang module {module}")]
+    DuplicateErlangModule {
+        module: Name,
+        first: Utf8PathBuf,
+        second: Utf8PathBuf,
+    },
+
     #[error("gleam module {module} clashes with native file of same name")]
     ClashingGleamModuleAndNativeFileName {
         module: Name,
@@ -1189,11 +1196,14 @@ Second: {second}"
 
             Error::ClashingGleamModuleAndNativeFileName { module, gleam_file, native_file } => {
                 let text = format!(
-                        "The module `{module}` is clashing with a native file
+                        "The Gleam module `{module}` is clashing with a native file
 with the same name:
 
     Gleam module: {gleam_file}
-    Native file:  {native_file}");
+    Native file:  {native_file}
+
+This is a problem because the Gleam module would be compiled to a file with the
+same name and extension, unintentionally overwriting the native file.");
 
                 vec![Diagnostic {
                     title: "Gleam module clashes with native file".into(),
@@ -1211,6 +1221,30 @@ with the same name:
                 level: Level::Error,
                 location: None,
             }],
+
+            Error::DuplicateErlangModule {
+                module,
+                first,
+                second,
+            } => {
+                let text = format!(
+                    "The native Erlang module `{module}` is defined multiple times.
+
+First:  {first}
+Second: {second}
+
+Erlang modules must have unique names regardless of the subfolders where their
+`.erl` files are located."
+                );
+
+                vec![Diagnostic {
+                    title: "Duplicate native Erlang module".into(),
+                    text,
+                    hint: Some("Rename one of the native Erlang modules and try again.".into()),
+                    level: Level::Error,
+                    location: None,
+                }]
+            },
 
             Error::FileIo {
                 kind,
