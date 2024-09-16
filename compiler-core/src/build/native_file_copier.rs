@@ -7,7 +7,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 use ecow::{eco_format, EcoString};
 
 use crate::{
-    io::{FileSystemReader, FileSystemWriter},
+    io::{DirWalker, FileSystemReader, FileSystemWriter},
     Error, Result,
 };
 
@@ -70,8 +70,9 @@ where
     }
 
     fn copy_files(&mut self, src_root: &Utf8Path) -> Result<()> {
-        for path in self.io.gleam_source_and_native_files(src_root) {
-            self.copy(path, src_root)?;
+        let mut dir_walker = DirWalker::new(src_root.to_path_buf());
+        while let Some(path) = dir_walker.next_file(&self.io)? {
+            self.copy(path, &src_root)?;
         }
         Ok(())
     }
