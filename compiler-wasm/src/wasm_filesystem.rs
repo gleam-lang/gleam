@@ -57,8 +57,9 @@ impl FileSystemWriter for WasmFileSystem {
         Ok(())
     }
 
-    fn mkdir(&self, _: &Utf8Path) -> Result<(), Error> {
-        Ok(())
+    fn mkdir(&self, path: &Utf8Path) -> Result<(), Error> {
+        tracing::trace!("mkdir {:?}", path);
+        self.imfs.mkdir(path)
     }
 
     fn hardlink(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {

@@ -87,8 +87,8 @@ pub enum Error {
     #[error("duplicate source file {file}")]
     DuplicateSourceFile { file: String },
 
-    #[error("duplicate Erlang module {module}")]
-    DuplicateErlangModule {
+    #[error("duplicate native Erlang module {module}")]
+    DuplicateNativeErlangModule {
         module: Name,
         first: Utf8PathBuf,
         second: Utf8PathBuf,
@@ -1221,7 +1221,7 @@ same name and extension, unintentionally overwriting the native file.");
                 location: None,
             }],
 
-            Error::DuplicateErlangModule {
+            Error::DuplicateNativeErlangModule {
                 module,
                 first,
                 second,
