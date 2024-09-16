@@ -13,7 +13,7 @@ use gleam_core::{
         TargetCodegenConfiguration,
     },
     config::PackageConfig,
-    io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
+    io::{memory::InMemoryFileSystem, Content, FileSystemReader, FileSystemWriter},
     warning::{VectorWarningEmitterIO, WarningEmitter},
 };
 use itertools::Itertools;
@@ -80,7 +80,11 @@ pub fn prepare(path: &str) -> String {
     match result {
         Outcome::Ok(_) => {
             for path in initial_files {
-                filesystem.delete_file(&path).unwrap();
+                if filesystem.is_directory(&path) {
+                    filesystem.delete_directory(&path).unwrap();
+                } else {
+                    filesystem.delete_file(&path).unwrap();
+                }
             }
             let files = filesystem.into_contents();
             let warnings = warnings.take();

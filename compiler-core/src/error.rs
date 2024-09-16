@@ -88,6 +88,20 @@ pub enum Error {
     #[error("duplicate source file {file}")]
     DuplicateSourceFile { file: String },
 
+    #[error("duplicate native Erlang module {module}")]
+    DuplicateNativeErlangModule {
+        module: Name,
+        first: Utf8PathBuf,
+        second: Utf8PathBuf,
+    },
+
+    #[error("gleam module {module} clashes with native file of same name")]
+    ClashingGleamModuleAndNativeFileName {
+        module: Name,
+        gleam_file: Utf8PathBuf,
+        native_file: Utf8PathBuf,
+    },
+
     #[error("cyclical module imports")]
     ImportCycle {
         modules: Vec1<(EcoString, ImportCycleLocationDetails)>,
@@ -1181,6 +1195,26 @@ Second: {second}"
                 }]
             }
 
+            Error::ClashingGleamModuleAndNativeFileName { module, gleam_file, native_file } => {
+                let text = format!(
+                        "The Gleam module `{module}` is clashing with a native file
+with the same name:
+
+    Gleam module: {gleam_file}
+    Native file:  {native_file}
+
+This is a problem because the Gleam module would be compiled to a file with the
+same name and extension, unintentionally overwriting the native file.");
+
+                vec![Diagnostic {
+                    title: "Gleam module clashes with native file".into(),
+                    text,
+                    hint: Some("Consider renaming one of the files, such as by adding an `_ffi` suffix to the native file's name, and trying again.".into()),
+                    level: Level::Error,
+                    location: None,
+                }]
+            },
+
             Error::DuplicateSourceFile { file } => vec![Diagnostic {
                 title: "Duplicate Source file".into(),
                 text: format!("The file `{file}` is defined multiple times."),
@@ -1188,6 +1222,30 @@ Second: {second}"
                 level: Level::Error,
                 location: None,
             }],
+
+            Error::DuplicateNativeErlangModule {
+                module,
+                first,
+                second,
+            } => {
+                let text = format!(
+                    "The native Erlang module `{module}` is defined multiple times.
+
+First:  {first}
+Second: {second}
+
+Erlang modules must have unique names regardless of the subfolders where their
+`.erl` files are located."
+                );
+
+                vec![Diagnostic {
+                    title: "Duplicate native Erlang module".into(),
+                    text,
+                    hint: Some("Rename one of the native Erlang modules and try again.".into()),
+                    level: Level::Error,
+                    location: None,
+                }]
+            },
 
             Error::FileIo {
                 kind,
