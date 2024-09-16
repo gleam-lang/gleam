@@ -5,9 +5,10 @@ use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{HashMap, HashSet, VecDeque},
     fmt::Debug,
     io,
+    iter::Extend,
     time::SystemTime,
     vec::IntoIter,
 };
@@ -183,6 +184,56 @@ impl DirEntry {
 
     pub fn into_path(self) -> Utf8PathBuf {
         self.pathbuf
+    }
+}
+
+/// Structure holding state to walk across a directory's descendant files at
+/// any level. Note that each descendant directory is only visited once, so
+/// each file is only visited once as well.
+#[derive(Debug, Clone)]
+pub struct DirWalker {
+    walk_queue: VecDeque<Utf8PathBuf>,
+    dirs_walked: im::HashSet<Utf8PathBuf>,
+}
+
+impl DirWalker {
+    /// Create a directory walker starting at the given path.
+    pub fn new(dir: Utf8PathBuf) -> Self {
+        Self {
+            walk_queue: VecDeque::from([dir]),
+            dirs_walked: im::HashSet::new(),
+        }
+    }
+
+    /// Advance the directory walker to the next file.
+    pub fn next_file(&mut self, io: &impl FileSystemReader) -> Result<Option<Utf8PathBuf>> {
+        while let Some(next_path) = self.walk_queue.pop_front() {
+            let real_path = io.canonicalise(&next_path)?;
+
+            if io.is_file(&real_path) {
+                return Ok(Some(real_path));
+            } else if io.is_directory(&real_path)
+                && self.dirs_walked.insert(real_path.clone()).is_none()
+            {
+                let dir_entries = io.read_dir(&real_path)?;
+
+                for entry in dir_entries {
+                    match entry {
+                        Ok(entry) => self.walk_queue.push_back(entry.into_path()),
+                        Err(_) => {
+                            return Err(Error::FileIo {
+                                kind: FileKind::Directory,
+                                action: FileIoAction::Read,
+                                path: next_path,
+                                err: None,
+                            });
+                        }
+                    }
+                }
+            }
+        }
+
+        Ok(None)
     }
 }
 
