@@ -8,6 +8,12 @@
 subdirectories of `src/` and `test/`.
 ([PgBiel](https://github.com/PgBiel))
 
+### Bug fixes
+
+- Fixed a bug where a `module.gleam` file would be overwritten by
+a `module.mjs` file of same name without warning. It now produces an error.
+([PgBiel](https://github.com/PgBiel))
+
 ## v1.5.0-rc1 - 2024-09-14
 
 ### Build tool
