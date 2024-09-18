@@ -34,7 +34,7 @@ const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
 
 fn module_name_to_erlang(module: &str) -> Document<'_> {
-    Document::String(module.replace('/', "@"))
+    Document::from_string(module.replace('/', "@"))
 }
 
 fn module_name_atom(module: &str) -> Document<'static> {
@@ -67,14 +67,14 @@ impl<'env> Env<'env> {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_string(), 0);
                 let _ = self.erl_function_scope_vars.insert(name.to_string(), 0);
-                Document::String(variable_name(name))
+                Document::from_string(variable_name(name))
             }
-            Some(0) => Document::String(variable_name(name)),
+            Some(0) => Document::from_string(variable_name(name)),
             Some(n) => {
                 use std::fmt::Write;
                 let mut name = variable_name(name);
                 write!(name, "@{n}").expect("pushing number suffix to name");
-                Document::String(name)
+                Document::from_string(name)
             }
         }
     }
@@ -162,7 +162,9 @@ fn module_document<'a>(
 
     let header = "-module("
         .to_doc()
-        .append(Document::String(module.name.replace("/", "@").to_string()))
+        .append(Document::from_string(
+            module.name.replace("/", "@").to_string(),
+        ))
         .append(").")
         .append(line());
 
@@ -298,7 +300,7 @@ fn register_imports(
             };
             // Type Exports
             type_exports.push(
-                Document::String(erl_safe_type_name(name.to_snake_case()))
+                Document::from_string(erl_safe_type_name(name.to_snake_case()))
                     .append("/")
                     .append(typed_parameters.len()),
             );
@@ -331,7 +333,9 @@ fn register_imports(
             );
             let doc = if *opaque { "-opaque " } else { "-type " }
                 .to_doc()
-                .append(Document::String(erl_safe_type_name(name.to_snake_case())))
+                .append(Document::from_string(erl_safe_type_name(
+                    name.to_snake_case(),
+                )))
                 .append("(")
                 .append(params)
                 .append(") :: ")
@@ -478,7 +482,7 @@ fn fun_spec<'a>(
 }
 
 fn atom_string(value: String) -> Document<'static> {
-    Document::String(escape_atom_string(value))
+    Document::from_string(escape_atom_string(value))
 }
 
 fn atom_pattern() -> &'static Regex {
@@ -489,13 +493,13 @@ fn atom_pattern() -> &'static Regex {
 fn atom(value: &str) -> Document<'_> {
     if is_erlang_reserved_word(value) {
         // Escape because of keyword collision
-        Document::String(format!("'{value}'"))
+        Document::from_string(format!("'{value}'"))
     } else if atom_pattern().is_match(value) {
         // No need to escape
-        Document::Str(value)
+        Document::from_str(value)
     } else {
         // Escape because of characters contained
-        Document::String(format!("'{value}'"))
+        Document::from_string(format!("'{value}'"))
     }
 }
 
@@ -534,7 +538,7 @@ fn string_inner(value: &str) -> Document<'_> {
             }
         })
         .to_string();
-    Document::String(content)
+    Document::from_string(content)
 }
 
 fn string(value: &str) -> Document<'_> {
@@ -693,7 +697,7 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
+    let unit = |value: &'a u8| Some(Document::from_string(format!("unit:{value}")));
 
     bit_array_segment(
         document,
@@ -744,7 +748,7 @@ fn expr_segment<'a>(
         TypedExpr::Int { value, .. } => {
             let v = value.replace("_", "");
             let v = u64::from_str(&v).unwrap_or(0);
-            Some(Document::String(format!(":{v}")))
+            Some(Document::from_string(format!(":{v}")))
         }
 
         _ => {
@@ -760,7 +764,7 @@ fn expr_segment<'a>(
         }
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
+    let unit = |value: &'a u8| Some(Document::from_string(format!("unit:{value}")));
 
     bit_array_segment(
         document,
@@ -1041,9 +1045,9 @@ fn float<'a>(value: &str) -> Document<'a> {
     match value.split('.').collect_vec().as_slice() {
         ["0", "0"] => "+0.0".to_doc(),
         [before_dot, after_dot] if after_dot.starts_with('e') => {
-            Document::String(format!("{before_dot}.0{after_dot}"))
+            Document::from_string(format!("{before_dot}.0{after_dot}"))
         }
-        _ => Document::String(value),
+        _ => Document::from_string(value),
     }
 }
 
@@ -1080,11 +1084,11 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
                 let chars = incrementing_args_list(args.len());
                 "fun("
                     .to_doc()
-                    .append(Document::String(chars.clone()))
+                    .append(Document::from_string(chars.clone()))
                     .append(") -> {")
                     .append(atom_string(record_name.to_snake_case()))
                     .append(", ")
-                    .append(Document::String(chars))
+                    .append(Document::from_string(chars))
                     .append("} end")
             }
             _ => atom_string(record_name.to_snake_case()),
@@ -1140,7 +1144,7 @@ fn int<'a>(value: &str) -> Document<'a> {
         value.replace_range(..2, "2#");
     }
 
-    Document::String(value)
+    Document::from_string(value)
 }
 
 fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'a> {
@@ -1199,11 +1203,11 @@ fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
     let chars = incrementing_args_list(arity);
     "fun("
         .to_doc()
-        .append(Document::String(chars.clone()))
+        .append(Document::from_string(chars.clone()))
         .append(") -> {")
         .append(atom_string(tag.to_snake_case()))
         .append(", ")
-        .append(Document::String(chars))
+        .append(Document::from_string(chars))
         .append("} end")
 }
 
@@ -1400,7 +1404,7 @@ fn tuple_index_inline<'a>(
     index: u64,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let index_doc = Document::String(format!("{}", (index + 1)));
+    let index_doc = Document::from_string(format!("{}", (index + 1)));
     let tuple_doc = bare_clause_guard(tuple, env);
     "erlang:element"
         .to_doc()
@@ -1876,7 +1880,7 @@ fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) ->
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {
-    let index_doc = Document::String(format!("{}", (index + 1)));
+    let index_doc = Document::from_string(format!("{}", (index + 1)));
     let tuple_doc = maybe_block_expr(tuple, env);
     "erlang:element"
         .to_doc()
@@ -1937,7 +1941,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
         let mut name = "".to_string();
         name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
-        return Document::String(name);
+        return Document::from_string(name);
     }
     let mut name = vec![];
     let mut last_char = id;
@@ -2280,7 +2284,7 @@ impl<'a> TypePrinter<'a> {
 
     fn print_type_app(&self, module: &str, name: &str, args: &[Arc<Type>]) -> Document<'static> {
         let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
-        let name = Document::String(erl_safe_type_name(name.to_snake_case()));
+        let name = Document::from_string(erl_safe_type_name(name.to_snake_case()));
         if self.current_module == module {
             docvec![name, "(", args, ")"]
         } else {

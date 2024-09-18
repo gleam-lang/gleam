@@ -63,6 +63,7 @@ termcolor.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
+unicode-segmentation = "1.12.0"
 
 [build-dependencies]
 # Data (de)serialisation
