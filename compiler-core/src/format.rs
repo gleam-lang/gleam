@@ -206,11 +206,9 @@ impl<'comments> Formatter<'comments> {
         // and doc comments (///) remain. Freestanding comments aren't associated
         // with any statement, and are moved to the bottom of the module.
         let doc_comments = join(
-            self.doc_comments.iter().map(|comment| {
-                "///"
-                    .to_doc()
-                    .append(Document::from_string(comment.content.to_string()))
-            }),
+            self.doc_comments
+                .iter()
+                .map(|comment| "///".to_doc().append(comment.content.to_string())),
             line(),
         );
 
@@ -220,11 +218,10 @@ impl<'comments> Formatter<'comments> {
         };
 
         let module_comments = if !self.module_comments.is_empty() {
-            let comments = self.module_comments.iter().map(|s| {
-                "////"
-                    .to_doc()
-                    .append(Document::from_string(s.content.to_string()))
-            });
+            let comments = self
+                .module_comments
+                .iter()
+                .map(|s| "////".to_doc().append(s.content.to_string()));
             join(comments, line()).append(line())
         } else {
             nil()
@@ -636,7 +633,7 @@ impl<'comments> Formatter<'comments> {
             None => nil(),
             Some(_) => join(
                 comments.map(|c| match c {
-                    Some(c) => "///".to_doc().append(Document::from_string(c.to_string())),
+                    Some(c) => "///".to_doc().append(c.to_string()),
                     None => unreachable!("empty lines dropped by pop_doc_comments"),
                 }),
                 line(),
@@ -1611,10 +1608,12 @@ impl<'comments> Formatter<'comments> {
             .append(pub_(ct.publicity))
             .append(if ct.opaque { "opaque type " } else { "type " })
             .append(if ct.parameters.is_empty() {
-                Document::from_eco_string(ct.name.clone())
+                ct.name.clone().to_doc()
             } else {
                 let args = ct.parameters.iter().map(|(_, e)| e.to_doc()).collect_vec();
-                Document::from_eco_string(ct.name.clone())
+                ct.name
+                    .clone()
+                    .to_doc()
                     .append(self.wrap_args(args, ct.location.end))
                     .group()
             });
@@ -2623,7 +2622,7 @@ impl<'comments> Formatter<'comments> {
                 }
                 (_, None) => continue,
             };
-            doc.push("//".to_doc().append(Document::from_string(c.to_string())));
+            doc.push("//".to_doc().append(c.to_string()));
             match comments.peek() {
                 // Next line is a comment
                 Some((_, Some(_))) => doc.push(line()),
@@ -2744,7 +2743,7 @@ fn printed_comments<'a, 'comments>(
             Some(c) => c,
             None => continue,
         };
-        doc.push("//".to_doc().append(Document::from_string(c.to_string())));
+        doc.push("//".to_doc().append(c.to_string()));
         match comments.peek() {
             // Next line is a comment
             Some(Some(_)) => doc.push(line()),
@@ -2843,7 +2842,7 @@ where
         BitArrayOption::Unit { value, .. } => "unit"
             .to_doc()
             .append("(")
-            .append(Document::from_string(format!("{value}")))
+            .append(format!("{value}"))
             .append(")"),
     }
 }

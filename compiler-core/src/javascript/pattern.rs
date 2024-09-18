@@ -154,7 +154,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
     fn path_document(&self) -> Document<'a> {
         concat(self.path.iter().map(|segment| match segment {
-            Index::Int(i) => Document::from_string(format!("[{i}]")),
+            Index::Int(i) => format!("[{i}]").to_doc(),
             // TODO: escape string if needed
             Index::String(s) => docvec!(".", s),
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
@@ -958,11 +958,11 @@ impl<'a> Check<'a> {
                 expected_length,
                 has_tail_spread,
             } => {
-                let length_check = Document::from_string(if has_tail_spread {
-                    format!(".atLeastLength({expected_length})")
+                let length_check = if has_tail_spread {
+                    format!(".atLeastLength({expected_length})").to_doc()
                 } else {
-                    format!(".hasLength({expected_length})")
-                });
+                    format!(".hasLength({expected_length})").to_doc()
+                };
                 if match_desired {
                     docvec![subject, path, length_check,]
                 } else {
@@ -975,11 +975,11 @@ impl<'a> Check<'a> {
                 expected_bytes,
                 has_tail_spread,
             } => {
-                let length_check = Document::from_string(if has_tail_spread {
-                    format!(".length >= {expected_bytes}")
+                let length_check = if has_tail_spread {
+                    format!(".length >= {expected_bytes}").to_doc()
                 } else {
-                    format!(".length == {expected_bytes}")
-                });
+                    format!(".length == {expected_bytes}").to_doc()
+                };
                 if match_desired {
                     docvec![subject, path, length_check,]
                 } else {
