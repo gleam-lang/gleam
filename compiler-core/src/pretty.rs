@@ -46,6 +46,12 @@ impl<'a> Documentable<'a> for char {
     }
 }
 
+impl<'a> Documentable<'a> for String {
+    fn to_doc(self) -> Document<'a> {
+        Document::from_string(self)
+    }
+}
+
 impl<'a> Documentable<'a> for &'a str {
     fn to_doc(self) -> Document<'a> {
         Document::from_str(self)

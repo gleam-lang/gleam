@@ -221,7 +221,7 @@ fn pattern_segment<'a>(
         )
     };
 
-    let unit = |value: &'a u8| Some(Document::from_string(format!("unit:{value}")));
+    let unit = |value: &'a u8| Some(format!("unit:{value}").to_doc());
 
     bit_array_segment(
         document,

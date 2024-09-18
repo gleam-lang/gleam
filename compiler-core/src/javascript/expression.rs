@@ -88,8 +88,8 @@ impl<'module> Generator<'module> {
                 maybe_escape_identifier_doc(name)
             }
             Some(0) => maybe_escape_identifier_doc(name),
-            Some(n) if name == "$" => Document::from_string(format!("${n}")),
-            Some(n) => Document::from_string(format!("{name}${n}")),
+            Some(n) if name == "$" => format!("${n}").to_doc(),
+            Some(n) => format!("{name}${n}").to_doc(),
         }
     }
 
@@ -781,7 +781,7 @@ impl<'module> Generator<'module> {
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
                         docs.push("loop$".to_doc());
-                        docs.push(Document::from_string((*name).to_string()));
+                        docs.push(name.to_doc());
                         docs.push(" = ".to_doc());
                     }
                     // Render the value given to the function. Even if it is not
@@ -877,7 +877,7 @@ impl<'module> Generator<'module> {
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
-            Ok(docvec![tuple, Document::from_string(format!("[{index}]"))])
+            Ok(docvec![tuple, format!("[{index}]")])
         })
     }
 
@@ -1542,7 +1542,7 @@ fn sized_bit_array_segment_details<'a>(
 
 pub fn string(value: &str) -> Document<'_> {
     if value.contains('\n') {
-        Document::from_string(value.replace('\n', r"\n")).surround("\"", "\"")
+        value.replace('\n', r"\n").to_doc().surround("\"", "\"")
     } else {
         value.to_doc().surround("\"", "\"")
     }
@@ -1758,7 +1758,7 @@ fn record_constructor<'a>(
             None => docvec!["new ", name, "()"],
         }
     } else {
-        let vars = (0..arity).map(|i| Document::from_string(format!("var{i}")));
+        let vars = (0..arity).map(|i| format!("var{i}").to_doc());
         let body = docvec![
             "return ",
             construct_record(qualifier, name, vars.clone()),

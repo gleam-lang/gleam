@@ -157,8 +157,7 @@ impl Printer {
 }
 
 fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
-    let type_name = Document::from_string(type_name.to_string());
-    docvec![Document::from_string(module.to_string()), ".", type_name]
+    docvec![module.to_string(), ".", type_name.to_string()]
 }
 
 #[test]

@@ -338,7 +338,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn type_alias(&mut self, alias: &str, type_: &Type) -> Output<'a> {
         Ok(docvec![
             "export type ",
-            Document::from_string(ts_safe_type_name(alias.to_string())),
+            ts_safe_type_name(alias.to_string()),
             " = ",
             self.print_type(type_),
             ";"
@@ -379,7 +379,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         definitions.push(Ok(docvec![
             "export type ",
-            name_with_generics(Document::from_string(format!("{name}$")), typed_parameters),
+            name_with_generics(format!("{name}$").to_doc(), typed_parameters),
             " = ",
             definition,
             ";",
@@ -422,7 +422,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     .label
                     .as_ref()
                     .map(|(_, s)| super::maybe_escape_identifier_doc(s))
-                    .unwrap_or_else(|| Document::from_string(format!("argument${i}")));
+                    .unwrap_or_else(|| format!("argument${i}").to_doc());
                 docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
@@ -435,7 +435,7 @@ impl<'a> TypeScriptGenerator<'a> {
                         .label
                         .as_ref()
                         .map(|(_, s)| super::maybe_escape_identifier_doc(s))
-                        .unwrap_or_else(|| Document::from_string(format!("{i}")));
+                        .unwrap_or_else(|| format!("{i}").to_doc());
                     docvec![
                         name,
                         ": ",
@@ -670,15 +670,11 @@ impl<'a> TypeScriptGenerator<'a> {
     ) -> Document<'static> {
         let name = format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
-            true => Document::from_string(name),
+            true => name.to_doc(),
             false => {
                 // If type comes from a separate module, use that module's name
                 // as a TypeScript namespace prefix
-                docvec![
-                    Document::from_string(self.module_name(module)),
-                    ".",
-                    Document::from_string(name),
-                ]
+                docvec![self.module_name(module), ".", name]
             }
         };
         if args.is_empty() {
