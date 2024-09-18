@@ -6424,3 +6424,14 @@ pub fn init(
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3627
+#[test]
+fn big_grapheme_cluster() {
+    assert_format!(
+        r#"pub fn main() {
+  sw("👩‍👩‍👧‍👦👩‍👩‍👧‍👦👩‍👩‍👧‍👦", [])
+}
+"#
+    );
+}

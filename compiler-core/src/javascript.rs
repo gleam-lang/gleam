@@ -69,7 +69,7 @@ impl<'a> Generator<'a> {
 
     fn type_reference(&self) -> Document<'a> {
         if self.typescript == TypeScriptDeclarations::None {
-            return Document::Str("");
+            return Document::from_str("");
         }
 
         // Get the name of the module relative the directory (similar to basename)
@@ -81,7 +81,7 @@ impl<'a> Generator<'a> {
             .last()
             .expect("JavaScript generator could not identify imported module name.");
 
-        let name = Document::Str(module);
+        let name = Document::from_str(module);
 
         docvec!["/// <reference types=\"./", name, ".d.mts\" />", line()]
     }
@@ -271,7 +271,7 @@ impl<'a> Generator<'a> {
             arg.label
                 .as_ref()
                 .map(|(_, s)| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| Document::String(format!("x{i}")))
+                .unwrap_or_else(|| Document::from_string(format!("x{i}")))
         }
 
         let head = if publicity.is_private() || opaque {
@@ -444,7 +444,7 @@ impl<'a> Generator<'a> {
             alias: if name == fun && !needs_escaping {
                 None
             } else if needs_escaping {
-                Some(Document::String(escape_identifier(name)))
+                Some(Document::from_string(escape_identifier(name)))
             } else {
                 Some(name.to_doc())
             },
@@ -616,12 +616,12 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             let doc = if discards == 0 {
                 "_".to_doc()
             } else {
-                Document::String(format!("_{discards}"))
+                Document::from_string(format!("_{discards}"))
             };
             discards += 1;
             doc
         }
-        Some(name) if tail_recursion_used => Document::String(format!("loop${name}")),
+        Some(name) if tail_recursion_used => Document::from_string(format!("loop${name}")),
         Some(name) => maybe_escape_identifier_doc(name),
     }))
 }
@@ -758,7 +758,7 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
     if is_usable_js_identifier(word) {
         word.to_doc()
     } else {
-        Document::String(escape_identifier(word))
+        Document::from_string(escape_identifier(word))
     }
 }
 

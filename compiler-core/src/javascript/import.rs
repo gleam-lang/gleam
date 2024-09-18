@@ -52,7 +52,7 @@ impl<'a> Imports<'a> {
             imports
         } else {
             let names = join(
-                self.exports.into_iter().sorted().map(Document::String),
+                self.exports.into_iter().sorted().map(Document::from_string),
                 break_(",", ", "),
             );
             let names = docvec![
@@ -91,7 +91,7 @@ impl<'a> Import<'a> {
     }
 
     pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
-        let path = Document::String(self.path.clone());
+        let path = Document::from_string(self.path.clone());
         let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
             "type "
         } else {
@@ -102,7 +102,7 @@ impl<'a> Import<'a> {
                 "import ",
                 import_modifier,
                 "* as ",
-                Document::String(alias),
+                Document::from_string(alias),
                 " from \"",
                 path.clone(),
                 r#"";"#,

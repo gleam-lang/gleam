@@ -18,6 +18,7 @@ mod tests;
 
 use ecow::EcoString;
 use itertools::Itertools;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{io::Utf8Writer, Result};
 
@@ -41,73 +42,73 @@ pub trait Documentable<'a> {
 
 impl<'a> Documentable<'a> for char {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for &'a str {
     fn to_doc(self) -> Document<'a> {
-        Document::Str(self)
+        Document::from_str(self)
     }
 }
 
 impl<'a> Documentable<'a> for EcoString {
     fn to_doc(self) -> Document<'a> {
-        Document::EcoString(self)
+        Document::from_eco_string(self)
     }
 }
 
 impl<'a> Documentable<'a> for &EcoString {
     fn to_doc(self) -> Document<'a> {
-        Document::EcoString(self.clone())
+        Document::from_eco_string(self.clone())
     }
 }
 
 impl<'a> Documentable<'a> for isize {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for i64 {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for usize {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for f64 {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self:?}"))
+        Document::from_string(format!("{self:?}"))
     }
 }
 
 impl<'a> Documentable<'a> for u64 {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self:?}"))
+        Document::from_string(format!("{self:?}"))
     }
 }
 
 impl<'a> Documentable<'a> for u32 {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for u16 {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for u8 {
     fn to_doc(self) -> Document<'a> {
-        Document::String(format!("{self}"))
+        Document::from_string(format!("{self}"))
     }
 }
 
@@ -171,13 +172,24 @@ pub enum Document<'a> {
     Group(Box<Self>),
 
     /// A string to render
-    String(String),
+    String {
+        string: String,
+        // The number of extended grapheme clusters in the string.
+        // This is what the pretty printer uses as the width of the string as it
+        // is closes to what a human would consider the "length" of a string.
+        //
+        // Since computing the number of grapheme clusters requires walking over
+        // the string we precompute it to avoid iterating through a string over
+        // and over again in the pretty printing algorithm.
+        //
+        graphemes: isize,
+    },
 
     /// A str to render
-    Str(&'a str),
+    Str { string: &'a str, graphemes: isize },
 
     /// A string that is cheap to copy
-    EcoString(EcoString),
+    EcoString { string: EcoString, graphemes: isize },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -317,9 +329,9 @@ fn fits(
 
             // When we run into a string we increase the current_width; looping
             // back we will check if we've exceeded the maximum allowed width.
-            Document::Str(s) => current_width += s.len() as isize,
-            Document::String(s) => current_width += s.len() as isize,
-            Document::EcoString(s) => current_width += s.len() as isize,
+            Document::Str { graphemes, .. }
+            | Document::String { graphemes, .. }
+            | Document::EcoString { graphemes, .. } => current_width += graphemes,
 
             // If we get to a break we need to first see if it has to be
             // rendered as its unbroken or broken string, depending on the mode.
@@ -473,19 +485,19 @@ fn format(
 
             // Strings are printed as they are and the current width is
             // increased accordingly.
-            Document::String(s) => {
-                width += s.len() as isize;
-                writer.str_write(s)?;
+            Document::String { string, graphemes } => {
+                width += graphemes;
+                writer.str_write(string)?;
             }
 
-            Document::EcoString(s) => {
-                width += s.len() as isize;
-                writer.str_write(s)?;
+            Document::EcoString { string, graphemes } => {
+                width += graphemes;
+                writer.str_write(string)?;
             }
 
-            Document::Str(s) => {
-                width += s.len() as isize;
-                writer.str_write(s)?;
+            Document::Str { string, graphemes } => {
+                width += graphemes;
+                writer.str_write(string)?;
             }
 
             // If multiple documents need to be printed, then they are all
@@ -580,6 +592,27 @@ pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
 }
 
 impl<'a> Document<'a> {
+    pub fn from_string(string: String) -> Self {
+        Document::String {
+            graphemes: string.graphemes(true).count() as isize,
+            string,
+        }
+    }
+
+    pub fn from_str(string: &'a str) -> Self {
+        Document::Str {
+            graphemes: string.graphemes(true).count() as isize,
+            string,
+        }
+    }
+
+    pub fn from_eco_string(string: EcoString) -> Self {
+        Document::EcoString {
+            graphemes: string.graphemes(true).count() as isize,
+            string,
+        }
+    }
+
     pub fn group(self) -> Self {
         Self::Group(Box::new(self))
     }
@@ -647,9 +680,9 @@ impl<'a> Document<'a> {
         use Document::*;
         match self {
             Line(n) => *n == 0,
-            EcoString(s) => s.is_empty(),
-            String(s) => s.is_empty(),
-            Str(s) => s.is_empty(),
+            EcoString { string, .. } => string.is_empty(),
+            String { string, .. } => string.is_empty(),
+            Str { string, .. } => string.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
             ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
