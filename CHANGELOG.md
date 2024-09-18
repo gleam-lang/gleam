@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.5.0-rc2 - 2024-09-18
 
 ### Bug Fixes
 
