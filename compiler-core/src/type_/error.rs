@@ -680,6 +680,10 @@ pub enum Warning {
         layer: Layer,
     },
 
+    SingleCaseClause {
+        location: SrcSpan,
+    },
+
     UnreachableCaseClause {
         location: SrcSpan,
     },
@@ -978,6 +982,7 @@ impl Warning {
             | Warning::InefficientEmptyListCheck { location, .. }
             | Warning::TransitiveDependencyImported { location, .. }
             | Warning::DeprecatedItem { location, .. }
+            | Warning::SingleCaseClause { location, .. }
             | Warning::UnreachableCaseClause { location, .. }
             | Warning::CaseMatchOnLiteralCollection { location, .. }
             | Warning::CaseMatchOnLiteralValue { location, .. }

@@ -726,6 +726,22 @@ Run this command to add it to your dependencies:
                         }),
                     }
                 }
+                type_::Warning::SingleCaseClause { location, .. } => Diagnostic {
+                    title: "Pattern Matching with just one case".into(),
+                    text: "This case expression can be simplified using a let destructuring."
+                        .into(),
+                    level: diagnostic::Level::Warning,
+                    hint: None,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
 
                 type_::Warning::UnreachableCaseClause { location } => {
                     let text: String =

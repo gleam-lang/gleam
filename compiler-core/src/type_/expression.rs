@@ -1375,7 +1375,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.previous_panics = false;
         let mut any_subject_panics = false;
-        for subject in subjects {
+        for subject in subjects.clone() {
             let subject_location = subject.location();
             let subject = self.in_new_scope(|subject_typer| {
                 let subject = subject_typer.infer(subject)?;
@@ -1395,7 +1395,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let mut all_patterns_are_discards = true;
         // NOTE: if there are 0 clauses then there are 0 panics
         let mut all_clauses_panic = !clauses.is_empty();
-        for clause in clauses {
+
+        for clause in clauses.clone() {
             has_a_guard = has_a_guard || clause.guard.is_some();
             all_patterns_are_discards =
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
@@ -1417,6 +1418,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
             self.error_with_rigid_names(e);
         };
+
+        self.check_single_case(&clauses, &location);
 
         // We track if the case expression is used like an if: that is all its
         // patterns are discarded and there's at least a guard. For example:
@@ -3413,6 +3416,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
+    }
+
+    fn check_single_case(&mut self, clauses: &[UntypedClause], location: &SrcSpan) {
+        if clauses.len() > 1 {
+            return;
+        }
+
+        let _ = clauses
+            .first()
+            .map(|pats| (pats.pattern.first()))
+            .and_then(|pats| pats)
+            .map(|pat| {
+                if let Pattern::Constructor { .. } = pat {
+                    self.problems.warning(Warning::SingleCaseClause {
+                        location: *location,
+                    });
+                }
+            });
     }
 
     fn check_case_exhaustiveness(
