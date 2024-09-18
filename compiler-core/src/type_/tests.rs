@@ -17,6 +17,7 @@ use vec1::Vec1;
 
 use camino::Utf8PathBuf;
 
+mod accessors;
 mod assert;
 mod assignments;
 mod conditional_compilation;

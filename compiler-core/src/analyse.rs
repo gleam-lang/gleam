@@ -1658,7 +1658,7 @@ fn assert_unique_name(
     }
 }
 
-fn custom_type_accessors<A>(
+fn custom_type_accessors<A: std::fmt::Debug>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
@@ -1684,7 +1684,7 @@ fn custom_type_accessors<A>(
 
 /// Returns the fields that have the same label and type across all variants of
 /// the given type.
-fn get_compatible_record_fields<A>(
+fn get_compatible_record_fields<A: std::fmt::Debug>(
     constructors: &[RecordConstructor<A>],
 ) -> Vec<(usize, &EcoString, &TypeAst)> {
     let mut compatible = vec![];
