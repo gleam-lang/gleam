@@ -373,22 +373,22 @@ impl<'a> Generator<'a> {
         imports
     }
 
-    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.mjs"),
+                1 => eco_format!("./{module}.mjs"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.mjs")
+                    eco_format!("{prefix}{module}.mjs")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.mjs")
+            eco_format!("{prefix}{package}/{module}.mjs")
         }
     }
 
@@ -413,7 +413,7 @@ impl<'a> Generator<'a> {
             Some((AssignName::Variable(name), _)) => (false, name.as_str()),
         };
 
-        let module_name = format!("${module_name}");
+        let module_name = eco_format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
@@ -448,9 +448,9 @@ impl<'a> Generator<'a> {
             },
         };
         if publicity.is_importable() {
-            imports.register_export(maybe_escape_identifier_string(name).to_string())
+            imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(module.to_string(), [], [member]);
+        imports.register_module(EcoString::from(module), [], [member]);
     }
 
     fn module_constant(

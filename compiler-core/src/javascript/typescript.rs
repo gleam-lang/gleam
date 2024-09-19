@@ -265,28 +265,28 @@ impl<'a> TypeScriptGenerator<'a> {
     ///
     fn register_import(&mut self, imports: &mut Imports<'a>, package: &'a str, module: &'a str) {
         let path = self.import_path(package, module);
-        imports.register_module(path, [self.module_name(module).to_string()], []);
+        imports.register_module(path, [self.module_name(module)], []);
     }
 
     /// Calculates the path of where to import an external module from
     ///
-    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
         // DUPE: current_module_name_segments_count
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.d.mts"),
+                1 => eco_format!("./{module}.d.mts"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.d.mts")
+                    eco_format!("{prefix}{module}.d.mts")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.d.mts")
+            eco_format!("{prefix}{package}/{module}.d.mts")
         }
     }
 
