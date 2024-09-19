@@ -16,7 +16,7 @@
 #[cfg(test)]
 mod tests;
 
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use itertools::Itertools;
 use unicode_segmentation::UnicodeSegmentation;
 
@@ -42,13 +42,7 @@ pub trait Documentable<'a> {
 
 impl<'a> Documentable<'a> for char {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
-    }
-}
-
-impl<'a> Documentable<'a> for String {
-    fn to_doc(self) -> Document<'a> {
-        Document::string(self)
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
@@ -72,49 +66,49 @@ impl<'a> Documentable<'a> for &EcoString {
 
 impl<'a> Documentable<'a> for isize {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for i64 {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for usize {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for f64 {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self:?}"))
+        Document::eco_string(eco_format!("{self:?}"))
     }
 }
 
 impl<'a> Documentable<'a> for u64 {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self:?}"))
+        Document::eco_string(eco_format!("{self:?}"))
     }
 }
 
 impl<'a> Documentable<'a> for u32 {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for u16 {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
 impl<'a> Documentable<'a> for u8 {
     fn to_doc(self) -> Document<'a> {
-        Document::string(format!("{self}"))
+        Document::eco_string(eco_format!("{self}"))
     }
 }
 
@@ -598,13 +592,6 @@ pub fn flex_break<'a>(broken: &'a str, unbroken: &'a str) -> Document<'a> {
 }
 
 impl<'a> Document<'a> {
-    pub fn string(string: String) -> Self {
-        Document::String {
-            graphemes: string.graphemes(true).count() as isize,
-            string,
-        }
-    }
-
     pub fn str(string: &'a str) -> Self {
         Document::Str {
             graphemes: string.graphemes(true).count() as isize,

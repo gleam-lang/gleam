@@ -1,5 +1,6 @@
 use std::collections::{HashMap, HashSet};
 
+use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
@@ -55,7 +56,7 @@ impl<'a> Imports<'a> {
                 self.exports
                     .into_iter()
                     .sorted()
-                    .map(|string| string.to_doc()),
+                    .map(|string| EcoString::from(string).to_doc()),
                 break_(",", ", "),
             );
             let names = docvec![
@@ -94,7 +95,7 @@ impl<'a> Import<'a> {
     }
 
     pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
-        let path = self.path.clone().to_doc();
+        let path = EcoString::from(self.path).to_doc();
         let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
             "type "
         } else {
@@ -105,7 +106,7 @@ impl<'a> Import<'a> {
                 "import ",
                 import_modifier,
                 "* as ",
-                alias,
+                EcoString::from(alias),
                 " from \"",
                 path.clone(),
                 r#"";"#,

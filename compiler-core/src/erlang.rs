@@ -20,7 +20,7 @@ use crate::{
     },
     Result,
 };
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
@@ -34,7 +34,7 @@ const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
 
 fn module_name_to_erlang(module: &str) -> Document<'_> {
-    module.replace('/', "@").to_doc()
+    EcoString::from(module.replace('/', "@")).to_doc()
 }
 
 fn module_name_atom(module: &str) -> Document<'static> {
@@ -162,7 +162,7 @@ fn module_document<'a>(
 
     let header = "-module("
         .to_doc()
-        .append(module.name.replace("/", "@").to_string())
+        .append(module.name.replace("/", "@"))
         .append(").")
         .append(line());
 
@@ -490,26 +490,26 @@ fn atom_pattern() -> &'static Regex {
 fn atom(value: &str) -> Document<'_> {
     if is_erlang_reserved_word(value) {
         // Escape because of keyword collision
-        format!("'{value}'").to_doc()
+        eco_format!("'{value}'").to_doc()
     } else if atom_pattern().is_match(value) {
         // No need to escape
-        value.to_doc()
+        EcoString::from(value).to_doc()
     } else {
         // Escape because of characters contained
-        format!("'{value}'").to_doc()
+        eco_format!("'{value}'").to_doc()
     }
 }
 
-fn escape_atom_string(value: String) -> String {
+fn escape_atom_string(value: String) -> EcoString {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
-        format!("'{value}'")
+        eco_format!("'{value}'")
     } else if atom_pattern().is_match(&value) {
         // No need to escape
-        value
+        EcoString::from(value)
     } else {
         // Escape because of characters contained
-        format!("'{value}'")
+        eco_format!("'{value}'")
     }
 }
 
@@ -533,9 +533,8 @@ fn string_inner(value: &str) -> Document<'_> {
             } else {
                 format!("{slashes}x")
             }
-        })
-        .to_string();
-    content.to_doc()
+        });
+    EcoString::from(content).to_doc()
 }
 
 fn string(value: &str) -> Document<'_> {
@@ -694,7 +693,7 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &'a u8| Some(format!("unit:{value}").to_doc());
+    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
         document,
@@ -745,7 +744,7 @@ fn expr_segment<'a>(
         TypedExpr::Int { value, .. } => {
             let v = value.replace("_", "");
             let v = u64::from_str(&v).unwrap_or(0);
-            Some(format!(":{v}").to_doc())
+            Some(eco_format!(":{v}").to_doc())
         }
 
         _ => {
@@ -761,7 +760,7 @@ fn expr_segment<'a>(
         }
     };
 
-    let unit = |value: &'a u8| Some(format!("unit:{value}").to_doc());
+    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
         document,
@@ -1042,9 +1041,9 @@ fn float<'a>(value: &str) -> Document<'a> {
     match value.split('.').collect_vec().as_slice() {
         ["0", "0"] => "+0.0".to_doc(),
         [before_dot, after_dot] if after_dot.starts_with('e') => {
-            format!("{before_dot}.0{after_dot}").to_doc()
+            eco_format!("{before_dot}.0{after_dot}").to_doc()
         }
-        _ => value.to_doc(),
+        _ => EcoString::from(value).to_doc(),
     }
 }
 
@@ -1141,7 +1140,7 @@ fn int<'a>(value: &str) -> Document<'a> {
         value.replace_range(..2, "2#");
     }
 
-    value.to_doc()
+    EcoString::from(value).to_doc()
 }
 
 fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'a> {
@@ -1401,7 +1400,7 @@ fn tuple_index_inline<'a>(
     index: u64,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let index_doc = format!("{}", (index + 1)).to_doc();
+    let index_doc = eco_format!("{}", (index + 1)).to_doc();
     let tuple_doc = bare_clause_guard(tuple, env);
     "erlang:element"
         .to_doc()
@@ -1877,7 +1876,7 @@ fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) ->
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {
-    let index_doc = format!("{}", (index + 1)).to_doc();
+    let index_doc = eco_format!("{}", (index + 1)).to_doc();
     let tuple_doc = maybe_block_expr(tuple, env);
     "erlang:element"
         .to_doc()
@@ -1918,17 +1917,19 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) 
     doc
 }
 
-fn incrementing_args_list(arity: usize) -> String {
+fn incrementing_args_list(arity: usize) -> EcoString {
     let arguments = (0..arity).map(|c| format!("Field@{c}"));
-    Itertools::intersperse(arguments, ", ".into()).collect()
+    Itertools::intersperse(arguments, ", ".into())
+        .collect::<String>()
+        .into()
 }
 
-fn variable_name(name: &str) -> String {
+fn variable_name(name: &str) -> EcoString {
     let mut chars = name.chars();
     let first_char = chars.next();
     let first_uppercased = first_char.into_iter().flat_map(char::to_uppercase);
 
-    first_uppercased.chain(chars).collect()
+    first_uppercased.chain(chars).collect::<EcoString>()
 }
 
 /// When rendering a type variable to an erlang type spec we need all type variables with the
@@ -1936,7 +1937,7 @@ fn variable_name(name: &str) -> String {
 /// This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
-        let mut name = "".to_string();
+        let mut name = EcoString::from("");
         name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
         return name.to_doc();
     }
@@ -2148,7 +2149,7 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     }
 }
 
-fn erl_safe_type_name(mut name: String) -> String {
+fn erl_safe_type_name(mut name: String) -> EcoString {
     if matches!(
         name.as_str(),
         "any"
@@ -2191,7 +2192,7 @@ fn erl_safe_type_name(mut name: String) -> String {
             | "tuple"
     ) {
         name.push('_');
-        name
+        EcoString::from(name)
     } else {
         escape_atom_string(name)
     }

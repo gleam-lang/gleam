@@ -157,7 +157,7 @@ impl Printer {
 }
 
 fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
-    docvec![module.to_string(), ".", type_name.to_string()]
+    docvec![EcoString::from(module), ".", EcoString::from(type_name)]
 }
 
 #[test]

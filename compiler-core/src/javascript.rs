@@ -17,7 +17,7 @@ use crate::{
     pretty::*,
 };
 use camino::Utf8Path;
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use expression::Context;
 use itertools::Itertools;
 
@@ -269,7 +269,7 @@ impl<'a> Generator<'a> {
             arg.label
                 .as_ref()
                 .map(|(_, s)| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| format!("x{i}").to_doc())
+                .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
         let head = if publicity.is_private() || opaque {
@@ -448,7 +448,7 @@ impl<'a> Generator<'a> {
             },
         };
         if publicity.is_importable() {
-            imports.register_export(maybe_escape_identifier_string(name))
+            imports.register_export(maybe_escape_identifier_string(name).to_string())
         }
         imports.register_module(module.to_string(), [], [member]);
     }
@@ -614,12 +614,12 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             let doc = if discards == 0 {
                 "_".to_doc()
             } else {
-                format!("_{discards}").to_doc()
+                eco_format!("_{discards}").to_doc()
             };
             discards += 1;
             doc
         }
-        Some(name) if tail_recursion_used => format!("loop${name}").to_doc(),
+        Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
         Some(name) => maybe_escape_identifier_doc(name),
     }))
 }
@@ -740,16 +740,16 @@ fn is_usable_js_identifier(word: &str) -> bool {
     )
 }
 
-fn maybe_escape_identifier_string(word: &str) -> String {
+fn maybe_escape_identifier_string(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
-        word.to_string()
+        EcoString::from(word)
     } else {
         escape_identifier(word)
     }
 }
 
-fn escape_identifier(word: &str) -> String {
-    format!("{word}$")
+fn escape_identifier(word: &str) -> EcoString {
+    eco_format!("{word}$")
 }
 
 fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {

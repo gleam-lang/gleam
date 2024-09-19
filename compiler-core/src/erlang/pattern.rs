@@ -1,3 +1,5 @@
+use ecow::eco_format;
+
 use crate::analyse::Inferred;
 
 use super::*;
@@ -221,7 +223,7 @@ fn pattern_segment<'a>(
         )
     };
 
-    let unit = |value: &'a u8| Some(format!("unit:{value}").to_doc());
+    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
         document,
