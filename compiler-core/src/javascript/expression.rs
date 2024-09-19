@@ -88,8 +88,8 @@ impl<'module> Generator<'module> {
                 maybe_escape_identifier_doc(name)
             }
             Some(0) => maybe_escape_identifier_doc(name),
-            Some(n) if name == "$" => format!("${n}").to_doc(),
-            Some(n) => format!("{name}${n}").to_doc(),
+            Some(n) if name == "$" => eco_format!("${n}").to_doc(),
+            Some(n) => eco_format!("{name}${n}").to_doc(),
         }
     }
 
@@ -877,7 +877,7 @@ impl<'module> Generator<'module> {
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
-            Ok(docvec![tuple, format!("[{index}]")])
+            Ok(docvec![tuple, eco_format!("[{index}]")])
         })
     }
 
@@ -1542,7 +1542,9 @@ fn sized_bit_array_segment_details<'a>(
 
 pub fn string(value: &str) -> Document<'_> {
     if value.contains('\n') {
-        value.replace('\n', r"\n").to_doc().surround("\"", "\"")
+        EcoString::from(value.replace('\n', r"\n"))
+            .to_doc()
+            .surround("\"", "\"")
     } else {
         value.to_doc().surround("\"", "\"")
     }
@@ -1758,7 +1760,7 @@ fn record_constructor<'a>(
             None => docvec!["new ", name, "()"],
         }
     } else {
-        let vars = (0..arity).map(|i| format!("var{i}").to_doc());
+        let vars = (0..arity).map(|i| eco_format!("var{i}").to_doc());
         let body = docvec![
             "return ",
             construct_record(qualifier, name, vars.clone()),

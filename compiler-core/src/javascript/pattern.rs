@@ -154,7 +154,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
     fn path_document(&self) -> Document<'a> {
         concat(self.path.iter().map(|segment| match segment {
-            Index::Int(i) => format!("[{i}]").to_doc(),
+            Index::Int(i) => eco_format!("[{i}]").to_doc(),
             // TODO: escape string if needed
             Index::String(s) => docvec!(".", s),
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
@@ -959,9 +959,9 @@ impl<'a> Check<'a> {
                 has_tail_spread,
             } => {
                 let length_check = if has_tail_spread {
-                    format!(".atLeastLength({expected_length})").to_doc()
+                    eco_format!(".atLeastLength({expected_length})").to_doc()
                 } else {
-                    format!(".hasLength({expected_length})").to_doc()
+                    eco_format!(".hasLength({expected_length})").to_doc()
                 };
                 if match_desired {
                     docvec![subject, path, length_check,]
@@ -976,9 +976,9 @@ impl<'a> Check<'a> {
                 has_tail_spread,
             } => {
                 let length_check = if has_tail_spread {
-                    format!(".length >= {expected_bytes}").to_doc()
+                    eco_format!(".length >= {expected_bytes}").to_doc()
                 } else {
-                    format!(".length == {expected_bytes}").to_doc()
+                    eco_format!(".length == {expected_bytes}").to_doc()
                 };
                 if match_desired {
                     docvec![subject, path, length_check,]

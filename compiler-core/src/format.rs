@@ -16,7 +16,7 @@ use crate::{
     warning::WarningEmitter,
     Error, Result,
 };
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use itertools::Itertools;
 use std::{cmp::Ordering, sync::Arc};
 use vec1::Vec1;
@@ -208,7 +208,7 @@ impl<'comments> Formatter<'comments> {
         let doc_comments = join(
             self.doc_comments
                 .iter()
-                .map(|comment| "///".to_doc().append(comment.content.to_string())),
+                .map(|comment| "///".to_doc().append(EcoString::from(comment.content))),
             line(),
         );
 
@@ -221,7 +221,7 @@ impl<'comments> Formatter<'comments> {
             let comments = self
                 .module_comments
                 .iter()
-                .map(|s| "////".to_doc().append(s.content.to_string()));
+                .map(|s| "////".to_doc().append(EcoString::from(s.content)));
             join(comments, line()).append(line())
         } else {
             nil()
@@ -633,7 +633,7 @@ impl<'comments> Formatter<'comments> {
             None => nil(),
             Some(_) => join(
                 comments.map(|c| match c {
-                    Some(c) => "///".to_doc().append(c.to_string()),
+                    Some(c) => "///".to_doc().append(EcoString::from(c)),
                     None => unreachable!("empty lines dropped by pop_doc_comments"),
                 }),
                 line(),
@@ -2622,7 +2622,7 @@ impl<'comments> Formatter<'comments> {
                 }
                 (_, None) => continue,
             };
-            doc.push("//".to_doc().append(c.to_string()));
+            doc.push("//".to_doc().append(EcoString::from(c)));
             match comments.peek() {
                 // Next line is a comment
                 Some((_, Some(_))) => doc.push(line()),
@@ -2743,7 +2743,7 @@ fn printed_comments<'a, 'comments>(
             Some(c) => c,
             None => continue,
         };
-        doc.push("//".to_doc().append(c.to_string()));
+        doc.push("//".to_doc().append(EcoString::from(c)));
         match comments.peek() {
             // Next line is a comment
             Some(Some(_)) => doc.push(line()),
@@ -2842,7 +2842,7 @@ where
         BitArrayOption::Unit { value, .. } => "unit"
             .to_doc()
             .append("(")
-            .append(format!("{value}"))
+            .append(eco_format!("{value}"))
             .append(")"),
     }
 }
