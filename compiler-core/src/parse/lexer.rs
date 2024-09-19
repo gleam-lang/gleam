@@ -1,3 +1,5 @@
+use ecow::EcoString;
+
 use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
@@ -705,7 +707,7 @@ where
             }
             _ => Kind::Comment,
         };
-        let mut content = String::new();
+        let mut content = EcoString::new();
         let start_pos = self.get_pos();
         while Some('\n') != self.chr0 {
             match self.chr0 {

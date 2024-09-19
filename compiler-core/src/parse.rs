@@ -213,7 +213,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
-    doc_comments: VecDeque<(u32, String)>,
+    doc_comments: VecDeque<(u32, EcoString)>,
 }
 impl<T> Parser<T>
 where

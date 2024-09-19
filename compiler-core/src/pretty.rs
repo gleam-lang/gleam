@@ -171,9 +171,9 @@ pub enum Document<'a> {
     /// Nests the given document to the current cursor position
     Group(Box<Self>),
 
-    /// A string to render
-    String {
-        string: String,
+    /// A str to render
+    Str {
+        string: &'a str,
         // The number of extended grapheme clusters in the string.
         // This is what the pretty printer uses as the width of the string as it
         // is closes to what a human would consider the "length" of a string.
@@ -184,9 +184,6 @@ pub enum Document<'a> {
         //
         graphemes: isize,
     },
-
-    /// A str to render
-    Str { string: &'a str, graphemes: isize },
 
     /// A string that is cheap to copy
     EcoString { string: EcoString, graphemes: isize },
@@ -329,9 +326,9 @@ fn fits(
 
             // When we run into a string we increase the current_width; looping
             // back we will check if we've exceeded the maximum allowed width.
-            Document::Str { graphemes, .. }
-            | Document::String { graphemes, .. }
-            | Document::EcoString { graphemes, .. } => current_width += graphemes,
+            Document::Str { graphemes, .. } | Document::EcoString { graphemes, .. } => {
+                current_width += graphemes
+            }
 
             // If we get to a break we need to first see if it has to be
             // rendered as its unbroken or broken string, depending on the mode.
@@ -485,11 +482,6 @@ fn format(
 
             // Strings are printed as they are and the current width is
             // increased accordingly.
-            Document::String { string, graphemes } => {
-                width += graphemes;
-                writer.str_write(string)?;
-            }
-
             Document::EcoString { string, graphemes } => {
                 width += graphemes;
                 writer.str_write(string)?;
@@ -674,7 +666,6 @@ impl<'a> Document<'a> {
         match self {
             Line(n) => *n == 0,
             EcoString { string, .. } => string.is_empty(),
-            String { string, .. } => string.is_empty(),
             Str { string, .. } => string.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
