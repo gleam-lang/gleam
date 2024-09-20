@@ -947,3 +947,21 @@ pub fn main() {
     .unwrap();
     insta::assert_debug_snapshot!(hover);
 }
+
+#[test]
+fn hover_type_alias() {
+    let code = "
+import html/internal
+pub type AliasedAttr = internal.Attribute
+
+pub fn checked() -> AliasedAttr {
+    internal.Attribute
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code)
+            .add_module("html/internal", "pub type Attribute { Attribute }"),
+        find_position_of("checked").under_last_char()
+    );
+}

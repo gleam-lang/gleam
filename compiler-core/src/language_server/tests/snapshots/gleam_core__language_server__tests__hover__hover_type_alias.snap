@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport html/internal\npub type AliasedAttr = internal.Attribute\n\npub fn checked() -> AliasedAttr {\n    internal.Attribute\n}\n"
+---
+import html/internal
+pub type AliasedAttr = internal.Attribute
+
+pub fn checked() -> AliasedAttr {
+▔▔▔▔▔▔▔▔▔▔▔▔▔↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔  
+    internal.Attribute
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> html/internal.Attribute\n```\n",
+    ),
+)
