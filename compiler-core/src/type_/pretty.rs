@@ -118,7 +118,7 @@ impl Printer {
                 let doc = match &self.context {
                     Some(ctx) => {
                         if module == "gleam" || &ctx.module == module {
-                            Document::String(name.into())
+                            Document::eco_string(name.clone())
                         } else {
                             let import_ = ctx.imports.iter().find(|i| &i.module == module);
 
@@ -127,9 +127,9 @@ impl Printer {
                                     import_.unqualified_types.iter().find(|u| &u.name == name);
 
                                 if let Some(u) = renamed_unqualified_import {
-                                    return Document::String(match u.as_name {
-                                        Some(ref renaming) => renaming.into(),
-                                        None => name.into(),
+                                    return Document::eco_string(match &u.as_name {
+                                        Some(renaming) => renaming.clone(),
+                                        None => name.clone(),
                                     });
                                 }
                             }

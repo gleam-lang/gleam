@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-assertion_line: 1019
 expression: hover
 ---
 Hover {

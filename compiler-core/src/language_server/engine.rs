@@ -1,7 +1,7 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
+        Arg, CustomType, Definition, ModuleConstant, SrcSpan, TypedExpr, TypedFunction,
         TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -12,7 +12,10 @@ use crate::{
     },
     line_numbers::LineNumbers,
     paths::ProjectPaths,
-    type_::{pretty::Printer, ModuleInterface, Type, TypeConstructor, ValueConstructorVariant},
+    type_::{
+        self, pretty::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
+        ValueConstructorVariant,
+    },
     Error, Result, Warning,
 };
 use camino::Utf8PathBuf;
@@ -488,11 +491,17 @@ where
                     location,
                 }) => this
                     .compiler
-                    .get_module_interface(module.as_str())
-                    .and_then(|module| {
+                    .get_module_interface(module_name.as_str())
+                    .and_then(|module_interface| {
                         if is_type {
-                            module.types.get(name).map(|t| {
-                                hover_for_annotation(*location, t.type_.as_ref(), Some(t), lines)
+                            module_interface.types.get(name).map(|t| {
+                                hover_for_annotation(
+                                    *location,
+                                    t.type_.as_ref(),
+                                    Some(t),
+                                    module,
+                                    lines,
+                                )
                             })
                         } else {
                             module_interface.values.get(name).map(|v| {
@@ -505,7 +514,7 @@ where
                             })
                         }
                     }),
-                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines)),
+                Located::Pattern(pattern) => Some(hover_for_pattern(pattern, module, lines)),
                 Located::PatternSpread {
                     spread_location,
                     arguments,
@@ -548,17 +557,13 @@ Unused labelled fields:
                         range,
                     })
                 }
-                Located::Expression(expression) => {
-                    let module = this.module_for_uri(&params.text_document.uri);
-
-                    Some(hover_for_expression(
-                        expression,
-                        lines,
-                        module,
-                        &this.hex_deps,
-                    ))
-                }
-                Located::Arg(arg) => Some(hover_for_function_argument(arg, lines)),
+                Located::Expression(expression) => Some(hover_for_expression(
+                    expression,
+                    lines,
+                    module,
+                    &this.hex_deps,
+                )),
+                Located::Arg(arg) => Some(hover_for_function_argument(arg, module, lines)),
                 Located::FunctionBody(_) => None,
                 Located::Annotation(annotation, type_) => {
                     let type_constructor = type_constructor_from_modules(
@@ -744,7 +749,7 @@ fn custom_type_symbol(type_: &CustomType<Arc<Type>>, line_numbers: &LineNumbers)
     }
 }
 
-fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers) -> Hover {
+fn hover_for_pattern(pattern: &TypedPattern, module: &Module, line_numbers: LineNumbers) -> Hover {
     let documentation = pattern.get_documentation().unwrap_or_default();
 
     // Show the type of the hovered node to the user
@@ -774,11 +779,12 @@ fn hover_for_function_head(
     module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
-    let documentation = fun.documentation.as_ref().unwrap_or(&empty_str);
-    let function_type = Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
-        retrn: fun.return_type.clone(),
-    };
+    let documentation = fun
+        .documentation
+        .as_ref()
+        .map(|(_, doc)| doc)
+        .unwrap_or(&empty_str);
+    let function_type = get_function_type(fun);
     let formatted_type = printer_from_module(module).pretty_print(&function_type, 0);
     let contents = format!(
         "```gleam
@@ -835,7 +841,7 @@ fn hover_for_module_constant(
     module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
-    let type_ = Printer::new().pretty_print(&constant.type_, 0);
+    let type_ = printer_from_module(module).pretty_print(&constant.type_, 0);
     let documentation = constant
         .documentation
         .as_ref()
