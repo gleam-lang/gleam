@@ -26,6 +26,7 @@ use crate::{
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use hexpm::version::{Range, Version};
+use itertools::Itertools;
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 use std::{
     collections::HashMap,
