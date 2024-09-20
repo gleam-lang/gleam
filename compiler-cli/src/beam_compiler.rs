@@ -67,8 +67,8 @@ impl BeamCompiler {
         let mut buf = String::new();
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
             match buf.trim() {
-                "ok" => return Ok(()),
-                "err" => {
+                "gleam-compile-result-ok" => return Ok(()),
+                "gleam-compile-result-error" => {
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
                         err: None,
