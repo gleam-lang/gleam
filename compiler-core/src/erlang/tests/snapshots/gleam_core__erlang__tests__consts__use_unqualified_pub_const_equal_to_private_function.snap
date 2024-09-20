@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 121
 expression: "\n              fn identity(a) {\n                a\n              }\n\n              pub const id = identity\n        "
 ---
 -module(my@mod).

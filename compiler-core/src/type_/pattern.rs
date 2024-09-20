@@ -56,15 +56,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         match &mut self.mode {
             PatternMode::Initial => {
-                // Register usage for the unused variable detection
-                self.environment.init_usage(
-                    name.into(),
-                    EntityKind::Variable {
-                        how_to_ignore: Some(format!("_{name}").into()),
-                    },
-                    location,
-                    self.problems,
-                );
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
@@ -75,15 +66,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 let _ = self.initial_pattern_vars.insert(name.into());
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
-                self.environment
-                    .insert_local_variable(name.into(), location, type_);
+                let variable_index = self.environment.register_variable();
+                self.environment.insert_local_variable(
+                    name.into(),
+                    location,
+                    type_,
+                    Some(variable_index),
+                );
                 Ok(())
             }
 
             PatternMode::Alternative(assigned) => {
                 match self.environment.scope.get(name) {
                     // This variable was defined in the Initial multi-pattern
-                    Some(initial) if self.initial_pattern_vars.contains(name) => {
+                    Some((_, initial)) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.into());
                         let initial_typ = initial.type_.clone();
                         unify(initial_typ, type_)
@@ -264,7 +260,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::VarUsage { name, location, .. } => {
                 let vc = self
                     .environment
-                    .get_variable(&name)
+                    .get_variable(&name, &location)
                     .cloned()
                     .ok_or_else(|| Error::UnknownVariable {
                         location,
@@ -276,7 +272,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .keys()
                             .any(|type_| type_ == &name),
                     })?;
-                self.environment.increment_usage(&name);
                 let type_ =
                     self.environment
                         .instantiate(vc.type_.clone(), &mut hashmap![], self.hydrator);
@@ -462,12 +457,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 spread,
                 ..
             } => {
-                // Register the value as seen for detection of unused values
-                self.environment.increment_usage(&name);
-
                 let cons = self
                     .environment
-                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name)
+                    .get_value_constructor(
+                        module.as_ref().map(|(module, _)| module),
+                        &name,
+                        &location,
+                    )
                     .map_err(|e| {
                         convert_get_value_constructor_error(
                             e,

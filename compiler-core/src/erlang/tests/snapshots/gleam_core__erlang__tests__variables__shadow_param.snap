@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/variables.rs
-assertion_line: 23
 expression: "pub fn main(board) {\nfn(board) { board }\n  board\n}"
 ---
 -module(my@mod).

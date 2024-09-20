@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
-assertion_line: 72
 expression: "\n        pub type Wibble(a, b) {\n            Wibble(a, b)\n        }\n\n        pub fn wibble() -> Wibble(a, a) {\n            todo\n        }\n        "
 ---
 -module(my@mod).

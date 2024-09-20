@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 39
 expression: "\npub fn main() {\n  use <- trip(1.0, \"\")\n  123\n}\n\nfn trip(x, y, f) {\n  let z = f()\n  #(x, y, z)\n}\n"
 ---
 -module(my@mod).

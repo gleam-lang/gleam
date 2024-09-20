@@ -458,6 +458,25 @@ pub const make_two = one.Two
     );
 }
 
+#[test]
+fn imported_construct_same_name_in_type_alias() {
+    assert_warning!(
+        ("thepackage", "wibble", "pub type Wibble { Wibble(String) }"),
+        "
+import wibble.{Wibble}
+
+type Wibble =
+  Int
+
+pub fn main() {
+  let _ = Wibble
+  1
+}
+
+"
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2050
 #[test]
 fn double_unary_integer_literal() {
@@ -983,12 +1002,25 @@ fn unused_module_wuth_alias_warning_test() {
 }
 
 #[test]
-fn unused_alias_warning_test() {
+fn unused_private_alias_warning_test() {
     assert_warnings_with_imports!(
         ("gleam/wibble", "pub const one = 1");
         r#"
             import gleam/wibble.{one} as wobble
+            // Since the import is only used for unused private variables
+            // It is also considered unused
             const one = one
+        "#,
+    );
+}
+
+#[test]
+fn unused_public_alias_warning_test() {
+    assert_warnings_with_imports!(
+        ("gleam/wibble", "pub const one = 1");
+        r#"
+            import gleam/wibble.{one} as wobble
+            pub const one = one
         "#,
     );
 }

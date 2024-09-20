@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/pipes.rs
-assertion_line: 122
 expression: "\npub fn main() {\n  123\n  |> two(\n    1 |> two(2),\n    _,\n  )\n}\n\npub fn two(a, b) {\n  a\n}\n"
 ---
 -module(my@mod).

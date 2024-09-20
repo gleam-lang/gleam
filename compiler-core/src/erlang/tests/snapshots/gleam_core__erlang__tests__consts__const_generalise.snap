@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 53
 expression: "\nfn identity(a: a) -> a {\na\n}\n\nconst id  = identity\n\npub fn main(){\n  let num  = id(1)\n  let word = id(\"Word\")\n}"
 ---
 -module(my@mod).

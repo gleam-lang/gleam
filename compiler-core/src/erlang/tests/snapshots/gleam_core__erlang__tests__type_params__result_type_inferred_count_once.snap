@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/type_params.rs
-assertion_line: 5
 expression: "\n        fn wibble() {\n            let assert Ok(_) = wobble()\n        }\n\n        type Wobble(a) {\n            Wobble\n        }\n\n        fn wobble() -> Result(a, Wobble(a)) {\n            todo\n        }\n        "
 ---
 -module(my@mod).

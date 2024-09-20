@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport wibble.{Wibble}\n\ntype Wibble =\n  Int\n\npub fn main() {\n  let _ = Wibble\n  1\n}\n\n"
+---
+warning: Unused private type
+  ┌─ /src/warning/wrn.gleam:4:1
+  │  
+4 │ ╭ type Wibble =
+5 │ │   Int
+  │ ╰─────^ This private type is never used
+
+Hint: You can safely remove it.
