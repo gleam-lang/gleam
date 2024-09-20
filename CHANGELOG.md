@@ -4,10 +4,9 @@
 
 ### Build tool
 
-- `gleam new` now takes an optional `--template` flag (with options `erlang`
-  and `javascript`) to specify the template and target for the generated
-  project.
-  ([Mohammed Khouni](https://github.com/Tar-Tarus)
+- The `--template` flag for `gleam new` takes the values `erlang` and
+  `javascript` to specify what target to use, with `erlang` being the default.
+  ([Mohammed Khouni](https://github.com/Tar-Tarus))
 
 ### Compiler
 
