@@ -14,8 +14,8 @@ compile_package_loop() ->
             % $\x1f is the "unit separator" character
             Args = string:split(string:trim(Line), "\x1f", all),
             case compile_package(Args) of
-                ok -> io:put_chars("ok\n");
-                err -> io:put_chars("err\n")
+                ok -> io:put_chars("gleam-compile-result-ok\n");
+                err -> io:put_chars("gleam-compile-result-error\n")
             end,
             compile_package(Args),
             compile_package_loop()
