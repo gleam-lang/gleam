@@ -1748,7 +1748,7 @@ fn get_type_dependencies(type_: &TypeAst) -> Vec<EcoString> {
             ..
         }) => {
             deps.push(match module {
-                Some((module, _)) => format!("{}.{}", name, module).into(),
+                Some((module, _)) => format!("{name}.{module}").into(),
                 None => name.clone(),
             });
 

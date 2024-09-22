@@ -129,15 +129,12 @@ where
             Some(locked_version) => {
                 let compatible = range
                     .to_pubgrub()
-                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {}", e)))?
+                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {e}")))?
                     .contains(locked_version);
                 if !compatible {
                     return Err(ResolutionError::Failure(format!(
-                        "{package} is specified with the requirement `{requirement}`, \
-but it is locked to {version}, which is incompatible.",
-                        package = name,
-                        requirement = range,
-                        version = locked_version,
+                        "{name} is specified with the requirement `{range}`, \
+but it is locked to {locked_version}, which is incompatible.",
                     )));
                 }
             }
@@ -658,7 +655,7 @@ mod tests {
             msg,
             "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
         ),
-        _ => panic!("wrong error: {}", err),
+        _ => panic!("wrong error: {err}"),
         }
     }
 

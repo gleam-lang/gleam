@@ -196,12 +196,12 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     Token::CommentDoc { .. } => "a comment".to_string(),
                     Token::DiscardName { .. } => "a discard name".to_string(),
                     Token::Name { .. } | Token::UpName { .. } => "a name".to_string(),
-                    _ if token.is_reserved_word() => format!("the keyword {}", token),
+                    _ if token.is_reserved_word() => format!("the keyword {token}"),
                     _ => token.to_string(),
                 };
 
                 let messages = std::iter::once(format!("Found {found}, expected one of: "))
-                    .chain(expected.iter().map(|s| format!("- {}", s)));
+                    .chain(expected.iter().map(|s| format!("- {s}")));
 
                 let messages = match hint {
                     Some(hint_text) => messages
