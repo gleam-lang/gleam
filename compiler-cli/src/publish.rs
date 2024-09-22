@@ -73,7 +73,7 @@ impl PublishCommand {
         }
         println!("\nSource files:");
         for file in src_files_added.iter().sorted() {
-            println!("  - {}", file);
+            println!("  - {file}");
         }
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);

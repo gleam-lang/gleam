@@ -241,7 +241,7 @@ fn run_javascript_deno(
 
     // Enable location API
     if let Some(location) = &config.javascript.deno.location {
-        args.push(format!("--location={}", location));
+        args.push(format!("--location={location}"));
     }
 
     // Set deno permissions

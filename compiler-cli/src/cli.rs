@@ -70,7 +70,7 @@ pub fn ask(question: &str) -> Result<String, Error> {
 }
 
 pub fn confirm(question: &str) -> Result<bool, Error> {
-    let answer = ask(&format!("{question} [y/n]", question = question))?;
+    let answer = ask(&format!("{question} [y/n]"))?;
     match answer.as_str() {
         "y" | "yes" | "Y" | "YES" => Ok(true),
         _ => Ok(false),

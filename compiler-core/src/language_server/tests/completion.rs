@@ -100,27 +100,27 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
         buffer.push_str(&label);
 
         if let Some(kind) = kind {
-            write!(buffer, "\n  kind:   {:?}", kind).unwrap();
+            write!(buffer, "\n  kind:   {kind:?}").unwrap();
         }
 
         if let Some(detail) = detail {
-            write!(buffer, "\n  detail: {}", detail).unwrap();
+            write!(buffer, "\n  detail: {detail}").unwrap();
         }
 
         if let Some(sort_text) = sort_text {
-            write!(buffer, "\n  sort:   {}", sort_text).unwrap();
+            write!(buffer, "\n  sort:   {sort_text}").unwrap();
         }
 
         if let Some(label_details) = label_details {
             assert!(label_details.detail.is_none());
             if let Some(desc) = label_details.description {
-                write!(buffer, "\n  desc:   {}", desc).unwrap();
+                write!(buffer, "\n  desc:   {desc}").unwrap();
             }
         }
 
         if let Some(documentation) = documentation {
             let lsp_types::Documentation::MarkupContent(m) = documentation else {
-                panic!("unexpected docs in test {:?}", documentation);
+                panic!("unexpected docs in test {documentation:?}");
             };
             match m.kind {
                 lsp_types::MarkupKind::Markdown => (),
@@ -141,7 +141,7 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
 
         if let Some(text_edit) = text_edit {
             let lsp_types::CompletionTextEdit::Edit(e) = text_edit else {
-                panic!("unexpected text edit in test {:?}", text_edit);
+                panic!("unexpected text edit in test {text_edit:?}");
             };
             buffer.push_str("\n  edits:");
             edit(&mut buffer, e);
@@ -1350,7 +1350,7 @@ fn internal_modules_from_same_package_are_included() {
 pub fn main() {
   0
 }";
-    let internal_name = format!("{}/internal", LSP_TEST_ROOT_PACKAGE_NAME);
+    let internal_name = format!("{LSP_TEST_ROOT_PACKAGE_NAME}/internal");
 
     assert_completion!(
         TestProject::for_source(code)

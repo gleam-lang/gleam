@@ -523,8 +523,8 @@ where
 
                         let type_ = Printer::new().pretty_print(argument.value.type_().as_ref(), 0);
                         match &argument.label {
-                            Some(label) => labelled.push(format!("- `{}: {}`", label, type_)),
-                            None => positional.push(format!("- `{}`", type_)),
+                            Some(label) => labelled.push(format!("- `{label}: {type_}`")),
+                            None => positional.push(format!("- `{type_}`")),
                         }
                     }
 
@@ -1084,7 +1084,7 @@ fn code_action_fix_names(
                 new_text: correction.to_string(),
             };
 
-            CodeActionBuilder::new(&format!("Rename to {}", correction))
+            CodeActionBuilder::new(&format!("Rename to {correction}"))
                 .kind(lsp_types::CodeActionKind::QUICKFIX)
                 .changes(uri.clone(), vec![edit])
                 .preferred(true)

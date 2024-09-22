@@ -636,7 +636,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                         self.push_byte_at(offset.bytes);
                                         self.push_equality_check(
                                             subject.clone(),
-                                            EcoString::from(format!("0x{:X}", byte)).to_doc(),
+                                            EcoString::from(format!("0x{byte:X}")).to_doc(),
                                         );
                                         self.pop();
                                         offset.increment(1);
