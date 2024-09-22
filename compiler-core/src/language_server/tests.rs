@@ -223,9 +223,7 @@ impl CommandExecutor for LanguageServerTestIO {
         cwd: Option<&Utf8Path>,
         stdio: crate::io::Stdio,
     ) -> Result<i32> {
-        panic!(
-            "exec({program:?}, {args:?}, {env:?}, {cwd:?}, {stdio:?}) is not implemented"
-        )
+        panic!("exec({program:?}, {args:?}, {env:?}, {cwd:?}, {stdio:?}) is not implemented")
     }
 }
 
