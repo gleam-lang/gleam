@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn resolution_error_message() {
-        let result = resolve_versions(
+        let _ = resolve_versions(
             interesting_remote(),
             HashMap::new(),
             "app".into(),

@@ -14,6 +14,7 @@ use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
+use pubgrub::range::Range;
 use pubgrub::report::{DerivationTree, Derived, External};
 use pubgrub::version::Version;
 use std::collections::HashSet;
@@ -412,6 +413,10 @@ fn derivation_tree_to_pretty_error_message(
 ) -> String {
     derivation_tree.collapse_no_versions();
     let derivation_tree = simplify_error(derivation_tree);
+
+    // TODO))
+    // This order is not deterministic, so sometimes it will default to the
+    // original version even though it's almost the same!!
     match &derivation_tree {
         DerivationTree::Derived(Derived { cause1, cause2, .. }) => {
             match (cause1.as_ref(), cause2.as_ref()) {
@@ -443,14 +448,20 @@ fn derivation_tree_to_pretty_error_message(
                         && maybe_root_range == root_range
                         && maybe_dep == dep =>
                     {
+                        // TODO))
+                        // The default look of ranges is confusing and we want to switch
+                        // to one more similar to Gleam's constraints.
+                        // However, at the moment there's no way of doing this:
+                        // https://github.com/pubgrub-rs/pubgrub/issues/258
+                        //
                         wrap_format!(
                             "Unable to find compatible versions for the version \
-constraints in your gleam.toml.
+constraints in your gleam.toml:
 
 - `{root}` requires `{common}` to be `{common_range}`
 - and all versions of `{common}` in that range require `{dep}` to be `{dep_range_from_common}`
 - but `{root}` also requires `{dep}` to be `{dep_range_from_root}`
-- and there is no version of `{dep}` that satiesfies both constraints
+- and there is no version of `{dep}` that satisfies both constraints
 "
                         )
                     }
