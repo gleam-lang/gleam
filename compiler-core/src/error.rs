@@ -473,7 +473,6 @@ fn derivation_tree_to_default_error_message(
     let mut conflicting_packages = HashSet::new();
     collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
 
-    pprint_error(0, &derivation_tree);
     wrap_format!(
         "Unable to find compatible versions for the version constraints in \
 your gleam.toml. The conflicting packages are:
