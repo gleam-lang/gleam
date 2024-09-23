@@ -1,3 +1,4 @@
+use bimap::BiMap;
 use ecow::EcoString;
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
@@ -42,7 +43,7 @@ pub struct Names {
     /// - key:   `("some/module", "Wibble")`
     /// - value: `"Wobble"`
     ///
-    local_types: HashMap<(EcoString, EcoString), EcoString>,
+    local_types: BiMap<(EcoString, EcoString), EcoString>,
 
     /// Mapping of imported modules to their locally used named
     ///
@@ -157,9 +158,21 @@ impl Names {
         type_name: EcoString,
         local_alias: EcoString,
     ) {
+        _ = self.local_types.remove_by_right(&local_alias);
         _ = self
             .local_types
             .insert((module_name, type_name), local_alias);
+    }
+
+    pub fn type_in_scope(&mut self, local_alias: EcoString, type_: &Type) {
+        match type_ {
+            Type::Named { module, name, .. } => {
+                self.named_type_in_scope(module.clone(), name.clone(), local_alias);
+            }
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+                _ = self.local_types.remove_by_right(&local_alias);
+            }
+        }
     }
 
     /// Record a type variable in this module.
@@ -191,7 +204,7 @@ impl Names {
 
         // Only check for local aliases if we want to print aliases
         // There is a local name for this type, use that.
-        if let Some(name) = self.local_types.get(&key) {
+        if let Some(name) = self.local_types.get_by_left(&key) {
             return NameContextInformation::Unqualified(name.as_str());
         }
 
