@@ -1181,27 +1181,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
 
-            if let Type::Named {
-                module,
-                name: type_name,
-                args,
-                ..
-            } = type_.as_ref()
-            {
-                // If the alias or type itself have any parameters, it requires a
-                // lot of work to reconstruct and correctly print the alias,
-                // so we just don't register it.
-                //
-                // Maybe in future we could do this extra work, but for the time
-                // being, it's simpler not to.
-                if parameters.is_empty() && args.is_empty() {
-                    environment.names.named_type_in_scope(
-                        module.clone(),
-                        type_name.clone(),
-                        name.clone(),
-                    );
-                }
-            }
+            environment
+                .names
+                .type_in_scope(name.clone(), type_.as_ref());
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(

@@ -4,7 +4,7 @@ use crate::{
     ast::{SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
     type_::{
-        EntityKind, Environment, Error, ModuleInterface, Problems, Type, UnusedModuleAlias,
+        EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
         ValueConstructorVariant,
     },
 };
@@ -95,14 +95,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         let type_info = type_info.clone().with_location(import.location);
 
-        // We only register types if they are named
-        if let Type::Named { module, name, .. } = type_info.type_.as_ref() {
-            self.environment.names.named_type_in_scope(
-                module.clone(),
-                name.clone(),
-                imported_name.clone(),
-            );
-        }
+        self.environment
+            .names
+            .type_in_scope(imported_name.clone(), type_info.type_.as_ref());
 
         if let Err(e) = self
             .environment

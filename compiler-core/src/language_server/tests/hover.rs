@@ -20,7 +20,7 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
     // When we display the over range the end character is always excluded!
     let end = Position::new(end.line, end.character);
 
-    let mut str: String = "".into();
+    let mut buffer: String = "".into();
     for (line_number, line) in code.lines().enumerate() {
         let mut underline: String = "".into();
         let mut underline_empty = true;
@@ -38,15 +38,15 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
             }
         }
 
-        str.push_str(line);
+        buffer.push_str(line);
         if !underline_empty {
-            str.push('\n');
-            str.push_str(&underline);
+            buffer.push('\n');
+            buffer.push_str(&underline);
         }
-        str.push('\n');
+        buffer.push('\n');
     }
 
-    str
+    buffer
 }
 
 #[macro_export]
