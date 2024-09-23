@@ -474,6 +474,75 @@ mod tests {
         Box::new(Remote { deps })
     }
 
+    fn interesting_remote() -> Box<Remote> {
+        let release = |version, requirements: Vec<(&str, &str)>| Release {
+            version: Version::try_from(version).unwrap(),
+            requirements: requirements
+                .iter()
+                .map(|(name, range)| {
+                    (
+                        name.to_string(),
+                        Dependency {
+                            requirement: Range::new(range.to_string()),
+                            optional: false,
+                            app: None,
+                            repository: None,
+                        },
+                    )
+                })
+                .collect(),
+            retirement_status: None,
+            outer_checksum: vec![1, 2, 3],
+            meta: (),
+        };
+
+        let mut deps = HashMap::new();
+        let _ = deps.insert(
+            "wibble".into(),
+            hexpm::Package {
+                name: "wibble".into(),
+                repository: "hexpm".into(),
+                releases: vec![
+                    release("0.1.0", vec![("wobble", ">= 1.0.0")]),
+                    release("0.2.0", vec![("wobble", ">= 2.0.0")]),
+                    release("1.0.0", vec![("wobble", ">= 1.3.0")]),
+                    release("1.2.0", vec![("wobble", ">= 1.2.0")]),
+                    release("1.3.0", vec![("wobble", ">= 1.2.0")]),
+                ],
+            },
+        );
+        let _ = deps.insert(
+            "wobble".into(),
+            hexpm::Package {
+                name: "wibble".into(),
+                repository: "hexpm".into(),
+                releases: vec![
+                    release("1.1.0", vec![]),
+                    release("1.5.0", vec![]),
+                    release("2.0.0", vec![]),
+                ],
+            },
+        );
+
+        Box::new(Remote { deps })
+    }
+
+    #[test]
+    fn resolution_error_message() {
+        let result = resolve_versions(
+            interesting_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![
+                ("wibble".into(), Range::new(">= 1.0.0 and < 2.0.0".into())),
+                ("wobble".into(), Range::new("< 1.5.0".into())),
+            ]
+            .into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+    }
+
     #[test]
     fn resolution_with_locked() {
         let locked_stdlib = ("gleam_stdlib".into(), Version::parse("0.1.0").unwrap());

@@ -14,7 +14,7 @@ use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
-use pubgrub::report::DerivationTree;
+use pubgrub::report::{DerivationTree, Derived, External};
 use pubgrub::version::Version;
 use std::collections::HashSet;
 use std::env;
@@ -359,48 +359,9 @@ impl Error {
     }
 
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
-        fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-            derivation_tree: &'dt DerivationTree<P, V>,
-            conflicting_packages: &mut HashSet<&'dt P>,
-        ) {
-            match derivation_tree {
-                DerivationTree::External(external) => match external {
-                    pubgrub::report::External::NotRoot(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::NoVersions(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::UnavailableDependencies(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                        let _ = conflicting_packages.insert(dep_package);
-                    }
-                },
-                DerivationTree::Derived(derived) => {
-                    collect_conflicting_packages(&derived.cause1, conflicting_packages);
-                    collect_conflicting_packages(&derived.cause2, conflicting_packages);
-                }
-            }
-        }
-
         Self::DependencyResolutionFailed(match error {
-            ResolutionError::NoSolution(mut derivation_tree) => {
-                derivation_tree.collapse_no_versions();
-
-                let mut conflicting_packages = HashSet::new();
-                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
-
-                wrap_format!("Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
-
-{}
-",
-                    conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n"))
-            }
+            ResolutionError::NoSolution(derivation_tree) =>
+                derivation_tree_to_pretty_error_message(derivation_tree),
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
@@ -443,6 +404,215 @@ The conflicting packages are:
         Self::ExpandTar {
             error: error.to_string(),
         }
+    }
+}
+
+fn derivation_tree_to_pretty_error_message(
+    mut derivation_tree: DerivationTree<String, hexpm::version::Version>,
+) -> String {
+    derivation_tree.collapse_no_versions();
+    let derivation_tree = simplify_error(derivation_tree);
+    match &derivation_tree {
+        DerivationTree::Derived(Derived { cause1, cause2, .. }) => {
+            match (cause1.as_ref(), cause2.as_ref()) {
+                (
+                    DerivationTree::Derived(Derived { cause1, cause2, .. }),
+                    DerivationTree::External(External::FromDependencyOf(
+                        root,
+                        root_range,
+                        dep,
+                        dep_range,
+                    )),
+                ) => match (cause1.as_ref(), cause2.as_ref()) {
+                    (
+                        DerivationTree::External(External::FromDependencyOf(
+                            maybe_common,
+                            maybe_common_range,
+                            maybe_dep,
+                            dep_range_from_common,
+                        )),
+                        DerivationTree::External(External::FromDependencyOf(
+                            maybe_root,
+                            maybe_root_range,
+                            common,
+                            common_range,
+                        )),
+                    ) if maybe_common == common
+                        && maybe_common_range == common_range
+                        && maybe_root == root
+                        && maybe_root_range == root_range
+                        && maybe_dep == dep =>
+                    {
+                        format!(
+                            "Unable to find compatible versions for the version \
+constraints in your gleam.toml.
+
+- `{root}` requires `{dep}` with a version `{dep_range}`.
+- But `{root}` also requires `{common}` with a version `{common_range}`.
+  - And all `{common}` versions in that range require `{dep}` with a version in range `{dep_range_from_common}`,
+    which is incompatible with the previous range!
+"
+                        )
+                    }
+                    _ => derivation_tree_to_default_error_message(derivation_tree),
+                },
+                _ => derivation_tree_to_default_error_message(derivation_tree),
+            }
+        }
+        // In case we can't figure out a good way to display the constraint
+        // failure then we just use a default error message that just lists the
+        // conflicting packages; leaving to the user to figure out what went
+        // wrong.
+        _ => derivation_tree_to_default_error_message(derivation_tree),
+    }
+}
+
+fn derivation_tree_to_default_error_message(
+    derivation_tree: DerivationTree<String, hexpm::version::Version>,
+) -> String {
+    let mut conflicting_packages = HashSet::new();
+    collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
+
+    pprint_error(0, &derivation_tree);
+    wrap_format!(
+        "Unable to find compatible versions for the version constraints in \
+your gleam.toml. The conflicting packages are:
+
+{}
+",
+        conflicting_packages
+            .into_iter()
+            .map(|s| format!("- {}", s))
+            .join("\n")
+    )
+}
+
+fn pprint_error<'dt, P: Package, V: Version>(
+    nest: usize,
+    derivation_tree: &'dt DerivationTree<P, V>,
+) {
+    match derivation_tree {
+        DerivationTree::External(external) => match external {
+            External::NotRoot(_, _) => panic!(),
+            External::NoVersions(_, _) => panic!(),
+            External::UnavailableDependencies(_, _) => panic!(),
+            External::FromDependencyOf(p1, range1, p2, range2) => {
+                let nesting = " ".repeat(nest);
+                print!(
+                    "{nesting}FromDepOf {{
+{nesting}  {p1}: {range1},
+{nesting}  {p2}: {range2},
+{nesting}}}"
+                )
+            }
+        },
+
+        DerivationTree::Derived(Derived {
+            terms: _,
+            shared_id: _,
+            cause1,
+            cause2,
+        }) => {
+            let nesting = " ".repeat(nest);
+            print!(
+                "{nesting}Derived {{
+{nesting}  cause1: "
+            );
+            pprint_error(nest + 2, cause1.as_ref());
+            print!(
+                ",
+{nesting}  cause2: "
+            );
+            pprint_error(nest + 2, cause2.as_ref());
+            print!(
+                ",
+{nesting}}}",
+            )
+        }
+    }
+}
+
+fn collect_conflicting_packages<'dt, P: Package, V: Version>(
+    derivation_tree: &'dt DerivationTree<P, V>,
+    conflicting_packages: &mut HashSet<&'dt P>,
+) {
+    match derivation_tree {
+        DerivationTree::External(external) => match external {
+            External::NotRoot(package, _) => {
+                let _ = conflicting_packages.insert(package);
+            }
+            External::NoVersions(package, _) => {
+                let _ = conflicting_packages.insert(package);
+            }
+            External::UnavailableDependencies(package, _) => {
+                let _ = conflicting_packages.insert(package);
+            }
+            External::FromDependencyOf(package, _, dep_package, _) => {
+                let _ = conflicting_packages.insert(package);
+                let _ = conflicting_packages.insert(dep_package);
+            }
+        },
+        DerivationTree::Derived(derived) => {
+            collect_conflicting_packages(&derived.cause1, conflicting_packages);
+            collect_conflicting_packages(&derived.cause2, conflicting_packages);
+        }
+    }
+}
+
+fn simplify_error<'dt, P: Package, V: Version>(
+    derivation_tree: DerivationTree<P, V>,
+) -> DerivationTree<P, V> {
+    match derivation_tree {
+        DerivationTree::External(_) => derivation_tree,
+        DerivationTree::Derived(Derived {
+            cause1,
+            cause2,
+            terms,
+            shared_id,
+        }) => merge_trees_step(
+            simplify_error(*cause1),
+            simplify_error(*cause2),
+            terms,
+            shared_id,
+        ),
+    }
+}
+
+fn merge_trees_step<'dt, P: Package, V: Version>(
+    one: DerivationTree<P, V>,
+    other: DerivationTree<P, V>,
+    terms: pubgrub::type_aliases::Map<P, pubgrub::term::Term<V>>,
+    shared_id: Option<usize>,
+) -> DerivationTree<P, V> {
+    match (one, other) {
+        (
+            DerivationTree::External(External::FromDependencyOf(
+                cause1_p1,
+                cause1_r1,
+                cause1_p2,
+                cause1_r2,
+            )),
+            DerivationTree::External(External::FromDependencyOf(
+                cause2_p1,
+                cause2_r1,
+                cause2_p2,
+                cause2_r2,
+            )),
+        ) if cause1_p1 == cause2_p1 && cause1_p2 == cause2_p2 => {
+            DerivationTree::External(External::FromDependencyOf(
+                cause1_p1,
+                cause1_r1.union(&cause2_r1),
+                cause1_p2,
+                cause1_r2.intersection(&cause2_r2),
+            ))
+        }
+
+        (cause1, cause2) => DerivationTree::Derived(Derived {
+            cause1: Box::new(cause1),
+            cause2: Box::new(cause2),
+            terms,
+            shared_id,
+        }),
     }
 }
 
