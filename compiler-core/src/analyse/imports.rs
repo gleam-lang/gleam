@@ -102,8 +102,6 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 name.clone(),
                 imported_name.clone(),
             );
-        } else {
-            self.environment.names.type_exists_in_scope(imported_name);
         }
 
         if let Err(e) = self

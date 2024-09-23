@@ -1200,14 +1200,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         type_name.clone(),
                         name.clone(),
                     );
-                } else {
-                    // We need to make sure we register the type as existing, even if we don't define
-                    // the underlying type for printing, because these types do still affect printing,
-                    // for shadowing prelude types, even if they aren't printed at all.
-                    environment.names.type_exists_in_scope(name);
                 }
-            } else {
-                environment.names.type_exists_in_scope(name);
             }
 
             // Insert the alias so that it can be used by other code.
