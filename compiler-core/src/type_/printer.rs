@@ -4,8 +4,6 @@ use std::{collections::HashSet, sync::Arc};
 
 use crate::type_::{Type, TypeVar};
 
-use super::PRELUDE_MODULE_NAME;
-
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
 ///
@@ -45,11 +43,6 @@ pub struct Names {
     /// - value: `"Wobble"`
     ///
     local_types: HashMap<(EcoString, EcoString), EcoString>,
-
-    /// Types which exist in the prelude, and haven't been shadowed by a local type.
-    /// These are a special case, because they are unqualified by default, but can be
-    /// shadowed and then must be qualified.
-    unshadowed_prelude_types: HashSet<EcoString>,
 
     /// Mapping of imported modules to their locally used named
     ///
@@ -150,7 +143,6 @@ impl Names {
     pub fn new() -> Self {
         Self {
             local_types: Default::default(),
-            unshadowed_prelude_types: Default::default(),
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_value_constructors: Default::default(),
@@ -165,26 +157,9 @@ impl Names {
         type_name: EcoString,
         local_alias: EcoString,
     ) {
-        self.type_exists_in_scope(&local_alias);
         _ = self
             .local_types
             .insert((module_name, type_name), local_alias);
-    }
-
-    /// Record a type existing in the current module. This is for types
-    /// which define a name in the current scope, but do not represent a
-    /// named type (aliases). This exists so we can correctly print
-    /// prelude types, even if they are shadowed by an alias like:
-    /// ```gleam
-    /// type Pair = #(String, Int)
-    /// ```
-    pub fn type_exists_in_scope(&mut self, name: &EcoString) {
-        // If this is a type in the prelude, it is now shadowed.
-        _ = self.unshadowed_prelude_types.remove(name);
-    }
-
-    pub fn prelude_type(&mut self, name: EcoString) {
-        _ = self.unshadowed_prelude_types.insert(name);
     }
 
     /// Record a type variable in this module.
@@ -217,10 +192,6 @@ impl Names {
         // Only check for local aliases if we want to print aliases
         // There is a local name for this type, use that.
         if let Some(name) = self.local_types.get(&key) {
-            return NameContextInformation::Unqualified(name.as_str());
-        }
-
-        if module == PRELUDE_MODULE_NAME && self.unshadowed_prelude_types.contains(name) {
             return NameContextInformation::Unqualified(name.as_str());
         }
 
@@ -479,7 +450,7 @@ fn test_local_type() {
 #[test]
 fn test_prelude_type() {
     let mut names = Names::new();
-    names.prelude_type("Int".into());
+    names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Named {
@@ -497,7 +468,7 @@ fn test_prelude_type() {
 fn test_shadowed_prelude_type() {
     let mut names = Names::new();
 
-    names.prelude_type("Int".into());
+    names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
     names.named_type_in_scope("mod".into(), "Int".into(), "Int".into());
 
     let mut printer = Printer::new(&names);
@@ -573,8 +544,8 @@ fn test_tuple_type() {
 #[test]
 fn test_fn_type() {
     let mut names = Names::new();
-    names.prelude_type("Int".into());
-    names.prelude_type("Bool".into());
+    names.named_type_in_scope("gleam".into(), "Int".into(), "Int".into());
+    names.named_type_in_scope("gleam".into(), "Bool".into(), "Bool".into());
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Fn {

@@ -54,7 +54,6 @@ Parsed {
         ],
         names: Names {
             local_types: {},
-            unshadowed_prelude_types: {},
             imported_modules: {},
             type_variables: {},
             local_value_constructors: {},
