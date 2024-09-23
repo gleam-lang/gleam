@@ -421,7 +421,7 @@ fn derivation_tree_to_pretty_error_message(
                         root,
                         root_range,
                         dep,
-                        dep_range,
+                        dep_range_from_root,
                     )),
                 ) => match (cause1.as_ref(), cause2.as_ref()) {
                     (
@@ -443,14 +443,14 @@ fn derivation_tree_to_pretty_error_message(
                         && maybe_root_range == root_range
                         && maybe_dep == dep =>
                     {
-                        format!(
+                        wrap_format!(
                             "Unable to find compatible versions for the version \
 constraints in your gleam.toml.
 
-- `{root}` requires `{dep}` with a version `{dep_range}`.
-- But `{root}` also requires `{common}` with a version `{common_range}`.
-  - And all `{common}` versions in that range require `{dep}` with a version in range `{dep_range_from_common}`,
-    which is incompatible with the previous range!
+- `{root}` requires `{common}` to be `{common_range}`
+- and all versions of `{common}` in that range require `{dep}` to be `{dep_range_from_common}`
+- but `{root}` also requires `{dep}` to be `{dep_range_from_root}`
+- and there is no version of `{dep}` that satiesfies both constraints
 "
                         )
                     }
