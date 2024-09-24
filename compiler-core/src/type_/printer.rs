@@ -113,31 +113,7 @@ pub struct Names {
     /// - key:   `("wibble", "Wobble")`
     /// - value: `"Woo"`
     ///
-    local_value_constructors: HashMap<(EcoString, EcoString), EcoString>,
-
-    /// A map from local constructor names to the modules which they refer to.
-    /// This helps resolve cases like:
-    /// ```gleam
-    /// import wibble.{Wobble}
-    /// type Wibble { Wobble }
-    /// ```
-    /// Here, `Wobble` is shadowed, causing `Wobble` not to be valid syntax
-    /// for `wibble.Wobble`.
-    ///
-    /// Each key is the local name of the constructor, and the value is the module
-    /// for which the unqualified version is valid. In the above example,
-    /// it would result in
-    /// - key:   `"Wobble"`
-    /// - value: `"module"` (Whatever the current module is)
-    ///
-    /// But in this case:
-    /// ```gleam
-    /// import wibble.{Wobble as Wubble}
-    /// type Wibble { Wobble }
-    /// ```
-    /// No shadowing occurs, so this isn't needed.
-    ///
-    constructor_names: HashMap<EcoString, EcoString>,
+    local_value_constructors: BiMap<(EcoString, EcoString), EcoString>,
 }
 
 impl Names {
@@ -147,7 +123,6 @@ impl Names {
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_value_constructors: Default::default(),
-            constructor_names: Default::default(),
         }
     }
 
@@ -223,10 +198,10 @@ impl Names {
         value_name: EcoString,
         local_alias: EcoString,
     ) {
+        _ = self.local_value_constructors.remove_by_right(&local_alias);
         _ = self
             .local_value_constructors
             .insert((module_name.clone(), value_name), local_alias.clone());
-        _ = self.constructor_names.insert(local_alias, module_name);
     }
 
     /// Get the name and optional module qualifier for a named constructor.
@@ -238,17 +213,8 @@ impl Names {
         let key: (EcoString, EcoString) = (module.clone(), name.clone());
 
         // There is a local name for this value, use that.
-        if let Some(name) = self.local_value_constructors.get(&key) {
-            // Only return unqualified syntax if the constructor is not shadowed,
-            // and unqualified syntax is valid.
-            if self
-                .constructor_names
-                .get(name)
-                .expect("Constructors must be added to both maps")
-                == module
-            {
-                return NameContextInformation::Unqualified(name.as_str());
-            }
+        if let Some(name) = self.local_value_constructors.get_by_left(&key) {
+            return NameContextInformation::Unqualified(name.as_str());
         }
 
         // This value is from a module that has been imported
