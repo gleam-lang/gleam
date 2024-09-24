@@ -68,6 +68,10 @@
 
 ### Bug Fixes
 
+- Fixed a bug in the compiler where shadowing a sized value in a bit pattern
+  would cause invalid erlang code to be generated.
+  ([Antonio Iaccarino](https://github.com/eingin))
+
 - Fixed a bug where the formatter would not format strings with big grapheme
   clusters properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
