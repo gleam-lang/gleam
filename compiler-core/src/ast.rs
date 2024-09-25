@@ -15,6 +15,7 @@ use crate::analyse::Inferred;
 use crate::build::{Located, Target};
 use crate::parse::SpannedString;
 use crate::type_::expression::Implementations;
+use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
@@ -46,6 +47,7 @@ pub struct Module<Info, Statements> {
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
     pub definitions: Vec<Statements>,
+    pub names: Names,
 }
 
 impl TypedModule {

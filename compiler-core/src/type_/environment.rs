@@ -5,7 +5,6 @@ use crate::{
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
     error::edit_distance,
-    exhaustiveness::printer::ValueNames,
     uid::UniqueIdGenerator,
 };
 
@@ -64,7 +63,7 @@ pub struct Environment<'a> {
     /// compilation target.
     pub target_support: TargetSupport,
 
-    pub value_names: ValueNames,
+    pub names: Names,
 }
 
 impl<'a> Environment<'a> {
@@ -81,13 +80,17 @@ impl<'a> Environment<'a> {
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
 
-        let mut value_names = ValueNames::new();
+        let mut names = Names::new();
         for name in prelude.values.keys() {
-            value_names.named_constructor_in_scope(
+            names.named_constructor_in_scope(
                 PRELUDE_MODULE_NAME.into(),
                 name.clone(),
                 name.clone(),
             );
+        }
+
+        for name in prelude.types.keys() {
+            names.named_type_in_scope(PRELUDE_MODULE_NAME.into(), name.clone(), name.clone());
         }
 
         Self {
@@ -111,7 +114,7 @@ impl<'a> Environment<'a> {
             current_module,
             entity_usages: vec![HashMap::new()],
             target_support,
-            value_names,
+            names,
         }
     }
 }

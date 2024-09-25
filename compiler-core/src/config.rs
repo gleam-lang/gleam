@@ -879,7 +879,7 @@ mod uri_serde_default_https {
             return Err(D::Error::custom("uri without host"));
         }
         match uri.scheme().is_none() {
-            true => format!("https://{}", string)
+            true => format!("https://{string}")
                 .parse()
                 .map_err(|err: InvalidUri| D::Error::custom(err.to_string())),
             false => Ok(uri),

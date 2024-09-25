@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport wibble/wobble\ntype MyInt = Int\nfn func(value: wobble.Wibble) -> MyInt { 1 }\n"
+---
+import wibble/wobble
+type MyInt = Int
+fn func(value: wobble.Wibble) -> MyInt { 1 }
+▔▔▔↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔      
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn(wobble.Wibble) -> MyInt\n```\n",
+    ),
+)

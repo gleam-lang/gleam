@@ -13,6 +13,6 @@ fn append(x: String, y: String) -> String {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nString\n```\n",
+        "```gleam\ngleam.String\n```\n",
     ),
 )

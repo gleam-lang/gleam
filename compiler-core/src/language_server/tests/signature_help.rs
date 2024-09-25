@@ -37,7 +37,7 @@ fn pretty_signature_help(signature_help: SignatureHelp) -> String {
         .expect("no signature help for function with no parameters");
 
     let documentation = match documentation {
-        Some(d) => format!("Documentation:\n{:#?}", d),
+        Some(d) => format!("Documentation:\n{d:#?}"),
         None => "No documentation".to_string(),
     };
 

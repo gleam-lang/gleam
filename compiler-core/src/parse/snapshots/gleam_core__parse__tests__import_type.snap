@@ -52,6 +52,13 @@ Parsed {
                 target: None,
             },
         ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+            constructor_names: {},
+        },
     },
     extra: ModuleExtra {
         module_comments: [],

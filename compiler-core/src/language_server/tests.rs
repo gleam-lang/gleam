@@ -222,10 +222,7 @@ impl CommandExecutor for LanguageServerTestIO {
         cwd: Option<&Utf8Path>,
         stdio: crate::io::Stdio,
     ) -> Result<i32> {
-        panic!(
-            "exec({:?}, {:?}, {:?}, {:?}, {:?}) is not implemented",
-            program, args, env, cwd, stdio
-        )
+        panic!("exec({program:?}, {args:?}, {env:?}, {cwd:?}, {stdio:?}) is not implemented")
     }
 }
 
@@ -541,9 +538,9 @@ impl<'a> TestProject<'a> {
         test_name: &str,
     ) -> TextDocumentPositionParams {
         let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-            format!(r"\\?\C:\test\{}.gleam", test_name)
+            format!(r"\\?\C:\test\{test_name}.gleam")
         } else {
-            format!("/test/{}.gleam", test_name)
+            format!("/test/{test_name}.gleam")
         });
 
         let url = Url::from_file_path(path).unwrap();

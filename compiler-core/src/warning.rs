@@ -1030,15 +1030,13 @@ See: https://tour.gleam.run/functions/pipelines/",
                         hint: Some(format!(
                             "Remove the version constraint from your `gleam.toml` or update it to be:
 
-    gleam = \">= {}\"",
-                            minimum_required_version
+    gleam = \">= {minimum_required_version}\""
                         )),
                         level: diagnostic::Level::Warning,
                         location: Some(Location {
                             label: diagnostic::Label {
                                 text: Some(format!(
-                                    "This requires a Gleam version >= {}",
-                                    minimum_required_version
+                                    "This requires a Gleam version >= {minimum_required_version}"
                                 )),
                                 span: *location,
                             },

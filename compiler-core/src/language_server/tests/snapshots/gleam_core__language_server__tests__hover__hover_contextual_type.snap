@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport wibble/wobble\nconst value = wobble.Wobble\n"
+---
+import wibble/wobble
+const value = wobble.Wobble
+▔▔▔▔▔▔↑▔▔▔▔                
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nwobble.Wibble\n```\n",
+    ),
+)

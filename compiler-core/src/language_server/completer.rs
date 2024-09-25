@@ -60,7 +60,7 @@ fn sort_text(kind: CompletionKind, label: &str) -> String {
         CompletionKind::Prelude => 4,
         CompletionKind::ImportableModule => 5,
     };
-    format!("{}_{}", priority, label)
+    format!("{priority}_{label}")
 }
 
 // The form in which a type completion is needed in context.
@@ -151,7 +151,7 @@ where
                     character: self.cursor_position.character + after.len() as u32,
                 },
             },
-            format!("{}{}", before, after),
+            format!("{before}{after}"),
         )
     }
 

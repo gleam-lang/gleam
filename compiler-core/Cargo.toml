@@ -40,6 +40,10 @@ pubgrub = "0"
 pathdiff = { version = "0", features = ["camino"] }
 # Memory arena using ids rather than references
 id-arena = "2"
+# Unicode grapheme traversal
+unicode-segmentation = "1.12.0"
+# Bijective (bi-directional) hashmap
+bimap = "0.6.3"
 async-trait.workspace = true
 base16.workspace = true
 bytes.workspace = true
@@ -63,7 +67,6 @@ termcolor.workspace = true
 thiserror.workspace = true
 toml.workspace = true
 tracing.workspace = true
-unicode-segmentation = "1.12.0"
 
 [build-dependencies]
 # Data (de)serialisation

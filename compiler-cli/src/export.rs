@@ -88,16 +88,13 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 
     println!(
         "
-Your Erlang shipment has been generated to {path}.
+Your Erlang shipment has been generated to {out}.
 
 It can be copied to a compatible server with Erlang installed and run with
-the {file} script.
+the {ENTRYPOINT_FILENAME} script.
 
     {entrypoint}
 ",
-        path = out,
-        file = ENTRYPOINT_FILENAME,
-        entrypoint = entrypoint,
     );
 
     Ok(())
