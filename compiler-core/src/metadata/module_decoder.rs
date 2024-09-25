@@ -128,6 +128,7 @@ impl ModuleDecoder {
             module,
             name,
             args,
+            constructor_index: None,
         }))
     }
 
@@ -543,7 +544,23 @@ impl ModuleDecoder {
             publicity: Publicity::Public,
             type_: self.type_(&reader.get_type()?)?,
             accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
+            constructor_accessors: read_vec!(
+                &reader.get_constructor_accessors()?,
+                self,
+                constructor_accessors
+            ),
         })
+    }
+
+    fn constructor_accessors(
+        &mut self,
+        reader: &constructor_accessors::Reader<'_>,
+    ) -> Result<HashMap<EcoString, RecordAccessor>> {
+        Ok(read_hashmap!(
+            &reader.get_accessors()?,
+            self,
+            record_accessor
+        ))
     }
 
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {

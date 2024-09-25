@@ -259,6 +259,7 @@ fn pretty_print_test() {
             name: "Int".into(),
             publicity: Publicity::Public,
             args: vec![],
+            constructor_index: None,
         },
         "Int",
     );
@@ -275,6 +276,7 @@ fn pretty_print_test() {
                     name: "Int".into(),
                     publicity: Publicity::Public,
                     args: vec![],
+                    constructor_index: None,
                 }),
                 Arc::new(Type::Named {
                     module: "whatever".into(),
@@ -282,8 +284,10 @@ fn pretty_print_test() {
                     name: "Bool".into(),
                     publicity: Publicity::Public,
                     args: vec![],
+                    constructor_index: None,
                 }),
             ],
+            constructor_index: None,
         },
         "Pair(Int, Bool)",
     );
@@ -296,6 +300,7 @@ fn pretty_print_test() {
                     package: "whatever".into(),
                     name: "Int".into(),
                     publicity: Publicity::Public,
+                    constructor_index: None,
                 }),
                 Arc::new(Type::Named {
                     args: vec![],
@@ -303,6 +308,7 @@ fn pretty_print_test() {
                     package: "whatever".into(),
                     name: "Bool".into(),
                     publicity: Publicity::Public,
+                    constructor_index: None,
                 }),
             ],
             retrn: Arc::new(Type::Named {
@@ -311,6 +317,7 @@ fn pretty_print_test() {
                 package: "whatever".into(),
                 name: "Bool".into(),
                 publicity: Publicity::Public,
+                constructor_index: None,
             }),
         },
         "fn(Int, Bool) -> Bool",
@@ -324,6 +331,7 @@ fn pretty_print_test() {
                     package: "whatever".into(),
                     name: "Int".into(),
                     publicity: Publicity::Public,
+                    constructor_index: None,
                 }),
             })),
         },
