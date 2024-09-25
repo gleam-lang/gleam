@@ -2253,3 +2253,141 @@ pub fn main() {
 ",
     );
 }
+
+#[test]
+fn qualified_type_mismatched_type_error() {
+    assert_with_module_error!(
+        ("wibble", "pub type Wobble"),
+        "
+import wibble
+const my_wobble: wibble.Wobble = Nil
+"
+    );
+}
+
+#[test]
+fn qualified_type_similar_type_name() {
+    assert_with_module_error!(
+        ("wibble", "pub type Int"),
+        "
+import wibble
+const value: wibble.Int = 20
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_a_function() {
+    assert_with_module_error!(
+        ("wibble", "pub type Function { Function(fn() -> Nil) }"),
+        "
+import wibble.{type Function as FuncWrapper}
+pub fn main(f: FuncWrapper) {
+  f()
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_unknown_field() {
+    assert_module_error!(
+        "
+import gleam
+type Int {
+  Int(bit_size: gleam.Int, bits: BitArray)
+}
+
+pub fn main(not_a_record: gleam.Int) {
+  not_a_record.bits
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_invalid_operands() {
+    assert_with_module_error!(
+        ("maths", "pub type Vector { Vector(x: Float, y: Float) }"),
+        "
+import maths as math
+pub fn add_two_vectors(a: math.Vector, b: math.Vector) {
+  a + b
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_invalid_pipe_argument() {
+    assert_with_module_error!(
+        (
+            "mod",
+            "pub type Wibble pub fn takes_wibble(value: Wibble) { value }"
+        ),
+        "
+import mod
+pub fn main() {
+  Nil |> mod.takes_wibble
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_unification_error() {
+    assert_module_error!(
+        "
+import gleam
+
+type Bool {
+  True
+  False
+}
+
+const list_of_bools = [True, False, gleam.False]
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_a_tuple() {
+    assert_with_module_error!(
+        ("mod", "pub type Pair(a, b) { Pair(a, b) }"),
+        "
+import mod.{type Pair as Duo}
+pub fn first(pair: Duo(a, b)) {
+  pair.0
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_fn_in_use() {
+    assert_with_module_error!(
+        ("some_mod", "pub type Function(param1, param2, return)"),
+        "
+import some_mod as sm
+pub fn main(func: sm.Function(Int, String, Float)) {
+  use <- func()
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_use_fn_without_callback() {
+    assert_with_module_error!(
+        (
+            "some_mod",
+            "pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }"
+        ),
+        "
+import some_mod
+pub fn main() {
+  use value <- some_mod.do_a_thing(10)
+}
+"
+    );
+}

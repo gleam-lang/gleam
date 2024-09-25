@@ -6,6 +6,43 @@
 
 ### Compiler
 
+- The compiler now prints correctly qualified or aliased type names when
+  printing type errors.
+
+  This code:
+
+  ```gleam
+  pub type Int
+
+  pub fn different_int_types(value: Int) {
+    value
+  }
+
+  pub fn main() {
+    different_int_types(20)
+  }
+  ```
+
+  Produces this error:
+
+  ```
+  error: Type mismatch
+    ┌─ /src/wibble.gleam:8:23
+    │
+  8 │   different_int_types(20)
+    │                       ^^
+
+  Expected type:
+
+      Int
+
+  Found type:
+
+      gleam.Int
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Language Server

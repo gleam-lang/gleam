@@ -139,9 +139,10 @@ macro_rules! assert_error {
     };
 
     ($src:expr) => {
-        let error = $crate::type_::tests::compile_statement_sequence($src)
+        let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
+            names,
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
             errors: error,
@@ -279,7 +280,7 @@ macro_rules! assert_no_warnings {
 
 fn compile_statement_sequence(
     src: &str,
-) -> Result<Vec1<TypedStatement>, Vec1<crate::type_::Error>> {
+) -> Result<Vec1<TypedStatement>, (Vec1<crate::type_::Error>, Names)> {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
@@ -289,16 +290,17 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut problems = Problems::new();
+    let mut environment = Environment::new(
+        ids,
+        "thepackage".into(),
+        None,
+        "themodule".into(),
+        Target::Erlang,
+        &modules,
+        TargetSupport::Enforced,
+    );
     let res = ExprTyper::new(
-        &mut Environment::new(
-            ids,
-            "thepackage".into(),
-            None,
-            "themodule".into(),
-            Target::Erlang,
-            &modules,
-            TargetSupport::Enforced,
-        ),
+        &mut environment,
         FunctionDefinition {
             has_body: true,
             has_erlang_external: false,
@@ -309,7 +311,7 @@ fn compile_statement_sequence(
     .infer_statements(ast);
     match Vec1::try_from_vec(problems.take_errors()) {
         Err(_) => Ok(res),
-        Ok(errors) => Err(errors),
+        Ok(errors) => Err((errors, environment.names)),
     }
 }
 
@@ -371,7 +373,7 @@ pub fn compile_module(
     src: &str,
     warnings: Option<Rc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
-) -> Result<TypedModule, Vec<crate::type_::Error>> {
+) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
     compile_module_with_opts(
         module_name,
         src,
@@ -391,7 +393,7 @@ pub fn compile_module_with_opts(
     target: Target,
     target_support: TargetSupport,
     gleam_version: Option<Range<Version>>,
-) -> Result<TypedModule, Vec<crate::type_::Error>> {
+) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
 
@@ -456,8 +458,8 @@ pub fn compile_module_with_opts(
 
     match inference_result {
         Outcome::Ok(ast) => Ok(ast),
-        Outcome::PartialFailure(_, errors) => Err(errors.into()),
-        Outcome::TotalFailure(error) => Err(error.into()),
+        Outcome::PartialFailure(ast, errors) => Err((errors.into(), ast.names)),
+        Outcome::TotalFailure(error) => Err((error.into(), Default::default())),
     }
 }
 
@@ -470,7 +472,7 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error = compile_module_with_opts(
+    let (error, names) = compile_module_with_opts(
         "themodule",
         src,
         None,
@@ -481,6 +483,7 @@ pub fn module_error_with_target(
     )
     .expect_err("should infer an error");
     let error = Error::Type {
+        names,
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -497,7 +500,7 @@ pub fn internal_module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error = compile_module_with_opts(
+    let (error, names) = compile_module_with_opts(
         "thepackage/internal/themodule",
         src,
         None,
@@ -508,6 +511,7 @@ pub fn internal_module_error_with_target(
     )
     .expect_err("should infer an error");
     let error = Error::Type {
+        names,
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),

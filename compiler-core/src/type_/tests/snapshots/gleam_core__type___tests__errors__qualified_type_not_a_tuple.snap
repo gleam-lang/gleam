@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport mod.{type Pair as Duo}\npub fn first(pair: Duo(a, b)) {\n  pair.0\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   pair.0
+  │   ^^^^ This is not a tuple
+
+To index into this value it needs to be a tuple, however it has this type:
+
+    Duo(a, b)
