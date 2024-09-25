@@ -895,12 +895,14 @@ impl ConstructorSpecialiser {
                 module,
                 name,
                 args,
+                constructor_index,
             } => Type::Named {
                 publicity: *publicity,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),
                 args: args.iter().map(|a| self.specialise_type(a)).collect(),
+                constructor_index: *constructor_index,
             },
 
             Type::Fn { args, retrn } => Type::Fn {

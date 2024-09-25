@@ -91,6 +91,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],
+        constructor_index: None,
     });
     let variant = ValueConstructorVariant::Record {
         documentation: Some("wibble".into()),
@@ -113,30 +114,32 @@ fn compile_expression(src: &str) -> TypedStatement {
         Deprecation::NotDeprecated,
     );
 
+    let accessors = [
+        (
+            "name".into(),
+            RecordAccessor {
+                index: 0,
+                label: "name".into(),
+                type_: type_::string(),
+            },
+        ),
+        (
+            "age".into(),
+            RecordAccessor {
+                index: 1,
+                label: "age".into(),
+                type_: type_::int(),
+            },
+        ),
+    ];
+
     environment.insert_accessors(
         "Cat".into(),
         AccessorsMap {
             publicity: Publicity::Public,
             type_: cat_type,
-            accessors: [
-                (
-                    "name".into(),
-                    RecordAccessor {
-                        index: 0,
-                        label: "name".into(),
-                        type_: type_::string(),
-                    },
-                ),
-                (
-                    "age".into(),
-                    RecordAccessor {
-                        index: 1,
-                        label: "age".into(),
-                        type_: type_::int(),
-                    },
-                ),
-            ]
-            .into(),
+            accessors: accessors.clone().into(),
+            constructor_accessors: vec![accessors.into()],
         },
     );
     let mut problems = Problems::new();
