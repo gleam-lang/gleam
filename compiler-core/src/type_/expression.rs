@@ -2381,8 +2381,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let spread_index = spread_type.constructor_index();
 
-        dbg!(spread_type, spread_index, constructor_index);
-
         // We can only update a record if it is the only variant of its type.
         // If a record has multiple variants it cannot be safely updated as it
         // could be one of the other variants.
