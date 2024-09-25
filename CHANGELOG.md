@@ -109,6 +109,25 @@
   the Erlang target if any of their arguments were discarded.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now narrows the variant of custom types when pattern matching,
+  allowing for safe record updates if the variant is known:
+
+  ```gleam
+  pub type Shape {
+    Circle(cx: Int, cy: Int, radius: Int)
+    Square(x: Int, y: Int, width: Int, height: Int)
+  }
+
+  pub fn grow(shape) {
+    case shape {
+      Circle(radius:, ..) as circle -> Circle(..circle, radius: radius + 1)
+      Square(width:, height:, ..) as square -> Square(..square, width: width + 1, height: height + 1)
+    }
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Language Server
