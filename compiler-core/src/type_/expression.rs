@@ -2255,35 +2255,55 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 UnknownField::TrulyUnknown
             },
         };
-        let accessors = match collapse_links(record_type.clone()).as_ref() {
-            // A type in the current module which may have fields
-            Type::Named { module, name, .. } if module == &self.environment.current_module => {
-                self.environment.accessors.get(name)
+        let (accessors, accessor_record_type) =
+            match collapse_links(record_type.clone()).as_ref() {
+                // A type in the current module which may have fields
+                Type::Named {
+                    module,
+                    name,
+                    constructor_index,
+                    ..
+                } if module == &self.environment.current_module => {
+                    self.environment.accessors.get(name).map(|accessors_map| {
+                        (
+                            accessors_map.accessors_for_constructor(*constructor_index),
+                            accessors_map.type_.clone(),
+                        )
+                    })
+                }
+
+                // A type in another module which may have fields
+                Type::Named {
+                    module,
+                    name,
+                    constructor_index,
+                    ..
+                } => self
+                    .environment
+                    .importable_modules
+                    .get(module)
+                    .and_then(|module| module.accessors.get(name))
+                    .filter(|a| {
+                        a.publicity.is_importable() || module == &self.environment.current_module
+                    })
+                    .map(|accessors_map| {
+                        (
+                            accessors_map.accessors_for_constructor(*constructor_index),
+                            accessors_map.type_.clone(),
+                        )
+                    }),
+
+                _something_without_fields => return Err(unknown_field(vec![])),
             }
-
-            // A type in another module which may have fields
-            Type::Named { module, name, .. } => self
-                .environment
-                .importable_modules
-                .get(module)
-                .and_then(|module| module.accessors.get(name))
-                .filter(|a| {
-                    a.publicity.is_importable() || module == &self.environment.current_module
-                }),
-
-            _something_without_fields => return Err(unknown_field(vec![])),
-        }
-        .ok_or_else(|| unknown_field(vec![]))?;
+            .ok_or_else(|| unknown_field(vec![]))?;
         let RecordAccessor {
             index,
             label,
             type_,
         } = accessors
-            .accessors
             .get(&label)
-            .ok_or_else(|| unknown_field(accessors.accessors.keys().cloned().collect()))?
+            .ok_or_else(|| unknown_field(accessors.keys().cloned().collect()))?
             .clone();
-        let accessor_record_type = accessors.type_.clone();
         let mut type_vars = hashmap![];
         let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
         let type_ = self.instantiate(type_, &mut type_vars);
@@ -2329,27 +2349,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .clone();
 
         // It must be a record with a field map for us to be able to update it
-        let (field_map, constructors_count) = match &value_constructor.variant {
+        let (field_map, constructors_count, constructor_index) = match &value_constructor.variant {
             ValueConstructorVariant::Record {
                 field_map: Some(field_map),
                 constructors_count,
+                constructor_index,
                 ..
-            } => (field_map, *constructors_count),
+            } => (field_map, *constructors_count, *constructor_index),
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
                 });
             }
         };
-
-        // We can only update a record if it is the only variant of its type.
-        // If a record has multiple variants it cannot be safely updated as it
-        // could be one of the other variants.
-        if constructors_count != 1 {
-            return Err(Error::UpdateMultiConstructorType {
-                location: constructor.location(),
-            });
-        }
 
         // The type must be a function for it to be a record constructor
         let retrn = match value_constructor.type_.as_ref() {
@@ -2363,10 +2375,25 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let spread = self.infer(*spread.base)?;
         let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
+        let spread_type = spread.type_();
 
         // Check that the spread variable unifies with the return type of the constructor
-        unify(return_type, spread.type_())
+        unify(return_type, spread_type.clone())
             .map_err(|e| convert_unify_error(e, spread.location()))?;
+
+        let spread_index = spread_type.constructor_index();
+
+        dbg!(spread_type, spread_index, constructor_index);
+
+        // We can only update a record if it is the only variant of its type.
+        // If a record has multiple variants it cannot be safely updated as it
+        // could be one of the other variants.
+        if constructors_count != 1 && !spread_index.is_some_and(|index| index == constructor_index)
+        {
+            return Err(Error::UpdateMultiConstructorType {
+                location: constructor.location(),
+            });
+        }
 
         let args: Vec<TypedRecordUpdateArg> = args
             .iter()

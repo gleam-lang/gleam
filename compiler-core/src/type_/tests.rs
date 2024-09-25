@@ -1821,6 +1821,30 @@ fn record_update_generic_unannotated() {
 }
 
 #[test]
+fn record_update_type_narrowing() {
+    assert_module_infer!(
+        "
+pub type Shape {
+  Circle(cx: Int, cy: Int, radius: Int)
+  Square(x: Int, y: Int, width: Int, height: Int)
+}
+
+pub fn grow(shape) {
+  case shape {
+    Circle(radius, ..) as circle -> Circle(..circle, radius: radius + 1)
+    Square(width, height, ..) as square -> Square(..square, width: width + 1, height: height + 1)
+  }
+}
+",
+        vec![
+            ("Circle", "fn(Int, Int, Int) -> Shape"),
+            ("Square", "fn(Int, Int, Int, Int) -> Shape"),
+            ("grow", "fn(Shape) -> Shape")
+        ]
+    )
+}
+
+#[test]
 fn module_constants() {
     assert_module_infer!(
         "

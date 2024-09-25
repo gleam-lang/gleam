@@ -63,6 +63,7 @@ pub enum Type {
         module: EcoString,
         name: EcoString,
         args: Vec<Arc<Type>>,
+        constructor_index: Option<u16>,
     },
 
     /// The type of a function. It takes arguments and returns a value.
@@ -236,6 +237,37 @@ impl Type {
         }
     }
 
+    pub fn with_constructor_index(self, index: u16) -> Self {
+        match self {
+            Type::Named {
+                publicity,
+                package,
+                module,
+                name,
+                args,
+                ..
+            } => Type::Named {
+                constructor_index: Some(index),
+                publicity,
+                package,
+                module,
+                name,
+                args,
+            },
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => self,
+        }
+    }
+
+    pub fn constructor_index(&self) -> Option<u16> {
+        match self {
+            Type::Named {
+                constructor_index, ..
+            } => *constructor_index,
+            Type::Var { type_ } => type_.borrow().constructor_index(),
+            Type::Fn { .. } | Type::Tuple { .. } => None,
+        }
+    }
+
     /// Get the args for the type if the type is a specific `Type::App`.
     /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
@@ -294,6 +326,7 @@ impl Type {
                         module: module.into(),
                         args: args.clone(),
                         publicity,
+                        constructor_index: None,
                     }),
                 };
                 Some(args)
@@ -369,6 +402,18 @@ pub struct AccessorsMap {
     pub publicity: Publicity,
     pub type_: Arc<Type>,
     pub accessors: HashMap<EcoString, RecordAccessor>,
+    pub constructor_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+}
+
+impl AccessorsMap {
+    pub fn accessors_for_constructor(
+        &self,
+        constructor_index: Option<u16>,
+    ) -> &HashMap<EcoString, RecordAccessor> {
+        constructor_index
+            .and_then(|index| self.constructor_accessors.get(index as usize))
+            .unwrap_or(&self.accessors)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -850,6 +895,13 @@ impl TypeVar {
         }
     }
 
+    pub fn constructor_index(&self) -> Option<u16> {
+        match self {
+            Self::Link { type_ } => type_.constructor_index(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
     pub fn is_result(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_result(),
@@ -1161,6 +1213,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             package,
             name,
             args,
+            constructor_index,
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
@@ -1169,6 +1222,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
                 package: package.clone(),
                 name: name.clone(),
                 args,
+                constructor_index: *constructor_index,
             })
         }
 
