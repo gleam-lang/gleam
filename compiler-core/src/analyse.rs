@@ -1673,18 +1673,17 @@ fn assert_unique_name(
     }
 }
 
+type Accessors = (
+    HashMap<EcoString, RecordAccessor>,
+    Vec<HashMap<EcoString, RecordAccessor>>,
+);
+
 fn custom_type_accessors<A: std::fmt::Debug>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
     problems: &mut Problems,
-) -> Result<
-    (
-        HashMap<EcoString, RecordAccessor>,
-        Vec<HashMap<EcoString, RecordAccessor>>,
-    ),
-    Error,
-> {
+) -> Result<Accessors, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut fields = HashMap::with_capacity(args.len());
