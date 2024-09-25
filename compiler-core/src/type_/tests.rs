@@ -1831,8 +1831,8 @@ pub type Shape {
 
 pub fn grow(shape) {
   case shape {
-    Circle(radius, ..) as circle -> Circle(..circle, radius: radius + 1)
-    Square(width, height, ..) as square -> Square(..square, width: width + 1, height: height + 1)
+    Circle(radius:, ..) as circle -> Circle(..circle, radius: radius + 1)
+    Square(width:, height:, ..) as square -> Square(..square, width: width + 1, height: height + 1)
   }
 }
 ",
