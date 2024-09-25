@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport maths as math\npub fn add_two_vectors(a: math.Vector, b: math.Vector) {\n  a + b\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   a + b
+  │   ^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    math.Vector

@@ -537,19 +537,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.infer_iter_statements(location, count, untyped.into_iter())
     }
 
-    // Helper to push a new error to the errors list with rigid names.
-    fn error_with_rigid_names(&mut self, error: Error) {
-        let rigid_names = self.hydrator.rigid_names();
-        self.problems
-            .error(error.with_unify_error_rigid_names(&rigid_names));
-    }
-
-    // Helper to push a new error to the errors list and return an invalid expression.
-    fn error_expr_with_rigid_names(&mut self, location: SrcSpan, error: Error) -> TypedExpr {
-        self.error_with_rigid_names(error);
-        self.error_expr(location)
-    }
-
     // Helper to create a new error expr.
     fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
         TypedExpr::Invalid {
@@ -565,7 +552,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         error: Error,
         type_: Arc<Type>,
     ) -> TypedPattern {
-        self.error_with_rigid_names(error);
+        self.problems.error(error);
         Pattern::Invalid { location, type_ }
     }
 
@@ -592,7 +579,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let location = expression.location();
                     let expression = match self.infer(expression) {
                         Ok(expression) => expression,
-                        Err(error) => self.error_expr_with_rigid_names(location, error),
+                        Err(error) => {
+                            self.problems.error(error);
+                            self.error_expr(location)
+                        }
                     };
 
                     // This isn't the final expression in the sequence, so call the
@@ -1296,7 +1286,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
             Ok(value) => value,
-            Err(error) => self.error_expr_with_rigid_names(value_location, error),
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(value_location)
+            }
         };
 
         let value_typ = value.type_();
@@ -1329,11 +1322,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     if let Err(error) = unify(ann_typ, value_typ.clone())
                         .map_err(|e| convert_unify_error(e, value.type_defining_location()))
                     {
-                        self.error_with_rigid_names(error);
+                        self.problems.error(error);
                     }
                 }
                 Err(error) => {
-                    self.error_with_rigid_names(error);
+                    self.problems.error(error);
                 }
             }
         }
@@ -1343,7 +1336,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match (kind, exhaustiveness_check) {
             (AssignmentKind::Let, Ok(_)) => {}
             (AssignmentKind::Let, Err(e)) => {
-                self.error_with_rigid_names(e);
+                self.problems.error(e);
             }
             (AssignmentKind::Assert { location }, Ok(_)) => self
                 .problems
@@ -1383,7 +1376,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
             let subject = match subject {
                 Ok(subject) => subject,
-                Err(error) => self.error_expr_with_rigid_names(subject_location, error),
+                Err(error) => {
+                    self.problems.error(error);
+                    self.error_expr(subject_location)
+                }
             };
 
             any_subject_panics = any_subject_panics || self.previous_panics;
@@ -1407,7 +1403,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
                 .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))
             {
-                self.error_with_rigid_names(e);
+                self.problems.error(e);
             }
             typed_clauses.push(typed_clause);
         }
@@ -1415,7 +1411,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
         if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
-            self.error_with_rigid_names(e);
+            self.problems.error(e);
         };
 
         // We track if the case expression is used like an if: that is all its
@@ -1465,7 +1461,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Ok(res) => res,
                 // If an error occurs inferring patterns then assume no patterns
                 Err(error) => {
-                    clause_typer.error_with_rigid_names(error);
+                    clause_typer.problems.error(error);
                     (vec![], vec![])
                 }
             };
@@ -1473,13 +1469,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Ok(guard) => guard,
                 // If an error occurs inferring guard then assume no guard
                 Err(error) => {
-                    clause_typer.error_with_rigid_names(error);
+                    clause_typer.problems.error(error);
                     None
                 }
             };
             let then = match clause_typer.infer(then) {
                 Ok(then) => then,
-                Err(error) => clause_typer.error_expr_with_rigid_names(then_location, error),
+                Err(error) => {
+                    clause_typer.problems.error(error);
+                    clause_typer.error_expr(then_location)
+                }
             };
 
             Ok((guard, then, typed_pattern, typed_alternatives))
@@ -1490,7 +1489,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // NOTE: theoretically it should be impossible to get here
                 // since the individual parts have been made fault tolerant
                 // but in_new_scope requires that the return type be a result
-                self.error_with_rigid_names(error);
+                self.problems.error(error);
                 (
                     None,
                     TypedExpr::Invalid {
@@ -2956,7 +2955,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let fun = match typed_fun {
             Ok(fun) => fun,
             Err(function_inference_error) => {
-                self.error_expr_with_rigid_names(function_location, function_inference_error)
+                self.problems.error(function_inference_error);
+                self.error_expr(function_location)
             }
         };
 
@@ -3023,14 +3023,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } = e
             {
                 labelled_arity_error = true;
-                self.error_with_rigid_names(Error::IncorrectArity {
+                self.problems.error(Error::IncorrectArity {
                     expected,
                     given,
                     labels,
                     location,
                 });
             } else {
-                self.error_with_rigid_names(e);
+                self.problems.error(e);
             }
         }
 
@@ -3057,7 +3057,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             // If the function has labels then arity issues will already
                             // be handled by the field map so we can ignore them here.
                             if !labelled_arity_error {
-                                self.error_with_rigid_names(converted_error);
+                                self.problems.error(converted_error);
                                 (arg_types, return_type)
                             } else {
                                 // Since arity errors with labels cause incorrect
@@ -3077,7 +3077,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             }
                         }
                         MatchFunTypeError::NotFn { .. } => {
-                            self.error_with_rigid_names(converted_error);
+                            self.problems.error(converted_error);
                             (vec![], self.new_unbound_var())
                         }
                     }
@@ -3164,7 +3164,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 let value = match self.infer_call_argument(value, type_.clone(), argument_kind) {
                     Ok(value) => value,
-                    Err(e) => self.error_expr_with_rigid_names(location, e),
+                    Err(e) => {
+                        self.problems.error(e);
+                        self.error_expr(location)
+                    }
                 };
 
                 CallArg {
@@ -3335,12 +3338,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Check that any return type is accurate.
             if let Some(return_type) = return_type {
                 if let Err(error) = unify(return_type, body.last().type_()) {
-                    let body_rigid_names = body_typer.hydrator.rigid_names();
                     let error = error
                         .return_annotation_mismatch()
-                        .into_error(body.last().type_defining_location())
-                        .with_unify_error_rigid_names(&body_rigid_names);
-                    body_typer.error_with_rigid_names(error);
+                        .into_error(body.last().type_defining_location());
+                    body_typer.problems.error(error);
 
                     // If the return type doesn't match with the annotation we
                     // add a new expression to the end of the function to match
