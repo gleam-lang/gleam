@@ -1113,7 +1113,6 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
     fn trailing_comma_pos(&self) -> Option<usize> {
         self.import.and_then(|import| {
-            tracing::info!("trailing_comma_pos: {:?}", import.location);
             self.module
                 .code
                 .chars()
@@ -1128,22 +1127,22 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     fn edit_import(&mut self, has_brace: bool, trailing_comma_pos: Option<usize>, name: String) {
         let import = self.import.expect("import should be set");
         let (end, new_text) = match (has_brace, trailing_comma_pos) {
-            // case: import gleam/option
+            // import gleam/option
             (false, None) => (
                 SrcSpan::new(import.location.end, import.location.end),
                 format!(".{{{name}}}"),
             ),
-            // case: import gleam/option.{} or import gleam/option.{Some}
+            // import gleam/option.{} or import gleam/option.{Some}
             (true, None) => (
                 SrcSpan::new(import.location.end - 1, import.location.end - 1),
                 format!(", {name}"),
             ),
-            // case: import gleam/option.{Some,}
+            // import gleam/option.{Some,}
             (true, Some(pos)) if pos == import.location.end as usize - 1 => (
                 SrcSpan::new(import.location.end - 1, import.location.end - 1),
                 format!(" {name}"),
             ),
-            // case: import gleam/option.{Some,  }
+            // import gleam/option.{Some,  }
             (true, Some(pos)) => (
                 SrcSpan::new(pos as u32 + 1, pos as u32 + 1),
                 format!(" {name}"),
@@ -1157,23 +1156,23 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
     fn add_import_edits(&mut self, name: &str, is_type: bool) {
         let import = self.import.expect("import should be set");
-        let need_imported = if is_type {
+        let is_imported = if is_type {
             import
                 .unqualified_types
                 .iter()
-                .all(|type_| type_.used_name() != name)
+                .any(|type_| type_.used_name() == name)
         } else {
             import
                 .unqualified_values
                 .iter()
-                .all(|value| value.used_name() != name)
+                .any(|value| value.used_name() == name)
         };
         let name = if is_type {
             format!("type {name}")
         } else {
             name.to_string()
         };
-        if need_imported {
+        if !is_imported {
             let has_brace = self.has_brace();
             let trailing_comma_pos = has_brace.then(|| self.trailing_comma_pos()).flatten();
             self.edit_import(has_brace, trailing_comma_pos, name);
@@ -1192,7 +1191,9 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         for arg in args {
-            self.visit_typed_arg(arg);
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
         }
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
@@ -1221,20 +1222,6 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         ast::visit::visit_typed_function(self, fun);
     }
 
-    fn visit_type_ast(&mut self, node: &'ast ast::TypeAst) {
-        match node {
-            ast::TypeAst::Constructor(ast::TypeAstConstructor {
-                location,
-                module,
-                name,
-                arguments,
-            }) => {
-                self.visit_type_ast_constructor(location, module, name, arguments);
-            }
-            _ => ast::visit::visit_type_ast(self, node),
-        }
-    }
-
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
@@ -1245,18 +1232,15 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         let range = src_span_to_lsp_range(*location, &self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some((module_name, module_location)) = module {
-                // tracing::info!("visit_type_ast_constructor: {name} {module_name:?}");
                 let _ = self.module.find_node(module_location.start).map(|node| {
                     if let Located::Annotation(_, ty) = node {
-                        let _ = ty.named_type_name().map(|(module, _)| {
-                            self.edits.clear();
+                        if let Some((module, _)) = ty.named_type_name() {
                             self.get_module_import(&module);
-                        });
+                        }
                     }
                 });
                 if self.import.is_some() {
                     self.add_import_edits(name, true);
-
                     self.edits.push(TextEdit {
                         range: src_span_to_lsp_range(
                             SrcSpan::new(

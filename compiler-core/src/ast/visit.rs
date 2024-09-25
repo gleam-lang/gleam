@@ -482,10 +482,6 @@ pub trait Visit<'ast> {
     fn visit_type_ast_hole(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
         visit_type_ast_hole(self, location, name);
     }
-
-    fn visit_typed_arg(&mut self, arg: &'ast TypedArg) {
-        visit_typed_arg(self, arg);
-    }
 }
 
 pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
@@ -818,15 +814,6 @@ pub fn visit_typed_expr_fn<'a, V>(
 {
     for stmt in body {
         v.visit_typed_statement(stmt);
-    }
-}
-
-pub fn visit_typed_arg<'a, V>(v: &mut V, arg: &'a TypedArg)
-where
-    V: Visit<'a> + ?Sized,
-{
-    if let Some(annotation) = &arg.annotation {
-        v.visit_type_ast(annotation);
     }
 }
 
