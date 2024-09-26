@@ -131,7 +131,11 @@ impl TestCompileOutput {
                             Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
                         })
                         .replace_all(text, |caps: &regex::Captures| {
-                            let path = caps.get(1).expect("file path").as_str().replace("\\", "/");
+                            let path = caps
+                                .get(1)
+                                .expect("file path")
+                                .as_str()
+                                .replace("\\\\", "/");
                             let line_number = caps.get(2).expect("line number").as_str();
                             format!("-file(\"{path}\", {line_number}).")
                         });
