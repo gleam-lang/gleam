@@ -437,6 +437,7 @@ fn file_attribute<'a>(
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
     let line = line_numbers.line_number(function.location.start);
+    let path = path.replace("\\", "\\\\");
     docvec!["-file(\"", path, "\", ", line, ")."]
 }
 
