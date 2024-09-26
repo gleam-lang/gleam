@@ -33,7 +33,7 @@ mod type_params;
 mod use_;
 mod variables;
 
-pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> String {
+pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, &str)>) -> String {
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
@@ -73,7 +73,7 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
-    let path = Utf8PathBuf::from("/root/project/test/my/mod.gleam");
+    let path = Utf8PathBuf::from(src_path);
     let parsed = crate::parse::parse_module(path.clone(), src, &WarningEmitter::null())
         .expect("syntax error");
     let mut config = PackageConfig::default();
@@ -102,13 +102,18 @@ macro_rules! assert_erl {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let output = $crate::erlang::tests::compile_test_project(
             $src,
+            "/root/project/test/my/mod.gleam",
             Some(($dep_package, $dep_name, $dep_src)),
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr $(,)?) => {{
-        let output = $crate::erlang::tests::compile_test_project($src, None);
+        let output = $crate::erlang::tests::compile_test_project(
+            $src,
+            "/root/project/test/my/mod.gleam",
+            None,
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
@@ -928,4 +933,13 @@ pub fn main() {
 }
 "
     );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3648
+#[test]
+fn windows_file_escaping_bug() {
+    let src = "pub fn main() { Nil }";
+    let path = "C:\\root\\project\\test\\my\\mod.gleam";
+    let output = compile_test_project(src, path, None);
+    insta::assert_snapshot!(insta::internals::AutoName, output, src);
 }
