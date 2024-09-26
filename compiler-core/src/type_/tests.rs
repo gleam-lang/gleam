@@ -1841,7 +1841,52 @@ pub fn grow(shape) {
             ("Square", "fn(Int, Int, Int, Int) -> Shape"),
             ("grow", "fn(Shape) -> Shape")
         ]
-    )
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_fails_for_several_possible_variants() {
+    assert_module_error!(
+        "
+pub type Vector {
+  Vector2(x: Float, y: Float)
+  Vector3(x: Float, y: Float, z: Float)
+}
+
+pub fn increase_y(vector, by increase) {
+  case vector {
+    Vector2(y:, ..) as vector | Vector3(y:, ..) as vector ->
+      Vector2(..vector, y: y +. increase)
+  }
+}
+"
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_in_alternate_pattern_with_all_same_variants() {
+    assert_module_infer!(
+        r#"
+pub type Vector {
+  Vector2(x: Float, y: Float)
+  Vector3(x: Float, y: Float, z: Float)
+}
+
+pub fn increase_y(vector, by increase) {
+  case vector {
+    Vector2(y:, ..) as vector -> Vector2(..vector, y: y +. increase)
+    Vector3(y:, z: 12.3, ..) as vector | Vector3(y:, z: 15.0, ..) as vector ->
+      Vector3(..vector, y: y +. increase, z: 0.0)
+    _ -> panic as "Could not increase Y"
+  }
+}
+"#,
+        vec![
+            ("Vector2", "fn(Float, Float) -> Vector"),
+            ("Vector3", "fn(Float, Float, Float) -> Vector"),
+            ("increase_y", "fn(Vector, Float) -> Vector")
+        ]
+    );
 }
 
 #[test]
