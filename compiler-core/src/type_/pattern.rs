@@ -81,12 +81,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             PatternMode::Alternative(assigned) => {
-                match self.environment.scope.get(name) {
+                match self.environment.scope.get_mut(name) {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.into());
                         let initial_typ = initial.type_.clone();
-                        unify(initial_typ, type_)
+                        unify(initial_typ, type_.clone())?;
+                        unify_constructor_variants(Arc::make_mut(&mut initial.type_), &type_);
+                        Ok(())
                     }
 
                     // This variable was not defined in the Initial multi-pattern
@@ -737,5 +739,43 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
         }
+    }
+}
+
+/// Unifies the variants of two variables declared in alternative patterns.
+///
+/// This ensures that constructor variant information is only stored if
+/// all alternate pattern variables have the same variant. For example:
+///
+/// ```gleam
+/// type Wibble {
+///   Wibble(wibble: Int, wobble: Float)
+///   Wobble(wubble: String, wooble, Bool)
+/// }
+///
+/// case some_value {
+///   Wibble(..) as wibble | Wobble(..) as wibble ->
+///     Wibble(..wibble, wobble: 1.3)
+/// }
+/// ```
+///
+/// The `wibble` variable will not have the constructor variant stored,
+/// since it can be one of two possible variants.
+///
+fn unify_constructor_variants(into: &mut Type, from: &Type) {
+    match (into, from) {
+        (
+            Type::Named {
+                constructor_index: into_index,
+                ..
+            },
+            Type::Named {
+                constructor_index: from_index,
+                ..
+            },
+        ) if from_index != into_index => *into_index = None,
+        // If the variants are the same, or they aren't both named types,
+        // no modifications are needed
+        _ => {}
     }
 }
