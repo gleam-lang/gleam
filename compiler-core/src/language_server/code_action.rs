@@ -1111,6 +1111,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                 .is_some_and(|c| c == '}')
         })
     }
+
     fn trailing_comma_pos(&self) -> Option<usize> {
         self.import.and_then(|import| {
             self.module
@@ -1124,6 +1125,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                 .map(|(i, _)| i)
         })
     }
+
     fn edit_import(&mut self, has_brace: bool, trailing_comma_pos: Option<usize>, name: String) {
         let import = self.import.expect("import should be set");
         let (end, new_text) = match (has_brace, trailing_comma_pos) {
