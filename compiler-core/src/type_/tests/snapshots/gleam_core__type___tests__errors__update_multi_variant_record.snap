@@ -14,15 +14,13 @@ pub fn main() {
 }
 
 ----- ERROR
-error: Unsafe record update
+error: Mismatched record update
   ┌─ /src/one/two.gleam:8:3
   │
 8 │   Point3(..Point2(a: 1, b: 2))
-  │   ^^^^^^ I can't tell this is always the right constructor
+  │   ^^^^^^ This is never the right constructor
 
-This type has multiple constructors so it cannot be safely updated. If
-this value was one of the other variants then the update would be produce
-incorrect results.
+This value is never the same constructor as the one being updated.
 
-Consider pattern matching on it with a case expression and then
-constructing a new record with its values.
+If you want to change one variant of a type into another, each field of the
+new type must be specified explicitly.
