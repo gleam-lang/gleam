@@ -219,8 +219,9 @@ pub enum Error {
         labels: Vec<EcoString>,
     },
 
-    UpdateMultiConstructorType {
+    UnsafeRecordUpdate {
         location: SrcSpan,
+        reason: UnsafeRecordUpdateReason,
     },
 
     UnnecessarySpreadOperator {
@@ -890,7 +891,7 @@ impl Error {
             | Error::NotFn { location, .. }
             | Error::UnknownRecordField { location, .. }
             | Error::IncorrectArity { location, .. }
-            | Error::UpdateMultiConstructorType { location, .. }
+            | Error::UnsafeRecordUpdate { location, .. }
             | Error::UnnecessarySpreadOperator { location, .. }
             | Error::IncorrectTypeArity { location, .. }
             | Error::CouldNotUnify { location, .. }
@@ -1068,6 +1069,12 @@ pub fn convert_get_value_constructor_error(
             type_with_same_name: imported_value_as_type,
         },
     }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+pub enum UnsafeRecordUpdateReason {
+    UnknownVariant,
+    WrongVariant,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
