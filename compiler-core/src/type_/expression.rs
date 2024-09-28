@@ -2383,14 +2383,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let record_index = record_type.constructor_index();
 
-        // We can only update a record if it is the only variant of its type.
-        // If a record has multiple variants it cannot be safely updated as it
-        // could be one of the other variants.
-        if constructors_count != 1 && !record_index.is_some_and(|index| index == constructor_index)
-        {
-            return Err(Error::UpdateMultiConstructorType {
-                location: constructor.location(),
-            });
+        // Updating a record with only one constructor is always safe
+        if constructors_count != 1 {
+            // If we know the variant of the value being spread, and it doesn't match the
+            // one being constructed, we can tell the user that it's always wrong
+            if record_index.is_some_and(|index| index != constructor_index) {
+                return Err(Error::UnsafeRecordUpdate {
+                    location: constructor.location(),
+                    reason: UnsafeRecordUpdateReason::WrongVariant,
+                });
+            }
+            // If we don't have information about the variant being spread, we tell the user
+            // that it's not safe to update it as it could be any variant
+            else if record_index.is_none() {
+                return Err(Error::UnsafeRecordUpdate {
+                    location: constructor.location(),
+                    reason: UnsafeRecordUpdateReason::UnknownVariant,
+                });
+            }
         }
 
         let args: Vec<TypedRecordUpdateArg> = args
