@@ -1,15 +1,14 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-expression: "\npub type Wibble {\n  Wibble(wibble: Int, wobble: Int)\n  Wobble(wabble: Int, wobble: Int)\n}\n\nfn fun() {\n  let wibble = Wibble(1, 2)\n  wibble.wobble\n}\n"
+expression: "\ntype Wibble {\n  Wibble(a: Int, b: Int, c: Int, d: Int)\n  Wobble(a: Int, z: Bool)\n}\n\nfn fun(some_wibble: Wibble) {\n  some_wibble.a\n}\n"
 ---
-pub type Wibble {
-  Wibble(wibble: Int, wobble: Int)
-  Wobble(wabble: Int, wobble: Int)
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int, d: Int)
+  Wobble(a: Int, z: Bool)
 }
 
-fn fun() {
-  let wibble = Wibble(1, 2)
-  wibble.wobble|
+fn fun(some_wibble: Wibble) {
+  some_wibble.a|
 }
 
 
@@ -34,11 +33,7 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   4_True
-wibble
+a
   kind:   Field
   detail: Int
-  sort:   1_wibble
-wobble
-  kind:   Field
-  detail: Int
-  sort:   1_wobble
+  sort:   1_a
