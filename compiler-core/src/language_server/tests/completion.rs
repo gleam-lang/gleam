@@ -1614,6 +1614,41 @@ fn fun() {
 }
 
 #[test]
+fn completions_for_record_access_known_variant() {
+    let code = "
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int, d: Int)
+  Wobble(z: Bool)
+}
+
+fn fun(some_wibble: Wibble) {
+  case some_wibble {
+    Wibble(..) as w -> w.a
+    Wobble(..) -> panic
+  }
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(8, 26));
+}
+
+#[test]
+fn completions_for_record_access_unknown_variant() {
+    let code = "
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int, d: Int)
+  Wobble(a: Int, z: Bool)
+}
+
+fn fun(some_wibble: Wibble) {
+  some_wibble.a
+}
+";
+
+    assert_completion!(TestProject::for_source(code), Position::new(7, 15));
+}
+
+#[test]
 fn completions_for_record_labels() {
     let code = "
 pub type Wibble {
