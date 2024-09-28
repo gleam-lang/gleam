@@ -2471,3 +2471,38 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn record_update_unknown_variant() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(wibble: Int, wubble: Bool)
+  Wobble(wobble: Int, wubble: Bool)
+}
+
+pub fn wibble(value: Wibble) {
+  Wibble(..value, wubble: True)
+}
+"#
+    );
+}
+
+#[test]
+fn record_update_wrong_variant() {
+    assert_module_error!(
+        r#"
+pub type MyRecord {
+  A(common: Int, other: String)
+  B(common: Int, different: Float)
+}
+
+pub fn b_to_a(value: MyRecord) {
+  case value {
+    A(..) -> value
+    B(..) as b -> A(..b, other: "Hi")
+  }
+}
+"#
+    );
+}
