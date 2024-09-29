@@ -696,36 +696,42 @@ impl<'module> Generator<'module> {
                 let is_first_clause = clause_number == 1;
                 let is_only_clause = is_final_clause && is_first_clause;
 
-                doc = if is_only_clause {
+                let (clause_location_start, clause_location_end) = gen
+                    .expression_generator
+                    .line_numbers
+                    .line_and_column_number_of_src_span(clause.location);
+
+                let doc_to_append = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
                     // A block is used as it could declare variables still.
-                    doc.append("{")
-                        .append(docvec!(line(), body).nest(INDENT))
-                        .append(line())
-                        .append("}")
+                    docvec!["{", docvec!(line(), body).nest(INDENT), line(), "}"]
                 } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
-                    doc.append(" else {")
-                        .append(docvec!(line(), body).nest(INDENT))
-                        .append(line())
-                        .append("}")
+                    docvec![" else {", docvec!(line(), body).nest(INDENT), line(), "}"]
                 } else {
-                    doc.append(if is_first_clause {
+                    let ifclause = if is_first_clause {
                         "if ("
                     } else {
                         " else if ("
-                    })
-                    .append(
-                        gen.expression_generator
-                            .pattern_take_checks_doc(&mut compiled, true),
-                    )
-                    .append(") {")
-                    .append(docvec!(line(), body).nest(INDENT))
-                    .append(line())
-                    .append("}")
+                    };
+                    let expr = gen
+                        .expression_generator
+                        .pattern_take_checks_doc(&mut compiled, true);
+                    docvec![
+                        ifclause,
+                        expr,
+                        ") {",
+                        docvec!(line(), body).nest(INDENT),
+                        line(),
+                        "}"
+                    ]
                 };
+                doc = doc.append(
+                    doc_to_append
+                        .attach_sourcemap_location(clause_location_start, clause_location_end),
+                );
             }
         }
 
