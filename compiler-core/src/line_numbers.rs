@@ -1,3 +1,5 @@
+use crate::ast::SrcSpan;
+
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
 pub struct LineNumbers {
     pub line_starts: Vec<u32>,
@@ -35,6 +37,16 @@ impl LineNumbers {
         LineColumn { line, column }
     }
 
+    pub fn line_and_column_number_of_src_span(
+        &self,
+        location: SrcSpan,
+    ) -> (LineColumn, LineColumn) {
+        let SrcSpan { start, end } = location;
+        let start = self.line_and_column_number(start);
+        let end = self.line_and_column_number(end);
+        (start, end)
+    }
+
     // TODO: handle unicode characters that may be more than 1 byte in width
     /// 0 indexed line and character to byte index
     pub fn byte_index(&self, line: u32, character: u32) -> u32 {
@@ -61,7 +73,7 @@ pub fn main() {
     assert_eq!(line_numbers.byte_index(2, 1), 18);
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LineColumn {
     pub line: u32,
     pub column: u32,

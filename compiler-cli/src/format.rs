@@ -1,7 +1,7 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind, Result, StandardIoAction, Unformatted},
-    io::Content,
-    io::OutputFile,
+    io::{Content, OutputFile},
+    sourcemap::SourceMapEmitter,
 };
 use std::{io::Read, str::FromStr};
 
@@ -18,7 +18,12 @@ pub fn run(stdin: bool, check: bool, files: Vec<String>) -> Result<()> {
 fn process_stdin(check: bool) -> Result<()> {
     let src = read_stdin()?.into();
     let mut out = String::new();
-    gleam_core::format::pretty(&mut out, &src, Utf8Path::new("<stdin>"))?;
+    gleam_core::format::pretty(
+        &mut out,
+        &src,
+        Utf8Path::new("<stdin>"),
+        &mut SourceMapEmitter::null(),
+    )?;
 
     if !check {
         print!("{out}");
@@ -93,7 +98,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
 fn format_file(problem_files: &mut Vec<Unformatted>, path: Utf8PathBuf) -> Result<()> {
     let src = crate::fs::read(&path)?.into();
     let mut output = String::new();
-    gleam_core::format::pretty(&mut output, &src, &path)?;
+    gleam_core::format::pretty(&mut output, &src, &path, &mut SourceMapEmitter::null())?;
 
     if src != output {
         problem_files.push(Unformatted {
