@@ -31,6 +31,7 @@ pub fn prepare(path: &str) -> String {
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: config.javascript.typescript_declarations,
+            emit_source_map: config.javascript.sourcemap,
             prelude_location: Utf8PathBuf::from("../prelude.mjs"),
         },
     };

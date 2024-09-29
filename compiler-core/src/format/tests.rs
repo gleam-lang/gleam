@@ -20,8 +20,13 @@ mod use_;
 macro_rules! assert_format {
     ($src:expr $(,)?) => {
         let mut writer = String::new();
-        $crate::format::pretty(&mut writer, &$src.into(), camino::Utf8Path::new("<stdin>"))
-            .unwrap();
+        $crate::format::pretty(
+            &mut writer,
+            &$src.into(),
+            camino::Utf8Path::new("<stdin>"),
+            &mut crate::sourcemap::SourceMapEmitter::null(),
+        )
+        .unwrap();
         assert_eq!($src, writer);
     };
 }
@@ -30,8 +35,13 @@ macro_rules! assert_format {
 macro_rules! assert_format_rewrite {
     ($src:expr, $expected:expr  $(,)?) => {
         let mut writer = String::new();
-        $crate::format::pretty(&mut writer, &$src.into(), camino::Utf8Path::new("<stdin>"))
-            .unwrap();
+        $crate::format::pretty(
+            &mut writer,
+            &$src.into(),
+            camino::Utf8Path::new("<stdin>"),
+            &mut crate::sourcemap::SourceMapEmitter::null(),
+        )
+        .unwrap();
         assert_eq!(writer, $expected);
     };
 }

@@ -6,9 +6,11 @@ use crate::{
     io::FileSystemWriter,
     javascript,
     line_numbers::LineNumbers,
+    sourcemap::{SourceMapEmitter, SourceMapSupport},
     Result,
 };
 use itertools::Itertools;
+use sourcemap::SourceMapBuilder;
 use std::fmt::Debug;
 
 use camino::Utf8Path;
@@ -160,6 +162,7 @@ pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
     prelude_location: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
+    sourcemap: SourceMapSupport,
     target_support: TargetSupport,
 }
 
@@ -167,6 +170,7 @@ impl<'a> JavaScript<'a> {
     pub fn new(
         output_directory: &'a Utf8Path,
         typescript: TypeScriptDeclarations,
+        sourcemap: SourceMapSupport,
         prelude_location: &'a Utf8Path,
         target_support: TargetSupport,
     ) -> Self {
@@ -175,16 +179,26 @@ impl<'a> JavaScript<'a> {
             output_directory,
             target_support,
             typescript,
+            sourcemap,
         }
     }
 
     pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
+            let js_filename = format!("{js_name}.mjs");
             if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
-            self.js_module(writer, module, &js_name)?
+            let source_map_emitter = match self.sourcemap {
+                SourceMapSupport::None => SourceMapEmitter::null(),
+                SourceMapSupport::Emit => {
+                    let mut builder = SourceMapBuilder::new(Some(&js_filename));
+                    let _ = builder.add_source(module.input_path.as_str());
+                    SourceMapEmitter::Emit(builder)
+                }
+            };
+            self.js_module(writer, module, source_map_emitter, &js_name)?;
         }
         self.write_prelude(writer)?;
         Ok(())
@@ -234,10 +248,13 @@ impl<'a> JavaScript<'a> {
         &self,
         writer: &impl FileSystemWriter,
         module: &Module,
+        mut source_map_emitter: SourceMapEmitter,
         js_name: &str,
     ) -> Result<()> {
         let name = format!("{js_name}.mjs");
+        let sourcemap_name = format!("{js_name}.mjs.map");
         let path = self.output_directory.join(name);
+        let sourcemap_path = self.output_directory.join(sourcemap_name);
         let line_numbers = LineNumbers::new(&module.code);
         let output = javascript::module(
             &module.ast,
@@ -246,8 +263,31 @@ impl<'a> JavaScript<'a> {
             &module.code,
             self.target_support,
             self.typescript,
+            &mut source_map_emitter,
         );
         tracing::debug!(name = ?js_name, "Generated js module");
-        writer.write(&path, &output?)
+        writer.write(&path, &output?)?;
+
+        match source_map_emitter {
+            SourceMapEmitter::Null => Ok(()),
+            SourceMapEmitter::Emit(builder) => {
+                // NOTE: This is a bit inefficient
+                // * we first write to a buffer
+                // * then construct a String based on the output
+                // * then write to the output
+                let sourcemap = builder.into_sourcemap();
+                let mut output = Vec::new();
+
+                // TODO: proper error handling
+                sourcemap
+                    .to_writer(&mut output)
+                    .expect("Failed to write sourcemap to memory");
+                // TODO: proper error handling
+                let output =
+                    String::from_utf8(output).expect("Failed to write sourcemap to memory");
+
+                writer.write(&sourcemap_path, &output)
+            }
+        }
     }
 }
