@@ -1149,6 +1149,9 @@ impl<'module> Generator<'module> {
         message: Option<&'a TypedExpr>,
     ) -> Output<'a> {
         let checks = self.pattern_checks_doc(checks, false);
+        let (start, end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(location);
         Ok(docvec![
             "if (",
             docvec![break_("", ""), checks].nest(INDENT),
@@ -1162,7 +1165,8 @@ impl<'module> Generator<'module> {
             line(),
             "}",
         ]
-        .group())
+        .group()
+        .attach_sourcemap_location(start, end))
     }
 
     fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
