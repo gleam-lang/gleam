@@ -414,6 +414,7 @@ fn derivation_tree_to_pretty_error_message(
     derivation_tree.collapse_no_versions();
     let derivation_tree = simplify_error(derivation_tree);
 
+    pprint_error(0, &derivation_tree);
     // TODO))
     // This order is not deterministic, so sometimes it will default to the
     // original version even though it's almost the same!!
@@ -613,7 +614,7 @@ fn merge_trees_step<'dt, P: Package, V: Version>(
                 cause1_p1,
                 cause1_r1.union(&cause2_r1),
                 cause1_p2,
-                cause1_r2.intersection(&cause2_r2),
+                cause1_r2.union(&cause2_r2),
             ))
         }
 
