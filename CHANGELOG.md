@@ -47,6 +47,47 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The compiler can now suggest to pattern match on a `Result(a, b)` if it's
+  being used where a value of type `a` is expected. For example, this code:
+
+  ```gleam
+  import gleam/list
+  import gleam/int
+
+  pub fn main() {
+    let not_a_number = list.first([1, 2, 3])
+    int.add(1, not_a_number)
+  }
+  ```
+
+  Results in the following error:
+
+  ```txt
+  error: Type mismatch
+    ┌─ /src/one/two.gleam:6:9
+    │
+  6 │   int.add(1, not_a_number)
+    │              ^^^^^^^^^^^^
+
+  Expected type:
+
+      Int
+
+  Found type:
+
+      Result(Int, a)
+
+  Hint: If you want to get a `Int` out of a `Result(Int, a)` you can pattern
+  match on it:
+
+      case result {
+        Ok(value) -> todo
+        Error(error) -> todo
+      }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
