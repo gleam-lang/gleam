@@ -306,6 +306,10 @@ impl<'a> Generator<'a> {
                 .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
+        let (start, end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(constructor.location);
+
         let head = if publicity.is_private() || opaque {
             "class "
         } else {
@@ -314,7 +318,7 @@ impl<'a> Generator<'a> {
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
         if constructor.arguments.is_empty() {
-            return head.append("}");
+            return head.append("}").attach_sourcemap_location(start, end);
         };
 
         let parameters = join(
@@ -340,10 +344,6 @@ impl<'a> Generator<'a> {
             line(),
         );
 
-        let (start, end) = self
-            .line_numbers
-            .line_and_column_number_of_src_span(constructor.location);
-
         let class_body = docvec![
             line(),
             "constructor(",
@@ -353,10 +353,9 @@ impl<'a> Generator<'a> {
             line(),
             "}",
         ]
-        .nest(INDENT)
-        .attach_sourcemap_location(start, end);
+        .nest(INDENT);
 
-        docvec![head, class_body, line(), "}"]
+        docvec![head, class_body, line(), "}"].attach_sourcemap_location(start, end)
     }
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
