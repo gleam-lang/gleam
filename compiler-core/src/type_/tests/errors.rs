@@ -2391,3 +2391,17 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn suggest_unwrapping_a_result_when_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let value = Ok(1)
+  add_1(value)
+}
+
+fn add_1(to x) { x + 1 }
+"
+    );
+}
