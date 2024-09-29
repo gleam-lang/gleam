@@ -214,6 +214,12 @@ impl<'module> Generator<'module> {
                 panic!("invalid expressions should not reach code generation")
             }
         }?;
+
+        let (start, end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(expression.location());
+
+        let document = document.attach_sourcemap_location(start, end);
         Ok(if expression.handles_own_return() {
             document
         } else {
@@ -231,81 +237,90 @@ impl<'module> Generator<'module> {
         use BitArrayOption as Opt;
 
         // Collect all the values used in segments.
-        let segments_array = array(segments.iter().map(|segment| {
-            let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
+        let segments_array =
+            array(segments.iter().map(|segment| {
+                let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
 
-            if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
-                let details = self.sized_bit_array_segment_details(segment)?;
+                let (start, end) = self
+                    .line_numbers
+                    .line_and_column_number_of_src_span(segment.location);
 
-                if segment.type_ == crate::type_::int() {
-                    match (details.size_value, segment.value.as_ref()) {
-                        (Some(size_value), TypedExpr::Int { int_value, .. })
-                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into() =>
-                        {
-                            let bytes = bit_array_segment_int_value_to_bytes(
-                                int_value.clone(),
-                                size_value,
-                                details.endianness,
-                            )?;
+                if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+                    let details = self.sized_bit_array_segment_details(segment)?;
+                    if segment.type_ == crate::type_::int() {
+                        match (details.size_value, segment.value.as_ref()) {
+                            (Some(size_value), TypedExpr::Int { int_value, .. })
+                                if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into() =>
+                            {
+                                let bytes = bit_array_segment_int_value_to_bytes(
+                                    int_value.clone(),
+                                    size_value,
+                                    details.endianness,
+                                )?;
 
-                            Ok(u8_slice(&bytes))
+                                Ok(u8_slice(&bytes))
+                            }
+
+                            (Some(size_value), _) if size_value == 8.into() => Ok(value),
+
+                            (Some(size_value), _) if size_value <= 0.into() => Ok(docvec![]),
+
+                            _ => {
+                                self.tracker.sized_integer_segment_used = true;
+                                Ok(docvec![
+                                    "sizedInt(",
+                                    value,
+                                    ", ",
+                                    details.size,
+                                    ", ",
+                                    bool(details.endianness.is_big()),
+                                    ")"
+                                ]
+                                .attach_sourcemap_location(start, end))
+                            }
                         }
-
-                        (Some(size_value), _) if size_value == 8.into() => Ok(value),
-
-                        (Some(size_value), _) if size_value <= 0.into() => Ok(docvec![]),
-
-                        _ => {
-                            self.tracker.sized_integer_segment_used = true;
-                            Ok(docvec![
-                                "sizedInt(",
-                                value,
-                                ", ",
-                                details.size,
-                                ", ",
-                                bool(details.endianness.is_big()),
-                                ")"
-                            ])
-                        }
+                    } else {
+                        self.tracker.float_bit_array_segment_used = true;
+                        Ok(docvec![
+                            "sizedFloat(",
+                            value,
+                            ", ",
+                            details.size,
+                            ", ",
+                            bool(details.endianness.is_big()),
+                            ")"
+                        ]
+                        .attach_sourcemap_location(start, end))
                     }
                 } else {
-                    self.tracker.float_bit_array_segment_used = true;
-                    Ok(docvec![
-                        "sizedFloat(",
-                        value,
-                        ", ",
-                        details.size,
-                        ", ",
-                        bool(details.endianness.is_big()),
-                        ")"
-                    ])
-                }
-            } else {
-                match segment.options.as_slice() {
-                    // UTF8 strings
-                    [Opt::Utf8 { .. }] => {
-                        self.tracker.string_bit_array_segment_used = true;
-                        Ok(docvec!["stringBits(", value, ")"])
+                    match segment.options.as_slice() {
+                        // UTF8 strings
+                        [Opt::Utf8 { .. }] => {
+                            self.tracker.string_bit_array_segment_used = true;
+                            Ok(docvec!["stringBits(", value, ")"]
+                                .attach_sourcemap_location(start, end))
+                        }
+
+                        // UTF8 codepoints
+                        [Opt::Utf8Codepoint { .. }] => {
+                            self.tracker.codepoint_bit_array_segment_used = true;
+                            Ok(docvec!["codepointBits(", value, ")"]
+                                .attach_sourcemap_location(start, end))
+                        }
+
+                        // Bit arrays
+                        [Opt::Bytes { .. } | Opt::Bits { .. }] => {
+                            Ok(docvec![value, ".buffer"].attach_sourcemap_location(start, end))
+                        }
+
+                        // Anything else
+                        _ => Err(Error::Unsupported {
+                            feature: "This bit array segment option".into(),
+                            location: segment.location,
+                        }),
                     }
-
-                    // UTF8 codepoints
-                    [Opt::Utf8Codepoint { .. }] => {
-                        self.tracker.codepoint_bit_array_segment_used = true;
-                        Ok(docvec!["codepointBits(", value, ")"])
-                    }
-
-                    // Bit arrays
-                    [Opt::Bytes { .. } | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
-
-                    // Anything else
-                    _ => Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    }),
                 }
-            }
-        }))?;
-
+            }))?;
         Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
@@ -560,10 +575,15 @@ impl<'module> Generator<'module> {
 
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
-        if let TypedPattern::Variable { name, .. } = pattern {
+        if let TypedPattern::Variable { name, location, .. } = pattern {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-            let js_name = self.next_local_var(name);
+
+            let js_name_location_start = self.line_numbers.line_and_column_number(location.start);
+            let js_name_location_end = self.line_numbers.line_and_column_number(location.end);
+            let js_name = self
+                .next_local_var(name)
+                .attach_sourcemap_location(js_name_location_start, js_name_location_end);
             return Ok(if self.scope_position.is_tail() {
                 docvec![
                     "let ",
@@ -584,8 +604,13 @@ impl<'module> Generator<'module> {
 
         // Otherwise we need to compile the patterns
         let (subject, subject_assignment) = pattern::assign_subject(self, value);
+        let (value_location_start, value_location_end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(value.location());
         // Value needs to be rendered before traversing pattern to have correctly incremented variables.
-        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+        let value = self
+            .not_in_tail_position(|gen| gen.wrap_expression(value))?
+            .attach_sourcemap_location(value_location_start, value_location_end);
         let mut pattern_generator = pattern::Generator::new(self);
         pattern_generator.traverse_pattern(&subject, pattern)?;
         let compiled = pattern_generator.take_compiled();

@@ -16,11 +16,13 @@
 #[cfg(test)]
 mod tests;
 
+use std::fmt::Write;
+
 use ecow::{eco_format, EcoString};
 use itertools::Itertools;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{io::Utf8Writer, Result};
+use crate::{io::Utf8Writer, line_numbers::LineColumn, sourcemap::SourceMapEmitter, Error, Result};
 
 #[macro_export]
 macro_rules! docvec {
@@ -187,6 +189,14 @@ pub enum Document<'a> {
 
     /// A string that is cheap to copy
     EcoString { string: EcoString, graphemes: isize },
+
+    /// Nests the given document and attach a link from the module at the given
+    /// location to the printed document through the sourcemap
+    WithSourceMapLocation {
+        document: Box<Self>,
+        start: LineColumn,
+        end: LineColumn,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -379,6 +389,10 @@ fn fits(
                     docs.push_front((indent, mode, doc));
                 }
             }
+
+            Document::WithSourceMapLocation { document, .. } => {
+                docs.push_front((indent, mode, document));
+            }
         }
     }
 }
@@ -389,11 +403,66 @@ pub enum BreakKind {
     Strict,
 }
 
+// TODO: Move this somewhere sensible
+/// A wrapper for any writer that keeps track of what line/column it is
+/// currently on. Used to produce SourceMaps
+struct CursorPositionWriter<'a, W> {
+    /// The wrapper writer
+    writer: &'a mut W,
+    /// 0-indexed line the cursor is at right now
+    line: usize,
+    /// 0-indexed column the cursor is at right now
+    column: usize,
+}
+
+impl<'a, W> CursorPositionWriter<'a, W> {
+    pub fn position(&self) -> (usize, usize) {
+        (self.line, self.column)
+    }
+
+    pub fn new(writer: &'a mut W) -> Self {
+        CursorPositionWriter {
+            writer,
+            line: 0,
+            column: 0,
+        }
+    }
+}
+
+impl<'a, W: Write> Write for CursorPositionWriter<'a, W> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.writer.write_str(s)
+    }
+}
+
+impl<'a, W: Utf8Writer + Write> Utf8Writer for CursorPositionWriter<'a, W> {
+    /// A wrapper around `fmt::Write` that has Gleam's error handling.
+    fn str_write(&mut self, str: &str) -> Result<()> {
+        if str.is_empty() {
+            return Ok(());
+        }
+        let newline_count = str.rmatches('\n').count();
+        self.line += newline_count;
+        if newline_count > 0 {
+            let lastline = str.lines().last().expect("Should have at least one line");
+            self.column = lastline.len();
+        } else {
+            self.column += str.len();
+        }
+        self.writer.write_str(str).map_err(|e| self.convert_err(e))
+    }
+
+    fn convert_err<E: std::error::Error>(&self, err: E) -> Error {
+        self.writer.convert_err(err)
+    }
+}
+
 fn format(
     writer: &mut impl Utf8Writer,
     limit: isize,
     mut width: isize,
     mut docs: im::Vector<(isize, Mode, &Document<'_>)>,
+    source_map_emitter: &mut SourceMapEmitter,
 ) -> Result<()> {
     // As long as there are documents to print we'll take each one by one and
     // output the corresponding string to the given writer.
@@ -407,6 +476,7 @@ fn format(
     //   group. For example, if a group doesn't fit on a single line its
     //   documents will be split into multiple lines and the mode set to
     //   `Broken` to keep track of this.
+    let mut writer = CursorPositionWriter::new(writer);
     while let Some((indent, mode, document)) = docs.pop_front() {
         match document {
             // When we run into a line we print the given number of newlines and
@@ -550,6 +620,16 @@ fn format(
             Document::ForceBroken(document) | Document::NextBreakFits(document, _) => {
                 docs.push_front((indent, mode, document));
             }
+
+            Document::WithSourceMapLocation {
+                document,
+                start,
+                end: _, // TODO: Learn how to use this
+            } => {
+                let (line, col) = writer.position();
+                source_map_emitter.add_mapping(line as u32, col as u32, *start);
+                docs.push_front((indent, mode, document));
+            }
         }
     }
     Ok(())
@@ -644,7 +724,7 @@ impl<'a> Document<'a> {
 
     pub fn to_pretty_string(self, limit: isize) -> String {
         let mut buffer = String::new();
-        self.pretty_print(limit, &mut buffer)
+        self.pretty_print(limit, &mut buffer, &mut SourceMapEmitter::null())
             .expect("Writing to string buffer failed");
         buffer
     }
@@ -653,9 +733,22 @@ impl<'a> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 
-    pub fn pretty_print(&self, limit: isize, writer: &mut impl Utf8Writer) -> Result<()> {
+    pub fn attach_sourcemap_location(self, start: LineColumn, end: LineColumn) -> Self {
+        Document::WithSourceMapLocation {
+            document: Box::new(self),
+            start,
+            end,
+        }
+    }
+
+    pub fn pretty_print(
+        &self,
+        limit: isize,
+        writer: &mut impl Utf8Writer,
+        source_map_emitter: &mut SourceMapEmitter,
+    ) -> Result<()> {
         let docs = im::vector![(0, Mode::Unbroken, self)];
-        format(writer, limit, 0, docs)?;
+        format(writer, limit, 0, docs, source_map_emitter)?;
         Ok(())
     }
 
@@ -669,7 +762,11 @@ impl<'a> Document<'a> {
             Str { string, .. } => string.is_empty(),
             // assuming `broken` and `unbroken` are equivalent
             Break { broken, .. } => broken.is_empty(),
-            ForceBroken(d) | Nest(_, _, _, d) | Group(d) | NextBreakFits(d, _) => d.is_empty(),
+            ForceBroken(d)
+            | Nest(_, _, _, d)
+            | Group(d)
+            | NextBreakFits(d, _)
+            | WithSourceMapLocation { document: d, .. } => d.is_empty(),
             Vec(docs) => docs.iter().all(|d| d.is_empty()),
         }
     }

@@ -958,6 +958,7 @@ fn package_config(
                 unstable: true,
                 location: None,
             },
+            sourcemap: false,
         },
         target: Target::Erlang,
         internal_modules: None,

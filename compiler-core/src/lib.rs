@@ -83,6 +83,7 @@ pub mod parse;
 pub mod paths;
 pub mod pretty;
 pub mod requirement;
+pub mod sourcemap;
 pub mod strings;
 pub mod type_;
 pub mod uid;

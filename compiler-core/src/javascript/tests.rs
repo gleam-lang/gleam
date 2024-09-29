@@ -210,6 +210,7 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
         &"".into(),
         TargetSupport::Enforced,
         TypeScriptDeclarations::None,
+        &mut SourceMapEmitter::null(),
     )
 }
 

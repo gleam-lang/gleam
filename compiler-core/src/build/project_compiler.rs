@@ -1,8 +1,11 @@
 use crate::{
     analyse::TargetSupport,
     build::{
-        package_compiler, package_compiler::PackageCompiler, package_loader::StaleTracker,
-        project_compiler, telemetry::Telemetry, Mode, Module, Origin, Package, Target,
+        package_compiler::{self, PackageCompiler},
+        package_loader::StaleTracker,
+        project_compiler,
+        telemetry::Telemetry,
+        Mode, Module, Origin, Package, Target,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
@@ -12,6 +15,7 @@ use crate::{
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
     paths::{self, ProjectPaths},
+    sourcemap::SourceMapEmitter,
     type_::{self, ModuleFunction},
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
@@ -550,6 +554,7 @@ where
 
             Target::JavaScript => super::TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions: self.config.javascript.typescript_declarations,
+                emit_source_map: self.config.javascript.sourcemap,
                 // This path is relative to each package output directory
                 prelude_location: Utf8PathBuf::from("../prelude.mjs"),
             },

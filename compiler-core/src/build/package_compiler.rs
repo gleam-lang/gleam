@@ -1,5 +1,6 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
+use crate::sourcemap::{SourceMapEmitter, SourceMapSupport};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -302,10 +303,12 @@ where
         match self.target {
             TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions,
+                emit_source_map,
                 prelude_location,
             } => self.perform_javascript_codegen(
                 modules,
                 *emit_typescript_definitions,
+                *emit_source_map,
                 prelude_location,
             ),
             TargetCodegenConfiguration::Erlang { app_file } => {
@@ -365,6 +368,7 @@ where
         &mut self,
         modules: &[Module],
         typescript: bool,
+        emit_source_map: bool,
         prelude_location: &Utf8Path,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
@@ -373,9 +377,20 @@ where
         } else {
             TypeScriptDeclarations::None
         };
+        let sourcemap = if emit_source_map {
+            SourceMapSupport::Emit
+        } else {
+            SourceMapSupport::None
+        };
 
-        JavaScript::new(&self.out, typescript, prelude_location, self.target_support)
-            .render(&self.io, modules)?;
+        JavaScript::new(
+            &self.out,
+            typescript,
+            sourcemap,
+            prelude_location,
+            self.target_support,
+        )
+        .render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
