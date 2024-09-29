@@ -1034,8 +1034,12 @@ impl<'module> Generator<'module> {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
-        let doc = self.throw_error("todo", &message, *location, vec![]);
-
+        let (start, end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(*location);
+        let doc = self
+            .throw_error("todo", &message, *location, vec![])
+            .attach_sourcemap_location(start, end);
         Ok(doc)
     }
 
@@ -1044,7 +1048,12 @@ impl<'module> Generator<'module> {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("`panic` expression evaluated."),
         };
-        let doc = self.throw_error("panic", &message, *location, vec![]);
+        let (start, end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(*location);
+        let doc = self
+            .throw_error("panic", &message, *location, vec![])
+            .attach_sourcemap_location(start, end);
 
         Ok(doc)
     }
