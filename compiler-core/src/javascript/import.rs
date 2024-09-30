@@ -4,8 +4,10 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
+    ast::SrcSpan,
     docvec,
     javascript::{JavaScriptCodegenTarget, INDENT},
+    line_numbers::LineNumbers,
     pretty::{break_, concat, join, line, Document, Documentable},
 };
 
@@ -30,23 +32,28 @@ impl<'a> Imports<'a> {
     pub fn register_module(
         &mut self,
         path: EcoString,
+        location: ImportLocation,
         aliases: impl IntoIterator<Item = EcoString>,
         unqualified_imports: impl IntoIterator<Item = Member<'a>>,
     ) {
         let import = self
             .imports
             .entry(path.clone())
-            .or_insert_with(|| Import::new(path.clone()));
+            .or_insert_with(|| Import::new(path.clone(), location));
         import.aliases.extend(aliases);
         import.unqualified.extend(unqualified_imports)
     }
 
-    pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
+    pub fn into_doc(
+        self,
+        codegen_target: JavaScriptCodegenTarget,
+        line_numbers: &LineNumbers,
+    ) -> Document<'a> {
         let imports = concat(
             self.imports
                 .into_values()
                 .sorted_by(|a, b| a.path.cmp(&b.path))
-                .map(|import| Import::into_doc(import, codegen_target)),
+                .map(|import| Import::into_doc(import, codegen_target, line_numbers)),
         );
 
         if self.exports.is_empty() {
@@ -83,26 +90,45 @@ struct Import<'a> {
     path: EcoString,
     aliases: HashSet<EcoString>,
     unqualified: Vec<Member<'a>>,
+    location: ImportLocation,
+}
+
+#[derive(Debug)]
+pub enum ImportLocation {
+    Prelude,
+    AtLocation(SrcSpan),
 }
 
 impl<'a> Import<'a> {
-    fn new(path: EcoString) -> Self {
+    fn new(path: EcoString, location: ImportLocation) -> Self {
         Self {
             path,
             aliases: Default::default(),
             unqualified: Default::default(),
+            location,
         }
     }
 
-    pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
+    pub fn into_doc(
+        self,
+        codegen_target: JavaScriptCodegenTarget,
+        line_numbers: &LineNumbers,
+    ) -> Document<'a> {
         let path = self.path.to_doc();
         let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
             "type "
         } else {
             ""
         };
+        let maybe_location = match self.location {
+            ImportLocation::Prelude => None,
+            ImportLocation::AtLocation(location) => {
+                let (start, end) = line_numbers.line_and_column_number_of_src_span(location);
+                Some((start, end))
+            }
+        };
         let alias_imports = concat(self.aliases.into_iter().sorted().map(|alias| {
-            docvec![
+            let doc = docvec![
                 "import ",
                 import_modifier,
                 "* as ",
@@ -111,7 +137,11 @@ impl<'a> Import<'a> {
                 path.clone(),
                 r#"";"#,
                 line()
-            ]
+            ];
+            match maybe_location {
+                Some((start, end)) => doc.attach_sourcemap_location(start, end),
+                None => doc,
+            }
         }));
         if self.unqualified.is_empty() {
             alias_imports
@@ -123,7 +153,7 @@ impl<'a> Import<'a> {
                 break_(",", " ")
             ]
             .group();
-            docvec![
+            let doc = docvec![
                 alias_imports,
                 "import ",
                 import_modifier,
@@ -133,7 +163,11 @@ impl<'a> Import<'a> {
                 path,
                 r#"";"#,
                 line()
-            ]
+            ];
+            match maybe_location {
+                Some((start, end)) => doc.attach_sourcemap_location(start, end),
+                None => doc,
+            }
         }
     }
 }
@@ -156,15 +190,22 @@ impl<'a> Member<'a> {
 #[test]
 fn into_doc() {
     let mut imports = Imports::new();
-    imports.register_module("./gleam/empty".into(), [], []);
+    imports.register_module("./gleam/empty".into(), ImportLocation::Prelude, [], []);
     imports.register_module(
         "./multiple/times".into(),
+        ImportLocation::Prelude,
         ["wibble".into(), "wobble".into()],
         [],
     );
-    imports.register_module("./multiple/times".into(), ["wubble".into()], []);
     imports.register_module(
         "./multiple/times".into(),
+        ImportLocation::Prelude,
+        ["wubble".into()],
+        [],
+    );
+    imports.register_module(
+        "./multiple/times".into(),
+        ImportLocation::Prelude,
         [],
         [Member {
             name: "one".to_doc(),
@@ -174,6 +215,7 @@ fn into_doc() {
 
     imports.register_module(
         "./other".into(),
+        ImportLocation::Prelude,
         [],
         [
             Member {
@@ -193,6 +235,7 @@ fn into_doc() {
 
     imports.register_module(
         "./other".into(),
+        ImportLocation::Prelude,
         [],
         [
             Member {
@@ -208,6 +251,7 @@ fn into_doc() {
 
     imports.register_module(
         "./zzz".into(),
+        ImportLocation::Prelude,
         [],
         [
             Member {
@@ -221,9 +265,10 @@ fn into_doc() {
         ],
     );
 
+    let line_numbers = LineNumbers::new("");
     assert_eq!(
         line()
-            .append(imports.into_doc(JavaScriptCodegenTarget::JavaScript))
+            .append(imports.into_doc(JavaScriptCodegenTarget::JavaScript, &line_numbers))
             .to_pretty_string(40),
         r#"
 import * as wibble from "./multiple/times";
