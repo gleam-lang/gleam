@@ -1508,6 +1508,38 @@ fn verified_requirements_equality_with_canonicalized_paths() {
     );
 }
 
+#[cfg(test)]
+fn create_testable_unlock_manifest(
+    packages: Vec<(EcoString, Version, Vec<EcoString>)>,
+    requirements: Vec<(EcoString, EcoString)>,
+) -> Manifest {
+    let manifest_packages = packages
+        .into_iter()
+        .map(|(name, version, requirements)| ManifestPackage {
+            name,
+            version,
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements,
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+        })
+        .collect();
+
+    let root_requirements = requirements
+        .into_iter()
+        .map(|(name, range)| {
+            (name, Requirement::Hex { version: hexpm::version::Range::new(range.into()) })
+        })
+        .collect();
+
+    Manifest {
+        packages: manifest_packages,
+        requirements: root_requirements,
+    }
+}
+
 #[test]
 fn test_unlock_package() {
     let mut locked = HashMap::from([
@@ -1517,53 +1549,14 @@ fn test_unlock_package() {
         ("package_d".into(), Version::new(4, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(3, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_d".into(),
-            version: Version::new(4, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+        ("package_d".into(), Version::new(4, 0, 0), vec![]),
     ];
 
-    let manifest = Manifest {
-        packages: manifest_packages.clone(),
-        requirements: HashMap::new(),
-    };
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
 
     let packages_to_unlock = vec!["package_a".into()];
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
@@ -1597,33 +1590,12 @@ fn test_unlock_nonexistent_package() {
         ("package_b".into(), Version::new(2, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
     ];
 
-    let manifest = Manifest {
-        packages: manifest_packages.clone(),
-        requirements: HashMap::new(),
-    };
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
 
     let packages_to_unlock = vec!["nonexistent_package".into()];
     let mut locked = initial_locked.clone();
@@ -1645,63 +1617,15 @@ fn test_unlock_multiple_packages() {
         ("package_e".into(), Version::new(5, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(3, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_d".into(),
-            version: Version::new(4, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_e".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_e".into(),
-            version: Version::new(5, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+        ("package_d".into(), Version::new(4, 0, 0), vec!["package_e".into()]),
+        ("package_e".into(), Version::new(5, 0, 0), vec![]),
     ];
 
-    let manifest = Manifest {
-        packages: manifest_packages.clone(),
-        requirements: HashMap::new(),
-    };
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
 
     let packages_to_unlock = vec!["package_a".into(), "package_d".into()];
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
@@ -1720,33 +1644,12 @@ fn test_unlock_packages_empty_input() {
         ("package_b".into(), Version::new(2, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
     ];
 
-    let manifest = Manifest {
-        packages: manifest_packages.clone(),
-        requirements: HashMap::new(),
-    };
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
 
     let packages_to_unlock: Vec<EcoString> = vec![];
     let mut locked = initial_locked.clone();
@@ -1766,43 +1669,13 @@ fn test_unlock_package_preserve_shared_deps() {
         ("package_c".into(), Version::new(3, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(3, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_c".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let manifest = Manifest {
-        packages: manifest_packages.clone(),
-        requirements: HashMap::new(),
-    };
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
 
     let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
@@ -1820,48 +1693,17 @@ fn test_unlock_package_with_root_dep() {
         ("package_c".into(), Version::new(3, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let requirements = HashMap::from([
-        ("package_b".into(), Requirement::Hex { version: hexpm::version::Range::new(">= 2.0.0".into()) }),
-    ]);
+    let requirements = vec![
+        ("package_b".into(), ">= 2.0.0".into()),
+    ];
 
-    let manifest = Manifest {
-        packages: manifest_packages,
-        requirements,
-    };
-
+    let manifest = create_testable_unlock_manifest(packages, requirements);
 
     let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
@@ -1879,48 +1721,17 @@ fn test_unlock_root_dep_package() {
         ("package_c".into(), Version::new(3, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let requirements = HashMap::from([
-        ("package_a".into(), Requirement::Hex { version: hexpm::version::Range::new(">= 1.0.0".into()) }),
-    ]);
+    let requirements = vec![
+        ("package_a".into(), ">= 1.0.0".into()),
+    ];
 
-    let manifest = Manifest {
-        packages: manifest_packages,
-        requirements,
-    };
-
+    let manifest = create_testable_unlock_manifest(packages, requirements);
 
     let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
@@ -1938,48 +1749,17 @@ fn test_unlock_package_with_and_without_root_dep() {
         ("package_c".into(), Version::new(3, 0, 0)),
     ]);
 
-    let manifest_packages = vec![
-        ManifestPackage {
-            name: "package_a".into(),
-            version: Version::new(1, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec!["package_b".into(), "package_c".into()],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_b".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
-        ManifestPackage {
-            name: "package_c".into(),
-            version: Version::new(2, 0, 0),
-            build_tools: vec!["gleam".into()],
-            otp_app: None,
-            requirements: vec![],
-            source: ManifestPackageSource::Hex {
-                outer_checksum: Base16Checksum(vec![]),
-            },
-        },
+    let packages = vec![
+        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into(), "package_c".into()]),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let requirements = HashMap::from([
-        ("package_b".into(), Requirement::Hex { version: hexpm::version::Range::new(">= 2.0.0".into()) }),
-    ]);
+    let requirements = vec![
+        ("package_b".into(), ">= 2.0.0".into()),
+    ];
 
-    let manifest = Manifest {
-        packages: manifest_packages,
-        requirements,
-    };
-
+    let manifest = create_testable_unlock_manifest(packages, requirements);
 
     let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
     unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
