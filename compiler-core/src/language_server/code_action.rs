@@ -1049,8 +1049,16 @@ pub struct QualifiedToUnqualifiedImport<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
-    import: Option<&'a ast::Import<EcoString>>,
+    import: Option<ModuleImport<'a>>,
     edits: Vec<TextEdit>,
+    should_stop: bool,
+}
+
+struct ModuleImport<'a> {
+    hover_location: SrcSpan,
+    import: &'a ast::Import<EcoString>,
+    used_name: EcoString,
+    constructor: EcoString,
 }
 
 impl<'a> QualifiedToUnqualifiedImport<'a> {
@@ -1062,10 +1070,14 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             line_numbers,
             edits: vec![],
             import: None,
+            should_stop: false,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
+        // the first pass is to find the hovered constructor
+        self.visit_typed_module(&self.module.ast);
+        // the second pass is to find all edits
         self.visit_typed_module(&self.module.ast);
         if self.edits.is_empty() {
             return vec![];
@@ -1079,14 +1091,8 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         action
     }
 
-    fn get_module_import(&mut self, module_name: &EcoString) {
-        // If we've already found an import overlapped by current span, clear the edits and start over
-        // since we only edit the inner most span
-        if self.import.is_some() {
-            self.edits.clear();
-        }
-        self.import = self
-            .module
+    fn get_module_import(&mut self, module_name: &EcoString) -> Option<&'a ast::Import<EcoString>> {
+        self.module
             .ast
             .definitions
             .iter()
@@ -1101,11 +1107,11 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
 
     fn has_brace(&self) -> bool {
-        self.import.is_some_and(|import| {
+        self.import.as_ref().is_some_and(|import| {
             self.module
                 .code
                 .chars()
-                .skip(import.location.end as usize - 1)
+                .skip(import.import.location.end as usize - 1)
                 .take(1)
                 .next()
                 .is_some_and(|c| c == '}')
@@ -1113,13 +1119,13 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
 
     fn trailing_comma_pos(&self) -> Option<usize> {
-        self.import.and_then(|import| {
+        self.import.as_ref().and_then(|import| {
             self.module
                 .code
                 .chars()
                 .enumerate()
-                .skip(import.location.start as usize)
-                .take_while(|(i, _)| *i < import.location.end as usize)
+                .skip(import.import.location.start as usize)
+                .take_while(|(i, _)| *i < import.import.location.end as usize)
                 .filter(|(_, c)| *c == ',')
                 .last()
                 .map(|(i, _)| i)
@@ -1127,21 +1133,27 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
 
     fn edit_import(&mut self, has_brace: bool, trailing_comma_pos: Option<usize>, name: String) {
-        let import = self.import.expect("import should be set");
+        let import = self.import.as_mut().expect("import should be set");
         let (end, new_text) = match (has_brace, trailing_comma_pos) {
             // import gleam/option
             (false, None) => (
-                SrcSpan::new(import.location.end, import.location.end),
+                SrcSpan::new(import.import.location.end, import.import.location.end),
                 format!(".{{{name}}}"),
             ),
             // import gleam/option.{} or import gleam/option.{Some}
             (true, None) => (
-                SrcSpan::new(import.location.end - 1, import.location.end - 1),
+                SrcSpan::new(
+                    import.import.location.end - 1,
+                    import.import.location.end - 1,
+                ),
                 format!(", {name}"),
             ),
             // import gleam/option.{Some,}
-            (true, Some(pos)) if pos == import.location.end as usize - 1 => (
-                SrcSpan::new(import.location.end - 1, import.location.end - 1),
+            (true, Some(pos)) if pos == import.import.location.end as usize - 1 => (
+                SrcSpan::new(
+                    import.import.location.end - 1,
+                    import.import.location.end - 1,
+                ),
                 format!(" {name}"),
             ),
             // import gleam/option.{Some,  }
@@ -1157,14 +1169,16 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         });
     }
     fn add_import_edits(&mut self, name: &str, is_type: bool) {
-        let import = self.import.expect("import should be set");
+        let import = self.import.as_mut().expect("import should be set");
         let is_imported = if is_type {
             import
+                .import
                 .unqualified_types
                 .iter()
                 .any(|type_| type_.used_name() == name)
         } else {
             import
+                .import
                 .unqualified_values
                 .iter()
                 .any(|value| value.used_name() == name)
@@ -1179,6 +1193,43 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             let trailing_comma_pos = has_brace.then(|| self.trailing_comma_pos()).flatten();
             self.edit_import(has_brace, trailing_comma_pos, name);
         }
+    }
+
+    fn import_match(
+        &self,
+        new_import: Option<&ast::Import<EcoString>>,
+        hover_location: SrcSpan,
+    ) -> bool {
+        match (self.import.as_ref(), new_import) {
+            (
+                Some(ModuleImport {
+                    hover_location: old_src,
+                    import: old_import,
+                    ..
+                }),
+                Some(new_import),
+            ) => old_import.module == new_import.module && *old_src == hover_location,
+            _ => false,
+        }
+    }
+
+    fn remove_module_qualifier(&mut self, location: SrcSpan, is_type: bool) {
+        let import = self.import.as_ref().expect("import should be set");
+        let span = if is_type {
+            SrcSpan::new(
+                location.start,
+                location.start + import.used_name.len() as u32 + 1,
+            )
+        } else {
+            SrcSpan::new(
+                location.start - import.used_name.len() as u32,
+                location.start + 1,
+            )
+        };
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(span, &self.line_numbers),
+            new_text: "".to_string(),
+        });
     }
 }
 
@@ -1231,30 +1282,57 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
+        if self.should_stop {
+            return;
+        }
         let range = src_span_to_lsp_range(*location, &self.line_numbers);
         if overlaps(self.params.range, range) {
             if let Some((module_name, module_location)) = module {
-                let _ = self.module.find_node(module_location.start).map(|node| {
-                    if let Located::Annotation(_, ty) = node {
-                        if let Some((module, _)) = ty.named_type_name() {
-                            self.get_module_import(&module);
+                let import = self
+                    .module
+                    .find_node(module_location.start)
+                    .and_then(|node| {
+                        if let Located::Annotation(_, ty) = node {
+                            if let Some((module, _)) = ty.named_type_name() {
+                                return self.get_module_import(&module);
+                            }
                         }
-                    }
-                });
-                if self.import.is_some() {
-                    self.add_import_edits(name, true);
-                    self.edits.push(TextEdit {
-                        range: src_span_to_lsp_range(
-                            SrcSpan::new(
-                                location.start,
-                                location.start + module_name.len() as u32 + 1,
-                            ),
-                            &self.line_numbers,
-                        ),
-                        new_text: "".to_string(),
+                        None
                     });
+                // the second pass to the correct position
+                if self.import_match(import, *location) {
+                    self.should_stop = true;
+                    return;
+                }
+                if self.import.is_some() {
+                    self.edits.clear();
+                }
+                if let Some(import) = import {
+                    self.import = Some(ModuleImport {
+                        hover_location: *location,
+                        import,
+                        used_name: module_name.clone(),
+                        constructor: name.clone(),
+                    });
+                    self.add_import_edits(name, true);
+                    self.remove_module_qualifier(*location, true);
                 }
             };
+        } else {
+            if let Some(ModuleImport {
+                used_name,
+                constructor,
+                ..
+            }) = self.import.as_ref()
+            {
+                if let Some((module_name, _)) = module {
+                    if used_name.as_str() == (*module_name).as_str()
+                        && constructor.as_str() == (*name).as_str()
+                    {
+                        self.remove_module_qualifier(*location, true);
+                    }
+                }
+            }
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
     }
@@ -1268,24 +1346,45 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         module_alias: &'ast EcoString,
         constructor: &'ast ModuleValueConstructor,
     ) {
+        if self.should_stop {
+            return;
+        }
         let select_range = src_span_to_lsp_range(*location, &self.line_numbers);
         if overlaps(self.params.range, select_range) {
-            self.get_module_import(module_name);
+            let import = self.get_module_import(module_name);
+            if self.import_match(import, *location) {
+                self.should_stop = true;
+                return;
+            }
             if self.import.is_some() {
+                self.edits.clear();
+            }
+            if let Some(import) = import {
                 if let ModuleValueConstructor::Record { name, .. } = constructor {
-                    self.add_import_edits(name, false);
-
-                    // Remove the module qualifier
-                    self.edits.push(TextEdit {
-                        range: src_span_to_lsp_range(
-                            SrcSpan::new(
-                                location.start - module_alias.len() as u32,
-                                location.start + 1,
-                            ),
-                            &self.line_numbers,
-                        ),
-                        new_text: "".to_string(),
+                    self.import = Some(ModuleImport {
+                        hover_location: *location,
+                        import,
+                        used_name: module_alias.clone(),
+                        constructor: name.clone(),
                     });
+                    self.add_import_edits(name, false);
+                    self.remove_module_qualifier(*location, false);
+                }
+            }
+        } else {
+            if let Some(ModuleImport {
+                // import,
+                used_name,
+                constructor: wanted_constructor,
+                ..
+            }) = self.import.as_ref()
+            {
+                if let ModuleValueConstructor::Record { name, .. } = constructor {
+                    if used_name.as_str() == (*module_alias).as_str()
+                        && wanted_constructor.as_str() == (*name).as_str()
+                    {
+                        self.remove_module_qualifier(*location, false);
+                    }
                 }
             }
         }
