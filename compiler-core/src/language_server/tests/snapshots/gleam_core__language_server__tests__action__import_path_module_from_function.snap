@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  io.println(\"Hello, world!\")\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  io.println("Hello, world!")
+  ▔▔↑                        
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+pub fn main() {
+  io.println("Hello, world!")
+}

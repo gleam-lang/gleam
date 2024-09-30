@@ -1,6 +1,12 @@
 use crate::{
-    build::Module, config::PackageConfig, erlang, io::FileSystemWriter, javascript,
-    line_numbers::LineNumbers, Result,
+    analyse::TargetSupport,
+    build::{ErlangAppCodegenConfiguration, Module},
+    config::PackageConfig,
+    erlang,
+    io::FileSystemWriter,
+    javascript,
+    line_numbers::LineNumbers,
+    Result,
 };
 use itertools::Itertools;
 use std::fmt::Debug;
@@ -29,7 +35,7 @@ impl<'a> Erlang<'a> {
         modules: &[Module],
     ) -> Result<()> {
         for module in modules {
-            let erl_name = module.name.replace('/', "@");
+            let erl_name = module.name.replace("/", "@");
             self.erlang_module(&writer, module, &erl_name)?;
             self.erlang_record_headers(&writer, module, &erl_name)?;
         }
@@ -69,14 +75,14 @@ impl<'a> Erlang<'a> {
 #[derive(Debug)]
 pub struct ErlangApp<'a> {
     output_directory: &'a Utf8Path,
-    include_dev_deps: bool,
+    config: &'a ErlangAppCodegenConfiguration,
 }
 
 impl<'a> ErlangApp<'a> {
-    pub fn new(output_directory: &'a Utf8Path, include_dev_deps: bool) -> Self {
+    pub fn new(output_directory: &'a Utf8Path, config: &'a ErlangAppCodegenConfiguration) -> Self {
         Self {
             output_directory,
-            include_dev_deps,
+            config,
         }
     }
 
@@ -96,12 +102,12 @@ impl<'a> ErlangApp<'a> {
             .erlang
             .application_start_module
             .as_ref()
-            .map(|module| tuple("mod", &format!("'{}'", module.replace('/', "@"))))
+            .map(|module| tuple("mod", &format!("{{'{}', []}}", module.replace("/", "@"))))
             .unwrap_or_default();
 
         let modules = modules
             .iter()
-            .map(|m| m.name.replace('/', "@"))
+            .map(|m| m.name.replace("/", "@"))
             .sorted()
             .join(",\n               ");
 
@@ -114,8 +120,10 @@ impl<'a> ErlangApp<'a> {
                 config
                     .dev_dependencies
                     .keys()
-                    .take_while(|_| self.include_dev_deps),
+                    .take_while(|_| self.config.include_dev_deps),
             )
+            // TODO: test this!
+            .map(|name| self.config.package_name_overrides.get(name).unwrap_or(name))
             .chain(config.erlang.extra_applications.iter())
             .sorted()
             .join(",\n                    ");
@@ -150,13 +158,22 @@ pub enum TypeScriptDeclarations {
 #[derive(Debug)]
 pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
+    prelude_location: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
+    target_support: TargetSupport,
 }
 
 impl<'a> JavaScript<'a> {
-    pub fn new(output_directory: &'a Utf8Path, typescript: TypeScriptDeclarations) -> Self {
+    pub fn new(
+        output_directory: &'a Utf8Path,
+        typescript: TypeScriptDeclarations,
+        prelude_location: &'a Utf8Path,
+        target_support: TargetSupport,
+    ) -> Self {
         Self {
+            prelude_location,
             output_directory,
+            target_support,
             typescript,
         }
     }
@@ -174,18 +191,25 @@ impl<'a> JavaScript<'a> {
     }
 
     fn write_prelude(&self, writer: &impl FileSystemWriter) -> Result<()> {
-        writer.write(
-            &self.output_directory.join("gleam.mjs"),
-            javascript::PRELUDE,
-        )?;
-        tracing::debug!("Generated JS prelude");
-        if self.typescript == TypeScriptDeclarations::Emit {
-            writer.write(
-                &self.output_directory.join("gleam.d.mts"),
-                javascript::PRELUDE_TS_DEF,
-            )?;
-            tracing::debug!("Generated TS prelude");
+        let rexport = format!("export * from \"{}\";\n", self.prelude_location);
+        let prelude_path = &self.output_directory.join("gleam.mjs");
+
+        // This check skips unnecessary `gleam.mjs` writes which confuse
+        // watchers and HMR build tools
+        if !writer.exists(prelude_path) {
+            writer.write(prelude_path, &rexport)?;
         }
+
+        if self.typescript == TypeScriptDeclarations::Emit {
+            let rexport = rexport.replace(".mjs", ".d.mts");
+            let prelude_declaration_path = &self.output_directory.join("gleam.d.mts");
+
+            // Type decleration may trigger badly configured watchers
+            if !writer.exists(prelude_declaration_path) {
+                writer.write(prelude_declaration_path, &rexport)?;
+            }
+        }
+
         Ok(())
     }
 
@@ -211,8 +235,14 @@ impl<'a> JavaScript<'a> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output =
-            javascript::module(&module.ast, &line_numbers, &module.input_path, &module.code);
+        let output = javascript::module(
+            &module.ast,
+            &line_numbers,
+            &module.input_path,
+            &module.code,
+            self.target_support,
+            self.typescript,
+        );
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
     }

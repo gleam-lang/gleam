@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "\nimport esa/rocket_ship\nimport nasa/rocket_ship.{go} as _nasa_rocket\npub fn esa_go() { rocket_ship.go() }\npub fn nasa_go() { go() }\n"
+---
+import * as $rocket_ship from "../esa/rocket_ship.mjs";
+import { go } from "../nasa/rocket_ship.mjs";
+
+export function esa_go() {
+  return $rocket_ship.go();
+}
+
+export function nasa_go() {
+  return go();
+}

@@ -6,3 +6,58 @@ members = [
   "compiler-wasm",
   "test-package-compiler",
 ]
+
+# common dependencies
+[workspace.dependencies]
+# Immutable data structures
+im = "15"
+# Extra iter methods
+itertools = "0"
+# Parsing
+regex = "1"
+# Colours in terminal
+termcolor = "1"
+# Data (de)serialisation
+serde = { version = "1", features = ["derive", "rc"] }
+serde_json = "1"
+# toml config file parsing
+toml = "0"
+walkdir = "2"
+# Enum trait impl macros
+strum = { version = "0", features = ["derive"] }
+# Hex package manager client
+hexpm = "2"
+# Creation of tar file archives
+tar = "0"
+# gzip compression
+flate2 = "1"
+# Byte array data type
+bytes = "1"
+# Logging
+tracing = "0"
+# Macro to work around Rust's traits not working with async. Sigh.
+async-trait = "0"
+# HTTP types
+http = "1"
+# Async combinators for futures
+futures = "0"
+# Little helper to omit fields that cannot be debug printed
+debug-ignore = "1"
+# base encoding
+base16 = "0"
+# Language server protocol server plumbing
+lsp-server = "0"
+lsp-types = "0"
+# Compact clone-on-write vector & string type
+ecow = "0"
+# Drop in replacement for std::path but with only utf-8
+camino = "1"
+# std::error::Error definition macro
+thiserror = "1"
+# Test assertion errors with diffs
+pretty_assertions = "1"
+# Snapshot testing to make test maintenance easier
+insta = "1"
+# A transitive dependency needed to compile into wasm32-unknown-unknown
+# See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
+getrandom = { version = "0", features = ["js"] }

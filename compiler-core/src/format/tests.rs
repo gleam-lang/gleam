@@ -1,13 +1,17 @@
 use pretty_assertions::assert_eq;
 
 mod asignments;
-mod bit_string;
+mod binary_operators;
+mod bit_array;
 mod blocks;
+mod cases;
 mod conditional_compilation;
 mod external_fn;
 mod external_types;
 mod function;
 mod guards;
+mod imports;
+mod pipeline;
 mod record_update;
 mod tuple;
 mod use_;
@@ -24,11 +28,11 @@ macro_rules! assert_format {
 
 #[macro_export]
 macro_rules! assert_format_rewrite {
-    ($src:expr, $output:expr  $(,)?) => {
+    ($src:expr, $expected:expr  $(,)?) => {
         let mut writer = String::new();
         $crate::format::pretty(&mut writer, &$src.into(), camino::Utf8Path::new("<stdin>"))
             .unwrap();
-        assert_eq!(writer, $output);
+        assert_eq!(writer, $expected);
     };
 }
 
@@ -38,7 +42,7 @@ fn imports() {
     assert_format!("import one\n");
     assert_format!("import one\nimport two\n");
     assert_format!("import one/two/three\n");
-    assert_format!("import one/two/three\nimport four/five\n");
+    assert_format!("import four/five\nimport one/two/three\n");
     assert_format!("import one.{fun, fun2, fun3}\n");
     assert_format!("import one.{One, Two, fun1, fun2}\n");
     assert_format!("import one.{main as entrypoint}\n");
@@ -65,8 +69,8 @@ fn imports() {
 fn multiple_statements_test() {
     assert_format!(
         r#"import one
-import two
 import three
+import two
 
 pub type One
 
@@ -524,13 +528,10 @@ fn expr_call() {
 
     assert_format!(
         "fn main() {
-  Ok(
-    1,
-    {
-      1
-      2
-    },
-  )
+  Ok(1, {
+    1
+    2
+  })
 }
 "
     );
@@ -597,11 +598,13 @@ fn compact_single_argument_call() {
 
     assert_format!(
         r#"fn main() {
-  thingy(wiggle(my_function(
-    // ok!
-    one(),
-    two(),
-  )))
+  thingy(
+    wiggle(my_function(
+      // ok!
+      one(),
+      two(),
+    )),
+  )
 }
 "#
     );
@@ -642,13 +645,10 @@ fn compact_single_argument_call() {
 fn expr_tuple() {
     assert_format!(
         r#"fn main(one, two, three) {
-  #(
-    1,
-    {
-      1
-      2
-    },
-  )
+  #(1, {
+    1
+    2
+  })
 }
 "#
     );
@@ -713,21 +713,30 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn1() {
     assert_format!(
         r#"fn main(label_one one, label_two two, label_three three) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn2() {
     assert_format!(
         r#"fn main(label_one one: One, label_two two: Two) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn3() {
     assert_format!(
         r#"fn main(
   label_one one: One,
@@ -746,14 +755,20 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn4() {
     assert_format!(
         r#"fn main(label _discarded) {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn5() {
     // https://github.com/gleam-lang/gleam/issues/613
     assert_format!(
         r#"fn main() {
@@ -762,7 +777,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn6() {
     //
     // Module function return annotations
     //
@@ -773,7 +791,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn7() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Looooooooooooooong,
@@ -785,7 +806,10 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn8() {
     assert_format!(
         r#"fn main() -> Loooooooooooooooooooong(
   Loooooooooooooooooooooooooooooooooooooooooong,
@@ -794,21 +818,33 @@ fn statement_fn() {
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn9() {
     assert_format!(
         r#"fn main() -> program.Exit {
   Nil
 }
 "#
     );
+}
 
+#[test]
+fn statement_fn10() {
     assert_format!(
-        "fn order(first: Set(member), second: Set(member)) -> #(Set(member), Set(member)) {
+        "fn order(
+  first: Set(member),
+  second: Set(member),
+) -> #(Set(member), Set(member), a) {
   Nil
 }
 "
     );
+}
 
+#[test]
+fn statement_fn11() {
     assert_format!(
         "///
 pub fn try_map(
@@ -2243,8 +2279,8 @@ fn expr_pipe() {
         r#"fn main() {
   #(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2256,8 +2292,8 @@ fn expr_pipe() {
         r#"fn main() {
   some_call(
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   )
@@ -2269,8 +2305,8 @@ fn expr_pipe() {
         r#"fn main() {
   [
     1
-    |> succ
-    |> succ,
+      |> succ
+      |> succ,
     2,
     3,
   ]
@@ -2547,12 +2583,12 @@ fn breakable_pattern() {
     assert_format!(
         r#"fn main() {
   let Ok(Thingybob(
-    one: one,
-    two: two,
-    three: three,
-    four: four,
-    five: five,
-    six: six,
+    one: _one,
+    two: _two,
+    three: _three,
+    four: _four,
+    five: _five,
+    six: _six,
   )) = 1
   Nil
 }
@@ -2591,7 +2627,7 @@ fn pattern_discard() {
 
     assert_format!(
         r#"fn main() {
-  let _foo = 1
+  let _wibble = 1
   Nil
 }
 "#
@@ -2675,7 +2711,7 @@ fn pattern_constructor() {
 
     assert_format!(
         r#"fn main() {
-  let Person(name, age: age) = 1
+  let Person(name, age: the_age) = 1
   Nil
 }
 "#
@@ -2683,7 +2719,7 @@ fn pattern_constructor() {
 
     assert_format!(
         r#"fn main() {
-  let Person(name: name, age: age) = 1
+  let Person(name: the_name, age: the_age) = 1
   Nil
 }
 "#
@@ -2815,10 +2851,10 @@ fn expr_case() {
         r#"fn main() {
   case bool {
     True -> {
-      "Foo"
+      "Wibble"
       |> io.println
 
-      "Bar"
+      "Wobble"
       |> io.println
 
       Nil
@@ -3130,7 +3166,7 @@ fn tuple_access2() {
 fn tuple_access3() {
     assert_format!(
         r#"fn main() {
-  { tup.1 }.2
+  tup.1.2
 }
 "#
     );
@@ -3157,6 +3193,28 @@ fn expr_panic_as() {
 }
 
 #[test]
+fn expr_panic_as_value() {
+    assert_format!(
+        r#"fn main() {
+  let x = "panicking" <> "with a value"
+  panic as x
+}
+"#
+    );
+}
+
+#[test]
+fn expr_todo_as_value() {
+    assert_format!(
+        r#"fn main() {
+  let x = "Need to" <> "do this"
+  todo as x
+}
+"#
+    );
+}
+
+#[test]
 fn expr_todo() {
     assert_format!(
         "fn main() {
@@ -3169,20 +3227,6 @@ fn expr_todo() {
 #[test]
 fn expr_todo_with_label() {
     assert_format!(
-        r#"fn main() {
-  todo as "todo with a label"
-}
-"#
-    );
-}
-
-#[test]
-fn todo_old() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  todo("todo with a label")
-}
-"#,
         r#"fn main() {
   todo as "todo with a label"
 }
@@ -3688,8 +3732,9 @@ pub fn main(
 fn commented_binop() {
     assert_format!(
         "fn main() {
-  1 + // hello
-  2
+  1
+  // hello
+  + 2
 }
 "
     );
@@ -3697,9 +3742,11 @@ fn commented_binop() {
     assert_format!(
         "fn main() {
   // one
-  1 + // two
-  2 + // three
-  3
+  1
+  // two
+  + 2
+  // three
+  + 3
 }
 "
     );
@@ -3963,7 +4010,8 @@ fn binary_operator_precedence() {
 
     assert_format!(
         "fn main() {
-  3 * {
+  3
+  * {
     1
     |> inc
   }
@@ -3976,7 +4024,8 @@ fn binary_operator_precedence() {
   {
     1
     |> inc
-  } * 3
+  }
+  * 3
 }
 "
     );
@@ -4343,13 +4392,10 @@ fn case_in_call() {
     assert_format!(
         "fn clause_guard_tests(_fns) -> List(Test) {
   example(fn() {
-    assert_equal(
-      0,
-      case Nil {
-        _ if yes -> 0
-        _ -> 1
-      },
-    )
+    assert_equal(0, case Nil {
+      _ if yes -> 0
+      _ -> 1
+    })
   })
 }
 "
@@ -4420,12 +4466,141 @@ fn negation_block() {
 }
 
 #[test]
+fn empty_lines_work_with_trailing_space() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+    // We first make extra sure we've not messed up the expected output and
+    // check it's well formatted.
+    assert_format!(expected);
+
+    assert_format_rewrite!(src, expected);
+}
+
+#[test]
+fn empty_lines_work_with_eol_normalisation() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+
+    // We first make extra sure we've not messed up the expected output and
+    // check it's well formatted.
+    assert_format!(expected);
+
+    assert_format_rewrite!(&src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(&src.replace('\n', "\r"), expected);
+}
+
+#[test]
+fn empty_lines_work_with_trailing_space_and_eol_normalisation() {
+    let src = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+
+  // Comment
+
+
+  2
+}
+";
+    let expected = "pub fn main() {
+  let inc = fn(a) { a + 1 }
+
+  pair.map_first(#(1, 2), inc)
+  |> should.equal(#(2, 2))
+
+  // Comment
+
+  1
+
+  // Comment
+
+  2
+}
+";
+
+    // We first make extra sure we've not messed up the expected output and
+    // check it's well formatted.
+    assert_format!(expected);
+
+    assert_format_rewrite!(src.replace('\n', "\r\n"), expected);
+    assert_format_rewrite!(&src.replace('\n', "\r"), expected);
+}
+#[test]
 fn single_empty_line_between_comments() {
     // empty line isn't added if it's not already present
     assert_format!(
-        "pub fn foo() {
-  // foo
-  // bar
+        "pub fn wibble() {
+  // wibble
+  // wobble
   123
 }
 "
@@ -4436,10 +4611,10 @@ fn single_empty_line_between_comments() {
 fn single_empty_line_between_comments1() {
     // single empty line between comments/statement preserved
     assert_format!(
-        "pub fn foo() {
-  // foo
+        "pub fn wibble() {
+  // wibble
 
-  // bar
+  // wobble
 
   123
 }
@@ -4451,20 +4626,20 @@ fn single_empty_line_between_comments1() {
 fn single_empty_line_between_comments2() {
     // multiple consecutive empty lines condensed into one
     assert_format_rewrite!(
-        "pub fn foo() {
-  // foo
+        "pub fn wibble() {
+  // wibble
 
 
-  // bar
+  // wobble
 
 
   123
 }
 ",
-        "pub fn foo() {
-  // foo
+        "pub fn wibble() {
+  // wibble
 
-  // bar
+  // wobble
 
   123
 }
@@ -4476,9 +4651,9 @@ fn single_empty_line_between_comments2() {
 fn single_empty_line_between_comments3() {
     // freestanding comments keep empty lines
     assert_format!(
-        "// foo
+        "// wibble
 
-// bar
+// wobble
 "
     );
 }
@@ -4487,14 +4662,14 @@ fn single_empty_line_between_comments3() {
 fn single_empty_line_between_comments4() {
     // freestanding comments condense consecutive empty lines
     assert_format_rewrite!(
-        "// foo
+        "// wibble
 
 
-// bar
+// wobble
 ",
-        "// foo
+        "// wibble
 
-// bar
+// wobble
 ",
     );
 }
@@ -4503,8 +4678,8 @@ fn single_empty_line_between_comments4() {
 #[test]
 fn no_newline_before_comments() {
     assert_format!(
-        "// foo
-// bar
+        "// wibble
+// wobble
 "
     );
 }
@@ -4514,7 +4689,11 @@ fn no_newline_before_comments() {
 fn list_at_end_of_long_expr_line() {
     assert_format!(
         "pub fn example() {
-  Ok(RecordConstructorWithALongName(a_field: RecordConstructorWithALongName(a_field: Record(a_field: []))))
+  Ok(
+    RecordConstructorWithALongName(
+      a_field: RecordConstructorWithALongName(a_field: Record(a_field: [])),
+    ),
+  )
 }
 "
     );
@@ -4595,9 +4774,9 @@ fn do_not_remove_required_braces_case_guard() {
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if is_enabled && {
-      is_confirmed || is_admin
-    } -> Nil
+    is_enabled, is_confirmed, is_admin
+      if is_enabled && { is_confirmed || is_admin }
+    -> Nil
     _, _, _ -> Nil
   }
 }
@@ -4606,9 +4785,9 @@ fn do_not_remove_required_braces_case_guard() {
 
     assert_format!(
         "fn main() {
-  let foo = True
-  case foo {
-    foo if True != { 1 == 2 } -> Nil
+  let wibble = True
+  case wibble {
+    wibble if True != { 1 == 2 } -> Nil
     _ -> Nil
   }
 }
@@ -4617,10 +4796,10 @@ fn do_not_remove_required_braces_case_guard() {
 
     assert_format!(
         "fn main() {
-  let foo = True
-  let bar = False
-  case foo {
-    foo if True != { 1 == { bar == foo } } -> Nil
+  let wibble = True
+  let wobble = False
+  case wibble {
+    wibble if True != { 1 == { wobble == wibble } } -> Nil
     _ -> Nil
   }
 }
@@ -4629,9 +4808,9 @@ fn do_not_remove_required_braces_case_guard() {
 
     assert_format!(
         "fn main() {
-  let foo = #(10, [0])
-  case foo {
-    foo if True && { foo.0 == 10 || foo.0 == 1 } -> Nil
+  let wibble = #(10, [0])
+  case wibble {
+    wibble if True && { wibble.0 == 10 || wibble.0 == 1 } -> Nil
     _ -> Nil
   }
 }
@@ -4658,8 +4837,9 @@ fn remove_braces_case_guard() {
   let is_confirmed = False
   let is_admin = True
   case is_enabled, is_confirmed, is_admin {
-    is_enabled, is_confirmed, is_admin if is_enabled && is_confirmed || is_admin ->
-      Nil
+    is_enabled, is_confirmed, is_admin
+      if is_enabled && is_confirmed || is_admin
+    -> Nil
     _, _, _ -> Nil
   }
 }
@@ -4671,17 +4851,17 @@ fn remove_braces_case_guard() {
 fn remove_braces_case_guard_2() {
     assert_format_rewrite!(
         "fn main() {
-  let foo = #(10, [0])
-  case foo {
-    foo if True && { foo.0 == 10 } -> Nil
+  let wibble = #(10, [0])
+  case wibble {
+    wibble if True && { wibble.0 == 10 } -> Nil
     _ -> Nil
   }
 }
 ",
         "fn main() {
-  let foo = #(10, [0])
-  case foo {
-    foo if True && foo.0 == 10 -> Nil
+  let wibble = #(10, [0])
+  case wibble {
+    wibble if True && wibble.0 == 10 -> Nil
     _ -> Nil
   }
 }
@@ -4828,9 +5008,9 @@ fn list_spread_discard_comment_pattern() {
 #[test]
 fn multiple_line_documentation_comment_statement_grouping() {
     assert_format!(
-        r#"/// This is the first line of the documenation comment.
-/// This is the second line of the documenation comment.
-/// This is the third line of the documenation comment.
+        r#"/// This is the first line of the documentation comment.
+/// This is the second line of the documentation comment.
+/// This is the third line of the documentation comment.
 pub type Map(key, value)
 "#
     );
@@ -4990,13 +5170,35 @@ fn wrap_long_line_with_int_negation() {
         r#"pub fn main() {
   let a = 3
   let b =
-    a * a * a * a * a * a * a * a * a * a * a * a * a * {
-      a * a * a * a * a * a * a * a * a * a
-    }
+    a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * a
+    * { a * a * a * a * a * a * a * a * a * a }
   let c =
-    c * c * c * c * c * c * c * c * c * c * c * c * c * -{
-      c * c * c * c * c * c * c * c * c * c
-    }
+    c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * c
+    * -{ c * c * c * c * c * c * c * c * c * c }
 }
 "#
     );
@@ -5014,13 +5216,35 @@ fn wrap_long_line_with_bool_negation() {
         r#"pub fn main() {
   let a = True
   let b =
-    a || a || a || a || a || a || a || a || a || a || a || a || a || {
-      a || a || a || a || a || a || a || a || a || a
-    }
+    a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || a
+    || { a || a || a || a || a || a || a || a || a || a }
   let c =
-    c || c || c || c || c || c || c || c || c || c || c || c || c || !{
-      c || c || c || c || c || c || c || c || c || c
-    }
+    c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || c
+    || !{ c || c || c || c || c || c || c || c || c || c }
 }
 "#
     );
@@ -5119,10 +5343,1095 @@ fn empty_line_after_crash() {
 "#,
         r#"pub type One {
   One
+  // Comment
 }
-// Comment
+"#
+    );
+}
 
+// https://github.com/gleam-lang/gleam/issues/2196
+#[test]
+fn comment_at_end_of_type() {
+    assert_format!(
+        r#"pub type X {
+  X
+  // Afterwards
+}
+"#
+    );
+}
 
+#[test]
+fn deprecated_custom_type() {
+    assert_format!(
+        r#"@deprecated("Deprecated type")
+pub type One {
+  One
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_type_alias() {
+    assert_format!(
+        r#"@deprecated("Deprecated type")
+pub type Tiger =
+  Nil
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2423
+#[test]
+fn prefix_as() {
+    assert_format!(
+        r#"pub fn main(x) {
+  case x {
+    "0" as digit <> rest | "1" as digit <> rest -> rest
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn case_splits_function_on_newline() {
+    assert_format!(
+        r#"pub fn main() {
+  case x {
+    1 ->
+      some_module.some_long_name_function([
+        some_module.some_long_name_function(),
+      ])
+    _ -> todo
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_list() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok([
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ])
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_function() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(fn() {
+    some_long_variable_name_to_force_wrapping()
+    some_long_variable_name_to_force_wrapping()
+    some_long_variable_name_to_force_wrapping()
+  })
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_tuple() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(#(
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ))
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(do_something(
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+    some_long_variable_name_to_force_wrapping,
+  ))
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(
+    do_something(do_something_else(
+      some_long_variable_name_to_force_wrapping,
+      some_long_variable_name_to_force_wrapping,
+      some_long_variable_name_to_force_wrapping,
+    )),
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2442
+#[test]
+fn single_argument_call_nested_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  Ok(
+    do_something(
+      do_something_else(do_a_last_thing(
+        some_long_variable_name_to_force_wrapping,
+        some_long_variable_name_to_force_wrapping,
+        some_long_variable_name_to_force_wrapping,
+      )),
+    ),
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2512
+#[test]
+fn list_with_pipe_format() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    "Success!"
+      |> ansi(apply: [1, 31]),
+    "",
+    "Wrote `" <> bin <> "`, `" <> pwsh_bin <> "`",
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn function_call_close_to_line_limit() {
+    assert_format!(
+        r#"pub fn main() {
+  function_call(
+    that,
+    is,
+    super,
+    close,
+    to,
+    the,
+    max,
+    line,
+    limit,
+    of,
+    80,
+    chars,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_are_not_broken_with_string_concatenation_if_they_fit() {
+    assert_format!(
+        r#"pub fn main() {
+  "pub fn wibble(" <> arg <> ") ->" <> type_ <> "{
+    body
+}"
+}
+"#
+    );
+}
+
+#[test]
+fn nesting_goes_back_to_normal_after_multiline_string() {
+    assert_format!(
+        r#"pub fn main() {
+  let x = {
+    "
+1
+2
+" <> long_name_function_call(
+      1_111_111_111_111_111,
+      222_222_222_222,
+      3_333_333_333_333_333,
+    )
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn multiline_string_get_broken_on_newlines_as_function_arguments() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    wobble,
+    "wobble
+  wibble
+       wobble",
+    wibble,
+    wobble,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+    wobble,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_used_as_function_arguments_is_not_nested_if_it_is_the_only_argument() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    wibble,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_list_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_gets_nested() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    wibble,
+    a_variable_with_a_long_name
+      |> another_variable_with_a_long_name
+      |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_inside_tuple_is_not_nested_if_only_item() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    a_variable_with_a_long_name
+    |> another_variable_with_a_long_name
+    |> yet_another_variable_with_a_long_name,
+  )
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_list_of_literals() {
+    assert_format!(
+        r#"fn main() {
+  [
+    1, 2,
+    // list
+  ]
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_list() {
+    assert_format!(
+        r#"fn main() {
+  [
+    wibble,
+    wobble,
+    // list
+  ]
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_case_expressions() {
+    assert_format!(
+        r#"fn main() {
+  case True {
+    _ -> Nil
+    // case
+  }
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_tuples() {
+    assert_format!(
+        r#"fn main() {
+  #(
+    1,
+    2,
+    // tuple
+  )
+}
+"#
+    );
+}
+
+// github.com/gleam-lang/gleam/issues/2608
+#[test]
+fn comments_are_not_moved_out_of_function_calls() {
+    assert_format!(
+        r#"fn main() {
+  call(
+    1,
+    2,
+    // function call
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn function_arguments_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    // Wobble
+    1 + 1,
+    "wibble",
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn tuple_items_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    // Wobble
+    1 + 1,
+    "wibble",
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2607
+#[test]
+fn list_items_after_comment_are_not_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  [
+    // Wobble
+    1 + 1,
+    "wibble",
+  ]
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2990
+#[test]
+fn comments_are_not_moved_out_of_empty_list() {
+    assert_format!(
+        r#"pub fn main() {
+  // This is an empty list!
+  [
+    // Nothing here...
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn empty_lists_with_comment_inside_are_indented_properly() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    [
+      // Nothing here...
+    ],
+    wibble_wobble_wibble_wobble_wibble_wobble_wibble_wobble,
+    [
+      // Nothing here as well!
+    ],
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2890
+#[test]
+fn piped_blocks_are_not_needlessly_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    1,
+    {
+      "long enough to need to wrap. blah blah blah blah blah blah blah blah blah"
+    }
+      |> wibble,
+    3,
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2924
+#[test]
+fn record_update_fields_are_not_needlessly_broken() {
+    assert_format!(
+        r#"pub fn main() {
+  Model(
+    ..model,
+    wibble: wibble_wobble_wibble_wobble + 1,
+    wobble: Some(wibble_wobble_wibble_wobble),
+  )
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2890
+#[test]
+fn piped_lists_are_not_needlessly_indented() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    [
+      ["wibble wobble", "wibble", "wobble"],
+      ["long enough to go over", "line limit"],
+    ]
+      |> list.concat,
+    todo,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn comments_inside_nested_pipe_chain() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    thing
+      // A comment
+      |> wibble
+      // Another comment
+      |> wobble,
+    thing,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn comments_inside_nested_binop_chain() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    thing
+      // A comment
+      <> wibble
+      // Another comment
+      <> wobble,
+    thing,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn comments_inside_binop_chain() {
+    assert_format!(
+        r#"pub fn main() {
+  thing
+  // A comment
+  <> wibble
+  // Another comment
+  <> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_function() {
+    assert_format!(
+        r#"@internal
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_type() {
+    assert_format!(
+        r#"@internal
+pub type Type
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_const() {
+    assert_format!(
+        r#"@internal
+pub const wibble = 1
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_list() {
+    assert_format!(
+        r#"const wibble = [
+  // A comment
+  1, 2,
+  // Another comment
+  3,
+  // One last comment
+]
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_empty_list() {
+    assert_format!(
+        r#"const wibble = [
+  // A comment
+]
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_tuple() {
+    assert_format!(
+        r#"const wibble = #(
+  // A comment
+  1,
+  2,
+  // Another comment
+  3,
+  // One last comment
+)
+"#
+    );
+}
+
+#[test]
+fn comments_inside_contant_empty_tuple() {
+    assert_format!(
+        r#"const wibble = #(
+  // A comment
+)
+"#
+    );
+}
+
+#[test]
+fn comments_inside_empty_tuple() {
+    assert_format!(
+        r#"pub fn main() {
+  #(
+    // A comment!
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn comments_at_the_end_of_anonymous_function() {
+    assert_format!(
+        r#"pub fn main() {
+  fn() {
+    1
+    // a final comment
+
+    // another final comment
+    // at the end of the block
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn comments_in_anonymous_function_args() {
+    assert_format!(
+        r#"pub fn main() {
+  fn(
+    // A comment 1
+    // A comment 2
+  ) {
+    1
+  }
+}
+"#
+    );
+    assert_format!(
+        r#"pub fn main() {
+  fn(
+    // A comment 1
+    a,
+    // A comment 2
+  ) {
+    1
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn comments_after_last_argument_of_record_constructor() {
+    assert_format!(
+        r#"type Record {
+  Record(
+    field: String,
+    // comment_line_1: String,
+    // comment_line_2: String,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn only_comments_in_record_constructor() {
+    assert_format!(
+        r#"type Record {
+  Record(
+    // comment_line_1: String,
+    // comment_line_2: String,
+  )
+}
+"#
+    );
+}
+#[test]
+fn comment_after_spread_operator() {
+    assert_format!(
+        "type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1, 2, 3)
+  let Triple(
+    really_really_long_variable_name_a,
+    c: really_really_long_variable_name_c,
+    ..,
+    // comment
+  ) = triple
+  really_really_long_variable_name_c
+}
+"
+    );
+}
+
+#[test]
+fn multiline_comment_in_case_block() {
+    assert_format!(
+        r#"pub fn do_len(list, acc) {
+  case list {
+    [] -> acc
+    [_, ..rest] -> rest |> do_len(acc + 1)
+    // Even the opposite wouldn't be optimised:
+    // { acc + 1 } |> do_len(rest, _)
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3190
+#[test]
+fn trailing_comments_inside_non_empty_bit_arrays_are_not_moved() {
+    assert_format!(
+        r#"pub fn main() {
+  <<
+    1, 2,
+    // One and two are above me.
+  >>
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3210
+#[test]
+fn newlines_are_not_stripped_if_two_consecutive_anonymous_function_are_passed_as_arguments() {
+    assert_format!(
+        r#"pub fn main() {
+  fun(
+    fn() {
+      wibble
+
+      wobble
+    },
+    fn() { wibble },
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn const_long_concat_string() {
+    assert_format_rewrite!(
+        r#"const long_string = "some" <> " very" <> " long" <> " string" <> " indeed" <> " please" <> " break"
+"#,
+        r#"const long_string = "some"
+  <> " very"
+  <> " long"
+  <> " string"
+  <> " indeed"
+  <> " please"
+  <> " break"
+"#
+    );
+}
+
+#[test]
+fn const_concat_short_unbroken() {
+    assert_format!(
+        r#"const x = "some" <> "short" <> "string"
+"#
+    );
+}
+
+#[test]
+fn const_concat_long_including_list() {
+    assert_format_rewrite!(
+        r#"const x = "some long string 1" <> "some long string 2" <> ["here is a list", "with several elements", "in order to make it be too long to fit on one line", "so we can see how it breaks", "onto multiple lines"] <> "and a last string"
+"#,
+        r#"const x = "some long string 1"
+  <> "some long string 2"
+  <> [
+    "here is a list", "with several elements",
+    "in order to make it be too long to fit on one line",
+    "so we can see how it breaks", "onto multiple lines",
+  ]
+  <> "and a last string"
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3397
+#[test]
+fn comment_after_case_branch() {
+    assert_format!(
+        r#"pub fn main() {
+  case x {
+    _ ->
+      // comment
+      [123]
+  }
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3397
+#[test]
+fn comment_after_case_branch_case() {
+    assert_format!(
+        r#"pub fn main() {
+  case x {
+    _ ->
+      // comment
+      case y {
+        _ -> todo
+      }
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn label_shorthand_call_arg_is_split_like_regular_labelled_args() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    a_punned_arg_that_is_super_long:,
+    another_punned_arg:,
+    yet_another_pun:,
+    ok_thats_enough: wibble,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn commented_label_shorthand_call_arg_is_split_like_regular_labelled_args() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(
+    // A comment here
+    a_punned_arg_that_is_super_long:,
+    another_punned_arg:,
+    // And a comment there
+    yet_another_pun:,
+    ok_thats_enough: wibble,
+  )
+}
+"#
+    );
+}
+
+#[test]
+fn label_shorthand_pattern_arg_is_split_like_regular_labelled_patterns() {
+    assert_format!(
+        r#"pub fn main() {
+  let Wibble(
+    a_punned_arg_that_is_super_long:,
+    another_punned_arg:,
+    yet_another_pun:,
+    ok_thats_enough: wibble,
+  ) = todo
+}
+"#
+    );
+}
+
+#[test]
+fn record_pattern_with_no_label_shorthand() {
+    assert_format!(
+        r#"pub fn main() {
+  let Wibble(x: x) = todo
+}
+"#
+    );
+}
+
+#[test]
+fn record_with_no_label_shorthand() {
+    assert_format!(
+        r#"pub fn main() {
+  Wibble(x: x)
+}
+"#
+    );
+}
+
+#[test]
+fn function_without_label_shorthand() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble(x: x)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn doc_comments_are_split_by_regular_comments() {
+    assert_format!(
+        r#"/// Doc comment
+// Commented function
+// fn wibble() {}
+
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn it_is_easy_to_tell_two_different_doc_comments_apart_when_a_regular_comment_is_separating_those()
+{
+    assert_format_rewrite!(
+        r#"/// Doc comment
+// regular comment
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#,
+        r#"/// Doc comment
+// regular comment
+
+/// Other doc comment
+pub fn main() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn multiple_commented_definitions_in_a_row_2() {
+    assert_format!(
+        r#"/// Stray comment
+// regular comment
+
+/// Stray comment
+// regular comment
+
+/// Doc comment
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn only_stray_comments_and_definition_with_no_doc_comments() {
+    assert_format!(
+        r#"/// Stray comment
+// regular comment
+
+/// Stray comment
+// regular comment
+
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2015
+#[test]
+fn only_stray_comments_and_definition_with_no_doc_comments_2() {
+    assert_format_rewrite!(
+        r#"/// Stray comment
+// regular comment
+pub fn wibble () {
+  todo
+}
+"#,
+        r#"/// Stray comment
+// regular comment
+
+pub fn wibble() {
+  todo
+}
+"#
+    );
+}
+
+#[test]
+fn discard_in_pipe_is_not_turned_into_shorthand_label() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble |> wobble(one: 1, label: _, two: 2)
+}
+"#
+    );
+}
+
+// Bug found by Louis
+#[test]
+fn internal_attribute_does_not_change_formatting_of_a_function() {
+    assert_format!(
+        r#"@internal
+pub fn init(
+  start: #(SupervisorFlags, List(ChildSpecification)),
+) -> Result(#(Dynamic, Dynamic), never) {
+  todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3627
+#[test]
+fn big_grapheme_cluster() {
+    assert_format!(
+        r#"pub fn main() {
+  sw("👩‍👩‍👧‍👦👩‍👩‍👧‍👦👩‍👩‍👧‍👦", [])
+}
 "#
     );
 }

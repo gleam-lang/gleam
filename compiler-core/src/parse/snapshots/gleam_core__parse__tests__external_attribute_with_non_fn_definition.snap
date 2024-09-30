@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@external(erlang, \"module\", \"fun\")\npub type Fun\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ @external(erlang, "module", "fun")
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ I was expecting a function definition after this

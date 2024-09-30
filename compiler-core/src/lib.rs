@@ -1,6 +1,5 @@
 #![warn(
     clippy::all,
-    clippy::doc_markdown,
     clippy::dbg_macro,
     clippy::todo,
     clippy::mem_forget,
@@ -10,7 +9,6 @@
     clippy::needless_continue,
     clippy::needless_borrow,
     clippy::match_wildcard_for_single_variants,
-    clippy::mismatched_target_os,
     clippy::match_on_vec_items,
     clippy::imprecise_flops,
     clippy::suboptimal_flops,
@@ -29,6 +27,7 @@
     trivial_casts,
     trivial_numeric_casts,
     nonstandard_style,
+    unexpected_cfgs,
     unused_import_braces,
     unused_qualifications,
 )]
@@ -46,7 +45,9 @@
     unused_results
 )]
 #![allow(
+    clippy::to_string_trait_impl,
     clippy::match_single_binding,
+    clippy::match_like_matches_macro,
     clippy::inconsistent_struct_constructor,
     // TODO: fix
     clippy::arc_with_non_send_sync,
@@ -58,7 +59,7 @@ extern crate pretty_assertions;
 
 pub mod analyse;
 pub mod ast;
-pub mod bit_string;
+pub mod bit_array;
 pub mod build;
 pub mod codegen;
 pub mod config;
@@ -67,6 +68,7 @@ pub mod diagnostic;
 pub mod docs;
 pub mod erlang;
 pub mod error;
+pub mod fix;
 pub mod format;
 pub mod hex;
 pub mod io;
@@ -75,17 +77,21 @@ pub mod language_server;
 pub mod line_numbers;
 pub mod manifest;
 pub mod metadata;
+pub mod package_interface;
 pub mod parse;
 pub mod paths;
 pub mod pretty;
 pub mod requirement;
+pub mod strings;
 pub mod type_;
 pub mod uid;
 pub mod version;
 pub mod warning;
 
+pub(crate) mod ast_folder;
 mod call_graph;
 mod dep_tree;
+mod exhaustiveness;
 pub(crate) mod graph;
 
 pub use error::{Error, Result};

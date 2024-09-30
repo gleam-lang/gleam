@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 46
 expression: "\n@external(javascript, \"./the/module.mjs\", \"one\")\npub fn one() -> Nil\n\n@external(javascript, \"./the/module.mjs\", \"two\")\npub fn two() -> Nil\n"
 ---
 import { one, two } from "./the/module.mjs";
 
 export { one, two };
-

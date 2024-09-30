@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\nlet x = fn(f) { \"Hello, \" <> f() }\nuse <- x()\nlet n = 1\nn + 2\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:1
+  │
+5 │ n + 2
+  │ ^^^^^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int

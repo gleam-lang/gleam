@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let assert [theElement] = [9.4]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let assert [theElement] = [9.4]
+        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let assert [the_element] = [9.4]
+}

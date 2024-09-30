@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main(res) {\n  case res {\n    result.Ok(_) -> Nil\n    result.Error(_) -> Nil\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(res) {
+  case res {
+    result.Ok(_) -> Nil
+    ▔▔▔▔▔▔↑            
+    result.Error(_) -> Nil
+  }
+}
+
+
+----- AFTER ACTION
+import result
+
+pub fn main(res) {
+  case res {
+    result.Ok(_) -> Nil
+    result.Error(_) -> Nil
+  }
+}

@@ -2,7 +2,7 @@
 
 # This Cap'n Proto schema is compiled into Rust code for use in the compiler.
 #
-# We don't want the compiler build to depend on the Cap'n Proto compiler so 
+# We don't want the compiler build to depend on the Cap'n Proto compiler so
 # the Cap'n Proto to Rust build step is commented out in `build.rs`.
 #
 # This schema is not considered a stable API and may change at any time.
@@ -25,17 +25,44 @@ struct Module {
   values @2 :List(Property(ValueConstructor));
   accessors @3 :List(Property(AccessorsMap));
   package @4 :Text;
-  typesConstructors @5 :List(Property(List(Text)));
+  typesConstructors @5 :List(Property(TypesVariantConstructors));
+  lineNumbers @6 :LineNumbers;
+  srcPath @7 :Text;
+  isInternal @8 :Bool;
+  requiredVersion @9 :Version;
+}
+
+struct Version {
+  major @0 :UInt32;
+  minor @1 :UInt32;
+  patch @2 :UInt32;
+}
+
+struct TypesVariantConstructors {
+  variants @0 :List(TypeValueConstructor);
+  typeParametersIds @1 :List(UInt16);
+}
+
+struct TypeValueConstructor {
+  name @0 :Text;
+  parameters @1 :List(TypeValueConstructorParameter);
+}
+
+struct TypeValueConstructorParameter {
+  type @0 :Type;
 }
 
 struct TypeConstructor {
   type @0 :Type;
-  # TODO: convert this to an int as we only need to reconstruct type vars, 
+  # TODO: convert this to an int as we only need to reconstruct type vars,
   # not other types
   # TODO: test
-  parameters @1 :List(Type); 
+  parameters @1 :List(Type);
   module @2 :Text;
-  public @3 :Bool;
+  publicity @3 :Publicity;
+  deprecated @4 :Text;
+  origin @5 :SrcSpan;
+  documentation @6 :Text;
 }
 
 struct AccessorsMap {
@@ -55,6 +82,7 @@ struct Type {
       name @0 :Text;
       module @1 :Text;
       parameters @2 :List(Type);
+      package @7 :Text;
     }
 
     fn :group {
@@ -75,8 +103,24 @@ struct Type {
 struct ValueConstructor {
   type @0 :Type;
   variant @1 :ValueConstructorVariant;
-  public @2 :Bool;
+  publicity @2 :Publicity;
   deprecated @3 :Text;
+}
+
+struct Publicity {
+  union {
+    public @0 :Void;
+    private @1 :Void;
+    internal @2 :Option(SrcSpan);
+  }
+}
+
+struct Implementations {
+  gleam @0 :Bool;
+  usesErlangExternals @1 :Bool;
+  usesJavascriptExternals @2 :Bool;
+  canRunOnErlang @3 :Bool;
+  canRunOnJavascript @4 :Bool;
 }
 
 struct ValueConstructorVariant {
@@ -86,6 +130,7 @@ struct ValueConstructorVariant {
       location @1 :SrcSpan;
       module @2 :Text;
       documentation @14 :Text;
+      implementations @19 :Implementations;
     }
 
     moduleFn :group {
@@ -95,6 +140,9 @@ struct ValueConstructorVariant {
       arity @6 :UInt16;
       location @7 :SrcSpan;
       documentation @15 :Text;
+      implementations @18 :Implementations;
+      externalErlang @20 :Option(External);
+      externalJavascript @21 :Option(External);
     }
 
     record :group {
@@ -105,8 +153,14 @@ struct ValueConstructorVariant {
       module @12 :Text;
       constructorsCount @13 :UInt16;
       documentation @16 :Text;
+      constructorIndex @17 :UInt16;
     }
   }
+}
+
+struct External {
+  module @0 :Text;
+  function @1 :Text;
 }
 
 struct SrcSpan {
@@ -144,35 +198,40 @@ struct Constant {
     record :group {
       args @6 :List(Constant);
       tag @7 :Text;
-      typ @8 :Type;
+      type @8 :Type;
     }
 
-    bitString @9 :List(BitStringSegment);
+    bitArray @9 :List(BitArraySegment);
 
     var :group {
       module @10 :Text;
       name @11 :Text;
-      typ @12 :Type;
+      type @12 :Type;
       constructor @13 :ValueConstructor;
+    }
+
+    stringConcatenation :group {
+      left @14 :Constant;
+      right @15 :Constant;
     }
   }
 }
 
-struct BitStringSegment {
+struct BitArraySegment {
   value @0 :Constant;
-  options @1 :List(BitStringSegmentOption);
+  options @1 :List(BitArraySegmentOption);
   type @2 :Type;
 }
 
-struct BitStringSegmentOption {
+struct BitArraySegmentOption {
   union {
-    binary @0 :Void;
+    bytes @0 :Void;
 
     integer @1 :Void;
 
     float @2 :Void;
 
-    bitstring @3 :Void;
+    bits @3 :Void;
 
     utf8 @4 :Void;
 
@@ -208,3 +267,7 @@ struct BitStringSegmentOption {
   }
 }
 
+struct LineNumbers {
+  lineStarts @0 :List(UInt32);
+  length @1 :UInt32;
+}

@@ -8,13 +8,12 @@ import { makeError } from "../gleam.mjs";
 export function negate(x) {
   return x && (() => {
     throw makeError(
-      "todo",
+      "panic",
       "my/mod",
       2,
       "negate",
-      "panic expression evaluated",
+      "`panic` expression evaluated.",
       {}
     )
   })();
 }
-

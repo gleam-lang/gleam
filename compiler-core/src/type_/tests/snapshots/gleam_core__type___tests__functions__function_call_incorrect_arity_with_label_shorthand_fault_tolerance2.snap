@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/functions.rs
+expression: "\nfn wibble(wibble arg1: fn() -> Int, wobble arg2: Int, wabble arg3: Int) -> Int {\n  arg1() + arg2 + arg3\n}\n\npub fn main() {\n  let wobble = \"\"\n  wibble(fn() {\"\"}, wobble:)\n}\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:8:3
+  │
+8 │   wibble(fn() {""}, wobble:)
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^^^ Expected 3 arguments, got 2
+
+This call accepts these additional labelled arguments:
+
+  - wabble
+  - wibble
+
+error: Type mismatch
+  ┌─ /src/one/two.gleam:8:10
+  │
+8 │   wibble(fn() {""}, wobble:)
+  │          ^^^^^^^^^
+
+Expected type:
+
+    fn() -> Int
+
+Found type:
+
+    fn() -> String

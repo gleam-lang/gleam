@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import example_module
+fn make_var() -> example_module.Wabble(example_module.Wibble(example_module.Wobble)) {
+                                                                             ↑        
+  example_module.Wabble(example_module.Wibble(example_module.Wobble(1)))
+}
+
+----- Jumped to `build/packages/hex/src/example_module.gleam`
+
+pub type Wobble {
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔  
+  Wobble(Int)
+}
+
+pub type Wibble(a) {
+  Wibble(a)
+}
+
+pub type Wabble(a) {
+  Wabble(a)
+}

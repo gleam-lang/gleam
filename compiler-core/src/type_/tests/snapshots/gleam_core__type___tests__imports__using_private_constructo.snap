@@ -1,13 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 31
 expression: "import one\n\npub fn main() {\n  one.Two\n}"
 ---
-error: Unknown module field
+error: Unknown module value
   ┌─ /src/one/two.gleam:4:6
   │
 4 │   one.Two
   │      ^^^^
 
-The module `one` does not have a `Two` field.
-
+The module `one` does not have a `Two` value.

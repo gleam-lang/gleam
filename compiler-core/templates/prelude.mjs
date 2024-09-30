@@ -1,16 +1,10 @@
-export class CustomType {
-  inspect() {
-    let field = (label) => {
-      let value = inspect(this[label]);
-      return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
-    };
-    let props = Object.keys(this).map(field).join(", ");
-    return props ? `${this.constructor.name}(${props})` : this.constructor.name;
-  }
+// Values marked with @internal are not part of the public API and may change
+// without notice.
 
+export class CustomType {
   withFields(fields) {
     let properties = Object.keys(this).map((label) =>
-      label in fields ? fields[label] : this[label]
+      label in fields ? fields[label] : this[label],
     );
     return new this.constructor(...properties);
   }
@@ -19,26 +13,21 @@ export class CustomType {
 export class List {
   static fromArray(array, tail) {
     let t = tail || new Empty();
-    return array.reduceRight((xs, x) => new NonEmpty(x, xs), t);
-  }
-
-  static isList(data) {
-    let variant = data?.__gleam_prelude_variant__;
-    return variant === "EmptyList" || variant === "NonEmptyList";
+    for (let i = array.length - 1; i >= 0; --i) {
+      t = new NonEmpty(array[i], t);
+    }
+    return t;
   }
 
   [Symbol.iterator]() {
     return new ListIterator(this);
   }
 
-  inspect() {
-    return `[${this.toArray().map(inspect).join(", ")}]`;
-  }
-
   toArray() {
     return [...this];
   }
 
+  // @internal
   atLeastLength(desired) {
     for (let _ of this) {
       if (desired <= 0) return true;
@@ -47,6 +36,7 @@ export class List {
     return desired <= 0;
   }
 
+  // @internal
   hasLength(desired) {
     for (let _ of this) {
       if (desired <= 0) return false;
@@ -55,6 +45,7 @@ export class List {
     return desired === 0;
   }
 
+  // @internal
   countLength() {
     let length = 0;
     for (let _ of this) length++;
@@ -62,10 +53,16 @@ export class List {
   }
 }
 
+// @internal
+export function prepend(element, tail) {
+  return new NonEmpty(element, tail);
+}
+
 export function toList(elements, tail) {
   return List.fromArray(elements, tail);
 }
 
+// @internal
 class ListIterator {
   #current;
 
@@ -74,7 +71,7 @@ class ListIterator {
   }
 
   next() {
-    if (this.#current.isEmpty()) {
+    if (this.#current instanceof Empty) {
       return { done: true };
     } else {
       let { head, tail } = this.#current;
@@ -84,15 +81,7 @@ class ListIterator {
   }
 }
 
-export class Empty extends List {
-  get __gleam_prelude_variant__() {
-    return "EmptyList";
-  }
-
-  isEmpty() {
-    return true;
-  }
-}
+export class Empty extends List {}
 
 export class NonEmpty extends List {
   constructor(head, tail) {
@@ -100,58 +89,44 @@ export class NonEmpty extends List {
     this.head = head;
     this.tail = tail;
   }
-
-  get __gleam_prelude_variant__() {
-    return "NonEmptyList";
-  }
-
-  isEmpty() {
-    return false;
-  }
 }
 
-export class BitString {
-  static isBitString(data) {
-    return data?.__gleam_prelude_variant__ === "BitString";
-  }
-
+export class BitArray {
   constructor(buffer) {
     if (!(buffer instanceof Uint8Array)) {
-      throw "BitString can only be constructed from a Uint8Array";
+      throw "BitArray can only be constructed from a Uint8Array";
     }
     this.buffer = buffer;
   }
 
-  get __gleam_prelude_variant__() {
-    return "BitString";
-  }
-
-  inspect() {
-    return `<<${Array.from(this.buffer).join(", ")}>>`;
-  }
-
+  // @internal
   get length() {
     return this.buffer.length;
   }
 
+  // @internal
   byteAt(index) {
     return this.buffer[index];
   }
 
-  floatAt(index) {
-    return byteArrayToFloat(this.buffer.slice(index, index + 8));
+  // @internal
+  floatFromSlice(start, end, isBigEndian) {
+    return byteArrayToFloat(this.buffer, start, end, isBigEndian);
   }
 
-  intFromSlice(start, end) {
-    return byteArrayToInt(this.buffer.slice(start, end));
+  // @internal
+  intFromSlice(start, end, isBigEndian, isSigned) {
+    return byteArrayToInt(this.buffer, start, end, isBigEndian, isSigned);
   }
 
+  // @internal
   binaryFromSlice(start, end) {
-    return new BitString(this.buffer.slice(start, end));
+    return new BitArray(this.buffer.slice(start, end));
   }
 
+  // @internal
   sliceAfter(index) {
-    return new BitString(this.buffer.slice(index));
+    return new BitArray(this.buffer.slice(index));
   }
 }
 
@@ -159,17 +134,10 @@ export class UtfCodepoint {
   constructor(value) {
     this.value = value;
   }
-
-  get __gleam_prelude_variant__() {
-    return "UtfCodepoint";
-  }
-
-  inspect() {
-    return `//utfcodepoint(${String.fromCodePoint(this.value)})`;
-  }
 }
 
-export function toBitString(segments) {
+// @internal
+export function toBitArray(segments) {
   let size = (segment) =>
     segment instanceof Uint8Array ? segment.byteLength : 1;
   let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
@@ -184,57 +152,124 @@ export function toBitString(segments) {
       cursor++;
     }
   }
-  return new BitString(new Uint8Array(view.buffer));
+  return new BitArray(new Uint8Array(view.buffer));
 }
 
+// @internal
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
-export function sizedInt(int, size) {
-  let value = int;
+export function sizedInt(value, size, isBigEndian) {
   if (size < 0) {
     return new Uint8Array();
   }
   if (size % 8 != 0) {
-    throw "Needs to be a byte size" + size;
+    const msg = `Bit arrays must be byte aligned on JavaScript, got size of ${size} bits`;
+    throw new globalThis.Error(msg);
   }
+
   const byteArray = new Uint8Array(size / 8);
 
-  for (let index = 0; index < byteArray.length; index++) {
-    const byte = value & 0xff;
-    byteArray[index] = byte;
-    value = (value - byte) / 256;
+  // Convert negative number to two's complement representation
+  if (value < 0) {
+    value = 2 ** size + value;
   }
-  return byteArray.reverse();
+
+  if (isBigEndian) {
+    for (let i = byteArray.length - 1; i >= 0; i--) {
+      const byte = value % 256;
+      byteArray[i] = byte;
+      value = (value - byte) / 256;
+    }
+  } else {
+    for (let i = 0; i < byteArray.length; i++) {
+      const byte = value % 256;
+      byteArray[i] = byte;
+      value = (value - byte) / 256;
+    }
+  }
+
+  return byteArray;
 }
 
-export function byteArrayToInt(byteArray) {
-  byteArray = byteArray.reverse();
+// @internal
+export function byteArrayToInt(byteArray, start, end, isBigEndian, isSigned) {
   let value = 0;
-  for (let i = byteArray.length - 1; i >= 0; i--) {
-    value = value * 256 + byteArray[i];
+
+  // Read bytes as an unsigned integer value
+  if (isBigEndian) {
+    for (let i = start; i < end; i++) {
+      value = value * 256 + byteArray[i];
+    }
+  } else {
+    for (let i = end - 1; i >= start; i--) {
+      value = value * 256 + byteArray[i];
+    }
   }
+
+  if (isSigned) {
+    const byteSize = end - start;
+
+    const highBit = 2 ** (byteSize * 8 - 1);
+
+    // If the high bit is set and this is a signed integer, reinterpret as
+    // two's complement
+    if (value >= highBit) {
+      value -= highBit * 2;
+    }
+  }
+
   return value;
 }
 
-export function byteArrayToFloat(byteArray) {
-  return new Float64Array(byteArray.reverse().buffer)[0];
+// @internal
+export function byteArrayToFloat(byteArray, start, end, isBigEndian) {
+  const view = new DataView(byteArray.buffer);
+
+  const byteSize = end - start;
+
+  if (byteSize === 8) {
+    return view.getFloat64(start, !isBigEndian);
+  } else if (byteSize === 4) {
+    return view.getFloat32(start, !isBigEndian);
+  } else {
+    const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${byteSize * 8} bits`;
+    throw new globalThis.Error(msg);
+  }
 }
 
+// @internal
 export function stringBits(string) {
   return new TextEncoder().encode(string);
 }
 
+// @internal
 export function codepointBits(codepoint) {
   return stringBits(String.fromCodePoint(codepoint.value));
 }
 
-export function float64Bits(float) {
-  return new Uint8Array(Float64Array.from([float]).buffer).reverse();
+// @internal
+export function sizedFloat(float, size, isBigEndian) {
+  if (size !== 32 && size !== 64) {
+    const msg = `Sized floats must be 32-bit or 64-bit on JavaScript, got size of ${size} bits`;
+    throw new globalThis.Error(msg);
+  }
+
+  const byteArray = new Uint8Array(size / 8);
+
+  const view = new DataView(byteArray.buffer);
+
+  if (size == 64) {
+    view.setFloat64(0, float, !isBigEndian);
+  } else if (size === 32) {
+    view.setFloat32(0, float, !isBigEndian);
+  }
+
+  return byteArray;
 }
 
 export class Result extends CustomType {
+  // @internal
   static isResult(data) {
-    let variant = data?.__gleam_prelude_variant__;
-    return variant === "Ok" || variant === "Error";
+    return data instanceof Result;
   }
 }
 
@@ -244,10 +279,7 @@ export class Ok extends Result {
     this[0] = value;
   }
 
-  get __gleam_prelude_variant__() {
-    return "Ok";
-  }
-
+  // @internal
   isOk() {
     return true;
   }
@@ -259,50 +291,10 @@ export class Error extends Result {
     this[0] = detail;
   }
 
-  get __gleam_prelude_variant__() {
-    return "Error";
-  }
-
+  // @internal
   isOk() {
     return false;
   }
-}
-
-export function inspect(v) {
-  let t = typeof v;
-  if (v === true) return "True";
-  if (v === false) return "False";
-  if (v === null) return "//js(null)";
-  if (v === undefined) return "Nil";
-  if (t === "string") return JSON.stringify(v);
-  if (t === "bigint" || t === "number") return v.toString();
-  if (Array.isArray(v)) return `#(${v.map(inspect).join(", ")})`;
-  if (v instanceof Set) return `//js(Set(${[...v].map(inspect).join(", ")}))`;
-  if (v instanceof RegExp) return `//js(${v})`;
-  if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
-  if (v instanceof Function) {
-    let args = [];
-    for (let i of Array(v.length).keys())
-      args.push(String.fromCharCode(i + 97));
-    return `//fn(${args.join(", ")}) { ... }`;
-  }
-  try {
-    return v.inspect();
-  } catch (_) {
-    return inspectObject(v);
-  }
-}
-
-function inspectObject(v) {
-  let [keys, get] = getters(v);
-  let name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
-  let props = [];
-  for (let k of keys(v)) {
-    props.push(`${inspect(k)}: ${inspect(get(v, k))}`);
-  }
-  let body = props.length ? " " + props.join(", ") + " " : "";
-  let head = name === "Object" ? "" : name + " ";
-  return `//js(${head}{${body}})`;
 }
 
 export function isEqual(x, y) {
@@ -320,7 +312,8 @@ export function isEqual(x, y) {
       unequalBuffers(a, b) ||
       unequalArrays(a, b) ||
       unequalMaps(a, b) ||
-      unequalSets(a, b);
+      unequalSets(a, b) ||
+      unequalRegExps(a, b);
     if (unequal) return false;
 
     const proto = Object.getPrototypeOf(a);
@@ -375,6 +368,10 @@ function unequalSets(a, b) {
   );
 }
 
+function unequalRegExps(a, b) {
+  return a instanceof RegExp && (a.source !== b.source || a.flags !== b.flags);
+}
+
 function isObject(a) {
   return typeof a === "object" && a !== null;
 }
@@ -386,13 +383,10 @@ function structurallyCompatibleObjects(a, b) {
   let nonstructural = [Promise, WeakSet, WeakMap, Function];
   if (nonstructural.some((c) => a instanceof c)) return false;
 
-  return (
-    a.constructor === b.constructor ||
-    (a.__gleam_prelude_variant__ &&
-      a.__gleam_prelude_variant__ === b.__gleam_prelude_variant__)
-  );
+  return a.constructor === b.constructor;
 }
 
+// @internal
 export function remainderInt(a, b) {
   if (b === 0) {
     return 0;
@@ -401,10 +395,12 @@ export function remainderInt(a, b) {
   }
 }
 
+// @internal
 export function divideInt(a, b) {
   return Math.trunc(divideFloat(a, b));
 }
 
+// @internal
 export function divideFloat(a, b) {
   if (b === 0) {
     return 0;
@@ -413,11 +409,14 @@ export function divideFloat(a, b) {
   }
 }
 
+// @internal
 export function makeError(variant, module, line, fn, message, extra) {
   let error = new globalThis.Error(message);
   error.gleam_error = variant;
   error.module = module;
   error.line = line;
+  error.function = fn;
+  // TODO: Remove this with Gleam v2.0.0
   error.fn = fn;
   for (let k in extra) error[k] = extra[k];
   return error;

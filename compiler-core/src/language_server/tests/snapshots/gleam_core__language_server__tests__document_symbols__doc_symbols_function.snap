@@ -1,0 +1,66 @@
+---
+source: compiler-core/src/language_server/tests/document_symbols.rs
+expression: "doc_symbols(TestProject::for_source(code))"
+---
+[
+    DocumentSymbol {
+        name: "super_func",
+        detail: Some(
+            "fn(Int) -> List(Int)",
+        ),
+        kind: Function,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 1,
+                character: 0,
+            },
+            end: Position {
+                line: 4,
+                character: 1,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 2,
+                character: 7,
+            },
+            end: Position {
+                line: 2,
+                character: 17,
+            },
+        },
+        children: None,
+    },
+    DocumentSymbol {
+        name: "super_func2",
+        detail: Some(
+            "fn(Int) -> List(Int)",
+        ),
+        kind: Function,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 6,
+                character: 0,
+            },
+            end: Position {
+                line: 8,
+                character: 1,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 6,
+                character: 7,
+            },
+            end: Position {
+                line: 6,
+                character: 18,
+            },
+        },
+        children: None,
+    },
+]

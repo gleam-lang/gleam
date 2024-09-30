@@ -1,17 +1,17 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 313
-expression: "pub type Test { A }\nconst test = A\npub fn a() { A }"
+assertion_line: 314
+expression: "pub type Test { A }\nconst some_test = A\npub fn a() { A }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([a/0]).
 -export_type([test/0]).
 
 -type test() :: a.
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec a() -> test().
 a() ->
     a.
-

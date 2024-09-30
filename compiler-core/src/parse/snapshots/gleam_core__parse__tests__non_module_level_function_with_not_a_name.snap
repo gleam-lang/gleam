@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  fn @() { 1 }  // wrong token and not a name\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:6
+  │
+3 │   fn @() { 1 }  // wrong token and not a name
+  │      ^ I was not expecting this
+
+Found `@`, expected one of: 
+- `(`

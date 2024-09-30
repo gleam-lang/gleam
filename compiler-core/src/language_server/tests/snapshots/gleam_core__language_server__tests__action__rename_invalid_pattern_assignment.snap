@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let assert 42 as theAnswer = 42\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let assert 42 as theAnswer = 42
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let assert 42 as the_answer = 42
+}

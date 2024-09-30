@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 1229
+expression: "\npub fn main() {\n  let wibble: Int = 7\n}\n"
+---
+pub fn main() {
+  let wibble: In|t = 7
+}
+
+
+----- Completion content -----
+BitArray
+  kind:   Class
+  detail: Type
+  sort:   4_BitArray
+Bool
+  kind:   Class
+  detail: Type
+  sort:   4_Bool
+Float
+  kind:   Class
+  detail: Type
+  sort:   4_Float
+Int
+  kind:   Class
+  detail: Type
+  sort:   4_Int
+List
+  kind:   Class
+  detail: Type
+  sort:   4_List
+Nil
+  kind:   Class
+  detail: Type
+  sort:   4_Nil
+Result
+  kind:   Class
+  detail: Type
+  sort:   4_Result
+String
+  kind:   Class
+  detail: Type
+  sort:   4_String
+UtfCodepoint
+  kind:   Class
+  detail: Type
+  sort:   4_UtfCodepoint

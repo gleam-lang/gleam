@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let assert <<_iDontCare>> = <<97>>\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let assert <<_iDontCare>> = <<97>>
+               ▔▔▔▔▔▔▔▔↑              
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let assert <<_i_dont_care>> = <<97>>
+}

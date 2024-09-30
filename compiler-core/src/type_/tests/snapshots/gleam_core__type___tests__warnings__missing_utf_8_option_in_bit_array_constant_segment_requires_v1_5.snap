@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub const bits = <<\"hello\">>"
+---
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:1:20
+  │
+1 │ pub const bits = <<"hello">>
+  │                    ^^^^^^^ This requires a Gleam version >= 1.5.0
+
+The ability to omit the `utf8` annotation for string segments was
+introduced in version v1.5.0. But the Gleam version range specified in
+your `gleam.toml` would allow this code to run on an earlier version like
+v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.5.0"

@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn doStuff() {}"
+---
+----- BEFORE ACTION
+fn doStuff() {}
+▔▔▔▔▔▔▔▔▔▔▔▔▔↑ 
+
+
+----- AFTER ACTION
+fn do_stuff() {}

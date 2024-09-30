@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+expression: "\nconst x = 09_179\n"
+---
+const x = 9_179;

@@ -5,7 +5,7 @@ fn tuple_matching() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(1, 2) = x
+  let assert #(1, 2) = x
 }
 "#,
     )
@@ -14,7 +14,10 @@ fn go(x) {
 #[test]
 fn assert() {
     assert_js!(r#"fn go(x) { let assert 1 = x }"#,);
+}
 
+#[test]
+fn assert1() {
     assert_js!(r#"fn go(x) { let assert #(1, 2) = x }"#,);
 }
 
@@ -23,7 +26,7 @@ fn nested_binding() {
     assert_js!(
         r#"
 fn go(x) {
-  let #(a, #(b, c, 2) as t, _, 1) = x
+  let assert #(a, #(b, c, 2) as t, _, 1) = x
 }
 "#,
     )
@@ -34,19 +37,19 @@ fn variable_renaming() {
     assert_js!(
         r#"
 
-fn go(x, foo) {
+fn go(x, wibble) {
   let a = 1
-  foo(a)
+  wibble(a)
   let a = 2
-  foo(a)
-  let #(a, 3) = x
+  wibble(a)
+  let assert #(a, 3) = x
   let b = a
-  foo(b)
+  wibble(b)
   let c = {
     let a = a
     #(a, b)
   }
-  foo(a)
+  wibble(a)
   // make sure arguments are counted in initial state
   let x = c
   x
@@ -94,10 +97,10 @@ fn rebound_argument() {
 #[test]
 fn rebound_function() {
     assert_js!(
-        r#"pub fn x() { 
+        r#"pub fn x() {
   Nil
 }
-        
+
 pub fn main() {
   let x = False
   x
@@ -109,10 +112,10 @@ pub fn main() {
 #[test]
 fn rebound_function_and_arg() {
     assert_js!(
-        r#"pub fn x() { 
+        r#"pub fn x() {
   Nil
 }
-        
+
 pub fn main(x) {
   let x = False
   x
@@ -150,7 +153,7 @@ fn module_const_var() {
     assert_js!(
         r#"
 pub const int = 42
-pub const int_alias = int 
+pub const int_alias = int
 pub fn use_int_alias() { int_alias }
 
 pub const compound: #(Int, Int) = #(int, int_alias)
@@ -164,8 +167,44 @@ fn module_const_var1() {
     assert_ts_def!(
         r#"
 pub const int = 42
-pub const int_alias = int 
+pub const int_alias = int
 pub const compound: #(Int, Int) = #(int, int_alias)
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2443
+#[test]
+fn let_assert_string_prefix() {
+    assert_js!(
+        r#"
+pub fn main() {
+  let assert "Game " <> id = "Game 1"
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2931
+#[test]
+fn keyword_assignment() {
+    assert_js!(
+        r#"
+pub fn main() {
+  let class = 10
+  let debugger = 50
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3004
+#[test]
+fn escaped_variables_in_constants() {
+    assert_js!(
+        r#"
+pub const class = 5
+pub const something = class
 "#
     );
 }

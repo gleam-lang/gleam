@@ -1,4 +1,4 @@
-use crate::{assert_js, assert_module_error, assert_ts_def};
+use crate::{assert_js, assert_js_error, assert_module_error, assert_ts_def};
 
 #[test]
 fn type_() {
@@ -10,6 +10,15 @@ fn module_fn() {
     assert_js!(
         r#"
 @external(javascript, "utils", "inspect")
+fn show(x: anything) -> Nil"#,
+    );
+}
+
+#[test]
+fn at_namespace_module() {
+    assert_js!(
+        r#"
+@external(javascript, "@namespace/package", "inspect")
 fn show(x: anything) -> Nil"#,
     );
 }
@@ -254,6 +263,52 @@ fn inline_function() {
 @external(javascript, "blah", "(x => x)")
 pub fn one(x: Int) -> Int {
   1
+}
+"#
+    );
+}
+
+#[test]
+fn erlang_only() {
+    assert_js!(
+        r#"
+pub fn should_be_generated(x: Int) -> Int {
+  x
+}
+
+@external(erlang, "one", "one")
+pub fn should_not_be_generated(x: Int) -> Int
+"#
+    );
+}
+
+#[test]
+fn erlang_bit_patterns() {
+    assert_js_error!(
+        r#"
+pub fn should_not_be_generated(x) {
+  case x {
+    <<_, rest:bits>> -> rest
+    _ -> x
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn both_externals_no_valid_impl() {
+    assert_js!(
+        r#"
+@external(javascript, "one", "one")
+pub fn js() -> Nil
+
+@external(erlang, "one", "one")
+pub fn erl() -> Nil
+
+pub fn should_not_be_generated() {
+  js()
+  erl()
 }
 "#
     );

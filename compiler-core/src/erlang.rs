@@ -6,6 +6,8 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
+use crate::build::Target;
+use crate::strings::convert_string_escape_chars;
 use crate::type_::is_prelude_module;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -18,20 +20,21 @@ use crate::{
     },
     Result,
 };
+use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
+use im::HashSet;
 use itertools::Itertools;
-use lazy_static::lazy_static;
 use pattern::pattern;
-use regex::Regex;
-use smol_str::SmolStr;
-use std::{char, collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
+use regex::{Captures, Regex};
+use std::sync::OnceLock;
+use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
 
 fn module_name_to_erlang(module: &str) -> Document<'_> {
-    Document::String(module.replace('/', "@"))
+    EcoString::from(module.replace('/', "@")).to_doc()
 }
 
 fn module_name_atom(module: &str) -> Document<'static> {
@@ -64,14 +67,14 @@ impl<'env> Env<'env> {
             None => {
                 let _ = self.current_scope_vars.insert(name.to_string(), 0);
                 let _ = self.erl_function_scope_vars.insert(name.to_string(), 0);
-                Document::String(variable_name(name))
+                variable_name(name).to_doc()
             }
-            Some(0) => Document::String(variable_name(name)),
+            Some(0) => variable_name(name).to_doc(),
             Some(n) => {
                 use std::fmt::Write;
                 let mut name = variable_name(name);
                 write!(name, "@{n}").expect("pushing number suffix to name");
-                Document::String(name)
+                name.to_doc()
             }
         }
     }
@@ -90,7 +93,7 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
         .iter()
         .filter_map(|s| match s {
             Definition::CustomType(CustomType {
-                public: true,
+                publicity: Publicity::Public,
                 constructors,
                 ..
             }) => Some(constructors),
@@ -110,7 +113,9 @@ pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
                          type_,
                          ..
                      }| {
-                        label.as_deref().map(|label| (label, type_.clone()))
+                        label
+                            .as_ref()
+                            .map(|(_, label)| (label.as_str(), type_.clone()))
                     },
                 )
                 .collect::<Option<Vec<_>>>()
@@ -128,7 +133,7 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
         docvec!(atom_string((*name).to_string()), " :: ", type_.group())
     });
     let fields = break_("", "")
-        .append(concat(Itertools::intersperse(fields, break_(",", ", "))))
+        .append(join(fields, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .group();
@@ -157,9 +162,15 @@ fn module_document<'a>(
 
     let header = "-module("
         .to_doc()
-        .append(Document::String(module.name.replace('/', "@")))
+        .append(module.name.replace("/", "@"))
         .append(").")
         .append(line());
+
+    // We need to know which private functions are referenced in importable
+    // constants so that we can export them anyway in the generated Erlang.
+    // This is because otherwise when the constant is used in another module it
+    // would result in an error as it tries to reference this private function.
+    let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
     for s in &module.definitions {
         register_imports(
@@ -168,6 +179,7 @@ fn module_document<'a>(
             &mut type_exports,
             &mut type_defs,
             &module.name,
+            &overridden_publicity,
         );
     }
 
@@ -175,36 +187,24 @@ fn module_document<'a>(
         (false, false) => return Ok(header),
         (true, false) => "-export(["
             .to_doc()
-            .append(concat(Itertools::intersperse(
-                exports.into_iter(),
-                ", ".to_doc(),
-            )))
+            .append(join(exports, ", ".to_doc()))
             .append("]).")
             .append(lines(2)),
 
         (true, true) => "-export(["
             .to_doc()
-            .append(concat(Itertools::intersperse(
-                exports.into_iter(),
-                ", ".to_doc(),
-            )))
+            .append(join(exports, ", ".to_doc()))
             .append("]).")
             .append(line())
             .append("-export_type([")
             .to_doc()
-            .append(concat(Itertools::intersperse(
-                type_exports.into_iter(),
-                ", ".to_doc(),
-            )))
+            .append(join(type_exports, ", ".to_doc()))
             .append("]).")
             .append(lines(2)),
 
         (false, true) => "-export_type(["
             .to_doc()
-            .append(concat(Itertools::intersperse(
-                type_exports.into_iter(),
-                ", ".to_doc(),
-            )))
+            .append(join(type_exports, ", ".to_doc()))
             .append("]).")
             .append(lines(2)),
     };
@@ -212,19 +212,21 @@ fn module_document<'a>(
     let type_defs = if type_defs.is_empty() {
         nil()
     } else {
-        concat(Itertools::intersperse(type_defs.into_iter(), lines(2))).append(lines(2))
+        join(type_defs, lines(2)).append(lines(2))
     };
 
-    let statements = concat(Itertools::intersperse(
+    let src_path = EcoString::from(module.type_info.src_path.as_str());
+
+    let statements = join(
         module
             .definitions
             .iter()
-            .flat_map(|s| module_statement(s, &module.name, line_numbers)),
+            .flat_map(|s| module_statement(s, &module.name, line_numbers, &src_path)),
         lines(2),
-    ));
+    );
 
     Ok(header
-        .append("-compile([no_auto_import, nowarn_unused_vars]).")
+        .append("-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).")
         .append(lines(2))
         .append(exports)
         .append(type_defs)
@@ -238,14 +240,26 @@ fn register_imports(
     type_exports: &mut Vec<Document<'_>>,
     type_defs: &mut Vec<Document<'_>>,
     module_name: &str,
+    overridden_publicity: &HashSet<EcoString>,
 ) {
     match s {
         Definition::Function(Function {
-            public: true,
-            name,
+            publicity,
+            name: Some((_, name)),
             arguments: args,
+            implementations,
             ..
-        }) => exports.push(atom_string(name.to_string()).append("/").append(args.len())),
+        }) if publicity.is_importable() || overridden_publicity.contains(name) => {
+            // If the function isn't for this target then don't attempt to export it
+            if implementations.supports(Target::Erlang) {
+                let function_name = escape_erlang_existing_name(name);
+                exports.push(
+                    atom_string(function_name.to_string())
+                        .append("/")
+                        .append(args.len()),
+                )
+            }
+        }
 
         Definition::CustomType(CustomType {
             name,
@@ -284,7 +298,8 @@ fn register_imports(
             };
             // Type Exports
             type_exports.push(
-                Document::String(erl_safe_type_name(name.to_snake_case()))
+                erl_safe_type_name(name.to_snake_case())
+                    .to_doc()
                     .append("/")
                     .append(typed_parameters.len()),
             );
@@ -292,7 +307,7 @@ fn register_imports(
             let definition = if constructors.is_empty() {
                 let constructors =
                     std::iter::once("any()".to_doc()).chain(phantom_vars_constructor);
-                concat(Itertools::intersperse(constructors, break_(" |", " | ")))
+                join(constructors, break_(" |", " | "))
             } else {
                 let constructors = constructors
                     .iter()
@@ -307,17 +322,17 @@ fn register_imports(
                         }
                     })
                     .chain(phantom_vars_constructor);
-                concat(Itertools::intersperse(constructors, break_(" |", " | ")))
+                join(constructors, break_(" |", " | "))
             }
             .nest(INDENT);
             let type_printer = TypePrinter::new(module_name);
-            let params = concat(Itertools::intersperse(
+            let params = join(
                 typed_parameters.iter().map(|a| type_printer.print(a)),
                 ", ".to_doc(),
-            ));
+            );
             let doc = if *opaque { "-opaque " } else { "-type " }
                 .to_doc()
-                .append(Document::String(erl_safe_type_name(name.to_snake_case())))
+                .append(erl_safe_type_name(name.to_snake_case()))
                 .append("(")
                 .append(params)
                 .append(") :: ")
@@ -338,6 +353,7 @@ fn module_statement<'a>(
     statement: &'a TypedDefinition,
     module: &'a str,
     line_numbers: &'a LineNumbers,
+    src_path: &EcoString,
 ) -> Option<Document<'a>> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
@@ -345,7 +361,9 @@ fn module_statement<'a>(
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. }) => None,
 
-        Definition::Function(function) => module_function(function, module, line_numbers),
+        Definition::Function(function) => {
+            module_function(function, module, line_numbers, src_path.clone())
+        }
     }
 }
 
@@ -353,14 +371,28 @@ fn module_function<'a>(
     function: &'a TypedFunction,
     module: &'a str,
     line_numbers: &'a LineNumbers,
+    src_path: EcoString,
 ) -> Option<Document<'a>> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
-    if function.external_erlang.is_some() && !function.public {
+    if function.external_erlang.is_some() && function.publicity.is_private() {
         return None;
     }
 
-    let mut env = Env::new(module, &function.name, line_numbers);
+    // If the function has no suitable Erlang implementation then there is nothing
+    // to generate for it.
+    if !function.implementations.supports(Target::Erlang) {
+        return None;
+    }
+
+    let (_, function_name) = function
+        .name
+        .as_ref()
+        .expect("A module's function must be named");
+    let function_name = escape_erlang_existing_name(function_name);
+    let file_attribute = file_attribute(src_path, function, line_numbers);
+
+    let mut env = Env::new(module, function_name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
@@ -371,28 +403,49 @@ fn module_function<'a>(
         .iter()
         .map(|a| type_printer.print(&a.type_));
     let return_spec = type_printer.print(&function.return_type);
-    let spec = fun_spec(&function.name, args_spec, return_spec);
+
+    let spec = fun_spec(function_name, args_spec, return_spec);
     let arguments = fun_args(&function.arguments, &mut env);
 
     let body = function
         .external_erlang
         .as_ref()
-        .map(|(module, function)| docvec![atom(module), ":", atom(function), arguments.clone()])
+        .map(|(module, function, _location)| {
+            docvec![
+                atom(module),
+                ":",
+                atom(escape_erlang_existing_name(function)),
+                arguments.clone()
+            ]
+        })
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
-    let doc = spec
-        .append(atom_string(function.name.to_string()))
-        .append(arguments)
-        .append(" ->")
-        .append(line().append(body).nest(INDENT).group())
-        .append(".");
-    Some(doc)
+    Some(docvec![
+        file_attribute,
+        line(),
+        spec,
+        atom_string(escape_erlang_existing_name(function_name).to_string()),
+        arguments,
+        " ->",
+        line().append(body).nest(INDENT).group(),
+        ".",
+    ])
+}
+
+fn file_attribute<'a>(
+    path: EcoString,
+    function: &'a TypedFunction,
+    line_numbers: &'a LineNumbers,
+) -> Document<'a> {
+    let line = line_numbers.line_number(function.location.start);
+    let path = path.replace("\\", "\\\\");
+    docvec!["-file(\"", path, "\", ", line, ")."]
 }
 
 fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
     wrap_args(args.iter().map(|a| match &a.names {
         ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => "_".to_doc(),
-        ArgNames::Named { name } | ArgNames::NamedLabelled { name, .. } => {
+        ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
             env.next_local_var_name(name)
         }
     }))
@@ -403,10 +456,7 @@ where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            args.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(args, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -430,48 +480,136 @@ fn fun_spec<'a>(
 }
 
 fn atom_string(value: String) -> Document<'static> {
-    Document::String(escape_atom_string(value))
+    escape_atom_string(value).to_doc()
 }
 
-lazy_static! {
-    static ref ATOM_PATTERN: Regex = Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex");
+fn atom_pattern() -> &'static Regex {
+    static ATOM_PATTERN: OnceLock<Regex> = OnceLock::new();
+    ATOM_PATTERN.get_or_init(|| Regex::new(r"^[a-z][a-z0-9_@]*$").expect("atom RE regex"))
 }
 
 fn atom(value: &str) -> Document<'_> {
     if is_erlang_reserved_word(value) {
         // Escape because of keyword collision
-        Document::String(format!("'{value}'"))
-    } else if ATOM_PATTERN.is_match(value) {
+        eco_format!("'{value}'").to_doc()
+    } else if atom_pattern().is_match(value) {
         // No need to escape
-        Document::Str(value)
+        EcoString::from(value).to_doc()
     } else {
         // Escape because of characters contained
-        Document::String(format!("'{value}'"))
+        eco_format!("'{value}'").to_doc()
     }
 }
 
-fn escape_atom_string(value: String) -> String {
+fn escape_atom_string(value: String) -> EcoString {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
-        format!("'{value}'")
-    } else if ATOM_PATTERN.is_match(&value) {
+        eco_format!("'{value}'")
+    } else if atom_pattern().is_match(&value) {
         // No need to escape
-        value
+        EcoString::from(value)
     } else {
         // Escape because of characters contained
-        format!("'{value}'")
+        eco_format!("'{value}'")
     }
+}
+
+fn unicode_escape_sequence_pattern() -> &'static Regex {
+    static PATTERN: OnceLock<Regex> = OnceLock::new();
+    PATTERN.get_or_init(|| {
+        Regex::new(r#"(\\+)(u)"#).expect("Unicode escape sequence regex cannot be constructed")
+    })
+}
+
+fn string_inner(value: &str) -> Document<'_> {
+    let content = unicode_escape_sequence_pattern()
+        // `\\u`-s should not be affected, so that "\\u..." is not converted to
+        // "\\x...". That's why capturing groups is used to exclude cases that
+        // shouldn't be replaced.
+        .replace_all(value, |caps: &Captures<'_>| {
+            let slashes = caps.get(1).map_or("", |m| m.as_str());
+
+            if slashes.len() % 2 == 0 {
+                format!("{slashes}u")
+            } else {
+                format!("{slashes}x")
+            }
+        });
+    EcoString::from(content).to_doc()
 }
 
 fn string(value: &str) -> Document<'_> {
-    value.to_doc().surround("<<\"", "\"/utf8>>")
+    string_inner(value).surround("<<\"", "\"/utf8>>")
+}
+
+fn string_length_utf8_bytes(str: &EcoString) -> usize {
+    convert_string_escape_chars(str).len()
 }
 
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
+    join(elems, break_(",", ", "))
         .nest(INDENT)
         .surround("{", "}")
         .group()
+}
+
+fn const_string_concatenate_bit_array<'a>(
+    elems: impl IntoIterator<Item = Document<'a>>,
+) -> Document<'a> {
+    join(elems, break_(",", ", "))
+        .nest(INDENT)
+        .surround("<<", ">>")
+        .group()
+}
+
+fn const_string_concatenate<'a>(
+    left: &'a TypedConstant,
+    right: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = const_string_concatenate_argument(left, env);
+    let right = const_string_concatenate_argument(right, env);
+    const_string_concatenate_bit_array([left, right])
+}
+
+fn const_string_concatenate_inner<'a>(
+    left: &'a TypedConstant,
+    right: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = const_string_concatenate_argument(left, env);
+    let right = const_string_concatenate_argument(right, env);
+    join([left, right], break_(",", ", "))
+}
+
+fn const_string_concatenate_argument<'a>(
+    value: &'a TypedConstant,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    match value {
+        Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
+
+        Constant::Var {
+            constructor: Some(constructor),
+            ..
+        } => match &constructor.variant {
+            ValueConstructorVariant::ModuleConstant {
+                literal: Constant::String { value, .. },
+                ..
+            } => docvec!['"', string_inner(value), "\"/utf8"],
+            ValueConstructorVariant::ModuleConstant {
+                literal: Constant::StringConcatenation { left, right, .. },
+                ..
+            } => const_string_concatenate_inner(left, right, env),
+            _ => const_inline(value, env),
+        },
+
+        Constant::StringConcatenation { left, right, .. } => {
+            const_string_concatenate_inner(left, right, env)
+        }
+
+        _ => const_inline(value, env),
+    }
 }
 
 fn string_concatenate<'a>(
@@ -481,7 +619,7 @@ fn string_concatenate<'a>(
 ) -> Document<'a> {
     let left = string_concatenate_argument(left, env);
     let right = string_concatenate_argument(right, env);
-    bit_string([left, right])
+    bit_array([left, right])
 }
 
 fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
@@ -498,7 +636,7 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
                 },
             ..
         }
-        | TypedExpr::String { value, .. } => docvec!['"', value, "\"/utf8"],
+        | TypedExpr::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
 
         TypedExpr::Var {
             name,
@@ -519,8 +657,8 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
     }
 }
 
-fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    concat(Itertools::intersperse(elems.into_iter(), break_(",", ", ")))
+fn bit_array<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    join(elems, break_(",", ", "))
         .nest(INDENT)
         .surround("<<", ">>")
         .group()
@@ -528,15 +666,19 @@ fn bit_string<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a>
 
 fn const_segment<'a>(
     value: &'a TypedConstant,
-    options: &'a [BitStringSegmentOption<TypedConstant>],
+    options: &'a [TypedConstantBitArraySegmentOption],
     env: &mut Env<'a>,
 ) -> Document<'a> {
+    let mut value_is_a_string_literal = false;
     let document = match value {
         // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Constant::String { value, .. } => {
+            value_is_a_string_literal = true;
+            value.to_doc().surround("\"", "\"")
+        }
 
         // As normal
-        Constant::Int { .. } | Constant::Float { .. } | Constant::BitString { .. } => {
+        Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
             const_inline(value, env)
         }
 
@@ -552,9 +694,17 @@ fn const_segment<'a>(
         ),
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
+    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
-    bit_string_segment(document, options, size, unit, true, env)
+    bit_array_segment(
+        document,
+        options,
+        size,
+        unit,
+        value_is_a_string_literal,
+        false,
+        env,
+    )
 }
 
 fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'a> {
@@ -569,7 +719,7 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
 
 fn expr_segment<'a>(
     value: &'a TypedExpr,
-    options: &'a [BitStringSegmentOption<TypedExpr>],
+    options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut value_is_a_string_literal = false;
@@ -578,14 +728,14 @@ fn expr_segment<'a>(
         // Skip the normal <<value/utf8>> surrounds and set the string literal flag
         TypedExpr::String { value, .. } => {
             value_is_a_string_literal = true;
-            value.to_doc().surround("\"", "\"")
+            string_inner(value).surround("\"", "\"")
         }
 
         // As normal
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
         | TypedExpr::Var { .. }
-        | TypedExpr::BitString { .. } => expr(value, env),
+        | TypedExpr::BitArray { .. } => expr(value, env),
 
         // Wrap anything else in parentheses
         value => expr(value, env).surround("(", ")"),
@@ -593,9 +743,9 @@ fn expr_segment<'a>(
 
     let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
         TypedExpr::Int { value, .. } => {
-            let v = value.replace('_', "");
+            let v = value.replace("_", "");
             let v = u64::from_str(&v).unwrap_or(0);
-            Some(Document::String(format!(":{v}")))
+            Some(eco_format!(":{v}").to_doc())
         }
 
         _ => {
@@ -611,24 +761,26 @@ fn expr_segment<'a>(
         }
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
+    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
-    bit_string_segment(
+    bit_array_segment(
         document,
         options,
         size,
         unit,
         value_is_a_string_literal,
+        false,
         env,
     )
 }
 
-fn bit_string_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
+fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     mut document: Document<'a>,
-    options: &'a [BitStringSegmentOption<Value>],
+    options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
     value_is_a_string_literal: bool,
+    value_is_a_discard: bool,
     env: &mut Env<'a>,
 ) -> Document<'a>
 where
@@ -642,14 +794,14 @@ where
     // Erlang only allows valid codepoint integers to be used as values for utf segments
     // We want to support <<string_var:utf8>> for all string variables, but <<StringVar/utf8>> is invalid
     // To work around this we use the binary type specifier for these segments instead
-    let override_type = if !value_is_a_string_literal {
+    let override_type = if !value_is_a_string_literal && !value_is_a_discard {
         Some("binary")
     } else {
         None
     };
 
     for option in options {
-        use BitStringSegmentOption as Opt;
+        use BitArrayOption as Opt;
         if !others.is_empty() && !matches!(option, Opt::Size { .. } | Opt::Unit { .. }) {
             others.push("-".to_doc());
         }
@@ -659,8 +811,8 @@ where
             Opt::Utf32 { .. } => others.push(override_type.unwrap_or("utf32").to_doc()),
             Opt::Int { .. } => others.push("integer".to_doc()),
             Opt::Float { .. } => others.push("float".to_doc()),
-            Opt::Binary { .. } => others.push("binary".to_doc()),
-            Opt::BitString { .. } => others.push("bitstring".to_doc()),
+            Opt::Bytes { .. } => others.push("binary".to_doc()),
+            Opt::Bits { .. } => others.push("bitstring".to_doc()),
             Opt::Utf8Codepoint { .. } => others.push("utf8".to_doc()),
             Opt::Utf16Codepoint { .. } => others.push("utf16".to_doc()),
             Opt::Utf32Codepoint { .. } => others.push("utf32".to_doc()),
@@ -723,17 +875,57 @@ fn statement_sequence<'a>(statements: &'a [TypedStatement], env: &mut Env<'a>) -
     }
 }
 
+fn float_div<'a>(left: &'a TypedExpr, right: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
+    if right.non_zero_compile_time_number() {
+        return binop_exprs(left, "/", right, env);
+    }
+
+    let left = expr(left, env);
+    let right = expr(right, env);
+    let denominator = env.next_local_var_name("gleam@denominator");
+    let clauses = docvec![
+        line(),
+        "+0.0 -> +0.0;",
+        line(),
+        "-0.0 -> -0.0;",
+        line(),
+        denominator.clone(),
+        " -> ",
+        binop_documents(left, "/", denominator)
+    ];
+    docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+}
+
+fn int_div<'a>(
+    left: &'a TypedExpr,
+    right: &'a TypedExpr,
+    op: &'static str,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    if right.non_zero_compile_time_number() {
+        return binop_exprs(left, op, right, env);
+    }
+
+    let left = expr(left, env);
+    let right = expr(right, env);
+    let denominator = env.next_local_var_name("gleam@denominator");
+    let clauses = docvec![
+        line(),
+        "0 -> 0;",
+        line(),
+        denominator.clone(),
+        " -> ",
+        binop_documents(left, op, denominator)
+    ];
+    docvec!["case ", right, " of", clauses.nest(INDENT), line(), "end"]
+}
+
 fn bin_op<'a>(
     name: &'a BinOp,
     left: &'a TypedExpr,
     right: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let div_zero = match name {
-        BinOp::DivInt | BinOp::RemainderInt => Some("0"),
-        BinOp::DivFloat => Some("0.0"),
-        _ => None,
-    };
     let op = match name {
         BinOp::And => "andalso",
         BinOp::Or => "orelse",
@@ -749,56 +941,38 @@ fn bin_op<'a>(
         BinOp::SubFloat => "-",
         BinOp::MultInt => "*",
         BinOp::MultFloat => "*",
-        BinOp::DivInt => "div",
-        BinOp::DivFloat => "/",
-        BinOp::RemainderInt => "rem",
+        BinOp::DivFloat => return float_div(left, right, env),
+        BinOp::DivInt => return int_div(left, right, "div", env),
+        BinOp::RemainderInt => return int_div(left, right, "rem", env),
         BinOp::Concatenate => return string_concatenate(left, right, env),
     };
 
-    let left_expr = match left {
+    binop_exprs(left, op, right, env)
+}
+
+fn binop_exprs<'a>(
+    left: &'a TypedExpr,
+    op: &'static str,
+    right: &'a TypedExpr,
+    env: &mut Env<'a>,
+) -> Document<'a> {
+    let left = match left {
         TypedExpr::BinOp { .. } => expr(left, env).surround("(", ")"),
         _ => maybe_block_expr(left, env),
     };
-
-    let right_expr = match right {
+    let right = match right {
         TypedExpr::BinOp { .. } => expr(right, env).surround("(", ")"),
         _ => maybe_block_expr(right, env),
     };
+    binop_documents(left, op, right)
+}
 
-    let div = |left: Document<'a>, right: Document<'a>| {
-        left.append(break_("", " "))
-            .append(op)
-            .group()
-            .append(" ")
-            .append(right)
-    };
-
-    match div_zero {
-        Some(_) if right.non_zero_compile_time_number() => div(left_expr, right_expr),
-        None => div(left_expr, right_expr),
-
-        Some(zero) => {
-            let denominator = "gleam@denominator";
-            "case "
-                .to_doc()
-                .append(right_expr)
-                .append(" of")
-                .append(
-                    line()
-                        .append(zero)
-                        .append(" -> ")
-                        .append(zero)
-                        .append(";")
-                        .append(line())
-                        .append(env.next_local_var_name(denominator))
-                        .append(" -> ")
-                        .append(div(left_expr, env.local_var_name(denominator)))
-                        .nest(INDENT),
-                )
-                .append(line())
-                .append("end")
-        }
-    }
+fn binop_documents<'a>(left: Document<'a>, op: &'static str, right: Document<'a>) -> Document<'a> {
+    left.append(break_("", " "))
+        .append(op)
+        .group()
+        .append(" ")
+        .append(right)
 }
 
 fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
@@ -811,10 +985,17 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
         let definition = docvec![var.clone(), " = ", body, ",", line()];
         (var, definition)
     };
-    let check_pattern = pattern::to_doc_discarding_all(pat, &mut vars, env);
-    let assign_pattern = pattern::to_doc(pat, &mut vars, env);
+
+    let mut guards = vec![];
+    let check_pattern = pattern::to_doc_discarding_all(pat, &mut vars, env, &mut guards);
+    let clause_guard = optional_clause_guard(None, guards, env);
+
+    // We don't take the guards from the assign pattern or we would end up with
+    // all the same guards repeated twice!
+    let assign_pattern = pattern::to_doc(pat, &mut vars, env, &mut vec![]);
     let clauses = docvec![
         check_pattern.clone(),
+        clause_guard,
         " -> ",
         subject_var.clone(),
         ";",
@@ -825,7 +1006,7 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
             line(),
             erlang_error(
                 "let_assert",
-                "Assertion pattern match failed",
+                &string("Pattern match failed, no pattern matched the value."),
                 pat.location(),
                 vec![("value", env.local_var_name(ASSERT_FAIL_VARIABLE))],
                 env,
@@ -848,7 +1029,8 @@ fn let_assert<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>
 
 fn let_<'a>(value: &'a TypedExpr, pat: &'a TypedPattern, env: &mut Env<'a>) -> Document<'a> {
     let body = maybe_block_expr(value, env).group();
-    pattern(pat, env).append(" = ").append(body)
+    let mut guards = vec![];
+    pattern(pat, env, &mut guards).append(" = ").append(body)
 }
 
 fn float<'a>(value: &str) -> Document<'a> {
@@ -856,7 +1038,14 @@ fn float<'a>(value: &str) -> Document<'a> {
     if value.ends_with('.') {
         value.push('0')
     }
-    Document::String(value)
+
+    match value.split('.').collect_vec().as_slice() {
+        ["0", "0"] => "+0.0".to_doc(),
+        [before_dot, after_dot] if after_dot.starts_with('e') => {
+            eco_format!("{before_dot}.0{after_dot}").to_doc()
+        }
+        _ => EcoString::from(value).to_doc(),
+    }
 }
 
 fn expr_list<'a>(
@@ -864,18 +1053,20 @@ fn expr_list<'a>(
     tail: &'a Option<Box<TypedExpr>>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let elements = concat(Itertools::intersperse(
+    let elements = join(
         elements.iter().map(|e| maybe_block_expr(e, env)),
         break_(",", ", "),
-    ));
+    );
     list(elements, tail.as_ref().map(|e| maybe_block_expr(e, env)))
 }
 
 fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
-    let elems = if let Some(final_tail) = tail {
-        elems.append(break_(" |", " | ")).append(final_tail)
-    } else {
-        elems
+    let elems = match tail {
+        Some(tail) if elems.is_empty() => return tail.to_doc(),
+
+        Some(tail) => elems.append(break_(" |", " | ")).append(tail),
+
+        None => elems,
     };
 
     elems.to_doc().nest(INDENT).surround("[", "]").group()
@@ -890,11 +1081,11 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
                 let chars = incrementing_args_list(args.len());
                 "fun("
                     .to_doc()
-                    .append(Document::String(chars.clone()))
+                    .append(chars.clone())
                     .append(") -> {")
                     .append(atom_string(record_name.to_snake_case()))
                     .append(", ")
-                    .append(Document::String(chars))
+                    .append(chars)
                     .append("} end")
             }
             _ => atom_string(record_name.to_snake_case()),
@@ -906,36 +1097,51 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
         | ValueConstructorVariant::LocalConstant { literal } => const_inline(literal, env),
 
         ValueConstructorVariant::ModuleFn {
+            arity,
+            external_erlang: Some((module, name)),
+            ..
+        } if module == env.module => function_reference(None, name, *arity),
+
+        ValueConstructorVariant::ModuleFn {
+            arity,
+            external_erlang: Some((module, name)),
+            ..
+        } => function_reference(Some(module), name, *arity),
+
+        ValueConstructorVariant::ModuleFn {
             arity, ref module, ..
-        } if module == env.module => "fun "
-            .to_doc()
-            .append(atom(name))
-            .append("/")
-            .append(*arity),
+        } if module == env.module => function_reference(None, name, *arity),
 
         ValueConstructorVariant::ModuleFn {
             arity,
             module,
             name,
             ..
-        } => "fun "
-            .to_doc()
-            .append(module_name_atom(module))
-            .append(":")
-            .append(atom(name))
-            .append("/")
-            .append(*arity),
+        } => function_reference(Some(module), name, *arity),
     }
 }
 
+fn function_reference<'a>(module: Option<&'a str>, name: &'a str, arity: usize) -> Document<'a> {
+    match module {
+        None => "fun ".to_doc(),
+        Some(module) => "fun ".to_doc().append(module_name_atom(module)).append(":"),
+    }
+    .append(atom(escape_erlang_existing_name(name)))
+    .append("/")
+    .append(arity)
+}
+
 fn int<'a>(value: &str) -> Document<'a> {
-    Document::String(
-        value
-            .replace('_', "")
-            .replace("0x", "16#")
-            .replace("0o", "8#")
-            .replace("0b", "2#"),
-    )
+    let mut value = value.replace('_', "");
+    if value.starts_with("0x") {
+        value.replace_range(..2, "16#");
+    } else if value.starts_with("0o") {
+        value.replace_range(..2, "8#");
+    } else if value.starts_with("0b") {
+        value.replace_range(..2, "2#");
+    }
+
+    EcoString::from(value).to_doc()
 }
 
 fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'a> {
@@ -945,21 +1151,23 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         Constant::String { value, .. } => string(value),
         Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
 
-        Constant::List { elements, .. } => {
-            let elements = Itertools::intersperse(
-                elements.iter().map(|e| const_inline(e, env)),
-                break_(",", ", "),
-            );
-            concat(elements).nest(INDENT).surround("[", "]").group()
-        }
+        Constant::List { elements, .. } => join(
+            elements.iter().map(|e| const_inline(e, env)),
+            break_(",", ", "),
+        )
+        .nest(INDENT)
+        .surround("[", "]")
+        .group(),
 
-        Constant::BitString { segments, .. } => bit_string(
+        Constant::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
                 .map(|s| const_segment(&s.value, &s.options, env)),
         ),
 
-        Constant::Record { tag, typ, args, .. } if args.is_empty() => match typ.deref() {
+        Constant::Record {
+            tag, type_, args, ..
+        } if args.is_empty() => match type_.deref() {
             Type::Fn { args, .. } => record_constructor_function(tag, args.len()),
             _ => atom_string(tag.to_snake_case()),
         },
@@ -979,18 +1187,24 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
                 .expect("This is guaranteed to hold a value."),
             env,
         ),
+
+        Constant::StringConcatenation { left, right, .. } => {
+            const_string_concatenate(left, right, env)
+        }
+
+        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
 }
 
-fn record_constructor_function(tag: &SmolStr, arity: usize) -> Document<'_> {
+fn record_constructor_function(tag: &EcoString, arity: usize) -> Document<'_> {
     let chars = incrementing_args_list(arity);
     "fun("
         .to_doc()
-        .append(Document::String(chars.clone()))
+        .append(chars.clone())
         .append(") -> {")
         .append(atom_string(tag.to_snake_case()))
         .append(", ")
-        .append(Document::String(chars))
+        .append(chars)
         .append("} end")
 }
 
@@ -1011,20 +1225,25 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
     let initial_erlang_vars = env.erl_function_scope_vars.clone();
     let mut end_erlang_vars = im::HashMap::new();
 
-    let docs = Itertools::intersperse(
+    let doc = join(
         std::iter::once(pat)
             .chain(alternative_patterns)
             .map(|patterns| {
+                let mut additional_guards = vec![];
                 env.erl_function_scope_vars = initial_erlang_vars.clone();
 
                 let patterns_doc = if patterns.len() == 1 {
-                    let p = patterns.get(0).expect("Single pattern clause printing");
-                    pattern(p, env)
+                    let p = patterns.first().expect("Single pattern clause printing");
+                    pattern(p, env, &mut additional_guards)
                 } else {
-                    tuple(patterns.iter().map(|p| pattern(p, env)))
+                    tuple(
+                        patterns
+                            .iter()
+                            .map(|p| pattern(p, env, &mut additional_guards)),
+                    )
                 };
 
-                let guard = optional_clause_guard(guard.as_ref(), env);
+                let guard = optional_clause_guard(guard.as_ref(), additional_guards, env);
                 if then_doc.is_none() {
                     then_doc = Some(clause_consequence(then, env));
                     end_erlang_vars = env.erl_function_scope_vars.clone();
@@ -1039,7 +1258,6 @@ fn clause<'a>(clause: &'a TypedClause, env: &mut Env<'a>) -> Document<'a> {
         ";".to_doc().append(lines(2)),
     );
 
-    let doc = concat(docs);
     env.erl_function_scope_vars = end_erlang_vars;
     doc
 }
@@ -1053,15 +1271,31 @@ fn clause_consequence<'a>(consequence: &'a TypedExpr, env: &mut Env<'a>) -> Docu
 
 fn optional_clause_guard<'a>(
     guard: Option<&'a TypedClauseGuard>,
+    additional_guards: Vec<Document<'a>>,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    guard
-        .map(|guard| " when ".to_doc().append(bare_clause_guard(guard, env)))
-        .unwrap_or_else(nil)
+    let guard_doc = guard.map(|guard| bare_clause_guard(guard, env));
+
+    let guards_count = guard_doc.iter().len() + additional_guards.len();
+    let guards_docs = additional_guards.into_iter().chain(guard_doc).map(|guard| {
+        if guards_count > 1 {
+            guard.surround("(", ")")
+        } else {
+            guard
+        }
+    });
+    let doc = join(guards_docs, " andalso ".to_doc());
+    if doc.is_empty() {
+        doc
+    } else {
+        " when ".to_doc().append(doc)
+    }
 }
 
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
+        ClauseGuard::Not { expression, .. } => docvec!["not ", bare_clause_guard(expression, env)],
+
         ClauseGuard::Or { left, right, .. } => clause_guard(left, env)
             .append(" orelse ")
             .append(clause_guard(right, env)),
@@ -1110,6 +1344,42 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
             .append(" =< ")
             .append(clause_guard(right, env)),
 
+        ClauseGuard::AddInt { left, right, .. } => clause_guard(left, env)
+            .append(" + ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::AddFloat { left, right, .. } => clause_guard(left, env)
+            .append(" + ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::SubInt { left, right, .. } => clause_guard(left, env)
+            .append(" - ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::SubFloat { left, right, .. } => clause_guard(left, env)
+            .append(" - ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env)
+            .append(" * ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::MultFloat { left, right, .. } => clause_guard(left, env)
+            .append(" * ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::DivInt { left, right, .. } => clause_guard(left, env)
+            .append(" div ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::DivFloat { left, right, .. } => clause_guard(left, env)
+            .append(" / ")
+            .append(clause_guard(right, env)),
+
+        ClauseGuard::RemainderInt { left, right, .. } => clause_guard(left, env)
+            .append(" rem ")
+            .append(clause_guard(right, env)),
+
         // Only local variables are supported and the typer ensures that all
         // ClauseGuard::Vars are local variables
         ClauseGuard::Var { name, .. } => env.local_var_name(name),
@@ -1131,7 +1401,7 @@ fn tuple_index_inline<'a>(
     index: u64,
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let index_doc = Document::String(format!("{}", (index + 1)));
+    let index_doc = eco_format!("{}", (index + 1)).to_doc();
     let tuple_doc = bare_clause_guard(tuple, env);
     "erlang:element"
         .to_doc()
@@ -1140,7 +1410,7 @@ fn tuple_index_inline<'a>(
 
 fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
-        // Binary ops are wrapped in parens
+        // Binary operators are wrapped in parens
         ClauseGuard::Or { .. }
         | ClauseGuard::And { .. }
         | ClauseGuard::Equals { .. }
@@ -1152,13 +1422,23 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::GtFloat { .. }
         | ClauseGuard::GtEqFloat { .. }
         | ClauseGuard::LtFloat { .. }
-        | ClauseGuard::LtEqFloat { .. } => "("
+        | ClauseGuard::LtEqFloat { .. }
+        | ClauseGuard::AddInt { .. }
+        | ClauseGuard::AddFloat { .. }
+        | ClauseGuard::SubInt { .. }
+        | ClauseGuard::SubFloat { .. }
+        | ClauseGuard::MultInt { .. }
+        | ClauseGuard::MultFloat { .. }
+        | ClauseGuard::DivInt { .. }
+        | ClauseGuard::DivFloat { .. }
+        | ClauseGuard::RemainderInt { .. } => "("
             .to_doc()
             .append(bare_clause_guard(guard, env))
             .append(")"),
 
-        // Values are not wrapped
+        // Other expressions are not
         ClauseGuard::Constant(_)
+        | ClauseGuard::Not { .. }
         | ClauseGuard::Var { .. }
         | ClauseGuard::TupleIndex { .. }
         | ClauseGuard::FieldAccess { .. }
@@ -1167,7 +1447,7 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
 }
 
 fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
-    concat(Itertools::intersperse(
+    join(
         cs.iter().map(|c| {
             let vars = env.current_scope_vars.clone();
             let erl = clause(c, env);
@@ -1175,13 +1455,13 @@ fn clauses<'a>(cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
             erl
         }),
         ";".to_doc().append(lines(2)),
-    ))
+    )
 }
 
 fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>) -> Document<'a> {
     let subjects_doc = if subjects.len() == 1 {
         let subject = subjects
-            .get(0)
+            .first()
             .expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
@@ -1213,6 +1493,7 @@ fn module_fn_with_args<'a>(
     args: Vec<Document<'a>>,
     env: &Env<'a>,
 ) -> Document<'a> {
+    let name = escape_erlang_existing_name(name);
     let args = wrap_args(args);
     if module == env.module {
         atom(name).append(args)
@@ -1246,7 +1527,12 @@ fn docs_args_call<'a>(
         TypedExpr::Var {
             constructor:
                 ValueConstructor {
-                    variant: ValueConstructorVariant::ModuleFn { module, name, .. },
+                    variant:
+                        ValueConstructorVariant::ModuleFn {
+                            external_erlang: Some((module, name)),
+                            ..
+                        }
+                        | ValueConstructorVariant::ModuleFn { module, name, .. },
                     ..
                 },
             ..
@@ -1271,7 +1557,12 @@ fn docs_args_call<'a>(
                 },
             ..
         } if constructor.variant.is_module_fn() => {
-            if let ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant {
+            if let ValueConstructorVariant::ModuleFn {
+                external_erlang: Some((module, name)),
+                ..
+            }
+            | ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant
+            {
                 module_fn_with_args(module, name, args, env)
             } else {
                 unreachable!("The above clause guard ensures that this is a module fn")
@@ -1279,10 +1570,16 @@ fn docs_args_call<'a>(
         }
 
         TypedExpr::ModuleSelect {
-            constructor: ModuleValueConstructor::Fn { module, name, .. },
+            constructor:
+                ModuleValueConstructor::Fn {
+                    external_erlang: Some((module, name)),
+                    ..
+                }
+                | ModuleValueConstructor::Fn { module, name, .. },
             ..
         } => {
             let args = wrap_args(args);
+            let name = escape_erlang_existing_name(name);
             // We use the constructor Fn variant's `module` and function `name`.
             // It would also be valid to use the module and label as in the
             // Gleam code, but using the variant can result in an optimisation
@@ -1291,7 +1588,7 @@ fn docs_args_call<'a>(
             // This also enables an optimisation in the Erlang compiler in which
             // some Erlang BIFs can be replaced with literals if their arguments
             // are literals, such as `binary_to_atom`.
-            atom_string(module.replace('/', "@"))
+            atom_string(module.replace("/", "@").to_string())
                 .append(":")
                 .append(atom_string(name.to_string()))
                 .append(args)
@@ -1393,28 +1690,33 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
         | TypedExpr::Panic { .. }
-        | TypedExpr::BitString { .. }
+        | TypedExpr::BitArray { .. }
         | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
-        | TypedExpr::NegateInt { .. } => false,
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => false,
     }
 }
 
-fn todo<'a>(message: &'a Option<SmolStr>, location: SrcSpan, env: &Env<'a>) -> Document<'a> {
-    let message = message
-        .as_deref()
-        .unwrap_or("This has not yet been implemented");
-    erlang_error("todo", message, location, vec![], env)
+fn todo<'a>(message: Option<&'a TypedExpr>, location: SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+    let message = match message {
+        Some(m) => expr(m, env),
+        None => string("`todo` expression evaluated. This code has not yet been implemented."),
+    };
+    erlang_error("todo", &message, location, vec![], env)
 }
 
-fn panic<'a>(location: SrcSpan, message: Option<&'a str>, env: &Env<'a>) -> Document<'a> {
-    let message = message.unwrap_or("panic expression evaluated");
-    erlang_error("panic", message, location, vec![], env)
+fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a>) -> Document<'a> {
+    let message = match message {
+        Some(m) => expr(m, env),
+        None => string("`panic` expression evaluated."),
+    };
+    erlang_error("panic", &message, location, vec![], env)
 }
 
 fn erlang_error<'a>(
     name: &'a str,
-    message: &'a str,
+    message: &Document<'a>,
     location: SrcSpan,
     fields: Vec<(&'a str, Document<'a>)>,
     env: &Env<'a>,
@@ -1425,8 +1727,9 @@ fn erlang_error<'a>(
         ",",
         line(),
         "message => ",
-        string(message)
+        message.clone()
     ];
+
     for (key, value) in fields {
         fields_doc = fields_doc
             .append(",")
@@ -1461,7 +1764,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             message: label,
             location,
             ..
-        } => todo(label, *location, env),
+        } => todo(label.as_deref(), *location, env),
 
         TypedExpr::Panic {
             location, message, ..
@@ -1511,10 +1814,15 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         } => record_constructor_function(name, *arity as usize),
 
         TypedExpr::ModuleSelect {
-            typ,
-            constructor: ModuleValueConstructor::Fn { module, name, .. },
+            type_,
+            constructor:
+                ModuleValueConstructor::Fn {
+                    external_erlang: Some((module, name)),
+                    ..
+                }
+                | ModuleValueConstructor::Fn { module, name, .. },
             ..
-        } => module_select_fn(typ.clone(), module, name),
+        } => module_select_fn(type_.clone(), module, name),
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
@@ -1530,16 +1838,18 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
 
-        TypedExpr::BitString { segments, .. } => bit_string(
+        TypedExpr::BitArray { segments, .. } => bit_array(
             segments
                 .iter()
                 .map(|s| expr_segment(&s.value, &s.options, env)),
         ),
+
+        TypedExpr::Invalid { .. } => panic!("invalid expressions should not reach code generation"),
     }
 }
 
 fn pipeline<'a>(
-    assignments: &'a [Assignment<Arc<Type>, TypedExpr>],
+    assignments: &'a [TypedAssignment],
     finally: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
@@ -1558,7 +1868,7 @@ fn pipeline<'a>(
 fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Document<'a> {
     match assignment.kind {
         AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
-        AssignmentKind::Assert => let_assert(&assignment.value, &assignment.pattern, env),
+        AssignmentKind::Assert { .. } => let_assert(&assignment.value, &assignment.pattern, env),
     }
 }
 
@@ -1567,16 +1877,16 @@ fn negate_with<'a>(op: &'static str, value: &'a TypedExpr, env: &mut Env<'a>) ->
 }
 
 fn tuple_index<'a>(tuple: &'a TypedExpr, index: u64, env: &mut Env<'a>) -> Document<'a> {
-    let index_doc = Document::String(format!("{}", (index + 1)));
+    let index_doc = eco_format!("{}", (index + 1)).to_doc();
     let tuple_doc = maybe_block_expr(tuple, env);
     "erlang:element"
         .to_doc()
         .append(wrap_args([index_doc, tuple_doc]))
 }
 
-fn module_select_fn<'a>(typ: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
-    match crate::type_::collapse_links(typ).as_ref() {
-        crate::type_::Type::Fn { args, .. } => "fun "
+fn module_select_fn<'a>(type_: Arc<Type>, module_name: &'a str, label: &'a str) -> Document<'a> {
+    match crate::type_::collapse_links(type_).as_ref() {
+        Type::Fn { args, .. } => "fun "
             .to_doc()
             .append(module_name_to_erlang(module_name))
             .append(":")
@@ -1608,17 +1918,19 @@ fn fun<'a>(args: &'a [TypedArg], body: &'a [TypedStatement], env: &mut Env<'a>) 
     doc
 }
 
-fn incrementing_args_list(arity: usize) -> String {
+fn incrementing_args_list(arity: usize) -> EcoString {
     let arguments = (0..arity).map(|c| format!("Field@{c}"));
-    Itertools::intersperse(arguments, ", ".into()).collect()
+    Itertools::intersperse(arguments, ", ".into())
+        .collect::<String>()
+        .into()
 }
 
-fn variable_name(name: &str) -> String {
+fn variable_name(name: &str) -> EcoString {
     let mut chars = name.chars();
     let first_char = chars.next();
     let first_uppercased = first_char.into_iter().flat_map(char::to_uppercase);
 
-    first_uppercased.chain(chars).collect()
+    first_uppercased.chain(chars).collect::<EcoString>()
 }
 
 /// When rendering a type variable to an erlang type spec we need all type variables with the
@@ -1626,19 +1938,19 @@ fn variable_name(name: &str) -> String {
 /// This function converts a usize into base 26 A-Z for this purpose.
 fn id_to_type_var(id: u64) -> Document<'static> {
     if id < 26 {
-        let mut name = "".to_string();
-        name.push(std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
-        return Document::String(name);
+        let mut name = EcoString::from("");
+        name.push(char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"));
+        return name.to_doc();
     }
     let mut name = vec![];
     let mut last_char = id;
     while last_char >= 26 {
-        name.push(std::char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
+        name.push(char::from_u32((last_char % 26 + 65) as u32).expect("id_to_type_var 1"));
         last_char /= 26;
     }
-    name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
+    name.push(char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    name.into_iter().collect::<SmolStr>().to_doc()
+    name.into_iter().collect::<EcoString>().to_doc()
 }
 
 pub fn is_erlang_reserved_word(name: &str) -> bool {
@@ -1672,6 +1984,8 @@ pub fn is_erlang_reserved_word(name: &str) -> bool {
             | "if"
             | "of"
             | "case"
+            | "maybe"
+            | "else"
     )
 }
 
@@ -1746,6 +2060,14 @@ pub fn is_erlang_standard_library_module(name: &str) -> bool {
     )
 }
 
+// Includes the functions that are autogenerated by erlang itself
+pub fn escape_erlang_existing_name(name: &str) -> &str {
+    match name {
+        "module_info" => "moduleInfo",
+        _ => name,
+    }
+}
+
 // A TypeVar can either be rendered as an actual type variable such as `A` or `B`,
 // or it can be rendered as `any()` depending on how many usages it has. If it
 // has only 1 usage it is an `any()` type. If it has more than 1 usage it is a
@@ -1759,26 +2081,61 @@ fn collect_type_var_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
-    for typ in types {
-        type_var_ids(typ, &mut ids);
+    for type_ in types {
+        type_var_ids(type_, &mut ids);
     }
     ids
 }
 
+fn result_type_var_ids(ids: &mut HashMap<u64, u64>, arg_ok: &Type, arg_err: &Type) {
+    let mut ok_ids = HashMap::new();
+    type_var_ids(arg_ok, &mut ok_ids);
+
+    let mut err_ids = HashMap::new();
+    type_var_ids(arg_err, &mut err_ids);
+
+    let mut result_counts = ok_ids;
+    for (id, count) in err_ids {
+        let _ = result_counts
+            .entry(id)
+            .and_modify(|current_count| {
+                if *current_count < count {
+                    *current_count = count;
+                }
+            })
+            .or_insert(count);
+    }
+    for (id, count) in result_counts {
+        let _ = ids
+            .entry(id)
+            .and_modify(|current_count| {
+                *current_count += count;
+            })
+            .or_insert(count);
+    }
+}
+
 fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
-        Type::Var { type_: typ } => match typ.borrow().deref() {
+        Type::Var { type_ } => match type_.borrow().deref() {
             TypeVar::Generic { id, .. } | TypeVar::Unbound { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
             }
-            TypeVar::Link { type_: typ } => type_var_ids(typ, ids),
+            TypeVar::Link { type_ } => type_var_ids(type_, ids),
         },
-        Type::Named { args, .. } => {
-            for arg in args {
-                type_var_ids(arg, ids)
+        Type::Named {
+            args, module, name, ..
+        } => match args[..] {
+            [ref arg_ok, ref arg_err] if is_prelude_module(module) && name == "Result" => {
+                result_type_var_ids(ids, arg_ok, arg_err)
             }
-        }
+            _ => {
+                for arg in args {
+                    type_var_ids(arg, ids)
+                }
+            }
+        },
         Type::Fn { args, retrn } => {
             for arg in args {
                 type_var_ids(arg, ids)
@@ -1793,7 +2150,7 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     }
 }
 
-fn erl_safe_type_name(mut name: String) -> String {
+fn erl_safe_type_name(mut name: String) -> EcoString {
     if matches!(
         name.as_str(),
         "any"
@@ -1836,7 +2193,7 @@ fn erl_safe_type_name(mut name: String) -> String {
             | "tuple"
     ) {
         name.push('_');
-        name
+        EcoString::from(name)
     } else {
         escape_atom_string(name)
     }
@@ -1865,7 +2222,7 @@ impl<'a> TypePrinter<'a> {
 
     pub fn print(&self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow()),
+            Type::Var { type_ } => self.print_var(&type_.borrow()),
 
             Type::Named {
                 name, module, args, ..
@@ -1894,7 +2251,7 @@ impl<'a> TypePrinter<'a> {
                 },
                 None => id_to_type_var(*id),
             },
-            TypeVar::Link { type_: typ } => self.print(typ),
+            TypeVar::Link { type_ } => self.print(type_),
         }
     }
 
@@ -1905,18 +2262,19 @@ impl<'a> TypePrinter<'a> {
             "String" => "binary()".to_doc(),
             "Bool" => "boolean()".to_doc(),
             "Float" => "float()".to_doc(),
-            "BitString" => "bitstring()".to_doc(),
+            "BitArray" => "bitstring()".to_doc(),
             "List" => {
-                let arg0 = self.print(args.get(0).expect("print_prelude_type list"));
+                let arg0 = self.print(args.first().expect("print_prelude_type list"));
                 "list(".to_doc().append(arg0).append(")")
             }
-            "Result" => {
-                let arg_ok = self.print(args.get(0).expect("print_prelude_type result ok"));
-                let arg_err = self.print(args.get(1).expect("print_prelude_type result err"));
-                let ok = tuple(["ok".to_doc(), arg_ok]);
-                let error = tuple(["error".to_doc(), arg_err]);
-                docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
-            }
+            "Result" => match args {
+                [arg_ok, arg_err] => {
+                    let ok = tuple(["ok".to_doc(), self.print(arg_ok)]);
+                    let error = tuple(["error".to_doc(), self.print(arg_err)]);
+                    docvec![ok, break_(" |", " | "), error].nest(INDENT).group()
+                }
+                _ => panic!("print_prelude_type result expects ok and err"),
+            },
             // Getting here should mean we either forgot a built-in type or there is a
             // compiler error
             name => panic!("{name} is not a built-in type."),
@@ -1924,11 +2282,8 @@ impl<'a> TypePrinter<'a> {
     }
 
     fn print_type_app(&self, module: &str, name: &str, args: &[Arc<Type>]) -> Document<'static> {
-        let args = concat(Itertools::intersperse(
-            args.iter().map(|a| self.print(a)),
-            ", ".to_doc(),
-        ));
-        let name = Document::String(erl_safe_type_name(name.to_snake_case()));
+        let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
+        let name = erl_safe_type_name(name.to_snake_case()).to_doc();
         if self.current_module == module {
             docvec![name, "(", args, ")"]
         } else {
@@ -1937,10 +2292,7 @@ impl<'a> TypePrinter<'a> {
     }
 
     fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {
-        let args = concat(Itertools::intersperse(
-            args.iter().map(|a| self.print(a)),
-            ", ".to_doc(),
-        ));
+        let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
         let retrn = self.print(retrn);
         "fun(("
             .to_doc()
@@ -1954,5 +2306,57 @@ impl<'a> TypePrinter<'a> {
     fn var_as_any(mut self) -> Self {
         self.var_as_any = true;
         self
+    }
+}
+
+fn find_private_functions_referenced_in_importable_constants(
+    module: &TypedModule,
+) -> HashSet<EcoString> {
+    let mut overridden_publicity = HashSet::new();
+
+    for def in module.definitions.iter() {
+        if let Definition::ModuleConstant(c) = def {
+            if c.publicity.is_importable() {
+                find_referenced_private_functions(&c.value, &mut overridden_publicity)
+            }
+        }
+    }
+    overridden_publicity
+}
+
+fn find_referenced_private_functions(
+    constant: &TypedConstant,
+    already_found: &mut HashSet<EcoString>,
+) {
+    match constant {
+        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
+
+        Constant::Int { .. }
+        | Constant::Float { .. }
+        | Constant::String { .. }
+        | Constant::BitArray { .. } => (),
+
+        TypedConstant::Var {
+            name, constructor, ..
+        } => {
+            if let Some(ValueConstructor { type_, .. }) = constructor.as_deref() {
+                if let Type::Fn { .. } = **type_ {
+                    let _ = already_found.insert(name.clone());
+                }
+            }
+        }
+
+        TypedConstant::Record { args, .. } => args
+            .iter()
+            .for_each(|arg| find_referenced_private_functions(&arg.value, already_found)),
+
+        TypedConstant::StringConcatenation { left, right, .. } => {
+            find_referenced_private_functions(left, already_found);
+            find_referenced_private_functions(right, already_found);
+        }
+
+        Constant::Tuple { elements, .. } | Constant::List { elements, .. } => elements
+            .iter()
+            .for_each(|element| find_referenced_private_functions(element, already_found)),
     }
 }

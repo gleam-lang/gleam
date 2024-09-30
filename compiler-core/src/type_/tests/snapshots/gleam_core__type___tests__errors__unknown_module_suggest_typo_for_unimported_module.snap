@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  woble.wubble()\n}\n"
+---
+error: Unknown module
+  ┌─ /src/one/two.gleam:3:3
+  │
+3 │   woble.wubble()
+  │   ^^^^^
+
+No module has been found with the name `woble`.
+Hint: Did you mean to import `wibble/wobble` and reference `wobble`?

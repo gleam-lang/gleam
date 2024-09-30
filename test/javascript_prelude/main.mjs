@@ -1,19 +1,16 @@
 import {
-  BitString,
+  BitArray,
   CustomType,
-  Empty,
   Error,
   List,
-  NonEmpty,
   Ok,
   UtfCodepoint,
   codepointBits,
   divideFloat,
   divideInt,
-  inspect,
   isEqual,
   stringBits,
-  toBitString,
+  toBitArray,
   toList,
 } from "./prelude.mjs";
 
@@ -29,6 +26,14 @@ function fail(message) {
   console.log("");
   console.assert(false, message);
   failures++;
+}
+
+function inspect(a) {
+  if (typeof a === "object" && a !== null && typeof a.inspect === "function") {
+    return a.inspect();
+  } else {
+    return JSON.stringify(a);
+  }
 }
 
 function assertEqual(a, b) {
@@ -108,59 +113,56 @@ assertNotEqual(new Error(new Error(2)), new Error(new Error(3)));
 
 assertEqual(
   new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
-  new ExampleRecordImpl(undefined, 1, new Ok(2.1))
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
 );
 assertNotEqual(
   new ExampleRecordImpl(undefined, 1, new Ok("2.1")),
-  new ExampleRecordImpl(undefined, 1, new Ok(2.1))
+  new ExampleRecordImpl(undefined, 1, new Ok(2.1)),
 );
 
 assertEqual(List.fromArray([]), List.fromArray([]));
 assertEqual(
   List.fromArray([1, 2, new Ok(1)]),
-  List.fromArray([1, 2, new Ok(1)])
+  List.fromArray([1, 2, new Ok(1)]),
 );
 assertNotEqual(
   List.fromArray([1, 2, new Ok(1)]),
-  List.fromArray([1, 2, new Ok(2)])
+  List.fromArray([1, 2, new Ok(2)]),
 );
 assertNotEqual(List.fromArray([1, 2]), List.fromArray([1, 2, new Ok(2)]));
 assertNotEqual(List.fromArray([1]), List.fromArray([]));
 assertNotEqual(List.fromArray([]), List.fromArray([1]));
 
+assertEqual(new BitArray(new Uint8Array([])), new BitArray(new Uint8Array([])));
 assertEqual(
-  new BitString(new Uint8Array([])),
-  new BitString(new Uint8Array([]))
-);
-assertEqual(
-  new BitString(new Uint8Array([1, 2, 3])),
-  new BitString(new Uint8Array([1, 2, 3]))
+  new BitArray(new Uint8Array([1, 2, 3])),
+  new BitArray(new Uint8Array([1, 2, 3])),
 );
 assertNotEqual(
-  new BitString(new Uint8Array([1, 2])),
-  new BitString(new Uint8Array([1, 2, 3]))
+  new BitArray(new Uint8Array([1, 2])),
+  new BitArray(new Uint8Array([1, 2, 3])),
 );
 
 assertEqual(new UtfCodepoint(128013), new UtfCodepoint(128013));
 assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
 
-// toBitString
+// toBitArray
 
-assertEqual(new BitString(new Uint8Array([])), toBitString([]));
+assertEqual(new BitArray(new Uint8Array([])), toBitArray([]));
 
 assertEqual(
-  new BitString(new Uint8Array([97, 98, 99])),
-  toBitString([stringBits("abc")])
+  new BitArray(new Uint8Array([97, 98, 99])),
+  toBitArray([stringBits("abc")]),
 );
 
 assertEqual(
-  new BitString(new Uint8Array([97])),
-  toBitString([codepointBits(new UtfCodepoint(97))])
+  new BitArray(new Uint8Array([97])),
+  toBitArray([codepointBits(new UtfCodepoint(97))]),
 );
 
 assertEqual(
-  new BitString(new Uint8Array([240, 159, 144, 141])),
-  toBitString([codepointBits(new UtfCodepoint(128013))])
+  new BitArray(new Uint8Array([240, 159, 144, 141])),
+  toBitArray([codepointBits(new UtfCodepoint(128013))]),
 );
 
 // toList
@@ -205,7 +207,7 @@ let fun = () => 1;
 assertEqual(fun, fun);
 assertNotEqual(
   () => 1,
-  () => 1
+  () => 1,
 );
 
 // Maps are compared structurally
@@ -217,19 +219,19 @@ assertNotEqual(
     ["a", 1],
     ["b", 2],
   ]),
-  new Map([["a", 1]])
+  new Map([["a", 1]]),
 );
 assertNotEqual(
   new Map([["a", 1]]),
   new Map([
     ["a", 1],
     ["b", 2],
-  ])
+  ]),
 );
 assertNotEqual(new Map([["a", 1]]), new Map([["b", 1]]));
 assertEqual(
   new Map([["a", new Map([["a", []]])]]),
-  new Map([["a", new Map([["a", []]])]])
+  new Map([["a", new Map([["a", []]])]]),
 );
 
 // Sets are compared structurally
@@ -241,7 +243,7 @@ assertNotEqual(new Set(["a", 1, "b"]), new Set(["a", 1]));
 assertNotEqual(new Set(["a", 1]), new Set(["a", 1, "b"]));
 assertNotEqual(
   new Set(["a", new Map([["a", []]])]),
-  new Set(["a", new Map([["a", []]])])
+  new Set(["a", new Map([["a", []]])]),
 );
 
 // WeakMaps are not equal unless they have reference equality
@@ -253,6 +255,19 @@ assertNotEqual(new WeakMap([[map, 1]]), new WeakMap([[map, 1]]));
 let weak_set = new WeakSet([map, set]);
 assertEqual(weak_set, weak_set);
 assertNotEqual(new WeakSet([map, set]), new WeakSet([map, set]));
+
+// RegExp are compared structurally
+let re = new RegExp("test", "g");
+let re_literal = /test/g;
+assertEqual(re, re);
+assertEqual(re_literal, re_literal);
+assertEqual(re, re_literal);
+assertNotEqual(re, new RegExp("test", "i"));
+assertNotEqual(re, new RegExp("test"));
+assertNotEqual(re_literal, new RegExp("test", "i"));
+assertNotEqual(re_literal, /test/);
+assertNotEqual(re_literal, new RegExp("test", "i"));
+assertNotEqual(re, /test/i);
 
 class ExampleA {
   constructor(x) {
@@ -313,8 +328,14 @@ const hasEqualsField2 = {
 assertEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 1));
 assertNotEqual(new NoCustomEquals(1, 1), new NoCustomEquals(1, 2));
 // custom equals throws, fallback to structural equality
-assertEqual(new HasCustomEqualsThatThrows(1, 1), new HasCustomEqualsThatThrows(1, 1));
-assertNotEqual(new HasCustomEqualsThatThrows(1, 1), new HasCustomEqualsThatThrows(1, 2));
+assertEqual(
+  new HasCustomEqualsThatThrows(1, 1),
+  new HasCustomEqualsThatThrows(1, 1),
+);
+assertNotEqual(
+  new HasCustomEqualsThatThrows(1, 1),
+  new HasCustomEqualsThatThrows(1, 2),
+);
 // custom equals works, use it
 assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 1));
 assertEqual(new HasCustomEquals(1, 1), new HasCustomEquals(1, 2));
@@ -323,202 +344,35 @@ assertNotEqual(new HasCustomEquals(1, 1), new HasCustomEquals(2, 1));
 assertEqual(hasEqualsField, { ...hasEqualsField });
 assertNotEqual(hasEqualsField, hasEqualsField2);
 
-// Equality between Gleam prelude types from different packages
-//
-// The prelude is not global, each package gets one to fit into the JavaScript
-// module system. We work around this by having a single global
-// `globalThis.__gleam_prelude_variant` symbol and using this in place of the
-// constructor to check if Gleam values are of the same kind.
-//
-// In these tests we simulate a different prelude by creating new version of the
-// prelude types through inheritance.
-
-class AnotherEmpty extends Empty {}
-class AnotherNonEmpty extends NonEmpty {}
-class AnotherBitString extends BitString {}
-class AnotherOk extends Ok {}
-class AnotherError extends Error {}
-class AnotherUtfCodepoint extends UtfCodepoint {}
-
-assertEqual(List.fromArray([]), new AnotherEmpty());
-assertEqual(List.fromArray([1]), new AnotherNonEmpty(1, new AnotherEmpty()));
-assertNotEqual(List.fromArray([1]), new AnotherEmpty());
-assertEqual(new AnotherEmpty(), List.fromArray([]));
-assertEqual(new AnotherNonEmpty(1, new AnotherEmpty()), List.fromArray([1]));
-assertNotEqual(new AnotherEmpty(), List.fromArray([1]));
-
-assertEqual(new Ok(1), new AnotherOk(1));
-assertEqual(new AnotherOk(1), new Ok(1));
-assertNotEqual(new Ok(2), new AnotherOk(1));
-assertNotEqual(new AnotherOk(2), new Ok(1));
-
-assertEqual(new Error(1), new AnotherError(1));
-assertEqual(new AnotherError(1), new Error(1));
-assertNotEqual(new Error(2), new AnotherError(1));
-assertNotEqual(new AnotherError(2), new Error(1));
-
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(0), 1);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(2), 3);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 1, true, false), 1);
+assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 1, false, true), -96);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2, true, false), 258);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2, false, false), 513);
+assertEqual(new BitArray(new Uint8Array([1, 160, 3])).intFromSlice(0, 2, false, true), -24575);
+assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 2, true, false), 40962);
+assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 2, true, true), -24574);
 assertEqual(
-  new BitString(new Uint8Array([1, 2])),
-  new AnotherBitString(new Uint8Array([1, 2]))
+  new BitArray(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatFromSlice(0, 8, true),
+  1.0,
 );
 assertEqual(
-  new AnotherBitString(new Uint8Array([1, 2])),
-  new BitString(new Uint8Array([1, 2]))
-);
-assertNotEqual(
-  new BitString(new Uint8Array([2, 2])),
-  new AnotherBitString(new Uint8Array([1, 2]))
-);
-assertNotEqual(
-  new AnotherBitString(new Uint8Array([2, 2])),
-  new BitString(new Uint8Array([1, 2]))
-);
-
-assertEqual(new UtfCodepoint(128013), new AnotherUtfCodepoint(128013));
-assertEqual(new AnotherUtfCodepoint(128013), new UtfCodepoint(128013));
-assertNotEqual(new UtfCodepoint(128014), new AnotherUtfCodepoint(128013));
-assertNotEqual(new AnotherUtfCodepoint(128014), new UtfCodepoint(128013));
-
-// Inspecting Gleam values
-
-assertEqual(inspect(true), "True");
-assertEqual(inspect(false), "False");
-assertEqual(inspect(undefined), "Nil");
-
-assertEqual(inspect(0), "0");
-assertEqual(inspect(1), "1");
-assertEqual(inspect(2), "2");
-assertEqual(inspect(-1), "-1");
-assertEqual(inspect(-2), "-2");
-
-assertEqual(inspect(0.23), "0.23");
-assertEqual(inspect(1.23), "1.23");
-assertEqual(inspect(2.23), "2.23");
-assertEqual(inspect(-1.23), "-1.23");
-assertEqual(inspect(-2.23), "-2.23");
-
-assertEqual(inspect(new Ok(1)), "Ok(1)");
-assertEqual(inspect(new Ok(true)), "Ok(True)");
-assertEqual(inspect(new Ok(false)), "Ok(False)");
-assertEqual(inspect(new Ok(undefined)), "Ok(Nil)");
-
-assertEqual(inspect(new Error(2)), "Error(2)");
-assertEqual(inspect(new Error(true)), "Error(True)");
-assertEqual(inspect(new Error(false)), "Error(False)");
-assertEqual(inspect(new Error(undefined)), "Error(Nil)");
-
-assertEqual(
-  inspect(new ExampleRecordImpl(undefined, 1, 2.1)),
-  "ExampleRecordImpl(Nil, detail: 1, boop: 2.1)"
+  new BitArray(new Uint8Array([0, 0, 0, 0, 0, 0, 240, 63])).floatFromSlice(0, 8, false),
+  1.0,
 );
 assertEqual(
-  inspect(new ExampleRecordImpl(new Ok(1), 1, 2.1)),
-  "ExampleRecordImpl(Ok(1), detail: 1, boop: 2.1)"
-);
-
-assertEqual(inspect([]), "#()");
-assertEqual(inspect([1, 2, 3]), "#(1, 2, 3)");
-assertEqual(inspect([new Ok(1), new Ok(2)]), "#(Ok(1), Ok(2))");
-
-assertEqual(inspect(List.fromArray([])), "[]");
-assertEqual(inspect(List.fromArray([1, 2, 3])), "[1, 2, 3]");
-assertEqual(inspect(List.fromArray([new Ok(1), new Ok(2)])), "[Ok(1), Ok(2)]");
-
-assertEqual(inspect(new BitString(new Uint8Array([]))), "<<>>");
-assertEqual(inspect(new BitString(new Uint8Array([1, 2, 3]))), "<<1, 2, 3>>");
-
-assertEqual(new BitString(new Uint8Array([1, 2, 3])).byteAt(0), 1);
-assertEqual(new BitString(new Uint8Array([1, 2, 3])).byteAt(2), 3);
-assertEqual(
-  new BitString(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatAt(0),
-  1.0
-);
-assertEqual(new BitString(new Uint8Array([1, 2, 3])).intFromSlice(0, 1), 1);
-assertEqual(new BitString(new Uint8Array([1, 2, 3])).intFromSlice(0, 2), 258);
-assertEqual(
-  new BitString(new Uint8Array([1, 2, 3])).sliceAfter(1),
-  new BitString(new Uint8Array([2, 3]))
-);
-
-assertEqual(inspect(new UtfCodepoint(128013)), "//utfcodepoint(🐍)");
-
-assertEqual(
-  inspect(() => undefined),
-  "//fn() { ... }"
-);
-
-assertEqual(
-  inspect((a) => undefined),
-  "//fn(a) { ... }"
-);
-
-assertEqual(
-  inspect((x, y) => undefined),
-  "//fn(a, b) { ... }"
-);
-
-assertEqual(
-  inspect((x, y, z) => undefined),
-  "//fn(a, b, c) { ... }"
-);
-
-// Inspecting JavaScript values
-
-assertEqual(inspect(null), "//js(null)");
-assertEqual(inspect({}), "//js({})");
-assertEqual(inspect({ a: 1 }), '//js({ "a": 1 })');
-assertEqual(inspect({ a: 1, b: 2 }), '//js({ "a": 1, "b": 2 })');
-assertEqual(inspect({ a: 1, b: new Ok(1) }), '//js({ "a": 1, "b": Ok(1) })');
-assertEqual(
-  inspect(new globalThis.Error("Oh no")),
-  '//js(Error { "message": "Oh no" })'
+  new BitArray(new Uint8Array([0xC9, 0x74, 0x24, 0x00])).floatFromSlice(0, 4, true),
+  -1000000.0,
 );
 assertEqual(
-  inspect(
-    (() => {
-      let error = new globalThis.Error("Oh no");
-      error.other = new Ok(1);
-      return error;
-    })()
-  ),
-  '//js(Error { "message": "Oh no", "other": Ok(1) })'
+  new BitArray(new Uint8Array([0x00, 0x24, 0x74, 0xC9])).floatFromSlice(0, 4, false),
+  -1000000.0,
 );
-
-// Generic JS objects
-assertEqual(inspect(Promise.resolve(1)), "//js(Promise {})");
-
-// Inspecting Dates
 assertEqual(
-  inspect(new Date("1991-01-05")),
-  '//js(Date("1991-01-05T00:00:00.000Z"))'
+  new BitArray(new Uint8Array([1, 2, 3])).sliceAfter(1),
+  new BitArray(new Uint8Array([2, 3])),
 );
-
-// Inspecting RegExps
-assertEqual(inspect(/1[23]/g), "//js(/1[23]/g)");
-
-// Inspecting Maps
-assertEqual(
-  inspect(
-    new Map([
-      [1, 2],
-      [3, new Ok([1, 2])],
-    ])
-  ),
-  "//js(Map { 1: 2, 3: Ok(#(1, 2)) })"
-);
-
-// Inspecting Sets
-assertEqual(
-  inspect(new Set([1, 2, new Ok([1, 2])])),
-  "//js(Set(1, 2, Ok(#(1, 2))))"
-);
-
-// Inspecting objects that have the null prototype
-let nullPrototypeObject = Object.create(null);
-assertEqual(inspect(nullPrototypeObject), "//js({})");
-nullPrototypeObject.one = 1;
-nullPrototypeObject.two = 2;
-assertEqual(inspect(nullPrototypeObject), '//js({ "one": 1, "two": 2 })');
 
 // Result.isOk
 
@@ -552,11 +406,11 @@ assertEqual(toList([1, 1]).hasLength(3), false);
 assertEqual([...toList([])], []);
 assertEqual([...toList([1, 2, 3])], [1, 2, 3]);
 
-// BitString.length
+// BitArray.length
 
-assertEqual(new BitString(new Uint8Array([])).length, 0);
-assertEqual(new BitString(new Uint8Array([1, 2])).length, 2);
-assertEqual(new BitString(new Uint8Array([1, 2, 3, 4])).length, 4);
+assertEqual(new BitArray(new Uint8Array([])).length, 0);
+assertEqual(new BitArray(new Uint8Array([1, 2])).length, 2);
+assertEqual(new BitArray(new Uint8Array([1, 2, 3, 4])).length, 4);
 
 //
 // Division
@@ -601,21 +455,21 @@ assertEqual(new Error(1).withFields({ 0: 2 }), new Error(2));
 
 assertEqual(
   new ExampleRecordImpl(1, 2, 3).withFields({}),
-  new ExampleRecordImpl(1, 2, 3)
+  new ExampleRecordImpl(1, 2, 3),
 );
 assertEqual(
   new ExampleRecordImpl(1, 2, 3).withFields({ boop: 6, 0: 40 }),
-  new ExampleRecordImpl(40, 2, 6)
+  new ExampleRecordImpl(40, 2, 6),
 );
 assertEqual(
   new ExampleRecordImpl(1, 2, 3).withFields({ boop: 4, detail: 5, 0: 6 }),
-  new ExampleRecordImpl(6, 5, 4)
+  new ExampleRecordImpl(6, 5, 4),
 );
 
-// Test BitString can only be constructed from Uint8Array, not ArrayBuffer
-const bs1 = new BitString(new Uint8Array(new ArrayBuffer(8)));
-assertThrows("Should only construct bitstring from Uint8Array", () => {
-  const bs = new BitString(new ArrayBuffer(8));
+// Test BitArray can only be constructed from Uint8Array, not ArrayBuffer
+const bs1 = new BitArray(new Uint8Array(new ArrayBuffer(8)));
+assertThrows("Should only construct BitArray from Uint8Array", () => {
+  const bs = new BitArray(new ArrayBuffer(8));
 });
 
 //

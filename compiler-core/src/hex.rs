@@ -2,7 +2,7 @@ use camino::Utf8Path;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::version::Version;
+use hexpm::{version::Version, ApiError};
 use tar::Archive;
 
 use crate::{
@@ -29,6 +29,7 @@ fn key_name(hostname: &str) -> String {
 
 pub async fn publish_package<Http: HttpClient>(
     release_tarball: Vec<u8>,
+    version: String,
     api_key: &str,
     config: &hexpm::Config,
     replace: bool,
@@ -37,10 +38,13 @@ pub async fn publish_package<Http: HttpClient>(
     tracing::info!("Publishing package, replace: {}", replace);
     let request = hexpm::publish_package_request(release_tarball, api_key, config, replace);
     let response = http.send(request).await?;
-    hexpm::publish_package_response(response).map_err(Error::hex)
+    hexpm::publish_package_response(response).map_err(|e| match e {
+        ApiError::NotReplacing => Error::HexPublishReplaceRequired { version },
+        err => Error::hex(err),
+    })
 }
 
-#[derive(Debug, strum::EnumString, strum::EnumVariantNames, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, strum::EnumString, strum::VariantNames, Clone, Copy, PartialEq, Eq)]
 #[strum(serialize_all = "lowercase")]
 pub enum RetirementReason {
     Other,
@@ -239,7 +243,7 @@ impl Downloader {
                 return match result {
                     Ok(()) => Ok(true),
                     Err(err) => {
-                        self.fs_writer.delete(&destination)?;
+                        self.fs_writer.delete_directory(&destination)?;
                         Err(err)
                     }
                 };

@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn identity(value: someType) { value }"
+---
+----- BEFORE ACTION
+fn identity(value: someType) { value }
+                   ▔▔▔▔▔▔▔▔↑          
+
+
+----- AFTER ACTION
+fn identity(value: some_type) { value }

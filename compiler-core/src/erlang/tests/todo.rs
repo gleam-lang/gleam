@@ -27,7 +27,21 @@ fn named() {
     assert_erl!(
         r#"
 pub fn main() {
-  todo("testing")
+  todo as "testing"
+}
+"#
+    );
+}
+
+#[test]
+fn todo_as_function() {
+    assert_erl!(
+        r#"
+pub fn retstring() {
+  "wibble"
+}
+pub fn main() {
+  todo as { retstring() <> "wobble" }
 }
 "#
     );
@@ -37,10 +51,10 @@ pub fn main() {
 fn piped() {
     assert_erl!(
         r#"
-     pub fn main(){
+     pub fn main() {
       "lets"
-      |> todo("pipe")
-      |> todo("other todo")
+      |> todo as "pipe"
+      |> todo as "other todo"
     }
     "#
     );

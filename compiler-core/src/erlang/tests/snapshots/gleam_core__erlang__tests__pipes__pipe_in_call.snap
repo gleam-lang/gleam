@@ -4,14 +4,16 @@ assertion_line: 122
 expression: "\npub fn main() {\n  123\n  |> two(\n    1 |> two(2),\n    _,\n  )\n}\n\npub fn two(a, b) {\n  a\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([two/2, main/0]).
 
+-file("/root/project/test/my/mod.gleam", 10).
 -spec two(J, any()) -> J.
 two(A, B) ->
     A.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     _pipe = 123,
@@ -22,4 +24,3 @@ main() ->
         end,
         _pipe
     ).
-

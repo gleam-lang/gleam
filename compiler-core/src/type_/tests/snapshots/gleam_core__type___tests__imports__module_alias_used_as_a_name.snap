@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/imports.rs
+expression: "\nimport one/two\n\npub fn main() {\n  two\n}\n"
+---
+error: Module `two` used as a value
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   two
+  │   ^^^
+
+Modules are not values, so you cannot assign them to variables, pass them
+to functions, or anything else that you would do with a value.

@@ -1,24 +1,24 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 472
+assertion_line: 505
 expression: "pub fn x(y) {\n  let assert Ok(_) = y\n  1\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([x/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x({ok, any()} | {error, any()}) -> integer().
 x(Y) ->
     {ok, _} = case Y of
         {ok, _} -> Y;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
-                        message => <<"Assertion pattern match failed"/utf8>>,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
                         module => <<"my/mod"/utf8>>,
                         function => <<"x"/utf8>>,
                         line => 2})
     end,
     1.
-

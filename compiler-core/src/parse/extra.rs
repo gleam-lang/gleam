@@ -1,4 +1,6 @@
-use smol_str::SmolStr;
+use std::cmp::Ordering;
+
+use ecow::EcoString;
 
 use crate::ast::SrcSpan;
 
@@ -8,11 +10,43 @@ pub struct ModuleExtra {
     pub doc_comments: Vec<SrcSpan>,
     pub comments: Vec<SrcSpan>,
     pub empty_lines: Vec<u32>,
+    pub new_lines: Vec<u32>,
 }
 
 impl ModuleExtra {
     pub fn new() -> Self {
         Default::default()
+    }
+
+    /// Detects if a byte index is in a comment context
+    pub fn is_within_comment(&self, byte_index: u32) -> bool {
+        let cmp = |span: &SrcSpan| {
+            if byte_index < span.start {
+                Ordering::Greater
+            } else if byte_index > span.end {
+                Ordering::Less
+            } else {
+                Ordering::Equal
+            }
+        };
+
+        self.comments.binary_search_by(cmp).is_ok()
+            || self.doc_comments.binary_search_by(cmp).is_ok()
+            || self.module_comments.binary_search_by(cmp).is_ok()
+    }
+
+    pub(crate) fn has_comment_between(&self, start: u32, end: u32) -> bool {
+        self.comments
+            .binary_search_by(|comment| {
+                if comment.end < start {
+                    Ordering::Less
+                } else if comment.start > end {
+                    Ordering::Greater
+                } else {
+                    Ordering::Equal
+                }
+            })
+            .is_ok()
     }
 }
 
@@ -22,8 +56,8 @@ pub struct Comment<'a> {
     pub content: &'a str,
 }
 
-impl<'a> From<(&SrcSpan, &'a SmolStr)> for Comment<'a> {
-    fn from(value: (&SrcSpan, &'a SmolStr)) -> Self {
+impl<'a> From<(&SrcSpan, &'a EcoString)> for Comment<'a> {
+    fn from(value: (&SrcSpan, &'a EcoString)) -> Self {
         Self::from((value.0, value.1.as_str()))
     }
 }

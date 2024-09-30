@@ -3,17 +3,22 @@ use camino::Utf8PathBuf;
 use gleam_core::{
     config::PackageConfig,
     error::{Error, FileIoAction, FileKind},
-    manifest::Manifest,
+    manifest::{Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
 };
-use smol_str::SmolStr;
 
-use crate::fs::get_current_directory;
+use crate::fs::{get_current_directory, get_project_root};
 
 pub fn root_config() -> Result<PackageConfig, Error> {
-    let current_dir = get_current_directory().expect("Failed to get current directory");
-    let paths = ProjectPaths::new(current_dir);
+    let dir = get_project_root(get_current_directory()?)?;
+    let paths = ProjectPaths::new(dir);
     read(paths.root_config())
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum PackageKind {
+    Dependency,
+    Root,
 }
 
 /// Get the config for a dependency module. Return the config for the current
@@ -22,37 +27,36 @@ pub fn find_package_config_for_module(
     mod_path: &str,
     manifest: &Manifest,
     project_paths: &ProjectPaths,
-) -> Result<PackageConfig, Error> {
-    let gleam_projects: Vec<SmolStr> = manifest
-        .packages
-        .iter()
-        .filter(|package| package.build_tools.contains(&"gleam".to_string()))
-        .map(|package| package.name.clone())
-        .collect();
-
-    let maybe_package_path = gleam_projects.into_iter().find(|package_to_check| {
-        let mut path = project_paths.build_packages_directory();
-        path.push(package_to_check.as_str());
-
-        path.push("src");
-
-        for file in mod_path.split('/') {
-            path.push(file);
+) -> Result<(PackageConfig, PackageKind), Error> {
+    for package in &manifest.packages {
+        // Not a Gleam package
+        if !package.build_tools.contains(&"gleam".into()) {
+            continue;
         }
 
-        let _ = path.set_extension("gleam");
+        let root = package_root(package, project_paths);
+        let mut module_path = root.join("src").join(mod_path);
+        _ = module_path.set_extension("gleam");
 
-        path.is_file()
-    });
-
-    match maybe_package_path {
-        Some(package_path) => {
-            let mut config_path = project_paths.build_packages_directory();
-            config_path.push(package_path.as_str());
-            config_path.push("gleam.toml");
-            read(config_path)
+        // This package doesn't have the module we're looking for
+        if !module_path.is_file() {
+            continue;
         }
-        None => root_config(),
+
+        let configuration = read(root.join("gleam.toml"))?;
+        return Ok((configuration, PackageKind::Dependency));
+    }
+
+    Ok((root_config()?, PackageKind::Root))
+}
+
+fn package_root(package: &ManifestPackage, project_paths: &ProjectPaths) -> Utf8PathBuf {
+    match &package.source {
+        ManifestPackageSource::Local { path } => project_paths.root().join(path),
+
+        ManifestPackageSource::Hex { .. } | ManifestPackageSource::Git { .. } => {
+            project_paths.build_packages_package(&package.name)
+        }
     }
 }
 
@@ -64,7 +68,7 @@ pub fn read(config_path: Utf8PathBuf) -> Result<PackageConfig, Error> {
         path: config_path,
         err: Some(e.to_string()),
     })?;
-    config.check_gleam_compatability()?;
+    config.check_gleam_compatibility()?;
     Ok(config)
 }
 
@@ -79,4 +83,68 @@ pub fn ensure_config_exists(paths: &ProjectPaths) -> Result<(), Error> {
         });
     }
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use gleam_core::manifest::Base16Checksum;
+
+    #[test]
+    fn package_root_hex() {
+        let paths = ProjectPaths::new(Utf8PathBuf::from("/app"));
+        let package = ManifestPackage {
+            name: "the_package".into(),
+            version: hexpm::version::Version::new(1, 0, 0),
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+        };
+        assert_eq!(
+            package_root(&package, &paths),
+            Utf8PathBuf::from("/app/build/packages/the_package")
+        );
+    }
+
+    #[test]
+    fn package_root_git() {
+        let paths = ProjectPaths::new(Utf8PathBuf::from("/app"));
+        let package = ManifestPackage {
+            name: "the_package".into(),
+            version: hexpm::version::Version::new(1, 0, 0),
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Git {
+                repo: "repo".into(),
+                commit: "commit".into(),
+            },
+        };
+        assert_eq!(
+            package_root(&package, &paths),
+            Utf8PathBuf::from("/app/build/packages/the_package")
+        );
+    }
+
+    #[test]
+    fn package_root_local() {
+        let paths = ProjectPaths::new(Utf8PathBuf::from("/app"));
+        let package = ManifestPackage {
+            name: "the_package".into(),
+            version: hexpm::version::Version::new(1, 0, 0),
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements: vec![],
+            source: ManifestPackageSource::Local {
+                path: Utf8PathBuf::from("../wibble"),
+            },
+        };
+        assert_eq!(
+            package_root(&package, &paths),
+            Utf8PathBuf::from("/app/../wibble")
+        );
+    }
 }

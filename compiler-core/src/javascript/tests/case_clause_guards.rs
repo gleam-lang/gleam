@@ -1,19 +1,6 @@
 use crate::assert_js;
 
 #[test]
-fn guards_cause_badmatch_to_render() {
-    assert_js!(
-        r#"pub fn main(x, y) {
-  case x {
-    1 -> 1
-    _ if y -> 0
-  }
-}
-"#,
-    );
-}
-
-#[test]
 fn referencing_pattern_var() {
     assert_js!(
         r#"pub fn main(xs) {
@@ -35,6 +22,43 @@ fn rebound_var() {
   case x {
     _ if x -> 1
     _ -> 0
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn bitarray_with_var() {
+    assert_js!(
+        r#"pub fn main() {
+  case 5 {
+    z if <<z>> == <<z>> -> Nil
+    _ -> Nil
+  }
+}
+"#,
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/3004
+#[test]
+fn keyword_var() {
+    assert_js!(
+        r#"
+pub const function = 5
+pub const do = 10
+pub fn main() {
+  let class = 5
+  let while = 10
+  let var = 7
+  case var {
+    _ if class == while -> True
+    _ if [class] == [5] -> True
+    function if #(function) == #(5) -> False
+    _ if do == function -> True
+    while if while > 5 -> False
+    class -> False
   }
 }
 "#,
@@ -179,7 +203,7 @@ fn alternative_patterns_assignment() {
     [x] | [_, x] -> x
     _ -> 1
   }
-}  
+}
 "#,
     );
 }
@@ -192,7 +216,7 @@ fn alternative_patterns_guard() {
     [x] | [_, x] if x == 1 -> x
     _ -> 0
   }
-}   
+}
 "#,
     );
 }
@@ -204,11 +228,9 @@ fn field_access() {
         pub type Person {
           Person(username: String, name: String, age: Int)
         }
-        
         pub fn main() {
           let given_name = "jack"
           let raiden = Person("raiden", "jack", 31)
-          
           case given_name {
             name if name == raiden.name -> "It's jack"
             _ -> "It's not jack"
@@ -340,6 +362,58 @@ fn module_access() {
 }
 
 #[test]
+fn module_access_submodule() {
+    assert_js!(
+        (
+            "package",
+            "hero/submodule",
+            r#"
+              pub type Hero {
+                Hero(name: String)
+              }
+              pub const ironman = Hero("Tony Stark")
+            "#
+        ),
+        r#"
+          import hero/submodule
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == submodule.ironman.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
+fn module_access_aliased() {
+    assert_js!(
+        (
+            "package",
+            "hero/submodule",
+            r#"
+              pub type Hero {
+                Hero(name: String)
+              }
+              pub const ironman = Hero("Tony Stark")
+            "#
+        ),
+        r#"
+          import hero/submodule as myhero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == myhero.ironman.name -> True
+              _ -> False
+            }
+          }
+        "#
+    );
+}
+
+#[test]
 fn module_nested_access() {
     assert_js!(
         (
@@ -366,5 +440,80 @@ fn module_nested_access() {
             }
           }
         "#
+    );
+}
+
+#[test]
+fn not() {
+    assert_js!(
+        r#"pub fn main(x, y) {
+  case x {
+    _ if !y -> 0
+    _ -> 1
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn not_two() {
+    assert_js!(
+        r#"pub fn main(x, y) {
+  case x {
+    _ if !y && !x -> 0
+    _ -> 1
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn custom_type_constructor_imported_and_aliased() {
+    assert_js!(
+        ("package", "other_module", "pub type T { A }"),
+        r#"import other_module.{A as B}
+fn func() {
+  case B {
+    x if x == B -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn imported_aliased_ok() {
+    assert_js!(
+        r#"import gleam.{Ok as Y}
+pub type X {
+  Ok
+}
+fn func() {
+  case Y {
+    y if y == Y -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
+
+#[test]
+fn imported_ok() {
+    assert_js!(
+        r#"import gleam
+pub type X {
+  Ok
+}
+fn func(x) {
+  case gleam.Ok {
+    _ if [] == [ gleam.Ok ] -> True
+    _ -> False
+  }
+}
+"#,
     );
 }

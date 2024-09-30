@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/type_/tests/pipes.rs
+expression: "\nfn callback(a: Int) {\n  fn() -> String {\n    \"Called\"\n  }\n}\n\npub fn main() {\n  let x = 1 |> callback(2)\n}\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:9:16
+  │
+9 │   let x = 1 |> callback(2)
+  │                ^^^^^^^^^^^ Expected no arguments, got 1

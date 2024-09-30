@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn add(numA: Int, num_b: Int) { numA + num_b }"
+---
+----- BEFORE ACTION
+fn add(numA: Int, num_b: Int) { numA + num_b }
+       ↑                                      
+
+
+----- AFTER ACTION
+fn add(num_a: Int, num_b: Int) { numA + num_b }

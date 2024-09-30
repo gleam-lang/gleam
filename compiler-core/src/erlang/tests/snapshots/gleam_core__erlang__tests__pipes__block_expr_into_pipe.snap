@@ -4,14 +4,16 @@ assertion_line: 26
 expression: "fn id(a) { a }\npub fn main() {\n  {\n    let x = 1\n    x\n  }\n  |> id\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec id(I) -> I.
 id(A) ->
     A.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     _pipe = begin
@@ -19,4 +21,3 @@ main() ->
         X
     end,
     id(_pipe).
-

@@ -1,0 +1,17 @@
+name = "project"
+version = "0.1.0"
+
+[dependencies]
+# These are Gleam deps
+gleam_stdlib = "~> 0.32"
+gleam_erlang = "~> 0.23"
+
+# This is a rebar3 dep that uses files in ./priv
+certifi = "~> 2.12"
+# This is a rebar3 dep that uses files in ./ebin
+cowboy = "~> 2.10"
+# This is a mix dep that uses files in ./priv
+countries = "~> 1.6"
+
+[dev-dependencies]
+gleeunit = "~> 1.0"

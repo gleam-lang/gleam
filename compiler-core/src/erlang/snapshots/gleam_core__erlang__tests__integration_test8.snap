@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 202
+assertion_line: 235
 expression: "pub fn x() { 1. <. 2.3 }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([x/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x() -> boolean().
 x() ->
     1.0 < 2.3.
-

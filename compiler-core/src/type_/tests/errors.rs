@@ -1,9 +1,10 @@
 use crate::{
-    assert_error, assert_module_error, assert_module_syntax_error, assert_with_module_error,
+    assert_error, assert_internal_module_error, assert_module_error, assert_module_syntax_error,
+    assert_with_module_error,
 };
 
 #[test]
-fn bit_string_invalid_type() {
+fn bit_array_invalid_type() {
     assert_module_error!(
         "fn x() { \"test\" }
 
@@ -15,185 +16,184 @@ fn main() {
 }
 
 #[test]
-fn bit_strings2() {
-    assert_error!("let <<x:utf8>> = <<1>> x");
+fn bit_arrays2() {
+    assert_error!("let <<x:utf8>> = <<1>>");
 }
 
 #[test]
-fn bit_strings3() {
-    assert_error!("let <<x:utf16>> = <<1>> x");
+fn bit_arrays3() {
+    assert_error!("let <<x:utf16>> = <<1>>");
 }
 
 #[test]
-fn bit_strings4() {
-    assert_error!("let <<x:utf32>> = <<1>> x");
+fn bit_arrays4() {
+    assert_error!("let <<x:utf32>> = <<1>>");
 }
 
 #[test]
-fn bit_string() {
-    assert_error!("case <<1>> { <<2.0, a>> -> 1 }");
+fn bit_array() {
+    assert_error!("case <<1>> { <<2.0, a>> -> 1 _ -> 2 }");
 }
 
 #[test]
-fn bit_string_float() {
-    assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 }");
+fn bit_array_float() {
+    assert_error!("case <<1>> { <<a:float>> if a > 1 -> 1 _ -> 2 }");
 }
 
 #[test]
-fn bit_string_binary() {
-    assert_error!("case <<1>> { <<a:binary>> if a > 1 -> 1 }");
+fn bit_array_binary() {
+    assert_error!("case <<1>> { <<a:bytes>> if a > 1 -> 1 _ -> 2 }");
 }
 
 #[test]
-fn bit_string_guard() {
-    assert_error!("case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 }");
+fn bit_array_guard() {
+    assert_error!("case <<1>> { <<a:utf16_codepoint>> if a == \"test\" -> 1 _ -> 2 }");
 }
 
 #[test]
-fn bit_string_segment_nosize() {
-    assert_error!("case <<1>> { <<_:binary, _:binary>> -> 1 }");
+fn bit_array_segment_nosize() {
+    assert_error!("case <<1>> { <<_:bytes, _:bytes>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_nosize2() {
-    assert_error!("case <<1>> { <<_:bit_string, _:binary>> -> 1 }");
+fn bit_array_segment_nosize2() {
+    assert_error!("case <<1>> { <<_:bits, _:bytes>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_nosize3() {
-    assert_error!("case <<1>> { <<_:binary, _:bit_string>> -> 1 }");
+fn bit_array_segment_nosize3() {
+    assert_error!("case <<1>> { <<_:bytes, _:bits>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_conflicting_options_int() {
-    assert_error!("let x = <<1:int-binary>> x");
+fn bit_array_segment_conflicting_options_int() {
+    assert_error!("let x = <<1:int-bytes>> x");
 }
 
 #[test]
-fn bit_string_segment_conflicting_options_bit_string() {
-    assert_error!("case <<1>> { <<1:bit_string-binary>> -> 1 }");
+fn bit_array_segment_conflicting_options_bit_array() {
+    assert_error!("case <<1>> { <<1:bits-bytes>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_conflicting_signedness1() {
+fn bit_array_segment_conflicting_signedness1() {
     assert_error!("let x = <<1:signed-unsigned>> x");
 }
 
 #[test]
-fn bit_string_segment_conflicting_signedness2() {
+fn bit_array_segment_conflicting_signedness2() {
     assert_error!("case <<1>> { <<1:unsigned-signed>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_conflicting_endianness1() {
+fn bit_array_segment_conflicting_endianness1() {
     assert_error!("let x = <<1:big-little>> x");
 }
 
 #[test]
-fn bit_string_segment_conflicting_endianness2() {
+fn bit_array_segment_conflicting_endianness2() {
     assert_error!("case <<1>> { <<1:native-big>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_size() {
+fn bit_array_segment_size() {
     assert_error!("let x = <<1:8-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_size2() {
-    assert_error!("case <<1>> { <<1:size(2)-size(8)>> -> a }");
+fn bit_array_segment_size2() {
+    assert_error!("case <<1>> { <<1:size(2)-size(8)>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_unit_unit() {
+fn bit_array_segment_unit_unit() {
     assert_error!("let x = <<1:unit(2)-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf8() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf8() {
     assert_error!("let x = <<1:utf8_codepoint-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf16() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf16() {
     assert_error!("let x = <<1:utf16_codepoint-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf32() {
-    assert_error!("case <<1>> { <<1:utf32_codepoint-unit(2)>> -> a }");
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf32() {
+    assert_error!("case <<1>> { <<1:utf32_codepoint-unit(2)>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf8_2() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf8_2() {
     assert_error!("let x = <<1:utf8_codepoint-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf16_2() {
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf16_2() {
     assert_error!("let x = <<1:utf16_codepoint-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_codepoint_utf32_2() {
-    assert_error!("case <<1>> { <<1:utf32_codepoint-size(5)>> -> a }");
+fn bit_array_segment_type_does_not_allow_unit_codepoint_utf32_2() {
+    assert_error!("case <<1>> { <<1:utf32_codepoint-size(5)>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_utf8_2() {
+fn bit_array_segment_type_does_not_allow_unit_utf8_2() {
     assert_error!("let x = <<1:utf8-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_utf16() {
+fn bit_array_segment_type_does_not_allow_unit_utf16() {
     assert_error!("let x = <<1:utf16-unit(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_unit_utf32() {
-    assert_error!("case <<1>> { <<1:utf32-unit(2)>> -> a }");
+fn bit_array_segment_type_does_not_allow_unit_utf32() {
+    assert_error!("case <<1>> { <<1:utf32-unit(2)>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_size_utf8() {
+fn bit_array_segment_type_does_not_allow_size_utf8() {
     assert_error!("let x = <<1:utf8-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_size_utf16() {
+fn bit_array_segment_type_does_not_allow_size_utf16() {
     assert_error!("let x = <<1:utf16-size(5)>> x");
 }
 
 #[test]
-fn bit_string_segment_type_does_not_allow_size_utf32() {
-    assert_error!("case <<1>> { <<1:utf32-size(5)>> -> a }");
+fn bit_array_segment_type_does_not_allow_size_utf32() {
+    assert_error!("case <<1>> { <<1:utf32-size(5)>> -> 1 }");
 }
 
 #[test]
-fn bit_string_segment_unit_no_size() {
+fn bit_array_segment_unit_no_size() {
     assert_error!("let x = <<1:unit(5)>> x");
 }
 
 #[test]
-fn bit_string_size_not_int() {
+fn bit_array_size_not_int() {
     assert_error!("let x = <<1:size(\"1\")>> x");
 }
 
 #[test]
-fn bit_string_size_not_int_variable() {
+fn bit_array_size_not_int_variable() {
     assert_error!("let a = 2.0 case <<1>> { <<1:size(a)>> -> a }");
 }
 
 #[test]
-fn bit_string_float_size() {
+fn bit_array_float_size() {
     // float given invalid size
     assert_error!("let x = <<1:8-float>> x");
 }
 
 #[test]
-fn bit_string_binary_option_in_value() {
-    // using binary in value
-    assert_error!("let x = <<<<1:1>>:binary>> x");
+fn bit_array_bits_option_in_value() {
+    assert_error!("let x = <<<<1:1>>:bytes>> x");
 }
 
 #[test]
@@ -229,6 +229,11 @@ fn fn0_eq_fn1() {
 #[test]
 fn unknown_variable() {
     assert_error!("x");
+}
+
+#[test]
+fn unknown_variable_type() {
+    assert_error!("Int");
 }
 
 #[test]
@@ -304,7 +309,7 @@ fn function_return_annotation_mismatch_with_pipe() {
             1
             |> add_two
          }
-          
+
          fn add_two(i: Int) -> Int {
             i + 2
          }"
@@ -323,10 +328,10 @@ fn pipe_mismatch_error() {
             Orange
             |> eat_veggie
          }
-          
+
          type Fruit{ Orange }
          type Veg{ Lettuce }
-          
+
          fn eat_veggie(v: Veg) -> String {
             \"Ok\"
          }"
@@ -340,7 +345,7 @@ fn case_tuple_guard() {
 
 #[test]
 fn case_list_guard() {
-    assert_error!("case [1] { x if x == [1, 2.0] -> 1 }");
+    assert_error!("case [1] { x if x == [1, 2.0] -> 1 _ -> 2 }");
 }
 
 #[test]
@@ -365,12 +370,12 @@ fn recursive_var() {
 
 #[test]
 fn true_fn() {
-    assert_error!("let True(x) = 1 x");
+    assert_error!("let True(x) = 1");
 }
 
 #[test]
 fn ok_2_args() {
-    assert_error!("let Ok(1, x) = 1 x");
+    assert_error!("let Ok(1, x) = 1");
 }
 
 #[test]
@@ -390,7 +395,7 @@ fn tuple_int_float() {
 
 #[test]
 fn tuple_int() {
-    assert_error!("let #(a, b) = 1 a");
+    assert_error!("let #(a, b) = 1");
 }
 
 #[test]
@@ -541,7 +546,7 @@ fn duplicate_vars() {
 
 #[test]
 fn duplicate_vars_2() {
-    assert_error!("case [3.33], 1 { x, x if x > x -> 1 }");
+    assert_error!("case [3.33], 1 { x, x -> 1 }");
 }
 
 #[test]
@@ -607,7 +612,7 @@ pub type Shape {
     Rectangle(x: String, y: String)
 }
 pub fn get_x(shape: Shape) { shape.x }
-pub fn get_y(shape: Shape) { shape.y }"
+"
     );
 }
 
@@ -662,7 +667,7 @@ pub fn x() { id(1, 1.0) }"
 fn module_could_not_unify4() {
     assert_module_error!(
         "
-fn bar() -> Int {
+fn wobble() -> Int {
     5
 }
 
@@ -671,7 +676,7 @@ fn run(one: fn() -> String) {
 }
 
 fn demo() {
-    run(bar)
+    run(wobble)
 }"
     );
 }
@@ -680,7 +685,7 @@ fn demo() {
 fn module_could_not_unify5() {
     assert_module_error!(
         "
-fn bar(x: Int) -> Int {
+fn wobble(x: Int) -> Int {
     x * 5
 }
 
@@ -689,7 +694,7 @@ fn run(one: fn(String) -> Int) {
 }
 
 fn demo() {
-    run(bar)
+    run(wobble)
 }"
     );
 }
@@ -701,7 +706,7 @@ fn module_could_not_unify6() {
 
 #[test]
 fn module_could_not_unify7() {
-    assert_module_error!("fn main() { let assert 5: Int = \"\" 5 }");
+    assert_module_error!("fn main() { let assert 5 = \"\" }");
 }
 
 #[test]
@@ -711,7 +716,7 @@ fn module_could_not_unify8() {
 
 #[test]
 fn module_could_not_unify9() {
-    assert_module_error!("fn main() { let [1, 2, ..x]: List(String) = [1,2,3] x }");
+    assert_module_error!("fn main() { let assert [1, 2, ..x]: List(String) = [1,2,3] x }");
 }
 
 #[test]
@@ -809,9 +814,32 @@ pub type LeakType { Variant(PrivateType) }"#
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/3387
+// Private types should not leak even in internal modules
+#[test]
+fn module_private_type_leak_6() {
+    assert_internal_module_error!(
+        r#"type PrivateType
+pub type LeakType { Variant(PrivateType) }"#
+    );
+}
+
 #[test]
 fn unexpected_labelled_arg() {
     assert_module_error!(r#"fn id(x) { x } fn y() { id(x: 4) }"#);
+}
+
+#[test]
+fn unexpected_arg_with_label_shorthand() {
+    assert_module_error!(
+        r#"
+    fn id(x) { x }
+    fn y() {
+        let x = 4
+        id(x:)
+    }
+"#
+    );
 }
 
 #[test]
@@ -819,6 +847,18 @@ fn positional_argument_after_labelled() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Int, c: Int) }
 fn x() { X(b: 1, a: 1, 1) }"#
+    );
+}
+
+#[test]
+fn positional_argument_after_one_using_label_shorthand() {
+    assert_module_error!(
+        r#"type X { X(a: Int, b: Int, c: Int) }
+fn x() {
+  let b = 1
+  let a = 1
+  X(b:, a:, 1)
+}"#
     );
 }
 
@@ -885,7 +925,6 @@ type Triple {
 fn main() {
   let triple = Triple(1,2,3)
   let Triple(a, b, c, ..) = triple
-  a
 }"
     );
 }
@@ -902,12 +941,23 @@ fn x() {
 }
 
 #[test]
+fn duplicate_label_shorthands_in_record_pattern() {
+    // Duplicate var in record
+    assert_module_error!(
+        r#"type X { X(a: Int, b: Int, c: Int) }
+fn x() {
+  case X(1,2,3) { X(a:, b:, c: a) -> 1 }
+}"#
+    );
+}
+
+#[test]
 fn guard_record_wrong_arity() {
     // Constructor in guard clause errors
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
 fn x() {
-  case X(1, 2.0) { x if x == X(1) -> 1 }
+  case X(1, 2.0) { x if x == X(1) -> 1 _ -> 2 }
 }"#
     );
 }
@@ -916,7 +966,7 @@ fn x() {
 fn subject_int_float_guard_tuple() {
     assert_module_error!(
         r#"type X { X(a: Int, b: Float) }
-fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 } }"#
+fn x() { case X(1, 2.0) { x if x == X(2.0, 1) -> 1 _ -> 2 } }"#
     );
 }
 
@@ -1042,16 +1092,16 @@ fn duplicate() { 2 }"
 #[test]
 fn duplicate_const_const() {
     assert_module_error!(
-        "const foo = 1
-const foo = 2"
+        "const wibble = 1
+const wibble = 2"
     );
 }
 
 #[test]
 fn duplicate_fn_fn() {
     assert_module_error!(
-        "fn foo() { 1 }
-fn foo() { 2 }"
+        "fn wibble() { 1 }
+fn wibble() { 2 }"
     );
 }
 
@@ -1060,9 +1110,9 @@ fn duplicate_extfn_extfn() {
     assert_module_error!(
         r#"
 @external(erlang, "module1", "function1")
-fn foo() -> Float
+fn wibble() -> Float
 @external(erlang, "module2", "function2")
-fn foo() -> Float
+fn wibble() -> Float
 "#
     );
 }
@@ -1072,19 +1122,19 @@ fn duplicate_extfn_fn() {
     assert_module_error!(
         "
 @external(erlang, \"module1\", \"function1\")
-fn foo() -> Float
+fn wibble() -> Float
 
-fn foo() { 2 }"
+fn wibble() { 2 }"
     );
 }
 
 #[test]
 fn duplicate_fn_extfn() {
     assert_module_error!(
-        "fn foo() { 1 }
+        "fn wibble() { 1 }
 
 @external(erlang, \"module2\", \"function2\")
-fn foo() -> Float
+fn wibble() -> Float
 "
     );
 }
@@ -1092,10 +1142,10 @@ fn foo() -> Float
 #[test]
 fn duplicate_const_extfn() {
     assert_module_error!(
-        "const foo = 1
+        "const wibble = 1
 
 @external(erlang, \"module2\", \"function2\")
-fn foo() -> Float
+fn wibble() -> Float
 "
     );
 }
@@ -1105,26 +1155,211 @@ fn duplicate_extfn_const() {
     assert_module_error!(
         "
 @external(erlang, \"module1\", \"function1\")
-fn foo() -> Float
+fn wibble() -> Float
 
-const foo = 2"
+const wibble = 2"
     );
 }
 
 #[test]
 fn duplicate_const_fn() {
     assert_module_error!(
-        "const foo = 1
-fn foo() { 2 }"
+        "const wibble = 1
+fn wibble() { 2 }"
     );
 }
 
 #[test]
 fn duplicate_fn_const() {
     assert_module_error!(
-        "fn foo() { 1 }
-const foo = 2"
+        "fn wibble() { 1 }
+const wibble = 2"
     );
+}
+
+#[test]
+fn invalid_const_name() {
+    assert_module_error!("const myInvalid_Constant = 42");
+}
+
+#[test]
+fn invalid_parameter_name() {
+    assert_module_error!("fn add(numA: Int, num_b: Int) { numA + num_b }");
+}
+
+#[test]
+fn invalid_parameter_name2() {
+    assert_module_error!("fn pass(label paramName: Bool) { paramName }");
+}
+
+#[test]
+fn invalid_parameter_name3() {
+    assert_error!("let add = fn(numA: Int, num_b: Int) { numA + num_b }");
+}
+
+#[test]
+fn invalid_parameter_discard_name() {
+    assert_module_error!("fn ignore(_ignoreMe: Bool) { 98 }");
+}
+
+#[test]
+fn invalid_parameter_discard_name2() {
+    assert_module_error!("fn ignore(labelled_discard _ignoreMe: Bool) { 98 }");
+}
+
+#[test]
+fn invalid_parameter_discard_name3() {
+    assert_error!("let ignore = fn(_ignoreMe: Bool) { 98 }");
+}
+
+#[test]
+fn invalid_parameter_label() {
+    assert_module_error!("fn func(thisIsALabel param: Int) { param }");
+}
+
+#[test]
+fn invalid_parameter_label2() {
+    assert_module_error!("fn ignore(thisIsALabel _ignore: Int) { 25 }");
+}
+
+#[test]
+fn invalid_constructor_name() {
+    assert_module_error!("type MyType { Int_Value(Int) }");
+}
+
+#[test]
+fn invalid_constructor_arg_name() {
+    assert_module_error!("type IntWrapper { IntWrapper(innerInt: Int) }");
+}
+
+#[test]
+fn invalid_custom_type_name() {
+    assert_module_error!("type Boxed_value { Box(Int) }");
+}
+
+#[test]
+fn invalid_type_alias_name() {
+    assert_module_error!("type Fancy_Bool = Bool");
+}
+
+#[test]
+fn invalid_function_name() {
+    assert_module_error!("fn doStuff() {}");
+}
+
+#[test]
+fn invalid_variable_name() {
+    assert_error!("let theAnswer = 42");
+}
+
+#[test]
+fn invalid_variable_discard_name() {
+    assert_error!("let _boringNumber = 72");
+}
+
+#[test]
+fn invalid_use_name() {
+    assert_module_error!(
+        "fn use_test(f) { f(Nil) }
+pub fn main() { use useVar <- use_test() }"
+    );
+}
+
+#[test]
+fn invalid_use_discard_name() {
+    assert_module_error!(
+        "fn use_test(f) { f(Nil) }
+pub fn main() { use _discardVar <- use_test() }"
+    );
+}
+
+#[test]
+fn invalid_pattern_assignment_name() {
+    assert_error!("let assert 42 as theAnswer = 42");
+}
+
+#[test]
+fn invalid_list_pattern_name() {
+    assert_error!("let assert [theElement] = [9.4]");
+}
+
+#[test]
+fn invalid_list_pattern_discard_name() {
+    assert_error!("let assert [_elemOne] = [False]");
+}
+
+#[test]
+fn invalid_constructor_pattern_name() {
+    assert_module_error!(
+        "pub type Box { Box(Int) } pub fn main() { let Box(innerValue) = Box(203) }"
+    );
+}
+
+#[test]
+fn invalid_constructor_pattern_discard_name() {
+    assert_module_error!(
+        "pub type Box { Box(Int) } pub fn main() { let Box(_ignoredInner) = Box(203)}"
+    );
+}
+
+#[test]
+fn invalid_tuple_pattern_name() {
+    assert_error!("let #(a, secondValue) = #(1, 2)");
+}
+
+#[test]
+fn invalid_tuple_pattern_discard_name() {
+    assert_error!("let #(a, _secondValue) = #(1, 2)");
+}
+
+#[test]
+fn invalid_bit_array_pattern_name() {
+    assert_error!("let assert <<bitValue>> = <<73>>");
+}
+
+#[test]
+fn invalid_bit_array_pattern_discard_name() {
+    assert_error!("let assert <<_iDontCare>> = <<97>>");
+}
+
+#[test]
+fn invalid_string_prefix_pattern_name() {
+    assert_error!(r#"let assert "prefix" <> coolSuffix = "prefix-suffix""#);
+}
+
+#[test]
+fn invalid_string_prefix_pattern_discard_name() {
+    assert_error!(r#"let assert "prefix" <> _boringSuffix = "prefix-suffix""#);
+}
+
+#[test]
+fn invalid_string_prefix_pattern_alias() {
+    assert_error!(r#"let assert "prefix" as thePrefix <> _suffix = "prefix-suffix""#);
+}
+
+#[test]
+fn invalid_case_variable_name() {
+    assert_error!("case 21 { twentyOne -> {Nil} }");
+}
+
+#[test]
+fn invalid_case_variable_discard_name() {
+    assert_error!("case 21 { _twentyOne -> {Nil} }");
+}
+
+#[test]
+fn invalid_type_parameter_name() {
+    assert_module_error!("type Wrapper(innerType) {}");
+}
+
+#[test]
+fn invalid_type_alias_parameter_name() {
+    assert_module_error!("type GleamOption(okType) = Result(okType, Nil)");
+}
+
+#[test]
+fn invalid_function_type_parameter_name() {
+    assert_module_error!("fn identity(value: someType) { value }");
 }
 
 #[test]
@@ -1154,6 +1389,74 @@ fn const_annotation_wrong_3() {
 #[test]
 fn const_annotation_wrong_4() {
     assert_module_error!("pub const pair: #(Int, Float) = #(4.1, 1)");
+}
+
+#[test]
+fn const_multiple_errors_mismatched_types() {
+    assert_module_error!(
+        "const mismatched_types: String = 7
+const invalid_annotation: MyInvalidType = \"str\""
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_annotation() {
+    assert_module_error!(
+        "const invalid_annotation: MyInvalidType = \"str\"
+const invalid_value: String = MyInvalidValue"
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_value() {
+    assert_module_error!(
+        "const invalid_value: String = MyInvalidValue
+const invalid_unannotated_value = [1, 2.0]"
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_unannotated_value() {
+    assert_module_error!(
+        "const invalid_unannotated_value = [1, 2.0]
+const invalid_everything: MyInvalidType = MyInvalidValue"
+    );
+}
+
+#[test]
+fn const_multiple_errors_invalid_annotation_and_value() {
+    assert_module_error!(
+        "const invalid_everything: MyInvalidType = MyInvalidValue
+const mismatched_types: String = 7"
+    );
+}
+
+#[test]
+fn const_multiple_errors_are_local_with_annotation() {
+    assert_module_error!(
+        "const num: String = 7
+const tpl: String = #(Ok(1), MyInvalidType, 3)
+const assignment1: String = num
+const assignment2: String = tpl"
+    );
+}
+
+#[test]
+fn const_multiple_errors_are_local_with_inferred_value() {
+    assert_module_error!(
+        "const str: MyInvalidType = \"str\"
+const assignment: String = str"
+    );
+}
+
+#[test]
+fn const_multiple_errors_are_local_with_unbound_value() {
+    assert_module_error!(
+        "const lst = [1, 2.0]
+const unbound: MyInvalidType = MyInvalidType
+const assignment1: String = lst
+const assignment2: String = unbound"
+    );
 }
 
 #[test]
@@ -1189,13 +1492,25 @@ fn x() {
 }
 
 #[test]
+fn unknown_label_shorthand() {
+    assert_module_error!(
+        r#"type X { X(a: Int, b: Float) }
+fn x() {
+  let c = 2.0
+  let x = X(a: 1, c:)
+  x
+}"#
+    );
+}
+
+#[test]
 fn wrong_type_var() {
     // A unification error should show the type var as named by user
     // See https://github.com/gleam-lang/gleam/issues/1256
     assert_module_error!(
-        r#"fn foo(x: String) { x }
+        r#"fn wibble(x: String) { x }
 fn multi_result(x: some_name) {
-  foo(x)
+  wibble(x)
 }"#
     );
 }
@@ -1204,9 +1519,9 @@ fn multi_result(x: some_name) {
 fn wrong_type_arg() {
     assert_module_error!(
         r#"
-fn foo(x: List(Int)) { x }
+fn wibble(x: List(Int)) { x }
 fn main(y: List(something)) {
-  foo(y)
+  wibble(y)
 }"#
     );
 }
@@ -1416,167 +1731,15 @@ pub fn change(x: String) -> String {
   ""
 }
 
-pub fn parse(input: BitString) -> String {
+pub fn parse(input: BitArray) -> String {
   case input {
     <<>> -> 1
-    <<"(":utf8, b:binary>> ->
+    <<"(":utf8, b:bytes>> ->
       parse(input)
       |> change
+    _ -> 3
   }
 }"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness1() {
-    assert_module_error!(
-        r#"
-pub fn main(b) {
-    let True = b
-    Nil
-}
-"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness2() {
-    assert_module_error!(
-        r#"
-pub fn main(r) {
-    let Error(_) = r
-    Nil
-}
-"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness3() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitString)
-    Video(BitString)
-    Text(String)
-}
-pub fn main(m) {
-    let Video(_) = m
-    Nil
-}
-"#
-    );
-}
-
-#[test]
-fn let_exhaustiveness4() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitString)
-    Video(BitString)
-    Text(String)
-}
-pub fn main(m) {
-    let Video(_) as v = m
-    v
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness1() {
-    assert_module_error!(
-        r#"
-pub fn main(b) {
-    case b {
-        True -> Nil
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness2() {
-    assert_module_error!(
-        r#"
-pub fn main(r) {
-    case r {
-        Error(_) -> Nil
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness3() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitString)
-    Video(BitString)
-    Text(String)
-}
-pub fn main(m) {
-    case m {
-        Audio(_) as a -> a
-        Video(_) -> m
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness4() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitString)
-    Video(BitString)
-    Text(String)
-}
-pub fn main(m) {
-    case m {
-        Video(_) -> m
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness5() {
-    assert_module_error!(
-        r#"
-pub type Media {
-    Audio(BitString)
-    Video(BitString)
-    Text(String)
-}
-pub fn main(m) {
-    case m {
-        Audio(_) | Text(_) -> m
-    }
-}
-"#
-    );
-}
-
-#[test]
-fn case_exhaustiveness6() {
-    assert_module_error!(
-        r#"
-pub fn main(b) {
-    case b {
-        b if b == True -> Nil
-        b if b != True -> Nil
-    }
-}
-"#
     );
 }
 
@@ -1604,10 +1767,10 @@ fn negate_string() {
 #[test]
 fn ambiguous_type_error() {
     assert_with_module_error!(
-        ("foo", "pub type Thing { Thing }"),
-        "import foo pub type Thing { Thing }
+        ("wibble", "pub type Thing { Thing }"),
+        "import wibble pub type Thing { Thing }
         pub fn main() {
-            [Thing] == [foo.Thing]
+            [Thing] == [wibble.Thing]
         }",
     );
 }
@@ -1615,13 +1778,13 @@ fn ambiguous_type_error() {
 #[test]
 fn ambiguous_import_error_no_unqualified() {
     assert_with_module_error!(
-        ("foo/sub", "pub fn bar() { 1 }"),
-        ("foo2/sub", "pub fn bar() { 1 }"),
+        ("wibble/sub", "pub fn wobble() { 1 }"),
+        ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
-        import foo/sub
-        import foo2/sub
+        import wibble/sub
+        import wibble2/sub
         pub fn main() {
-            sub.bar()
+            sub.wobble()
         }
         ",
     );
@@ -1630,13 +1793,13 @@ fn ambiguous_import_error_no_unqualified() {
 #[test]
 fn ambiguous_import_error_with_unqualified() {
     assert_with_module_error!(
-        ("foo/sub", "pub fn bar() { 1 }"),
-        ("foo2/sub", "pub fn bar() { 1 }"),
+        ("wibble/sub", "pub fn wobble() { 1 }"),
+        ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
-        import foo/sub
-        import foo2/sub.{bar}
+        import wibble/sub
+        import wibble2/sub.{wobble}
         pub fn main() {
-            sub.bar()
+            sub.wobble()
         }
         ",
     );
@@ -1646,16 +1809,16 @@ fn ambiguous_import_error_with_unqualified() {
 fn same_imports_multiple_times() {
     assert_with_module_error!(
         (
-            "gleam/foo",
+            "gleam/wibble",
             "
-            pub fn bar() { 1 }
+            pub fn wobble() { 1 }
             pub fn zoo() { 1 }
             "
         ),
         "
-        import gleam/foo.{bar}
-        import gleam/foo.{zoo}
-        pub fn go() { bar() + zoo() }
+        import gleam/wibble.{wobble}
+        import gleam/wibble.{zoo}
+        pub fn go() { wobble() + zoo() }
         "
     );
 }
@@ -1792,6 +1955,32 @@ fn same_imports_multiple_times_6() {
     );
 }
 
+#[test]
+fn same_imports_multiple_times_7() {
+    assert_with_module_error!(
+        (
+            "one",
+            "
+            pub fn fn1() { 1 }
+            "
+        ),
+        (
+            "two",
+            "
+            pub fn fn2() { 1 }
+            "
+        ),
+        "
+        import one.{
+          fn1
+        } as x
+        import two.{
+          fn2
+        } as x
+        "
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1705
 #[test]
 fn update_multi_variant_record() {
@@ -1857,6 +2046,32 @@ pub fn main(_x: two.Thing) {
 }
 
 #[test]
+fn value_imported_as_type() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "pub type Wibble {
+               Wobble
+             }"
+        ),
+        "import gleam/wibble.{type Wobble}"
+    );
+}
+
+#[test]
+fn type_imported_as_value() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "pub type Wibble {
+               Wobble
+             }"
+        ),
+        "import gleam/wibble.{Wibble}"
+    );
+}
+
+#[test]
 fn duplicate_module_function_arguments() {
     assert_module_error!(
         "
@@ -1897,6 +2112,281 @@ fn negate_float_as_integer() {
 fn() {
   let a = 3.0
   let b = -a
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2371
+#[test]
+fn list() {
+    assert_error!("[1, 2.0]");
+}
+
+#[test]
+fn mismatched_list_tail() {
+    assert_error!("[\"wibble\", ..[1, 2]]");
+}
+
+#[test]
+fn leak_multiple_private_types() {
+    assert_module_error!(
+        "
+        type Private {
+            Private
+        }
+
+        pub fn ret_private() -> Private {
+            Private
+        }
+
+        pub fn ret_private2() -> Private {
+            Private
+        }
+
+        pub fn main() {
+            ret_private()
+        }
+        "
+    );
+}
+
+#[test]
+fn const_string_concat_invalid_type() {
+    assert_module_error!(
+        "
+const some_int = 5
+const invalid_concat = some_int <> \"with_string\"
+"
+    );
+}
+
+#[test]
+fn invalid_pattern_label_shorthand() {
+    assert_module_error!(
+        "
+pub type Wibble { Wibble(arg: Int) }
+pub fn main() {
+  let Wibble(not_a_label:) = Wibble(1)
+}
+"
+    );
+}
+
+#[test]
+fn no_crash_on_duplicate_definition() {
+    // This previous caused the compiler to crash
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wobble
+  Wobble
+}
+
+pub fn main() {
+  let wibble = Wobble
+  case wibble {
+    Wobble -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn no_crash_on_duplicate_definition2() {
+    // This also caused a compiler crash, separate to the above test
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+  Wobble
+  Wubble
+}
+
+pub fn main() {
+  let wibble = Wobble
+  case wibble {
+    Wibble -> Nil
+    Wobble -> Nil
+    Wubble -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn unknown_module_suggest_import() {
+    assert_with_module_error!(
+        ("utils", "pub fn helpful() {}"),
+        "
+pub fn main() {
+  utils.helpful()
+}
+",
+    );
+}
+
+#[test]
+fn unknown_module_suggest_typo_for_imported_module() {
+    assert_with_module_error!(
+        ("wibble", "pub fn wobble() {}"),
+        "
+import wibble
+pub fn main() {
+  wible.wobble()
+}
+",
+    );
+}
+
+#[test]
+fn unknown_module_suggest_typo_for_unimported_module() {
+    assert_with_module_error!(
+        ("wibble/wobble", "pub fn wubble() {}"),
+        "
+pub fn main() {
+  woble.wubble()
+}
+",
+    );
+}
+
+#[test]
+fn qualified_type_mismatched_type_error() {
+    assert_with_module_error!(
+        ("wibble", "pub type Wobble"),
+        "
+import wibble
+const my_wobble: wibble.Wobble = Nil
+"
+    );
+}
+
+#[test]
+fn qualified_type_similar_type_name() {
+    assert_with_module_error!(
+        ("wibble", "pub type Int"),
+        "
+import wibble
+const value: wibble.Int = 20
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_a_function() {
+    assert_with_module_error!(
+        ("wibble", "pub type Function { Function(fn() -> Nil) }"),
+        "
+import wibble.{type Function as FuncWrapper}
+pub fn main(f: FuncWrapper) {
+  f()
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_unknown_field() {
+    assert_module_error!(
+        "
+import gleam
+type Int {
+  Int(bit_size: gleam.Int, bits: BitArray)
+}
+
+pub fn main(not_a_record: gleam.Int) {
+  not_a_record.bits
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_invalid_operands() {
+    assert_with_module_error!(
+        ("maths", "pub type Vector { Vector(x: Float, y: Float) }"),
+        "
+import maths as math
+pub fn add_two_vectors(a: math.Vector, b: math.Vector) {
+  a + b
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_invalid_pipe_argument() {
+    assert_with_module_error!(
+        (
+            "mod",
+            "pub type Wibble pub fn takes_wibble(value: Wibble) { value }"
+        ),
+        "
+import mod
+pub fn main() {
+  Nil |> mod.takes_wibble
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_unification_error() {
+    assert_module_error!(
+        "
+import gleam
+
+type Bool {
+  True
+  False
+}
+
+const list_of_bools = [True, False, gleam.False]
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_a_tuple() {
+    assert_with_module_error!(
+        ("mod", "pub type Pair(a, b) { Pair(a, b) }"),
+        "
+import mod.{type Pair as Duo}
+pub fn first(pair: Duo(a, b)) {
+  pair.0
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_fn_in_use() {
+    assert_with_module_error!(
+        ("some_mod", "pub type Function(param1, param2, return)"),
+        "
+import some_mod as sm
+pub fn main(func: sm.Function(Int, String, Float)) {
+  use <- func()
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_use_fn_without_callback() {
+    assert_with_module_error!(
+        (
+            "some_mod",
+            "pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }"
+        ),
+        "
+import some_mod
+pub fn main() {
+  use value <- some_mod.do_a_thing(10)
 }
 "
     );

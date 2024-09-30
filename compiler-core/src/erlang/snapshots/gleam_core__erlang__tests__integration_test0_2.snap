@@ -1,17 +1,17 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 114
+assertion_line: 140
 expression: "pub fn go() {\n    let fifteen = 0xF\n    let nine = 0o11\n    let ten = 0b1010\n  fifteen\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
     Fifteen = 16#F,
     Nine = 8#11,
     Ten = 2#1010,
     Fifteen.
-

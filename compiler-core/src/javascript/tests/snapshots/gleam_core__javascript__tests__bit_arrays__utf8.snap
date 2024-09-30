@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  <<256, 4, x, \"Gleam\":utf8>>\n}\n"
+---
+import { toBitArray, stringBits } from "../gleam.mjs";
+
+function go(x) {
+  return toBitArray([256, 4, x, stringBits("Gleam")]);
+}

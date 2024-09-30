@@ -1,4 +1,4 @@
-use crate::{assert_infer_with_module, assert_with_module_error};
+use crate::{assert_infer_with_module, assert_module_error, assert_with_module_error};
 
 // https://github.com/gleam-lang/gleam/issues/1760
 #[test]
@@ -191,5 +191,138 @@ fn unqualified_using_private_function() {
 pub fn main() {
   two
 }",
+    );
+}
+
+#[test]
+fn import_type() {
+    assert_infer_with_module!(
+        ("one", "pub type One = Int"),
+        "import one.{type One}
+
+pub fn main() -> One {
+  todo
+}
+",
+        vec![("main", "fn() -> Int")],
+    );
+}
+
+#[test]
+fn import_type_duplicate() {
+    assert_with_module_error!(
+        ("one", "pub type One = Int"),
+        "import one.{One, type One}
+
+pub fn main() -> One {
+  todo
+}
+",
+    );
+}
+
+#[test]
+fn import_type_duplicate_with_as() {
+    assert_with_module_error!(
+        ("one", "pub type One = Int"),
+        "import one.{type One as MyOne, type One as MyOne}
+
+pub type X = One
+",
+    );
+}
+
+#[test]
+fn import_type_duplicate_with_as_multiline() {
+    assert_with_module_error!(
+        ("one", "pub type One = Int"),
+        "import one.{
+          type One as MyOne,
+          type One as MyOne
+        }
+
+pub type X = One
+",
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2379
+#[test]
+fn deprecated_type_import_conflict() {
+    assert_infer_with_module!(
+        ("one", "pub type X { X }"),
+        "import one.{X, type X}",
+        vec![]
+    );
+}
+
+#[test]
+fn aliased_unqualified_type_and_value() {
+    assert_infer_with_module!(
+        ("one", "pub type X { X }"),
+        "import one.{X as XX, type X as XX}",
+        vec![]
+    );
+}
+
+#[test]
+fn deprecated_type_import_conflict_two_modules() {
+    assert_infer_with_module!(
+        ("one", "pub type X { X }"),
+        ("two", "pub type X { X }"),
+        "
+        import one.{type X as Y}
+        import two.{X}
+        ",
+        vec![]
+    );
+}
+
+#[test]
+fn imported_constructor_instead_of_type() {
+    assert_with_module_error!(
+        ("module", "pub type Wibble { Wibble }"),
+        "import module.{Wibble}
+
+pub fn main(x: Wibble) {
+  todo
+}",
+    );
+}
+
+#[test]
+fn import_errors_do_not_block_analysis() {
+    // An error in an import doesn't stop the rest of the module being analysed
+    assert_module_error!(
+        "import unknown_module
+
+pub fn main() {
+  1 + Nil
+}"
+    );
+}
+
+#[test]
+fn unqualified_import_errors_do_not_block_later_unqualified() {
+    assert_module_error!(
+        "import gleam.{Unknown, type Int as Integer}
+
+pub fn main() -> Integer {
+  Nil
+}"
+    );
+}
+
+#[test]
+fn module_alias_used_as_a_name() {
+    assert_with_module_error!(
+        ("one/two", ""),
+        "
+import one/two
+
+pub fn main() {
+  two
+}
+"
     );
 }

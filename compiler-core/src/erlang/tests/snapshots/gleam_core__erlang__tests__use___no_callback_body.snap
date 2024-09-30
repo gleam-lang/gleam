@@ -4,16 +4,16 @@ assertion_line: 56
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     Thingy = fun(F) -> F() end,
     Thingy(fun() -> erlang:error(#{gleam_error => todo,
-                    message => <<"This has not yet been implemented"/utf8>>,
+                    message => <<"`todo` expression evaluated. This code has not yet been implemented."/utf8>>,
                     module => <<"my/mod"/utf8>>,
                     function => <<"main"/utf8>>,
                     line => 4}) end).
-

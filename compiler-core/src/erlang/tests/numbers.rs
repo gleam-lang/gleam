@@ -31,8 +31,8 @@ fn numbers_with_underscores2() {
     assert_erl!(
         r#"
 pub fn main() {
-  let 100_000 = 1
-  let 100_000.00101 = 1.
+  let assert 100_000 = 1
+  let assert 100_000.00101 = 1.
   1
 }
 "#
@@ -53,12 +53,12 @@ const m = 100.001e123_456_789
 const n = -100.001e-123_456_789
 
 pub fn main() {
-    i
-    j
-    k
-    l
-    m
-    n
+  i
+  j
+  k
+  l
+  m
+  n
 }
 "#
     );
@@ -83,6 +83,18 @@ fn repeated_int_negation() {
 pub fn main() {
   let a = 3
   let b = --a
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2356
+#[test]
+fn zero_b_in_hex() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  0xffe0bb
 }
 "#
     );

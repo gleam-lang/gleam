@@ -1,13 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 92
+assertion_line: 118
 expression: "pub fn go() {\nlet x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 6000000000)\n  x\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go() -> {integer(),
     {integer(), integer(), integer()},
     integer(),
@@ -18,4 +19,3 @@ go() ->
         50000,
         6000000000},
     X.
-

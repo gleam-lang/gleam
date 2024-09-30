@@ -22,6 +22,24 @@ impl Feedback {
         self.diagnostics.entry(path).or_default().push(diagnostic);
     }
 
+    /// No feedback at all.
+    ///
+    pub fn none() -> Feedback {
+        Default::default()
+    }
+
+    /// Add all the content of another feedback to this feedback.
+    ///
+    pub fn append_feedback(&mut self, feedback: Feedback) {
+        for (path, diagnostics) in feedback.diagnostics {
+            // Any new diagnostics for a file will overwrite any existing ones.
+            _ = self.diagnostics.insert(path, diagnostics);
+        }
+        for diagnostic in feedback.messages {
+            self.append_message(diagnostic);
+        }
+    }
+
     fn append_message(&mut self, diagnostic: Diagnostic) {
         self.messages.push(diagnostic);
     }
@@ -98,20 +116,22 @@ impl FeedbackBookKeeper {
         compilation: Compilation,
         warnings: Vec<Warning>,
     ) -> Feedback {
-        let diagnostic = error.to_diagnostic();
+        let diagnostics = error.to_diagnostics();
         let mut feedback = self.response(compilation, warnings);
 
         // A new error means that any existing errors are no longer valid. Unset them.
         self.unset_errors(&mut feedback);
 
-        match diagnostic.location.as_ref().map(|l| l.path.clone()) {
-            Some(path) => {
-                _ = self.files_with_errors.insert(path.clone());
-                feedback.append_diagnostic(path, diagnostic);
-            }
+        for diagnostic in diagnostics {
+            match diagnostic.location.as_ref().map(|l| l.path.clone()) {
+                Some(path) => {
+                    _ = self.files_with_errors.insert(path.clone());
+                    feedback.append_diagnostic(path, diagnostic);
+                }
 
-            None => {
-                feedback.append_message(diagnostic);
+                None => {
+                    feedback.append_message(diagnostic);
+                }
             }
         }
 
@@ -134,9 +154,12 @@ impl FeedbackBookKeeper {
 #[cfg(test)]
 mod tests {
 
+    use std::assert_eq;
+
     use super::*;
     use crate::{
         ast::SrcSpan,
+        diagnostic::Level,
         parse::error::{ParseError, ParseErrorType},
         type_,
     };
@@ -228,7 +251,7 @@ mod tests {
         assert_eq!(
             Feedback {
                 diagnostics: HashMap::from([(file1, vec![warning1.to_diagnostic()])]),
-                messages: vec![locationless_error.to_diagnostic()],
+                messages: locationless_error.to_diagnostics(),
             },
             feedback
         );
@@ -269,7 +292,7 @@ mod tests {
             Feedback {
                 diagnostics: HashMap::from([
                     (file1, vec![warning1.to_diagnostic()]),
-                    (file3.clone(), vec![error.to_diagnostic()]),
+                    (file3.clone(), error.to_diagnostics()),
                 ]),
                 messages: vec![],
             },
@@ -324,7 +347,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1.clone(), vec![error.to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1.clone(), error.to_diagnostics())]),
                 messages: vec![],
             },
             feedback
@@ -365,7 +388,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1.clone(), vec![error(&file1).to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1.clone(), error(&file1).to_diagnostics())]),
                 messages: vec![],
             },
             feedback
@@ -380,7 +403,7 @@ mod tests {
                     // Unset the previous error
                     (file1, vec![]),
                     // Set the new one
-                    (file2.clone(), vec![error(&file2).to_diagnostic()]),
+                    (file2.clone(), error(&file2).to_diagnostics()),
                 ]),
                 messages: vec![],
             },
@@ -408,7 +431,7 @@ mod tests {
 
         assert_eq!(
             Feedback {
-                diagnostics: HashMap::from([(file1, vec![error.to_diagnostic()])]),
+                diagnostics: HashMap::from([(file1, error.to_diagnostics())]),
                 messages: vec![],
             },
             feedback
@@ -425,6 +448,290 @@ mod tests {
                 messages: vec![],
             },
             feedback
+        );
+    }
+
+    #[test]
+    fn append_feedback_new_file() {
+        let mut feedback = Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file1.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 1".to_string(),
+                    title: "Error 1".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![Diagnostic {
+                location: None,
+                hint: None,
+                text: "Error 2".to_string(),
+                title: "Error 2".to_string(),
+                level: Level::Error,
+            }],
+        };
+        feedback.append_feedback(Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file2.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 3".to_string(),
+                    title: "Error 3".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![],
+        });
+        assert_eq!(
+            feedback,
+            Feedback {
+                diagnostics: HashMap::from([
+                    (
+                        Utf8PathBuf::from("src/file1.gleam"),
+                        vec![Diagnostic {
+                            location: None,
+                            hint: None,
+                            text: "Error 1".to_string(),
+                            title: "Error 1".to_string(),
+                            level: Level::Error,
+                        }],
+                    ),
+                    (
+                        Utf8PathBuf::from("src/file2.gleam"),
+                        vec![Diagnostic {
+                            location: None,
+                            hint: None,
+                            text: "Error 3".to_string(),
+                            title: "Error 3".to_string(),
+                            level: Level::Error,
+                        }],
+                    ),
+                ]),
+                messages: vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 2".to_string(),
+                    title: "Error 2".to_string(),
+                    level: Level::Error,
+                },],
+            }
+        );
+    }
+
+    #[test]
+    fn append_feedback_same_file() {
+        let mut feedback = Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file1.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 1".to_string(),
+                    title: "Error 1".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![Diagnostic {
+                location: None,
+                hint: None,
+                text: "Error 2".to_string(),
+                title: "Error 2".to_string(),
+                level: Level::Error,
+            }],
+        };
+        feedback.append_feedback(Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file1.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 3".to_string(),
+                    title: "Error 3".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![],
+        });
+        assert_eq!(
+            feedback,
+            Feedback {
+                diagnostics: HashMap::from([(
+                    Utf8PathBuf::from("src/file1.gleam"),
+                    vec![Diagnostic {
+                        location: None,
+                        hint: None,
+                        text: "Error 3".to_string(),
+                        title: "Error 3".to_string(),
+                        level: Level::Error,
+                    }],
+                ),]),
+                messages: vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 2".to_string(),
+                    title: "Error 2".to_string(),
+                    level: Level::Error,
+                },],
+            }
+        );
+    }
+
+    #[test]
+    fn append_feedback_new_message() {
+        let mut feedback = Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file1.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 1".to_string(),
+                    title: "Error 1".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![Diagnostic {
+                location: None,
+                hint: None,
+                text: "Error 2".to_string(),
+                title: "Error 2".to_string(),
+                level: Level::Error,
+            }],
+        };
+        feedback.append_feedback(Feedback {
+            diagnostics: HashMap::from([]),
+            messages: vec![Diagnostic {
+                location: None,
+                hint: None,
+                text: "Error 3".to_string(),
+                title: "Error 3".to_string(),
+                level: Level::Error,
+            }],
+        });
+        assert_eq!(
+            feedback,
+            Feedback {
+                diagnostics: HashMap::from([(
+                    Utf8PathBuf::from("src/file1.gleam"),
+                    vec![Diagnostic {
+                        location: None,
+                        hint: None,
+                        text: "Error 1".to_string(),
+                        title: "Error 1".to_string(),
+                        level: Level::Error,
+                    },],
+                ),]),
+                messages: vec![
+                    Diagnostic {
+                        location: None,
+                        hint: None,
+                        text: "Error 2".to_string(),
+                        title: "Error 2".to_string(),
+                        level: Level::Error,
+                    },
+                    Diagnostic {
+                        location: None,
+                        hint: None,
+                        text: "Error 3".to_string(),
+                        title: "Error 3".to_string(),
+                        level: Level::Error,
+                    }
+                ],
+            }
+        );
+    }
+
+    #[test]
+    fn append_feedback_new_file_blank() {
+        let mut feedback = Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file1.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 1".to_string(),
+                    title: "Error 1".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![Diagnostic {
+                location: None,
+                hint: None,
+                text: "Error 2".to_string(),
+                title: "Error 2".to_string(),
+                level: Level::Error,
+            }],
+        };
+        feedback.append_feedback(Feedback {
+            diagnostics: HashMap::from([(Utf8PathBuf::from("src/file2.gleam"), vec![])]),
+            messages: vec![],
+        });
+        assert_eq!(
+            feedback,
+            Feedback {
+                diagnostics: HashMap::from([
+                    (
+                        Utf8PathBuf::from("src/file1.gleam"),
+                        vec![Diagnostic {
+                            location: None,
+                            hint: None,
+                            text: "Error 1".to_string(),
+                            title: "Error 1".to_string(),
+                            level: Level::Error,
+                        },],
+                    ),
+                    (Utf8PathBuf::from("src/file2.gleam"), vec![],),
+                ]),
+                messages: vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 2".to_string(),
+                    title: "Error 2".to_string(),
+                    level: Level::Error,
+                },],
+            }
+        );
+    }
+
+    #[test]
+    fn append_feedback_existing_file_blank() {
+        let mut feedback = Feedback {
+            diagnostics: HashMap::from([(
+                Utf8PathBuf::from("src/file1.gleam"),
+                vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 1".to_string(),
+                    title: "Error 1".to_string(),
+                    level: Level::Error,
+                }],
+            )]),
+            messages: vec![Diagnostic {
+                location: None,
+                hint: None,
+                text: "Error 2".to_string(),
+                title: "Error 2".to_string(),
+                level: Level::Error,
+            }],
+        };
+        feedback.append_feedback(Feedback {
+            diagnostics: HashMap::from([(Utf8PathBuf::from("src/file1.gleam"), vec![])]),
+            messages: vec![],
+        });
+        assert_eq!(
+            feedback,
+            Feedback {
+                diagnostics: HashMap::from([(Utf8PathBuf::from("src/file1.gleam"), vec![],),]),
+                messages: vec![Diagnostic {
+                    location: None,
+                    hint: None,
+                    text: "Error 2".to_string(),
+                    title: "Error 2".to_string(),
+                    level: Level::Error,
+                },],
+            }
         );
     }
 }

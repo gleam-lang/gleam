@@ -92,13 +92,20 @@ impl ProjectPaths {
         self.build_directory_for_mode(mode).join(target.to_string())
     }
 
+    /// Note this uses the "application name", not the name of this package.
+    /// This is because in BEAM applications one can specify an application
+    /// name that is not the same as the Hex package name. Ideally we would
+    /// always use the package name, but the BEAM runtime knows nothing
+    /// about packages, only applications, so it will look on the filesystem
+    /// for the application name when loading it.
     pub fn build_directory_for_package(
         &self,
         mode: Mode,
         target: Target,
-        package: &str,
+        application_name: &str,
     ) -> Utf8PathBuf {
-        self.build_directory_for_target(mode, target).join(package)
+        self.build_directory_for_target(mode, target)
+            .join(application_name)
     }
 
     pub fn build_packages_ebins_glob(&self, mode: Mode, target: Target) -> Utf8PathBuf {

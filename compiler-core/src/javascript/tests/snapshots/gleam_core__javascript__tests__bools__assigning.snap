@@ -8,34 +8,33 @@ import { makeError } from "../gleam.mjs";
 function go(x, y) {
   if (!x) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       3,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }
   if (x) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       4,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }
   if (y) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       5,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: y }
     )
   }
   return y;
 }
-

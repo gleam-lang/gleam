@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+@external(erlang, "wibble", "wobble")
+fn external_function() -> Nil
+
+fn main() {
+  external_function()
+         ↑           
+}
+
+----- Jumped to `src/app.gleam`
+
+@external(erlang, "wibble", "wobble")
+fn external_function() -> Nil
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔       
+
+fn main() {
+  external_function()
+}

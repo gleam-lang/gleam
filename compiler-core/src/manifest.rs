@@ -1,17 +1,17 @@
 use std::collections::HashMap;
 
-use crate::io::make_relative;
+use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
 use crate::Result;
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 #[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq, Eq)]
 pub struct Manifest {
     #[serde(serialize_with = "ordered_map")]
-    pub requirements: HashMap<SmolStr, Requirement>,
+    pub requirements: HashMap<EcoString, Requirement>,
     #[serde(serialize_with = "sorted_vec")]
     pub packages: Vec<ManifestPackage>,
 }
@@ -62,7 +62,7 @@ impl Manifest {
             }
 
             buffer.push_str("], requirements = [");
-            for (i, package) in requirements.iter().enumerate() {
+            for (i, package) in requirements.iter().sorted_by(|a, b| a.cmp(b)).enumerate() {
                 if i != 0 {
                     buffer.push_str(", ");
                 }
@@ -147,13 +147,13 @@ impl<'de> serde::Deserialize<'de> for Base16Checksum {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
 pub struct ManifestPackage {
-    pub name: SmolStr,
+    pub name: EcoString,
     pub version: Version,
-    pub build_tools: Vec<String>,
+    pub build_tools: Vec<EcoString>,
     #[serde(default)]
-    pub otp_app: Option<String>,
+    pub otp_app: Option<EcoString>,
     #[serde(serialize_with = "sorted_vec")]
-    pub requirements: Vec<String>,
+    pub requirements: Vec<EcoString>,
     #[serde(flatten)]
     pub source: ManifestPackageSource,
 }
@@ -162,6 +162,13 @@ impl ManifestPackage {
     pub fn with_build_tools(mut self, build_tools: &'static [&'static str]) -> Self {
         self.build_tools = build_tools.iter().map(|s| (*s).into()).collect();
         self
+    }
+
+    pub fn application_name(&self) -> &EcoString {
+        match self.otp_app {
+            Some(ref app) => app,
+            None => &self.name,
+        }
     }
 
     #[inline]
@@ -181,20 +188,9 @@ pub enum ManifestPackageSource {
     #[serde(rename = "hex")]
     Hex { outer_checksum: Base16Checksum },
     #[serde(rename = "git")]
-    Git { repo: SmolStr, commit: SmolStr },
+    Git { repo: EcoString, commit: EcoString },
     #[serde(rename = "local")]
     Local { path: Utf8PathBuf }, // should be the canonical path
-}
-
-fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: serde::Serializer,
-    K: serde::Serialize + Ord,
-    V: serde::Serialize,
-{
-    use serde::Serialize;
-    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
-    ordered.serialize(serializer)
 }
 
 fn sorted_vec<S, T>(value: &[T], serializer: S) -> Result<S::Ok, S::Error>
@@ -218,11 +214,14 @@ mod tests {
     #[cfg(windows)]
     const PACKAGE: &'static str = "C:\\home\\louis\\packages\\path\\to\\package";
 
-    #[cfg(not(windows))]
-    const HOME: &'static str = "/home/louis/packages/some_folder";
+    #[cfg(windows)]
+    const PACKAGE_WITH_UNC: &'static str = "\\\\?\\C:\\home\\louis\\packages\\path\\to\\package";
 
     #[cfg(not(windows))]
-    const PACKAGE: &'static str = "/home/louis/packages/path/to/package";
+    const HOME: &str = "/home/louis/packages/some_folder";
+
+    #[cfg(not(windows))]
+    const PACKAGE: &str = "/home/louis/packages/path/to/package";
 
     #[test]
     fn manifest_toml_format() {
@@ -314,7 +313,117 @@ mod tests {
 # You typically do not need to edit this file
 
 packages = [
-  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["zzz", "gleam_stdlib"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["gleam_stdlib", "zzz"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
+  { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "../path/to/package" },
+  { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
+  { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },
+  { name = "gleeunit", version = "0.4.0", build_tools = ["gleam"], requirements = ["gleam_stdlib"], source = "hex", outer_checksum = "032E" },
+  { name = "zzz", version = "0.4.0", build_tools = ["mix"], requirements = [], source = "hex", outer_checksum = "0316" },
+]
+
+[requirements]
+aaa = { version = "> 0.0.0" }
+awsome_local1 = { path = "../path/to/package" }
+awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
+gleam_stdlib = { version = "~> 0.17" }
+gleeunit = { version = "~> 0.1" }
+zzz = { version = "> 0.0.0" }
+"#
+        );
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn manifest_toml_format_with_unc() {
+        let manifest = Manifest {
+            requirements: [
+                ("zzz".into(), Requirement::hex("> 0.0.0")),
+                ("aaa".into(), Requirement::hex("> 0.0.0")),
+                (
+                    "awsome_local2".into(),
+                    Requirement::git("https://github.com/gleam-lang/gleam.git"),
+                ),
+                (
+                    "awsome_local1".into(),
+                    Requirement::path("../path/to/package"),
+                ),
+                ("gleam_stdlib".into(), Requirement::hex("~> 0.17")),
+                ("gleeunit".into(), Requirement::hex("~> 0.1")),
+            ]
+            .into(),
+            packages: vec![
+                ManifestPackage {
+                    name: "gleam_stdlib".into(),
+                    version: Version::new(0, 17, 1),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 22]),
+                    },
+                },
+                ManifestPackage {
+                    name: "aaa".into(),
+                    version: Version::new(0, 4, 0),
+                    build_tools: ["rebar3".into(), "make".into()].into(),
+                    otp_app: Some("aaa_app".into()),
+                    requirements: vec!["zzz".into(), "gleam_stdlib".into()],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![3, 22]),
+                    },
+                },
+                ManifestPackage {
+                    name: "zzz".into(),
+                    version: Version::new(0, 4, 0),
+                    build_tools: ["mix".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![3, 22]),
+                    },
+                },
+                ManifestPackage {
+                    name: "awsome_local2".into(),
+                    version: Version::new(1, 2, 3),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Git {
+                        repo: "https://github.com/gleam-lang/gleam.git".into(),
+                        commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
+                    },
+                },
+                ManifestPackage {
+                    name: "awsome_local1".into(),
+                    version: Version::new(1, 2, 3),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Local {
+                        path: PACKAGE_WITH_UNC.into(),
+                    },
+                },
+                ManifestPackage {
+                    name: "gleeunit".into(),
+                    version: Version::new(0, 4, 0),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec!["gleam_stdlib".into()],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![3, 46]),
+                    },
+                },
+            ],
+        };
+
+        let buffer = manifest.to_toml(HOME.into());
+        assert_eq!(
+            buffer,
+            r#"# This file was generated by Gleam
+# You typically do not need to edit this file
+
+packages = [
+  { name = "aaa", version = "0.4.0", build_tools = ["rebar3", "make"], requirements = ["gleam_stdlib", "zzz"], otp_app = "aaa_app", source = "hex", outer_checksum = "0316" },
   { name = "awsome_local1", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "local", path = "../path/to/package" },
   { name = "awsome_local2", version = "1.2.3", build_tools = ["gleam"], requirements = [], source = "git", repo = "https://github.com/gleam-lang/gleam.git", commit = "bd9fe02f72250e6a136967917bcb1bdccaffa3c8" },
   { name = "gleam_stdlib", version = "0.17.1", build_tools = ["gleam"], requirements = [], source = "hex", outer_checksum = "0116" },

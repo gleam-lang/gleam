@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/externals.rs
+expression: "import mod.{wobble}"
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ import mod.{wobble}
+  │             ^^^^^^
+
+This value is not available as it is defined using externals, and there is
+no implementation for the Erlang target.
+
+Hint: Did you mean to build for a different target?

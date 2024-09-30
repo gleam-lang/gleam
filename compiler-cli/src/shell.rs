@@ -1,21 +1,25 @@
 use gleam_core::{
-    build::{Codegen, Mode, Options, Target},
+    analyse::TargetSupport,
+    build::{Codegen, Compile, Mode, Options, Target},
     error::Error,
 };
 use std::process::Command;
 
 pub fn command() -> Result<(), Error> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
 
     // Build project
     let _ = crate::build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             codegen: Codegen::All,
+            compile: Compile::All,
             mode: Mode::Dev,
             target: Some(Target::Erlang),
+            no_print_progress: false,
         },
-        crate::build::download_dependencies()?,
+        crate::build::download_dependencies(crate::cli::Reporter::new())?,
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

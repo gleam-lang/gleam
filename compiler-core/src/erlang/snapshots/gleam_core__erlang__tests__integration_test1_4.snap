@@ -1,21 +1,22 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 155
+assertion_line: 181
 expression: "fn inc(x) { x + 1 }\n                    pub fn go() { 1 |> inc |> inc |> inc }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec inc(integer()) -> integer().
 inc(X) ->
     X + 1.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec go() -> integer().
 go() ->
     _pipe = 1,
     _pipe@1 = inc(_pipe),
     _pipe@2 = inc(_pipe@1),
     inc(_pipe@2).
-

@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn use_test(f) { f(Nil) }\npub fn main() {use useVar <- use_test()}"
+---
+----- BEFORE ACTION
+fn use_test(f) { f(Nil) }
+pub fn main() {use useVar <- use_test()}
+               ▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑          
+
+
+----- AFTER ACTION
+fn use_test(f) { f(Nil) }
+pub fn main() {use use_var <- use_test()}

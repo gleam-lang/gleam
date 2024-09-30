@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 19
 expression: "\n@external(javascript, \"utils\", \"inspect\")\npub fn show(x: anything) -> Nil"
 ---
 import { inspect as show } from "utils";
 
 export { show };
-

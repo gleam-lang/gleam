@@ -1,0 +1,66 @@
+---
+source: compiler-core/src/language_server/tests/document_symbols.rs
+expression: "doc_symbols(TestProject::for_source(code))"
+---
+[
+    DocumentSymbol {
+        name: "my_const",
+        detail: Some(
+            "Int",
+        ),
+        kind: Constant,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 1,
+                character: 0,
+            },
+            end: Position {
+                line: 2,
+                character: 22,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 2,
+                character: 10,
+            },
+            end: Position {
+                line: 2,
+                character: 18,
+            },
+        },
+        children: None,
+    },
+    DocumentSymbol {
+        name: "my_const2",
+        detail: Some(
+            "List(Int)",
+        ),
+        kind: Constant,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 4,
+                character: 0,
+            },
+            end: Position {
+                line: 4,
+                character: 26,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 4,
+                character: 10,
+            },
+            end: Position {
+                line: 4,
+                character: 19,
+            },
+        },
+        children: None,
+    },
+]

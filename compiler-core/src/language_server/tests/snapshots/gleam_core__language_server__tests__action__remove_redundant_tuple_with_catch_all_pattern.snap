@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  case #(1, 2) {\n    #(1, 2) -> 0\n    _ -> 1\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  case #(1, 2) {
+  ▔▔▔▔▔▔▔▔▔▔▔↑  
+    #(1, 2) -> 0
+    _ -> 1
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  case 1, 2 {
+    1, 2 -> 0
+    _, _ -> 1
+  }
+}

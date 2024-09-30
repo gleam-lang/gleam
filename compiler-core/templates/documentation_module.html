@@ -50,13 +50,18 @@
         <a href="#{{ typ.name }}">
           {{ typ.name }}
         </a>
-      </h2>
+      </h2>{% if typ.opaque %} <span class="visibility-tag">opaque</span> {% endif %}
       {% if !typ.source_url.is_empty() %}
       <a class="member-source" alt="View Source" title="View Source" href="{{ typ.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
     </div>
+    {% if !typ.deprecation_message.is_empty() %}
+    <p>
+      <b>Deprecated:</b> {{ typ.deprecation_message }}
+    </p>
+    {% endif %}
     <div class="custom-type-constructors">
       <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
       <pre><code class="hljs gleam">{{ typ.definition }}</code></pre>

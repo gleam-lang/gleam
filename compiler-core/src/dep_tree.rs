@@ -1,5 +1,5 @@
+use ecow::EcoString;
 use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
-use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
 
 #[cfg(test)]
@@ -13,7 +13,7 @@ use pretty_assertions::assert_eq;
 ///
 /// Errors if there are duplicate values, unknown deps, or cycles.
 ///
-pub fn toposort_deps(inputs: Vec<(SmolStr, Vec<SmolStr>)>) -> Result<Vec<SmolStr>, Error> {
+pub fn toposort_deps(inputs: Vec<(EcoString, Vec<EcoString>)>) -> Result<Vec<EcoString>, Error> {
     let mut graph = petgraph::Graph::<(), ()>::with_capacity(inputs.len(), inputs.len() * 5);
     let mut values = HashMap::with_capacity(inputs.len());
     let mut indexes = HashMap::with_capacity(inputs.len());
@@ -42,12 +42,11 @@ pub fn toposort_deps(inputs: Vec<(SmolStr, Vec<SmolStr>)>) -> Result<Vec<SmolStr
     }
 }
 
-// TODO: test
 fn import_cycle(
     cycle: Cycle<NodeIndex>,
     graph: &petgraph::Graph<(), ()>,
-    mut values: HashMap<NodeIndex, SmolStr>,
-) -> Vec<SmolStr> {
+    mut values: HashMap<NodeIndex, EcoString>,
+) -> Vec<EcoString> {
     let origin = cycle.node_id();
     let mut path = vec![];
     let _ = find_cycle(origin, origin, graph, &mut path, &mut HashSet::new());
@@ -84,38 +83,89 @@ fn find_cycle(
     false
 }
 
-#[test]
-fn toposort_deps_test() {
-    // All deps are nodes
-    assert_eq!(
-        toposort_deps(vec![
-            ("a".into(), vec!["b".into()]),
-            ("c".into(), vec![]),
-            ("b".into(), vec!["c".into()])
-        ]),
-        Ok(vec!["c".into(), "b".into(), "a".into()])
-    );
-
-    // No deps
-    assert_eq!(
-        toposort_deps(vec![
-            ("no-deps-1".into(), vec![]),
-            ("no-deps-2".into(), vec![])
-        ]),
-        Ok(vec!["no-deps-1".into(), "no-deps-2".into(),])
-    );
-
-    // Some deps are not nodes (and thus are ignored)
-    assert_eq!(
-        toposort_deps(vec![
-            ("a".into(), vec!["b".into(), "z".into()]),
-            ("b".into(), vec!["x".into()])
-        ]),
-        Ok(vec!["b".into(), "a".into()])
-    );
-}
-
 #[derive(Debug, PartialEq)]
 pub enum Error {
-    Cycle(Vec<SmolStr>),
+    Cycle(Vec<EcoString>),
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn toposort_deps_test() {
+        // All deps are nodes
+        assert_eq!(
+            toposort_deps(vec![
+                ("a".into(), vec!["b".into()]),
+                ("c".into(), vec![]),
+                ("b".into(), vec!["c".into()])
+            ]),
+            Ok(vec!["c".into(), "b".into(), "a".into()])
+        );
+
+        // No deps
+        assert_eq!(
+            toposort_deps(vec![
+                ("no-deps-1".into(), vec![]),
+                ("no-deps-2".into(), vec![])
+            ]),
+            Ok(vec!["no-deps-1".into(), "no-deps-2".into(),])
+        );
+
+        // Some deps are not nodes (and thus are ignored)
+        assert_eq!(
+            toposort_deps(vec![
+                ("a".into(), vec!["b".into(), "z".into()]),
+                ("b".into(), vec!["x".into()])
+            ]),
+            Ok(vec!["b".into(), "a".into()])
+        );
+    }
+
+    #[test]
+    fn cycle_detection() {
+        // a ---+
+        // ^    |
+        // |    v
+        // +----+
+        assert_eq!(
+            toposort_deps(vec![("a".into(), vec!["a".into()])]),
+            Err(Error::Cycle(vec!["a".into()]))
+        );
+
+        // a -> b -> c
+        // ^         v
+        // |         |
+        // +---------+
+        assert_eq!(
+            toposort_deps(vec![
+                ("a".into(), vec!["b".into()]),
+                ("b".into(), vec!["c".into()]),
+                ("c".into(), vec!["a".into()]),
+            ]),
+            Err(Error::Cycle(vec!["c".into(), "b".into(), "a".into()]))
+        );
+
+        // a -> b <- e
+        // |    |    ^
+        // v    v    |
+        // f    c -> d
+        assert_eq!(
+            toposort_deps(vec![
+                ("a".into(), vec!["b".into()]),
+                ("b".into(), vec!["c".into()]),
+                ("c".into(), vec!["d".into()]),
+                ("d".into(), vec!["e".into()]),
+                ("e".into(), vec!["b".into()]),
+                ("a".into(), vec!["f".into()]),
+            ]),
+            Err(Error::Cycle(vec![
+                "e".into(),
+                "d".into(),
+                "c".into(),
+                "b".into(),
+            ]))
+        );
+    }
 }

@@ -4,11 +4,11 @@ assertion_line: 84
 expression: "import atom.{make}\npub fn main() {\n  make(\"ok\")\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> binary().
 main() ->
     erlang:binary_to_atom(<<"ok"/utf8>>).
-

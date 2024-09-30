@@ -1,11 +1,12 @@
 use std::collections::{HashMap, HashSet};
 
+use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
     docvec,
     javascript::{JavaScriptCodegenTarget, INDENT},
-    pretty::{break_, concat, line, Document, Documentable},
+    pretty::{break_, concat, join, line, Document, Documentable},
 };
 
 /// A collection of JavaScript import statements from Gleam imports and from
@@ -13,8 +14,8 @@ use crate::{
 ///
 #[derive(Debug, Default)]
 pub(crate) struct Imports<'a> {
-    imports: HashMap<String, Import<'a>>,
-    exports: HashSet<String>,
+    imports: HashMap<EcoString, Import<'a>>,
+    exports: HashSet<EcoString>,
 }
 
 impl<'a> Imports<'a> {
@@ -22,14 +23,14 @@ impl<'a> Imports<'a> {
         Self::default()
     }
 
-    pub fn register_export(&mut self, export: String) {
+    pub fn register_export(&mut self, export: EcoString) {
         let _ = self.exports.insert(export);
     }
 
     pub fn register_module(
         &mut self,
-        path: String,
-        aliases: impl IntoIterator<Item = String>,
+        path: EcoString,
+        aliases: impl IntoIterator<Item = EcoString>,
         unqualified_imports: impl IntoIterator<Item = Member<'a>>,
     ) {
         let import = self
@@ -51,10 +52,13 @@ impl<'a> Imports<'a> {
         if self.exports.is_empty() {
             imports
         } else {
-            let names = concat(Itertools::intersperse(
-                self.exports.into_iter().sorted().map(Document::String),
+            let names = join(
+                self.exports
+                    .into_iter()
+                    .sorted()
+                    .map(|string| string.to_doc()),
                 break_(",", ", "),
-            ));
+            );
             let names = docvec![
                 docvec![break_("", " "), names].nest(INDENT),
                 break_(",", " ")
@@ -76,13 +80,13 @@ impl<'a> Imports<'a> {
 
 #[derive(Debug)]
 struct Import<'a> {
-    path: String,
-    aliases: HashSet<String>,
+    path: EcoString,
+    aliases: HashSet<EcoString>,
     unqualified: Vec<Member<'a>>,
 }
 
 impl<'a> Import<'a> {
-    fn new(path: String) -> Self {
+    fn new(path: EcoString) -> Self {
         Self {
             path,
             aliases: Default::default(),
@@ -91,7 +95,7 @@ impl<'a> Import<'a> {
     }
 
     pub fn into_doc(self, codegen_target: JavaScriptCodegenTarget) -> Document<'a> {
-        let path = Document::String(self.path.clone());
+        let path = self.path.to_doc();
         let import_modifier = if codegen_target == JavaScriptCodegenTarget::TypeScriptDeclarations {
             "type "
         } else {
@@ -102,7 +106,7 @@ impl<'a> Import<'a> {
                 "import ",
                 import_modifier,
                 "* as ",
-                Document::String(alias),
+                alias,
                 " from \"",
                 path.clone(),
                 r#"";"#,
@@ -113,7 +117,7 @@ impl<'a> Import<'a> {
             alias_imports
         } else {
             let members = self.unqualified.into_iter().map(Member::into_doc);
-            let members = concat(Itertools::intersperse(members, break_(",", ", ")));
+            let members = join(members, break_(",", ", "));
             let members = docvec![
                 docvec![break_("", " "), members].nest(INDENT),
                 break_(",", " ")

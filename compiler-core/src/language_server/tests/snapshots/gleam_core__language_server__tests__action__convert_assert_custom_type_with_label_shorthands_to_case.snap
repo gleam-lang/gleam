@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble { Wibble(arg: Int, arg2: Float) }\npub fn main() {\n  let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble { Wibble(arg: Int, arg2: Float) }
+pub fn main() {
+  let assert Wibble(arg2:, ..) = Wibble(arg: 1, arg2: 1.0)
+                    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble { Wibble(arg: Int, arg2: Float) }
+pub fn main() {
+  let arg2 = case Wibble(arg: 1, arg2: 1.0) {
+    Wibble(arg2:, ..) -> arg2
+    _ -> panic
+  }
+}

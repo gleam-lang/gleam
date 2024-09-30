@@ -1,0 +1,67 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 746
+expression: "\n//// Some module comments\n// Some other whitespace\n\nimport dep2\n\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
+---
+//// Some module comments
+// Some other whitespace
+
+import dep2
+
+pub fn wibble(
+|  _: String,
+) -> Nil {
+  Nil
+}
+
+
+----- Completion content -----
+BitArray
+  kind:   Class
+  detail: Type
+  sort:   4_BitArray
+Bool
+  kind:   Class
+  detail: Type
+  sort:   4_Bool
+Float
+  kind:   Class
+  detail: Type
+  sort:   4_Float
+Int
+  kind:   Class
+  detail: Type
+  sort:   4_Int
+List
+  kind:   Class
+  detail: Type
+  sort:   4_List
+Nil
+  kind:   Class
+  detail: Type
+  sort:   4_Nil
+Result
+  kind:   Class
+  detail: Type
+  sort:   4_Result
+String
+  kind:   Class
+  detail: Type
+  sort:   4_String
+UtfCodepoint
+  kind:   Class
+  detail: Type
+  sort:   4_UtfCodepoint
+dep.Zoo
+  kind:   Class
+  detail: Type
+  sort:   5_dep.Zoo
+  edits:
+    [7:0-7:0]: "dep.Zoo"
+    [4:0-4:0]: "import dep\n"
+dep2.Zoo
+  kind:   Class
+  detail: Type
+  sort:   3_dep2.Zoo
+  edits:
+    [7:0-7:0]: "dep2.Zoo"

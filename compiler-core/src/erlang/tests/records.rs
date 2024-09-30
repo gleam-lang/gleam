@@ -47,8 +47,9 @@ fn module_types() {
         "PetCat",
         &[(
             "name",
-            Arc::new(type_::Type::Named {
-                public: true,
+            Arc::new(Type::Named {
+                publicity: Publicity::Public,
+                package: "package".into(),
                 module: module_name,
                 name: "my_type".into(),
                 args: vec![]
@@ -312,7 +313,7 @@ fn main() {
 fn record_constants() {
     assert_erl!(
         "pub type Test { A }
-const test = A
+const some_test = A
 pub fn a() { A }"
     );
 }

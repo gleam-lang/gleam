@@ -4,7 +4,7 @@ use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
-use std::{fmt::Debug, io, time::SystemTime, vec::IntoIter};
+use std::{collections::HashMap, fmt::Debug, io, time::SystemTime, vec::IntoIter};
 use tar::{Archive, Entry};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -16,6 +16,15 @@ use camino::{Utf8Path, Utf8PathBuf};
 /// The provided source path should be absolute, otherwise will panic.
 pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8PathBuf {
     assert!(source_path.is_absolute());
+    // Input target will always be canonicalised whereas source will not
+    // This causes problems with diffing on windows since canonicalised paths have a special root
+    // As such we are attempting to strip the target path
+    // Based on https://github.com/rust-lang/rust/issues/42869#issuecomment-1712317081
+    #[cfg(target_family = "windows")]
+    let binding = target_path.to_string();
+    #[cfg(target_family = "windows")]
+    let target_path = Utf8Path::new(binding.trim_start_matches(r"\\?\"));
+
     match target_path.is_absolute() {
         true => pathdiff::diff_utf8_paths(target_path, source_path)
             .expect("Should not fail on two absolute paths"),
@@ -24,7 +33,7 @@ pub fn make_relative(source_path: &Utf8Path, target_path: &Utf8Path) -> Utf8Path
     }
 }
 
-pub trait Reader: std::io::Read {
+pub trait Reader: io::Read {
     /// A wrapper around `std::io::Read` that has Gleam's error handling.
     fn read_bytes(&mut self, buffer: &mut [u8]) -> Result<usize> {
         self.read(buffer).map_err(|e| self.convert_err(e))
@@ -53,10 +62,10 @@ impl Utf8Writer for String {
     }
 }
 
-pub trait Writer: std::io::Write + Utf8Writer {
+pub trait Writer: io::Write + Utf8Writer {
     /// A wrapper around `io::Write` that has Gleam's error handling.
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
-        std::io::Write::write(self, bytes)
+        io::Write::write(self, bytes)
             .map(|_| ())
             .map_err(|e| self.convert_err(e))
     }
@@ -73,6 +82,13 @@ impl Content {
         match self {
             Content::Binary(data) => data,
             Content::Text(data) => data.as_bytes(),
+        }
+    }
+
+    pub fn text(&self) -> Option<&str> {
+        match self {
+            Content::Binary(_) => None,
+            Content::Text(s) => Some(s),
         }
     }
 }
@@ -214,36 +230,37 @@ pub trait FileSystemWriter {
     fn mkdir(&self, path: &Utf8Path) -> Result<(), Error>;
     fn write(&self, path: &Utf8Path, content: &str) -> Result<(), Error>;
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error>;
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error>;
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error>;
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn copy_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn hardlink(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn symlink_dir(&self, from: &Utf8Path, to: &Utf8Path) -> Result<(), Error>;
     fn delete_file(&self, path: &Utf8Path) -> Result<(), Error>;
+    fn exists(&self, path: &Utf8Path) -> bool;
 }
 
 #[derive(Debug)]
 /// A wrapper around a Read implementing object that has Gleam's error handling.
 pub struct WrappedReader {
     path: Utf8PathBuf,
-    inner: DebugIgnore<Box<dyn std::io::Read>>,
+    inner: DebugIgnore<Box<dyn io::Read>>,
 }
 
 impl WrappedReader {
-    pub fn new(path: &Utf8Path, inner: Box<dyn std::io::Read>) -> Self {
+    pub fn new(path: &Utf8Path, inner: Box<dyn io::Read>) -> Self {
         Self {
             path: path.to_path_buf(),
             inner: DebugIgnore(inner),
         }
     }
 
-    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         self.inner.read(buffer)
     }
 }
 
-impl std::io::Read for WrappedReader {
-    fn read(&mut self, buffer: &mut [u8]) -> std::io::Result<usize> {
+impl io::Read for WrappedReader {
+    fn read(&mut self, buffer: &mut [u8]) -> io::Result<usize> {
         self.read(buffer)
     }
 }
@@ -304,4 +321,15 @@ pub trait TarUnpacker {
                 err: Some(e.to_string()),
             })
     }
+}
+
+pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+    K: serde::Serialize + Ord,
+    V: serde::Serialize,
+{
+    use serde::Serialize;
+    let ordered: std::collections::BTreeMap<_, _> = value.iter().collect();
+    ordered.serialize(serializer)
 }

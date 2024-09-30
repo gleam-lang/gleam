@@ -12,6 +12,18 @@ fn go() {
 }
 
 #[test]
+fn panic_as() {
+    assert_js!(
+        r#"
+fn go() {
+  let x = "wibble"
+  panic as x
+}
+"#,
+    );
+}
+
+#[test]
 fn bare_typescript() {
     assert_ts_def!(
         r#"

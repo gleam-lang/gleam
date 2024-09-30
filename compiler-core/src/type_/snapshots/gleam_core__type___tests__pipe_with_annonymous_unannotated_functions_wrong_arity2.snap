@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub fn main() {\n  let a = 1\n     |> fn (x) { #(x, x + 1) }\n     |> fn (x) { x.0 }\n     |> fn (x, y) { x }\n}\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:6:9
+  │
+6 │      |> fn (x, y) { x }
+  │         ^^^^^^^^^^^^^^^ Expected 2 arguments, got 1

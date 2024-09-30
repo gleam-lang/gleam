@@ -4,6 +4,7 @@ mod untyped;
 
 #[cfg(test)]
 mod tests;
+pub mod visit;
 
 pub use self::typed::TypedExpr;
 pub use self::untyped::{UntypedExpr, Use};
@@ -12,14 +13,17 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
+use crate::parse::SpannedString;
+use crate::type_::expression::Implementations;
+use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
 use std::sync::Arc;
 
+use ecow::EcoString;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
-use smol_str::SmolStr;
 use vec1::Vec1;
 
 pub const TRY_VARIABLE: &str = "_try";
@@ -35,14 +39,15 @@ pub trait HasLocation {
 
 pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 
-pub type UntypedModule = Module<(), TargettedDefinition>;
+pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module<Info, Statements> {
-    pub name: SmolStr,
-    pub documentation: Vec<SmolStr>,
+    pub name: EcoString,
+    pub documentation: Vec<EcoString>,
     pub type_info: Info,
     pub definitions: Vec<Statements>,
+    pub names: Names,
 }
 
 impl TypedModule {
@@ -64,19 +69,19 @@ impl TypedModule {
 /// ```
 ///
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TargettedDefinition {
+pub struct TargetedDefinition {
     pub definition: UntypedDefinition,
     pub target: Option<Target>,
 }
 
-impl TargettedDefinition {
+impl TargetedDefinition {
     pub fn is_for(&self, target: Target) -> bool {
         self.target.map(|t| t == target).unwrap_or(true)
     }
 }
 
 impl UntypedModule {
-    pub fn dependencies(&self, target: Target) -> Vec<(SmolStr, SrcSpan)> {
+    pub fn dependencies(&self, target: Target) -> Vec<(EcoString, SrcSpan)> {
         self.iter_statements(target)
             .flat_map(|s| match s {
                 Definition::Import(Import {
@@ -105,6 +110,7 @@ impl UntypedModule {
 #[test]
 fn module_dependencies_test() {
     let parsed = crate::parse::parse_module(
+        camino::Utf8PathBuf::from("test/path"),
         "import one
          @target(erlang)
          import two
@@ -113,6 +119,7 @@ fn module_dependencies_test() {
          import three
 
          import four",
+        &crate::warning::WarningEmitter::null(),
     )
     .expect("syntax error");
     let module = parsed.module;
@@ -148,21 +155,54 @@ impl<A> Arg<A> {
         }
     }
 
-    pub fn get_variable_name(&self) -> Option<&SmolStr> {
+    pub fn get_variable_name(&self) -> Option<&EcoString> {
         self.names.get_variable_name()
+    }
+
+    pub fn is_capture_hole(&self) -> bool {
+        match &self.names {
+            ArgNames::Named { name, .. } if name == CAPTURE_VARIABLE => true,
+            _ => false,
+        }
+    }
+}
+
+impl TypedArg {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if self.location.contains(byte_index) {
+            Some(Located::Arg(self))
+        } else {
+            None
+        }
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ArgNames {
-    Discard { name: SmolStr },
-    LabelledDiscard { label: SmolStr, name: SmolStr },
-    Named { name: SmolStr },
-    NamedLabelled { name: SmolStr, label: SmolStr },
+    Discard {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    LabelledDiscard {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
+    Named {
+        name: EcoString,
+        location: SrcSpan,
+    },
+    NamedLabelled {
+        label: EcoString,
+        label_location: SrcSpan,
+        name: EcoString,
+        name_location: SrcSpan,
+    },
 }
 
 impl ArgNames {
-    pub fn get_label(&self) -> Option<&SmolStr> {
+    pub fn get_label(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::Named { .. } => None,
             ArgNames::LabelledDiscard { label, .. } | ArgNames::NamedLabelled { label, .. } => {
@@ -170,10 +210,10 @@ impl ArgNames {
             }
         }
     }
-    pub fn get_variable_name(&self) -> Option<&SmolStr> {
+    pub fn get_variable_name(&self) -> Option<&EcoString> {
         match self {
             ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
-            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name } => Some(name),
+            ArgNames::NamedLabelled { name, .. } | ArgNames::Named { name, .. } => Some(name),
         }
     }
 }
@@ -183,13 +223,14 @@ pub type TypedRecordConstructor = RecordConstructor<Arc<Type>>;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructor<T> {
     pub location: SrcSpan,
-    pub name: SmolStr,
+    pub name_location: SrcSpan,
+    pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<(u32, EcoString)>,
 }
 
 impl<A> RecordConstructor<A> {
-    pub fn put_doc(&mut self, new_doc: SmolStr) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         self.documentation = Some(new_doc);
     }
 }
@@ -198,76 +239,89 @@ pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordConstructorArg<T> {
-    pub label: Option<SmolStr>,
+    pub label: Option<SpannedString>,
     pub ast: TypeAst,
     pub location: SrcSpan,
     pub type_: T,
-    pub doc: Option<SmolStr>,
+    pub doc: Option<(u32, EcoString)>,
 }
 
 impl<T: PartialEq> RecordConstructorArg<T> {
-    pub fn put_doc(&mut self, new_doc: SmolStr) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         self.doc = Some(new_doc);
     }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAstConstructor {
+    pub location: SrcSpan,
+    pub module: Option<(EcoString, SrcSpan)>,
+    pub name: EcoString,
+    pub arguments: Vec<TypeAst>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAstFn {
+    pub location: SrcSpan,
+    pub arguments: Vec<TypeAst>,
+    pub return_: Box<TypeAst>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAstVar {
+    pub location: SrcSpan,
+    pub name: EcoString,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAstTuple {
+    pub location: SrcSpan,
+    pub elems: Vec<TypeAst>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypeAstHole {
+    pub location: SrcSpan,
+    pub name: EcoString,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeAst {
-    Constructor {
-        location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
-        arguments: Vec<Self>,
-    },
-
-    Fn {
-        location: SrcSpan,
-        arguments: Vec<Self>,
-        return_: Box<Self>,
-    },
-
-    Var {
-        location: SrcSpan,
-        name: SmolStr,
-    },
-
-    Tuple {
-        location: SrcSpan,
-        elems: Vec<Self>,
-    },
-
-    Hole {
-        location: SrcSpan,
-        name: SmolStr,
-    },
+    Constructor(TypeAstConstructor),
+    Fn(TypeAstFn),
+    Var(TypeAstVar),
+    Tuple(TypeAstTuple),
+    Hole(TypeAstHole),
 }
 
 impl TypeAst {
     pub fn location(&self) -> SrcSpan {
         match self {
-            TypeAst::Fn { location, .. }
-            | TypeAst::Var { location, .. }
-            | TypeAst::Hole { location, .. }
-            | TypeAst::Tuple { location, .. }
-            | TypeAst::Constructor { location, .. } => *location,
+            TypeAst::Fn(TypeAstFn { location, .. })
+            | TypeAst::Var(TypeAstVar { location, .. })
+            | TypeAst::Hole(TypeAstHole { location, .. })
+            | TypeAst::Tuple(TypeAstTuple { location, .. })
+            | TypeAst::Constructor(TypeAstConstructor { location, .. }) => *location,
         }
     }
 
     pub fn is_logically_equal(&self, other: &TypeAst) -> bool {
         match self {
-            TypeAst::Constructor {
+            TypeAst::Constructor(TypeAstConstructor {
                 module,
                 name,
                 arguments,
                 location: _,
-            } => match other {
-                TypeAst::Constructor {
+            }) => match other {
+                TypeAst::Constructor(TypeAstConstructor {
                     module: o_module,
                     name: o_name,
                     arguments: o_arguments,
                     location: _,
-                } => {
-                    module == o_module
+                }) => {
+                    let module_name =
+                        |m: &Option<(EcoString, _)>| m.as_ref().map(|(m, _)| m.clone());
+                    module_name(module) == module_name(o_module)
                         && name == o_name
                         && arguments.len() == o_arguments.len()
                         && arguments
@@ -277,16 +331,16 @@ impl TypeAst {
                 }
                 _ => false,
             },
-            TypeAst::Fn {
+            TypeAst::Fn(TypeAstFn {
                 arguments,
                 return_,
                 location: _,
-            } => match other {
-                TypeAst::Fn {
+            }) => match other {
+                TypeAst::Fn(TypeAstFn {
                     arguments: o_arguments,
                     return_: o_return_,
                     location: _,
-                } => {
+                }) => {
                     arguments.len() == o_arguments.len()
                         && arguments
                             .iter()
@@ -296,18 +350,18 @@ impl TypeAst {
                 }
                 _ => false,
             },
-            TypeAst::Var { name, location: _ } => match other {
-                TypeAst::Var {
+            TypeAst::Var(TypeAstVar { name, location: _ }) => match other {
+                TypeAst::Var(TypeAstVar {
                     name: o_name,
                     location: _,
-                } => name == o_name,
+                }) => name == o_name,
                 _ => false,
             },
-            TypeAst::Tuple { elems, location: _ } => match other {
-                TypeAst::Tuple {
+            TypeAst::Tuple(TypeAstTuple { elems, location: _ }) => match other {
+                TypeAst::Tuple(TypeAstTuple {
                     elems: o_elems,
                     location: _,
-                } => {
+                }) => {
                     elems.len() == o_elems.len()
                         && elems
                             .iter()
@@ -316,13 +370,247 @@ impl TypeAst {
                 }
                 _ => false,
             },
-            TypeAst::Hole { name, location: _ } => match other {
-                TypeAst::Hole {
+            TypeAst::Hole(TypeAstHole { name, location: _ }) => match other {
+                TypeAst::Hole(TypeAstHole {
                     name: o_name,
                     location: _,
-                } => name == o_name,
+                }) => name == o_name,
                 _ => false,
             },
+        }
+    }
+
+    pub fn find_node(&self, byte_index: u32, type_: Arc<Type>) -> Option<Located<'_>> {
+        if !self.location().contains(byte_index) {
+            return None;
+        }
+
+        match self {
+            TypeAst::Fn(TypeAstFn {
+                arguments, return_, ..
+            }) => type_
+                .fn_types()
+                .and_then(|(arg_types, ret_type)| {
+                    if let Some(arg) = arguments
+                        .iter()
+                        .zip(arg_types)
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                    {
+                        return Some(arg);
+                    }
+                    if let Some(ret) = return_.find_node(byte_index, ret_type) {
+                        return Some(ret);
+                    }
+
+                    None
+                })
+                .or(Some(Located::Annotation(self.location(), type_))),
+            TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
+                .constructor_types()
+                .and_then(|arg_types| {
+                    if let Some(arg) = arguments
+                        .iter()
+                        .zip(arg_types)
+                        .find_map(|(arg, arg_type)| arg.find_node(byte_index, arg_type.clone()))
+                    {
+                        return Some(arg);
+                    }
+
+                    None
+                })
+                .or(Some(Located::Annotation(self.location(), type_))),
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
+                .tuple_types()
+                .and_then(|elem_types| {
+                    if let Some(e) = elems
+                        .iter()
+                        .zip(elem_types)
+                        .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
+                    {
+                        return Some(e);
+                    }
+
+                    None
+                })
+                .or(Some(Located::Annotation(self.location(), type_))),
+            TypeAst::Var(_) | TypeAst::Hole(_) => Some(Located::Annotation(self.location(), type_)),
+        }
+    }
+
+    /// Generates an annotation corresponding to the type.
+    pub fn print(&self, buffer: &mut EcoString) {
+        match &self {
+            TypeAst::Var(var) => buffer.push_str(&var.name),
+            TypeAst::Hole(hole) => buffer.push_str(&hole.name),
+            TypeAst::Tuple(tuple) => {
+                buffer.push_str("#(");
+                for (i, elem) in tuple.elems.iter().enumerate() {
+                    elem.print(buffer);
+                    if i < tuple.elems.len() - 1 {
+                        buffer.push_str(", ");
+                    }
+                }
+                buffer.push(')')
+            }
+            TypeAst::Fn(func) => {
+                buffer.push_str("fn(");
+                for (i, argument) in func.arguments.iter().enumerate() {
+                    argument.print(buffer);
+                    if i < func.arguments.len() - 1 {
+                        buffer.push_str(", ");
+                    }
+                }
+                buffer.push(')');
+                buffer.push_str(" -> ");
+                func.return_.print(buffer);
+            }
+            TypeAst::Constructor(constructor) => {
+                if let Some((module, _)) = &constructor.module {
+                    buffer.push_str(module);
+                    buffer.push('.');
+                }
+                buffer.push_str(&constructor.name);
+                if !constructor.arguments.is_empty() {
+                    buffer.push('(');
+                    for (i, argument) in constructor.arguments.iter().enumerate() {
+                        argument.print(buffer);
+                        if i < constructor.arguments.len() - 1 {
+                            buffer.push_str(", ");
+                        }
+                    }
+                    buffer.push(')');
+                }
+            }
+        }
+    }
+}
+
+#[test]
+fn type_ast_print_fn() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Fn(TypeAstFn {
+        location: SrcSpan { start: 1, end: 1 },
+        arguments: vec![
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "String".into(),
+            }),
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "Bool".into(),
+            }),
+        ],
+        return_: Box::new(TypeAst::Var(TypeAstVar {
+            location: SrcSpan { start: 1, end: 1 },
+            name: "Int".into(),
+        })),
+    });
+    ast.print(&mut buffer);
+    assert_eq!(&buffer, "fn(String, Bool) -> Int")
+}
+
+#[test]
+fn type_ast_print_constructor() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Constructor(TypeAstConstructor {
+        name: "SomeType".into(),
+        module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
+        location: SrcSpan { start: 1, end: 1 },
+        arguments: vec![
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "String".into(),
+            }),
+            TypeAst::Var(TypeAstVar {
+                location: SrcSpan { start: 1, end: 1 },
+                name: "Bool".into(),
+            }),
+        ],
+    });
+    ast.print(&mut buffer);
+    assert_eq!(&buffer, "some_module.SomeType(String, Bool)")
+}
+
+#[test]
+fn type_ast_print_tuple() {
+    let mut buffer = EcoString::new();
+    let ast = TypeAst::Tuple(TypeAstTuple {
+        location: SrcSpan { start: 1, end: 1 },
+        elems: vec![
+            TypeAst::Constructor(TypeAstConstructor {
+                name: "SomeType".into(),
+                module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),
+                location: SrcSpan { start: 1, end: 1 },
+                arguments: vec![
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "String".into(),
+                    }),
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "Bool".into(),
+                    }),
+                ],
+            }),
+            TypeAst::Fn(TypeAstFn {
+                location: SrcSpan { start: 1, end: 1 },
+                arguments: vec![
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "String".into(),
+                    }),
+                    TypeAst::Var(TypeAstVar {
+                        location: SrcSpan { start: 1, end: 1 },
+                        name: "Bool".into(),
+                    }),
+                ],
+                return_: Box::new(TypeAst::Var(TypeAstVar {
+                    location: SrcSpan { start: 1, end: 1 },
+                    name: "Int".into(),
+                })),
+            }),
+        ],
+    });
+    ast.print(&mut buffer);
+    assert_eq!(
+        &buffer,
+        "#(some_module.SomeType(String, Bool), fn(String, Bool) -> Int)"
+    )
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum Publicity {
+    Public,
+    Private,
+    Internal { attribute_location: Option<SrcSpan> },
+}
+
+impl Publicity {
+    pub fn is_private(&self) -> bool {
+        match self {
+            Self::Private => true,
+            Self::Public | Self::Internal { .. } => false,
+        }
+    }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Self::Internal { .. } => true,
+            Self::Public | Self::Private => false,
+        }
+    }
+
+    pub fn is_public(&self) -> bool {
+        match self {
+            Self::Public => true,
+            Self::Internal { .. } | Self::Private => false,
+        }
+    }
+
+    pub fn is_importable(&self) -> bool {
+        match self {
+            Self::Internal { .. } | Self::Public => true,
+            Self::Private => false,
         }
     }
 }
@@ -330,37 +618,45 @@ impl TypeAst {
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A function definition
 ///
+/// Note that an anonymous function will have `None` as the name field, while a
+/// named function will have `Some`.
+///
 /// # Example(s)
 ///
 /// ```gleam
 /// // Public function
-/// pub fn bar() -> String { ... }
+/// pub fn wobble() -> String { ... }
 /// // Private function
-/// fn foo(x: Int) -> Int { ... }
+/// fn wibble(x: Int) -> Int { ... }
+/// // Anonymous function
+/// fn(x: Int) { ... }
 /// ```
 pub struct Function<T, Expr> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: SmolStr,
+    pub name: Option<SpannedString>,
     pub arguments: Vec<Arg<T>>,
     pub body: Vec1<Statement<T, Expr>>,
-    pub public: bool,
+    pub publicity: Publicity,
     pub deprecation: Deprecation,
     pub return_annotation: Option<TypeAst>,
     pub return_type: T,
-    pub documentation: Option<SmolStr>,
-    pub external_erlang: Option<(SmolStr, SmolStr)>,
-    pub external_javascript: Option<(SmolStr, SmolStr)>,
+    pub documentation: Option<(u32, EcoString)>,
+    pub external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
+    pub external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
+    pub implementations: Implementations,
 }
 
 pub type TypedFunction = Function<Arc<Type>, TypedExpr>;
 pub type UntypedFunction = Function<(), UntypedExpr>;
 
 impl<T, E> Function<T, E> {
-    fn full_location(&self) -> SrcSpan {
+    pub fn full_location(&self) -> SrcSpan {
         SrcSpan::new(self.location.start, self.end_position)
     }
 }
+
+pub type UntypedImport = Import<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// Import another Gleam module so the current module can use the types and
@@ -374,20 +670,26 @@ impl<T, E> Function<T, E> {
 /// import animal/cat as kitty
 /// ```
 pub struct Import<PackageName> {
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<EcoString>,
     pub location: SrcSpan,
-    pub module: SmolStr,
-    pub as_name: Option<SmolStr>,
-    pub unqualified: Vec<UnqualifiedImport>,
+    pub module: EcoString,
+    pub as_name: Option<(AssignName, SrcSpan)>,
+    pub unqualified_values: Vec<UnqualifiedImport>,
+    pub unqualified_types: Vec<UnqualifiedImport>,
     pub package: PackageName,
 }
+
 impl<T> Import<T> {
-    pub(crate) fn used_name(&self) -> SmolStr {
-        self.as_name
-            .as_ref()
-            .cloned()
-            .or_else(|| self.module.split('/').last().map(|s| s.into()))
-            .expect("Import could not identify variable name.")
+    pub(crate) fn used_name(&self) -> Option<EcoString> {
+        match self.as_name.as_ref() {
+            Some((AssignName::Variable(name), _)) => Some(name.clone()),
+            Some((AssignName::Discard(_), _)) => None,
+            None => self.module.split('/').last().map(EcoString::from),
+        }
+    }
+
+    pub(crate) fn alias_location(&self) -> Option<SrcSpan> {
+        self.as_name.as_ref().map(|(_, location)| *location)
     }
 }
 
@@ -403,14 +705,21 @@ pub type UntypedModuleConstant = ModuleConstant<(), ()>;
 /// pub const end_year = 2111
 /// ```
 pub struct ModuleConstant<T, ConstantRecordTag> {
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<(u32, EcoString)>,
+    /// The location of the constant, starting at the "(pub) const" keywords and
+    /// ending after the ": Type" annotation, or (without an annotation) after its name.
     pub location: SrcSpan,
-    pub public: bool,
-    pub name: SmolStr,
+    pub publicity: Publicity,
+    pub name: EcoString,
+    pub name_location: SrcSpan,
     pub annotation: Option<TypeAst>,
     pub value: Box<Constant<T, ConstantRecordTag>>,
     pub type_: T,
+    pub deprecation: Deprecation,
+    pub implementations: Implementations,
 }
+
+pub type UntypedCustomType = CustomType<()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A newly defined type with one or more constructors.
@@ -431,13 +740,15 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
 pub struct CustomType<T> {
     pub location: SrcSpan,
     pub end_position: u32,
-    pub name: SmolStr,
-    pub public: bool,
+    pub name: EcoString,
+    pub name_location: SrcSpan,
+    pub publicity: Publicity,
     pub constructors: Vec<RecordConstructor<T>>,
-    pub documentation: Option<SmolStr>,
+    pub documentation: Option<(u32, EcoString)>,
+    pub deprecation: Deprecation,
     pub opaque: bool,
     /// The names of the type parameters.
-    pub parameters: Vec<SmolStr>,
+    pub parameters: Vec<SpannedString>,
     /// Once type checked this field will contain the type information for the
     /// type parameters.
     pub typed_parameters: Vec<T>,
@@ -452,6 +763,8 @@ impl<T> CustomType<T> {
     }
 }
 
+pub type UntypedTypeAlias = TypeAlias<()>;
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A new name for an existing type
 ///
@@ -463,15 +776,17 @@ impl<T> CustomType<T> {
 /// ```
 pub struct TypeAlias<T> {
     pub location: SrcSpan,
-    pub alias: SmolStr,
-    pub parameters: Vec<SmolStr>,
+    pub alias: EcoString,
+    pub name_location: SrcSpan,
+    pub parameters: Vec<SpannedString>,
     pub type_ast: TypeAst,
     pub type_: T,
-    pub public: bool,
-    pub documentation: Option<SmolStr>,
+    pub publicity: Publicity,
+    pub documentation: Option<(u32, EcoString)>,
+    pub deprecation: Deprecation,
 }
 
-pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, SmolStr, SmolStr>;
+pub type TypedDefinition = Definition<Arc<Type>, TypedExpr, EcoString, EcoString>;
 pub type UntypedDefinition = Definition<(), UntypedExpr, (), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -488,18 +803,39 @@ pub enum Definition<T, Expr, ConstantRecordTag, PackageName> {
 }
 
 impl TypedDefinition {
+    pub fn main_function(&self) -> Option<&TypedFunction> {
+        match self {
+            Definition::Function(f) if f.name.as_ref().is_some_and(|(_, name)| name == "main") => {
+                Some(f)
+            }
+            _ => None,
+        }
+    }
+
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
             Definition::Function(function) => {
+                // Search for the corresponding node inside the function
+                // only if the index falls within the function's full location.
+                if !function.full_location().contains(byte_index) {
+                    return None;
+                }
+
                 if let Some(found) = function.body.iter().find_map(|s| s.find_node(byte_index)) {
                     return Some(found);
-                };
+                }
 
                 if let Some(found_arg) = function
                     .arguments
                     .iter()
                     .find(|arg| arg.location.contains(byte_index))
                 {
+                    // Check if location is within the arg annotation.
+                    if let Some(a) = &found_arg.annotation {
+                        return a
+                            .find_node(byte_index, found_arg.type_.clone())
+                            .or(Some(Located::Arg(found_arg)));
+                    }
                     return Some(Located::Arg(found_arg));
                 };
 
@@ -509,6 +845,15 @@ impl TypedDefinition {
                     .find(|statement| statement.location().contains(byte_index))
                 {
                     return Some(Located::Statement(found_statement));
+                };
+
+                // Check if location is within the return annotation.
+                if let Some(l) = function
+                    .return_annotation
+                    .iter()
+                    .find_map(|a| a.find_node(byte_index, function.return_type.clone()))
+                {
+                    return Some(l);
                 };
 
                 // Note that the fn `.location` covers the function head, not
@@ -523,6 +868,23 @@ impl TypedDefinition {
             }
 
             Definition::CustomType(custom) => {
+                // Check if location is within the type of one of the arguments of a constructor.
+                if let Some(annotation) = custom
+                    .constructors
+                    .iter()
+                    .find(|constructor| constructor.location.contains(byte_index))
+                    .and_then(|constructor| {
+                        constructor
+                            .arguments
+                            .iter()
+                            .find(|arg| arg.location.contains(byte_index))
+                    })
+                    .filter(|arg| arg.location.contains(byte_index))
+                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                {
+                    return Some(annotation);
+                }
+
                 // Note that the custom type `.location` covers the function
                 // head, not the entire statement.
                 if custom.full_location().contains(byte_index) {
@@ -532,8 +894,66 @@ impl TypedDefinition {
                 }
             }
 
-            Definition::TypeAlias(_) | Definition::Import(_) | Definition::ModuleConstant(_) => {
+            Definition::TypeAlias(alias) => {
+                // Check if location is within the type being aliased.
+                if let Some(l) = alias.type_ast.find_node(byte_index, alias.type_.clone()) {
+                    return Some(l);
+                }
+
+                if alias.location.contains(byte_index) {
+                    Some(Located::ModuleStatement(self))
+                } else {
+                    None
+                }
+            }
+
+            Definition::ModuleConstant(constant) => {
+                // Check if location is within the annotation.
+                if let Some(annotation) = &constant.annotation {
+                    if let Some(l) = annotation.find_node(byte_index, constant.type_.clone()) {
+                        return Some(l);
+                    }
+                }
+
+                if constant.location.contains(byte_index) {
+                    Some(Located::ModuleStatement(self))
+                } else {
+                    None
+                }
+            }
+
+            Definition::Import(import) => {
                 if self.location().contains(byte_index) {
+                    if let Some(unqualified) = import
+                        .unqualified_values
+                        .iter()
+                        .find(|i| i.location.contains(byte_index))
+                    {
+                        return Some(Located::UnqualifiedImport(
+                            crate::build::UnqualifiedImport {
+                                name: &unqualified.name,
+                                module: &import.module,
+                                is_type: false,
+                                location: &unqualified.location,
+                            },
+                        ));
+                    }
+
+                    if let Some(unqualified) = import
+                        .unqualified_types
+                        .iter()
+                        .find(|i| i.location.contains(byte_index))
+                    {
+                        return Some(Located::UnqualifiedImport(
+                            crate::build::UnqualifiedImport {
+                                name: &unqualified.name,
+                                module: &import.module,
+                                is_type: true,
+                                location: &unqualified.location,
+                            },
+                        ));
+                    }
+
                     Some(Located::ModuleStatement(self))
                 } else {
                     None
@@ -570,9 +990,22 @@ impl<A, B, C, E> Definition<A, B, C, E> {
         matches!(self, Self::Function(..))
     }
 
-    pub fn put_doc(&mut self, new_doc: SmolStr) {
+    pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         match self {
             Definition::Import(Import { .. }) => (),
+
+            Definition::Function(Function { documentation, .. })
+            | Definition::TypeAlias(TypeAlias { documentation, .. })
+            | Definition::CustomType(CustomType { documentation, .. })
+            | Definition::ModuleConstant(ModuleConstant { documentation, .. }) => {
+                let _ = std::mem::replace(documentation, Some(new_doc));
+            }
+        }
+    }
+
+    pub fn get_doc(&self) -> Option<EcoString> {
+        match self {
+            Definition::Import(Import { .. }) => None,
 
             Definition::Function(Function {
                 documentation: doc, ..
@@ -585,9 +1018,18 @@ impl<A, B, C, E> Definition<A, B, C, E> {
             })
             | Definition::ModuleConstant(ModuleConstant {
                 documentation: doc, ..
-            }) => {
-                let _ = std::mem::replace(doc, Some(new_doc));
-            }
+            }) => doc.as_ref().map(|(_, doc)| doc.clone()),
+        }
+    }
+
+    pub fn is_internal(&self) -> bool {
+        match self {
+            Definition::Function(Function { publicity, .. })
+            | Definition::CustomType(CustomType { publicity, .. })
+            | Definition::ModuleConstant(ModuleConstant { publicity, .. })
+            | Definition::TypeAlias(TypeAlias { publicity, .. }) => publicity.is_internal(),
+
+            Definition::Import(_) => false,
         }
     }
 }
@@ -595,22 +1037,17 @@ impl<A, B, C, E> Definition<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
-    pub name: SmolStr,
-    pub as_name: Option<SmolStr>,
-    pub layer: Layer,
+    pub name: EcoString,
+    pub as_name: Option<EcoString>,
 }
 
 impl UnqualifiedImport {
-    pub fn variable_name(&self) -> &str {
-        self.as_name.as_deref().unwrap_or(&self.name)
-    }
-
-    pub fn is_value(&self) -> bool {
-        self.layer.is_value()
+    pub fn used_name(&self) -> &EcoString {
+        self.as_name.as_ref().unwrap_or(&self.name)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Copy, Default)]
+#[derive(Debug, Clone, PartialEq, Eq, Copy, Default, serde::Serialize, serde::Deserialize)]
 pub enum Layer {
     #[default]
     Value,
@@ -657,6 +1094,17 @@ pub enum BinOp {
 
     // Strings
     Concatenate,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum OperatorKind {
+    BooleanLogic,
+    Equality,
+    IntComparison,
+    FLoatComparison,
+    IntMath,
+    FloatMath,
+    StringConcatenation,
 }
 
 impl BinOp {
@@ -717,24 +1165,91 @@ impl BinOp {
             Self::Concatenate => "<>",
         }
     }
+
+    pub fn operator_kind(&self) -> OperatorKind {
+        match self {
+            Self::Concatenate => OperatorKind::StringConcatenation,
+            Self::Eq | Self::NotEq => OperatorKind::Equality,
+            Self::And | Self::Or => OperatorKind::BooleanLogic,
+            Self::LtInt | Self::LtEqInt | Self::GtEqInt | Self::GtInt => {
+                OperatorKind::IntComparison
+            }
+            Self::LtFloat | Self::LtEqFloat | Self::GtEqFloat | Self::GtFloat => {
+                OperatorKind::FLoatComparison
+            }
+            Self::AddInt | Self::SubInt | Self::MultInt | Self::RemainderInt | Self::DivInt => {
+                OperatorKind::IntMath
+            }
+            Self::AddFloat | Self::SubFloat | Self::MultFloat | Self::DivFloat => {
+                OperatorKind::FloatMath
+            }
+        }
+    }
+
+    pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
+        self.operator_kind() == other.operator_kind()
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
 pub struct CallArg<A> {
-    pub label: Option<SmolStr>,
+    pub label: Option<EcoString>,
     pub location: SrcSpan,
     pub value: A,
-    // This is true if this argument is given as the callback in a `use`
-    // expression. In future it may also be true for pipes too. It is used to
-    // determine if we should error if an argument without a label is given or
-    // not, which is not permitted if the argument is given explicitly by the
-    // programmer rather than implicitly by Gleam's syntactic sugar.
-    pub implicit: bool,
+    pub implicit: Option<ImplicitCallArgOrigin>,
+}
+
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum ImplicitCallArgOrigin {
+    /// The implicit callback argument passed as the last argument to the
+    /// function on the right hand side of `use`.
+    ///
+    Use,
+    /// An argument added by the compiler when rewriting a pipe `left |> right`.
+    ///
+    Pipe,
+    /// An argument added by the compiler to fill in all the missing fields of a
+    /// record that are being ignored with the `..` syntax.
+    ///
+    PatternFieldSpread,
+    /// An argument used to fill in the missing args when a function on the
+    /// right hand side of `use` is being called with the wrong arity.
+    ///
+    IncorrectArityUse,
+}
+
+impl<A> CallArg<A> {
+    #[must_use]
+    pub fn is_implicit(&self) -> bool {
+        self.implicit.is_some()
+    }
 }
 
 impl CallArg<TypedExpr> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value.find_node(byte_index)
+        match (self.implicit, &self.value) {
+            // If a call argument is the implicit use callback then we don't
+            // want to look at its arguments and body but we don't want to
+            // return the whole anonymous function if anything else doesn't
+            // match.
+            //
+            // In addition, if the callback is invalid because it couldn't be
+            // typed, we don't want to return it as it would make it hard for
+            // the LSP to give any suggestions on the use function being typed.
+            //
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Invalid { .. }) => None,
+            // So the code below is exactly the same as
+            // `TypedExpr::Fn{}.find_node()` except we do not return self as a
+            // fallback.
+            //
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { args, body, .. }) => args
+                .iter()
+                .find_map(|arg| arg.find_node(byte_index))
+                .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
+            // In all other cases we're happy with the default behaviour.
+            //
+            _ => self.value.find_node(byte_index),
+        }
     }
 }
 
@@ -753,6 +1268,22 @@ impl CallArg<UntypedExpr> {
     }
 }
 
+impl<T> CallArg<T>
+where
+    T: HasLocation,
+{
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool {
+        self.label.is_some() && self.location == self.value.location()
+    }
+}
+
+impl<T> HasLocation for CallArg<T> {
+    fn location(&self) -> SrcSpan {
+        self.location
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RecordUpdateSpread {
     pub base: Box<UntypedExpr>,
@@ -761,14 +1292,21 @@ pub struct RecordUpdateSpread {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UntypedRecordUpdateArg {
-    pub label: SmolStr,
+    pub label: EcoString,
     pub location: SrcSpan,
     pub value: UntypedExpr,
 }
 
+impl UntypedRecordUpdateArg {
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool {
+        self.value.location() == self.location
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedRecordUpdateArg {
-    pub label: SmolStr,
+    pub label: EcoString,
     pub location: SrcSpan,
     pub value: TypedExpr,
     pub index: u32,
@@ -778,6 +1316,11 @@ impl TypedRecordUpdateArg {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
+
+    #[must_use]
+    pub fn uses_label_shorthand(&self) -> bool {
+        self.value.location() == self.location
+    }
 }
 
 pub type MultiPattern<Type> = Vec<Pattern<Type>>;
@@ -785,7 +1328,7 @@ pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 pub type UntypedMultiPattern = MultiPattern<()>;
 pub type TypedMultiPattern = MultiPattern<Arc<Type>>;
 
-pub type TypedClause = Clause<TypedExpr, Arc<Type>, SmolStr>;
+pub type TypedClause = Clause<TypedExpr, Arc<Type>, EcoString>;
 
 pub type UntypedClause = Clause<UntypedExpr, (), ()>;
 
@@ -798,12 +1341,18 @@ pub struct Clause<Expr, Type, RecordTag> {
     pub then: Expr,
 }
 
+impl<A, B, C> Clause<A, B, C> {
+    pub fn pattern_count(&self) -> usize {
+        1 + self.alternative_patterns.len()
+    }
+}
+
 impl TypedClause {
     pub fn location(&self) -> SrcSpan {
         SrcSpan {
             start: self
                 .pattern
-                .get(0)
+                .first()
                 .map(|p| p.location().start)
                 .unwrap_or_default(),
             end: self.then.location().end,
@@ -819,7 +1368,7 @@ impl TypedClause {
 }
 
 pub type UntypedClauseGuard = ClauseGuard<(), ()>;
-pub type TypedClauseGuard = ClauseGuard<Arc<Type>, SmolStr>;
+pub type TypedClauseGuard = ClauseGuard<Arc<Type>, EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ClauseGuard<Type, RecordTag> {
@@ -883,6 +1432,60 @@ pub enum ClauseGuard<Type, RecordTag> {
         right: Box<Self>,
     },
 
+    AddInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    AddFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    SubInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    SubFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    MultInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    MultFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    DivInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    DivFloat {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    RemainderInt {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     Or {
         location: SrcSpan,
         left: Box<Self>,
@@ -895,10 +1498,15 @@ pub enum ClauseGuard<Type, RecordTag> {
         right: Box<Self>,
     },
 
+    Not {
+        location: SrcSpan,
+        expression: Box<Self>,
+    },
+
     Var {
         location: SrcSpan,
         type_: Type,
-        name: SmolStr,
+        name: EcoString,
     },
 
     TupleIndex {
@@ -911,7 +1519,7 @@ pub enum ClauseGuard<Type, RecordTag> {
     FieldAccess {
         location: SrcSpan,
         index: Option<u64>,
-        label: SmolStr,
+        label: EcoString,
         type_: Type,
         container: Box<Self>,
     },
@@ -919,9 +1527,9 @@ pub enum ClauseGuard<Type, RecordTag> {
     ModuleSelect {
         location: SrcSpan,
         type_: Type,
-        label: SmolStr,
-        module_name: SmolStr,
-        module_alias: SmolStr,
+        label: EcoString,
+        module_name: EcoString,
+        module_alias: EcoString,
         literal: Constant<Type, RecordTag>,
     },
 
@@ -934,6 +1542,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::Constant(constant) => constant.location(),
             ClauseGuard::Or { location, .. }
             | ClauseGuard::And { location, .. }
+            | ClauseGuard::Not { location, .. }
             | ClauseGuard::Var { location, .. }
             | ClauseGuard::TupleIndex { location, .. }
             | ClauseGuard::Equals { location, .. }
@@ -945,6 +1554,15 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::GtFloat { location, .. }
             | ClauseGuard::GtEqFloat { location, .. }
             | ClauseGuard::LtFloat { location, .. }
+            | ClauseGuard::AddInt { location, .. }
+            | ClauseGuard::AddFloat { location, .. }
+            | ClauseGuard::SubInt { location, .. }
+            | ClauseGuard::SubFloat { location, .. }
+            | ClauseGuard::MultInt { location, .. }
+            | ClauseGuard::MultFloat { location, .. }
+            | ClauseGuard::DivInt { location, .. }
+            | ClauseGuard::DivFloat { location, .. }
+            | ClauseGuard::RemainderInt { location, .. }
             | ClauseGuard::FieldAccess { location, .. }
             | ClauseGuard::LtEqFloat { location, .. }
             | ClauseGuard::ModuleSelect { location, .. } => *location,
@@ -953,26 +1571,42 @@ impl<A, B> ClauseGuard<A, B> {
 
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
+        match self.bin_op_name() {
+            Some(name) => name.precedence(),
+            None => u8::MAX,
+        }
+    }
+
+    pub fn bin_op_name(&self) -> Option<BinOp> {
         match self {
-            ClauseGuard::Or { .. } => 1,
-            ClauseGuard::And { .. } => 2,
-
-            ClauseGuard::Equals { .. } | ClauseGuard::NotEquals { .. } => 3,
-
-            ClauseGuard::GtInt { .. }
-            | ClauseGuard::GtEqInt { .. }
-            | ClauseGuard::LtInt { .. }
-            | ClauseGuard::LtEqInt { .. }
-            | ClauseGuard::GtFloat { .. }
-            | ClauseGuard::GtEqFloat { .. }
-            | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. } => 4,
+            ClauseGuard::Or { .. } => Some(BinOp::Or),
+            ClauseGuard::And { .. } => Some(BinOp::And),
+            ClauseGuard::Equals { .. } => Some(BinOp::Eq),
+            ClauseGuard::NotEquals { .. } => Some(BinOp::NotEq),
+            ClauseGuard::GtInt { .. } => Some(BinOp::GtInt),
+            ClauseGuard::GtEqInt { .. } => Some(BinOp::GtEqInt),
+            ClauseGuard::LtInt { .. } => Some(BinOp::LtInt),
+            ClauseGuard::LtEqInt { .. } => Some(BinOp::LtEqInt),
+            ClauseGuard::GtFloat { .. } => Some(BinOp::GtFloat),
+            ClauseGuard::GtEqFloat { .. } => Some(BinOp::GtEqFloat),
+            ClauseGuard::LtFloat { .. } => Some(BinOp::LtFloat),
+            ClauseGuard::LtEqFloat { .. } => Some(BinOp::LtEqFloat),
+            ClauseGuard::AddInt { .. } => Some(BinOp::AddInt),
+            ClauseGuard::AddFloat { .. } => Some(BinOp::AddFloat),
+            ClauseGuard::SubInt { .. } => Some(BinOp::SubInt),
+            ClauseGuard::SubFloat { .. } => Some(BinOp::SubFloat),
+            ClauseGuard::MultInt { .. } => Some(BinOp::MultInt),
+            ClauseGuard::MultFloat { .. } => Some(BinOp::MultFloat),
+            ClauseGuard::DivInt { .. } => Some(BinOp::DivInt),
+            ClauseGuard::DivFloat { .. } => Some(BinOp::DivFloat),
+            ClauseGuard::RemainderInt { .. } => Some(BinOp::RemainderInt),
 
             ClauseGuard::Constant(_)
             | ClauseGuard::Var { .. }
+            | ClauseGuard::Not { .. }
             | ClauseGuard::TupleIndex { .. }
             | ClauseGuard::FieldAccess { .. }
-            | ClauseGuard::ModuleSelect { .. } => 5,
+            | ClauseGuard::ModuleSelect { .. } => None,
         }
     }
 }
@@ -986,7 +1620,19 @@ impl TypedClauseGuard {
             ClauseGuard::ModuleSelect { type_, .. } => type_.clone(),
             ClauseGuard::Constant(constant) => constant.type_(),
 
+            ClauseGuard::AddInt { .. }
+            | ClauseGuard::SubInt { .. }
+            | ClauseGuard::MultInt { .. }
+            | ClauseGuard::DivInt { .. }
+            | ClauseGuard::RemainderInt { .. } => type_::int(),
+
+            ClauseGuard::AddFloat { .. }
+            | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::MultFloat { .. }
+            | ClauseGuard::DivFloat { .. } => type_::float(),
+
             ClauseGuard::Or { .. }
+            | ClauseGuard::Not { .. }
             | ClauseGuard::And { .. }
             | ClauseGuard::Equals { .. }
             | ClauseGuard::NotEquals { .. }
@@ -1002,7 +1648,7 @@ impl TypedClauseGuard {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Default, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub struct SrcSpan {
     pub start: u32,
     pub end: u32,
@@ -1014,7 +1660,7 @@ impl SrcSpan {
     }
 
     pub fn contains(&self, byte_index: u32) -> bool {
-        byte_index >= self.start && byte_index < self.end
+        byte_index >= self.start && byte_index <= self.end
     }
 }
 
@@ -1031,33 +1677,33 @@ pub type TypedPattern = Pattern<Arc<Type>>;
 pub enum Pattern<Type> {
     Int {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Float {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     String {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     /// The creation of a variable.
     /// e.g. `assert [this_is_a_var, .._] = x`
-    Var {
+    Variable {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         type_: Type,
     },
 
-    /// A reference to a variable in a bit string. This is always a variable
+    /// A reference to a variable in a bit array. This is always a variable
     /// being used rather than a new variable being assigned.
     /// e.g. `assert <<y:size(somevar)>> = x`
     VarUsage {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         constructor: Option<ValueConstructor>,
         type_: Type,
     },
@@ -1065,7 +1711,7 @@ pub enum Pattern<Type> {
     /// A name given to a sub-pattern using the `as` keyword.
     /// e.g. `assert #(1, [_, _] as the_list) = x`
     Assign {
-        name: SmolStr,
+        name: EcoString,
         location: SrcSpan,
         pattern: Box<Self>,
     },
@@ -1073,7 +1719,7 @@ pub enum Pattern<Type> {
     /// A pattern that binds to any value but does not assign a variable.
     /// Always starts with an underscore.
     Discard {
-        name: SmolStr,
+        name: EcoString,
         location: SrcSpan,
         type_: Type,
     },
@@ -1088,11 +1734,11 @@ pub enum Pattern<Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
         arguments: Vec<CallArg<Self>>,
-        module: Option<SmolStr>,
+        module: Option<(EcoString, SrcSpan)>,
         constructor: Inferred<PatternConstructor>,
-        with_spread: bool,
+        spread: Option<SrcSpan>,
         type_: Type,
     },
 
@@ -1101,20 +1747,27 @@ pub enum Pattern<Type> {
         elems: Vec<Self>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
-        segments: Vec<BitStringSegment<Self, Type>>,
+        segments: Vec<BitArraySegment<Self, Type>>,
     },
 
     // "prefix" <> variable
-    Concatenate {
+    StringPrefix {
         location: SrcSpan,
         left_location: SrcSpan,
-        left_side_assignment: Option<(SmolStr, SrcSpan)>,
+        left_side_assignment: Option<(EcoString, SrcSpan)>,
         right_location: SrcSpan,
-        left_side_string: SmolStr,
+        left_side_string: EcoString,
         /// The variable on the right hand side of the `<>`.
         right_side_assignment: AssignName,
+    },
+
+    /// A placeholder pattern used to allow module analysis to continue
+    /// even when there are type errors. Should never end up in generated code.
+    Invalid {
+        location: SrcSpan,
+        type_: Type,
     },
 }
 
@@ -1126,21 +1779,21 @@ impl Default for Inferred<()> {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignName {
-    Variable(SmolStr),
-    Discard(SmolStr),
+    Variable(EcoString),
+    Discard(EcoString),
 }
 
 impl AssignName {
-    pub fn name(&self) -> &str {
+    pub fn name(&self) -> &EcoString {
         match self {
             AssignName::Variable(name) | AssignName::Discard(name) => name,
         }
     }
 
-    pub fn to_arg_names(self) -> ArgNames {
+    pub fn to_arg_names(self, location: SrcSpan) -> ArgNames {
         match self {
-            AssignName::Variable(name) => ArgNames::Named { name },
-            AssignName::Discard(name) => ArgNames::Discard { name },
+            AssignName::Variable(name) => ArgNames::Named { name, location },
+            AssignName::Discard(name) => ArgNames::Discard { name, location },
         }
     }
 
@@ -1155,9 +1808,11 @@ impl AssignName {
 impl<A> Pattern<A> {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Pattern::Assign { pattern, .. } => pattern.location(),
+            Pattern::Assign {
+                pattern, location, ..
+            } => SrcSpan::new(pattern.location().start, location.end),
             Pattern::Int { location, .. }
-            | Pattern::Var { location, .. }
+            | Pattern::Variable { location, .. }
             | Pattern::VarUsage { location, .. }
             | Pattern::List { location, .. }
             | Pattern::Float { location, .. }
@@ -1165,8 +1820,9 @@ impl<A> Pattern<A> {
             | Pattern::String { location, .. }
             | Pattern::Tuple { location, .. }
             | Pattern::Constructor { location, .. }
-            | Pattern::Concatenate { location, .. }
-            | Pattern::BitString { location, .. } => *location,
+            | Pattern::StringPrefix { location, .. }
+            | Pattern::BitArray { location, .. }
+            | Pattern::Invalid { location, .. } => *location,
         }
     }
 
@@ -1184,14 +1840,15 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
-            | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. } => None,
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.definition_location(),
         }
@@ -1202,14 +1859,15 @@ impl TypedPattern {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
             | Pattern::List { .. }
             | Pattern::Tuple { .. }
-            | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. } => None,
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => None,
 
             Pattern::Constructor { constructor, .. } => constructor.get_documentation(),
         }
@@ -1220,13 +1878,14 @@ impl TypedPattern {
             Pattern::Int { .. } => type_::int(),
             Pattern::Float { .. } => type_::float(),
             Pattern::String { .. } => type_::string(),
-            Pattern::BitString { .. } => type_::bit_string(),
-            Pattern::Concatenate { .. } => type_::string(),
+            Pattern::BitArray { .. } => type_::bits(),
+            Pattern::StringPrefix { .. } => type_::string(),
 
-            Pattern::Var { type_, .. }
+            Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }
             | Pattern::VarUsage { type_, .. }
-            | Pattern::Constructor { type_, .. } => type_.clone(),
+            | Pattern::Constructor { type_, .. }
+            | Pattern::Invalid { type_, .. } => type_.clone(),
 
             Pattern::Assign { pattern, .. } => pattern.type_(),
 
@@ -1241,20 +1900,37 @@ impl TypedPattern {
             return None;
         }
 
+        if let Pattern::Variable { name, .. } = self {
+            // For pipes the pattern can't be pointed to
+            if name.as_str().eq(PIPE_VARIABLE) {
+                return None;
+            }
+        }
+
         match self {
             Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Var { .. }
+            | Pattern::Variable { .. }
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
-            | Pattern::BitString { .. }
-            | Pattern::Concatenate { .. } => Some(Located::Pattern(self)),
+            | Pattern::BitArray { .. }
+            | Pattern::StringPrefix { .. }
+            | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
-            Pattern::Constructor { arguments, .. } => {
-                arguments.iter().find_map(|arg| arg.find_node(byte_index))
-            }
+            Pattern::Constructor {
+                arguments, spread, ..
+            } => match spread {
+                Some(spread_location) if spread_location.contains(byte_index) => {
+                    Some(Located::PatternSpread {
+                        spread_location: *spread_location,
+                        arguments,
+                    })
+                }
+
+                Some(_) | None => arguments.iter().find_map(|arg| arg.find_node(byte_index)),
+            },
             Pattern::List { elements, tail, .. } => elements
                 .iter()
                 .find_map(|p| p.find_node(byte_index))
@@ -1276,48 +1952,52 @@ pub enum AssignmentKind {
     // let x = ...
     Let,
     // let assert x = ...
-    Assert,
+    Assert { location: SrcSpan },
 }
 
 impl AssignmentKind {
-    pub(crate) fn performs_exhaustiveness_check(&self) -> bool {
+    /// Returns `true` if the assignment kind is [`Assert`].
+    ///
+    /// [`Assert`]: AssignmentKind::Assert
+    #[must_use]
+    pub fn is_assert(&self) -> bool {
         match self {
-            AssignmentKind::Let => true,
-            AssignmentKind::Assert => false,
+            Self::Assert { .. } => true,
+            Self::Let => false,
         }
     }
 }
 
-// BitStrings
+// BitArrays
 
-pub type UntypedExprBitStringSegment = BitStringSegment<UntypedExpr, ()>;
-pub type TypedExprBitStringSegment = BitStringSegment<TypedExpr, Arc<Type>>;
+pub type UntypedExprBitArraySegment = BitArraySegment<UntypedExpr, ()>;
+pub type TypedExprBitArraySegment = BitArraySegment<TypedExpr, Arc<Type>>;
 
-pub type UntypedConstantBitStringSegment = BitStringSegment<UntypedConstant, ()>;
-pub type TypedConstantBitStringSegment = BitStringSegment<TypedConstant, Arc<Type>>;
+pub type UntypedConstantBitArraySegment = BitArraySegment<UntypedConstant, ()>;
+pub type TypedConstantBitArraySegment = BitArraySegment<TypedConstant, Arc<Type>>;
 
-pub type UntypedPatternBitStringSegment = BitStringSegment<UntypedPattern, ()>;
-pub type TypedPatternBitStringSegment = BitStringSegment<TypedPattern, Arc<Type>>;
+pub type UntypedPatternBitArraySegment = BitArraySegment<UntypedPattern, ()>;
+pub type TypedPatternBitArraySegment = BitArraySegment<TypedPattern, Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct BitStringSegment<Value, Type> {
+pub struct BitArraySegment<Value, Type> {
     pub location: SrcSpan,
     pub value: Box<Value>,
-    pub options: Vec<BitStringSegmentOption<Value>>,
+    pub options: Vec<BitArrayOption<Value>>,
     pub type_: Type,
 }
 
-impl TypedExprBitStringSegment {
+impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
     }
 }
 
-pub type TypedConstantBitStringSegmentOption = BitStringSegmentOption<TypedConstant>;
+pub type TypedConstantBitArraySegmentOption = BitArrayOption<TypedConstant>;
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub enum BitStringSegmentOption<Value> {
-    Binary {
+pub enum BitArrayOption<Value> {
+    Bytes {
         location: SrcSpan,
     },
 
@@ -1329,7 +2009,7 @@ pub enum BitStringSegmentOption<Value> {
         location: SrcSpan,
     },
 
-    BitString {
+    Bits {
         location: SrcSpan,
     },
 
@@ -1389,60 +2069,60 @@ pub enum BitStringSegmentOption<Value> {
     },
 }
 
-impl<A> BitStringSegmentOption<A> {
+impl<A> BitArrayOption<A> {
     pub fn value(&self) -> Option<&A> {
         match self {
-            BitStringSegmentOption::Size { value, .. } => Some(value),
+            BitArrayOption::Size { value, .. } => Some(value),
             _ => None,
         }
     }
 
     pub fn location(&self) -> SrcSpan {
         match self {
-            BitStringSegmentOption::Binary { location }
-            | BitStringSegmentOption::Int { location }
-            | BitStringSegmentOption::Float { location }
-            | BitStringSegmentOption::BitString { location }
-            | BitStringSegmentOption::Utf8 { location }
-            | BitStringSegmentOption::Utf16 { location }
-            | BitStringSegmentOption::Utf32 { location }
-            | BitStringSegmentOption::Utf8Codepoint { location }
-            | BitStringSegmentOption::Utf16Codepoint { location }
-            | BitStringSegmentOption::Utf32Codepoint { location }
-            | BitStringSegmentOption::Signed { location }
-            | BitStringSegmentOption::Unsigned { location }
-            | BitStringSegmentOption::Big { location }
-            | BitStringSegmentOption::Little { location }
-            | BitStringSegmentOption::Native { location }
-            | BitStringSegmentOption::Size { location, .. }
-            | BitStringSegmentOption::Unit { location, .. } => *location,
+            BitArrayOption::Bytes { location }
+            | BitArrayOption::Int { location }
+            | BitArrayOption::Float { location }
+            | BitArrayOption::Bits { location }
+            | BitArrayOption::Utf8 { location }
+            | BitArrayOption::Utf16 { location }
+            | BitArrayOption::Utf32 { location }
+            | BitArrayOption::Utf8Codepoint { location }
+            | BitArrayOption::Utf16Codepoint { location }
+            | BitArrayOption::Utf32Codepoint { location }
+            | BitArrayOption::Signed { location }
+            | BitArrayOption::Unsigned { location }
+            | BitArrayOption::Big { location }
+            | BitArrayOption::Little { location }
+            | BitArrayOption::Native { location }
+            | BitArrayOption::Size { location, .. }
+            | BitArrayOption::Unit { location, .. } => *location,
         }
     }
 
-    pub fn label(&self) -> SmolStr {
+    pub fn label(&self) -> EcoString {
         match self {
-            BitStringSegmentOption::Binary { .. } => "binary".into(),
-            BitStringSegmentOption::Int { .. } => "int".into(),
-            BitStringSegmentOption::Float { .. } => "float".into(),
-            BitStringSegmentOption::BitString { .. } => "bit_string".into(),
-            BitStringSegmentOption::Utf8 { .. } => "utf8".into(),
-            BitStringSegmentOption::Utf16 { .. } => "utf16".into(),
-            BitStringSegmentOption::Utf32 { .. } => "utf32".into(),
-            BitStringSegmentOption::Utf8Codepoint { .. } => "utf8_codepoint".into(),
-            BitStringSegmentOption::Utf16Codepoint { .. } => "utf16_codepoint".into(),
-            BitStringSegmentOption::Utf32Codepoint { .. } => "utf32_codepoint".into(),
-            BitStringSegmentOption::Signed { .. } => "signed".into(),
-            BitStringSegmentOption::Unsigned { .. } => "unsigned".into(),
-            BitStringSegmentOption::Big { .. } => "big".into(),
-            BitStringSegmentOption::Little { .. } => "little".into(),
-            BitStringSegmentOption::Native { .. } => "native".into(),
-            BitStringSegmentOption::Size { .. } => "size".into(),
-            BitStringSegmentOption::Unit { .. } => "unit".into(),
+            BitArrayOption::Bytes { .. } => "bytes".into(),
+            BitArrayOption::Int { .. } => "int".into(),
+            BitArrayOption::Float { .. } => "float".into(),
+            BitArrayOption::Bits { .. } => "bits".into(),
+            BitArrayOption::Utf8 { .. } => "utf8".into(),
+            BitArrayOption::Utf16 { .. } => "utf16".into(),
+            BitArrayOption::Utf32 { .. } => "utf32".into(),
+            BitArrayOption::Utf8Codepoint { .. } => "utf8_codepoint".into(),
+            BitArrayOption::Utf16Codepoint { .. } => "utf16_codepoint".into(),
+            BitArrayOption::Utf32Codepoint { .. } => "utf32_codepoint".into(),
+            BitArrayOption::Signed { .. } => "signed".into(),
+            BitArrayOption::Unsigned { .. } => "unsigned".into(),
+            BitArrayOption::Big { .. } => "big".into(),
+            BitArrayOption::Little { .. } => "little".into(),
+            BitArrayOption::Native { .. } => "native".into(),
+            BitArrayOption::Size { .. } => "size".into(),
+            BitArrayOption::Unit { .. } => "unit".into(),
         }
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TodoKind {
     Keyword,
     EmptyFunction,
@@ -1451,11 +2131,11 @@ pub enum TodoKind {
 
 #[derive(Debug, Default)]
 pub struct GroupedStatements {
-    pub functions: Vec<Function<(), UntypedExpr>>,
+    pub functions: Vec<UntypedFunction>,
     pub constants: Vec<UntypedModuleConstant>,
-    pub custom_types: Vec<CustomType<()>>,
-    pub imports: Vec<Import<()>>,
-    pub type_aliases: Vec<TypeAlias<()>>,
+    pub custom_types: Vec<UntypedCustomType>,
+    pub imports: Vec<UntypedImport>,
+    pub type_aliases: Vec<UntypedTypeAlias>,
 }
 
 impl GroupedStatements {
@@ -1517,6 +2197,14 @@ impl<T, E> Statement<T, E> {
     pub fn is_expression(&self) -> bool {
         matches!(self, Self::Expression(..))
     }
+
+    #[must_use]
+    pub(crate) fn is_use(&self) -> bool {
+        match self {
+            Self::Use(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl UntypedStatement {
@@ -1545,6 +2233,14 @@ impl UntypedStatement {
 }
 
 impl TypedStatement {
+    pub fn is_println(&self) -> bool {
+        match self {
+            Statement::Expression(e) => e.is_println(),
+            Statement::Assignment(_) => false,
+            Statement::Use(_) => false,
+        }
+    }
+
     pub fn is_non_pipe_expression(&self) -> bool {
         match self {
             Statement::Expression(expression) => !expression.is_pipeline(),
@@ -1613,6 +2309,11 @@ pub type UntypedAssignment = Assignment<(), UntypedExpr>;
 
 impl TypedAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        if let Some(annotation) = &self.annotation {
+            if let Some(l) = annotation.find_node(byte_index, self.pattern.type_()) {
+                return Some(l);
+            }
+        }
         self.pattern
             .find_node(byte_index)
             .or_else(|| self.value.find_node(byte_index))

@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 126
+expression: "\nfn go() {\n  <<256:16-big>>\n}\n"
+---
+import { toBitArray, sizedInt } from "../gleam.mjs";
+
+function go() {
+  return toBitArray([sizedInt(256, 16, true)]);
+}

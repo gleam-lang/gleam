@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\npub fn main() {\n  case <<>> {\n    <<\"a\", \"b\", _:bytes>> -> 1\n    _ -> 2\n  }\n}"
+---
+import { toBitArray } from "../gleam.mjs";
+
+export function main() {
+  let $ = toBitArray([]);
+  if ($.byteAt(0) === 0x61 && $.byteAt(1) === 0x62 && $.length >= 2) {
+    return 1;
+  } else {
+    return 2;
+  }
+}

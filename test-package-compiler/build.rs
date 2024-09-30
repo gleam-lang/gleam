@@ -15,7 +15,8 @@ pub fn main() {
         .map(|entry| entry.unwrap().file_name().into_string().unwrap())
         .collect();
     names.sort();
-    for name in names.into_iter() {
+
+    for name in names {
         let path = cases.join(&name);
         let path = path.to_str().unwrap().replace('\\', "/");
         module.push_str(&format!(
@@ -23,12 +24,11 @@ pub fn main() {
 #[rustfmt::skip]
 #[test]
 fn {name}() {{
-    let output =
-        crate::prepare("{path}");
+    let output = crate::prepare("{path}");
     insta::assert_snapshot!(
         "{name}",
         output,
-        "{path}"
+        "{path}",
     );
 }}
 "#

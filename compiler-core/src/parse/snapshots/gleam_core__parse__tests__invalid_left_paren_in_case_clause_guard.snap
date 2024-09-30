@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nlet my_string = \"hello\"\ncase my_string {\n    _ if string.length( > 2 -> io.debug(\"doesn't work')\n}"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:23
+  │
+4 │     _ if string.length( > 2 -> io.debug("doesn't work')
+  │                       ^ I was not expecting this
+
+Found `(`, expected one of: 
+- `->`
+Hint: Did you mean to wrap a multi line clause in curly braces?

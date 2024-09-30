@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 216
 expression: 1 > 1.0
 ---
 error: Type mismatch
@@ -18,5 +17,3 @@ But this argument has this type:
     Float
 
 Hint: the >. operator can be used with Floats
-
-

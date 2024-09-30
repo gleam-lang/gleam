@@ -1,13 +1,14 @@
-use smol_str::SmolStr;
+use ecow::EcoString;
 
 use crate::{
     ast::{
-        Constant, SrcSpan, TypedConstant, TypedConstantBitStringSegment,
-        TypedConstantBitStringSegmentOption,
+        Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
+        TypedConstantBitArraySegmentOption,
     },
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, RecordAccessor, Type, TypeConstructor, TypeVar,
+        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
+        Type, TypeConstructor, TypeValueConstructor, TypeVar, TypeVariantConstructors,
         ValueConstructor, ValueConstructorVariant,
     },
 };
@@ -39,13 +40,27 @@ impl<'a> ModuleEncoder<'a> {
         let mut module = message.init_root::<module::Builder<'_>>();
         module.set_name(&self.data.name);
         module.set_package(&self.data.package);
+        module.set_src_path(self.data.src_path.as_str());
+        module.set_is_internal(self.data.is_internal);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
+        self.set_line_numbers(&mut module);
+        self.set_version(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
+    }
+
+    fn set_line_numbers(&mut self, module: &mut module::Builder<'_>) {
+        let mut line_numbers = module.reborrow().init_line_numbers();
+        line_numbers.set_length(self.data.line_numbers.length);
+        let line_starts =
+            line_numbers.init_line_starts(self.data.line_numbers.line_starts.len() as u32);
+        for (i, l) in self.data.line_numbers.line_starts.iter().enumerate() {
+            line_starts.reborrow().set(i as u32, *l);
+        }
     }
 
     fn set_module_accessors(&mut self, module: &mut module::Builder<'_>) {
@@ -98,14 +113,31 @@ impl<'a> ModuleEncoder<'a> {
         tracing::trace!("Writing module metadata types to constructors mapping");
         let mut types_constructors = module
             .reborrow()
-            .init_types_constructors(self.data.types_constructors.len() as u32);
-        for (i, (name, constructors)) in self.data.types_constructors.iter().enumerate() {
+            .init_types_constructors(self.data.types_value_constructors.len() as u32);
+        for (i, (name, data)) in self.data.types_value_constructors.iter().enumerate() {
             let mut property = types_constructors.reborrow().get(i as u32);
             property.set_key(name);
-            self.build_types_constructors_mapping(
-                property.initn_value(constructors.len() as u32),
-                constructors,
-            )
+            self.build_type_variant_constructors(property.init_value(), data)
+        }
+    }
+
+    fn build_type_variant_constructors(
+        &mut self,
+        mut builder: types_variant_constructors::Builder<'_>,
+        data: &TypeVariantConstructors,
+    ) {
+        {
+            let mut builder = builder
+                .reborrow()
+                .init_type_parameters_ids(data.type_parameters_ids.len() as u32);
+            for (i, id) in data.type_parameters_ids.iter().enumerate() {
+                let id = self.get_or_insert_type_var_id(*id);
+                builder.set(i as u32, id as u16);
+            }
+        }
+        let mut builder = builder.init_variants(data.variants.len() as u32);
+        for (i, constructor) in data.variants.iter().enumerate() {
+            self.build_type_value_constructor(builder.reborrow().get(i as u32), constructor);
         }
     }
 
@@ -119,31 +151,63 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn set_version(&mut self, module: &mut module::Builder<'_>) {
+        let mut version = module.reborrow().init_required_version();
+        version.set_major(self.data.minimum_required_version.major);
+        version.set_minor(self.data.minimum_required_version.minor);
+        version.set_patch(self.data.minimum_required_version.patch);
+    }
+
     fn build_type_constructor(
         &mut self,
         mut builder: type_constructor::Builder<'_>,
         constructor: &TypeConstructor,
     ) {
-        builder.set_public(constructor.public);
         builder.set_module(&constructor.module);
+        builder.set_deprecated(match &constructor.deprecation {
+            Deprecation::NotDeprecated => "",
+            Deprecation::Deprecated { message } => message,
+        });
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
         let type_builder = builder.reborrow().init_type();
-        self.build_type(type_builder, &constructor.typ);
+        self.build_type(type_builder, &constructor.type_);
         self.build_types(
             builder
                 .reborrow()
                 .init_parameters(constructor.parameters.len() as u32),
             &constructor.parameters,
         );
+        self.build_src_span(builder.reborrow().init_origin(), constructor.origin);
+        builder.set_documentation(
+            constructor
+                .documentation
+                .as_ref()
+                .map(EcoString::as_str)
+                .unwrap_or_default(),
+        );
     }
 
-    fn build_types_constructors_mapping(
+    fn build_type_value_constructor(
         &mut self,
-        mut builder: capnp::text_list::Builder<'_>,
-        constructors: &[SmolStr],
+        mut builder: type_value_constructor::Builder<'_>,
+        constructor: &TypeValueConstructor,
     ) {
-        for (i, s) in constructors.iter().enumerate() {
-            builder.set(i as u32, s);
+        builder.set_name(&constructor.name);
+        let mut builder = builder.init_parameters(constructor.parameters.len() as u32);
+        for (i, parameter) in constructor.parameters.iter().enumerate() {
+            self.build_type_value_constructor_parameter(
+                builder.reborrow().get(i as u32),
+                parameter,
+            );
         }
+    }
+
+    fn build_type_value_constructor_parameter(
+        &mut self,
+        builder: type_value_constructor_parameter::Builder<'_>,
+        parameter: &type_::TypeValueConstructorField,
+    ) {
+        self.build_type(builder.init_type(), parameter.type_.as_ref());
     }
 
     fn build_value_constructor(
@@ -151,13 +215,34 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: value_constructor::Builder<'_>,
         constructor: &ValueConstructor,
     ) {
-        builder.set_public(constructor.public);
         builder.set_deprecated(match &constructor.deprecation {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
+
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
         self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
+    }
+
+    fn build_publicity(&mut self, mut builder: publicity::Builder<'_>, publicity: Publicity) {
+        match publicity {
+            Publicity::Public => builder.set_public(()),
+            Publicity::Private => builder.set_private(()),
+            Publicity::Internal {
+                attribute_location: None,
+            } => {
+                let mut builder = builder.init_internal();
+                builder.set_none(());
+            }
+            Publicity::Internal {
+                attribute_location: Some(location),
+            } => {
+                let builder = builder.init_internal();
+                let builder = builder.init_some();
+                self.build_src_span(builder, location);
+            }
+        }
     }
 
     fn build_src_span(&mut self, mut builder: src_span::Builder<'_>, span: SrcSpan) {
@@ -184,12 +269,14 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 module,
                 documentation: doc,
+                implementations,
             } => {
                 let mut builder = builder.init_module_constant();
-                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
+                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
+                self.build_implementations(builder.init_implementations(), *implementations)
             }
 
             ValueConstructorVariant::Record {
@@ -199,14 +286,16 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 module,
                 constructors_count,
+                constructor_index,
                 documentation: doc,
             } => {
                 let mut builder = builder.init_record();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity);
-                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
+                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 builder.set_constructors_count(*constructors_count);
+                builder.set_constructor_index(*constructor_index);
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.init_location(), *location);
             }
@@ -218,14 +307,23 @@ impl<'a> ModuleEncoder<'a> {
                 name,
                 location,
                 documentation: doc,
+                implementations,
+                external_erlang,
+                external_javascript,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
-                builder.set_documentation(doc.as_ref().map(SmolStr::as_str).unwrap_or_default());
+                builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
+                self.build_external(builder.reborrow().init_external_erlang(), external_erlang);
+                self.build_external(
+                    builder.reborrow().init_external_javascript(),
+                    external_javascript,
+                );
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
-                self.build_src_span(builder.init_location(), *location);
+                self.build_src_span(builder.reborrow().init_location(), *location);
+                self.build_implementations(builder.init_implementations(), *implementations);
             }
         }
     }
@@ -261,23 +359,27 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_constants(builder.init_tuple(elements.len() as u32), elements)
             }
 
-            Constant::List { elements, typ, .. } => {
+            Constant::List {
+                elements, type_, ..
+            } => {
                 let mut builder = builder.init_list();
                 self.build_constants(
                     builder.reborrow().init_elements(elements.len() as u32),
                     elements,
                 );
-                self.build_type(builder.init_type(), typ);
+                self.build_type(builder.init_type(), type_);
             }
 
-            Constant::BitString { segments, .. } => {
-                let mut builder = builder.init_bit_string(segments.len() as u32);
+            Constant::BitArray { segments, .. } => {
+                let mut builder = builder.init_bit_array(segments.len() as u32);
                 for (i, segment) in segments.iter().enumerate() {
-                    self.build_bit_string_segment(builder.reborrow().get(i as u32), segment);
+                    self.build_bit_array_segment(builder.reborrow().get(i as u32), segment);
                 }
             }
 
-            Constant::Record { args, tag, typ, .. } => {
+            Constant::Record {
+                args, tag, type_, ..
+            } => {
                 let mut builder = builder.init_record();
                 {
                     let mut builder = builder.reborrow().init_args(args.len() as u32);
@@ -286,29 +388,39 @@ impl<'a> ModuleEncoder<'a> {
                     }
                 }
                 builder.reborrow().set_tag(tag);
-                self.build_type(builder.reborrow().init_typ(), typ);
+                self.build_type(builder.reborrow().init_type(), type_);
             }
 
             Constant::Var {
                 module,
                 name,
-                typ,
+                type_,
                 constructor,
                 ..
             } => {
                 let mut builder = builder.init_var();
                 match module {
-                    Some(name) => builder.set_module(name),
+                    Some((name, _)) => builder.set_module(name),
                     None => builder.set_module(""),
                 };
                 builder.set_name(name);
-                self.build_type(builder.reborrow().init_typ(), typ);
+                self.build_type(builder.reborrow().init_type(), type_);
                 self.build_value_constructor(
                     builder.reborrow().init_constructor(),
                     constructor
                         .as_ref()
                         .expect("This is guaranteed to hold a value."),
                 );
+            }
+
+            Constant::StringConcatenation { right, left, .. } => {
+                let mut builder = builder.init_string_concatenation();
+                self.build_constant(builder.reborrow().init_right(), right);
+                self.build_constant(builder.reborrow().init_left(), left);
+            }
+
+            Constant::Invalid { .. } => {
+                panic!("invalid constants should not reach code generation")
             }
         }
     }
@@ -323,10 +435,10 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
-    fn build_bit_string_segment(
+    fn build_bit_array_segment(
         &mut self,
-        mut builder: bit_string_segment::Builder<'_>,
-        segment: &TypedConstantBitStringSegment,
+        mut builder: bit_array_segment::Builder<'_>,
+        segment: &TypedConstantBitArraySegment,
     ) {
         self.build_constant(builder.reborrow().init_value(), &segment.value);
         {
@@ -334,23 +446,23 @@ impl<'a> ModuleEncoder<'a> {
                 .reborrow()
                 .init_options(segment.options.len() as u32);
             for (i, option) in segment.options.iter().enumerate() {
-                self.build_bit_string_segment_option(builder.reborrow().get(i as u32), option);
+                self.build_bit_array_segment_option(builder.reborrow().get(i as u32), option);
             }
         }
         self.build_type(builder.init_type(), &segment.type_);
     }
 
-    fn build_bit_string_segment_option(
+    fn build_bit_array_segment_option(
         &mut self,
-        mut builder: bit_string_segment_option::Builder<'_>,
-        option: &TypedConstantBitStringSegmentOption,
+        mut builder: bit_array_segment_option::Builder<'_>,
+        option: &TypedConstantBitArraySegmentOption,
     ) {
-        use crate::ast::TypedConstantBitStringSegmentOption as Opt;
+        use crate::ast::TypedConstantBitArraySegmentOption as Opt;
         match option {
-            Opt::Binary { .. } => builder.set_binary(()),
+            Opt::Bytes { .. } => builder.set_bytes(()),
             Opt::Int { .. } => builder.set_integer(()),
             Opt::Float { .. } => builder.set_float(()),
-            Opt::BitString { .. } => builder.set_bitstring(()),
+            Opt::Bits { .. } => builder.set_bits(()),
             Opt::Utf8 { .. } => builder.set_utf8(()),
             Opt::Utf16 { .. } => builder.set_utf16(()),
             Opt::Utf32 { .. } => builder.set_utf32(()),
@@ -387,11 +499,16 @@ impl<'a> ModuleEncoder<'a> {
             }
 
             Type::Named {
-                name, args, module, ..
+                name,
+                args,
+                module,
+                package,
+                ..
             } => {
                 let mut app = builder.init_app();
                 app.set_name(name);
                 app.set_module(module);
+                app.set_package(package);
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 
@@ -400,8 +517,8 @@ impl<'a> ModuleEncoder<'a> {
                 elems,
             ),
 
-            Type::Var { type_: typ } => match typ.borrow().deref() {
-                TypeVar::Link { type_: typ } => self.build_type(builder, typ),
+            Type::Var { type_ } => match type_.borrow().deref() {
+                TypeVar::Link { type_ } => self.build_type(builder, type_),
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id } => {
                     self.build_type_var(builder.init_var(), *id)
                 }
@@ -420,7 +537,12 @@ impl<'a> ModuleEncoder<'a> {
     }
 
     fn build_type_var(&mut self, mut builder: schema::type_::var::Builder<'_>, id: u64) {
-        let serialised_id = match self.type_var_id_map.get(&id) {
+        let serialised_id = self.get_or_insert_type_var_id(id);
+        builder.set_id(serialised_id);
+    }
+
+    fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
+        match self.type_var_id_map.get(&id) {
             Some(&id) => id,
             None => {
                 let new_id = self.next_type_var_id;
@@ -428,7 +550,33 @@ impl<'a> ModuleEncoder<'a> {
                 let _ = self.type_var_id_map.insert(id, new_id);
                 new_id
             }
-        };
-        builder.set_id(serialised_id);
+        }
+    }
+
+    fn build_implementations(
+        &self,
+        mut builder: implementations::Builder<'_>,
+        implementations: Implementations,
+    ) {
+        builder.set_gleam(implementations.gleam);
+        builder.set_uses_erlang_externals(implementations.uses_erlang_externals);
+        builder.set_uses_javascript_externals(implementations.uses_javascript_externals);
+        builder.set_can_run_on_erlang(implementations.can_run_on_erlang);
+        builder.set_can_run_on_javascript(implementations.can_run_on_javascript);
+    }
+
+    fn build_external(
+        &self,
+        mut builder: option::Builder<'_, external::Owned>,
+        external: &Option<(EcoString, EcoString)>,
+    ) {
+        match external {
+            None => builder.set_none(()),
+            Some((module, function)) => {
+                let mut builder = builder.init_some();
+                builder.set_module(module);
+                builder.set_function(function);
+            }
+        }
     }
 }

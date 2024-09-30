@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: type Fancy_Bool = Bool
+---
+----- BEFORE ACTION
+type Fancy_Bool = Bool
+      ▔▔▔▔▔▔▔▔▔▔↑     
+
+
+----- AFTER ACTION
+type FancyBool = Bool

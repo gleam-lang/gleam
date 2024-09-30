@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 57
 expression: "./cases/erlang_empty"
 ---
 //// /out/lib/the_package/_gleam_artefacts/empty.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.cache_meta
-<29 byte binary>
+<49 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/empty.erl
 -module(empty).
@@ -21,6 +20,3 @@ expression: "./cases/erlang_empty"
     {modules, [empty]},
     {registered, []}
 ]}.
-
-
-

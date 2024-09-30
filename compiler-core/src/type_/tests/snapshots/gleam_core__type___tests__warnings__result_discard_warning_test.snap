@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn wibble() { Ok(5) }\npub fn main() {\n  wibble()\n  5\n}"
+---
+warning: Unused result value
+  ┌─ /src/warning/wrn.gleam:4:3
+  │
+4 │   wibble()
+  │   ^^^^^^^^ The Result value created here is unused
+
+Hint: If you are sure you don't need it you can assign it to `_`.

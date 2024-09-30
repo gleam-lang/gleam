@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn wibble(arg arg: Int) -> Int { arg }\n\npub fn main() {\n  let arg = 1\n  wibble(wibble(arg: arg))\n}\n "
+---
+----- BEFORE ACTION
+
+pub fn wibble(arg arg: Int) -> Int { arg }
+
+pub fn main() {
+       ▔▔▔▔▔▔▔▔
+  let arg = 1
+▔▔▔▔▔▔▔▔▔▔▔▔▔
+  wibble(wibble(arg: arg))
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+ 
+
+
+----- AFTER ACTION
+
+pub fn wibble(arg arg: Int) -> Int { arg }
+
+pub fn main() {
+  let arg = 1
+  wibble(wibble(arg: ))
+}

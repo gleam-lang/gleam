@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 291
 expression: "fn() -> Int { 2.0 }"
 ---
 error: Type mismatch
@@ -19,4 +18,3 @@ Expected type:
 Found type:
 
     Float
-

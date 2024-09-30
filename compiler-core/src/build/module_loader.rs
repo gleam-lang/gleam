@@ -1,33 +1,24 @@
 #[cfg(test)]
 mod tests;
 
-use std::{collections::HashMap, time::SystemTime};
+use std::{collections::HashSet, time::SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
+use ecow::EcoString;
 use serde::{Deserialize, Serialize};
-use smol_str::SmolStr;
 
 use super::{
     package_compiler::{module_name, CacheMetadata, CachedModule, Input, UncompiledModule},
     package_loader::CodegenRequired,
-    Mode, Origin, Target,
+    Mode, Origin, SourceFingerprint, Target,
 };
 use crate::{
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
-    warning::WarningEmitter,
+    warning::{TypeWarningEmitter, WarningEmitter},
     Error, Result,
 };
-
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
-pub(crate) struct SourceFingerprint(u64);
-
-impl SourceFingerprint {
-    pub(crate) fn new(source: &str) -> Self {
-        SourceFingerprint(xxhash_rust::xxh3::xxh3_64(source.as_bytes()))
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct ModuleLoader<'a, IO> {
@@ -36,10 +27,13 @@ pub(crate) struct ModuleLoader<'a, IO> {
     pub mode: Mode,
     pub target: Target,
     pub codegen: CodegenRequired,
-    pub package_name: &'a SmolStr,
+    pub package_name: &'a EcoString,
     pub source_directory: &'a Utf8Path,
     pub artefact_directory: &'a Utf8Path,
     pub origin: Origin,
+    /// The set of modules that have had partial compilation done since the last
+    /// successful compilation.
+    pub incomplete_modules: &'a HashSet<EcoString>,
 }
 
 impl<'a, IO> ModuleLoader<'a, IO>
@@ -82,6 +76,11 @@ where
             if meta.fingerprint != SourceFingerprint::new(&source_module.code) {
                 tracing::debug!(?name, "cache_stale");
                 return Ok(Input::New(source_module));
+            } else if self.mode == Mode::Lsp && self.incomplete_modules.contains(&name) {
+                // Since the lsp can have valid but incorrect intermediate code states between
+                // successful compilations, we need to invalidate the cache even if the fingerprint matches
+                tracing::debug!(?name, "cache_stale for lsp");
+                return Ok(Input::New(source_module));
             }
         }
 
@@ -115,59 +114,54 @@ where
     fn read_source(
         &self,
         path: Utf8PathBuf,
-        name: SmolStr,
+        name: EcoString,
         mtime: SystemTime,
     ) -> Result<UncompiledModule, Error> {
         read_source(
             self.io.clone(),
-            self.warnings,
             self.target,
             self.origin,
             path,
             name,
             self.package_name.clone(),
             mtime,
+            self.warnings.clone(),
         )
     }
 
-    fn cached(&self, name: SmolStr, meta: CacheMetadata) -> CachedModule {
+    fn cached(&self, name: EcoString, meta: CacheMetadata) -> CachedModule {
         CachedModule {
             dependencies: meta.dependencies,
             source_path: self.source_directory.join(format!("{}.gleam", name)),
             origin: self.origin,
             name,
+            line_numbers: meta.line_numbers,
         }
     }
 }
 
 pub(crate) fn read_source<IO>(
     io: IO,
-    warnings: &WarningEmitter,
     target: Target,
     origin: Origin,
     path: Utf8PathBuf,
-    name: SmolStr,
-    package_name: SmolStr,
+    name: EcoString,
+    package_name: EcoString,
     mtime: SystemTime,
+    emitter: WarningEmitter,
 ) -> Result<UncompiledModule>
 where
     IO: FileSystemReader + FileSystemWriter + CommandExecutor + Clone,
 {
-    let code: SmolStr = io.read(&path)?.into();
+    let code: EcoString = io.read(&path)?.into();
 
-    let parsed = crate::parse::parse_module(&code).map_err(|error| Error::Parse {
-        path: path.clone(),
-        src: code.clone(),
-        error,
-    })?;
-    for warning in parsed.warnings {
-        warnings.emit(crate::warning::Warning::Parse {
+    let parsed = crate::parse::parse_module(path.clone(), &code, &emitter).map_err(|error| {
+        Error::Parse {
             path: path.clone(),
             src: code.clone(),
-            warning,
-        });
-    }
-
+            error,
+        }
+    })?;
     let mut ast = parsed.module;
     let extra = parsed.extra;
     let dependencies = ast.dependencies(target);

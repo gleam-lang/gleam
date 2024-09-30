@@ -1,22 +1,30 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
-    build::{Codegen, Mode, Options, Package, Target},
+    analyse::TargetSupport,
+    build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
-    hex, paths,
-    paths::ProjectPaths,
+    docs::DocContext,
+    error::SmallVersion,
+    hex,
+    paths::{self, ProjectPaths},
     requirement::Requirement,
     Error, Result,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{io::Write, time::Instant};
+use std::{io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
 
 pub fn command(replace: bool, yes: bool) -> Result<()> {
-    PublishCommand::setup(replace, yes)?.run()
+    let command = PublishCommand::setup(replace, yes)?;
+
+    if let Some(mut command) = command {
+        command.run()?;
+    }
+    Ok(())
 }
 
 pub struct PublishCommand {
@@ -27,19 +35,34 @@ pub struct PublishCommand {
 }
 
 impl PublishCommand {
-    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Self> {
-        let paths = crate::project_paths_at_current_directory();
-        let config = crate::config::root_config()?;
+    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Option<Self>> {
+        let paths = crate::find_project_paths()?;
+        let mut config = crate::config::root_config()?;
+
+        let should_publish = check_for_gleam_prefix(&config, i_am_sure)?
+            && check_for_version_zero(&config, i_am_sure)?
+            && check_repo_url(&config, i_am_sure)?;
+
+        if !should_publish {
+            println!("Not publishing.");
+            std::process::exit(0);
+        }
+
         let Tarball {
             mut compile_result,
             data: package_tarball,
             src_files_added,
             generated_files_added,
-        } = do_build_hex_tarball(&paths, &config)?;
+        } = do_build_hex_tarball(&paths, &mut config)?;
+
+        check_for_name_squatting(&compile_result)?;
 
         // Build HTML documentation
-        let docs_tarball =
-            fs::create_tar_archive(docs::build_documentation(&config, &mut compile_result)?)?;
+        let docs_tarball = fs::create_tar_archive(docs::build_documentation(
+            &config,
+            &mut compile_result,
+            DocContext::HexPublish,
+        )?)?;
 
         // Ask user if this is correct
         if !generated_files_added.is_empty() {
@@ -50,27 +73,113 @@ impl PublishCommand {
         }
         println!("\nSource files:");
         for file in src_files_added.iter().sorted() {
-            println!("  - {}", file);
+            println!("  - {file}");
         }
         println!("\nName: {}", config.name);
         println!("Version: {}", config.version);
 
-        let should_publish = i_am_sure || {
-            let answer = cli::ask("\nDo you wish to publish this package? [y/n]")?;
-            answer == "y" || answer == "Y"
-        };
+        let should_publish = i_am_sure || cli::confirm("\nDo you wish to publish this package?")?;
         if !should_publish {
             println!("Not publishing.");
             std::process::exit(0);
         }
 
-        Ok(Self {
+        Ok(Some(Self {
             config,
             docs_tarball,
             package_tarball,
             replace,
-        })
+        }))
     }
+}
+
+fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
+    if package.modules.len() > 1 {
+        return Ok(());
+    }
+
+    let Some(module) = package.modules.first() else {
+        return Err(Error::HexPackageSquatting);
+    };
+
+    if module.dependencies.len() > 1 {
+        return Ok(());
+    }
+
+    let definitions = &module.ast.definitions;
+
+    if definitions.len() > 2 {
+        return Ok(());
+    }
+
+    let Some(main) = definitions.iter().find_map(|d| d.main_function()) else {
+        return Ok(());
+    };
+
+    if main.body.first().is_println() {
+        return Err(Error::HexPackageSquatting);
+    }
+
+    Ok(())
+}
+
+fn check_repo_url(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
+    let Some(url) = config.repository.url() else {
+        return Ok(true);
+    };
+
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let response = runtime.block_on(reqwest::get(&url)).map_err(Error::http)?;
+
+    if response.status().is_success() {
+        return Ok(true);
+    }
+
+    println!(
+        "The repository configuration in your `gleam.toml` file does not appear to be
+valid, {} returned status {}",
+        &url,
+        response.status()
+    );
+    let should_publish = i_am_sure || cli::confirm("\nDo you wish to continue?")?;
+    println!();
+    Ok(should_publish)
+}
+
+/// Ask for confirmation if the package name if a v0.x.x version
+fn check_for_version_zero(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
+    if config.version.major != 0 {
+        return Ok(true);
+    }
+
+    println!(
+        "You are about to publish a release that is below version 1.0.0.
+
+Semantic versioning doesn't apply to version 0.x.x releases, so your
+users will not be protected from breaking changes. This can result
+in a poor user experience where packages can break unexpectedly with
+updates that would normally be safe."
+    );
+    let should_publish = i_am_sure || cli::confirm("\nDo you wish to continue?")?;
+    println!();
+    Ok(should_publish)
+}
+
+/// Ask for confirmation if the package name if `gleam_*`
+fn check_for_gleam_prefix(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
+    if !config.name.starts_with("gleam_") || config.name.starts_with("gleam_community_") {
+        return Ok(true);
+    }
+
+    println!(
+        "You are about to publish a package with a name that starts with
+the prefix `gleam_`, which is for packages maintained by the Gleam
+core team.",
+    );
+    let should_publish =
+        i_am_sure || cli::confirm("\nAre you sure you want to use this package name?")?;
+    println!();
+    Ok(should_publish)
 }
 
 impl ApiKeyCommand for PublishCommand {
@@ -85,6 +194,7 @@ impl ApiKeyCommand for PublishCommand {
 
         runtime.block_on(hex::publish_package(
             std::mem::take(&mut self.package_tarball),
+            self.config.version.to_string(),
             api_key,
             hex_config,
             self.replace,
@@ -105,6 +215,23 @@ impl ApiKeyCommand for PublishCommand {
             "\nView your package at https://hex.pm/packages/{}",
             &self.config.name
         );
+
+        // Prompt the user to make a git tag if they have not.
+        let has_repo = self.config.repository.url().is_some();
+        let git = PathBuf::from(".git");
+        let version = format!("v{}", &self.config.version);
+        let git_tag = git.join("refs").join("tags").join(&version);
+        if has_repo && git.exists() && !git_tag.exists() {
+            println!(
+                "
+Please push a git tag for this release so source code links in the
+HTML documentation will work:
+
+    git tag {version}
+    git push origin {version}
+"
+            )
+        }
         Ok(())
     }
 }
@@ -116,29 +243,86 @@ struct Tarball {
     generated_files_added: Vec<(Utf8PathBuf, String)>,
 }
 
-pub fn build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Vec<u8>> {
+pub fn build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Result<Vec<u8>> {
     let Tarball { data, .. } = do_build_hex_tarball(paths, config)?;
     Ok(data)
 }
 
-fn do_build_hex_tarball(paths: &ProjectPaths, config: &PackageConfig) -> Result<Tarball> {
+fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Result<Tarball> {
     let target = config.target;
     check_config_for_publishing(config)?;
 
     // Reset the build directory so we know the state of the project
-    fs::delete_dir(&paths.build_directory_for_target(Mode::Prod, target))?;
+    fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, target))?;
 
     // Build the project to check that it is valid
     let built = build::main(
         Options {
+            root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
             mode: Mode::Prod,
             target: Some(target),
             codegen: Codegen::All,
+            compile: Compile::All,
+            no_print_progress: false,
         },
-        build::download_dependencies()?,
+        build::download_dependencies(cli::Reporter::new())?,
     )?;
 
+    let minimum_required_version = built.minimum_required_version();
+    match &config.gleam_version {
+        // If the package has no explicit `gleam` version in its `gleam.toml`
+        // then we want to add the automatically inferred one so we know it's
+        // correct and folks getting the package from Hex won't have unpleasant
+        // surprises if the author forgot to manualy write it down.
+        None => {
+            // If we're automatically adding the minimum required version
+            // constraint we want it to at least be `>= 1.0.0`, even if the
+            // inferred lower bound could be lower.
+            let minimum_required_version =
+                std::cmp::max(minimum_required_version, Version::new(1, 0, 0));
+            let inferred_version_range =
+                pubgrub::range::Range::higher_than(minimum_required_version);
+            config.gleam_version = Some(inferred_version_range);
+        }
+        // Otherwise we need to check that the annotated version range is
+        // correct and includes the minimum required version.
+        Some(gleam_version) => {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                if lowest_allowed_version < minimum_required_version {
+                    return Err(Error::CannotPublishWrongVersion {
+                        minimum_required_version: SmallVersion::from_hexpm(
+                            minimum_required_version,
+                        ),
+                        wrongfully_allowed_version: SmallVersion::from_hexpm(
+                            lowest_allowed_version,
+                        ),
+                    });
+                }
+            }
+        }
+    }
+
+    // If any of the modules in the package contain a todo then refuse to
+    // publish as the package is not yet finished.
+    let unfinished = built
+        .root_package
+        .modules
+        .iter()
+        .filter(|module| module.ast.type_info.contains_todo())
+        .map(|module| module.name.clone())
+        .sorted()
+        .collect_vec();
+    if !unfinished.is_empty() {
+        return Err(Error::CannotPublishTodo { unfinished });
+    }
+
+    // TODO: If any of the modules in the package contain a leaked internal type then
+    // refuse to publish as the package is not yet finished.
+    // We need to move aliases in to the type system first.
+    // context: https://discord.com/channels/768594524158427167/768594524158427170/1227250677734969386
+
+    // Collect all the files we want to include in the tarball
     let generated_files = match target {
         Target::Erlang => generated_erlang_files(paths, &built.root_package)?,
         Target::JavaScript => vec![],
@@ -381,7 +565,7 @@ impl<'a> ReleaseMetadata<'a> {
             r#"{{<<"name">>, <<"{name}">>}}.
 {{<<"app">>, <<"{name}">>}}.
 {{<<"version">>, <<"{version}">>}}.
-{{<<"description">>, <<"{description}">>}}.
+{{<<"description">>, <<"{description}"/utf8>>}}.
 {{<<"licenses">>, [{licenses}]}}.
 {{<<"build_tools">>, [{build_tools}]}}.
 {{<<"links">>, [{links}
@@ -454,7 +638,7 @@ fn release_metadata_as_erlang() {
     let meta = ReleaseMetadata {
         name: "myapp",
         version: &version,
-        description: "description goes here",
+        description: "description goes here 🌈",
         source_files: &[
             Utf8PathBuf::from("gleam.toml"),
             Utf8PathBuf::from("src/thingy.gleam"),
@@ -484,7 +668,7 @@ fn release_metadata_as_erlang() {
         r#"{<<"name">>, <<"myapp">>}.
 {<<"app">>, <<"myapp">>}.
 {<<"version">>, <<"1.2.3">>}.
-{<<"description">>, <<"description goes here">>}.
+{<<"description">>, <<"description goes here 🌈"/utf8>>}.
 {<<"licenses">>, [<<"MIT">>, <<"MPL-2.0">>]}.
 {<<"build_tools">>, [<<"gleam">>, <<"rebar3">>]}.
 {<<"links">>, [

@@ -11,11 +11,7 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
-use std::{collections::HashMap, ops::Deref, sync::Arc};
-
-use itertools::Itertools;
-use smol_str::SmolStr;
-
+use crate::ast::AssignName;
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
@@ -27,8 +23,11 @@ use crate::{
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
+use ecow::{eco_format, EcoString};
+use itertools::Itertools;
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{concat, import::Imports, line, lines, wrap_args, Output, INDENT};
+use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -38,7 +37,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
         return std::iter::once(
             std::char::from_u32((id % 26 + 65) as u32).expect("id_to_type_var 0"),
         )
-        .collect::<SmolStr>()
+        .collect::<EcoString>()
         .to_doc();
     }
     let mut name = vec![];
@@ -49,7 +48,7 @@ fn id_to_type_var(id: u64) -> Document<'static> {
     }
     name.push(std::char::from_u32((last_char % 26 + 64) as u32).expect("id_to_type_var 2"));
     name.reverse();
-    name.into_iter().collect::<SmolStr>().to_doc()
+    name.into_iter().collect::<EcoString>().to_doc()
 }
 
 fn name_with_generics<'a>(
@@ -79,26 +78,26 @@ fn name_with_generics<'a>(
 ///
 ///   Examples:
 ///     fn(a) -> String       // `a` is `any`
-///     fn() -> Result(a, b)  // `a` and `b` are `any`
+///     `fn()` -> Result(a, b)  // `a` and `b` are `any`
 ///     fn(a) -> a            // `a` is a generic
 fn collect_generic_usages<'a>(
     mut ids: HashMap<u64, u64>,
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> HashMap<u64, u64> {
-    for typ in types {
-        generic_ids(typ, &mut ids);
+    for type_ in types {
+        generic_ids(type_, &mut ids);
     }
     ids
 }
 
 fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
     match type_ {
-        Type::Var { type_: typ } => match typ.borrow().deref() {
+        Type::Var { type_ } => match type_.borrow().deref() {
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                 let count = ids.entry(*id).or_insert(0);
                 *count += 1;
             }
-            TypeVar::Link { type_: typ } => generic_ids(typ, ids),
+            TypeVar::Link { type_ } => generic_ids(type_, ids),
         },
         Type::Named { args, .. } => {
             for arg in args {
@@ -123,10 +122,7 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
 ///
 fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            elems.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(elems, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("[", "]")
@@ -138,10 +134,7 @@ where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            args.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(args, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("<", ">")
@@ -151,7 +144,7 @@ where
 /// Returns a name that can be used as a TypeScript type name. If there is a
 /// naming clash a '_' will be appended.
 ///
-fn ts_safe_type_name(mut name: String) -> String {
+fn ts_safe_type_name(mut name: String) -> EcoString {
     if matches!(
         name.as_str(),
         "any"
@@ -170,7 +163,7 @@ fn ts_safe_type_name(mut name: String) -> String {
             | "of"
     ) {
         name.push('_');
-        name
+        EcoString::from(name)
     } else {
         super::maybe_escape_identifier_string(&name)
     }
@@ -250,9 +243,13 @@ impl<'a> TypeScriptGenerator<'a> {
                     as_name,
                     ..
                 }) => {
-                    if let Some(alias) = as_name {
-                        let _ = self.aliased_module_names.insert(module, alias);
+                    match as_name {
+                        Some((AssignName::Variable(name), _)) => {
+                            let _ = self.aliased_module_names.insert(module, name);
+                        }
+                        Some((AssignName::Discard(_), _)) | None => (),
                     }
+
                     self.register_import(&mut imports, package, module);
                 }
             }
@@ -273,23 +270,23 @@ impl<'a> TypeScriptGenerator<'a> {
 
     /// Calculates the path of where to import an external module from
     ///
-    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
         // DUPE: current_module_name_segments_count
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.d.mts"),
+                1 => eco_format!("./{module}.d.mts"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.d.mts")
+                    eco_format!("{prefix}{module}.d.mts")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.d.mts")
+            eco_format!("{prefix}{package}/{module}.d.mts")
         }
     }
 
@@ -297,41 +294,43 @@ impl<'a> TypeScriptGenerator<'a> {
         match statement {
             Definition::TypeAlias(TypeAlias {
                 alias,
-                public,
+                publicity,
                 type_,
                 ..
-            }) if *public => vec![self.type_alias(alias, type_)],
+            }) if publicity.is_importable() => vec![self.type_alias(alias, type_)],
             Definition::TypeAlias(TypeAlias { .. }) => vec![],
 
             Definition::Import(Import { .. }) => vec![],
 
             Definition::CustomType(CustomType {
-                public,
+                publicity,
                 constructors,
                 opaque,
                 name,
                 typed_parameters,
                 ..
-            }) if *public => {
+            }) if publicity.is_importable() => {
                 self.custom_type_definition(name, typed_parameters, constructors, *opaque)
             }
             Definition::CustomType(CustomType { .. }) => vec![],
 
             Definition::ModuleConstant(ModuleConstant {
-                public,
+                publicity,
                 name,
                 value,
                 ..
-            }) if *public => vec![self.module_constant(name, value)],
+            }) if publicity.is_importable() => vec![self.module_constant(name, value)],
             Definition::ModuleConstant(ModuleConstant { .. }) => vec![],
 
             Definition::Function(Function {
                 arguments,
-                name,
-                public,
+                name: Some((_, name)),
+                publicity,
                 return_type,
                 ..
-            }) if *public => vec![self.module_function(name, arguments, return_type)],
+            }) if publicity.is_importable() => {
+                vec![self.module_function(name, arguments, return_type)]
+            }
             Definition::Function(Function { .. }) => vec![],
         }
     }
@@ -339,7 +338,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn type_alias(&mut self, alias: &str, type_: &Type) -> Output<'a> {
         Ok(docvec![
             "export type ",
-            Document::String(ts_safe_type_name(alias.to_string())),
+            ts_safe_type_name(alias.to_string()),
             " = ",
             self.print_type(type_),
             ";"
@@ -375,12 +374,12 @@ impl<'a> TypeScriptGenerator<'a> {
                     x.arguments.iter().map(|a| &a.type_),
                 )
             });
-            concat(Itertools::intersperse(constructors, break_("| ", " | ")))
+            join(constructors, break_("| ", " | "))
         };
 
         definitions.push(Ok(docvec![
             "export type ",
-            name_with_generics(Document::String(format!("{name}$")), typed_parameters),
+            name_with_generics(eco_format!("{name}$").to_doc(), typed_parameters),
             " = ",
             definition,
             ";",
@@ -422,21 +421,21 @@ impl<'a> TypeScriptGenerator<'a> {
                 let name = arg
                     .label
                     .as_ref()
-                    .map(|s| super::maybe_escape_identifier_doc(s))
-                    .unwrap_or_else(|| Document::String(format!("argument${i}")));
+                    .map(|(_, s)| super::maybe_escape_identifier_doc(s))
+                    .unwrap_or_else(|| eco_format!("argument${i}").to_doc());
                 docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
             line(),
             line(),
             // Then add each field to the class
-            concat(Itertools::intersperse(
+            join(
                 constructor.arguments.iter().enumerate().map(|(i, arg)| {
                     let name = arg
                         .label
                         .as_ref()
-                        .map(|s| super::maybe_escape_identifier_doc(s))
-                        .unwrap_or_else(|| Document::String(format!("{i}")));
+                        .map(|(_, s)| super::maybe_escape_identifier_doc(s))
+                        .unwrap_or_else(|| eco_format!("{i}").to_doc());
                     docvec![
                         name,
                         ": ",
@@ -445,7 +444,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     ]
                 }),
                 line(),
-            )),
+            ),
         ]
         .nest(INDENT);
 
@@ -532,22 +531,18 @@ impl<'a> TypeScriptGenerator<'a> {
     /// Get the locally used name for a module. Either the last segment, or the
     /// alias if one was given when imported.
     ///
-    fn module_name(&self, name: &str) -> String {
+    fn module_name(&self, name: &str) -> EcoString {
         // The prelude is always `_`
         if name.is_empty() {
             return "_".into();
         }
 
         let name = match self.aliased_module_names.get(name) {
-            Some(name) => (*name).to_string(),
-            None => name
-                .split('/')
-                .last()
-                .expect("Non empty module path")
-                .to_string(),
+            Some(name) => name,
+            None => name.split('/').last().expect("Non empty module path"),
         };
 
-        format!("${name}")
+        eco_format!("${name}")
     }
 
     fn do_print(
@@ -556,7 +551,7 @@ impl<'a> TypeScriptGenerator<'a> {
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow(), generic_usages, false),
+            Type::Var { type_ } => self.print_var(&type_.borrow(), generic_usages, false),
 
             Type::Named {
                 name, module, args, ..
@@ -574,7 +569,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
     fn do_print_force_generic_param(&mut self, type_: &Type) -> Document<'static> {
         match type_ {
-            Type::Var { type_: typ } => self.print_var(&typ.borrow(), None, true),
+            Type::Var { type_ } => self.print_var(&type_.borrow(), None, true),
 
             Type::Named {
                 name, module, args, ..
@@ -611,7 +606,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     }
                 }
             },
-            TypeVar::Link { type_: typ } => self.do_print(typ, generic_usages),
+            TypeVar::Link { type_ } => self.do_print(type_, generic_usages),
         }
     }
 
@@ -627,7 +622,7 @@ impl<'a> TypeScriptGenerator<'a> {
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         match name {
-            "Nil" => "null".to_doc(),
+            "Nil" => "undefined".to_doc(),
             "Int" | "Float" => "number".to_doc(),
             "UtfCodepoint" => {
                 self.tracker.prelude_used = true;
@@ -635,9 +630,9 @@ impl<'a> TypeScriptGenerator<'a> {
             }
             "String" => "string".to_doc(),
             "Bool" => "boolean".to_doc(),
-            "BitString" => {
+            "BitArray" => {
                 self.tracker.prelude_used = true;
-                "_.BitString".to_doc()
+                "_.BitArray".to_doc()
             }
             "List" => {
                 self.tracker.prelude_used = true;
@@ -669,17 +664,13 @@ impl<'a> TypeScriptGenerator<'a> {
         module: &str,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
-        let name = format!("{}$", ts_safe_type_name(name.to_string()));
+        let name = eco_format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
-            true => Document::String(name),
+            true => name.to_doc(),
             false => {
-                // If type comes from a separate module, use that module's nam
+                // If type comes from a separate module, use that module's name
                 // as a TypeScript namespace prefix
-                docvec![
-                    Document::String(self.module_name(module)),
-                    ".",
-                    Document::String(name),
-                ]
+                docvec![self.module_name(module), ".", name]
             }
         };
         if args.is_empty() {

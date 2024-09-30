@@ -32,6 +32,7 @@ You can exit this program by pressing ctrl+c.
     LanguageServer::new(&connection, ProjectIO::new())?.run()?;
 
     // Shut down gracefully.
+    drop(connection);
     io_threads.join().expect("joining_lsp_threads");
 
     tracing::info!("language_server_stopped");

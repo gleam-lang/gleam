@@ -6,13 +6,16 @@ use crate::type_::{
     Type,
 };
 
+use super::Publicity;
+
 fn print(type_: Arc<Type>) -> String {
     Printer::new().pretty_print(&type_, 0)
 }
 
 fn custom_bool() -> Arc<Type> {
     Arc::new(Type::Named {
-        public: true,
+        publicity: Publicity::Public,
+        package: "wibble".into(),
         module: "one/two".into(),
         name: "Bool".into(),
         args: vec![],

@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub type Box { Box(Int) }\npub fn main() {\n    let Box(innerValue) = Box(203)\n}"
+---
+----- BEFORE ACTION
+pub type Box { Box(Int) }
+pub fn main() {
+    let Box(innerValue) = Box(203)
+            ↑                     
+}
+
+
+----- AFTER ACTION
+pub type Box { Box(Int) }
+pub fn main() {
+    let Box(inner_value) = Box(203)
+}

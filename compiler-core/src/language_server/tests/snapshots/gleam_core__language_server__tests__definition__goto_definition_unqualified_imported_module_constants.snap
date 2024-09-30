@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import example_module.{my_num}
+fn main() {
+  my_num
+  ↑     
+}
+
+----- Jumped to `src/example_module.gleam`
+pub const my_num = 1
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔

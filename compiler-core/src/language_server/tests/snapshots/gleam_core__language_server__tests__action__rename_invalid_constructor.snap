@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "type MyType { The_Constructor(Int) }"
+---
+----- BEFORE ACTION
+type MyType { The_Constructor(Int) }
+               ↑                    
+
+
+----- AFTER ACTION
+type MyType { TheConstructor(Int) }

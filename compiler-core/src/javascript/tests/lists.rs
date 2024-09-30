@@ -62,11 +62,11 @@ fn list_destructuring() {
     assert_js!(
         r#"
 fn go(x, y) {
-  let [] = x
-  let [a] = x
-  let [1, 2] = x
-  let [_, #(3, b)] = y
-  let [head, ..tail] = y
+  let assert [] = x
+  let assert [a] = x
+  let assert [1, 2] = x
+  let assert [_, #(3, b)] = y
+  let assert [head, ..tail] = y
 }
 "#,
     );
@@ -95,6 +95,18 @@ fn go(xs) {
     [_, _] -> 2
     _ -> 9999
   }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2904
+#[test]
+fn tight_empty_list() {
+    assert_js!(
+        r#"
+fn go(func) {
+  let huuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuuge_variable = []
 }
 "#,
     );

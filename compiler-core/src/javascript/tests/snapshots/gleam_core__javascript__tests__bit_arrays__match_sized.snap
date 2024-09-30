@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 291
+expression: "\nfn go(x) {\n  let assert <<a:16, b:8>> = x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.length == 3)) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  let a = x.intFromSlice(0, 2, true, false);
+  let b = x.byteAt(2);
+  return x;
+}

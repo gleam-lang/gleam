@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/tuples.rs
-assertion_line: 97
 expression: "\nconst e = #(\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n  \"loooooooooooooong\", \"loooooooooooong\", \"loooooooooooooong\",\n)\n"
 ---
 const e = [
@@ -11,4 +10,3 @@ const e = [
   "loooooooooooong",
   "loooooooooooooong",
 ];
-

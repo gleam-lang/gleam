@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 424
+expression: "\nfn go(x) {\n  let assert <<a:float-big, b:int>> = x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.length == 9)) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  let a = x.floatFromSlice(0, 8, true);
+  let b = x.byteAt(8);
+  return x;
+}

@@ -1,0 +1,54 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nimport dep\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = dep.wibble()\n}\n"
+---
+import dep
+
+fn fun() { // completion inside parens below includes labels
+  let wibble = dep.wibble(|)
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+dep.wibble
+  kind:   Function
+  detail: fn(String, String) -> String
+  sort:   3_dep.wibble
+  desc:   app
+  edits:
+    [4:26-4:26]: "dep.wibble"
+fun
+  kind:   Function
+  detail: fn() -> String
+  sort:   2_fun
+  desc:   app
+  edits:
+    [4:26-4:26]: "fun"
+wibble:
+  kind:   Field
+  detail: String
+  sort:   0_wibble:
+wobble:
+  kind:   Field
+  detail: String
+  sort:   0_wobble:

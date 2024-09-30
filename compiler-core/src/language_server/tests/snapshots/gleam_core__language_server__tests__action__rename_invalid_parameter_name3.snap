@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let add = fn(numA: Int, num_b: Int) { numA + num_b }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let add = fn(numA: Int, num_b: Int) { numA + num_b }
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑                           
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let add = fn(num_a: Int, num_b: Int) { numA + num_b }
+}

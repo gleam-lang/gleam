@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 241
+expression: "\npub fn main(x) {\n  case x {\n    Error(True) -> 1\n    Error(False) -> 2\n  }\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:3:3
+  │  
+3 │ ╭   case x {
+4 │ │     Error(True) -> 1
+5 │ │     Error(False) -> 2
+6 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Ok(_)

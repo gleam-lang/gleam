@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: type Phantom(phantomType) = Int
+---
+----- BEFORE ACTION
+type Phantom(phantomType) = Int
+             ▔▔▔▔▔▔▔▔▔▔▔↑      
+
+
+----- AFTER ACTION
+type Phantom(phantom_type) = Int

@@ -1,15 +1,18 @@
+use hexpm::version::Version;
 use rand::Rng;
 use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
 use super::*;
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
-        TypedConstantBitStringSegmentOption,
+        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
+        TypedConstantBitArraySegmentOption,
     },
     build::Origin,
+    line_numbers::LineNumbers,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
+        self, expression::Implementations, Deprecation, ModuleInterface, Type, TypeConstructor,
+        TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
@@ -28,16 +31,18 @@ fn roundtrip(input: &ModuleInterface) -> ModuleInterface {
 
 fn constant_module(constant: TypedConstant) -> ModuleInterface {
     ModuleInterface {
+        warnings: vec![],
+        is_internal: true,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleConstant {
@@ -45,19 +50,27 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                     literal: constant,
                     location: SrcSpan::default(),
                     module: "one/two".into(),
+                    implementations: Implementations {
+                        gleam: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     }
 }
 
-fn bit_string_segment_option_module(
-    option: TypedConstantBitStringSegmentOption,
-) -> ModuleInterface {
-    constant_module(Constant::BitString {
+fn bit_array_segment_option_module(option: TypedConstantBitArraySegmentOption) -> ModuleInterface {
+    constant_module(Constant::BitArray {
         location: Default::default(),
-        segments: vec![BitStringSegment {
+        segments: vec![BitArraySegment {
             location: Default::default(),
             value: Box::new(Constant::Int {
                 location: Default::default(),
@@ -72,13 +85,41 @@ fn bit_string_segment_option_module(
 #[test]
 fn empty_module() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: true,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "one/two".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn with_line_numbers() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "one/two".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(
+            "const a = 1
+        const b = 2
+        const c = 3",
+        ),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -86,23 +127,30 @@ fn empty_module() {
 #[test]
 fn module_with_private_type() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
             "ListIntType".into(),
             TypeConstructor {
-                typ: type_::list(type_::int()),
-                public: false,
+                type_: type_::list(type_::int()),
+                publicity: Publicity::Private,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -110,23 +158,30 @@ fn module_with_private_type() {
 #[test]
 fn module_with_app_type() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
             "ListIntType".into(),
             TypeConstructor {
-                typ: type_::list(type_::int()),
-                public: true,
+                type_: type_::list(type_::int()),
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -134,23 +189,30 @@ fn module_with_app_type() {
 #[test]
 fn module_with_fn_type() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
             "FnType".into(),
             TypeConstructor {
-                typ: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
-                public: true,
+                type_: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -158,23 +220,30 @@ fn module_with_fn_type() {
 #[test]
 fn module_with_tuple_type() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
             "TupleType".into(),
             TypeConstructor {
-                typ: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
-                public: true,
+                type_: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
+                publicity: Publicity::Public,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
+                documentation: None,
             },
         )]
         .into(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -188,23 +257,30 @@ fn module_with_generic_type() {
 
     fn make(t1: Arc<Type>, t2: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
+            warnings: vec![],
+            is_internal: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a/b".into(),
             types: [(
                 "TupleType".into(),
                 TypeConstructor {
-                    typ: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
-                    public: true,
+                    type_: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
+                    publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
+                    deprecation: Deprecation::NotDeprecated,
+                    documentation: None,
                 },
             )]
             .into(),
-            types_constructors: HashMap::new(),
+            types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
+            line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     }
 
@@ -218,23 +294,107 @@ fn module_with_type_links() {
 
     fn make(type_: Arc<Type>) -> ModuleInterface {
         ModuleInterface {
+            warnings: vec![],
+            is_internal: false,
             package: "some_package".into(),
             origin: Origin::Src,
             name: "a".into(),
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    typ: type_,
-                    public: true,
+                    type_,
+                    publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
+                    deprecation: Deprecation::NotDeprecated,
+                    documentation: None,
                 },
             )]
             .into(),
-            types_constructors: HashMap::new(),
+            types_value_constructors: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
+            line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
+        }
+    }
+
+    assert_eq!(roundtrip(&make(linked_type)), make(type_));
+}
+
+#[test]
+fn module_with_type_constructor_documentation() {
+    let linked_type = type_::link(type_::int());
+    let type_ = type_::int();
+
+    fn make(type_: Arc<Type>) -> ModuleInterface {
+        ModuleInterface {
+            warnings: vec![],
+            is_internal: false,
+            package: "some_package".into(),
+            origin: Origin::Src,
+            name: "a".into(),
+            types: [(
+                "SomeType".into(),
+                TypeConstructor {
+                    type_,
+                    publicity: Publicity::Public,
+                    origin: Default::default(),
+                    module: "a".into(),
+                    parameters: vec![],
+                    deprecation: Deprecation::NotDeprecated,
+                    documentation: Some("type documentation".into()),
+                },
+            )]
+            .into(),
+            types_value_constructors: HashMap::new(),
+            values: HashMap::new(),
+            accessors: HashMap::new(),
+            line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
+        }
+    }
+
+    assert_eq!(roundtrip(&make(linked_type)), make(type_));
+}
+
+#[test]
+fn module_with_type_constructor_origin() {
+    let linked_type = type_::link(type_::int());
+    let type_ = type_::int();
+
+    fn make(type_: Arc<Type>) -> ModuleInterface {
+        ModuleInterface {
+            warnings: vec![],
+            is_internal: false,
+            package: "some_package".into(),
+            origin: Origin::Src,
+            name: "a".into(),
+            types: [(
+                "SomeType".into(),
+                TypeConstructor {
+                    type_,
+                    publicity: Publicity::Public,
+                    origin: SrcSpan {
+                        start: 535,
+                        end: 543,
+                    },
+                    module: "a".into(),
+                    parameters: vec![],
+                    deprecation: Deprecation::NotDeprecated,
+                    documentation: None,
+                },
+            )]
+            .into(),
+            types_value_constructors: HashMap::new(),
+            values: HashMap::new(),
+            accessors: HashMap::new(),
+            line_numbers: LineNumbers::new(""),
+            src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     }
 
@@ -244,13 +404,28 @@ fn module_with_type_links() {
 #[test]
 fn module_type_to_constructors_mapping() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: [("SomeType".into(), vec!["One".into()])].into(),
+        types_value_constructors: [(
+            "SomeType".into(),
+            TypeVariantConstructors {
+                type_parameters_ids: vec![0, 1, 2],
+                variants: vec![TypeValueConstructor {
+                    name: "One".into(),
+                    parameters: vec![],
+                }],
+            },
+        )]
+        .into(),
         accessors: HashMap::new(),
         values: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -259,16 +434,18 @@ fn module_type_to_constructors_mapping() {
 #[test]
 fn module_fn_value() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -281,10 +458,22 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
+                    implementations: Implementations {
+                        gleam: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -292,16 +481,18 @@ fn module_fn_value() {
 #[test]
 fn deprecated_module_fn_value() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::Deprecated {
                     message: "wibble wobble".into(),
                 },
@@ -316,10 +507,22 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
+                    implementations: Implementations {
+                        gleam: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -327,16 +530,18 @@ fn deprecated_module_fn_value() {
 #[test]
 fn private_module_fn_value() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: false,
+                publicity: Publicity::Private,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -349,10 +554,22 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
+                    implementations: Implementations {
+                        gleam: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -362,16 +579,18 @@ fn private_module_fn_value() {
 #[test]
 fn module_fn_value_regression() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a/b/c".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -384,10 +603,22 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
+                    implementations: Implementations {
+                        gleam: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -396,16 +627,18 @@ fn module_fn_value_regression() {
 #[test]
 fn module_fn_value_with_field_map() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -415,13 +648,25 @@ fn module_fn_value_with_field_map() {
                         arity: 20,
                         fields: [("ok".into(), 5), ("ko".into(), 7)].into(),
                     }),
+                    external_erlang: None,
+                    external_javascript: None,
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
+                    implementations: Implementations {
+                        gleam: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -432,16 +677,18 @@ fn record_value() {
     let mut random = rand::thread_rng();
 
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
@@ -455,10 +702,14 @@ fn record_value() {
                         start: random.gen(),
                         end: random.gen(),
                     },
+                    constructor_index: random.gen(),
                 },
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -469,16 +720,18 @@ fn record_value_with_field_map() {
     let mut random = rand::thread_rng();
 
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
             ValueConstructor {
-                public: true,
+                publicity: Publicity::Public,
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::Record {
@@ -491,6 +744,7 @@ fn record_value_with_field_map() {
                     }),
                     arity: random.gen(),
                     constructors_count: random.gen(),
+                    constructor_index: random.gen(),
                     location: SrcSpan {
                         start: random.gen(),
                         end: random.gen(),
@@ -499,6 +753,9 @@ fn record_value_with_field_map() {
             },
         )]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -507,17 +764,19 @@ fn record_value_with_field_map() {
 #[test]
 fn accessors() {
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         values: HashMap::new(),
         accessors: [
             (
                 "one".into(),
                 AccessorsMap {
-                    public: true,
+                    publicity: Publicity::Public,
                     type_: type_::int(),
                     accessors: [
                         (
@@ -543,7 +802,7 @@ fn accessors() {
             (
                 "two".into(),
                 AccessorsMap {
-                    public: true,
+                    publicity: Publicity::Public,
                     type_: type_::int(),
                     accessors: [(
                         "a".into(),
@@ -558,6 +817,9 @@ fn accessors() {
             ),
         ]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -629,7 +891,7 @@ fn constant_tuple() {
 fn constant_list() {
     let module = constant_module(Constant::List {
         location: Default::default(),
-        typ: type_::int(),
+        type_: type_::int(),
         elements: vec![
             Constant::Int {
                 location: Default::default(),
@@ -657,7 +919,7 @@ fn constant_record() {
         name: "".into(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 label: None,
                 location: Default::default(),
                 value: Constant::Float {
@@ -666,7 +928,7 @@ fn constant_record() {
                 },
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 label: None,
                 location: Default::default(),
                 value: Constant::Int {
@@ -676,7 +938,7 @@ fn constant_record() {
             },
         ],
         tag: "thetag".into(),
-        typ: type_::int(),
+        type_: type_::int(),
         field_map: None,
     });
 
@@ -694,9 +956,9 @@ fn constant_var() {
         location: Default::default(),
         module: None,
         name: "one_original".into(),
-        typ: type_::int(),
+        type_: type_::int(),
         constructor: Some(Box::from(ValueConstructor {
-            public: true,
+            publicity: Publicity::Public,
             deprecation: Deprecation::NotDeprecated,
             type_: type_::int(),
             variant: ValueConstructorVariant::ModuleConstant {
@@ -704,22 +966,31 @@ fn constant_var() {
                 literal: one_original.clone(),
                 location: SrcSpan::default(),
                 module: "one/two".into(),
+                implementations: Implementations {
+                    gleam: true,
+                    uses_erlang_externals: false,
+                    uses_javascript_externals: false,
+                    can_run_on_erlang: true,
+                    can_run_on_javascript: true,
+                },
             },
         })),
     };
 
     let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
         name: "a".into(),
         types: HashMap::new(),
-        types_constructors: HashMap::new(),
+        types_value_constructors: HashMap::new(),
         accessors: HashMap::new(),
         values: [
             (
                 "one".into(),
                 ValueConstructor {
-                    public: true,
+                    publicity: Publicity::Public,
                     deprecation: Deprecation::NotDeprecated,
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
@@ -727,13 +998,20 @@ fn constant_var() {
                         literal: one,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
+                        implementations: Implementations {
+                            gleam: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                        },
                     },
                 },
             ),
             (
                 "one_original".into(),
                 ValueConstructor {
-                    public: true,
+                    publicity: Publicity::Public,
                     deprecation: Deprecation::NotDeprecated,
                     type_: type_::int(),
                     variant: ValueConstructorVariant::ModuleConstant {
@@ -741,19 +1019,29 @@ fn constant_var() {
                         literal: one_original,
                         location: SrcSpan::default(),
                         module: "one/two".into(),
+                        implementations: Implementations {
+                            gleam: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                        },
                     },
                 },
             ),
         ]
         .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string() {
-    let module = constant_module(Constant::BitString {
+fn constant_bit_array() {
+    let module = constant_module(Constant::BitArray {
         location: Default::default(),
         segments: vec![],
     });
@@ -761,8 +1049,8 @@ fn constant_bit_string() {
 }
 
 #[test]
-fn constant_bit_string_unit() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Unit {
+fn constant_bit_array_unit() {
+    let module = bit_array_segment_option_module(BitArrayOption::Unit {
         location: Default::default(),
         value: 234,
     });
@@ -770,24 +1058,24 @@ fn constant_bit_string_unit() {
 }
 
 #[test]
-fn constant_bit_string_float() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Float {
+fn constant_bit_array_float() {
+    let module = bit_array_segment_option_module(BitArrayOption::Float {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_int() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Int {
+fn constant_bit_array_int() {
+    let module = bit_array_segment_option_module(BitArrayOption::Int {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_size() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Size {
+fn constant_bit_array_size() {
+    let module = bit_array_segment_option_module(BitArrayOption::Size {
         location: Default::default(),
         value: Box::new(Constant::Int {
             location: Default::default(),
@@ -799,8 +1087,8 @@ fn constant_bit_string_size() {
 }
 
 #[test]
-fn constant_bit_string_size_short_form() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Size {
+fn constant_bit_array_size_short_form() {
+    let module = bit_array_segment_option_module(BitArrayOption::Size {
         location: Default::default(),
         value: Box::new(Constant::Int {
             location: Default::default(),
@@ -812,97 +1100,342 @@ fn constant_bit_string_size_short_form() {
 }
 
 #[test]
-fn constant_bit_string_bit_string() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::BitString {
+fn constant_bit_array_bit_arry() {
+    let module = bit_array_segment_option_module(BitArrayOption::Bits {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf8() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf8 {
+fn constant_bit_array_utf8() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf8 {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf16() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf16 {
+fn constant_bit_array_utf16() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf16 {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf32() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf32 {
+fn constant_bit_array_utf32() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf32 {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf8codepoint() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf8Codepoint {
+fn constant_bit_array_utf8codepoint() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf8Codepoint {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf16codepoint() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf16Codepoint {
+fn constant_bit_array_utf16codepoint() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf16Codepoint {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_utf32codepoint() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Utf32Codepoint {
+fn constant_bit_array_utf32codepoint() {
+    let module = bit_array_segment_option_module(BitArrayOption::Utf32Codepoint {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_signed() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Signed {
+fn constant_bit_array_signed() {
+    let module = bit_array_segment_option_module(BitArrayOption::Signed {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_unsigned() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Unsigned {
+fn constant_bit_array_unsigned() {
+    let module = bit_array_segment_option_module(BitArrayOption::Unsigned {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_big() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Big {
+fn constant_bit_array_big() {
+    let module = bit_array_segment_option_module(BitArrayOption::Big {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_little() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Little {
+fn constant_bit_array_little() {
+    let module = bit_array_segment_option_module(BitArrayOption::Little {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
 }
 
 #[test]
-fn constant_bit_string_native() {
-    let module = bit_string_segment_option_module(BitStringSegmentOption::Native {
+fn constant_bit_array_native() {
+    let module = bit_array_segment_option_module(BitArrayOption::Native {
         location: Default::default(),
     });
     assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn deprecated_type() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b".into(),
+        types: [(
+            "ListIntType".into(),
+            TypeConstructor {
+                type_: type_::list(type_::int()),
+                publicity: Publicity::Public,
+                origin: Default::default(),
+                module: "the/module".into(),
+                parameters: vec![],
+                deprecation: Deprecation::Deprecated {
+                    message: "oh no".into(),
+                },
+                documentation: None,
+            },
+        )]
+        .into(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_fn_value_with_external_implementations() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                publicity: Publicity::Public,
+                deprecation: Deprecation::NotDeprecated,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wabble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
+                    implementations: Implementations {
+                        gleam: false,
+                        uses_erlang_externals: true,
+                        uses_javascript_externals: true,
+                        can_run_on_erlang: false,
+                        can_run_on_javascript: true,
+                    },
+                },
+            },
+        )]
+        .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn internal_module_fn() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                publicity: Publicity::Internal {
+                    attribute_location: None,
+                },
+                deprecation: Deprecation::NotDeprecated,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wabble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
+                    implementations: Implementations {
+                        gleam: false,
+                        uses_erlang_externals: true,
+                        uses_javascript_externals: true,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
+                },
+            },
+        )]
+        .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn internal_annotated_module_fn() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                publicity: Publicity::Internal {
+                    attribute_location: Some(SrcSpan {
+                        start: 11,
+                        end: 111,
+                    }),
+                },
+                deprecation: Deprecation::NotDeprecated,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wabble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
+                    implementations: Implementations {
+                        gleam: false,
+                        uses_erlang_externals: true,
+                        uses_javascript_externals: true,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
+                },
+            },
+        )]
+        .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+// https://github.com/gleam-lang/gleam/issues/2599
+#[test]
+fn type_variable_ids_in_constructors_are_shared() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::from([(
+            "SomeType".into(),
+            TypeVariantConstructors {
+                type_parameters_ids: vec![4, 5, 6],
+                variants: vec![TypeValueConstructor {
+                    name: "One".into(),
+                    parameters: vec![
+                        TypeValueConstructorField {
+                            type_: type_::generic_var(6),
+                        },
+                        TypeValueConstructorField {
+                            type_: type_::int(),
+                        },
+                        TypeValueConstructorField {
+                            type_: type_::tuple(vec![type_::generic_var(4), type_::generic_var(5)]),
+                        },
+                    ],
+                }],
+            },
+        )]),
+        accessors: HashMap::new(),
+        values: [].into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+
+    let expected = HashMap::from([(
+        "SomeType".into(),
+        TypeVariantConstructors {
+            type_parameters_ids: vec![1, 2, 0],
+            variants: vec![TypeValueConstructor {
+                name: "One".into(),
+                parameters: vec![
+                    TypeValueConstructorField {
+                        type_: type_::generic_var(0),
+                    },
+                    TypeValueConstructorField {
+                        type_: type_::int(),
+                    },
+                    TypeValueConstructorField {
+                        type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
+                    },
+                ],
+            }],
+        },
+    )]);
+
+    assert_eq!(roundtrip(&module).types_value_constructors, expected);
 }

@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/recursion.rs
+expression: "\npub fn map(map) {\n  map()\n}\n"
+---
+export function map(map) {
+  return map();
+}

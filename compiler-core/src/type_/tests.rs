@@ -1,42 +1,67 @@
 use super::*;
 use crate::{
+    analyse::TargetSupport,
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
-    build::{Origin, Target},
+    build::{Origin, Outcome, Target},
+    config::PackageConfig,
     error::Error,
-    type_::{build_prelude, pretty::Printer},
+    type_::{build_prelude, expression::FunctionDefinition, pretty::Printer},
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, VectorWarningEmitterIO, WarningEmitter, WarningEmitterIO},
 };
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
-use std::sync::Arc;
+use pubgrub::range::Range;
+use std::rc::Rc;
 use vec1::Vec1;
 
 use camino::Utf8PathBuf;
 
+mod accessors;
 mod assert;
 mod assignments;
 mod conditional_compilation;
 mod custom_types;
 mod errors;
+mod exhaustiveness;
+mod externals;
 mod functions;
 mod guards;
 mod imports;
+mod pipes;
 mod pretty;
+mod target_implementations;
 mod type_alias;
 mod use_;
+mod version_inference;
 mod warnings;
 
 #[macro_export]
 macro_rules! assert_infer {
-    ($src:expr, $typ:expr $(,)?) => {
+    ($src:expr, $type_:expr $(,)?) => {
         let t = $crate::type_::tests::infer($src);
-        assert_eq!(($src, t), ($src, $typ.to_string()),);
+        assert_eq!(($src, t), ($src, $type_.to_string()),);
     };
 }
 
 #[macro_export]
 macro_rules! assert_infer_with_module {
+    (
+        ($name1:expr, $module_src1:literal),
+        ($name2:expr, $module_src2:literal),
+        $src:expr, $module:expr $(,)?
+    ) => {
+        let constructors = $crate::type_::tests::infer_module(
+            $src,
+            vec![
+                ("thepackage", $name1, $module_src1),
+                ("thepackage", $name2, $module_src2),
+            ],
+        );
+        let expected = $crate::type_::tests::stringify_tuple_strs($module);
+
+        assert_eq!(($src, constructors), ($src, expected));
+    };
     (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
         let constructors =
             $crate::type_::tests::infer_module($src, vec![("thepackage", $name, $module_src)]);
@@ -56,9 +81,43 @@ macro_rules! assert_module_infer {
 }
 
 #[macro_export]
+macro_rules! assert_js_module_infer {
+    ($src:expr, $module:expr $(,)?) => {{
+        let constructors = $crate::type_::tests::infer_module_with_target(
+            "test_module",
+            $src,
+            vec![],
+            $crate::build::Target::JavaScript,
+        );
+        let expected = $crate::type_::tests::stringify_tuple_strs($module);
+        assert_eq!(($src, constructors), ($src, expected));
+    }};
+}
+
+#[macro_export]
 macro_rules! assert_module_error {
     ($src:expr) => {
         let output = $crate::type_::tests::module_error($src, vec![]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_internal_module_error {
+    ($src:expr) => {
+        let output = $crate::type_::tests::internal_module_error($src, vec![]);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_js_module_error {
+    ($src:expr) => {
+        let output = $crate::type_::tests::module_error_with_target(
+            $src,
+            vec![],
+            $crate::build::Target::JavaScript,
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -80,12 +139,13 @@ macro_rules! assert_error {
     };
 
     ($src:expr) => {
-        let error = $crate::type_::tests::compile_statement_sequence($src)
+        let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
+            names,
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
-            error,
+            errors: error,
         };
         let output = error.pretty_string();
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -116,78 +176,111 @@ macro_rules! assert_with_module_error {
     };
 }
 
-fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<Warning> {
+fn get_warnings(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    gleam_version: Option<Range<Version>>,
+) -> Vec<crate::warning::Warning> {
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module(src, Some(Arc::new(warnings.clone())), deps);
-    warnings
-        .take()
-        .into_iter()
-        .map(|warning| match warning {
-            crate::Warning::Type { warning, .. } => warning,
-            crate::Warning::Parse { .. } => panic!("Unexpected parse warning"),
-            crate::Warning::InvalidSource { .. } => panic!("Invalid module file name"),
-        })
-        .collect_vec()
+    _ = compile_module_with_opts(
+        "test_module",
+        src,
+        Some(Rc::new(warnings.clone())),
+        deps,
+        Target::Erlang,
+        TargetSupport::NotEnforced,
+        gleam_version,
+    );
+    warnings.take().into_iter().collect_vec()
 }
 
-fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
-    let warnings = get_warnings(src, deps);
+fn get_printed_warnings(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    gleam_version: Option<Range<Version>>,
+) -> String {
+    print_warnings(get_warnings(src, deps, gleam_version))
+}
+
+fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
     let mut nocolor = termcolor::Buffer::no_color();
     for warning in warnings {
-        let path = Utf8PathBuf::from("/src/warning/wrn.gleam");
-        let warning = warning.into_warning(path, src.into());
         warning.pretty(&mut nocolor);
     }
     String::from_utf8(nocolor.into_inner()).expect("Error printing produced invalid utf8")
 }
 
 #[macro_export]
+macro_rules! assert_warnings_with_imports {
+    ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
+        let output = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![
+                $(("thepackage", $name, $module_src)),*
+            ],
+            None
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let output = $crate::type_::tests::get_printed_warnings($src, vec![]);
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![], None);
+        assert!(!output.is_empty());
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
+        let output = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![$(("thepackage", $name, $module_src)),*],
+            None
+        );
+        assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(($package, $name, $module_src)),*]
+            vec![$(($package, $name, $module_src)),*],
+            None
         );
+        assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
+}
 
-    ($src:expr, $warning:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![]);
-        assert!(!warnings.is_empty());
-        assert_eq!($warning, warnings[0]);
-    };
-
-    ($(($name:expr, $module_src:literal)),+, $src:expr, $warning:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings(
-            $src,
-            vec![$(("thepackage", $name, $module_src)),*],
-        );
-        assert!(!warnings.is_empty());
-        assert_eq!($warning, warnings[0]);
+#[macro_export]
+macro_rules! assert_warnings_with_gleam_version {
+    ($gleam_version:expr, $src:expr$(,)?) => {
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![], Some($gleam_version));
+        assert!(!output.is_empty());
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![]);
+        let warnings = $crate::type_::tests::get_warnings($src, vec![], None);
         assert_eq!(warnings, vec![]);
     };
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
+            None,
         );
         assert_eq!(warnings, vec![]);
     };
 }
 
-fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::type_::Error> {
+fn compile_statement_sequence(
+    src: &str,
+) -> Result<Vec1<TypedStatement>, (Vec1<crate::type_::Error>, Names)> {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
@@ -196,23 +289,39 @@ fn compile_statement_sequence(src: &str) -> Result<Vec1<TypedStatement>, crate::
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    crate::type_::ExprTyper::new(&mut crate::type_::Environment::new(
+    let mut problems = Problems::new();
+    let mut environment = Environment::new(
         ids,
-        "themodule",
+        "thepackage".into(),
+        None,
+        "themodule".into(),
         Target::Erlang,
         &modules,
-        &TypeWarningEmitter::null(),
-    ))
-    .infer_statements(ast)
+        TargetSupport::Enforced,
+    );
+    let res = ExprTyper::new(
+        &mut environment,
+        FunctionDefinition {
+            has_body: true,
+            has_erlang_external: false,
+            has_javascript_external: false,
+        },
+        &mut problems,
+    )
+    .infer_statements(ast);
+    match Vec1::try_from_vec(problems.take_errors()) {
+        Err(_) => Ok(res),
+        Ok(errors) => Err((errors, environment.names)),
+    }
 }
 
 fn infer(src: &str) -> String {
-    let mut printer = crate::type_::pretty::Printer::new();
+    let mut printer = Printer::new();
     let result = compile_statement_sequence(src).expect("should successfully infer");
     printer.pretty_print(result.last().type_().as_ref(), 0)
 }
 
-pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)> {
+pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(EcoString, String)> {
     module
         .into_iter()
         .map(|(k, v)| (k.into(), v.into()))
@@ -227,12 +336,30 @@ pub fn stringify_tuple_strs(module: Vec<(&str, &str)>) -> Vec<(SmolStr, String)>
 /// 3. The module source.
 type DependencyModule<'a> = (&'a str, &'a str, &'a str);
 
-pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(SmolStr, String)> {
-    let ast = compile_module(src, None, dep).expect("should successfully infer");
+pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(EcoString, String)> {
+    infer_module_with_target("test_module", src, dep, Target::Erlang)
+}
+
+pub fn infer_module_with_target(
+    module_name: &str,
+    src: &str,
+    dep: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> Vec<(EcoString, String)> {
+    let ast = compile_module_with_opts(
+        module_name,
+        src,
+        None,
+        dep,
+        target,
+        TargetSupport::NotEnforced,
+        None,
+    )
+    .expect("should successfully infer");
     ast.type_info
         .values
         .iter()
-        .filter(|(_, v)| v.public)
+        .filter(|(_, v)| v.publicity.is_importable())
         .map(|(k, v)| {
             let mut printer = Printer::new();
             (k.clone(), printer.pretty_print(&v.type_, 0))
@@ -242,41 +369,64 @@ pub fn infer_module(src: &str, dep: Vec<DependencyModule<'_>>) -> Vec<(SmolStr, 
 }
 
 pub fn compile_module(
+    module_name: &str,
     src: &str,
-    warnings: Option<Arc<dyn WarningEmitterIO>>,
+    warnings: Option<Rc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
-) -> Result<TypedModule, crate::type_::Error> {
+) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
+    compile_module_with_opts(
+        module_name,
+        src,
+        warnings,
+        dep,
+        Target::Erlang,
+        TargetSupport::NotEnforced,
+        None,
+    )
+}
+
+pub fn compile_module_with_opts(
+    module_name: &str,
+    src: &str,
+    warnings: Option<Rc<dyn WarningEmitterIO>>,
+    dep: Vec<DependencyModule<'_>>,
+    target: Target,
+    target_support: TargetSupport,
+    gleam_version: Option<Range<Version>>,
+) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
-    let warnings = TypeWarningEmitter::new(
-        Utf8PathBuf::new(),
-        "".into(),
-        WarningEmitter::new(
-            warnings.unwrap_or_else(|| Arc::new(VectorWarningEmitterIO::default())),
-        ),
-    );
+
+    let emitter =
+        WarningEmitter::new(warnings.unwrap_or_else(|| Rc::new(VectorWarningEmitterIO::default())));
 
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
+    let mut direct_dependencies = HashMap::from_iter(vec![]);
 
     for (package, name, module_src) in dep {
-        let parsed = crate::parse::parse_module(module_src).expect("syntax error");
+        let parsed =
+            crate::parse::parse_module(Utf8PathBuf::from("test/path"), module_src, &emitter)
+                .expect("syntax error");
         let mut ast = parsed.module;
         ast.name = name.into();
-        let module = crate::analyse::infer_module::<()>(
-            Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &package.into(),
-            &modules,
-            &warnings,
-            &std::collections::HashMap::from_iter(vec![]),
-        )
+        let line_numbers = LineNumbers::new(module_src);
+        let mut config = PackageConfig::default();
+        config.name = package.into();
+        let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
+            target,
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &modules,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &HashMap::new(),
+            target_support,
+            package_config: &config,
+        }
+        .infer_module(ast, line_numbers, "".into())
         .expect("should successfully infer");
         let _ = modules.insert(name.into(), module.type_info);
 
@@ -285,32 +435,94 @@ pub fn compile_module(
         }
     }
 
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
-    let ast = parsed.module;
-    crate::analyse::infer_module(
-        Target::Erlang,
-        &ids,
-        ast,
-        Origin::Src,
-        &"thepackage".into(),
-        &modules,
-        &warnings,
-        &direct_dependencies,
-    )
+    let parsed = crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &emitter)
+        .expect("syntax error");
+    let mut ast = parsed.module;
+    ast.name = module_name.into();
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+    config.gleam_version = gleam_version;
+
+    let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
+    let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
+        target,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &warnings,
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::Enforced,
+        package_config: &config,
+    }
+    .infer_module(ast, LineNumbers::new(src), "".into());
+
+    match inference_result {
+        Outcome::Ok(ast) => Ok(ast),
+        Outcome::PartialFailure(ast, errors) => Err((errors.into(), ast.names)),
+        Outcome::TotalFailure(error) => Err((error.into(), Default::default())),
+    }
 }
 
 pub fn module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
-    let error = compile_module(src, None, deps).expect_err("should infer an error");
+    module_error_with_target(src, deps, Target::Erlang)
+}
+
+pub fn module_error_with_target(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> String {
+    let (error, names) = compile_module_with_opts(
+        "themodule",
+        src,
+        None,
+        deps,
+        target,
+        TargetSupport::NotEnforced,
+        None,
+    )
+    .expect_err("should infer an error");
     let error = Error::Type {
+        names,
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
-        error,
+        errors: Vec1::try_from_vec(error).expect("should have at least one error"),
+    };
+    error.pretty_string()
+}
+
+pub fn internal_module_error(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
+    internal_module_error_with_target(src, deps, Target::Erlang)
+}
+
+pub fn internal_module_error_with_target(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    target: Target,
+) -> String {
+    let (error, names) = compile_module_with_opts(
+        "thepackage/internal/themodule",
+        src,
+        None,
+        deps,
+        target,
+        TargetSupport::NotEnforced,
+        None,
+    )
+    .expect_err("should infer an error");
+    let error = Error::Type {
+        names,
+        src: src.into(),
+        path: Utf8PathBuf::from("/src/one/two.gleam"),
+        errors: Vec1::try_from_vec(error).expect("should have at least one error"),
     };
     error.pretty_string()
 }
 
 pub fn syntax_error(src: &str) -> String {
-    let error = crate::parse::parse_module(src).expect_err("should trigger an error when parsing");
+    let error =
+        crate::parse::parse_module(Utf8PathBuf::from("test/path"), src, &WarningEmitter::null())
+            .expect_err("should trigger an error when parsing");
     let error = Error::Parse {
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
@@ -328,7 +540,7 @@ fn field_map_reorder_test() {
 
     struct Case {
         arity: u32,
-        fields: HashMap<SmolStr, u32>,
+        fields: HashMap<EcoString, u32>,
         args: Vec<CallArg<UntypedExpr>>,
         expected_result: Result<(), crate::type_::Error>,
         expected_args: Vec<CallArg<UntypedExpr>>,
@@ -361,19 +573,19 @@ fn field_map_reorder_test() {
         fields: HashMap::new(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -382,19 +594,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("3"),
@@ -408,19 +620,19 @@ fn field_map_reorder_test() {
         fields: [("last".into(), 2)].into(),
         args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: Some("last".into()),
                 value: int("3"),
@@ -429,19 +641,19 @@ fn field_map_reorder_test() {
         expected_result: Ok(()),
         expected_args: vec![
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("1"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: None,
                 value: int("2"),
             },
             CallArg {
-                implicit: false,
+                implicit: None,
                 location: Default::default(),
                 label: Some("last".into()),
                 value: int("3"),
@@ -458,8 +670,9 @@ fn infer_module_type_retention_test() {
         name: "ok".into(),
         definitions: vec![],
         type_info: (),
+        names: Default::default(),
     };
-    let direct_dependencies = std::collections::HashMap::from_iter(vec![]);
+    let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     // DUPE: preludeinsertion
@@ -467,32 +680,85 @@ fn infer_module_type_retention_test() {
     // to have one place where we create all this required state for use in each
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
-    let module = crate::analyse::infer_module::<()>(
-        Target::Erlang,
-        &ids,
-        module,
-        Origin::Src,
-        &"thepackage".into(),
-        &modules,
-        &TypeWarningEmitter::null(),
-        &direct_dependencies,
-    )
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
+
+    let module = crate::analyse::ModuleAnalyzerConstructor::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::Enforced,
+        package_config: &config,
+    }
+    .infer_module(module, LineNumbers::new(""), "".into())
     .expect("Should infer OK");
 
     assert_eq!(
         module.type_info,
         ModuleInterface {
+            warnings: vec![],
             origin: Origin::Src,
             package: "thepackage".into(),
             name: "ok".into(),
+            is_internal: false,
             // Core type constructors like String and Int are not included
             types: HashMap::new(),
-            types_constructors: HashMap::from([
-                ("Bool".into(), vec!["True".into(), "False".into()]),
-                ("Result".into(), vec!["Ok".into(), "Error".into()])
+            types_value_constructors: HashMap::from([
+                (
+                    "Bool".into(),
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![
+                            TypeValueConstructor {
+                                name: "True".into(),
+                                parameters: vec![],
+                            },
+                            TypeValueConstructor {
+                                name: "False".into(),
+                                parameters: vec![],
+                            }
+                        ]
+                    }
+                ),
+                (
+                    "Result".into(),
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![1, 2],
+                        variants: vec![
+                            TypeValueConstructor {
+                                name: "Ok".into(),
+                                parameters: vec![TypeValueConstructorField {
+                                    type_: generic_var(1),
+                                }]
+                            },
+                            TypeValueConstructor {
+                                name: "Error".into(),
+                                parameters: vec![TypeValueConstructorField {
+                                    type_: generic_var(2),
+                                }]
+                            }
+                        ]
+                    }
+                ),
+                (
+                    "Nil".into(),
+                    TypeVariantConstructors {
+                        type_parameters_ids: vec![],
+                        variants: vec![TypeValueConstructor {
+                            name: "Nil".into(),
+                            parameters: vec![]
+                        }]
+                    }
+                )
             ]),
             values: HashMap::new(),
             accessors: HashMap::new(),
+            line_numbers: LineNumbers::new(""),
+            src_path: "".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     );
 }
@@ -693,33 +959,75 @@ fn pipe() {
 }
 
 #[test]
-fn bit_strings() {
-    assert_infer!("let <<x>> = <<1>> x", "Int");
-    assert_infer!("let <<x>> = <<1>> x", "Int");
-    assert_infer!("let <<x:float>> = <<1>> x", "Float");
-    assert_infer!("let <<x:binary>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:bytes>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:bit_string>> = <<1>> x", "BitString");
-    assert_infer!("let <<x:bits>> = <<1>> x", "BitString");
+fn bit_array() {
+    assert_infer!("let assert <<x>> = <<1>> x", "Int");
+}
 
-    assert_infer!("let <<x:utf8_codepoint>> = <<128013:32>> x", "UtfCodepoint");
+#[test]
+fn bit_array2() {
+    assert_infer!("let assert <<x>> = <<1>> x", "Int");
+}
+
+#[test]
+fn bit_array3() {
+    assert_infer!("let assert <<x:float>> = <<1>> x", "Float");
+}
+
+#[test]
+fn bit_array4() {
+    assert_infer!("let assert <<x:bytes>> = <<1>> x", "BitArray");
+}
+
+#[test]
+fn bit_array5() {
+    assert_infer!("let assert <<x:bytes>> = <<1>> x", "BitArray");
+}
+
+#[test]
+fn bit_array6() {
+    assert_infer!("let assert <<x:bits>> = <<1>> x", "BitArray");
+}
+
+#[test]
+fn bit_array7() {
+    assert_infer!("let assert <<x:bits>> = <<1>> x", "BitArray");
+}
+
+#[test]
+fn bit_array8() {
     assert_infer!(
-        "let <<x:utf16_codepoint>> = <<128013:32>> x",
+        "let assert <<x:utf8_codepoint>> = <<128013:32>> x",
         "UtfCodepoint"
     );
+}
+
+#[test]
+fn bit_array9() {
     assert_infer!(
-        "let <<x:utf32_codepoint>> = <<128013:32>> x",
+        "let assert <<x:utf16_codepoint>> = <<128013:32>> x",
         "UtfCodepoint"
     );
+}
 
+#[test]
+fn bit_array10() {
     assert_infer!(
-        "let a = <<1>> let <<x:binary>> = <<1, a:2-bit_string>> x",
-        "BitString"
+        "let assert <<x:utf32_codepoint>> = <<128013:32>> x",
+        "UtfCodepoint"
     );
+}
+
+#[test]
+fn bit_array11() {
     assert_infer!(
-        "let x = <<<<1>>:bit_string, <<2>>:bit_string>> x",
-        "BitString"
+        "let a = <<1>> let assert <<x:bits>> = <<1, a:2-bits>> x",
+        "BitArray"
     );
+}
+
+#[test]
+fn bit_array12() {
+    assert_infer!("let x = <<<<1>>:bits, <<2>>:bits>> x", "BitArray");
 }
 
 #[test]
@@ -959,7 +1267,7 @@ pub fn is_open(x: Connection) -> Bool
 #[test]
 fn infer_module_test21() {
     assert_module_infer!(
-        "pub type Pair(thing, thing)\n
+        "pub type Pair(a, b)\n
 @external(erlang, \"\", \"\")
 pub fn pair(x: a) -> Pair(a, a)
 ",
@@ -1017,6 +1325,18 @@ fn infer_module_test26() {
     assert_module_infer!(
         "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
          pub fn third(t) { let Tup(_ , _, third: a) = t a }",
+        vec![
+            ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
+            ("third", "fn(Tup(a, b, c)) -> c"),
+        ],
+    );
+}
+
+#[test]
+fn infer_label_shorthand_pattern() {
+    assert_module_infer!(
+        "pub type Tup(a, b, c) { Tup(first: a, second: b, third: c) }
+         pub fn third(t) { let Tup(_, _, third:) = t third }",
         vec![
             ("Tup", "fn(a, b, c) -> Tup(a, b, c)"),
             ("third", "fn(Tup(a, b, c)) -> c"),
@@ -1489,8 +1809,8 @@ fn module_constants() {
 fn custom_type_module_constants() {
     assert_module_infer!(
         "pub type Test { A }
-        pub const test = A",
-        vec![("A", "Test"), ("test", "Test")],
+        pub const some_test = A",
+        vec![("A", "Test"), ("some_test", "Test")],
     );
 }
 
@@ -1639,7 +1959,10 @@ fn early_function_generalisation() {
          pub fn int() { id(1) }",
         vec![("id", "fn(a) -> a"), ("int", "fn() -> Int")],
     );
+}
 
+#[test]
+fn early_function_generalisation2() {
     assert_module_infer!(
         "pub fn id(x) { x }
          pub fn int() { id(1) }
@@ -1655,15 +1978,19 @@ fn early_function_generalisation() {
 
 // https://github.com/gleam-lang/gleam/issues/970
 #[test]
-fn bitstring_pattern_unification() {
+fn bit_array_pattern_unification() {
     assert_module_infer!(
         "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
-        vec![("m", "fn(BitString) -> Nil")],
+        vec![("m", "fn(BitArray) -> Nil")],
     );
+}
 
+// https://github.com/gleam-lang/gleam/issues/970
+#[test]
+fn bit_array_pattern_unification2() {
     assert_module_infer!(
         "pub fn m(x) { case x { <<>> -> Nil _ -> Nil} }",
-        vec![("m", "fn(BitString) -> Nil")],
+        vec![("m", "fn(BitArray) -> Nil")],
     );
 }
 
@@ -1773,5 +2100,360 @@ fn block_maths() {
   { max -. min } /. { max +. min }
 }",
         vec![("do", "fn(Float, Float) -> Float")],
+    );
+}
+
+#[test]
+fn infer_label_shorthand_in_call_arg() {
+    assert_module_infer!(
+        "
+    pub fn main() {
+        let arg1 = 1
+        let arg2 = 1.0
+        let arg3 = False
+        wibble(arg2:, arg3:, arg1:)
+    }
+
+    pub fn wibble(arg1 arg1: Int, arg2 arg2: Float, arg3 arg3: Bool) { Nil }
+        ",
+        vec![
+            ("main", "fn() -> Nil"),
+            ("wibble", "fn(Int, Float, Bool) -> Nil")
+        ],
+    );
+}
+
+#[test]
+fn infer_label_shorthand_in_constructor_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
+    pub fn main() {
+        let arg1 = 1
+        let arg2 = True
+        let arg3 = 1.0
+        Wibble(arg2:, arg3:, arg1:)
+    }
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Float) -> Wibble"),
+            ("main", "fn() -> Wibble"),
+        ],
+    );
+}
+
+#[test]
+fn infer_label_shorthand_in_constant_constructor_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
+    pub const arg1 = 1
+    pub const arg2 = True
+    pub const arg3 = 1.0
+
+    pub const wibble = Wibble(arg2:, arg3:, arg1:)
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Float) -> Wibble"),
+            ("arg1", "Int"),
+            ("arg2", "Bool"),
+            ("arg3", "Float"),
+            ("wibble", "Wibble")
+        ],
+    );
+}
+
+#[test]
+fn infer_label_shorthand_in_pattern_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Int) }
+    pub fn main() {
+        case Wibble(1, True, 2) {
+           Wibble(arg2:, arg3:, arg1:) if arg2 -> arg1 * arg3
+           _ -> 0
+        }
+    }
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ],
+    );
+}
+
+#[test]
+fn infer_label_shorthand_in_record_update_arg() {
+    assert_module_infer!(
+        "
+    pub type Wibble { Wibble(arg1: Int, arg2: Bool, arg3: Float) }
+    pub fn main() {
+        let wibble = Wibble(1, True, 2.0)
+        let arg3 = 3.0
+        let arg2 = False
+        Wibble(..wibble, arg3:, arg2:)
+    }
+",
+        vec![
+            ("Wibble", "fn(Int, Bool, Float) -> Wibble"),
+            ("main", "fn() -> Wibble")
+        ],
+    );
+}
+
+#[test]
+fn public_type_from_internal_module_has_internal_publicity() {
+    let module = compile_module("thepackage/internal", "pub type Wibble", None, vec![]).unwrap();
+    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    assert!(type_.publicity.is_internal());
+}
+
+#[test]
+fn internal_type_from_internal_module_has_internal_publicity() {
+    let module = compile_module(
+        "thepackage/internal",
+        "@internal pub type Wibble",
+        None,
+        vec![],
+    )
+    .unwrap();
+    let type_ = module.type_info.get_public_type("Wibble").unwrap();
+    assert!(type_.publicity.is_internal());
+}
+
+#[test]
+fn private_type_from_internal_module_is_not_exposed_as_internal() {
+    let module = compile_module("thepackage/internal", "type Wibble", None, vec![]).unwrap();
+    assert!(module.type_info.get_public_type("Wibble").is_none());
+}
+
+#[test]
+fn assert_suitable_main_function_not_module_function() {
+    let value = ValueConstructor {
+        publicity: Publicity::Public,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleConstant {
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            literal: Constant::Int {
+                location: Default::default(),
+                value: "1".into(),
+            },
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+                can_run_on_erlang: true,
+                can_run_on_javascript: true,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+}
+
+#[test]
+fn assert_suitable_main_function_wrong_arity() {
+    let value = ValueConstructor {
+        publicity: Publicity::Public,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 1,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            external_erlang: None,
+            external_javascript: None,
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+                can_run_on_erlang: true,
+                can_run_on_javascript: true,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+}
+
+#[test]
+fn assert_suitable_main_function_ok() {
+    let value = ValueConstructor {
+        publicity: Publicity::Public,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 0,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            external_erlang: None,
+            external_javascript: None,
+            implementations: Implementations {
+                gleam: true,
+                uses_erlang_externals: false,
+                uses_javascript_externals: false,
+                can_run_on_erlang: true,
+                can_run_on_javascript: true,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_ok(),);
+}
+
+#[test]
+fn assert_suitable_main_function_erlang_not_supported() {
+    let value = ValueConstructor {
+        publicity: Publicity::Public,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 0,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            external_erlang: Some(("wibble".into(), "wobble".into())),
+            external_javascript: Some(("wobble".into(), "wibble".into())),
+            implementations: Implementations {
+                gleam: false,
+                uses_erlang_externals: true,
+                uses_javascript_externals: true,
+                can_run_on_erlang: false,
+                can_run_on_javascript: true,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);
+}
+
+#[test]
+fn assert_suitable_main_function_javascript_not_supported() {
+    let value = ValueConstructor {
+        publicity: Publicity::Public,
+        deprecation: Deprecation::NotDeprecated,
+        type_: fn_(vec![], int()),
+        variant: ValueConstructorVariant::ModuleFn {
+            name: "name".into(),
+            field_map: None,
+            arity: 0,
+            documentation: None,
+            location: Default::default(),
+            module: "module".into(),
+            external_erlang: Some(("wibble".into(), "wobble".into())),
+            external_javascript: Some(("wobble".into(), "wibble".into())),
+            implementations: Implementations {
+                gleam: false,
+                uses_erlang_externals: true,
+                uses_javascript_externals: true,
+                can_run_on_erlang: true,
+                can_run_on_javascript: false,
+            },
+        },
+    };
+    assert!(assert_suitable_main_function(&value, &"module".into(), Target::JavaScript).is_err(),);
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x) { x }
+}
+"#,
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity1() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x, y) { x.0 }
+     |> fn (x) { x }
+}
+"#
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity2() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x, y) { x }
+}
+"#
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_unannotated_functions_wrong_arity3() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn () { x }
+}
+"#
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_mixed_functions() {
+    assert_module_infer!(
+        r#"
+pub fn main() {
+  let a = "abc"
+     |> fn (x) { #(x, x <> "d") }
+     |> fn (x) { x.0 }
+     |> fn (x: String) { x }
+}
+"#,
+        vec![("main", "fn() -> String")]
+    );
+}
+
+#[test]
+fn pipe_with_annonymous_functions_using_structs() {
+    // https://github.com/gleam-lang/gleam/issues/2504
+    assert_module_infer!(
+        r#"
+type Date {
+  Date(day: Day)
+}
+type Day {
+  Day(year: Int)
+}
+fn now() -> Date {
+  Date(Day(2024))
+}
+fn get_day(date: Date) -> Day {
+  date.day
+}
+pub fn main() {
+  now() |> get_day() |> fn (it) { it.year }
+}
+"#,
+        vec![("main", "fn() -> Int")]
     );
 }

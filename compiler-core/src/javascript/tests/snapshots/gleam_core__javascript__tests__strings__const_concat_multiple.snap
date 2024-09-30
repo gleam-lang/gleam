@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/strings.rs
+expression: "\nconst cute = \"cute\"\nconst cute_bee = cute <> \"bee\"\nconst cute_cute_bee_buzz = cute <> cute_bee <> \"buzz\"\n\npub fn main() {\n  cute_cute_bee_buzz\n}\n"
+---
+const cute = "cute";
+
+const cute_bee = cute + "bee";
+
+const cute_cute_bee_buzz = cute + cute_bee + "buzz";
+
+export function main() {
+  return cute_cute_bee_buzz;
+}

@@ -1,0 +1,60 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 866
+expression: "\n@internal pub type Alias = Result(Int, String)\n@internal pub type AnotherType {\n  Wibble\n}\n"
+---
+@internal pub type Alias = Result(Int, String)
+@internal pub type AnotherType {
+|  Wibble
+}
+
+
+----- Completion content -----
+Alias
+  kind:   Class
+  detail: Type
+  sort:   2_Alias
+  edits:
+    [3:0-3:0]: "Alias"
+AnotherType
+  kind:   Class
+  detail: Type
+  sort:   2_AnotherType
+  edits:
+    [3:0-3:0]: "AnotherType"
+BitArray
+  kind:   Class
+  detail: Type
+  sort:   4_BitArray
+Bool
+  kind:   Class
+  detail: Type
+  sort:   4_Bool
+Float
+  kind:   Class
+  detail: Type
+  sort:   4_Float
+Int
+  kind:   Class
+  detail: Type
+  sort:   4_Int
+List
+  kind:   Class
+  detail: Type
+  sort:   4_List
+Nil
+  kind:   Class
+  detail: Type
+  sort:   4_Nil
+Result
+  kind:   Class
+  detail: Type
+  sort:   4_Result
+String
+  kind:   Class
+  detail: Type
+  sort:   4_String
+UtfCodepoint
+  kind:   Class
+  detail: Type
+  sort:   4_UtfCodepoint

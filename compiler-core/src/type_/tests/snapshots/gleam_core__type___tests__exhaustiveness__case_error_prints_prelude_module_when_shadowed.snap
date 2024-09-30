@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 1068
+expression: "\nimport gleam\ntype MyResult { Ok Error }\npub fn main() {\n  let res = gleam.Ok(10)\n  case res {\n    gleam.Ok(n) -> Nil\n  }\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:6:3
+  │  
+6 │ ╭   case res {
+7 │ │     gleam.Ok(n) -> Nil
+8 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    gleam.Error(_)

@@ -4,18 +4,18 @@ use std::str::FromStr;
 use crate::error::Result;
 use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use hexpm::version::Range;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
 use serde::Deserialize;
-use smol_str::SmolStr;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
 pub enum Requirement {
     Hex { version: Range },
     Path { path: Utf8PathBuf },
-    Git { git: SmolStr },
+    Git { git: EcoString },
 }
 
 impl Requirement {
@@ -36,7 +36,7 @@ impl Requirement {
     pub fn to_toml(&self, root_path: &Utf8Path) -> String {
         match self {
             Requirement::Hex { version: range } => {
-                format!(r#"{{ version = "{}" }}"#, range)
+                format!(r#"{{ version = "{range}" }}"#)
             }
             Requirement::Path { path } => {
                 format!(
@@ -44,7 +44,7 @@ impl Requirement {
                     make_relative(root_path, path).as_str().replace('\\', "/")
                 )
             }
-            Requirement::Git { git: url } => format!(r#"{{ git = "{}" }}"#, url),
+            Requirement::Git { git: url } => format!(r#"{{ git = "{url}" }}"#),
         }
     }
 }

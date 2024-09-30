@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import example_module
+fn main() {
+  example_module.Var1(1)
+                   ↑    
+}
+
+----- Jumped to `build/packages/hex/src/example_module.gleam`
+
+pub type Rec {
+  Var1(Int)
+  ↑▔▔▔▔▔▔▔▔
+  Var2(Int, Int)
+}

@@ -1,13 +1,11 @@
 use std::convert::TryInto;
+use std::sync::OnceLock;
 
 use async_trait::async_trait;
 use gleam_core::{Error, Result};
 use http::{Request, Response};
-use lazy_static::lazy_static;
 
-lazy_static! {
-    static ref REQWEST_CLIENT: reqwest::Client = reqwest::Client::new();
-}
+static REQWEST_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct HttpClient;
@@ -28,7 +26,11 @@ impl gleam_core::io::HttpClient for HttpClient {
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
-        let mut response = REQWEST_CLIENT.execute(request).await.map_err(Error::http)?;
+        let mut response = REQWEST_CLIENT
+            .get_or_init(reqwest::Client::new)
+            .execute(request)
+            .await
+            .map_err(Error::http)?;
         let mut builder = Response::builder()
             .status(response.status())
             .version(response.version());

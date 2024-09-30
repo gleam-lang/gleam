@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport example_module\nfn main() {\n  example_module.my_fn\n}\n"
+---
+import example_module
+fn main() {
+  example_module.my_fn
+                ▔▔▔↑▔▔
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> Nil\n```\n",
+    ),
+)

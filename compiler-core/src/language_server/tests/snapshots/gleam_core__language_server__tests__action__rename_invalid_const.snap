@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: const myInvalid_Constant = 42
+---
+----- BEFORE ACTION
+const myInvalid_Constant = 42
+               ↑             
+
+
+----- AFTER ACTION
+const my_invalid_constant = 42

@@ -4,10 +4,11 @@ assertion_line: 39
 expression: "pub fn go() {\n  let assert Ok(y) = Ok(1)\n  let assert Ok(y) = Ok(1)\n  y\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
     _assert_subject = {ok, 1},
@@ -15,7 +16,7 @@ go() ->
         {ok, _} -> _assert_subject;
         _assert_fail ->
             erlang:error(#{gleam_error => let_assert,
-                        message => <<"Assertion pattern match failed"/utf8>>,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
@@ -26,11 +27,10 @@ go() ->
         {ok, _} -> _assert_subject@1;
         _assert_fail@1 ->
             erlang:error(#{gleam_error => let_assert,
-                        message => <<"Assertion pattern match failed"/utf8>>,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
                         value => _assert_fail@1,
                         module => <<"my/mod"/utf8>>,
                         function => <<"go"/utf8>>,
                         line => 3})
     end,
     Y@1.
-

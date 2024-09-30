@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 302
+expression: "\nfn go(x) {\n  let assert <<a:unsigned>> = x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.length == 1)) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  let a = x.byteAt(0);
+  return x;
+}

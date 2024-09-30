@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 974
+expression: "\ntype Wibble {\n    One(Int)\n    Two(Absent)\n}\n\npub fn main(wibble) {\n    case wibble {\n        One(x) -> x\n    }\n}\n"
+---
+error: Unknown type
+  ┌─ /src/one/two.gleam:4:9
+  │
+4 │     Two(Absent)
+  │         ^^^^^^
+
+The type `Absent` is not defined or imported in this module.
+
+error: Private type used in public interface
+  ┌─ /src/one/two.gleam:7:1
+  │
+7 │ pub fn main(wibble) {
+  │ ^^^^^^^^^^^^^^^^^^^
+
+The following type is private, but is being used by this public export.
+
+    Wibble
+
+Private types can only be used within the module that defines them.
+
+error: Inexhaustive patterns
+   ┌─ /src/one/two.gleam:8:5
+   │  
+ 8 │ ╭     case wibble {
+ 9 │ │         One(x) -> x
+10 │ │     }
+   │ ╰─────^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Two

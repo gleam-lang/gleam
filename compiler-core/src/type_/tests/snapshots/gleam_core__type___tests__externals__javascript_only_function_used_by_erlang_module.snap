@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/externals.rs
+expression: "@external(javascript, \"one\", \"two\")\nfn js_only() -> Int\n\npub fn main() {\n  js_only()\n}\n"
+---
+error: Unsupported target
+  ┌─ /src/one/two.gleam:5:3
+  │
+5 │   js_only()
+  │   ^^^^^^^
+
+This value is not available as it is defined using externals, and there is
+no implementation for the Erlang target.
+
+Hint: Did you mean to build for a different target?

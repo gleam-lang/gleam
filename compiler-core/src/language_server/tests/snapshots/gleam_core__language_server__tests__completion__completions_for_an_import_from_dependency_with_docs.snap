@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 1085
+expression: "//// Main package\n//// documentation!\n\nimport gleam\n\npub fn main() {\n  0\n}"
+---
+//// Main package
+//// documentation!
+
+import gle|am
+
+pub fn main() {
+  0
+}
+
+
+----- Completion content -----
+example_module
+  kind:   Module
+  edits:
+    [3:7-3:7]: "example_module"

@@ -1,17 +1,16 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 45
 expression: "./cases/erlang_bug_752"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<29 byte binary>
+<57 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([one/1]).
 
@@ -24,11 +23,11 @@ expression: "./cases/erlang_bug_752"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<40 byte binary>
+<84 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([two/1]).
 
@@ -50,6 +49,3 @@ expression: "./cases/erlang_bug_752"
 
 //// /out/lib/the_package/include/two_Two.hrl
 -record(two, {thing :: one:one(integer())}).
-
-
-

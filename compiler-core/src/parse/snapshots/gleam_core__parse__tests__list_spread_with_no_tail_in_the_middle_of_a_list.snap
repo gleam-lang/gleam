@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() -> Nil {\n  let xs = [1, 2, 3]\n  [1, 2, .., 3 + 3, 4]\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:10
+  │
+4 │   [1, 2, .., 3 + 3, 4]
+  │          ^^ I was expecting a value after this spread
+
+If a list expression has a spread then a tail must also be given.

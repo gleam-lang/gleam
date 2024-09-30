@@ -1,6 +1,5 @@
-use lazy_static::__Deref;
-
 use super::*;
+use std::ops::Deref;
 use std::{cell::RefCell, collections::HashMap, rc::Rc, time::Duration};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -25,6 +24,10 @@ pub struct InMemoryFileSystem {
 impl InMemoryFileSystem {
     pub fn new() -> Self {
         Self::default()
+    }
+
+    pub fn reset(&self) {
+        self.files.deref().borrow_mut().clear();
     }
 
     /// # Panics
@@ -79,7 +82,7 @@ impl InMemoryFileSystem {
 }
 
 impl FileSystemWriter for InMemoryFileSystem {
-    fn delete(&self, path: &Utf8Path) -> Result<(), Error> {
+    fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();
         let _ = files.remove(path);
         Ok(())
@@ -123,6 +126,10 @@ impl FileSystemWriter for InMemoryFileSystem {
             .borrow_mut()
             .insert(path.to_path_buf(), file);
         Ok(())
+    }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        self.files.deref().borrow().contains_key(path)
     }
 }
 
@@ -271,13 +278,13 @@ impl Default for InMemoryFile {
     }
 }
 
-impl std::io::Write for InMemoryFile {
-    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+impl io::Write for InMemoryFile {
+    fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         let mut reference = (*self.buffer).borrow_mut();
         reference.write(buf)
     }
 
-    fn flush(&mut self) -> std::io::Result<()> {
+    fn flush(&mut self) -> io::Result<()> {
         let mut reference = (*self.buffer).borrow_mut();
         reference.flush()
     }

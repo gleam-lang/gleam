@@ -1,9 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 41
 expression: "pub fn main() -> String {\n  todo\n}"
 ---
-
 warning: Todo found
   ┌─ /src/warning/wrn.gleam:2:3
   │
@@ -14,5 +12,3 @@ This code will crash if it is run. Be sure to finish it before
 running your program.
 
 Hint: I think its type is `String`.
-
-

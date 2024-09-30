@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\nlet x = fn(f) { \"Hello, \" <> f(1) }\nuse _, _ <- x()\n\"Giacomo!\"\n"
+---
+error: Incorrect arity
+  ┌─ /src/one/two.gleam:3:5
+  │
+3 │ use _, _ <- x()
+  │     ^^^^    ^^^
+  │     │        
+  │     Expected 1 argument, got 2
+
+This function takes a callback that expects 1 argument. But 2 were provided
+on the left hand side of `<-`.
+
+See: https://tour.gleam.run/advanced-features/use/

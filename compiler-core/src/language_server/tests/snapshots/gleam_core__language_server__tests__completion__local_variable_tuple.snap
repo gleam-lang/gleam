@@ -1,0 +1,70 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\nfn wibble() {\n  let assert #([d, e] as f, g) = #([0, 1], 2)\n\n}\n"
+---
+fn wibble() {
+  let assert #([d, e] as f, g) = #([0, 1], 2)
+|
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+d
+  kind:   Variable
+  detail: Int
+  sort:   2_d
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "d"
+e
+  kind:   Variable
+  detail: Int
+  sort:   2_e
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "e"
+f
+  kind:   Variable
+  detail: List(Int)
+  sort:   2_f
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "f"
+g
+  kind:   Variable
+  detail: Int
+  sort:   2_g
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:0-3:0]: "g"
+wibble
+  kind:   Function
+  detail: fn() -> #(List(Int), Int)
+  sort:   2_wibble
+  desc:   app
+  edits:
+    [3:0-3:0]: "wibble"

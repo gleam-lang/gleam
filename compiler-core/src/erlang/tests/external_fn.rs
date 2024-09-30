@@ -1,11 +1,11 @@
-use crate::{assert_erl, assert_module_error};
+use crate::{assert_erl, assert_js_module_error, assert_module_error};
 
 #[test]
 fn integration_test1_3() {
     assert_erl!(
         r#"
 @external(erlang, "Elixir.MyApp", "run")
-pub fn run() -> Int 
+pub fn run() -> Int
 "#
     );
 }
@@ -223,7 +223,7 @@ pub fn one(x: Int) -> Int
 fn no_body_or_implementation() {
     assert_module_error!(
         r#"
-pub fn one(x: Int) -> Int
+pub fn one(x: Int) -> Float
 "#
     );
 }
@@ -262,6 +262,89 @@ fn public_elixir() {
         r#"
 @external(erlang, "Elixir.String", "main")
 pub fn do() -> Int
+"#
+    );
+}
+
+#[test]
+fn javascript_only() {
+    assert_erl!(
+        r#"
+pub fn should_be_generated(x: Int) -> Int {
+  x
+}
+
+@external(javascript, "one", "one")
+pub fn should_not_be_generated(x: Int) -> Int
+"#
+    );
+}
+
+#[test]
+fn javascript_only_indirect() {
+    assert_erl!(
+        r#"
+pub fn should_be_generated(x: Int) -> Int {
+  x
+}
+
+@external(javascript, "one", "one")
+pub fn should_not_be_generated(x: Int) -> Int
+
+pub fn also_should_not_be_generated() {
+  should_not_be_generated(1)
+  |> should_be_generated
+}
+"#
+    );
+}
+
+#[test]
+fn both_externals_no_valid_impl() {
+    assert_erl!(
+        r#"
+@external(javascript, "one", "one")
+pub fn js() -> Nil
+
+@external(erlang, "one", "one")
+pub fn erl() -> Nil
+
+pub fn should_not_be_generated() {
+  js()
+  erl()
+}
+"#
+    );
+}
+
+#[test]
+fn no_gleam_impl_no_annotations_function_fault_tolerance() {
+    // A function not having annotations when required does not stop analysis.
+    assert_module_error!(
+        r#"
+@external(erlang, "one", "two")
+pub fn no_impl()
+
+pub type X = UnknownType
+"#
+    );
+}
+
+#[test]
+fn no_target_supported_function_fault_tolerance() {
+    // A function not supporting the current target does not stop analysis.
+    assert_js_module_error!(
+        r#"
+// This will error for having no support on this platform
+@external(erlang, "one", "two")
+pub fn no_impl() -> Int
+
+pub fn main() {
+  // This will due to no_impl not having an appropriate implementation for the
+  // target, NOT because it doesn't exist. The analyser should still know about
+  // it, even though it is invalid.
+  no_impl()
+}
 "#
     );
 }

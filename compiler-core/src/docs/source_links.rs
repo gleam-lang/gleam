@@ -49,6 +49,27 @@ impl SourceLinker {
                 ),
                 ":".into(),
             )),
+            Repository::Codeberg { user, repo } => Some((
+                format!(
+                    "https://codeberg.org/{}/{}/src/tag/v{}/{}#L",
+                    user, repo, project_config.version, path_in_repo
+                ),
+                "-".into(),
+            )),
+            Repository::SourceHut { user, repo } => Some((
+                format!(
+                    "https://git.sr.ht/~{}/{}/tree/v{}/item/{}#L",
+                    user, repo, project_config.version, path_in_repo
+                ),
+                "-".into(),
+            )),
+            Repository::Gitea { user, repo, host } => Some((
+                format!(
+                    "{host}/{user}/{repo}/src/tag/v{}/{}#L",
+                    project_config.version, path_in_repo
+                ),
+                "-".into(),
+            )),
             Repository::Custom { .. } | Repository::None => None,
         };
 
@@ -57,7 +78,7 @@ impl SourceLinker {
             url_pattern,
         }
     }
-    pub fn url(&self, span: &SrcSpan) -> String {
+    pub fn url(&self, span: SrcSpan) -> String {
         match &self.url_pattern {
             Some((base, line_sep)) => {
                 let start_line = self.line_numbers.line_number(span.start);

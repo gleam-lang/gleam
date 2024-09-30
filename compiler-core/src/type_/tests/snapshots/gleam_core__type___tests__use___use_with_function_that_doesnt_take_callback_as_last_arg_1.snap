@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\nlet f = fn(a) { a + 1 }\nuse <- f\n123\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:8
+  │
+3 │ use <- f
+  │        ^
+
+The function on the right hand side of `<-` has to take a callback function
+as its last argument. But the last argument of this function has type:
+
+    Int
+
+See: https://tour.gleam.run/advanced-features/use/

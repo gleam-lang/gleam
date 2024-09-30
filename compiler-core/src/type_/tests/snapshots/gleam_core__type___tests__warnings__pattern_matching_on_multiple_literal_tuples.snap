@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub fn main() {\n        let wibble = 1\n        case #(1, 2), #(wibble, wibble) {\n            _, _ -> Nil\n        }\n      }"
+---
+warning: Redundant tuple
+  ┌─ /src/warning/wrn.gleam:3:14
+  │
+3 │         case #(1, 2), #(wibble, wibble) {
+  │              ^^^^^^^ You can remove this tuple wrapper
+
+Instead of building a tuple and matching on it, you can match on its
+contents directly.
+A case expression can take multiple subjects separated by commas like this:
+
+    case one_subject, another_subject {
+      _, _ -> todo
+    }
+
+See: https://tour.gleam.run/flow-control/multiple-subjects/
+
+warning: Redundant tuple
+  ┌─ /src/warning/wrn.gleam:3:23
+  │
+3 │         case #(1, 2), #(wibble, wibble) {
+  │                       ^^^^^^^^^^^^^^^^^ You can remove this tuple wrapper
+
+Instead of building a tuple and matching on it, you can match on its
+contents directly.
+A case expression can take multiple subjects separated by commas like this:
+
+    case one_subject, another_subject {
+      _, _ -> todo
+    }
+
+See: https://tour.gleam.run/flow-control/multiple-subjects/

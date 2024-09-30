@@ -1,13 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 426
+assertion_line: 459
 expression: "\npub fn main() {\n    let key = 10\n    let x = [#(10, 2), #(1, 2)]\n    case x {\n        [first, ..rest] if first.0 == key -> \"ok\"\n        _ -> \"ko\"\n    }\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> binary().
 main() ->
     Key = 10,
@@ -19,4 +20,3 @@ main() ->
         _ ->
             <<"ko"/utf8>>
     end.
-

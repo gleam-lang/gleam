@@ -70,6 +70,34 @@ fn go() {
 }
 
 #[test]
+fn int_divide_complex_expr() {
+    assert_js!(
+        r#"
+fn go() {
+  case 1 >= 0 {
+    True -> 2
+    False -> 4
+  } / 2
+}
+"#,
+    );
+}
+
+#[test]
+fn int_mod_complex_expr() {
+    assert_js!(
+        r#"
+fn go() {
+  case 1 >= 0 {
+    True -> 2
+    False -> 4
+  } % 2
+}
+"#,
+    );
+}
+
+#[test]
 fn float_operators() {
     assert_js!(
         r#"
@@ -78,11 +106,25 @@ fn go() {
     5.0 -. 1.5 // => 3.5
     5.0 /. 2.0 // => 2.5
     3.0 *. 3.1 // => 9.3
-    
+
     2.0 >. 1.0  // => True
     2.0 <. 1.0  // => False
     2.0 >=. 1.0 // => True
     2.0 <=. 1.0 // => False
+}
+"#,
+    );
+}
+
+#[test]
+fn float_divide_complex_expr() {
+    assert_js!(
+        r#"
+fn go() {
+  case 1.0 >=. 0.0 {
+    True -> 2.0
+    False -> 4.0
+  } /. 2.0
 }
 "#,
     );
@@ -104,7 +146,7 @@ fn int_patterns() {
     assert_js!(
         r#"
 fn go(x) {
-  let 4 = x
+  let assert 4 = x
 }
 "#,
     );
@@ -120,7 +162,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn int_equality1() {
     assert_js!(
         r#"
 fn go(y) {
@@ -141,7 +186,10 @@ fn go() {
 }
 "#,
     );
+}
 
+#[test]
+fn float_equality1() {
     assert_js!(
         r#"
 fn go(y) {
@@ -193,6 +241,74 @@ fn repeated_int_negation() {
 fn go() {
   let a = 3
   let b = --a
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_int() {
+    assert_js!(
+        r#"
+fn main() {
+  09_179
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_float() {
+    assert_js!(
+        r#"
+fn main() {
+  09_179.1
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_int_const() {
+    assert_js!(
+        r#"
+const x = 09_179
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_float_const() {
+    assert_js!(
+        r#"
+const x = 09_179.1
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_int_pattern() {
+    assert_js!(
+        r#"
+fn main(x) {
+  let assert 09_179 = x
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2412
+#[test]
+fn preceeding_zeros_float_pattern() {
+    assert_js!(
+        r#"
+fn main(x) {
+  let assert 09_179.1 = x
 }
 "#
     );

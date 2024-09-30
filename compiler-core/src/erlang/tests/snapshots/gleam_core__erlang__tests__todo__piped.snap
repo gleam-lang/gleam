@@ -1,13 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests/todo.rs
-assertion_line: 38
-expression: "\n     pub fn main(){\n      \"lets\"\n      |> todo(\"pipe\")\n      |> todo(\"other todo\")\n    }\n    "
+assertion_line: 52
+expression: "\n     pub fn main() {\n      \"lets\"\n      |> todo as \"pipe\"\n      |> todo as \"other todo\"\n    }\n    "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     _pipe = <<"lets"/utf8>>,
@@ -21,4 +22,3 @@ main() ->
             module => <<"my/mod"/utf8>>,
             function => <<"main"/utf8>>,
             line => 5}))(_pipe@1).
-

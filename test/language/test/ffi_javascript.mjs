@@ -26,10 +26,6 @@ export function toString(a) {
   }
 }
 
-export function ansiGreen(string) {
-  return `\u001b[32m${string}\u001b[0m`;
-}
-
 export function fileExists(path) {
   if (globalThis.Deno) {
     try {

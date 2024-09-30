@@ -29,11 +29,10 @@ impl BuildLock {
     }
 
     /// Lock the specified directory
-    pub fn lock<Telem: Telemetry>(&self, telemetry: &Telem) -> Guard {
+    pub fn lock<Telem: Telemetry + ?Sized>(&self, telemetry: &Telem) -> Result<Guard> {
         tracing::debug!(path=?self.directory, "locking_build_directory");
 
-        // TODO: return error rather than panicking
-        crate::fs::mkdir(&self.directory).expect("Could not create lock directory");
+        crate::fs::mkdir(&self.directory)?;
 
         let lock_path = self.directory.join("gleam.lock");
         let mut file = fslock::LockFile::open(lock_path.as_str()).expect("LockFile creation");
@@ -42,7 +41,8 @@ impl BuildLock {
             telemetry.waiting_for_build_directory_lock();
             file.lock_with_pid().expect("Build locking")
         }
-        Guard(file)
+
+        Ok(Guard(file))
     }
 
     /// Lock all build directories. Does not lock the packages directory.
@@ -53,19 +53,24 @@ impl BuildLock {
         let mut locks = vec![];
         for mode in Mode::iter() {
             for target in Target::iter() {
-                locks.push(Self::new_target(paths, mode, target)?.lock(telemetry));
+                locks.push(Self::new_target(paths, mode, target)?.lock(telemetry)?);
             }
         }
+
         Ok(locks)
     }
 }
 
 #[derive(Debug)]
-pub(crate) struct Guard(fslock::LockFile);
+pub(crate) struct Guard(
+    // False positive. This is used in `drop`. Presumably the lint error is a
+    // bug in clippy.
+    #[allow(dead_code)] fslock::LockFile,
+);
 
 #[test]
 fn locking_global() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_packages(&paths).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
@@ -73,7 +78,7 @@ fn locking_global() {
 
 #[test]
 fn locking_dev_erlang() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_target(&paths, Mode::Dev, Target::Erlang).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
@@ -81,7 +86,7 @@ fn locking_dev_erlang() {
 
 #[test]
 fn locking_prod_erlang() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_target(&paths, Mode::Prod, Target::Erlang).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
@@ -89,7 +94,7 @@ fn locking_prod_erlang() {
 
 #[test]
 fn locking_lsp_erlang() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_target(&paths, Mode::Lsp, Target::Erlang).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
@@ -97,7 +102,7 @@ fn locking_lsp_erlang() {
 
 #[test]
 fn locking_dev_javascript() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_target(&paths, Mode::Dev, Target::JavaScript).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
@@ -105,7 +110,7 @@ fn locking_dev_javascript() {
 
 #[test]
 fn locking_prod_javascript() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_target(&paths, Mode::Prod, Target::JavaScript).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")
@@ -113,7 +118,7 @@ fn locking_prod_javascript() {
 
 #[test]
 fn locking_lsp_javascript() {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::project_paths_at_current_directory_without_toml();
     let lock = BuildLock::new_target(&paths, Mode::Lsp, Target::JavaScript).expect("make lock");
     let _guard1 = lock.lock(&gleam_core::build::NullTelemetry);
     println!("Locked!")

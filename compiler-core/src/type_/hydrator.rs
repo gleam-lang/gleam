@@ -1,5 +1,8 @@
 use super::*;
-use crate::ast::TypeAst;
+use crate::{
+    analyse::name::check_name_case,
+    ast::{Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar},
+};
 use std::sync::Arc;
 
 use im::hashmap;
@@ -18,20 +21,20 @@ use im::hashmap;
 ///
 #[derive(Debug)]
 pub struct Hydrator {
-    created_type_variables: im::HashMap<SmolStr, Arc<Type>>,
+    created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
     /// A rigid type is a generic type that was specified as being generic in
     /// an annotation. As such it should never be instantiated into an unbound
     /// variable. This type_id => name map is used for reporting the original
     /// annotated name on error.
-    rigid_type_names: im::HashMap<u64, SmolStr>,
+    rigid_type_names: im::HashMap<u64, EcoString>,
     permit_new_type_variables: bool,
     permit_holes: bool,
 }
 
 #[derive(Debug)]
 pub struct ScopeResetData {
-    created_type_variables: im::HashMap<SmolStr, Arc<Type>>,
-    rigid_type_names: im::HashMap<u64, SmolStr>,
+    created_type_variables: im::HashMap<EcoString, CreatedTypeVariable>,
+    rigid_type_names: im::HashMap<u64, EcoString>,
 }
 
 impl Default for Hydrator {
@@ -48,6 +51,10 @@ impl Hydrator {
             permit_new_type_variables: true,
             permit_holes: false,
         }
+    }
+
+    pub fn named_type_variables(&self) -> im::HashMap<EcoString, CreatedTypeVariable> {
+        self.created_type_variables.clone()
     }
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
@@ -79,7 +86,7 @@ impl Hydrator {
         self.rigid_type_names.contains_key(id)
     }
 
-    pub fn rigid_names(&self) -> im::HashMap<u64, SmolStr> {
+    pub fn rigid_names(&self) -> im::HashMap<u64, EcoString> {
         self.rigid_type_names.clone()
     }
 
@@ -87,9 +94,10 @@ impl Hydrator {
         &mut self,
         ast: &Option<TypeAst>,
         environment: &mut Environment<'_>,
+        problems: &mut Problems,
     ) -> Result<Arc<Type>, Error> {
         match ast {
-            Some(ast) => self.type_from_ast(ast, environment),
+            Some(ast) => self.type_from_ast(ast, environment, problems),
             None => Ok(environment.new_unbound_var()),
         }
     }
@@ -100,32 +108,51 @@ impl Hydrator {
         &mut self,
         ast: &TypeAst,
         environment: &mut Environment<'_>,
+        problems: &mut Problems,
     ) -> Result<Arc<Type>, Error> {
         match ast {
-            TypeAst::Constructor {
+            TypeAst::Constructor(TypeAstConstructor {
                 location,
                 module,
                 name,
                 arguments: args,
-            } => {
+            }) => {
                 // Hydrate the type argument AST into types
                 let mut argument_types = Vec::with_capacity(args.len());
                 for t in args {
-                    let typ = self.type_from_ast(t, environment)?;
-                    argument_types.push((t.location(), typ));
+                    let type_ = self.type_from_ast(t, environment, problems)?;
+                    argument_types.push((t.location(), type_));
                 }
 
                 // Look up the constructor
                 let TypeConstructor {
                     parameters,
-                    typ: return_type,
+                    type_: return_type,
+                    deprecation,
                     ..
                 } = environment
                     .get_type_constructor(module, name)
-                    .map_err(|e| convert_get_type_constructor_error(e, location))?
+                    .map_err(|e| {
+                        convert_get_type_constructor_error(
+                            e,
+                            location,
+                            module.as_ref().map(|(_, location)| *location),
+                        )
+                    })?
                     .clone();
 
-                // Register the type constructor as being used if it is unqualifed.
+                match deprecation {
+                    Deprecation::NotDeprecated => {}
+                    Deprecation::Deprecated { message } => {
+                        problems.warning(Warning::DeprecatedItem {
+                            location: *location,
+                            message: message.clone(),
+                            layer: Layer::Type,
+                        })
+                    }
+                }
+
+                // Register the type constructor as being used if it is unqualified.
                 // We do not track use of qualified type constructors as they may be
                 // used in another module.
                 if module.is_none() {
@@ -144,10 +171,10 @@ impl Hydrator {
 
                 // Instantiate the constructor type for this specific usage
                 let mut type_vars = hashmap![];
-                #[allow(clippy::needless_collect)] // Not needless, used for size effects
+                #[allow(clippy::needless_collect)] // Not needless, used for side effects
                 let parameter_types: Vec<_> = parameters
                     .into_iter()
-                    .map(|typ| environment.instantiate(typ, &mut type_vars, self))
+                    .map(|type_| environment.instantiate(type_, &mut type_vars, self))
                     .collect();
 
                 let return_type = environment.instantiate(return_type, &mut type_vars, self);
@@ -163,50 +190,76 @@ impl Hydrator {
                 Ok(return_type)
             }
 
-            TypeAst::Tuple { elems, .. } => Ok(tuple(
+            TypeAst::Tuple(TypeAstTuple { elems, .. }) => Ok(tuple(
                 elems
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment))
+                    .map(|t| self.type_from_ast(t, environment, problems))
                     .try_collect()?,
             )),
 
-            TypeAst::Fn {
+            TypeAst::Fn(TypeAstFn {
                 arguments: args,
                 return_: retrn,
                 ..
-            } => {
+            }) => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment))
+                    .map(|t| self.type_from_ast(t, environment, problems))
                     .try_collect()?;
-                let retrn = self.type_from_ast(retrn, environment)?;
+                let retrn = self.type_from_ast(retrn, environment, problems)?;
                 Ok(fn_(args, retrn))
             }
 
-            TypeAst::Var { name, location, .. } => match self.created_type_variables.get(name) {
-                Some(var) => Ok(var.clone()),
+            TypeAst::Var(TypeAstVar { name, location }) => {
+                match self.created_type_variables.get_mut(name) {
+                    Some(var) => {
+                        var.usage_count += 1;
+                        Ok(var.type_.clone())
+                    }
 
-                None if self.permit_new_type_variables => {
-                    let var = environment.new_generic_var();
-                    let _ = self
-                        .rigid_type_names
-                        .insert(environment.previous_uid(), name.clone());
-                    let _ = self
-                        .created_type_variables
-                        .insert(name.clone(), var.clone());
-                    Ok(var)
+                    None if self.permit_new_type_variables => {
+                        if let Err(error) = check_name_case(*location, name, Named::TypeVariable) {
+                            problems.error(error);
+                        }
+                        let t = environment.new_generic_var();
+                        let _ = self
+                            .rigid_type_names
+                            .insert(environment.previous_uid(), name.clone());
+                        environment
+                            .names
+                            .type_variable_in_scope(environment.previous_uid(), name.clone());
+                        let _ = self.created_type_variables.insert(
+                            name.clone(),
+                            CreatedTypeVariable {
+                                type_: t.clone(),
+                                usage_count: 1,
+                            },
+                        );
+                        Ok(t)
+                    }
+
+                    None => {
+                        let hint = match environment.scope.contains_key(name) {
+                            true => UnknownTypeHint::ValueInScopeWithSameName,
+                            false => UnknownTypeHint::AlternativeTypes(
+                                environment.module_types.keys().cloned().collect(),
+                            ),
+                        };
+
+                        Err(Error::UnknownType {
+                            name: name.clone(),
+                            location: *location,
+                            hint,
+                        })
+                    }
                 }
+            }
 
-                None => Err(Error::UnknownType {
-                    name: name.clone(),
-                    location: *location,
-                    types: environment.module_types.keys().cloned().collect(),
-                }),
-            },
+            TypeAst::Hole(TypeAstHole { .. }) if self.permit_holes => {
+                Ok(environment.new_unbound_var())
+            }
 
-            TypeAst::Hole { .. } if self.permit_holes => Ok(environment.new_unbound_var()),
-
-            TypeAst::Hole { location, .. } => Err(Error::UnexpectedTypeHole {
+            TypeAst::Hole(TypeAstHole { location, .. }) => Err(Error::UnexpectedTypeHole {
                 location: *location,
             }),
         }
@@ -215,4 +268,39 @@ impl Hydrator {
     pub fn clear_ridgid_type_names(&mut self) {
         self.rigid_type_names.clear();
     }
+
+    /// All the type variables that were created but never used.
+    pub fn unused_type_variables(&self) -> impl Iterator<Item = &EcoString> {
+        self.created_type_variables
+            .iter()
+            .filter(|(_, var)| var.usage_count == 0)
+            .map(|(name, _)| name)
+    }
+
+    /// Create a new type variable with the given name.
+    pub fn add_type_variable(
+        &mut self,
+        name: &EcoString,
+        environment: &mut Environment<'_>,
+    ) -> Result<Arc<Type>, Arc<Type>> {
+        let t = environment.new_generic_var();
+        let v = CreatedTypeVariable {
+            type_: t.clone(),
+            usage_count: 0,
+        };
+
+        environment
+            .names
+            .type_variable_in_scope(environment.previous_uid(), name.clone());
+        match self.created_type_variables.insert(name.clone(), v) {
+            Some(_) => Err(t),
+            None => Ok(t),
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct CreatedTypeVariable {
+    pub type_: Arc<Type>,
+    pub usage_count: usize,
 }

@@ -4,10 +4,11 @@ assertion_line: 34
 expression: "\npub fn main(args) {\n  case args {\n    x if x && x || x == x && x -> 1\n    _ -> 0\n  }\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main(boolean()) -> integer().
 main(Args) ->
     case Args of
@@ -17,4 +18,3 @@ main(Args) ->
         _ ->
             0
     end.
-

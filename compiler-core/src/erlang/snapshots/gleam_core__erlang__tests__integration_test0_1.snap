@@ -1,16 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 102
+assertion_line: 128
 expression: "pub fn go() {\n  let y = 1\n  let y = 2\n  y\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec go() -> integer().
 go() ->
     Y = 1,
     Y@1 = 2,
     Y@1.
-

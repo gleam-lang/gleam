@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 67
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> name -> name\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
 export function go(x) {
@@ -11,4 +10,3 @@ export function go(x) {
     return "Unknown";
   }
 }
-

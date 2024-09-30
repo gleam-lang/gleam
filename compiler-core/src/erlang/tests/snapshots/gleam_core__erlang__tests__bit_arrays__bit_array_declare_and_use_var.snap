@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/erlang/tests/bit_arrays.rs
+assertion_line: 124
+expression: "pub fn go(x) {\n  let assert <<name_size:8, name:bytes-size(name_size)>> = x\n  name\n}"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([go/1]).
+
+-file("/root/project/test/my/mod.gleam", 1).
+-spec go(bitstring()) -> bitstring().
+go(X) ->
+    <<Name_size@1:8, Name:Name_size@1/binary>> = case X of
+        <<_:8, _:Name_size/binary>> -> X;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => <<"Pattern match failed, no pattern matched the value."/utf8>>,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"go"/utf8>>,
+                        line => 2})
+    end,
+    Name.

@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nconst no_cute_bee = \"cute\" <>\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:28
+  │
+2 │ const no_cute_bee = "cute" <>
+  │                            ^^ This operator has no value on its right side
+
+Hint: Remove it or put a value after it.

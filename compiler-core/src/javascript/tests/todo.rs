@@ -34,11 +34,12 @@ fn go() {
 }
 
 #[test]
-fn with_message_deprecated() {
+fn with_message_expr() {
     assert_js!(
         r#"
 fn go() {
-  todo("I should do this")
+  let x = "I should " <> "do this"
+  todo as x
 }
 "#,
     );
@@ -50,8 +51,8 @@ fn as_expression() {
     assert_js!(
         r#"
 fn go(f) {
-  let boop = todo("I should do this")
-  f(todo("Boom"))
+  let boop = todo as "I should do this"
+  f(todo as "Boom")
 }
 "#,
     );

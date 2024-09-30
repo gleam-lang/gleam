@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 221
 expression: 1.0 >. 1
 ---
 error: Type mismatch
@@ -18,5 +17,3 @@ But this argument has this type:
     Int
 
 Hint: the > operator can be used with Ints
-
-

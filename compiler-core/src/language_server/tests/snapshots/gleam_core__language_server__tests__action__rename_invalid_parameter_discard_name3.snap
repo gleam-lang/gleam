@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let ignore = fn(_ignoreMe: Bool) { 98 }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let ignore = fn(_ignoreMe: Bool) { 98 }
+        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let ignore = fn(_ignore_me: Bool) { 98 }
+}

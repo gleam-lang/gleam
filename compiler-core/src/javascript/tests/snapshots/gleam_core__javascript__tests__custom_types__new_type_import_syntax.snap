@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\nimport a.{type A, A}\n\npub fn main() {\n  A\n}\n"
+---
+import * as $a from "../../package/a.mjs";
+import { A } from "../../package/a.mjs";
+
+export function main() {
+  return new A();
+}

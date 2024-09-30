@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+assertion_line: 1166
+expression: "\ntype LocalResult = Result(String, Int)\n\nfn do_thing() -> LocalResult {\n  Error(1)\n}\n"
+---
+type LocalResult = Result(String, Int)
+
+fn do_thing() -> LocalResult {
+▔▔▔↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔  
+  Error(1)
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> LocalResult(String, Int)\n```\n",
+    ),
+)

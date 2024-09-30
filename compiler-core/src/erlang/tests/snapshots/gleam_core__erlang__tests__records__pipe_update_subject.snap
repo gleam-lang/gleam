@@ -1,20 +1,22 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 323
+assertion_line: 324
 expression: "pub type Thing {\n  Thing(a: Int, b: Int)\n}\n\npub fn identity(x) { x }\n\npub fn main() {\n  let thing = Thing(1, 2)\n  Thing(..thing |> identity, b: 1000)\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([identity/1, main/0]).
 -export_type([thing/0]).
 
 -type thing() :: {thing, integer(), integer()}.
 
+-file("/root/project/test/my/mod.gleam", 5).
 -spec identity(I) -> I.
 identity(X) ->
     X.
 
+-file("/root/project/test/my/mod.gleam", 7).
 -spec main() -> thing().
 main() ->
     Thing = {thing, 1, 2},
@@ -26,4 +28,3 @@ main() ->
         end,
         1000
     ).
-

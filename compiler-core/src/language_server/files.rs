@@ -49,7 +49,7 @@ where
     }
 
     pub fn delete_mem_cache(&self, path: &Utf8Path) -> Result<()> {
-        self.edit_cache.delete(path)
+        self.edit_cache.delete_directory(path)
     }
 }
 
@@ -70,8 +70,8 @@ where
         self.io.write_bytes(path, content)
     }
 
-    fn delete(&self, path: &Utf8Path) -> Result<()> {
-        self.io.delete(path)
+    fn delete_directory(&self, path: &Utf8Path) -> Result<()> {
+        self.io.delete_directory(path)
     }
 
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
@@ -92,6 +92,10 @@ where
 
     fn delete_file(&self, path: &Utf8Path) -> Result<()> {
         self.io.delete_file(path)
+    }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        self.io.exists(path)
     }
 }
 
@@ -129,12 +133,12 @@ where
         self.io.reader(path)
     }
 
-    // Cache overides existence of file
+    // Cache overrides existence of file
     fn is_file(&self, path: &Utf8Path) -> bool {
         self.edit_cache.is_file(path) || self.io.is_file(path)
     }
 
-    // Cache overides existence of directory
+    // Cache overrides existence of directory
     fn is_directory(&self, path: &Utf8Path) -> bool {
         self.edit_cache.is_directory(path) || self.io.is_directory(path)
     }

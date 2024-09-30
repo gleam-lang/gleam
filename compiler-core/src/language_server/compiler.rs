@@ -1,9 +1,10 @@
 use debug_ignore::DebugIgnore;
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use crate::{
-    build::{self, Mode, Module, NullTelemetry, ProjectCompiler},
+    analyse::TargetSupport,
+    build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     language_server::Locker,
@@ -14,7 +15,7 @@ use crate::{
     warning::VectorWarningEmitterIO,
     Error, Result, Warning,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, rc::Rc};
 
 use camino::Utf8PathBuf;
 
@@ -27,11 +28,11 @@ pub struct LspProjectCompiler<IO> {
     pub project_compiler: ProjectCompiler<IO>,
 
     /// Information on compiled modules.
-    pub modules: HashMap<SmolStr, Module>,
-    pub sources: HashMap<SmolStr, ModuleSourceInformation>,
+    pub modules: HashMap<EcoString, Module>,
+    pub sources: HashMap<EcoString, ModuleSourceInformation>,
 
     /// The storage for the warning emitter.
-    pub warnings: Arc<VectorWarningEmitterIO>,
+    pub warnings: Rc<VectorWarningEmitterIO>,
 
     /// A lock to ensure that multiple instances of the LSP don't try and use
     /// build directory at the same time.
@@ -49,10 +50,9 @@ where
         io: IO,
         locker: Box<dyn Locker>,
     ) -> Result<Self> {
-        let telemetry = NullTelemetry;
         let target = config.target;
         let name = config.name.clone();
-        let warnings = Arc::new(VectorWarningEmitterIO::default());
+        let warnings = Rc::new(VectorWarningEmitterIO::default());
 
         // The build caches do not contain all the information we need in the
         // LSP (e.g. the typed AST) so delete the caches for the top level
@@ -61,20 +61,23 @@ where
         {
             let _guard = locker.lock_for_build();
             let path = paths.build_directory_for_package(Mode::Lsp, target, &name);
-            io.delete(&path)?;
+            io.delete_directory(&path)?;
         }
 
         let options = build::Options {
             warnings_as_errors: false,
-            mode: build::Mode::Lsp,
+            mode: Mode::Lsp,
             target: None,
             codegen: build::Codegen::None,
+            compile: build::Compile::All,
+            root_target_support: TargetSupport::Enforced,
+            no_print_progress: false,
         };
         let mut project_compiler = ProjectCompiler::new(
             config,
             options,
             manifest.packages,
-            Box::new(telemetry),
+            &NullTelemetry,
             warnings.clone(),
             paths,
             io,
@@ -93,28 +96,68 @@ where
         })
     }
 
-    pub fn compile(&mut self) -> Result<Vec<Utf8PathBuf>, Error> {
+    pub fn compile(&mut self) -> Outcome<Vec<Utf8PathBuf>, Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
         let _lock_guard = self.locker.lock_for_build();
 
         // Verify that the build directory was created using the same version of
         // Gleam as we are running. If it is not then we discard the build
         // directory as the cache files may be in a different format.
-        self.project_compiler.check_gleam_version()?;
+        if let Err(e) = self.project_compiler.check_gleam_version() {
+            return e.into();
+        }
 
-        let compiled_dependencies = self.project_compiler.compile_dependencies()?;
+        let compiled_dependencies = match self.project_compiler.compile_dependencies() {
+            Ok(it) => it,
+            Err(err) => return err.into(),
+        };
+
+        // Store the compiled dependency module information
+        for module in &compiled_dependencies {
+            let path = module.input_path.as_os_str().to_string_lossy().to_string();
+            // strip canonicalised windows prefix
+            #[cfg(target_family = "windows")]
+            let path = path
+                .strip_prefix(r"\\?\")
+                .map(|s| s.to_string())
+                .unwrap_or(path);
+            let line_numbers = LineNumbers::new(&module.code);
+            let source = ModuleSourceInformation { path, line_numbers };
+            _ = self.sources.insert(module.name.clone(), source);
+        }
+
+        // Since cached modules are not recompiled we need to manually add them
+        for (name, module) in self.project_compiler.get_importable_modules() {
+            // It we already have the source for an importable module it means
+            // that we already have all the information we are adding here, so
+            // we can skip past to to avoid doing extra work for no gain.
+            if self.sources.contains_key(name) || name == "gleam" {
+                continue;
+            }
+            // Create the source information
+            let path = module.src_path.to_string();
+            // strip canonicalised windows prefix
+            #[cfg(target_family = "windows")]
+            let path = path
+                .strip_prefix(r"\\?\")
+                .map(|s| s.to_string())
+                .unwrap_or(path);
+            let line_numbers = module.line_numbers.clone();
+            let source = ModuleSourceInformation { path, line_numbers };
+            _ = self.sources.insert(name.clone(), source);
+        }
 
         // Warnings from dependencies are not fixable by the programmer so
         // we don't bother them with diagnostics for them.
         let _ = self.take_warnings();
 
-        // Do that there compilation. We don't use `?` to return early in the
-        // event of an error because we _always_ want to do the restoration of
-        // state afterwards.
-        let result = self.project_compiler.compile_root_package();
-
-        // Return any error
-        let package = result?;
+        // Compile the root package, that is, the one that the programmer is
+        // working in.
+        let (modules, error) = match self.project_compiler.compile_root_package() {
+            Outcome::Ok(package) => (package.modules, None),
+            Outcome::PartialFailure(package, error) => (package.modules, Some(error)),
+            Outcome::TotalFailure(error) => (vec![], Some(error)),
+        };
 
         // Record the compiled dependency modules
         let mut compiled_modules = compiled_dependencies
@@ -123,19 +166,25 @@ where
             .collect_vec();
 
         // Store the compiled module information
-        for module in package.modules {
+        for module in modules {
             let path = module.input_path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };
+            // Record that this one has been compiled. This is returned by this
+            // function and is used to determine what diagnostics to reset.
             compiled_modules.push(module.input_path.clone());
+            // Register information for the LS to use
             _ = self.sources.insert(module.name.clone(), source);
             _ = self.modules.insert(module.name.clone(), module);
         }
 
-        Ok(compiled_modules)
+        match error {
+            None => Outcome::Ok(compiled_modules),
+            Some(error) => Outcome::PartialFailure(compiled_modules, error),
+        }
     }
 
-    pub fn get_module_inferface(&self, name: &str) -> Option<&ModuleInterface> {
+    pub fn get_module_interface(&self, name: &str) -> Option<&ModuleInterface> {
         self.project_compiler.get_importable_modules().get(name)
     }
 }

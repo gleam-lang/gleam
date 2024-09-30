@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 765
+expression: "\npub fn main() {\n  add(_name, 1)\n}\n\nfn add(x, y) {\n  x + y\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:7
+  │
+3 │   add(_name, 1)
+  │       ^^^^^ I was not expecting this
+
+Found a name, expected one of: 
+- An expression
+- An underscore

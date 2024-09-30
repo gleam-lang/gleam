@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn func(thisIsALabel param: Int) { param }"
+---
+----- BEFORE ACTION
+fn func(thisIsALabel param: Int) { param }
+        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑             
+
+
+----- AFTER ACTION
+fn func(this_is_a_label param: Int) { param }

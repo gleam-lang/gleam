@@ -9,8 +9,7 @@ error: Recursive type
 3 │   two([x])
   │       ^^^
 
-I don't know how to work out what type this value has. It seems
-to be defined in terms of itself.
+I don't know how to work out what type this value has. It seems to be
+defined in terms of itself.
 
 Hint: Add some type annotations and try again.
-

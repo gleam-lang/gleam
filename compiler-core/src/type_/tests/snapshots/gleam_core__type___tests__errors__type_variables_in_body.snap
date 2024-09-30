@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 923
 expression: "\npub type Box(a) {\n  Box(value: a)\n}\npub fn go(box1: Box(a), box2: Box(b)) {\n  let _: Box(a) = box2\n  let _: Box(b) = box1\n  5\n}"
 ---
 error: Type mismatch
@@ -17,3 +16,16 @@ Found type:
 
     Box(b)
 
+error: Type mismatch
+  ┌─ /src/one/two.gleam:7:19
+  │
+7 │   let _: Box(b) = box1
+  │                   ^^^^
+
+Expected type:
+
+    Box(b)
+
+Found type:
+
+    Box(a)

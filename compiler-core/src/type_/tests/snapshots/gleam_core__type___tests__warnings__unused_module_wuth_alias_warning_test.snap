@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: import gleam/wibble as wobble
+---
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:1:1
+  │
+1 │ import gleam/wibble as wobble
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.

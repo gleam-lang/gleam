@@ -1,10 +1,8 @@
 ---
 source: compiler-core/src/javascript/tests/modules.rs
-assertion_line: 59
 expression: "\nimport rocket_ship.{ x as y }\nconst z = y\n"
 ---
 import * as $rocket_ship from "../rocket_ship.mjs";
 import { x as y } from "../rocket_ship.mjs";
 
 const z = y;
-

@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 1041
+expression: "\ntype A(a, type) {\n    A\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:11
+  │
+2 │ type A(a, type) {
+  │           ^^^^ I was not expecting this
+
+Found the keyword `type`, expected one of: 
+- `)`
+- a name

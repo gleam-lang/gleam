@@ -1,3 +1,4 @@
+mod endianness;
 mod expression;
 mod import;
 mod pattern;
@@ -5,8 +6,9 @@ mod pattern;
 mod tests;
 mod typescript;
 
-use camino::Utf8Path;
-
+use crate::analyse::TargetSupport;
+use crate::build::Target;
+use crate::codegen::TypeScriptDeclarations;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -14,8 +16,10 @@ use crate::{
     line_numbers::LineNumbers,
     pretty::*,
 };
+use camino::Utf8Path;
+use ecow::{eco_format, EcoString};
+use expression::Context;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use self::import::{Imports, Member};
 
@@ -37,23 +41,52 @@ pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
     tracker: UsageTracker,
-    module_scope: im::HashMap<SmolStr, usize>,
+    module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
+    target_support: TargetSupport,
+    typescript: TypeScriptDeclarations,
 }
 
 impl<'a> Generator<'a> {
-    pub fn new(line_numbers: &'a LineNumbers, module: &'a TypedModule) -> Self {
+    pub fn new(
+        line_numbers: &'a LineNumbers,
+        module: &'a TypedModule,
+        target_support: TargetSupport,
+        typescript: TypeScriptDeclarations,
+    ) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
+
         Self {
             current_module_name_segments_count,
             line_numbers,
             module,
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
+            target_support,
+            typescript,
         }
     }
 
+    fn type_reference(&self) -> Document<'a> {
+        if self.typescript == TypeScriptDeclarations::None {
+            return "".to_doc();
+        }
+
+        // Get the name of the module relative the directory (similar to basename)
+        let module = self
+            .module
+            .name
+            .as_str()
+            .split('/')
+            .last()
+            .expect("JavaScript generator could not identify imported module name.");
+
+        docvec!["/// <reference types=\"./", module, ".d.mts\" />", line()]
+    }
+
     pub fn compile(&mut self) -> Output<'a> {
+        let type_reference = self.type_reference();
+
         // Determine what JavaScript imports we need to generate
         let mut imports = self.collect_imports();
 
@@ -88,6 +121,10 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toList", None);
         };
 
+        if self.tracker.prepend_used {
+            self.register_prelude_usage(&mut imports, "prepend", Some("listPrepend"));
+        };
+
         if self.tracker.custom_type_used {
             self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
         };
@@ -112,37 +149,41 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "isEqual", None);
         };
 
-        if self.tracker.bit_string_literal_used {
-            self.register_prelude_usage(&mut imports, "toBitString", None);
+        if self.tracker.bit_array_literal_used {
+            self.register_prelude_usage(&mut imports, "toBitArray", None);
         };
 
         if self.tracker.sized_integer_segment_used {
             self.register_prelude_usage(&mut imports, "sizedInt", None);
         };
 
-        if self.tracker.string_bit_string_segment_used {
+        if self.tracker.string_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "stringBits", None);
         };
 
-        if self.tracker.codepoint_bit_string_segment_used {
+        if self.tracker.codepoint_bit_array_segment_used {
             self.register_prelude_usage(&mut imports, "codepointBits", None);
         };
 
-        if self.tracker.float_bit_string_segment_used {
-            self.register_prelude_usage(&mut imports, "float64Bits", None);
+        if self.tracker.float_bit_array_segment_used {
+            self.register_prelude_usage(&mut imports, "sizedFloat", None);
         };
 
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec!("export {}", line()))
+            Ok(docvec![type_reference, "export {}", line()])
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(statements.to_doc())
+            Ok(docvec![type_reference, statements])
         } else if statements.is_empty() {
-            Ok(imports.into_doc(JavaScriptCodegenTarget::JavaScript))
+            Ok(docvec![
+                type_reference,
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript)
+            ])
         } else {
             Ok(docvec![
+                type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
                 statements,
@@ -165,40 +206,45 @@ impl<'a> Generator<'a> {
         imports.register_module(path, [], [member]);
     }
 
-    pub fn statement(&mut self, statement: &'a TypedDefinition) -> Vec<Output<'a>> {
+    pub fn statement(&mut self, statement: &'a TypedDefinition) -> Option<Output<'a>> {
         match statement {
-            Definition::TypeAlias(TypeAlias { .. }) => vec![],
+            Definition::TypeAlias(TypeAlias { .. }) => None,
 
             // Handled in collect_imports
-            Definition::Import(Import { .. }) => vec![],
+            Definition::Import(Import { .. }) => None,
 
             // Handled in collect_definitions
-            Definition::CustomType(CustomType { .. }) => vec![],
+            Definition::CustomType(CustomType { .. }) => None,
 
             Definition::ModuleConstant(ModuleConstant {
-                public,
+                publicity,
                 name,
                 value,
                 ..
-            }) => vec![self.module_constant(*public, name, value)],
+            }) => Some(self.module_constant(*publicity, name, value)),
 
-            Definition::Function(Function {
-                arguments,
-                name,
-                body,
-                public,
-                external_javascript: None,
-                ..
-            }) => vec![self.module_function(*public, name, arguments, body)],
+            Definition::Function(function) => {
+                // If there's an external JavaScript implementation then it will be imported,
+                // so we don't need to generate a function definition.
+                if function.external_javascript.is_some() {
+                    return None;
+                }
 
-            Definition::Function(_) => vec![],
+                // If the function does not support JavaScript then we don't need to generate
+                // a function definition.
+                if !function.implementations.supports(Target::JavaScript) {
+                    return None;
+                }
+
+                self.module_function(function)
+            }
         }
     }
 
     fn custom_type_definition(
         &mut self,
         constructors: &'a [TypedRecordConstructor],
-        public: bool,
+        publicity: Publicity,
         opaque: bool,
     ) -> Vec<Output<'a>> {
         // If there's no constructors then there's nothing to do here.
@@ -209,27 +255,27 @@ impl<'a> Generator<'a> {
         self.tracker.custom_type_used = true;
         constructors
             .iter()
-            .map(|constructor| Ok(self.record_definition(constructor, public, opaque)))
+            .map(|constructor| Ok(self.record_definition(constructor, publicity, opaque)))
             .collect()
     }
 
     fn record_definition(
         &self,
         constructor: &'a TypedRecordConstructor,
-        public: bool,
+        publicity: Publicity,
         opaque: bool,
     ) -> Document<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|s| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| Document::String(format!("x{i}")))
+                .map(|(_, s)| maybe_escape_identifier_doc(s))
+                .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
-        let head = if public && !opaque {
-            "export class "
-        } else {
+        let head = if publicity.is_private() || opaque {
             "class "
+        } else {
+            "export class "
         };
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
@@ -237,21 +283,21 @@ impl<'a> Generator<'a> {
             return head.append("}");
         };
 
-        let parameters = concat(Itertools::intersperse(
+        let parameters = join(
             constructor.arguments.iter().enumerate().map(parameter),
             break_(",", ", "),
-        ));
+        );
 
-        let constructor_body = concat(Itertools::intersperse(
+        let constructor_body = join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
-                    Some(name) => docvec!["this.", name, " = ", var, ";"],
+                    Some((_, name)) => docvec!["this.", name, " = ", var, ";"],
                 }
             }),
             line(),
-        ));
+        );
 
         let class_body = docvec![
             line(),
@@ -273,11 +319,11 @@ impl<'a> Generator<'a> {
             .iter()
             .flat_map(|statement| match statement {
                 Definition::CustomType(CustomType {
-                    public,
+                    publicity,
                     constructors,
                     opaque,
                     ..
-                }) => self.custom_type_definition(constructors, *public, *opaque),
+                }) => self.custom_type_definition(constructors, *publicity, *opaque),
 
                 Definition::Function(Function { .. })
                 | Definition::TypeAlias(TypeAlias { .. })
@@ -295,7 +341,7 @@ impl<'a> Generator<'a> {
                 Definition::Import(Import {
                     module,
                     as_name,
-                    unqualified,
+                    unqualified_values: unqualified,
                     package,
                     ..
                 }) => {
@@ -303,12 +349,18 @@ impl<'a> Generator<'a> {
                 }
 
                 Definition::Function(Function {
-                    name,
-                    public,
-                    external_javascript: Some((module, function)),
+                    name: Some((_, name)),
+                    publicity,
+                    external_javascript: Some((module, function, _location)),
                     ..
                 }) => {
-                    self.register_external_function(&mut imports, *public, name, module, function);
+                    self.register_external_function(
+                        &mut imports,
+                        *publicity,
+                        name,
+                        module,
+                        function,
+                    );
                 }
 
                 Definition::Function(Function { .. })
@@ -321,22 +373,22 @@ impl<'a> Generator<'a> {
         imports
     }
 
-    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.mjs"),
+                1 => eco_format!("./{module}.mjs"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.mjs")
+                    eco_format!("{prefix}{module}.mjs")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.mjs")
+            eco_format!("{prefix}{package}/{module}.mjs")
         }
     }
 
@@ -345,36 +397,41 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<SmolStr>,
+        as_name: &'a Option<(AssignName, SrcSpan)>,
         unqualified: &'a [UnqualifiedImport],
     ) {
-        let module_name = as_name.as_ref().map(SmolStr::as_str).unwrap_or_else(|| {
+        let get_name = |module: &'a str| {
             module
                 .split('/')
                 .last()
                 .expect("JavaScript generator could not identify imported module name.")
-        });
-        let module_name = format!("${module_name}");
+        };
+
+        let (discarded, module_name) = match as_name {
+            None => (false, get_name(module)),
+            Some((AssignName::Discard(_), _)) => (true, get_name(module)),
+            Some((AssignName::Variable(name), _)) => (false, name.as_str()),
+        };
+
+        let module_name = eco_format!("${module_name}");
         let path = self.import_path(package, module);
-        let unqualified_imports = unqualified
-            .iter()
-            // We do not create a JS import for types as they are not used at runtime
-            .filter(|import| import.is_value())
-            .map(|i| {
-                let alias = i.as_name.as_ref().map(|n| {
-                    self.register_in_scope(n);
-                    maybe_escape_identifier_doc(n)
-                });
-                let name = maybe_escape_identifier_doc(&i.name);
-                Member { name, alias }
+        let unqualified_imports = unqualified.iter().map(|i| {
+            let alias = i.as_name.as_ref().map(|n| {
+                self.register_in_scope(n);
+                maybe_escape_identifier_doc(n)
             });
-        imports.register_module(path, [module_name], unqualified_imports);
+            let name = maybe_escape_identifier_doc(&i.name);
+            Member { name, alias }
+        });
+
+        let aliases = if discarded { vec![] } else { vec![module_name] };
+        imports.register_module(path, aliases, unqualified_imports);
     }
 
     fn register_external_function(
         &mut self,
         imports: &mut Imports<'a>,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         module: &'a str,
         fun: &'a str,
@@ -385,29 +442,37 @@ impl<'a> Generator<'a> {
             alias: if name == fun && !needs_escaping {
                 None
             } else if needs_escaping {
-                Some(Document::String(escape_identifier(name)))
+                Some(escape_identifier(name).to_doc())
             } else {
                 Some(name.to_doc())
             },
         };
-        if public {
+        if publicity.is_importable() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(module.to_string(), [], [member]);
+        imports.register_module(EcoString::from(module), [], [member]);
     }
 
     fn module_constant(
         &mut self,
-        public: bool,
+        publicity: Publicity,
         name: &'a str,
         value: &'a TypedConstant,
     ) -> Output<'a> {
-        let head = if public { "export const " } else { "const " };
+        let head = if publicity.is_private() {
+            "const "
+        } else {
+            "export const "
+        };
+
+        let document =
+            expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
+
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
             " = ",
-            expression::constant_expression(&mut self.tracker, value)?,
+            document,
             ";",
         ])
     }
@@ -416,51 +481,76 @@ impl<'a> Generator<'a> {
         let _ = self.module_scope.insert(name.into(), 0);
     }
 
-    fn module_function(
-        &mut self,
-        public: bool,
-        name: &'a SmolStr,
-        args: &'a [TypedArg],
-        body: &'a [TypedStatement],
-    ) -> Output<'a> {
-        let argument_names = args
+    fn module_function(&mut self, function: &'a TypedFunction) -> Option<Output<'a>> {
+        let (_, name) = function
+            .name
+            .as_ref()
+            .expect("A module's function must be named");
+        let argument_names = function
+            .arguments
             .iter()
             .map(|arg| arg.names.get_variable_name())
             .collect();
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             self.line_numbers,
-            name,
+            name.clone(),
             argument_names,
             &mut self.tracker,
             self.module_scope.clone(),
         );
-        let head = if public {
-            "export function "
-        } else {
+        let head = if function.publicity.is_private() {
             "function "
+        } else {
+            "export function "
         };
-        let body = generator.function_body(body, args)?;
-        Ok(docvec![
+
+        let body = match generator.function_body(&function.body, function.arguments.as_slice()) {
+            // No error, let's continue!
+            Ok(body) => body,
+
+            // There is an error coming from some expression that is not supported on JavaScript
+            // and the target support is not enforced. In this case we do not error, instead
+            // returning nothing which will cause no function to be generated.
+            Err(error) if error.is_unsupported() && !self.target_support.is_enforced() => {
+                return None
+            }
+
+            // Some other error case which will be returned to the user.
+            Err(error) => return Some(Err(error)),
+        };
+
+        let document = docvec![
             head,
-            maybe_escape_identifier_doc(name),
-            fun_args(args, generator.tail_recursion_used),
+            maybe_escape_identifier_doc(name.as_str()),
+            fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
-        ])
+        ];
+        Some(Ok(document))
     }
 
     fn register_module_definitions_in_scope(&mut self) {
         for statement in self.module.definitions.iter() {
             match statement {
-                Definition::ModuleConstant(ModuleConstant { name, .. })
-                | Definition::Function(Function { name, .. }) => self.register_in_scope(name),
+                Definition::ModuleConstant(ModuleConstant { name, .. }) => {
+                    self.register_in_scope(name)
+                }
 
-                Definition::Import(Import { unqualified, .. }) => unqualified
+                Definition::Function(Function { name, .. }) => self.register_in_scope(
+                    name.as_ref()
+                        .map(|(_, name)| name)
+                        .expect("Function in a definition must be named"),
+                ),
+
+                Definition::Import(Import {
+                    unqualified_values: unqualified,
+                    ..
+                }) => unqualified
                     .iter()
-                    .for_each(|unq_import| self.register_in_scope(unq_import.variable_name())),
+                    .for_each(|unq_import| self.register_in_scope(unq_import.used_name())),
 
                 Definition::TypeAlias(TypeAlias { .. })
                 | Definition::CustomType(CustomType { .. }) => (),
@@ -473,9 +563,11 @@ pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
     path: &Utf8Path,
-    src: &SmolStr,
+    src: &EcoString,
+    target_support: TargetSupport,
+    typescript: TypeScriptDeclarations,
 ) -> Result<String, crate::Error> {
-    let document = Generator::new(line_numbers, module)
+    let document = Generator::new(line_numbers, module, target_support, typescript)
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
@@ -488,7 +580,7 @@ pub fn module(
 pub fn ts_declaration(
     module: &TypedModule,
     path: &Utf8Path,
-    src: &SmolStr,
+    src: &EcoString,
 ) -> Result<String, crate::Error> {
     let document = typescript::TypeScriptGenerator::new(module)
         .compile()
@@ -505,6 +597,16 @@ pub enum Error {
     Unsupported { feature: String, location: SrcSpan },
 }
 
+impl Error {
+    /// Returns `true` if the error is [`Unsupported`].
+    ///
+    /// [`Unsupported`]: Error::Unsupported
+    #[must_use]
+    pub fn is_unsupported(&self) -> bool {
+        matches!(self, Self::Unsupported { .. })
+    }
+}
+
 fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
     let mut discards = 0;
     wrap_args(args.iter().map(|a| match a.get_variable_name() {
@@ -512,12 +614,12 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             let doc = if discards == 0 {
                 "_".to_doc()
             } else {
-                Document::String(format!("_{discards}"))
+                eco_format!("_{discards}").to_doc()
             };
             discards += 1;
             doc
         }
-        Some(name) if tail_recursion_used => Document::String(format!("loop${name}")),
+        Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
         Some(name) => maybe_escape_identifier_doc(name),
     }))
 }
@@ -527,10 +629,7 @@ where
     I: IntoIterator<Item = Document<'a>>,
 {
     break_("", "")
-        .append(concat(Itertools::intersperse(
-            args.into_iter(),
-            break_(",", ", "),
-        )))
+        .append(join(args, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("(", ")")
@@ -548,7 +647,7 @@ fn wrap_object<'a>(
             None => key.to_doc(),
         }
     });
-    let fields = concat(Itertools::intersperse(fields, break_(",", ", ")));
+    let fields = join(fields, break_(",", ", "));
 
     if empty {
         "{}".to_doc()
@@ -581,7 +680,7 @@ fn try_wrap_object<'a>(items: impl IntoIterator<Item = (Document<'a>, Output<'a>
 fn is_usable_js_identifier(word: &str) -> bool {
     !matches!(
         word,
-        // Keywords and reserved works
+        // Keywords and reserved words
         // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Lexical_grammar
         "await"
             | "arguments"
@@ -591,7 +690,7 @@ fn is_usable_js_identifier(word: &str) -> bool {
             | "class"
             | "const"
             | "continue"
-            | "deoh dear"
+            | "debugger"
             | "default"
             | "delete"
             | "do"
@@ -641,23 +740,23 @@ fn is_usable_js_identifier(word: &str) -> bool {
     )
 }
 
-fn maybe_escape_identifier_string(word: &str) -> String {
+fn maybe_escape_identifier_string(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
-        word.to_string()
+        EcoString::from(word)
     } else {
         escape_identifier(word)
     }
 }
 
-fn escape_identifier(word: &str) -> String {
-    format!("{word}$")
+fn escape_identifier(word: &str) -> EcoString {
+    eco_format!("{word}$")
 }
 
 fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
     if is_usable_js_identifier(word) {
         word.to_doc()
     } else {
-        Document::String(escape_identifier(word))
+        escape_identifier(word).to_doc()
     }
 }
 
@@ -665,6 +764,7 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
 pub(crate) struct UsageTracker {
     pub ok_used: bool,
     pub list_used: bool,
+    pub prepend_used: bool,
     pub error_used: bool,
     pub int_remainder_used: bool,
     pub make_error_used: bool,
@@ -672,9 +772,16 @@ pub(crate) struct UsageTracker {
     pub int_division_used: bool,
     pub float_division_used: bool,
     pub object_equality_used: bool,
-    pub bit_string_literal_used: bool,
+    pub bit_array_literal_used: bool,
     pub sized_integer_segment_used: bool,
-    pub string_bit_string_segment_used: bool,
-    pub codepoint_bit_string_segment_used: bool,
-    pub float_bit_string_segment_used: bool,
+    pub string_bit_array_segment_used: bool,
+    pub codepoint_bit_array_segment_used: bool,
+    pub float_bit_array_segment_used: bool,
+}
+
+fn bool(bool: bool) -> Document<'static> {
+    match bool {
+        true => "true".to_doc(),
+        false => "false".to_doc(),
+    }
 }

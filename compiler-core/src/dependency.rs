@@ -2,6 +2,7 @@ use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as S
 
 use crate::{Error, Result};
 
+use ecow::EcoString;
 use hexpm::{
     version::{Range, Version},
     Dependency, Release,
@@ -11,7 +12,6 @@ use pubgrub::{
     solver::{choose_package_with_fewest_versions, Dependencies},
     type_aliases::Map,
 };
-use smol_str::SmolStr;
 
 pub type PackageVersions = HashMap<String, Version>;
 
@@ -21,16 +21,26 @@ type PubgrubRange = pubgrub::range::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
     package_fetcher: Box<dyn PackageFetcher>,
-    provided_packages: HashMap<SmolStr, hexpm::Package>,
-    root_name: SmolStr,
+    provided_packages: HashMap<EcoString, hexpm::Package>,
+    root_name: EcoString,
     dependencies: Requirements,
-    locked: &HashMap<SmolStr, Version>,
+    locked: &HashMap<EcoString, Version>,
 ) -> Result<PackageVersions>
 where
-    Requirements: Iterator<Item = (SmolStr, Range)>,
+    Requirements: Iterator<Item = (EcoString, Range)>,
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
+    let requirements =
+        root_dependencies(dependencies, locked).map_err(Error::dependency_resolution_failed)?;
+
+    // Creating a map of all the required packages that have exact versions specified
+    let exact_deps = &requirements
+        .iter()
+        .filter_map(|(name, dep)| parse_exact_version(dep.requirement.as_str()).map(|v| (name, v)))
+        .map(|(name, version)| (name.clone(), version))
+        .collect();
+
     let root = hexpm::Package {
         name: root_name.as_str().into(),
         repository: "local".into(),
@@ -38,14 +48,13 @@ where
             version: root_version.clone(),
             outer_checksum: vec![],
             retirement_status: None,
-            requirements: root_dependencies(dependencies, locked)
-                .map_err(Error::dependency_resolution_failed)?,
+            requirements,
             meta: (),
         }],
     };
 
     let packages = pubgrub::solver::resolve(
-        &DependencyProvider::new(package_fetcher, provided_packages, root, locked),
+        &DependencyProvider::new(package_fetcher, provided_packages, root, locked, exact_deps),
         root_name.as_str().into(),
         root_version,
     )
@@ -57,12 +66,31 @@ where
     Ok(packages)
 }
 
+// If the string would parse to an exact version then return the version
+fn parse_exact_version(ver: &str) -> Option<Version> {
+    let version = ver.trim();
+    let first_byte = version.as_bytes().first();
+
+    // Version is exact if it starts with an explicit == or a number
+    if version.starts_with("==") || first_byte.map_or(false, |v| v.is_ascii_digit()) {
+        let version = version.replace("==", "");
+        let version = version.as_str().trim();
+        if let Ok(v) = Version::parse(version) {
+            Some(v)
+        } else {
+            None
+        }
+    } else {
+        None
+    }
+}
+
 fn root_dependencies<Requirements>(
     base_requirements: Requirements,
-    locked: &HashMap<SmolStr, Version>,
+    locked: &HashMap<EcoString, Version>,
 ) -> Result<HashMap<String, Dependency>, ResolutionError>
 where
-    Requirements: Iterator<Item = (SmolStr, Range)>,
+    Requirements: Iterator<Item = (EcoString, Range)>,
 {
     // Record all of the already locked versions as hard requirements
     let mut requirements: HashMap<_, _> = locked
@@ -101,15 +129,12 @@ where
             Some(locked_version) => {
                 let compatible = range
                     .to_pubgrub()
-                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {}", e)))?
+                    .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {e}")))?
                     .contains(locked_version);
                 if !compatible {
                     return Err(ResolutionError::Failure(format!(
-                        "{package} is specified with the requirement `{requirement}`, \
-but it is locked to {version}, which is incompatible.",
-                        package = name,
-                        requirement = range,
-                        version = locked_version,
+                        "{name} is specified with the requirement `{range}`, \
+but it is locked to {locked_version}, which is incompatible.",
                     )));
                 }
             }
@@ -124,23 +149,29 @@ pub trait PackageFetcher {
 }
 
 struct DependencyProvider<'a> {
-    packages: RefCell<HashMap<SmolStr, hexpm::Package>>,
+    packages: RefCell<HashMap<EcoString, hexpm::Package>>,
     remote: Box<dyn PackageFetcher>,
-    locked: &'a HashMap<SmolStr, Version>,
+    locked: &'a HashMap<EcoString, Version>,
+    // Map of packages where an exact version was requested
+    // We need this because by default pubgrub checks exact version by checking if a version is between the exact
+    // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
+    exact_only: &'a HashMap<String, Version>,
 }
 
 impl<'a> DependencyProvider<'a> {
     fn new(
         remote: Box<dyn PackageFetcher>,
-        mut packages: HashMap<SmolStr, hexpm::Package>,
+        mut packages: HashMap<EcoString, hexpm::Package>,
         root: hexpm::Package,
-        locked: &'a HashMap<SmolStr, Version>,
+        locked: &'a HashMap<EcoString, Version>,
+        exact_only: &'a HashMap<String, Version>,
     ) -> Self {
         let _ = packages.insert(root.name.as_str().into(), root);
         Self {
             packages: RefCell::new(packages),
             locked,
             remote,
+            exact_only,
         }
     }
 
@@ -189,12 +220,22 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
             })
             .collect::<Result<_, _>>()?;
         let list_available_versions = |name: &String| {
+            let name = name.as_str();
+            let exact_package = self.exact_only.get(name);
             self.packages
                 .borrow()
-                .get(name.as_str())
+                .get(name)
                 .cloned()
                 .into_iter()
-                .flat_map(|p| p.releases.into_iter())
+                .flat_map(move |p| {
+                    p.releases
+                        .into_iter()
+                        // if an exact version of a package is specified then we only want to allow that version as available
+                        .filter(move |release| match exact_package {
+                            Some(ver) => ver == &release.version,
+                            _ => true,
+                        })
+                })
                 .map(|p| p.version)
         };
         Ok(choose_package_with_fewest_versions(
@@ -344,6 +385,22 @@ mod tests {
                         outer_checksum: vec![1, 2, 3],
                         meta: (),
                     },
+                    Release {
+                        version: Version::try_from("0.3.0-rc2").unwrap(),
+                        requirements: [(
+                            "gleam_stdlib".into(),
+                            Dependency {
+                                app: None,
+                                optional: false,
+                                repository: None,
+                                requirement: Range::new(">= 0.1.0".into()),
+                            },
+                        )]
+                        .into(),
+                        retirement_status: None,
+                        outer_checksum: vec![1, 2, 3],
+                        meta: (),
+                    },
                 ],
             },
         );
@@ -382,7 +439,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![locked_stdlib].into_iter().collect(),
         )
@@ -400,7 +457,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -413,7 +470,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -431,7 +488,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -452,7 +509,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -473,7 +530,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -495,7 +552,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
             &vec![("package_with_retired".into(), Version::new(0, 2, 0))]
                 .into_iter()
@@ -519,7 +576,7 @@ mod tests {
         let result = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -527,8 +584,29 @@ mod tests {
         assert_eq!(
             result,
             vec![
-                ("gleam_otp".into(), Version::try_from("0.3.0-rc1").unwrap()),
                 ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap()),
+                ("gleam_otp".into(), Version::try_from("0.3.0-rc2").unwrap()),
+            ]
+            .into_iter()
+            .collect(),
+        );
+    }
+
+    #[test]
+    fn resolution_exact_prerelease_can_be_selected() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![
+                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap()),
+                ("gleam_otp".into(), Version::try_from("0.3.0-rc1").unwrap()),
             ]
             .into_iter()
             .collect(),
@@ -540,7 +618,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -552,7 +630,7 @@ mod tests {
         let _ = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
             &vec![].into_iter().collect(),
         )
@@ -564,7 +642,7 @@ mod tests {
         let err = resolve_versions(
             make_remote(),
             HashMap::new(),
-            SmolStr::new_inline("app"),
+            "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
                 .into_iter()
@@ -575,9 +653,45 @@ mod tests {
         match err {
         Error::DependencyResolutionFailed(msg) => assert_eq!(
             msg,
-            "gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+            "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
         ),
-        _ => panic!("wrong error: {}", err),
+        _ => panic!("wrong error: {err}"),
         }
+    }
+
+    #[test]
+    fn resolution_with_exact_dep() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![("gleam_stdlib".into(), Version::try_from("0.1.0").unwrap())]
+                .into_iter()
+                .collect()
+        );
+    }
+
+    #[test]
+    fn parse_exact_version_test() {
+        assert_eq!(
+            parse_exact_version("1.0.0"),
+            Some(Version::parse("1.0.0").unwrap())
+        );
+        assert_eq!(
+            parse_exact_version("==1.0.0"),
+            Some(Version::parse("1.0.0").unwrap())
+        );
+        assert_eq!(
+            parse_exact_version("== 1.0.0"),
+            Some(Version::parse("1.0.0").unwrap())
+        );
+        assert_eq!(parse_exact_version("~> 1.0.0"), None);
+        assert_eq!(parse_exact_version(">= 1.0.0"), None);
     }
 }

@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "\npub fn main(x) {\ncase x {\n\"P\" -> 4\n\"\" -> 65\n\"P\" -> 19\n_ -> 3\n}\n}\n"
+---
+warning: Unreachable case clause
+  ┌─ /src/warning/wrn.gleam:6:1
+  │
+6 │ "P" -> 19
+  │ ^^^^^^^^^
+
+This case clause cannot be reached as a previous clause matches
+the same values.
+
+Hint: It can be safely removed.

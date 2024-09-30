@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+assertion_line: 1118
+expression: "\nimport mod.{Wibble as Wobble}\ntype Wibble { Wibble Wubble }\npub fn main() {\n  let wibble = mod.Wibble\n  case wibble {\n    mod.Wobble -> Nil\n  }\n}\n"
+---
+error: Inexhaustive patterns
+  ┌─ /src/one/two.gleam:6:3
+  │  
+6 │ ╭   case wibble {
+7 │ │     mod.Wobble -> Nil
+8 │ │   }
+  │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    Wobble

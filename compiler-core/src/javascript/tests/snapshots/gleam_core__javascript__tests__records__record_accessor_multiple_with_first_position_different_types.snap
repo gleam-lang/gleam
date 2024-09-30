@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/records.rs
-assertion_line: 47
 expression: "\npub type Person {\n    Teacher(name: Nil, age: Int)\n    Student(name: String, age: Int)\n}\npub fn get_age(person: Person) { person.age }"
 ---
 import { CustomType as $CustomType } from "../gleam.mjs";
@@ -24,4 +23,3 @@ export class Student extends $CustomType {
 export function get_age(person) {
   return person.age;
 }
-

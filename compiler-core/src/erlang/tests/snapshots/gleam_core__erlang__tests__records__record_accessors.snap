@@ -1,21 +1,22 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 87
+assertion_line: 88
 expression: "\npub type Person { Person(name: String, age: Int) }\npub fn get_age(person: Person) { person.age }\npub fn get_name(person: Person) { person.name }\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([get_age/1, get_name/1]).
 -export_type([person/0]).
 
 -type person() :: {person, binary(), integer()}.
 
+-file("/root/project/test/my/mod.gleam", 3).
 -spec get_age(person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).
 
+-file("/root/project/test/my/mod.gleam", 4).
 -spec get_name(person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
-

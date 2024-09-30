@@ -1,13 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 182
+assertion_line: 208
 expression: "pub fn second(list) { case list { [x, y] -> y z -> 1 } }\npub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }\n            "
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([second/1, tail/1]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec second(list(integer())) -> integer().
 second(List) ->
     case List of
@@ -18,6 +19,7 @@ second(List) ->
             1
     end.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec tail(list(P)) -> list(P).
 tail(List) ->
     case List of
@@ -27,4 +29,3 @@ tail(List) ->
         Z ->
             List
     end.
-

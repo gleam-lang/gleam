@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/strings.rs
-assertion_line: 27
 expression: "\nfn go(a) {\n  a == \"ok\"\n  a != \"ok\"\n  a == a\n}\n"
 ---
 function go(a) {
@@ -8,4 +7,3 @@ function go(a) {
   a !== "ok";
   return a === a;
 }
-

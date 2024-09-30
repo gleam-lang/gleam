@@ -12,9 +12,8 @@ export function negate(x) {
       "my/mod",
       2,
       "negate",
-      "This has not yet been implemented",
+      "`todo` expression evaluated. This code has not yet been implemented.",
       {}
     )
   })() && x;
 }
-

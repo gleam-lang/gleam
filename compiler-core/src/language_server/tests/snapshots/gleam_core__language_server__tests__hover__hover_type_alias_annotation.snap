@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: type Wibble = Int
+---
+type Wibble = Int
+              ▔↑▔
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\ngleam.Int\n```\n",
+    ),
+)

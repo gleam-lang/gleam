@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn use_test(f) { f(Nil) }\npub fn main() { use useVar <- use_test() }"
+---
+error: Invalid argument name
+  ┌─ /src/one/two.gleam:2:21
+  │
+2 │ pub fn main() { use useVar <- use_test() }
+  │                     ^^^^^^ This is not a valid argument name
+
+Hint: Argument names start with a lowercase letter and contain a-z, 0-9,
+or _.
+Try: use_var

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let assert [var1, var2, _var3, var4] = [1, 2, 3, 4]
+              ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑                       
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let #(var1, var2, var4) = case [1, 2, 3, 4] {
+    [var1, var2, _var3, var4] -> #(var1, var2, var4)
+    _ -> panic
+  }
+}

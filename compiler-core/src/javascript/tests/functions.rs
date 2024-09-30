@@ -89,7 +89,10 @@ pub fn add(the_first_variable_that_should_be_added, the_second_variable_that_sho
   the_first_variable_that_should_be_added + the_second_variable_that_should_be_added
 }"#,
     );
+}
 
+#[test]
+fn function_formatting_typescript1() {
     assert_ts_def!(
         r#"
 pub fn this_function_really_does_have_a_ludicrously_unfeasibly_long_name_for_a_function(x, y) {
@@ -367,9 +370,9 @@ pub fn version(n) {
 #[test]
 fn pipe_shadow_import() {
     assert_js!(
-        (CURRENT_PACKAGE, "foo", "pub fn println(x: String) {  }"),
+        (CURRENT_PACKAGE, "wibble", "pub fn println(x: String) {  }"),
         r#"
-        import foo.{println}
+        import wibble.{println}
         pub fn main() {
           let println =
             "oh dear"
@@ -390,12 +393,69 @@ pub fn use_int_identity_alias() { int_identity_alias(42) }
 pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = #(int_identity, int_identity_alias)
 pub fn use_compound() { compound.0(compound.1(42)) }"#
     );
+}
 
+#[test]
+fn module_const_fn1() {
     assert_ts_def!(
         r#"
 pub fn int_identity(i: Int) -> Int { i }
 pub const int_identity_alias: fn(Int) -> Int = int_identity
-pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) = 
+pub const compound: #(fn(Int) -> Int, fn(Int) -> Int) =
     #(int_identity, int_identity_alias)"#
     )
+}
+
+// https://github.com/gleam-lang/gleam/issues/2399
+#[test]
+fn bad_comma() {
+    assert_js!(
+        r#"
+fn function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit() {
+  Nil
+}
+
+fn identity(x) {
+  x
+}
+
+pub fn main() {
+  function_with_a_long_name_that_is_intended_to_sit_right_on_the_limit()
+  |> identity
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/2518
+#[test]
+fn function_literals_get_properly_wrapped_1() {
+    assert_js!(
+        r#"pub fn main() {
+  fn(n) { n + 1 }(10)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2518
+#[test]
+fn function_literals_get_properly_wrapped_2() {
+    assert_js!(
+        r#"pub fn main() {
+  { fn(n) { n + 1 } }(10)
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2518
+#[test]
+fn function_literals_get_properly_wrapped_3() {
+    assert_js!(
+        r#"pub fn main() {
+  { let a = fn(n) { n + 1 } }(10)
+}
+"#
+    );
 }

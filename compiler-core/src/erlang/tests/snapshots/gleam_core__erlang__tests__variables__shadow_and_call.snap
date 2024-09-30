@@ -4,11 +4,11 @@ assertion_line: 34
 expression: "\npub fn main(x) {\n  fn(x) { x }(x)\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/1]).
 
--spec main(I) -> I.
+-file("/root/project/test/my/mod.gleam", 2).
+-spec main(K) -> K.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).
-

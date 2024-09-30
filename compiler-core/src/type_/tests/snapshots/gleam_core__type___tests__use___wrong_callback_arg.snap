@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\nlet x = fn(f) { \"Hello, \" <> f(1) }\nuse n <- x()\nn <> \"Giacomo!\"\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:1
+  │
+4 │ n <> "Giacomo!"
+  │ ^
+
+The <> operator expects arguments of this type:
+
+    String
+
+But this argument has this type:
+
+    Int

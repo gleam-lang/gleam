@@ -1,24 +1,24 @@
 use super::*;
 use crate::type_::{FieldMap, HasType};
 
-pub type TypedConstant = Constant<Arc<Type>, SmolStr>;
+pub type TypedConstant = Constant<Arc<Type>, EcoString>;
 pub type UntypedConstant = Constant<(), ()>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Float {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     String {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Tuple {
@@ -29,46 +29,60 @@ pub enum Constant<T, RecordTag> {
     List {
         location: SrcSpan,
         elements: Vec<Self>,
-        typ: T,
+        type_: T,
     },
 
     Record {
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<(EcoString, SrcSpan)>,
+        name: EcoString,
         args: Vec<CallArg<Self>>,
         tag: RecordTag,
-        typ: T,
+        type_: T,
         field_map: Option<FieldMap>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
-        segments: Vec<BitStringSegment<Self, T>>,
+        segments: Vec<BitArraySegment<Self, T>>,
     },
 
     Var {
         location: SrcSpan,
-        module: Option<SmolStr>,
-        name: SmolStr,
+        module: Option<(EcoString, SrcSpan)>,
+        name: EcoString,
         constructor: Option<Box<ValueConstructor>>,
-        typ: T,
+        type_: T,
+    },
+
+    StringConcatenation {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
+    /// A placeholder constant used to allow module analysis to continue
+    /// even when there are type errors. Should never end up in generated code.
+    Invalid {
+        location: SrcSpan,
+        type_: T,
     },
 }
 
 impl TypedConstant {
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            Constant::Int { .. } => crate::type_::int(),
-            Constant::Float { .. } => crate::type_::float(),
-            Constant::String { .. } => crate::type_::string(),
-            Constant::BitString { .. } => crate::type_::bit_string(),
+            Constant::Int { .. } => type_::int(),
+            Constant::Float { .. } => type_::float(),
+            Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
+            Constant::BitArray { .. } => type_::bits(),
             Constant::Tuple { elements, .. } => {
-                crate::type_::tuple(elements.iter().map(|e| e.type_()).collect())
+                type_::tuple(elements.iter().map(|e| e.type_()).collect())
             }
-            Constant::List { typ, .. }
-            | Constant::Record { typ, .. }
-            | Constant::Var { typ, .. } => typ.clone(),
+            Constant::List { type_, .. }
+            | Constant::Record { type_, .. }
+            | Constant::Var { type_, .. }
+            | Constant::Invalid { type_, .. } => type_.clone(),
         }
     }
 }
@@ -88,8 +102,10 @@ impl<A, B> Constant<A, B> {
             | Constant::Tuple { location, .. }
             | Constant::String { location, .. }
             | Constant::Record { location, .. }
-            | Constant::BitString { location, .. }
-            | Constant::Var { location, .. } => *location,
+            | Constant::BitArray { location, .. }
+            | Constant::Var { location, .. }
+            | Constant::Invalid { location, .. }
+            | Constant::StringConcatenation { location, .. } => *location,
         }
     }
 
@@ -107,7 +123,7 @@ impl<A, B> HasLocation for Constant<A, B> {
     }
 }
 
-impl<A, B> crate::bit_string::GetLiteralValue for Constant<A, B> {
+impl<A, B> crate::bit_array::GetLiteralValue for Constant<A, B> {
     fn as_int_literal(&self) -> Option<i64> {
         if let Constant::Int { value, .. } = self {
             if let Ok(val) = value.parse::<i64>() {

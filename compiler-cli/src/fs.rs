@@ -11,12 +11,12 @@ use gleam_core::{
     warning::WarningEmitterIO,
     Result, Warning,
 };
-use lazy_static::lazy_static;
 use std::{
     ffi::OsStr,
     fmt::Debug,
     fs::File,
     io::{self, BufRead, BufReader, Write},
+    sync::OnceLock,
     time::SystemTime,
 };
 
@@ -36,6 +36,22 @@ pub fn get_current_directory() -> Result<Utf8PathBuf, Error> {
         err: Some(e.to_string()),
     })?;
     Utf8PathBuf::from_path_buf(curr_dir.clone()).map_err(|_| Error::NonUtf8Path { path: curr_dir })
+}
+
+// Return the first directory with a gleam.toml as a UTF-8 Path
+pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
+    fn walk(dir: Utf8PathBuf) -> Option<Utf8PathBuf> {
+        match dir.join("gleam.toml").is_file() {
+            true => Some(dir),
+            false => match dir.parent() {
+                Some(p) => walk(p.into()),
+                None => None,
+            },
+        }
+    }
+    walk(path.clone()).ok_or(Error::UnableToFindProjectRoot {
+        path: path.to_string(),
+    })
 }
 
 /// A `FileWriter` implementation that writes to the file system.
@@ -130,8 +146,8 @@ impl FileSystemReader for ProjectIO {
 }
 
 impl FileSystemWriter for ProjectIO {
-    fn delete(&self, path: &Utf8Path) -> Result<()> {
-        delete_dir(path)
+    fn delete_directory(&self, path: &Utf8Path) -> Result<()> {
+        delete_directory(path)
     }
 
     fn copy(&self, from: &Utf8Path, to: &Utf8Path) -> Result<()> {
@@ -165,6 +181,10 @@ impl FileSystemWriter for ProjectIO {
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error> {
         write_bytes(path, content)
     }
+
+    fn exists(&self, path: &Utf8Path) -> bool {
+        path.exists()
+    }
 }
 
 impl CommandExecutor for ProjectIO {
@@ -181,7 +201,7 @@ impl CommandExecutor for ProjectIO {
             .args(args)
             .stdin(stdio.get_process_stdio())
             .stdout(stdio.get_process_stdio())
-            .envs(env.iter().map(|(a, b)| (a, b)))
+            .envs(env.iter().map(|pair| (pair.0, &pair.1)))
             .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./")))
             .status();
 
@@ -215,7 +235,7 @@ impl DownloadDependencies for ProjectIO {
     }
 }
 
-pub fn delete_dir(dir: &Utf8Path) -> Result<(), Error> {
+pub fn delete_directory(dir: &Utf8Path) -> Result<(), Error> {
     tracing::trace!(path=?dir, "deleting_directory");
     if dir.exists() {
         std::fs::remove_dir_all(dir).map_err(|e| Error::FileIo {
@@ -324,26 +344,41 @@ pub fn write_bytes(path: &Utf8Path, bytes: &[u8]) -> Result<(), Error> {
 
 fn is_gleam_path(path: &Utf8Path, dir: impl AsRef<Utf8Path>) -> bool {
     use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(&format!(
+
+    static RE: OnceLock<Regex> = OnceLock::new();
+
+    RE.get_or_init(|| {
+        Regex::new(&format!(
             "^({module}{slash})*{module}\\.gleam$",
             module = "[a-z][_a-z0-9]*",
             slash = "(/|\\\\)",
         ))
-        .expect("is_gleam_path() RE regex");
-    }
-
-    RE.is_match(
+        .expect("is_gleam_path() RE regex")
+    })
+    .is_match(
         path.strip_prefix(dir.as_ref())
             .expect("is_gleam_path(): strip_prefix")
             .as_str(),
     )
 }
 
+fn is_gleam_build_dir(e: &ignore::DirEntry) -> bool {
+    if !e.path().is_dir() || !e.path().ends_with("build") {
+        return false;
+    }
+
+    let Some(parent_path) = e.path().parent() else {
+        return false;
+    };
+
+    parent_path.join("gleam.toml").exists()
+}
+
 pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .require_git(false)
+        .filter_entry(|e| !is_gleam_build_dir(e))
         .build()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
@@ -534,7 +569,9 @@ pub fn copy_dir(
     fs_extra::dir::copy(
         path.as_ref(),
         to.as_ref(),
-        &fs_extra::dir::CopyOptions::new(),
+        &fs_extra::dir::CopyOptions::new()
+            .copy_inside(false)
+            .content_only(true),
     )
     .map_err(|err| Error::FileIo {
         action: FileIoAction::Copy,
@@ -550,13 +587,18 @@ pub fn symlink_dir(
     dest: impl AsRef<Utf8Path> + Debug,
 ) -> Result<(), Error> {
     tracing::trace!(src=?src, dest=?dest, "symlinking");
-    symlink::symlink_dir(canonicalise(src.as_ref())?, dest.as_ref()).map_err(|err| {
-        Error::FileIo {
-            action: FileIoAction::Link,
-            kind: FileKind::File,
-            path: Utf8PathBuf::from(dest.as_ref()),
-            err: Some(err.to_string()),
-        }
+    let src = canonicalise(src.as_ref())?;
+
+    #[cfg(target_family = "windows")]
+    let result = std::os::windows::fs::symlink_dir(src, dest.as_ref());
+    #[cfg(not(target_family = "windows"))]
+    let result = std::os::unix::fs::symlink(src, dest.as_ref());
+
+    result.map_err(|err| Error::FileIo {
+        action: FileIoAction::Link,
+        kind: FileKind::File,
+        path: Utf8PathBuf::from(dest.as_ref()),
+        err: Some(err.to_string()),
     })?;
     Ok(())
 }

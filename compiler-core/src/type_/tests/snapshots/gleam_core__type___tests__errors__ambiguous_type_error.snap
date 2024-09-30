@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1603
-expression: "import foo pub type Thing { Thing }\n        pub fn main() {\n            [Thing] == [foo.Thing]\n        }"
+expression: "import wibble pub type Thing { Thing }\n        pub fn main() {\n            [Thing] == [wibble.Thing]\n        }"
 ---
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:24
   │
-3 │             [Thing] == [foo.Thing]
-  │                        ^^^^^^^^^^^
+3 │             [Thing] == [wibble.Thing]
+  │                        ^^^^^^^^^^^^^^
 
 Expected type:
 
@@ -15,5 +14,4 @@ Expected type:
 
 Found type:
 
-    List(foo.Thing)
-
+    List(wibble.Thing)

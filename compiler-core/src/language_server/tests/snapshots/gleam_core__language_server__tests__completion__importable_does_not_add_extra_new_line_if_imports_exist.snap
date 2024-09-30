@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: ""
+---
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+dep.wobble
+  kind:   Function
+  detail: fn() -> Nil
+  sort:   5_dep.wobble
+  desc:   dep
+  edits:
+    [3:0-3:0]: "dep.wobble"
+    [0:0-0:0]: "import dep\n"

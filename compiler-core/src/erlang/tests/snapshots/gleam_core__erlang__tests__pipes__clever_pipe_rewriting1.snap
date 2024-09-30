@@ -4,12 +4,12 @@ assertion_line: 16
 expression: "\npub fn apply(f: fn(a, Int) -> b, a: a) { a |> f(1) }\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([apply/2]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec apply(fun((I, integer()) -> J), I) -> J.
 apply(F, A) ->
     _pipe = A,
     F(_pipe, 1).
-

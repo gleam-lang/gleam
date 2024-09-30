@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let assert [_elemOne] = [False]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let assert [_elemOne] = [False]
+                     ↑             
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let assert [_elem_one] = [False]
+}

@@ -1,15 +1,18 @@
+use std::sync::OnceLock;
+
 use camino::Utf8PathBuf;
+use ecow::EcoString;
 use gleam_core::{
-    build::{Codegen, Mode, Options, Runtime, Target},
+    analyse::TargetSupport,
+    build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
     error::Error,
     io::{CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
-use lazy_static::lazy_static;
 
-use crate::fs::ProjectIO;
+use crate::{config::PackageKind, fs::ProjectIO};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -24,8 +27,9 @@ pub fn command(
     runtime: Option<Runtime>,
     module: Option<String>,
     which: Which,
+    no_print_progress: bool,
 ) -> Result<(), Error> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
 
     // Validate the module path
     if let Some(mod_path) = &module {
@@ -36,16 +40,28 @@ pub fn command(
         }
     };
 
+    let telemetry: &'static dyn Telemetry = if no_print_progress {
+        &NullTelemetry
+    } else {
+        &crate::cli::Reporter
+    };
+
     // Download dependencies
-    let manifest = crate::build::download_dependencies()?;
+    let manifest = if no_print_progress {
+        crate::build::download_dependencies(NullTelemetry)?
+    } else {
+        crate::build::download_dependencies(crate::cli::Reporter::new())?
+    };
 
     // Get the config for the module that is being run to check the target.
-    let mod_config = match &module {
+    // Also get the kind of the package the module belongs to: wether the module
+    // belongs to a dependency or to the root package.
+    let (mod_config, package_kind) = match &module {
         Some(mod_path) => {
-            crate::config::find_package_config_for_module(mod_path, &manifest, &paths)
+            crate::config::find_package_config_for_module(mod_path, &manifest, &paths)?
         }
-        _ => crate::config::root_config(),
-    }?;
+        _ => (crate::config::root_config()?, PackageKind::Root),
+    };
 
     // The root config is required to run the project.
     let root_config = crate::config::root_config()?;
@@ -58,24 +74,38 @@ pub fn command(
 
     let target = target.unwrap_or(mod_config.target);
 
-    // Build project so we have bytecode to run
-    let built = crate::build::main(
-        Options {
-            warnings_as_errors: false,
-            codegen: Codegen::All,
-            mode: Mode::Dev,
-            target: Some(target),
+    let options = Options {
+        warnings_as_errors: false,
+        compile: match package_kind {
+            // If we're trying to run a dependecy module we do not compile and
+            // check the root package. So we can run the main function from a
+            // dependency's module even if the root package doesn't compile.
+            PackageKind::Dependency => Compile::DepsOnly,
+            PackageKind::Root => Compile::All,
         },
-        manifest,
-    )?;
+        codegen: Codegen::All,
+        mode: Mode::Dev,
+        target: Some(target),
+        root_target_support: match package_kind {
+            // The module we want to run is in the root package, so we make sure that the package
+            // can compile successfully for the current target.
+            PackageKind::Root => TargetSupport::Enforced,
+            // On the other hand, if we're trying to run a module that belongs to a dependency, we
+            // only care if the dependency can compile for the current target.
+            PackageKind::Dependency => TargetSupport::NotEnforced,
+        },
+        no_print_progress,
+    };
+
+    let built = crate::build::main(options, manifest)?;
 
     // A module can not be run if it does not exist or does not have a public main function.
-    let main_function = get_or_suggest_main_function(built, &module)?;
+    let main_function = get_or_suggest_main_function(built, &module, target)?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
-    crate::cli::print_running(&format!("{module}.main"));
+    telemetry.running(&format!("{module}.main"));
 
     // Run the command
     let status = match target {
@@ -97,6 +127,7 @@ pub fn command(
             Runtime::NodeJs => {
                 run_javascript_node(&paths, &main_function.package, &module, arguments)
             }
+            Runtime::Bun => run_javascript_bun(&paths, &main_function.package, &module, arguments),
         },
     }?;
 
@@ -119,7 +150,7 @@ fn run_erlang(
         args.push(entry.path().join("ebin").into());
     }
 
-    // gleam modules are seperated by `/`. Erlang modules are seperated by `@`.
+    // gleam modules are separated by `/`. Erlang modules are separated by `@`.
     let module = module.replace('/', "@");
 
     args.push("-eval".into());
@@ -137,6 +168,24 @@ fn run_erlang(
     ProjectIO::new().exec("erl", &args, &[], None, Stdio::Inherit)
 }
 
+fn run_javascript_bun(
+    paths: &ProjectPaths,
+    package: &str,
+    module: &str,
+    arguments: Vec<String>,
+) -> Result<i32, Error> {
+    let mut args = vec!["run".to_string()];
+    let entry = write_javascript_entrypoint(paths, package, module)?;
+
+    args.push(entry.to_string());
+
+    for arg in arguments.into_iter() {
+        args.push(arg);
+    }
+
+    ProjectIO::new().exec("bun", &args, &[], None, Stdio::Inherit)
+}
+
 fn run_javascript_node(
     paths: &ProjectPaths,
     package: &str,
@@ -146,7 +195,7 @@ fn run_javascript_node(
     let mut args = vec![];
     let entry = write_javascript_entrypoint(paths, package, module)?;
 
-    args.push(entry);
+    args.push(entry.to_string());
 
     for argument in arguments.into_iter() {
         args.push(argument);
@@ -159,20 +208,18 @@ fn write_javascript_entrypoint(
     paths: &ProjectPaths,
     package: &str,
     module: &str,
-) -> Result<String, Error> {
-    let entry = paths
+) -> Result<Utf8PathBuf, Error> {
+    let path = paths
         .build_directory_for_package(Mode::Dev, Target::JavaScript, package)
-        .strip_prefix(paths.root())
-        .expect("Failed to strip prefix from path")
-        .to_path_buf();
-    let entrypoint = format!("./{}/gleam.main.mjs", entry);
+        .to_path_buf()
+        .join("gleam.main.mjs");
     let module = format!(
         r#"import {{ main }} from "./{module}.mjs";
 main();
 "#,
     );
-    crate::fs::write(&Utf8PathBuf::from(&entrypoint), &module)?;
-    Ok(entrypoint)
+    crate::fs::write(&path, &module)?;
+    Ok(path)
 }
 
 fn run_javascript_deno(
@@ -190,6 +237,11 @@ fn run_javascript_deno(
     // Enable unstable features and APIs
     if config.javascript.deno.unstable {
         args.push("--unstable".into())
+    }
+
+    // Enable location API
+    if let Some(location) = &config.javascript.deno.location {
+        args.push(format!("--location={location}"));
     }
 
     // Set deno permissions
@@ -237,7 +289,7 @@ fn run_javascript_deno(
     }
 
     let entrypoint = write_javascript_entrypoint(paths, package, module)?;
-    args.push(entrypoint);
+    args.push(entrypoint.to_string());
 
     for argument in arguments.into_iter() {
         args.push(argument);
@@ -260,25 +312,27 @@ fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {
 /// Check if a module name is a valid gleam module name.
 fn is_gleam_module(module: &str) -> bool {
     use regex::Regex;
-    lazy_static! {
-        static ref RE: Regex = Regex::new(&format!(
+    static RE: OnceLock<Regex> = OnceLock::new();
+
+    RE.get_or_init(|| {
+        Regex::new(&format!(
             "^({module}{slash})*{module}$",
             module = "[a-z][_a-z0-9]*",
             slash = "/",
         ))
-        .expect("is_gleam_module() RE regex");
-    }
-
-    RE.is_match(module)
+        .expect("is_gleam_module() RE regex")
+    })
+    .is_match(module)
 }
 
 /// If provided module is not executable, suggest a possible valid module.
 fn get_or_suggest_main_function(
-    built: gleam_core::build::Built,
-    module: &String,
+    built: Built,
+    module: &str,
+    target: Target,
 ) -> Result<ModuleFunction, Error> {
     // Check if the module exists
-    let error = match built.get_main_function(&module.into()) {
+    let error = match built.get_main_function(&module.into(), target) {
         Ok(main_fn) => return Ok(main_fn),
         Err(error) => error,
     };
@@ -289,9 +343,9 @@ fn get_or_suggest_main_function(
             Some(other) => other.into(),
             None => continue,
         };
-        if built.get_main_function(&other).is_ok() {
+        if built.get_main_function(&other, target).is_ok() {
             return Err(Error::ModuleDoesNotExist {
-                module: module.into(),
+                module: EcoString::from(module),
                 suggestion: Some(other),
             });
         }

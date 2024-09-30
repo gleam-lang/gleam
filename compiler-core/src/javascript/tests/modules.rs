@@ -1,5 +1,5 @@
 use crate::javascript::tests::CURRENT_PACKAGE;
-use crate::{assert_js, assert_ts_def};
+use crate::{assert_js, assert_js_with_multiple_imports};
 
 #[test]
 fn empty_module() {
@@ -152,55 +152,60 @@ pub fn go() { three.go() }
 }
 
 #[test]
-fn imported_external_types_dont_get_rendered() {
-    assert_js!(
-        (CURRENT_PACKAGE, "one/two/three", r#"pub type External"#),
-        r#"import one/two/three.{External}
-
-pub fn go() { 1 }
-"#,
+fn discarded_duplicate_import() {
+    assert_js_with_multiple_imports!(
+        ("esa/rocket_ship", r#"pub fn go() { 1 }"#),
+        ("nasa/rocket_ship", r#"pub fn go() { 1 }"#);
+        r#"
+import esa/rocket_ship
+import nasa/rocket_ship as _nasa_rocket
+pub fn go() { rocket_ship.go() }
+"#
     );
 }
 
 #[test]
-fn imported_custom_types_dont_get_rendered() {
+fn discarded_duplicate_import_with_unqualified() {
+    assert_js_with_multiple_imports!(
+        ("esa/rocket_ship", r#"pub fn go() { 1 }"#),
+        ("nasa/rocket_ship", r#"pub fn go() { 1 }"#);
+        r#"
+import esa/rocket_ship
+import nasa/rocket_ship.{go} as _nasa_rocket
+pub fn esa_go() { rocket_ship.go() }
+pub fn nasa_go() { go() }
+"#
+    );
+}
+
+#[test]
+fn import_with_keyword() {
     assert_js!(
         (
             CURRENT_PACKAGE,
-            "one/two/three",
-            r#"pub type Custom { One Two }"#
+            "rocket_ship",
+            r#"
+pub const class = 1
+pub const in = 2
+"#
         ),
-        r#"import one/two/three.{Custom, One, Two}
-
-pub fn go() -> List(Custom) { [One, Two] }
-"#,
+        r#"
+import rocket_ship.{class, in as while}
+pub fn main() {
+  #(class, while)
+}
+"#
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/3004
 #[test]
-fn imported_custom_types_do_get_rendered_in_typescript() {
-    assert_ts_def!(
-        (
-            CURRENT_PACKAGE,
-            "one/two/three",
-            r#"pub type Custom { One Two }"#
-        ),
-        r#"import one/two/three.{Custom, One, Two}
-
-pub fn go() -> List(Custom) { [One, Two] }
-"#,
-    );
-}
-
-#[test]
-fn imported_external_types_dont_get_rendered_with_value_of_same_name() {
+fn constant_module_access_with_keyword() {
     assert_js!(
-        (CURRENT_PACKAGE, "one/two/three", r#"pub type Thingy"#),
-        r#"import one/two/three.{Thingy}
-
-type Dup { Thingy }
-
-pub fn go(x: Thingy) -> List(Thingy) { [x, x] }
+        (CURRENT_PACKAGE, "rocket_ship", r#"pub const class = 1"#),
+        r#"
+import rocket_ship
+pub const variable = rocket_ship.class
 "#,
     );
 }

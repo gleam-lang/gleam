@@ -1,12 +1,9 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1130
 expression: "fn x(x, y) { x }\nfn main() { 1 |> x() }"
 ---
 error: Incorrect arity
   ┌─ /src/one/two.gleam:2:18
   │
 2 │ fn main() { 1 |> x() }
-  │                  ^^^ Expected 2 arguments, got 0
-
-
+  │                  ^^^ Expected 2 arguments, got 1

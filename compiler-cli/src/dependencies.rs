@@ -4,6 +4,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
@@ -21,7 +22,6 @@ use gleam_core::{
 use hexpm::version::Version;
 use itertools::Itertools;
 use same_file::is_same_file;
-use smol_str::SmolStr;
 use strum::IntoEnumIterator;
 
 use crate::{
@@ -33,8 +33,8 @@ use crate::{
 
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-
-    let paths = ProjectPaths::at_filesystem_root();
+    let project = fs::get_project_root(fs::get_current_directory()?)?;
+    let paths = ProjectPaths::new(project);
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,
@@ -113,15 +113,136 @@ pub enum UseManifest {
 }
 
 pub fn update() -> Result<()> {
-    let paths = crate::project_paths_at_current_directory();
+    let paths = crate::find_project_paths()?;
     _ = download(&paths, cli::Reporter::new(), None, UseManifest::No)?;
     Ok(())
+}
+
+pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
+    let Some((package, version)) = package.split_once('@') else {
+        // Default to the latest version available.
+        return Ok((package.into(), Requirement::hex(">= 0.0.0")));
+    };
+
+    // Parse the major and minor from the provided semantic version.
+    let parts = version.split('.').collect::<Vec<_>>();
+    let major = match parts.first() {
+        Some(major) => Ok(major),
+        None => Err(Error::InvalidVersionFormat {
+            input: package.to_string(),
+            error: "Failed to parse semantic major version".to_string(),
+        }),
+    }?;
+    let minor = match parts.get(1) {
+        Some(minor) => minor,
+        None => "0",
+    };
+
+    // Using the major version specifier, calculate the maximum
+    // allowable version (i.e., the next major version).
+    let Ok(num) = major.parse::<usize>() else {
+        return Err(Error::InvalidVersionFormat {
+            input: version.to_string(),
+            error: "Failed to parse semantic major version as integer".to_string(),
+        });
+    };
+
+    let max_ver = [&(num + 1).to_string(), "0", "0"].join(".");
+
+    // Pad the provided version specifier with zeros map to a Hex version.
+    let requirement = match parts.len() {
+        1 | 2 => {
+            let min_ver = [major, minor, "0"].join(".");
+            Requirement::hex(&[">=", &min_ver, "and", "<", &max_ver].join(" "))
+        }
+        3 => Requirement::hex(version),
+        n => {
+            return Err(Error::InvalidVersionFormat {
+                input: version.to_string(),
+                error: format!(
+                    "Expected up to 3 numbers in version specifier (MAJOR.MINOR.PATCH), found {n}"
+                ),
+            })
+        }
+    };
+
+    Ok((package.into(), requirement))
+}
+
+#[test]
+fn parse_gleam_add_specifier_invalid_semver() {
+    assert!(parse_gleam_add_specifier("some_package@1.2.3.4").is_err());
+}
+
+#[test]
+fn parse_gleam_add_specifier_non_numeric_version() {
+    assert!(parse_gleam_add_specifier("some_package@not_a_version").is_err());
+}
+
+#[test]
+fn parse_gleam_add_specifier_default() {
+    let provided = "some_package";
+    let expected = ">= 0.0.0";
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
+        }
+        _ => assert!(false, "failed hexpm version parse: {provided}"),
+    }
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("some_package", package);
+}
+
+#[test]
+fn parse_gleam_add_specifier_major_only() {
+    let provided = "wobble@1";
+    let expected = ">= 1.0.0 and < 2.0.0";
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
+        }
+        _ => assert!(false, "failed hexpm version parse: {provided}"),
+    }
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("wobble", package);
+}
+
+#[test]
+fn parse_gleam_add_specifier_major_and_minor() {
+    let provided = "wibble@1.2";
+    let expected = ">= 1.2.0 and < 2.0.0";
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
+        }
+        _ => assert!(false, "failed hexpm version parse: {provided}"),
+    }
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("wibble", package);
+}
+
+#[test]
+fn parse_gleam_add_specifier_major_minor_and_patch() {
+    let provided = "bobble@1.2.3";
+    let expected = "1.2.3";
+    let (package, version) = parse_gleam_add_specifier(provided).unwrap();
+    match &version {
+        Requirement::Hex { version: v } => {
+            assert!(v.to_pubgrub().is_ok(), "failed pubgrub parse: {v}");
+        }
+        _ => assert!(false, "failed hexpm version parse: {provided}"),
+    }
+    assert_eq!(version, Requirement::hex(expected));
+    assert_eq!("bobble", package);
 }
 
 pub fn download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
-    new_package: Option<(Vec<String>, bool)>,
+    new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
     // If true we read the manifest from disc. If not set then we ignore any
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
@@ -147,12 +268,11 @@ pub fn download<Telem: Telemetry>(
 
     // Insert the new packages to add, if it exists
     if let Some((packages, dev)) = new_package {
-        for package in packages {
-            let version = Requirement::hex(">= 0.0.0");
-            let _ = if dev {
-                config.dev_dependencies.insert(package.into(), version)
+        for (package, requirement) in packages {
+            if dev {
+                _ = config.dev_dependencies.insert(package, requirement);
             } else {
-                config.dependencies.insert(package.into(), version)
+                _ = config.dependencies.insert(package, requirement);
             };
         }
     }
@@ -200,7 +320,7 @@ async fn add_missing_packages<Telem: Telemetry>(
     fs: Box<ProjectIO>,
     manifest: &Manifest,
     local: &LocalPackages,
-    project_name: SmolStr,
+    project_name: EcoString,
     telemetry: &Telem,
 ) -> Result<(), Error> {
     let missing_packages = local.missing_local_packages(manifest, &project_name);
@@ -209,9 +329,8 @@ async fn add_missing_packages<Telem: Telemetry>(
     let mut missing_hex_packages = missing_packages
         .into_iter()
         .filter(|package| package.is_hex())
-        .map(|package| {
+        .inspect(|_| {
             num_to_download += 1;
-            package
         })
         .peekable();
 
@@ -238,23 +357,29 @@ fn remove_extra_packages<Telem: Telemetry>(
 ) -> Result<()> {
     let _guard = BuildLock::lock_all_build(paths, telemetry)?;
 
-    for (package, version) in local.extra_local_packages(manifest) {
+    for (package_name, version) in local.extra_local_packages(manifest) {
         // TODO: test
         // Delete the package source
-        let path = paths.build_packages_package(&package);
+        let path = paths.build_packages_package(&package_name);
         if path.exists() {
-            tracing::debug!(package=%package, version=%version, "removing_unneeded_package");
-            fs::delete_dir(&path)?;
+            tracing::debug!(package=%package_name, version=%version, "removing_unneeded_package");
+            fs::delete_directory(&path)?;
         }
 
         // TODO: test
         // Delete any build artefacts for the package
         for mode in Mode::iter() {
             for target in Target::iter() {
-                let path = paths.build_directory_for_package(mode, target, &package);
+                let name = manifest
+                    .packages
+                    .iter()
+                    .find(|p| p.name == package_name)
+                    .map(|p| p.application_name().as_str())
+                    .unwrap_or(package_name.as_str());
+                let path = paths.build_directory_for_package(mode, target, name);
                 if path.exists() {
-                    tracing::debug!(package=%package, version=%version, "deleting_build_cache");
-                    fs::delete_dir(&path)?;
+                    tracing::debug!(package=%package_name, version=%version, "deleting_build_cache");
+                    fs::delete_directory(&path)?;
                 }
             }
         }
@@ -265,7 +390,7 @@ fn remove_extra_packages<Telem: Telemetry>(
 fn read_manifest_from_disc(paths: &ProjectPaths) -> Result<Manifest> {
     tracing::debug!("reading_manifest_toml");
     let manifest_path = paths.manifest();
-    let toml = crate::fs::read(&manifest_path)?;
+    let toml = fs::read(&manifest_path)?;
     let manifest = toml::from_str(&toml).map_err(|e| Error::FileIo {
         action: FileIoAction::Parse,
         kind: FileKind::File,
@@ -298,7 +423,7 @@ impl LocalPackages {
             .collect();
         self.packages
             .iter()
-            .filter(|(n, v)| !manifest_packages.contains(&(&SmolStr::from(n), v)))
+            .filter(|(n, v)| !manifest_packages.contains(&(&EcoString::from(*n), v)))
             .map(|(n, v)| (n.clone(), v.clone()))
             .collect()
     }
@@ -327,7 +452,7 @@ impl LocalPackages {
                 packages: HashMap::new(),
             });
         }
-        let toml = crate::fs::read(&path)?;
+        let toml = fs::read(&path)?;
         toml::from_str(&toml).map_err(|e| Error::FileIo {
             action: FileIoAction::Parse,
             kind: FileKind::File,
@@ -502,7 +627,11 @@ fn get_manifest<Telem: Telemetry>(
 
     // If the config has unchanged since the manifest was written then it is up
     // to date so we can return it unmodified.
-    if manifest.requirements == config.all_dependencies()? {
+    if is_same_requirements(
+        &manifest.requirements,
+        &config.all_drect_dependencies()?,
+        paths.root(),
+    )? {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
@@ -512,21 +641,57 @@ fn get_manifest<Telem: Telemetry>(
     }
 }
 
+fn is_same_requirements(
+    requirements1: &HashMap<EcoString, Requirement>,
+    requirements2: &HashMap<EcoString, Requirement>,
+    root_path: &Utf8Path,
+) -> Result<bool> {
+    if requirements1.len() != requirements2.len() {
+        return Ok(false);
+    }
+
+    for (key, requirement1) in requirements1 {
+        if !same_requirements(requirement1, requirements2.get(key), root_path)? {
+            return Ok(false);
+        }
+    }
+
+    Ok(true)
+}
+
+fn same_requirements(
+    requirement1: &Requirement,
+    requirement2: Option<&Requirement>,
+    root_path: &Utf8Path,
+) -> Result<bool> {
+    let (left, right) = match (requirement1, requirement2) {
+        (Requirement::Path { path: path1 }, Some(Requirement::Path { path: path2 })) => {
+            let left = fs::canonicalise(&root_path.join(path1))?;
+            let right = fs::canonicalise(&root_path.join(path2))?;
+            (left, right)
+        }
+        (_, Some(requirement2)) => return Ok(requirement1 == requirement2),
+        (_, None) => return Ok(false),
+    };
+
+    Ok(left == right)
+}
+
 #[derive(Clone, Eq, PartialEq, Debug)]
 struct ProvidedPackage {
     version: Version,
     source: ProvidedPackageSource,
-    requirements: HashMap<SmolStr, hexpm::version::Range>,
+    requirements: HashMap<EcoString, hexpm::version::Range>,
 }
 
 #[derive(Clone, Eq, Debug)]
 enum ProvidedPackageSource {
-    Git { repo: SmolStr, commit: SmolStr },
+    Git { repo: EcoString, commit: EcoString },
     Local { path: Utf8PathBuf },
 }
 
 impl ProvidedPackage {
-    fn to_hex_package(&self, name: &SmolStr) -> hexpm::Package {
+    fn to_hex_package(&self, name: &EcoString) -> hexpm::Package {
         let requirements = self
             .requirements
             .iter()
@@ -562,7 +727,7 @@ impl ProvidedPackage {
             version: self.version.clone(),
             otp_app: None, // Note, this will probably need to be set to something eventually
             build_tools: vec!["gleam".into()],
-            requirements: self.requirements.keys().map(|e| e.to_string()).collect(),
+            requirements: self.requirements.keys().cloned().collect(),
             source: self.source.to_manifest_package_source(),
         };
         package.requirements.sort();
@@ -584,10 +749,10 @@ impl ProvidedPackageSource {
     fn to_toml(&self) -> String {
         match self {
             Self::Git { repo, commit } => {
-                format!(r#"{{ repo: "{}", commit: "{}" }}"#, repo, commit)
+                format!(r#"{{ repo: "{repo}", commit: "{commit}" }}"#)
             }
             Self::Local { path } => {
-                format!(r#"{{ path: "{}" }}"#, path)
+                format!(r#"{{ path: "{path}" }}"#)
             }
         }
     }
@@ -668,7 +833,7 @@ fn resolve_versions<Telem: Telemetry>(
         &locked,
     )?;
 
-    // Convert the hex packages and local packages into manliest packages
+    // Convert the hex packages and local packages into manifest packages
     let manifest_packages = runtime.block_on(future::try_join_all(
         resolved
             .into_iter()
@@ -677,7 +842,7 @@ fn resolve_versions<Telem: Telemetry>(
 
     let manifest = Manifest {
         packages: manifest_packages,
-        requirements: config.all_dependencies()?,
+        requirements: config.all_drect_dependencies()?,
     };
 
     Ok(manifest)
@@ -685,12 +850,12 @@ fn resolve_versions<Telem: Telemetry>(
 
 /// Provide a package from a local project
 fn provide_local_package(
-    package_name: SmolStr,
+    package_name: EcoString,
     package_path: &Utf8Path,
     parent_path: &Utf8Path,
     project_paths: &ProjectPaths,
-    provided: &mut HashMap<SmolStr, ProvidedPackage>,
-    parents: &mut Vec<SmolStr>,
+    provided: &mut HashMap<EcoString, ProvidedPackage>,
+    parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
     let package_path = if package_path.is_absolute() {
         package_path.to_path_buf()
@@ -712,28 +877,28 @@ fn provide_local_package(
 
 /// Provide a package from a git repository
 fn provide_git_package(
-    _package_name: SmolStr,
+    _package_name: EcoString,
     _repo: &str,
     _project_paths: &ProjectPaths,
-    _provided: &mut HashMap<SmolStr, ProvidedPackage>,
+    _provided: &mut HashMap<EcoString, ProvidedPackage>,
 ) -> Result<hexpm::version::Range> {
     let _git = ProvidedPackageSource::Git {
-        repo: SmolStr::new_inline("repo"),
-        commit: SmolStr::new_inline("commit"),
+        repo: "repo".into(),
+        commit: "commit".into(),
     };
-    Err(Error::GitDependencyUnsuported)
+    Err(Error::GitDependencyUnsupported)
 }
 
 /// Adds a gleam project located at a specific path to the list of "provided packages"
 fn provide_package(
-    package_name: SmolStr,
+    package_name: EcoString,
     package_path: Utf8PathBuf,
     package_source: ProvidedPackageSource,
     project_paths: &ProjectPaths,
-    provided: &mut HashMap<SmolStr, ProvidedPackage>,
-    parents: &mut Vec<SmolStr>,
+    provided: &mut HashMap<EcoString, ProvidedPackage>,
+    parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
-    // Return early if a package cyle is detected
+    // Return early if a package cycle is detected
     if parents.contains(&package_name) {
         let mut last_cycle = parents
             .split(|p| p == &package_name)
@@ -813,7 +978,7 @@ fn provide_package(
 #[test]
 fn provide_wrong_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "wrong_name".into(),
         Utf8Path::new("./test/hello_world"),
@@ -836,7 +1001,7 @@ fn provide_wrong_package() {
 #[test]
 fn provide_existing_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
 
     let result = provide_local_package(
         "hello_world".into(),
@@ -862,7 +1027,7 @@ fn provide_existing_package() {
 #[test]
 fn provide_conflicting_package() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -893,7 +1058,7 @@ fn provide_conflicting_package() {
 #[test]
 fn provided_is_absolute() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -914,7 +1079,7 @@ fn provided_is_absolute() {
 #[test]
 fn provided_recursive() {
     let mut provided = HashMap::new();
-    let project_paths = crate::project_paths_at_current_directory();
+    let project_paths = crate::project_paths_at_current_directory_without_toml();
     let result = provide_local_package(
         "hello_world".into(),
         Utf8Path::new("./test/hello_world"),
@@ -935,7 +1100,7 @@ fn provided_recursive() {
 async fn lookup_package(
     name: String,
     version: Version,
-    provided: &HashMap<SmolStr, ProvidedPackage>,
+    provided: &HashMap<EcoString, ProvidedPackage>,
 ) -> Result<ManifestPackage> {
     match provided.get(name.as_str()) {
         Some(provided_package) => Ok(provided_package.to_manifest_package(name.as_str())),
@@ -943,12 +1108,23 @@ async fn lookup_package(
             let config = hexpm::Config::new();
             let release =
                 hex::get_package_release(&name, &version, &config, &HttpClient::new()).await?;
+            let build_tools = release
+                .meta
+                .build_tools
+                .iter()
+                .map(|s| EcoString::from(s.as_str()))
+                .collect_vec();
+            let requirements = release
+                .requirements
+                .keys()
+                .map(|s| EcoString::from(s.as_str()))
+                .collect_vec();
             Ok(ManifestPackage {
                 name: name.into(),
                 version,
-                otp_app: Some(release.meta.app),
-                build_tools: release.meta.build_tools,
-                requirements: release.requirements.keys().cloned().collect_vec(),
+                otp_app: Some(release.meta.app.into()),
+                build_tools,
+                requirements,
                 source: ManifestPackageSource::Hex {
                     outer_checksum: Base16Checksum(release.outer_checksum),
                 },
@@ -1016,7 +1192,7 @@ impl dependency::PackageFetcher for PackageFetcher {
 #[test]
 fn provided_local_to_hex() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Local {
             path: "canonical/path/to/package".into(),
         },
@@ -1037,7 +1213,7 @@ fn provided_local_to_hex() {
         name: "package".into(),
         repository: "local".into(),
         releases: vec![hexpm::Release {
-            version: hexpm::version::Version::new(1, 0, 0),
+            version: Version::new(1, 0, 0),
             retirement_status: None,
             outer_checksum: vec![],
             meta: (),
@@ -1066,7 +1242,7 @@ fn provided_local_to_hex() {
     };
 
     assert_eq!(
-        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        provided_package.to_hex_package(&"package".into()),
         hex_package
     );
 }
@@ -1074,7 +1250,7 @@ fn provided_local_to_hex() {
 #[test]
 fn provided_git_to_hex() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
@@ -1096,7 +1272,7 @@ fn provided_git_to_hex() {
         name: "package".into(),
         repository: "local".into(),
         releases: vec![hexpm::Release {
-            version: hexpm::version::Version::new(1, 0, 0),
+            version: Version::new(1, 0, 0),
             retirement_status: None,
             outer_checksum: vec![],
             meta: (),
@@ -1125,7 +1301,7 @@ fn provided_git_to_hex() {
     };
 
     assert_eq!(
-        provided_package.to_hex_package(&SmolStr::new_inline("package")),
+        provided_package.to_hex_package(&"package".into()),
         hex_package
     );
 }
@@ -1133,7 +1309,7 @@ fn provided_git_to_hex() {
 #[test]
 fn provided_local_to_manifest() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Local {
             path: "canonical/path/to/package".into(),
         },
@@ -1152,7 +1328,7 @@ fn provided_local_to_manifest() {
 
     let manifest_package = ManifestPackage {
         name: "package".into(),
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         otp_app: None,
         build_tools: vec!["gleam".into()],
         requirements: vec!["req_1".into(), "req_2".into()],
@@ -1162,7 +1338,7 @@ fn provided_local_to_manifest() {
     };
 
     assert_eq!(
-        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        provided_package.to_manifest_package("package"),
         manifest_package
     );
 }
@@ -1170,7 +1346,7 @@ fn provided_local_to_manifest() {
 #[test]
 fn provided_git_to_manifest() {
     let provided_package = ProvidedPackage {
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         source: ProvidedPackageSource::Git {
             repo: "https://github.com/gleam-lang/gleam.git".into(),
             commit: "bd9fe02f72250e6a136967917bcb1bdccaffa3c8".into(),
@@ -1190,7 +1366,7 @@ fn provided_git_to_manifest() {
 
     let manifest_package = ManifestPackage {
         name: "package".into(),
-        version: hexpm::version::Version::new(1, 0, 0),
+        version: Version::new(1, 0, 0),
         otp_app: None,
         build_tools: vec!["gleam".into()],
         requirements: vec!["req_1".into(), "req_2".into()],
@@ -1201,7 +1377,41 @@ fn provided_git_to_manifest() {
     };
 
     assert_eq!(
-        provided_package.to_manifest_package(&SmolStr::new_inline("package")),
+        provided_package.to_manifest_package("package"),
         manifest_package
+    );
+}
+
+#[test]
+fn verified_requirements_equality_with_canonicalized_paths() {
+    let temp_dir = tempfile::tempdir().expect("Failed to create a temp directory");
+    let temp_path = Utf8PathBuf::from_path_buf(temp_dir.path().to_path_buf())
+        .expect("Path should be valid UTF-8");
+
+    let sub_dir = temp_path.join("subdir");
+    std::fs::create_dir(&sub_dir).expect("Failed to create a subdir");
+    let file_path = sub_dir.join("file.txt");
+    fs::write(&file_path, "content").expect("Failed to write to file");
+
+    let canonical_path = std::fs::canonicalize(&file_path).expect("Failed to canonicalize path");
+    let relative_path = temp_path.join("./subdir/../subdir/./file.txt");
+
+    let requirements1 = HashMap::from([(
+        EcoString::from("dep1"),
+        Requirement::Path {
+            path: Utf8PathBuf::from(canonical_path.to_str().expect("Path should be valid UTF-8")),
+        },
+    )]);
+
+    let requirements2 = HashMap::from([(
+        EcoString::from("dep1"),
+        Requirement::Path {
+            path: Utf8PathBuf::from(relative_path.to_string()),
+        },
+    )]);
+
+    assert!(
+        is_same_requirements(&requirements1, &requirements2, &temp_path)
+            .expect("Requirements should be the same")
     );
 }

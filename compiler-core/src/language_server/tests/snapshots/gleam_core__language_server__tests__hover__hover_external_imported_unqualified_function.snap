@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport example_module.{my_fn}\nfn main() {\n  my_fn\n}\n"
+---
+import example_module.{my_fn}
+fn main() {
+  my_fn
+  ▔▔▔↑▔
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn() -> Nil\n```\n\nView on [HexDocs](https://hexdocs.pm/hex/example_module.html#my_fn)",
+    ),
+)

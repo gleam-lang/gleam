@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 358
 expression: "case 1 { _, _ -> 1 }"
 ---
 error: Incorrect number of patterns
@@ -11,4 +10,3 @@ error: Incorrect number of patterns
 
 This case expression has 1 subjects, but this pattern matches 2.
 Each clause must have a pattern for every subject value.
-

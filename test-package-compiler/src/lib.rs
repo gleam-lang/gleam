@@ -9,7 +9,8 @@ mod generated_tests;
 
 use gleam_core::{
     build::{
-        ErlangAppCodegenConfiguration, Mode, StaleTracker, Target, TargetCodegenConfiguration,
+        ErlangAppCodegenConfiguration, Mode, NullTelemetry, Outcome, StaleTracker, Target,
+        TargetCodegenConfiguration,
     },
     config::PackageConfig,
     io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
@@ -17,7 +18,12 @@ use gleam_core::{
 };
 use itertools::Itertools;
 use regex::Regex;
-use std::{collections::HashMap, fmt::Write, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Write,
+    rc::Rc,
+    sync::OnceLock,
+};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
@@ -31,17 +37,19 @@ pub fn prepare(path: &str) -> String {
         Target::Erlang => TargetCodegenConfiguration::Erlang {
             app_file: Some(ErlangAppCodegenConfiguration {
                 include_dev_deps: true,
+                package_name_overrides: HashMap::new(),
             }),
         },
         Target::JavaScript => TargetCodegenConfiguration::JavaScript {
             emit_typescript_definitions: config.javascript.typescript_declarations,
+            prelude_location: Utf8PathBuf::from("../prelude.mjs"),
         },
     };
 
     let ids = gleam_core::uid::UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
     let warnings = VectorWarningEmitterIO::default();
-    let warning_emitter = WarningEmitter::new(Arc::new(warnings.clone()));
+    let warning_emitter = WarningEmitter::new(Rc::new(warnings.clone()));
     let filesystem = to_in_memory_filesystem(&root);
     let initial_files = filesystem.paths();
     let root = Utf8PathBuf::from("");
@@ -66,9 +74,11 @@ pub fn prepare(path: &str) -> String {
         &mut modules,
         &mut im::HashMap::new(),
         &mut StaleTracker::default(),
+        &mut HashSet::new(),
+        &NullTelemetry,
     );
     match result {
-        Ok(_) => {
+        Outcome::Ok(_) => {
             for path in initial_files {
                 filesystem.delete_file(&path).unwrap();
             }
@@ -76,7 +86,9 @@ pub fn prepare(path: &str) -> String {
             let warnings = warnings.take();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
-        Err(error) => normalise_diagnostic(&error.pretty_string()),
+        Outcome::TotalFailure(error) | Outcome::PartialFailure(_, error) => {
+            normalise_diagnostic(&error.pretty_string())
+        }
     }
 }
 
@@ -92,6 +104,8 @@ fn normalise_diagnostic(text: &str) -> String {
         .replace('\\', "/")
 }
 
+static FILE_LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+
 #[derive(Debug)]
 pub struct TestCompileOutput {
     files: HashMap<Utf8PathBuf, Content>,
@@ -102,21 +116,31 @@ impl TestCompileOutput {
     pub fn as_overview_text(&self) -> String {
         let mut buffer = String::new();
         for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+            let normalised_path = path.as_str().replace('\\', "/");
             buffer.push_str("//// ");
-            buffer.push_str(&path.as_str().replace('\\', "/"));
+            buffer.push_str(&normalised_path);
             buffer.push('\n');
 
             let extension = path.extension();
             match content {
                 _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
-
-                _ if path.ends_with("gleam.mjs") || path.ends_with("gleam.d.mts") => {
-                    buffer.push_str("<prelude>")
-                }
-
                 Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
-
-                Content::Text(text) => buffer.push_str(text),
+                Content::Text(text) => {
+                    let text = FILE_LINE_REGEX
+                        .get_or_init(|| {
+                            Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
+                        })
+                        .replace_all(text, |caps: &regex::Captures| {
+                            let path = caps
+                                .get(1)
+                                .expect("file path")
+                                .as_str()
+                                .replace("\\\\", "/");
+                            let line_number = caps.get(2).expect("line number").as_str();
+                            format!("-file(\"{path}\", {line_number}).")
+                        });
+                    buffer.push_str(&text)
+                }
             };
             buffer.push('\n');
             buffer.push('\n');

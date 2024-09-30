@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\npub fn main() {\n  let class = 10\n  let debugger = 50\n}\n"
+---
+export function main() {
+  let class$ = 10;
+  let debugger$ = 50;
+  return debugger$;
+}

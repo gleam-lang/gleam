@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    let assert \"prefix\" <> coolSuffix = \"prefix-suffix\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    let assert "prefix" <> coolSuffix = "prefix-suffix"
+                        ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑       
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let assert "prefix" <> cool_suffix = "prefix-suffix"
+}

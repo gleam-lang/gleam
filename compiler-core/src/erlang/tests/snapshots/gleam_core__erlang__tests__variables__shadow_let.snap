@@ -4,10 +4,11 @@ assertion_line: 6
 expression: "\npub fn go(a) {\n  case a {\n    99 -> {\n      let a = a\n      1\n    }\n    _ -> a\n  }\n}"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([go/1]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec go(integer()) -> integer().
 go(A) ->
     case A of
@@ -18,4 +19,3 @@ go(A) ->
         _ ->
             A
     end.
-

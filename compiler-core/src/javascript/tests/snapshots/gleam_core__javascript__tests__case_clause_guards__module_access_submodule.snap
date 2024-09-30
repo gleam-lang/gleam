@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\n          import hero/submodule\n          pub fn main() {\n            let name = \"Tony Stark\"\n            case name {\n              n if n == submodule.ironman.name -> True\n              _ -> False\n            }\n          }\n        "
+---
+import * as $submodule from "../../package/hero/submodule.mjs";
+
+export function main() {
+  let name = "Tony Stark";
+  if (name === $submodule.ironman.name) {
+    let n = name;
+    return true;
+  } else {
+    return false;
+  }
+}

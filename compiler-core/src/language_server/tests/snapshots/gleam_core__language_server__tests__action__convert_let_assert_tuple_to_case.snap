@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n   let assert #(first, 10, third) = #(5, 10, 15)\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+   let assert #(first, 10, third) = #(5, 10, 15)
+   ↑                                            
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+   let #(first, third) = case #(5, 10, 15) {
+     #(first, 10, third) -> #(first, third)
+     _ -> panic
+   }
+}

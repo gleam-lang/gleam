@@ -284,7 +284,7 @@ type Cat {
 fn go(cat) {
   let Cat(x, y) = cat
   let Cat(name: x, ..) = cat
-  let Cat(cuteness: 4, name: x) = cat
+  let assert Cat(cuteness: 4, name: x) = cat
   x
 }
 
@@ -675,6 +675,21 @@ fn types_must_be_rendered_before_functions() {
         r#"
 pub fn one() { One }
 pub type One { One }
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/2386
+#[test]
+fn new_type_import_syntax() {
+    assert_js!(
+        ("package", "a", r#"pub type A { A }"#),
+        r#"
+import a.{type A, A}
+
+pub fn main() {
+  A
+}
 "#
     );
 }

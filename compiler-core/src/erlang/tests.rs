@@ -1,4 +1,9 @@
+use camino::Utf8PathBuf;
+
+use crate::analyse::TargetSupport;
+use crate::config::PackageConfig;
 use crate::type_::PRELUDE_MODULE_NAME;
+use crate::warning::WarningEmitter;
 use crate::{
     build::{Origin, Target},
     erlang::module,
@@ -7,7 +12,7 @@ use crate::{
     warning::TypeWarningEmitter,
 };
 
-mod bit_strings;
+mod bit_arrays;
 mod case;
 mod conditional_compilation;
 mod consts;
@@ -24,10 +29,11 @@ mod records;
 mod reserved;
 mod strings;
 mod todo;
+mod type_params;
 mod use_;
 mod variables;
 
-pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> String {
+pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, &str)>) -> String {
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
     // DUPE: preludeinsertion
@@ -40,37 +46,53 @@ pub fn compile_test_project(src: &str, dep: Option<(&str, &str, &str)>) -> Strin
     );
     let mut direct_dependencies = std::collections::HashMap::from_iter(vec![]);
     if let Some((dep_package, dep_name, dep_src)) = dep {
-        let parsed = crate::parse::parse_module(dep_src).expect("dep syntax error");
+        let mut dep_config = PackageConfig::default();
+        dep_config.name = dep_package.into();
+        let parsed = crate::parse::parse_module(
+            Utf8PathBuf::from("test/path"),
+            dep_src,
+            &WarningEmitter::null(),
+        )
+        .expect("dep syntax error");
         let mut ast = parsed.module;
         ast.name = dep_name.into();
-        let dep = crate::analyse::infer_module::<()>(
-            Target::Erlang,
-            &ids,
-            ast,
-            Origin::Src,
-            &dep_package.into(),
-            &modules,
-            &TypeWarningEmitter::null(),
-            &std::collections::HashMap::new(),
-        )
-        .expect("should successfully infer");
+        let line_numbers = LineNumbers::new(dep_src);
+
+        let dep = crate::analyse::ModuleAnalyzerConstructor::<()> {
+            target: Target::Erlang,
+            ids: &ids,
+            origin: Origin::Src,
+            importable_modules: &modules,
+            warnings: &TypeWarningEmitter::null(),
+            direct_dependencies: &std::collections::HashMap::new(),
+            target_support: TargetSupport::NotEnforced,
+            package_config: &dep_config,
+        }
+        .infer_module(ast, line_numbers, "".into())
+        .expect("should successfully infer dep Erlang");
         let _ = modules.insert(dep_name.into(), dep.type_info);
         let _ = direct_dependencies.insert(dep_package.into(), ());
     }
-    let parsed = crate::parse::parse_module(src).expect("syntax error");
+    let path = Utf8PathBuf::from(src_path);
+    let parsed = crate::parse::parse_module(path.clone(), src, &WarningEmitter::null())
+        .expect("syntax error");
+    let mut config = PackageConfig::default();
+    config.name = "thepackage".into();
     let mut ast = parsed.module;
     ast.name = "my/mod".into();
-    let ast = crate::analyse::infer_module::<()>(
-        Target::Erlang,
-        &ids,
-        ast,
-        Origin::Src,
-        &"thepackage".into(),
-        &modules,
-        &TypeWarningEmitter::null(),
-        &direct_dependencies,
-    )
-    .expect("should successfully infer");
+    let line_numbers = LineNumbers::new(src);
+    let ast = crate::analyse::ModuleAnalyzerConstructor::<()> {
+        target: Target::Erlang,
+        ids: &ids,
+        origin: Origin::Src,
+        importable_modules: &modules,
+        warnings: &TypeWarningEmitter::null(),
+        direct_dependencies: &direct_dependencies,
+        target_support: TargetSupport::NotEnforced,
+        package_config: &config,
+    }
+    .infer_module(ast, line_numbers, path)
+    .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
     module(&ast, &line_numbers).unwrap()
 }
@@ -80,13 +102,18 @@ macro_rules! assert_erl {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let output = $crate::erlang::tests::compile_test_project(
             $src,
+            "/root/project/test/my/mod.gleam",
             Some(($dep_package, $dep_name, $dep_src)),
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr $(,)?) => {{
-        let output = $crate::erlang::tests::compile_test_project($src, None);
+        let output = $crate::erlang::tests::compile_test_project(
+            $src,
+            "/root/project/test/my/mod.gleam",
+            None,
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
@@ -192,7 +219,14 @@ pub fn tail(list) { case list { [x, ..xs] -> xs z -> list } }
 
 #[test]
 fn integration_test5() {
-    assert_erl!("pub fn tail(list) { case list { [x, ..] -> x } }");
+    assert_erl!(
+        "pub fn tail(list) {
+  case list {
+    [x, ..] -> x
+    _ -> 0
+  }
+}"
+    );
 }
 
 #[test]
@@ -456,7 +490,7 @@ fn variable_name_underscores_preserved() {
 
 #[test]
 fn allowed_string_escapes() {
-    assert_erl!(r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\e" "\\^" }"#);
+    assert_erl!(r#"pub fn a() { "\n" "\r" "\t" "\\" "\"" "\\^" }"#);
 }
 
 // https://github.com/gleam-lang/gleam/issues/1006
@@ -488,9 +522,9 @@ fn operator_pipe_right_hand_side() {
         "fn id(x) {
   x
 }
-        
+
 pub fn bool_expr(x, y) {
-  y || x |> id 
+  y || x |> id
 }"
     );
 }
@@ -544,6 +578,7 @@ fn guard_variable_rewriting() {
       let a = a
       a
     }
+    _ -> 0.0
   }
 }
 "
@@ -581,9 +616,330 @@ fn inline_const_pattern_option() {
             case x {
               <<5:size(sixteen)>> -> <<5:size(sixteen)>>
               <<6:size(fifteen)>> -> <<5:size(fifteen)>>
+              _ -> <<>>
             }
           }
-          
+
           pub const sixteen = 16"
     )
+}
+
+// https://github.com/gleam-lang/gleam/issues/2349
+#[test]
+fn positive_zero() {
+    assert_erl!(
+        "
+pub fn main() {
+  0.0
+}
+"
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/3073
+#[test]
+fn scientific_notation() {
+    assert_erl!(
+        "
+pub fn main() {
+  1.0e6
+  1.e6
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3304
+#[test]
+fn type_named_else() {
+    assert_erl!(
+        "
+pub type Else {
+  Else
+}
+
+pub fn main() {
+  Else
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn type_named_module_info() {
+    assert_erl!(
+        "
+pub type ModuleInfo {
+    ModuleInfo
+}
+
+pub fn main() {
+    ModuleInfo
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info() {
+    assert_erl!(
+        "
+pub fn module_info() {
+    1
+}
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+            "
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+            "
+        ),
+        "
+import some_module.{module_info}
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info() {
+    assert_erl!(
+        "
+pub const module_info = 1
+
+pub fn main() {
+    module_info
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub const module_info = 1
+            "
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.module_info
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub const module_info = 1
+            "
+        ),
+        "
+import some_module.{module_info}
+
+pub fn main() {
+    module_info
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_with_function_inside() {
+    assert_erl!(
+        "
+pub fn function() {
+    1
+}
+
+pub const module_info = function
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_with_function_inside_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn function() {
+    1
+}
+
+pub const module_info = function
+"
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn constant_named_module_info_with_function_inside_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn function() {
+    1
+}
+
+pub const module_info = function
+"
+        ),
+        "
+import some_module.{module_info}
+
+pub fn main() {
+    module_info()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_in_constant() {
+    assert_erl!(
+        "
+pub fn module_info() {
+    1
+}
+
+pub const constant = module_info
+
+pub fn main() {
+    constant()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_in_constant_imported() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+
+pub const constant = module_info
+            "
+        ),
+        "
+import some_module
+
+pub fn main() {
+    some_module.constant()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3382
+#[test]
+fn function_named_module_info_in_constant_imported_qualified() {
+    assert_erl!(
+        (
+            "some_module",
+            "some_module",
+            "
+pub fn module_info() {
+    1
+}
+
+pub const constant = module_info
+            "
+        ),
+        "
+import some_module.{constant}
+
+pub fn main() {
+    constant()
+}
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3648
+#[test]
+fn windows_file_escaping_bug() {
+    let src = "pub fn main() { Nil }";
+    let path = "C:\\root\\project\\test\\my\\mod.gleam";
+    let output = compile_test_project(src, path, None);
+    insta::assert_snapshot!(insta::internals::AutoName, output, src);
 }

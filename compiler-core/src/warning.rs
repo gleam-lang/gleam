@@ -1,18 +1,21 @@
 use crate::{
-    ast::TodoKind,
-    build::Target,
+    ast::{SrcSpan, TodoKind},
     diagnostic::{self, Diagnostic, Location},
     error::wrap,
-    type_,
+    type_::{
+        self,
+        error::{FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic},
+        pretty::Printer,
+    },
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
-use smol_str::SmolStr;
-use std::sync::atomic::AtomicUsize;
+use ecow::EcoString;
 use std::{
     io::Write,
     sync::{atomic::Ordering, Arc},
 };
+use std::{rc::Rc, sync::atomic::AtomicUsize};
 use termcolor::Buffer;
 
 pub trait WarningEmitterIO {
@@ -32,9 +35,23 @@ pub struct VectorWarningEmitterIO {
 }
 
 impl VectorWarningEmitterIO {
+    pub fn new() -> Self {
+        Self::default()
+    }
+
     pub fn take(&self) -> Vec<Warning> {
         let mut warnings = self.write_lock();
         std::mem::take(&mut *warnings)
+    }
+
+    pub fn reset(&self) {
+        let mut warnings = self.write_lock();
+        warnings.clear();
+    }
+
+    pub fn pop(&self) -> Option<Warning> {
+        let mut warnings = self.write_lock();
+        warnings.pop()
     }
 
     fn write_lock(&self) -> std::sync::RwLockWriteGuard<'_, Vec<Warning>> {
@@ -56,11 +73,11 @@ pub struct WarningEmitter {
     /// package only, the count is reset back to zero after the dependencies are
     /// compiled.
     count: Arc<AtomicUsize>,
-    emitter: DebugIgnore<Arc<dyn WarningEmitterIO>>,
+    emitter: DebugIgnore<Rc<dyn WarningEmitterIO>>,
 }
 
 impl WarningEmitter {
-    pub fn new(emitter: Arc<dyn WarningEmitterIO>) -> Self {
+    pub fn new(emitter: Rc<dyn WarningEmitterIO>) -> Self {
         Self {
             count: Arc::new(AtomicUsize::new(0)),
             emitter: DebugIgnore(emitter),
@@ -68,7 +85,7 @@ impl WarningEmitter {
     }
 
     pub fn null() -> Self {
-        Self::new(Arc::new(NullWarningEmitterIO))
+        Self::new(Rc::new(NullWarningEmitterIO))
     }
 
     pub fn reset_count(&self) {
@@ -84,22 +101,22 @@ impl WarningEmitter {
         self.emitter.emit_warning(warning);
     }
 
-    pub fn vector() -> (Self, Arc<VectorWarningEmitterIO>) {
-        let io = Arc::new(VectorWarningEmitterIO::default());
+    pub fn vector() -> (Self, Rc<VectorWarningEmitterIO>) {
+        let io = Rc::new(VectorWarningEmitterIO::default());
         let emitter = Self::new(io.clone());
-        (emitter, Arc::clone(&io))
+        (emitter, Rc::clone(&io))
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct TypeWarningEmitter {
     module_path: Utf8PathBuf,
-    module_src: SmolStr,
+    module_src: EcoString,
     emitter: WarningEmitter,
 }
 
 impl TypeWarningEmitter {
-    pub fn new(module_path: Utf8PathBuf, module_src: SmolStr, emitter: WarningEmitter) -> Self {
+    pub fn new(module_path: Utf8PathBuf, module_src: EcoString, emitter: WarningEmitter) -> Self {
         Self {
             module_path,
             module_src,
@@ -110,12 +127,12 @@ impl TypeWarningEmitter {
     pub fn null() -> Self {
         Self {
             module_path: Utf8PathBuf::new(),
-            module_src: SmolStr::new(""),
-            emitter: WarningEmitter::new(Arc::new(NullWarningEmitterIO)),
+            module_src: EcoString::from(""),
+            emitter: WarningEmitter::new(Rc::new(NullWarningEmitterIO)),
         }
     }
 
-    pub fn emit(&self, warning: crate::type_::Warning) {
+    pub fn emit(&self, warning: type_::Warning) {
         self.emitter.emit(Warning::Type {
             path: self.module_path.clone(),
             src: self.module_src.clone(),
@@ -128,129 +145,174 @@ impl TypeWarningEmitter {
 pub enum Warning {
     Type {
         path: Utf8PathBuf,
-        src: SmolStr,
-        warning: crate::type_::Warning,
+        src: EcoString,
+        warning: type_::Warning,
     },
-    Parse {
-        path: Utf8PathBuf,
-        src: SmolStr,
-        warning: crate::parse::Warning,
-    },
+
     InvalidSource {
         path: Utf8PathBuf,
     },
+
+    DeprecatedSyntax {
+        path: Utf8PathBuf,
+        src: EcoString,
+        warning: DeprecatedSyntaxWarning,
+    },
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum DeprecatedSyntaxWarning {
+    /// If someone uses the deprecated syntax to append to a list:
+    /// `["a"..rest]`, notice how there's no comma!
+    DeprecatedListPrepend { location: SrcSpan },
+
+    /// If someone uses the deprecated syntax to pattern match on a list:
+    /// ```gleam
+    /// case list {
+    ///   [first..rest] -> todo
+    ///   //    ^^ notice there's no comma!
+    ///   _ ->
+    /// }
+    /// ```
+    ///
+    DeprecatedListPattern { location: SrcSpan },
+
+    /// If someone uses the deprecated syntax to match on all lists instead of
+    /// a common `_`:
+    /// ```gleam
+    /// case list {
+    ///   [..] -> todo
+    /// //^^^^ this matches on all lists so a `_` should be used instead!
+    ///   _ ->
+    /// }
+    /// ```
+    ///
+    DeprecatedListCatchAllPattern { location: SrcSpan },
+
+    /// If a record pattern has a spread that is not preceded by a comma:
+    /// ```gleam
+    /// case wibble {
+    ///   Wibble(arg1: name ..) -> todo
+    /// //                  ^^ this should be preceded by a comma!
+    /// }
+    /// ```
+    ///
+    DeprecatedRecordSpreadPattern { location: SrcSpan },
 }
 
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
-            Self::Parse { path, warning, src } => match warning {
-                crate::parse::Warning::DeprecatedIf { location, target } => {
-                    let target = match target {
-                        Target::Erlang => "erlang",
-                        Target::JavaScript => "javascript",
-                    };
-                    let text = format!(
-                        "This syntax has been replaced by the `@target({target})` attribute.\n"
-                    );
-                    Diagnostic {
-                        title: "Deprecated if syntax".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedExternalFn { location } => {
-                    let text =
-                        "This syntax has been replaced by the `@external` attribute.\n".into();
-                    Diagnostic {
-                        title: "Deprecated external fn syntax".into(),
-                        text,
-                        hint: Some("Run `gleam fix` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedTodo { location, message } => {
-                    let text = format!(
-                        "The `todo()` syntax has been replaced by this syntax:
-                        
-    todo as \"{message}\"\n"
-                    );
-                    Diagnostic {
-                        title: "Deprecated todo syntax".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-
-                crate::parse::Warning::DeprecatedExternalType { location, name } => {
-                    let text =
-                        format!("This syntax has been replaced by the `type {name}` syntax.\n");
-                    Diagnostic {
-                        title: "Deprecated if syntax".into(),
-                        text,
-                        hint: Some("Run `gleam format` to auto-fix your code.".into()),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            path: path.to_path_buf(),
-                            src: src.clone(),
-                            label: diagnostic::Label {
-                                text: None,
-                                span: *location,
-                            },
-                            extra_labels: Vec::new(),
-                        }),
-                    }
-                }
-            },
-
             Warning::InvalidSource { path } => Diagnostic {
-                title: "Invalid module name.".into(),
-                text: "Module names must begin with a lowercase letter and contain\
- only lowercase alphanumeric characters or underscores."
+                title: "Invalid module name".into(),
+                text: "\
+Module names must begin with a lowercase letter and contain
+only lowercase alphanumeric characters or underscores."
                     .into(),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: Some(format!(
-                    "Rename `{}` to be valid, or remove this file from the project source.",
-                    path
+                    "Rename `{path}` to be valid, or remove this file from the project source."
                 )),
             },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedListPrepend { location },
+            } => Diagnostic {
+                title: "Deprecated prepend syntax".into(),
+                text: wrap(
+                    "This syntax for prepending to a list is deprecated.
+When prepending an item to a list it should be preceded by a comma, \
+like this: `[item, ..list]`.",
+                ),
+
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This spread should be preceded by a comma".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedListPattern { location },
+            } => Diagnostic {
+                title: "Deprecated list pattern matching syntax".into(),
+                text: wrap(
+                    "This syntax for pattern matching on a list is deprecated.
+When matching on the rest of a list it should always be preceded by a comma, \
+like this: `[item, ..list]`.",
+                ),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This spread should be preceded by a comma".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedRecordSpreadPattern { location },
+            } => Diagnostic {
+                title: "Deprecated record pattern matching syntax".into(),
+                text: wrap("This syntax for pattern matching on a record is deprecated."),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This should be preceded by a comma".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning: DeprecatedSyntaxWarning::DeprecatedListCatchAllPattern { location },
+            } => Diagnostic {
+                title: "Deprecated list pattern matching syntax".into(),
+                text: wrap(
+                    "This syntax for pattern matching on lists is deprecated.
+To match on all possible lists, use the `_` catch-all pattern instead.",
+                ),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some("This can be replaced with `_`".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
                     location,
-                    typ,
+                    type_,
                 } => {
                     let mut text = String::new();
                     text.push_str(
@@ -271,10 +333,10 @@ expression.",
                         }
                     }
                     .into();
-                    if !typ.is_variable() {
+                    if !type_.is_variable() {
                         text.push_str(&format!(
                             "\n\nHint: I think its type is `{}`.\n",
-                            type_::pretty::Printer::new().pretty_print(typ, 0)
+                            Printer::new().pretty_print(type_, 0)
                         ));
                     }
 
@@ -298,7 +360,9 @@ expression.",
                 type_::Warning::ImplicitlyDiscardedResult { location } => Diagnostic {
                     title: "Unused result value".into(),
                     text: "".into(),
-                    hint: Some("If you are sure you don't need it you can assign it to `_`".into()),
+                    hint: Some(
+                        "If you are sure you don't need it you can assign it to `_`.".into(),
+                    ),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         path: path.to_path_buf(),
@@ -338,7 +402,7 @@ expression.",
                         path: path.to_path_buf(),
                         src: src.clone(),
                         label: diagnostic::Label {
-                            text: Some("This record update doesn't change any fields.".into()),
+                            text: Some("This record update doesn't change any fields".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -370,9 +434,9 @@ expression.",
                         "Unused private type".into()
                     };
                     let label = if *imported {
-                        "This imported type is never used.".into()
+                        "This imported type is never used".into()
                     } else {
-                        "This private type is never used.".into()
+                        "This private type is never used".into()
                     };
                     Diagnostic {
                         title,
@@ -400,9 +464,9 @@ expression.",
                         "Unused private constructor".into()
                     };
                     let label = if *imported {
-                        "This imported constructor is never used.".into()
+                        "This imported constructor is never used".into()
                     } else {
-                        "This private constructor is never used.".into()
+                        "This private constructor is never used".into()
                     };
                     Diagnostic {
                         title,
@@ -430,12 +494,41 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This imported module is never used.".into()),
+                            text: Some("This imported module is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::UnusedImportedModuleAlias {
+                    location,
+                    module_name,
+                    ..
+                } => {
+                    let text = format!(
+                        "\
+Hint: You can safely remove it.
+
+    import {module_name} as _
+"
+                    );
+                    Diagnostic {
+                        title: "Unused imported module alias".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: Some("This alias is never used".into()),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
 
                 type_::Warning::UnusedImportedValue { location, .. } => Diagnostic {
                     title: "Unused imported value".into(),
@@ -446,7 +539,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This imported value is never used.".into()),
+                            text: Some("This imported value is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -462,7 +555,7 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This private constant is never used.".into()),
+                            text: Some("This private constant is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
@@ -478,32 +571,37 @@ expression.",
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This private function is never used.".into()),
+                            text: Some("This private function is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
                     }),
                 },
 
-                type_::Warning::UnusedVariable { location, name, .. } => Diagnostic {
+                type_::Warning::UnusedVariable {
+                    location,
+                    how_to_ignore,
+                } => Diagnostic {
                     title: "Unused variable".into(),
                     text: "".into(),
-                    hint: Some(format!("You can ignore it with an underscore: `_{name}`.")),
+                    hint: how_to_ignore.as_ref().map(|rewrite_as| {
+                        format!("You can ignore it with an underscore: `{rewrite_as}`.")
+                    }),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
                         path: path.to_path_buf(),
                         label: diagnostic::Label {
-                            text: Some("This variable is never used.".into()),
+                            text: Some("This variable is never used".into()),
                             span: *location,
                         },
                         extra_labels: Vec::new(),
                     }),
                 },
                 type_::Warning::UnnecessaryDoubleIntNegation { location } => Diagnostic {
-                    title: "Unnecessary double negation (--) on integer.".into(),
+                    title: "Unnecessary double negation (--) on integer".into(),
                     text: "".into(),
-                    hint: Some("You can safely remove this".into()),
+                    hint: Some("You can safely remove this.".into()),
                     level: diagnostic::Level::Warning,
                     location: Some(Location {
                         src: src.clone(),
@@ -516,7 +614,7 @@ expression.",
                     }),
                 },
                 type_::Warning::UnnecessaryDoubleBoolNegation { location } => Diagnostic {
-                    title: "Unnecessary double negation (!!) on bool.".into(),
+                    title: "Unnecessary double negation (!!) on bool".into(),
                     text: "".into(),
                     hint: Some("You can safely remove this.".into()),
                     level: diagnostic::Level::Warning,
@@ -545,7 +643,7 @@ need to know if the list is empty or not.
                     });
 
                     Diagnostic {
-                        title: "Inefficient use of list.length".into(),
+                        title: "Inefficient use of `list.length`".into(),
                         text,
                         hint,
                         level: diagnostic::Level::Warning,
@@ -578,7 +676,7 @@ Run this command to add it to your dependencies:
 "
                     ));
                     Diagnostic {
-                        title: "Transative dependency imported".into(),
+                        title: "Transitive dependency imported".into(),
                         text,
                         hint: None,
                         level: diagnostic::Level::Warning,
@@ -594,10 +692,26 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::DeprecatedValue { location, message } => {
+                type_::Warning::DeprecatedItem {
+                    location,
+                    message,
+                    layer,
+                } => {
                     let text = wrap(&format!("It was deprecated with this message: {message}"));
+                    let (title, diagnostic_label_text) = if layer.is_value() {
+                        (
+                            "Deprecated value used".into(),
+                            Some("This value has been deprecated".into()),
+                        )
+                    } else {
+                        (
+                            "Deprecated type used".into(),
+                            Some("This type has been deprecated".into()),
+                        )
+                    };
+
                     Diagnostic {
-                        title: "Deprecated value used".into(),
+                        title,
                         text,
                         hint: None,
                         level: diagnostic::Level::Warning,
@@ -605,10 +719,330 @@ Run this command to add it to your dependencies:
                             src: src.clone(),
                             path: path.to_path_buf(),
                             label: diagnostic::Label {
-                                text: Some("This value has been deprecated".into()),
+                                text: diagnostic_label_text,
                                 span: *location,
                             },
                             extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::UnreachableCaseClause { location } => {
+                    let text: String =
+                        "This case clause cannot be reached as a previous clause matches
+the same values.\n"
+                            .into();
+                    Diagnostic {
+                        title: "Unreachable case clause".into(),
+                        text,
+                        hint: Some("It can be safely removed.".into()),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::CaseMatchOnLiteralCollection { kind, location } => {
+                    let kind = match kind {
+                        LiteralCollectionKind::List => "list",
+                        LiteralCollectionKind::Tuple => "tuple",
+                        LiteralCollectionKind::Record => "record",
+                    };
+
+                    let title = format!("Redundant {kind}");
+                    let text = wrap(&format!(
+                        "Instead of building a {kind} and matching on it, \
+you can match on its contents directly.
+A case expression can take multiple subjects separated by commas like this:
+
+    case one_subject, another_subject {{
+      _, _ -> todo
+    }}
+
+See: https://tour.gleam.run/flow-control/multiple-subjects/"
+                    ));
+
+                    Diagnostic {
+                        title,
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: diagnostic::Label {
+                                text: Some(format!("You can remove this {kind} wrapper")),
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
+                type_::Warning::CaseMatchOnLiteralValue { location } => Diagnostic {
+                    title: "Match on a literal value".into(),
+                    text: wrap(
+                        "Matching on a literal value is redundant since you \
+can already tell which branch is going to match with this value.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: Some("There's no need to pattern match on this value".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::OpaqueExternalType { location } => Diagnostic {
+                    title: "Opaque external type".into(),
+                    text: "This type has no constructors so making it opaque is redundant.".into(),
+                    hint: Some("Remove the `opaque` qualifier from the type definition.".into()),
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        src: src.clone(),
+                        path: path.to_path_buf(),
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::UnusedValue { location } => Diagnostic {
+                    title: "Unused value".into(),
+                    text: "".into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        path: path.to_path_buf(),
+                        src: src.clone(),
+                        label: diagnostic::Label {
+                            text: Some("This value is never used".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
+
+                type_::Warning::InternalTypeLeak { location, leaked } => {
+                    let mut printer = Printer::new();
+
+                    // TODO: be more precise.
+                    // - is being returned by this public function
+                    // - is taken as an argument by this public function
+                    // - is taken as an argument by this public enum constructor
+                    // etc
+                    let text = format!(
+                        "The following type is internal, but is being used by this public export.
+
+{}
+
+Internal types should not be used in a public facing function since they are
+hidden from the package's documentation.",
+                        printer.pretty_print(leaked, 4),
+                    );
+                    Diagnostic {
+                        title: "Internal type used in public interface".into(),
+                        text,
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+                type_::Warning::RedundantAssertAssignment { location } => Diagnostic {
+                    title: "Redundant assertion".into(),
+                    text: "This assertion is redundant since the pattern covers all possibilities."
+                        .into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("You can remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
+                type_::Warning::TodoOrPanicUsedAsFunction {
+                    kind,
+                    location,
+                    args_location,
+                    args,
+                } => {
+                    let title = match kind {
+                        TodoOrPanic::Todo => "Todo used as a function".into(),
+                        TodoOrPanic::Panic => "Panic used as a function".into(),
+                    };
+                    let label_location = match args_location {
+                        None => location,
+                        Some(location) => location,
+                    };
+                    let name = match kind {
+                        TodoOrPanic::Todo => "todo",
+                        TodoOrPanic::Panic => "panic",
+                    };
+                    let mut text = format!("`{name}` is not a function");
+                    match args {
+                        0 => text.push_str(&format!(
+                            ", you can just write `{name}` instead of `{name}()`."
+                        )),
+                        1 => text.push_str(
+                            " and will crash before it can do anything with this argument.",
+                        ),
+                        _ => text.push_str(
+                            " and will crash before it can do anything with these arguments.",
+                        ),
+                    };
+
+                    match args {
+                        0 => {}
+                        _ => text.push_str(&format!(
+                            "\n\nHint: if you want to display an error message you should write
+`{name} as \"my error message\"`
+See: https://tour.gleam.run/advanced-features/{name}/"
+                        )),
+                    }
+
+                    Diagnostic {
+                        title,
+                        text: wrap(&text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *label_location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                type_::Warning::UnreachableCodeAfterPanic {
+                    location,
+                    panic_position: unreachable_code_kind,
+                } => {
+                    let text = match unreachable_code_kind {
+                        PanicPosition::PreviousExpression =>
+                            "This code is unreachable because it comes after a `panic`.",
+                        PanicPosition::PreviousFunctionArgument =>
+                            "This argument is unreachable because the previous one always panics. \
+Your code will crash before reaching this point.",
+                        PanicPosition::LastFunctionArgument =>
+                            "This function call is unreachable because its last argument always panics. \
+Your code will crash before reaching this point.",
+                    };
+
+                    Diagnostic {
+                        title: "Unreachable code".into(),
+                        text: wrap(text),
+                        hint: None,
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: None,
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
+
+                type_::Warning::RedundantPipeFunctionCapture { location } => Diagnostic {
+                    title: "Redundant function capture".into(),
+                    text: wrap(
+                        "This function capture is redundant since the value is already piped as \
+the first argument of this call.
+
+See: https://tour.gleam.run/functions/pipelines/",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some("You can safely remove this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+                type_::Warning::FeatureRequiresHigherGleamVersion {
+                    location,
+                    minimum_required_version,
+                    wrongfully_allowed_version,
+                    feature_kind,
+                } => {
+                    let feature = match feature_kind {
+                        FeatureKind::LabelShorthandSyntax => "The label shorthand syntax was",
+                        FeatureKind::ConstantStringConcatenation => {
+                            "Constant strings concatenation was"
+                        }
+                        FeatureKind::ArithmeticInGuards => "Arithmetic operations in guards were",
+                        FeatureKind::UnannotatedUtf8StringSegment => {
+                            "The ability to omit the `utf8` annotation for string segments was"
+                        }
+                        FeatureKind::NestedTupleAccess => {
+                            "The ability to access nested tuple fields was"
+                        }
+                        FeatureKind::InternalAnnotation => "The `@internal` annotation was",
+                        FeatureKind::AtInJavascriptModules => {
+                            "The ability to have `@` in a Javascript module's name was"
+                        }
+                    };
+
+                    Diagnostic {
+                        title: "Incompatible gleam version range".into(),
+                        text: wrap(&format!(
+                        "{feature} introduced in version v{minimum_required_version}. But the Gleam version range \
+                        specified in your `gleam.toml` would allow this code to run on an earlier \
+                        version like v{wrongfully_allowed_version}, resulting in compilation errors!",
+                    )),
+                        hint: Some(format!(
+                            "Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = \">= {minimum_required_version}\""
+                        )),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: Some(format!(
+                                    "This requires a Gleam version >= {minimum_required_version}"
+                                )),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
                         }),
                     }
                 }
@@ -617,10 +1051,10 @@ Run this command to add it to your dependencies:
     }
 
     pub fn pretty(&self, buffer: &mut Buffer) {
+        self.to_diagnostic().write(buffer);
         buffer
             .write_all(b"\n")
-            .expect("error pretty buffer write space before");
-        self.to_diagnostic().write(buffer);
+            .expect("error pretty buffer write space after");
     }
 
     pub fn to_pretty_string(&self) -> String {

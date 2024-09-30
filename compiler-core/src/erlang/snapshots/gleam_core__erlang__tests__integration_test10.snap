@@ -1,16 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 215
+assertion_line: 248
 expression: "type Null { Null } fn x() { Null }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([null/0]).
 
 -type null() :: null.
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec x() -> null().
 x() ->
     null.
-

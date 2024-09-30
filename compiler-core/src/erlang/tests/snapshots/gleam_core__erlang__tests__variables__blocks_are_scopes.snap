@@ -4,10 +4,11 @@ assertion_line: 100
 expression: "\npub fn main() {\n  let x = 1\n  {\n    let x = 2\n  }\n  x\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     X = 1,
@@ -15,4 +16,3 @@ main() ->
         X@1 = 2
     end,
     X.
-

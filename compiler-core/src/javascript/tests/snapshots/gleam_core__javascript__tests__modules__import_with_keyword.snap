@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/javascript/tests/modules.rs
+expression: "\nimport rocket_ship.{class, in as while}\npub fn main() {\n  #(class, while)\n}\n"
+---
+import * as $rocket_ship from "../rocket_ship.mjs";
+import { class$, in$ as while$ } from "../rocket_ship.mjs";
+
+export function main() {
+  return [class$, while$];
+}

@@ -1,0 +1,56 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: import dep
+---
+|import dep
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+dep.Wobble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   3_dep.Wobble
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.Wobble"
+dep.main
+  kind:   Function
+  detail: fn() -> Int
+  sort:   3_dep.main
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.main"
+dep.random_float
+  kind:   Function
+  detail: fn() -> Float
+  sort:   3_dep.random_float
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.random_float"
+dep.wibble
+  kind:   Constant
+  detail: Int
+  sort:   3_dep.wibble
+  desc:   app
+  edits:
+    [1:0-1:0]: "dep.wibble"

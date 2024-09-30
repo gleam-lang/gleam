@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: "\n@external(javascript, \"one\", \"one\")\npub fn js() -> Nil\n\n@external(erlang, \"one\", \"one\")\npub fn erl() -> Nil\n\npub fn should_not_be_generated() {\n  js()\n  erl()\n}\n"
+---
+import { one as js } from "one";
+
+export { js };

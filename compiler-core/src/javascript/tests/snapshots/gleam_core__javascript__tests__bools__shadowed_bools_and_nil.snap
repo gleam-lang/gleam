@@ -14,34 +14,33 @@ export class Nil extends $CustomType {}
 function go(x, y) {
   if (!(x instanceof True)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       4,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }
   if (!(x instanceof False)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       5,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: x }
     )
   }
   if (!(y instanceof Nil)) {
     throw makeError(
-      "assignment_no_match",
+      "let_assert",
       "my/mod",
       6,
       "go",
-      "Assignment pattern did not match",
+      "Pattern match failed, no pattern matched the value.",
       { value: y }
     )
   }
   return y;
 }
-

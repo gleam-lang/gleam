@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  wibble(:,)\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:10
+  │
+3 │   wibble(:,)
+  │          ^ I was not expecting this
+
+Found `:`, expected one of: 
+- `)`

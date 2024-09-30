@@ -1,7 +1,11 @@
+use ecow::EcoString;
+
 use crate::ast::SrcSpan;
 use crate::parse::error::{LexicalError, LexicalErrorType};
 use crate::parse::token::Token;
 use std::char;
+
+use super::error::InvalidUnicodeEscapeError;
 
 #[derive(Debug)]
 pub struct Lexer<T: Iterator<Item = (u32, char)>> {
@@ -21,15 +25,23 @@ pub fn str_to_keyword(word: &str) -> Option<Token> {
     match word {
         "as" => Some(Token::As),
         "assert" => Some(Token::Assert),
+        "auto" => Some(Token::Auto),
         "case" => Some(Token::Case),
         "const" => Some(Token::Const),
+        "delegate" => Some(Token::Delegate),
+        "derive" => Some(Token::Derive),
+        "echo" => Some(Token::Echo),
+        "else" => Some(Token::Else),
         "fn" => Some(Token::Fn),
         "if" => Some(Token::If),
+        "implement" => Some(Token::Implement),
         "import" => Some(Token::Import),
         "let" => Some(Token::Let),
+        "macro" => Some(Token::Macro),
         "opaque" => Some(Token::Opaque),
         "panic" => Some(Token::Panic),
         "pub" => Some(Token::Pub),
+        "test" => Some(Token::Test),
         "todo" => Some(Token::Todo),
         "type" => Some(Token::Type),
         "use" => Some(Token::Use),
@@ -83,10 +95,12 @@ where
 
     fn next(&mut self) -> Option<Self::Item> {
         // Collapse \r\n into \n
-        while let Some((i, '\r')) = self.chr0 {
+        if let Some((i, '\r')) = self.chr0 {
             if let Some((_, '\n')) = self.chr1 {
                 // Transform windows EOL into \n
                 let _ = self.shift();
+                // using the position from the \r
+                self.chr0 = Some((i, '\n'))
             } else {
                 // Transform MAC EOL into \n
                 self.chr0 = Some((i, '\n'))
@@ -140,6 +154,7 @@ where
                 check_for_minus = true;
                 let name = self.lex_name()?;
                 self.emit(name);
+                self.maybe_lex_dot_access();
             } else if self.is_number_start(c, self.chr1) {
                 check_for_minus = true;
                 let num = self.lex_number()?;
@@ -165,10 +180,7 @@ where
     fn consume_character(&mut self, c: char) -> Result<(), LexicalError> {
         match c {
             '@' => {
-                let tok_start = self.get_pos();
-                let _ = self.next_char();
-                let tok_end = self.get_pos();
-                self.emit((tok_start, Token::At, tok_end));
+                self.eat_single_char(Token::At);
             }
             '"' => {
                 let string = self.lex_string()?;
@@ -181,6 +193,15 @@ where
                     Some('=') => {
                         let _ = self.next_char();
                         let tok_end = self.get_pos();
+                        if let Some('=') = self.chr0 {
+                            return Err(LexicalError {
+                                error: LexicalErrorType::InvalidTripleEqual,
+                                location: SrcSpan {
+                                    start: tok_start,
+                                    end: tok_end + 1,
+                                },
+                            });
+                        };
                         self.emit((tok_start, Token::EqualEqual, tok_end));
                     }
                     _ => {
@@ -237,10 +258,7 @@ where
                 }
             }
             '%' => {
-                let tok_start = self.get_pos();
-                let _ = self.next_char();
-                let tok_end = self.get_pos();
-                self.emit((tok_start, Token::Percent, tok_end));
+                self.eat_single_char(Token::Percent);
             }
             '|' => {
                 let tok_start = self.get_pos();
@@ -424,28 +442,14 @@ where
             '#' => {
                 self.eat_single_char(Token::Hash);
             }
-            '\n' => {
-                let _ = self.next_char();
+            '\n' | ' ' | '\t' | '\x0C' => {
                 let tok_start = self.get_pos();
-                while let Some(c) = self.chr0 {
-                    match c {
-                        ' ' | '\t' | '\x0C' => {
-                            let _ = self.next_char();
-                        }
-                        '\n' => {
-                            let tok_end = self.get_pos();
-                            self.emit((tok_start, Token::EmptyLine, tok_end));
-                            break;
-                        }
-                        _ => break,
-                    }
+                let _ = self.next_char();
+                let tok_end = self.get_pos();
+                if c == '\n' {
+                    self.emit((tok_start, Token::NewLine, tok_end));
                 }
             }
-            ' ' | '\t' | '\x0C' => {
-                // Skip whitespaces
-                let _ = self.next_char();
-            }
-
             c => {
                 let location = self.get_pos();
                 return Err(LexicalError {
@@ -471,31 +475,6 @@ where
             name.push(self.next_char().expect("lex_name continue"))
         }
 
-        // Finish lexing the name and return an error if an uppercase letter is used
-        if self.is_name_error_continuation() {
-            while self.is_name_error_continuation() {
-                name.push(self.next_char().expect("lex_name error"))
-            }
-            let end_pos = self.get_pos();
-            if name.starts_with('_') {
-                return Err(LexicalError {
-                    error: LexicalErrorType::BadDiscardName { name },
-                    location: SrcSpan {
-                        start: start_pos,
-                        end: end_pos,
-                    },
-                });
-            } else {
-                return Err(LexicalError {
-                    error: LexicalErrorType::BadName { name },
-                    location: SrcSpan {
-                        start: start_pos,
-                        end: end_pos,
-                    },
-                });
-            }
-        }
-
         let end_pos = self.get_pos();
 
         if let Some(tok) = str_to_keyword(&name) {
@@ -511,23 +490,8 @@ where
         let mut name = String::new();
         let start_pos = self.get_pos();
 
-        while self.is_upname_continuation() {
+        while self.is_name_continuation() {
             name.push(self.next_char().expect("lex_upname upname"));
-        }
-
-        // Finish lexing the upname and return an error if an underscore is used
-        if self.is_name_error_continuation() {
-            while self.is_name_error_continuation() {
-                name.push(self.next_char().expect("lex_upname name error"))
-            }
-            let end_pos = self.get_pos();
-            return Err(LexicalError {
-                error: LexicalErrorType::BadUpname { name },
-                location: SrcSpan {
-                    start: start_pos,
-                    end: end_pos,
-                },
-            });
         }
 
         let end_pos = self.get_pos();
@@ -615,6 +579,14 @@ where
     // Lex a normal number, that is, no octal, hex or binary number.
     // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
     fn lex_decimal_number(&mut self) -> Spanned {
+        self.lex_decimal_or_int_number(true)
+    }
+
+    fn lex_int_number(&mut self) -> Spanned {
+        self.lex_decimal_or_int_number(false)
+    }
+
+    fn lex_decimal_or_int_number(&mut self, can_lex_decimal: bool) -> Spanned {
         let start_pos = self.get_pos();
         let mut value = String::new();
         // consume negative sign
@@ -625,7 +597,7 @@ where
         value.push_str(&self.radix_run(10));
 
         // If float:
-        if self.chr0 == Some('.') {
+        if can_lex_decimal && self.chr0 == Some('.') {
             value.push(self.next_char().expect("lex_normal_number float"));
             value.push_str(&self.radix_run(10));
 
@@ -657,6 +629,20 @@ where
                 },
                 end_pos,
             )
+        }
+    }
+
+    // Maybe lex dot access that comes after name token.
+    fn maybe_lex_dot_access(&mut self) {
+        // It can be nested like: `tuple.1.2.3.4`
+        loop {
+            if Some('.') == self.chr0 && matches!(self.chr1, Some('0'..='9')) {
+                self.eat_single_char(Token::Dot);
+                let number = self.lex_int_number();
+                self.emit(number);
+            } else {
+                break;
+            }
         }
     }
 
@@ -721,7 +707,7 @@ where
             }
             _ => Kind::Comment,
         };
-        let mut content = String::new();
+        let mut content = EcoString::new();
         let start_pos = self.get_pos();
         while Some('\n') != self.chr0 {
             match self.chr0 {
@@ -751,10 +737,104 @@ where
                     let slash_pos = self.get_pos() - 1;
                     if let Some(c) = self.chr0 {
                         match c {
-                            'e' | 'f' | 'n' | 'r' | 't' | '"' | '\\' => {
+                            'f' | 'n' | 'r' | 't' | '"' | '\\' => {
                                 let _ = self.next_char();
                                 string_content.push('\\');
                                 string_content.push(c);
+                            }
+                            'u' => {
+                                let _ = self.next_char();
+
+                                if self.chr0 != Some('{') {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::MissingOpeningBrace,
+                                        ),
+                                        location: SrcSpan {
+                                            start: self.get_pos() - 1,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                // All digits inside \u{...}.
+                                let mut hex_digits = String::new();
+
+                                loop {
+                                    let _ = self.next_char();
+
+                                    let Some(chr) = self.chr0 else {
+                                        break;
+                                    };
+
+                                    // Don't break early when we've reached 6 digits to ensure a
+                                    // useful error message
+                                    if chr == '}' {
+                                        break;
+                                    }
+
+                                    hex_digits.push(chr);
+
+                                    if !chr.is_ascii_hexdigit() {
+                                        return Err(LexicalError {
+                                            error: LexicalErrorType::InvalidUnicodeEscape(
+                                                InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+                                            ),
+                                            location: SrcSpan {
+                                                start: self.get_pos(),
+                                                end: self.get_pos() + 1,
+                                            },
+                                        });
+                                    }
+                                }
+
+                                if self.chr0 != Some('}') {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::ExpectedHexDigitOrCloseBrace,
+                                        ),
+                                        location: SrcSpan {
+                                            start: self.get_pos() - 1,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                let _ = self.next_char();
+
+                                if !(1..=6).contains(&hex_digits.len()) {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::InvalidNumberOfHexDigits,
+                                        ),
+                                        location: SrcSpan {
+                                            start: slash_pos,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                // Checks for i >= 0x110000 || (i >= 0xD800 && i < 0xE000),
+                                // where i is the unicode codepoint.
+                                if char::from_u32(u32::from_str_radix(&hex_digits, 16).expect(
+                                    "Cannot parse codepoint number in Unicode escape sequence",
+                                ))
+                                .is_none()
+                                {
+                                    return Err(LexicalError {
+                                        error: LexicalErrorType::InvalidUnicodeEscape(
+                                            InvalidUnicodeEscapeError::InvalidCodepoint,
+                                        ),
+                                        location: SrcSpan {
+                                            start: slash_pos,
+                                            end: self.get_pos(),
+                                        },
+                                    });
+                                }
+
+                                string_content.push_str("\\u{");
+                                string_content.push_str(&hex_digits);
+                                string_content.push('}');
                             }
                             _ => {
                                 return Err(LexicalError {
@@ -813,18 +893,6 @@ where
     }
 
     fn is_name_continuation(&self) -> bool {
-        self.chr0
-            .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z'))
-            .unwrap_or(false)
-    }
-
-    fn is_upname_continuation(&self) -> bool {
-        self.chr0
-            .map(|c| matches!(c, '0'..='9' | 'a'..='z' | 'A'..='Z'))
-            .unwrap_or(false)
-    }
-
-    fn is_name_error_continuation(&self) -> bool {
         self.chr0
             .map(|c| matches!(c, '_' | '0'..='9' | 'a'..='z' | 'A'..='Z'))
             .unwrap_or(false)

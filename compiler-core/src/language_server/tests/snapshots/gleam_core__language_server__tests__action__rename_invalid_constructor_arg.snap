@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "type IntWrapper { IntWrapper(innerInt: Int) }"
+---
+----- BEFORE ACTION
+type IntWrapper { IntWrapper(innerInt: Int) }
+                  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑       
+
+
+----- AFTER ACTION
+type IntWrapper { IntWrapper(inner_int: Int) }

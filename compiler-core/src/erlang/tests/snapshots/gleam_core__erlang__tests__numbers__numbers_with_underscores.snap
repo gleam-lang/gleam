@@ -4,12 +4,12 @@ assertion_line: 5
 expression: "\npub fn main() {\n  100_000\n  100_000.00101\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([main/0]).
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> float().
 main() ->
     100000,
     100000.00101.
-

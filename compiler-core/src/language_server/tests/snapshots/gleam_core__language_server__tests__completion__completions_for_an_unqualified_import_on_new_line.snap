@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 1186
+expression: "\nimport dep.{\n  wibble,\n\n}\n\npub fn main() {\n  0\n}"
+---
+import dep.{
+  wibble,
+|
+}
+
+pub fn main() {
+  0
+}
+
+
+----- Completion content -----
+Wibble
+  kind:   Class
+  detail: Type
+  sort:   3_Wibble
+  edits:
+    [3:0-3:0]: "type Wibble"
+myfun
+  kind:   Function
+  detail: fn() -> Int
+  sort:   3_myfun
+  desc:   dep
+  edits:
+    [3:0-3:0]: "myfun"

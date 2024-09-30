@@ -1,0 +1,66 @@
+---
+source: compiler-core/src/language_server/tests/document_symbols.rs
+expression: "doc_symbols(TestProject::for_source(code))"
+---
+[
+    DocumentSymbol {
+        name: "FFF",
+        detail: Some(
+            "gleam.Int",
+        ),
+        kind: Class,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 1,
+                character: 0,
+            },
+            end: Position {
+                line: 2,
+                character: 18,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 2,
+                character: 9,
+            },
+            end: Position {
+                line: 2,
+                character: 12,
+            },
+        },
+        children: None,
+    },
+    DocumentSymbol {
+        name: "FFFF",
+        detail: Some(
+            "gleam.List(gleam.Int)",
+        ),
+        kind: Class,
+        tags: None,
+        deprecated: None,
+        range: Range {
+            start: Position {
+                line: 4,
+                character: 0,
+            },
+            end: Position {
+                line: 4,
+                character: 25,
+            },
+        },
+        selection_range: Range {
+            start: Position {
+                line: 4,
+                character: 9,
+            },
+            end: Position {
+                line: 4,
+                character: 13,
+            },
+        },
+        children: None,
+    },
+]

@@ -1,13 +1,19 @@
 ---
 source: compiler-core/src/type_/tests/imports.rs
-assertion_line: 175
 expression: "import one.{Two}\n\npub fn main() {\n  Two\n}"
 ---
+error: Unknown module value
+  ┌─ /src/one/two.gleam:1:13
+  │
+1 │ import one.{Two}
+  │             ^^^ Did you mean `type Two`?
+
+`Two` is only a type, it cannot be imported as a value.
+
 error: Unknown variable
   ┌─ /src/one/two.gleam:4:3
   │
 4 │   Two
-  │   ^^^ Did you mean `Nil`?
+  │   ^^^
 
 The name `Two` is not in scope here.
-

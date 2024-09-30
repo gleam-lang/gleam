@@ -42,12 +42,6 @@ Code changes to Gleam are welcomed via the process below.
 4. Once the changes have been approved the code will be rebased into the
    `main` branch.
 
-## Hacking on Gleam in Gitpod
-
-If you have a web browser, you can get a fully pre-configured Gleam development environment in one click:
-
-[![Open in Gitpod](https://gitpod.io/button/open-in-gitpod.svg)](https://gitpod.io/#https://github.com/gleam-lang/gleam)
-
 ## Local development
 
 To run the compiler tests. This will require a recent stable version of Rust
@@ -59,7 +53,7 @@ you can use for running any Gleam version or quickly obtaining a development env
 ```shell
 cargo test
 
-# Or if you have watchexec installed you can run them automatically 
+# Or if you have watchexec installed you can run them automatically
 # when files change
 make test-watch
 ```

@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@deprecated(\"Don't use this!\")\npub type Cat {\n    Cat(name: String)\n}\n\npub type Dog = Cat\n        "
+---
+warning: Deprecated type used
+  ┌─ /src/warning/wrn.gleam:7:16
+  │
+7 │ pub type Dog = Cat
+  │                ^^^ This type has been deprecated
+
+It was deprecated with this message: Don't use this!

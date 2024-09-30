@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/javascript/tests/consts.rs
+expression: "import other_module.{A as B}\n\npub const local = B\n"
+---
+import * as $other_module from "../../package/other_module.mjs";
+import { A as B } from "../../package/other_module.mjs";
+
+export const local = /* @__PURE__ */ new B();

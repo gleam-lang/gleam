@@ -1,0 +1,116 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\nconst cute = \"cute\"\nconst cute_bee = cute <> \"bee\"\n"
+---
+Parsed {
+    module: Module {
+        name: "",
+        documentation: [],
+        type_info: (),
+        definitions: [
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 1,
+                            end: 11,
+                        },
+                        publicity: Private,
+                        name: "cute",
+                        name_location: SrcSpan {
+                            start: 7,
+                            end: 11,
+                        },
+                        annotation: None,
+                        value: String {
+                            location: SrcSpan {
+                                start: 14,
+                                end: 20,
+                            },
+                            value: "cute",
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+            TargetedDefinition {
+                definition: ModuleConstant(
+                    ModuleConstant {
+                        documentation: None,
+                        location: SrcSpan {
+                            start: 21,
+                            end: 35,
+                        },
+                        publicity: Private,
+                        name: "cute_bee",
+                        name_location: SrcSpan {
+                            start: 27,
+                            end: 35,
+                        },
+                        annotation: None,
+                        value: StringConcatenation {
+                            location: SrcSpan {
+                                start: 38,
+                                end: 51,
+                            },
+                            left: Var {
+                                location: SrcSpan {
+                                    start: 38,
+                                    end: 42,
+                                },
+                                module: None,
+                                name: "cute",
+                                constructor: None,
+                                type_: (),
+                            },
+                            right: String {
+                                location: SrcSpan {
+                                    start: 46,
+                                    end: 51,
+                                },
+                                value: "bee",
+                            },
+                        },
+                        type_: (),
+                        deprecation: NotDeprecated,
+                        implementations: Implementations {
+                            gleam: true,
+                            can_run_on_erlang: true,
+                            can_run_on_javascript: true,
+                            uses_erlang_externals: false,
+                            uses_javascript_externals: false,
+                        },
+                    },
+                ),
+                target: None,
+            },
+        ],
+        names: Names {
+            local_types: {},
+            imported_modules: {},
+            type_variables: {},
+            local_value_constructors: {},
+        },
+    },
+    extra: ModuleExtra {
+        module_comments: [],
+        doc_comments: [],
+        comments: [],
+        empty_lines: [],
+        new_lines: [
+            0,
+            20,
+            51,
+        ],
+    },
+}

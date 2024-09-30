@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub opaque type Wibble {\n  Wobble\n}\n"
+---
+|
+pub opaque type Wibble {
+  Wobble
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+Wobble
+  kind:   EnumMember
+  detail: Wibble
+  sort:   2_Wobble
+  desc:   app
+  edits:
+    [1:0-1:0]: "Wobble"

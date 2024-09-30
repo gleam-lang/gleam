@@ -4,6 +4,7 @@ assertion_line: 6
 expression: "\nfn go(x) {\n  case x {\n    _ -> x\n  }\n}\n"
 ---
 function go(x) {
-  return x;
+  {
+    return x;
+  }
 }
-

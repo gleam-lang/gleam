@@ -12,11 +12,10 @@ function go(x) {
       "my/mod",
       4,
       "go",
-      "This has not yet been implemented",
+      "`todo` expression evaluated. This code has not yet been implemented.",
       {}
     )
   } else {
     return 1;
   }
 }
-

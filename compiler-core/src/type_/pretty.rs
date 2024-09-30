@@ -3,8 +3,7 @@ use crate::{
     docvec,
     pretty::{nil, *},
 };
-use itertools::Itertools;
-use smol_str::SmolStr;
+use ecow::EcoString;
 use std::sync::Arc;
 
 #[cfg(test)]
@@ -19,10 +18,10 @@ const INDENT: isize = 2;
 
 #[derive(Debug, Default)]
 pub struct Printer {
-    names: im::HashMap<u64, SmolStr>,
+    names: im::HashMap<u64, EcoString>,
     uid: u64,
     // A mapping of printd type names to the module that they are defined in.
-    printed_types: im::HashMap<SmolStr, SmolStr>,
+    printed_types: im::HashMap<EcoString, EcoString>,
 }
 
 impl Printer {
@@ -30,20 +29,20 @@ impl Printer {
         Default::default()
     }
 
-    pub fn with_names(&mut self, names: im::HashMap<u64, SmolStr>) {
+    pub fn with_names(&mut self, names: im::HashMap<u64, EcoString>) {
         self.names = names;
     }
 
     /// Render a Type as a well formatted string.
     ///
-    pub fn pretty_print(&mut self, typ: &Type, initial_indent: usize) -> String {
+    pub fn pretty_print(&mut self, type_: &Type, initial_indent: usize) -> String {
         let mut buffer = String::with_capacity(initial_indent);
         for _ in 0..initial_indent {
             buffer.push(' ');
         }
         buffer
             .to_doc()
-            .append(self.print(typ))
+            .append(self.print(type_))
             .nest(initial_indent as isize)
             .to_pretty_string(80)
     }
@@ -51,8 +50,8 @@ impl Printer {
     // TODO: have this function return a Document that borrows from the Type.
     // Is this possible? The lifetime would have to go through the Arc<Refcell<Type>>
     // for TypeVar::Link'd types.
-    pub fn print<'a>(&mut self, typ: &Type) -> Document<'a> {
-        match typ {
+    pub fn print<'a>(&mut self, type_: &Type) -> Document<'a> {
+        match type_ {
             Type::Named {
                 name, args, module, ..
             } => {
@@ -82,13 +81,13 @@ impl Printer {
                         .group(),
                 ),
 
-            Type::Var { type_: typ, .. } => self.type_var_doc(&typ.borrow()),
+            Type::Var { type_, .. } => self.type_var_doc(&type_.borrow()),
 
             Type::Tuple { elems, .. } => self.args_to_gleam_doc(elems).surround("#(", ")"),
         }
     }
 
-    fn name_clashes_if_unqualified(&mut self, type_: &SmolStr, module: &str) -> bool {
+    fn name_clashes_if_unqualified(&mut self, type_: &EcoString, module: &str) -> bool {
         match self.printed_types.get(type_) {
             None => false,
             Some(previous_module) if module == previous_module => false,
@@ -96,9 +95,9 @@ impl Printer {
         }
     }
 
-    fn type_var_doc<'a>(&mut self, typ: &TypeVar) -> Document<'a> {
-        match typ {
-            TypeVar::Link { type_: ref typ, .. } => self.print(typ),
+    fn type_var_doc<'a>(&mut self, type_: &TypeVar) -> Document<'a> {
+        match type_ {
+            TypeVar::Link { ref type_, .. } => self.print(type_),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }
@@ -118,7 +117,7 @@ impl Printer {
         }
     }
 
-    fn next_letter(&mut self) -> SmolStr {
+    fn next_letter(&mut self) -> EcoString {
         let alphabet_length = 26;
         let char_offset = 97;
         let mut chars = vec![];
@@ -145,10 +144,10 @@ impl Printer {
             return nil();
         }
 
-        let args = concat(Itertools::intersperse(
+        let args = join(
             args.iter().map(|t| self.print(t).group()),
             break_(",", ", "),
-        ));
+        );
         break_("", "")
             .append(args)
             .nest(INDENT)
@@ -158,8 +157,7 @@ impl Printer {
 }
 
 fn qualify_type_name(module: &str, type_name: &str) -> Document<'static> {
-    let type_name = Document::String(type_name.to_string());
-    docvec![Document::String(module.to_string()), ".", type_name]
+    docvec![EcoString::from(module), ".", EcoString::from(type_name)]
 }
 
 #[test]
@@ -248,17 +246,18 @@ fn next_letter_test() {
 #[test]
 fn pretty_print_test() {
     macro_rules! assert_string {
-        ($src:expr, $typ:expr $(,)?) => {
+        ($src:expr, $type_:expr $(,)?) => {
             let mut printer = Printer::new();
-            assert_eq!($typ.to_string(), printer.pretty_print(&$src, 0),);
+            assert_eq!($type_.to_string(), printer.pretty_print(&$src, 0),);
         };
     }
 
     assert_string!(
         Type::Named {
             module: "whatever".into(),
+            package: "whatever".into(),
             name: "Int".into(),
-            public: true,
+            publicity: Publicity::Public,
             args: vec![],
         },
         "Int",
@@ -266,19 +265,22 @@ fn pretty_print_test() {
     assert_string!(
         Type::Named {
             module: "themodule".into(),
+            package: "whatever".into(),
             name: "Pair".into(),
-            public: true,
+            publicity: Publicity::Public,
             args: vec![
                 Arc::new(Type::Named {
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Int".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                     args: vec![],
                 }),
                 Arc::new(Type::Named {
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Bool".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                     args: vec![],
                 }),
             ],
@@ -291,21 +293,24 @@ fn pretty_print_test() {
                 Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Int".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                 }),
                 Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Bool".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                 }),
             ],
             retrn: Arc::new(Type::Named {
                 args: vec![],
                 module: "whatever".into(),
+                package: "whatever".into(),
                 name: "Bool".into(),
-                public: true,
+                publicity: Publicity::Public,
             }),
         },
         "fn(Int, Bool) -> Bool",
@@ -316,8 +321,9 @@ fn pretty_print_test() {
                 type_: Arc::new(Type::Named {
                     args: vec![],
                     module: "whatever".into(),
+                    package: "whatever".into(),
                     name: "Int".into(),
-                    public: true,
+                    publicity: Publicity::Public,
                 }),
             })),
         },
@@ -448,6 +454,6 @@ fn function_test() {
 }
 
 #[cfg(test)]
-fn pretty_print(typ: Arc<Type>) -> String {
-    Printer::new().pretty_print(&typ, 0)
+fn pretty_print(type_: Arc<Type>) -> String {
+    Printer::new().pretty_print(&type_, 0)
 }

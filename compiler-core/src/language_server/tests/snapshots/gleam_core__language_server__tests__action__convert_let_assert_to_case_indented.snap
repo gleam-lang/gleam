@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  {\n    let assert Ok(value) = Ok(1)\n  }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  {
+    let assert Ok(value) = Ok(1)
+               ↑                
+  }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  {
+    let value = case Ok(1) {
+      Ok(value) -> value
+      _ -> panic
+    }
+  }
+}

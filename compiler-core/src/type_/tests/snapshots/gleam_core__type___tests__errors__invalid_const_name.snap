@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: const myInvalid_Constant = 42
+---
+error: Invalid constant name
+  ┌─ /src/one/two.gleam:1:7
+  │
+1 │ const myInvalid_Constant = 42
+  │       ^^^^^^^^^^^^^^^^^^ This is not a valid constant name
+
+Hint: Constant names start with a lowercase letter and contain a-z, 0-9,
+or _.
+Try: my_invalid_constant

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/generics.rs
-assertion_line: 40
 expression: "pub fn map(result, fun) {\n            case result {\n              Ok(a) -> Ok(fun(a))\n              Error(e) -> Error(e)\n            }\n          }"
 ---
 import type * as _ from "../gleam.d.mts";
@@ -9,4 +8,3 @@ export function map<S, T, V>(result: _.Result<T, S>, fun: (x0: T) => V): _.Resul
   V,
   S
 >;
-

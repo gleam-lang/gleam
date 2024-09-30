@@ -1,25 +1,26 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 225
 expression: "./cases/javascript_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@two.cache_meta
-<29 byte binary>
+<57 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<44 byte binary>
+<80 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
-<prelude>
+export * from "../prelude.d.mts";
+
 
 //// /out/lib/the_package/gleam.mjs
-<prelude>
+export * from "../prelude.mjs";
+
 
 //// /out/lib/the_package/one/two.d.mts
 import type * as _ from "../gleam.d.mts";
@@ -30,6 +31,7 @@ export type A$ = A;
 
 
 //// /out/lib/the_package/one/two.mjs
+/// <reference types="./two.d.mts" />
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class A extends $CustomType {}
@@ -42,9 +44,7 @@ export const x: $two.A$;
 
 
 //// /out/lib/the_package/two.mjs
+/// <reference types="./two.d.mts" />
 import * as $two from "./one/two.mjs";
 
-export const x = new $two.A();
-
-
-
+export const x = /* @__PURE__ */ new $two.A();

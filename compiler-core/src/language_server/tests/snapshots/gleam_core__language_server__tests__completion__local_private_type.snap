@@ -1,0 +1,57 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 808
+expression: "\ntype Zoo = Int\n\npub fn wibble(\n  x: String,\n) -> String {\n  \"ok\"\n}\n"
+---
+type Zoo = Int
+
+pub fn wibble(
+|  x: String,
+) -> String {
+  "ok"
+}
+
+
+----- Completion content -----
+BitArray
+  kind:   Class
+  detail: Type
+  sort:   4_BitArray
+Bool
+  kind:   Class
+  detail: Type
+  sort:   4_Bool
+Float
+  kind:   Class
+  detail: Type
+  sort:   4_Float
+Int
+  kind:   Class
+  detail: Type
+  sort:   4_Int
+List
+  kind:   Class
+  detail: Type
+  sort:   4_List
+Nil
+  kind:   Class
+  detail: Type
+  sort:   4_Nil
+Result
+  kind:   Class
+  detail: Type
+  sort:   4_Result
+String
+  kind:   Class
+  detail: Type
+  sort:   4_String
+UtfCodepoint
+  kind:   Class
+  detail: Type
+  sort:   4_UtfCodepoint
+Zoo
+  kind:   Class
+  detail: Type
+  sort:   2_Zoo
+  edits:
+    [4:0-4:0]: "Zoo"

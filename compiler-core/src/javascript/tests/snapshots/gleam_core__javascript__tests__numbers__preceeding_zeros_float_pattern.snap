@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/numbers.rs
+assertion_line: 308
+expression: "\nfn main(x) {\n  let assert 09_179.1 = x\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+function main(x) {
+  if (x !== 9_179.1) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "main",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  return x;
+}

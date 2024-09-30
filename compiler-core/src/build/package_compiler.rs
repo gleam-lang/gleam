@@ -1,11 +1,13 @@
+use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
-        module_loader::SourceFingerprint,
+        elixir_libraries::ElixirLibraries,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
-        Mode, Module, Origin, Package, Target,
+        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -19,18 +21,14 @@ use crate::{
     Error, Result, Warning,
 };
 use askama::Template;
-use smol_str::SmolStr;
+use ecow::EcoString;
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
+use vec1::Vec1;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration};
-
-#[cfg(not(target_os = "windows"))]
-const ELIXIR_EXECUTABLE: &str = "elixir";
-#[cfg(target_os = "windows")]
-const ELIXIR_EXECUTABLE: &str = "elixir.bat";
+use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -44,10 +42,19 @@ pub struct PackageCompiler<'a, IO> {
     pub ids: UniqueIdGenerator,
     pub write_metadata: bool,
     pub perform_codegen: bool,
+    /// If set to false the compiler won't load and analyse any of the package's
+    /// modules and always succeed compilation returning no compile modules.
+    ///
+    /// Code generation is still carried out so that a root package will have an
+    /// entry point nonetheless.
+    ///
+    pub compile_modules: bool,
     pub write_entrypoint: bool,
     pub copy_native_files: bool,
     pub compile_beam_bytecode: bool,
     pub subprocess_stdio: Stdio,
+    pub target_support: TargetSupport,
+    pub cached_warnings: CachedWarnings,
 }
 
 impl<'a, IO> PackageCompiler<'a, IO>
@@ -75,10 +82,13 @@ where
             target,
             write_metadata: true,
             perform_codegen: true,
+            compile_modules: true,
             write_entrypoint: false,
             copy_native_files: true,
             compile_beam_bytecode: true,
             subprocess_stdio: Stdio::Inherit,
+            target_support: TargetSupport::NotEnforced,
+            cached_warnings: CachedWarnings::Ignore,
         }
     }
 
@@ -89,15 +99,19 @@ where
     pub fn compile(
         mut self,
         warnings: &WarningEmitter,
-        existing_modules: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
-        already_defined_modules: &mut im::HashMap<SmolStr, Utf8PathBuf>,
+        existing_modules: &mut im::HashMap<EcoString, type_::ModuleInterface>,
+        already_defined_modules: &mut im::HashMap<EcoString, Utf8PathBuf>,
         stale_modules: &mut StaleTracker,
-    ) -> Result<Vec<Module>, Error> {
+        incomplete_modules: &mut HashSet<EcoString>,
+        telemetry: &dyn Telemetry,
+    ) -> Outcome<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
-        // Ensure that the package is compatable with this version of Gleam
-        self.config.check_gleam_compatability()?;
+        // Ensure that the package is compatible with this version of Gleam
+        if let Err(e) = self.config.check_gleam_compatibility() {
+            return e.into();
+        }
 
         let artefact_directory = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let codegen_required = if self.perform_codegen {
@@ -105,11 +119,13 @@ where
         } else {
             CodegenRequired::No
         };
-        let loaded = PackageLoader::new(
+
+        let loader = PackageLoader::new(
             self.io.clone(),
             self.ids.clone(),
             self.mode,
             self.root,
+            self.cached_warnings,
             warnings,
             codegen_required,
             &artefact_directory,
@@ -117,17 +133,44 @@ where
             &self.config.name,
             stale_modules,
             already_defined_modules,
-        )
-        .run()?;
+            incomplete_modules,
+        );
+
+        let loaded = if self.compile_modules {
+            match loader.run() {
+                Ok(loaded) => loaded,
+                Err(error) => return error.into(),
+            }
+        } else {
+            Loaded::empty()
+        };
 
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
-            _ = existing_modules.insert(module.name.clone(), module.clone());
+            // Emit any cached warnings.
+            // Note that `self.cached_warnings` is set to `Ignore` (such as for
+            // dependency packages) then this field will not be populated.
+            if let Err(e) = self.emit_warnings(warnings, &module) {
+                return e.into();
+            }
+
+            // Register the cached module so its type information etc can be
+            // used for compiling futher modules.
+            _ = existing_modules.insert(module.name.clone(), module);
+        }
+
+        if !loaded.to_compile.is_empty() {
+            // Print that work is being done
+            if self.perform_codegen {
+                telemetry.compiling_package(&self.config.name);
+            } else {
+                telemetry.checking_package(&self.config.name)
+            }
         }
 
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
-        let modules = analyse(
+        let outcome = analyse(
             &self.config,
             self.target.target(),
             self.mode,
@@ -135,13 +178,26 @@ where
             loaded.to_compile,
             existing_modules,
             warnings,
-        )?;
+            self.target_support,
+            incomplete_modules,
+        );
+
+        let modules = match outcome {
+            Outcome::Ok(modules) => modules,
+            Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
+        };
 
         tracing::debug!("performing_code_generation");
-        self.perform_codegen(&modules)?;
-        self.encode_and_write_metadata(&modules)?;
 
-        Ok(modules)
+        if let Err(error) = self.perform_codegen(&modules) {
+            return error.into();
+        }
+
+        if let Err(error) = self.encode_and_write_metadata(&modules) {
+            return error.into();
+        }
+
+        Outcome::Ok(modules)
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
@@ -213,7 +269,11 @@ where
         // If there are any Elixir files then we need to locate Elixir
         // installed on this system for use in compilation.
         if copied.any_elixir {
-            maybe_link_elixir_libs(&self.io, &self.lib.to_path_buf(), self.subprocess_stdio)?;
+            ElixirLibraries::make_available(
+                &self.io,
+                &self.lib.to_path_buf(),
+                self.subprocess_stdio,
+            )?;
         }
 
         Ok(())
@@ -232,7 +292,7 @@ where
 
         tracing::debug!("writing_module_caches");
         for module in modules {
-            let module_name = module.name.replace('/', "@");
+            let module_name = module.name.replace("/", "@");
 
             // Write metadata file
             let name = format!("{}.cache", &module_name);
@@ -246,10 +306,23 @@ where
             let info = CacheMetadata {
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
-                dependencies: module.dependencies_list(),
+                dependencies: module.dependencies.clone(),
                 fingerprint: SourceFingerprint::new(&module.code),
+                line_numbers: module.ast.type_info.line_numbers.clone(),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
+
+            // Write warnings.
+            // Dependency packages don't get warnings persisted as the
+            // programmer doesn't want to be told every time about warnings they
+            // cannot fix directly.
+            if self.cached_warnings.should_use() {
+                let name = format!("{}.cache_warnings", &module_name);
+                let path = artefact_dir.join(name);
+                let warnings = &module.ast.type_info.warnings;
+                let data = bincode::serialize(warnings).expect("Serialise warnings");
+                self.io.write_bytes(&path, &data)?;
+            }
         }
         Ok(())
     }
@@ -263,7 +336,12 @@ where
         match self.target {
             TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions,
-            } => self.perform_javascript_codegen(modules, *emit_typescript_definitions),
+                prelude_location,
+            } => self.perform_javascript_codegen(
+                modules,
+                *emit_typescript_definitions,
+                prelude_location,
+            ),
             TargetCodegenConfiguration::Erlang { app_file } => {
                 self.perform_erlang_codegen(modules, app_file.as_ref())
             }
@@ -273,7 +351,7 @@ where
     fn perform_erlang_codegen(
         &mut self,
         modules: &[Module],
-        app_file: Option<&ErlangAppCodegenConfiguration>,
+        app_file_config: Option<&ErlangAppCodegenConfiguration>,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let build_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
@@ -288,8 +366,8 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if let Some(config) = app_file {
-            ErlangApp::new(&self.out.join("ebin"), config.include_dev_deps).render(
+        if let Some(config) = app_file_config {
+            ErlangApp::new(&self.out.join("ebin"), config).render(
                 io.clone(),
                 &self.config,
                 modules,
@@ -321,6 +399,7 @@ where
         &mut self,
         modules: &[Module],
         typescript: bool,
+        prelude_location: &Utf8Path,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
         let typescript = if typescript {
@@ -329,7 +408,8 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript).render(&self.io, modules)?;
+        JavaScript::new(&self.out, typescript, prelude_location, self.target_support)
+            .render(&self.io, modules)?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
@@ -364,6 +444,23 @@ where
         tracing::debug!("erlang_entrypoint_written");
         Ok(())
     }
+
+    fn emit_warnings(
+        &self,
+        warnings: &WarningEmitter,
+        module: &type_::ModuleInterface,
+    ) -> Result<()> {
+        for warning in &module.warnings {
+            let src = self.io.read(&module.src_path)?;
+            warnings.emit(Warning::Type {
+                path: module.src_path.clone(),
+                src: src.into(),
+                warning: warning.clone(),
+            });
+        }
+
+        Ok(())
+    }
 }
 
 fn analyse(
@@ -372,9 +469,11 @@ fn analyse(
     mode: Mode,
     ids: &UniqueIdGenerator,
     mut parsed_modules: Vec<UncompiledModule>,
-    module_types: &mut im::HashMap<SmolStr, type_::ModuleInterface>,
+    module_types: &mut im::HashMap<EcoString, type_::ModuleInterface>,
     warnings: &WarningEmitter,
-) -> Result<Vec<Module>, Error> {
+    target_support: TargetSupport,
+    incomplete_modules: &mut HashSet<EcoString>,
+) -> Outcome<Vec<Module>, Error> {
     let mut modules = Vec::with_capacity(parsed_modules.len() + 1);
     let direct_dependencies = package_config.dependencies_for(mode).expect("Package deps");
 
@@ -399,125 +498,81 @@ fn analyse(
     {
         tracing::debug!(module = ?name, "Type checking");
 
-        let ast = crate::analyse::infer_module(
+        let line_numbers = LineNumbers::new(&code);
+
+        let analysis = crate::analyse::ModuleAnalyzerConstructor {
             target,
             ids,
-            ast,
             origin,
-            &package_config.name,
-            module_types,
-            &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
-            &direct_dependencies,
-        )
-        .map_err(|error| Error::Type {
-            path: path.clone(),
-            src: code.clone(),
-            error,
-        })?;
+            importable_modules: module_types,
+            warnings: &TypeWarningEmitter::new(path.clone(), code.clone(), warnings.clone()),
+            direct_dependencies: &direct_dependencies,
+            target_support,
+            package_config,
+        }
+        .infer_module(ast, line_numbers, path.clone());
 
-        // Register the types from this module so they can be imported into
-        // other modules.
-        let _ = module_types.insert(name.clone(), ast.type_info.clone());
+        match analysis {
+            Outcome::Ok(ast) => {
+                // Module has compiled successfully. Make sure it isn't marked as incomplete.
+                let _ = incomplete_modules.remove(&name.clone());
+                // Register the types from this module so they can be imported into
+                // other modules.
+                let _ = module_types.insert(name.clone(), ast.type_info.clone());
+                // Register the successfully type checked module data so that it can be
+                // used for code generation and in the language server.
+                modules.push(Module {
+                    dependencies,
+                    origin,
+                    extra,
+                    mtime,
+                    name,
+                    code,
+                    ast,
+                    input_path: path,
+                });
+            }
 
-        // Register the successfully type checked module data so that it can be
-        // used for code generation
-        modules.push(Module {
-            dependencies,
-            origin,
-            extra,
-            mtime,
-            name,
-            code,
-            ast,
-            input_path: path,
-        });
+            Outcome::PartialFailure(ast, errors) => {
+                let error = Error::Type {
+                    names: ast.names.clone(),
+                    path: path.clone(),
+                    src: code.clone(),
+                    errors,
+                };
+                // Mark as incomplete so that this module isn't reloaded from cache.
+                let _ = incomplete_modules.insert(name.clone());
+                // Register the partially type checked module data so that it can be
+                // used in the language server.
+                modules.push(Module {
+                    dependencies,
+                    origin,
+                    extra,
+                    mtime,
+                    name,
+                    code,
+                    ast,
+                    input_path: path,
+                });
+                // WARNING: This cannot be used for code generation as the code has errors.
+                return Outcome::PartialFailure(modules, error);
+            }
+
+            Outcome::TotalFailure(errors) => {
+                return Outcome::TotalFailure(Error::Type {
+                    names: Default::default(),
+                    path: path.clone(),
+                    src: code.clone(),
+                    errors,
+                })
+            }
+        };
     }
 
-    Ok(modules)
+    Outcome::Ok(modules)
 }
 
-pub fn maybe_link_elixir_libs<IO>(
-    io: &IO,
-    build_dir: &Utf8PathBuf,
-    subprocess_stdio: Stdio,
-) -> Result<(), Error>
-where
-    IO: CommandExecutor + FileSystemReader + FileSystemWriter + Clone,
-{
-    // These Elixir core libs will be loaded with the current project
-    // Each should be linked into build/{target}/erlang if:
-    // - It isn't already
-    // - Its ebin dir doesn't exist (e.g. Elixir's path changed)
-    let elixir_libs = ["eex", "elixir", "logger", "mix"];
-
-    // The pathfinder is a file in build/{target}/erlang
-    // It contains the full path for each Elixir core lib we need, new-line delimited
-    // The pathfinder saves us from repeatedly loading Elixir to get this info
-    let mut update_links = false;
-    let pathfinder_name = "gleam_elixir_paths";
-    let pathfinder = build_dir.join(pathfinder_name);
-    if !io.is_file(&pathfinder) {
-        // The pathfinder must be written
-        // Any existing core lib links will get updated
-        update_links = true;
-        // TODO: test
-        let env = [("TERM", "dumb".into())];
-        // Prepare the libs for Erlang's code:lib_dir function
-        let elixir_atoms: Vec<String> = elixir_libs.iter().map(|lib| format!(":{}", lib)).collect();
-        // Use Elixir to find its core lib paths and write the pathfinder file
-        let args = [
-            "--eval".into(),
-            format!(
-                ":ok = File.write(~s({}), [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(~s(\\n)))",
-                pathfinder_name,
-                elixir_atoms.join(", "),
-            )
-            .into(),
-        ];
-        tracing::debug!("writing_elixir_paths_to_build");
-        let status = io.exec(
-            ELIXIR_EXECUTABLE,
-            &args,
-            &env,
-            Some(&build_dir),
-            subprocess_stdio,
-        )?;
-        if status != 0 {
-            return Err(Error::ShellCommand {
-                program: "elixir".into(),
-                err: None,
-            });
-        }
-    }
-
-    // Each pathfinder line is a system path for an Elixir core library
-    let read_pathfinder = io.read(&pathfinder)?;
-    for lib_path in read_pathfinder.split('\n') {
-        let source = Utf8PathBuf::from(lib_path);
-        let name = source
-            .as_path()
-            .file_name()
-            .expect(&format!("Unexpanded path in {}", pathfinder_name));
-        let dest = build_dir.join(name);
-        let ebin = dest.join("ebin");
-        if !update_links || io.is_directory(&ebin) {
-            // Either links don't need updating
-            // Or this library is already linked
-            continue;
-        }
-        // TODO: unit test
-        if io.is_directory(&dest) {
-            // Delete the existing link
-            io.delete(&dest)?;
-        }
-        tracing::debug!("linking_{}_to_build", name,);
-        io.symlink_dir(&source, &dest)?;
-    }
-
-    Ok(())
-}
-
-pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> SmolStr {
+pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
     // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
     // my/module.gleam
@@ -543,7 +598,7 @@ pub(crate) enum Input {
 }
 
 impl Input {
-    pub fn name(&self) -> &SmolStr {
+    pub fn name(&self) -> &EcoString {
         match self {
             Input::New(m) => &m.name,
             Input::Cached(m) => &m.name,
@@ -557,10 +612,10 @@ impl Input {
         }
     }
 
-    pub fn dependencies(&self) -> Vec<SmolStr> {
+    pub fn dependencies(&self) -> Vec<EcoString> {
         match self {
             Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
-            Input::Cached(m) => m.dependencies.clone(),
+            Input::Cached(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
         }
     }
 
@@ -583,18 +638,20 @@ impl Input {
 
 #[derive(Debug)]
 pub(crate) struct CachedModule {
-    pub name: SmolStr,
+    pub name: EcoString,
     pub origin: Origin,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub source_path: Utf8PathBuf,
+    pub line_numbers: LineNumbers,
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
-    pub dependencies: Vec<SmolStr>,
+    pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub fingerprint: SourceFingerprint,
+    pub line_numbers: LineNumbers,
 }
 
 impl CacheMetadata {
@@ -613,15 +670,24 @@ pub(crate) struct Loaded {
     pub cached: Vec<type_::ModuleInterface>,
 }
 
+impl Loaded {
+    fn empty() -> Self {
+        Self {
+            to_compile: vec![],
+            cached: vec![],
+        }
+    }
+}
+
 #[derive(Debug, PartialEq, Eq)]
 pub(crate) struct UncompiledModule {
     pub path: Utf8PathBuf,
-    pub name: SmolStr,
-    pub code: SmolStr,
+    pub name: EcoString,
+    pub code: EcoString,
     pub mtime: SystemTime,
     pub origin: Origin,
-    pub package: SmolStr,
-    pub dependencies: Vec<(SmolStr, SrcSpan)>,
+    pub package: EcoString,
+    pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub ast: UntypedModule,
     pub extra: ModuleExtra,
 }
@@ -630,4 +696,18 @@ pub(crate) struct UncompiledModule {
 #[template(path = "gleam@@main.erl", escape = "none")]
 struct ErlangEntrypointModule<'a> {
     application: &'a str,
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum CachedWarnings {
+    Use,
+    Ignore,
+}
+impl CachedWarnings {
+    pub(crate) fn should_use(&self) -> bool {
+        match self {
+            CachedWarnings::Use => true,
+            CachedWarnings::Ignore => false,
+        }
+    }
 }

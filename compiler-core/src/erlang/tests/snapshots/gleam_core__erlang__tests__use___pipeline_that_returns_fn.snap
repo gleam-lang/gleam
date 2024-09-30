@@ -4,18 +4,19 @@ assertion_line: 69
 expression: "\npub fn main() {\n  use <- 1 |> add\n  1\n}\n\npub fn add(x) {\n  fn(f) { f() + x }\n}\n"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([add/1, main/0]).
 
+-file("/root/project/test/my/mod.gleam", 7).
 -spec add(integer()) -> fun((fun(() -> integer())) -> integer()).
 add(X) ->
     fun(F) -> F() + X end.
 
+-file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     begin
         _pipe = 1,
         add(_pipe)
     end(fun() -> 1 end).
-

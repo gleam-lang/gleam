@@ -1,20 +1,21 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 81
+assertion_line: 74
 expression: "./cases/erlang_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<40 byte binary>
+<88 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([unbox/1]).
 
+-file("src/one.gleam", 3).
 -spec unbox(two:box()) -> integer().
 unbox(X) ->
     {box, I} = X,
@@ -25,11 +26,11 @@ unbox(X) ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<29 byte binary>
+<57 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export_type([box/0]).
 
@@ -47,6 +48,3 @@ unbox(X) ->
                two]},
     {registered, []}
 ]}.
-
-
-

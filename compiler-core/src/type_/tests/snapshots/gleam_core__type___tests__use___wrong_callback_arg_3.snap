@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/use_.rs
+expression: "\npub type Box {\n  Box(Int)\n}\n\npub fn main() {\n  let x = fn(f) { \"Hello, \" <> f(1) }\n  use Box(1) <- x()\n  \"Giacomo!\"\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:8:7
+  │
+8 │   use Box(1) <- x()
+  │       ^^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Box

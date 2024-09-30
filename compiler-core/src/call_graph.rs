@@ -6,8 +6,9 @@ mod into_dependency_order_tests;
 
 use crate::{
     ast::{
-        AssignName, BitStringSegmentOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
-        UntypedExpr, UntypedFunction, UntypedPattern, UntypedStatement,
+        AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
+        UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant, UntypedPattern,
+        UntypedStatement,
     },
     type_::Error,
     Result,
@@ -23,6 +24,13 @@ struct CallGraphBuilder<'a> {
     current_function: NodeIndex,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum CallGraphNode {
+    Function(UntypedFunction),
+
+    ModuleConstant(UntypedModuleConstant),
+}
+
 impl<'a> CallGraphBuilder<'a> {
     fn into_graph(self) -> StableGraph<(), (), Directed> {
         self.graph
@@ -30,11 +38,14 @@ impl<'a> CallGraphBuilder<'a> {
 
     /// Add each function to the graph, storing the index of the node under the
     /// name of the function.
-    fn register_module_function_existance(
+    fn register_module_function_existence(
         &mut self,
         function: &'a UntypedFunction,
     ) -> Result<(), Error> {
-        let name = &function.name;
+        let (_, name) = function
+            .name
+            .as_ref()
+            .expect("A module's function must be named");
         let location = function.location;
 
         let index = self.graph.add_node(());
@@ -50,11 +61,50 @@ impl<'a> CallGraphBuilder<'a> {
         Ok(())
     }
 
-    fn register_references(&mut self, function: &'a UntypedFunction) {
-        let names = self.names.clone();
+    /// Add each constant to the graph, storing the index of the node under the
+    /// name of the constant.
+    fn register_module_const_existence(
+        &mut self,
+        constant: &'a UntypedModuleConstant,
+    ) -> Result<(), Error> {
+        let name = &constant.name;
+        let location = constant.location;
+
+        let index = self.graph.add_node(());
+        let previous = self.names.insert(name, Some((index, location)));
+
+        if let Some(Some((_, previous_location))) = previous {
+            return Err(Error::DuplicateName {
+                location_a: location,
+                location_b: previous_location,
+                name: name.clone(),
+            });
+        }
+        Ok(())
+    }
+
+    fn register_references_constant(&mut self, constant: &'a UntypedModuleConstant) {
         self.current_function = self
             .names
-            .get(function.name.as_str())
+            .get(constant.name.as_str())
+            .expect("Constant must already have been registered as existing")
+            .expect("Constant must not be shadowed at module level")
+            .0;
+        self.constant(&constant.value);
+    }
+
+    fn register_references(&mut self, function: &'a UntypedFunction) {
+        let names = self.names.clone();
+
+        self.current_function = self
+            .names
+            .get(
+                function
+                    .name
+                    .as_ref()
+                    .map(|(_, name)| name.as_str())
+                    .expect("A module's function must be named"),
+            )
             .expect("Function must already have been registered as existing")
             .expect("Function must not be shadowed at module level")
             .0;
@@ -112,12 +162,22 @@ impl<'a> CallGraphBuilder<'a> {
 
     fn expression(&mut self, expression: &'a UntypedExpr) {
         match expression {
-            UntypedExpr::Todo { .. }
-            | UntypedExpr::Int { .. }
+            UntypedExpr::Int { .. }
             | UntypedExpr::Float { .. }
-            | UntypedExpr::Panic { .. }
             | UntypedExpr::String { .. }
             | UntypedExpr::Placeholder { .. } => (),
+
+            UntypedExpr::Todo { message, .. } => {
+                if let Some(msg_expr) = message {
+                    self.expression(msg_expr)
+                }
+            }
+
+            UntypedExpr::Panic { message, .. } => {
+                if let Some(msg_expr) = message {
+                    self.expression(msg_expr)
+                }
+            }
 
             // Aha! A variable is being referenced.
             UntypedExpr::Var { name, .. } => {
@@ -179,9 +239,14 @@ impl<'a> CallGraphBuilder<'a> {
                 self.expression(expression);
             }
 
-            UntypedExpr::BitString { segments, .. } => {
+            UntypedExpr::BitArray { segments, .. } => {
                 for segment in segments {
                     self.expression(&segment.value);
+                    for option in &segment.options {
+                        if let BitArrayOption::Size { value, .. } = option {
+                            self.expression(value);
+                        }
+                    }
                 }
             }
 
@@ -234,16 +299,17 @@ impl<'a> CallGraphBuilder<'a> {
             | Pattern::Int { .. }
             | Pattern::Float { .. }
             | Pattern::String { .. }
-            | Pattern::Concatenate {
+            | Pattern::StringPrefix {
                 right_side_assignment: AssignName::Discard(_),
                 ..
-            } => (),
+            }
+            | Pattern::Invalid { .. } => (),
 
-            Pattern::Concatenate {
+            Pattern::StringPrefix {
                 right_side_assignment: AssignName::Variable(name),
                 ..
             }
-            | Pattern::Var { name, .. } => {
+            | Pattern::Variable { name, .. } => {
                 self.define(name);
             }
 
@@ -279,10 +345,10 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Pattern::BitString { segments, .. } => {
+            Pattern::BitArray { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(option, |s, p| s.pattern(p));
+                        self.bit_array_option(option, |s, p| s.pattern(p));
                     }
                     self.pattern(&segment.value);
                 }
@@ -294,36 +360,36 @@ impl<'a> CallGraphBuilder<'a> {
         _ = self.names.insert(name, None);
     }
 
-    fn bit_string_option<T>(
+    fn bit_array_option<T>(
         &mut self,
-        option: &'a BitStringSegmentOption<T>,
+        option: &'a BitArrayOption<T>,
         process: impl Fn(&mut Self, &'a T),
     ) {
         match option {
-            BitStringSegmentOption::Big { .. }
-            | BitStringSegmentOption::Binary { .. }
-            | BitStringSegmentOption::BitString { .. }
-            | BitStringSegmentOption::Float { .. }
-            | BitStringSegmentOption::Int { .. }
-            | BitStringSegmentOption::Little { .. }
-            | BitStringSegmentOption::Native { .. }
-            | BitStringSegmentOption::Signed { .. }
-            | BitStringSegmentOption::Unit { .. }
-            | BitStringSegmentOption::Unsigned { .. }
-            | BitStringSegmentOption::Utf16 { .. }
-            | BitStringSegmentOption::Utf16Codepoint { .. }
-            | BitStringSegmentOption::Utf32 { .. }
-            | BitStringSegmentOption::Utf32Codepoint { .. }
-            | BitStringSegmentOption::Utf8 { .. }
-            | BitStringSegmentOption::Utf8Codepoint { .. } => (),
+            BitArrayOption::Big { .. }
+            | BitArrayOption::Bytes { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unit { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf8Codepoint { .. } => (),
 
-            BitStringSegmentOption::Size { value: pattern, .. } => {
+            BitArrayOption::Size { value: pattern, .. } => {
                 process(self, pattern);
             }
         }
     }
 
-    fn guard(&mut self, guard: &'a ClauseGuard<(), ()>) {
+    fn guard(&mut self, guard: &'a UntypedClauseGuard) {
         match guard {
             ClauseGuard::Equals { left, right, .. }
             | ClauseGuard::NotEquals { left, right, .. }
@@ -335,11 +401,22 @@ impl<'a> CallGraphBuilder<'a> {
             | ClauseGuard::GtEqFloat { left, right, .. }
             | ClauseGuard::LtFloat { left, right, .. }
             | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
             | ClauseGuard::Or { left, right, .. }
             | ClauseGuard::And { left, right, .. } => {
                 self.guard(left);
                 self.guard(right);
             }
+
+            ClauseGuard::Not { expression, .. } => self.guard(expression),
 
             ClauseGuard::Var { name, .. } => self.referenced(name),
 
@@ -358,6 +435,7 @@ impl<'a> CallGraphBuilder<'a> {
             Constant::Int { .. }
             | Constant::Float { .. }
             | Constant::String { .. }
+            | Constant::Invalid { .. }
             | Constant::Var {
                 module: Some(_), ..
             } => (),
@@ -378,28 +456,38 @@ impl<'a> CallGraphBuilder<'a> {
                 module: None, name, ..
             } => self.referenced(name),
 
-            Constant::BitString { segments, .. } => {
+            Constant::BitArray { segments, .. } => {
                 for segment in segments {
                     for option in &segment.options {
-                        self.bit_string_option(option, |s, c| s.constant(c));
+                        self.bit_array_option(option, |s, c| s.constant(c));
                     }
                     self.constant(&segment.value);
                 }
+            }
+
+            Constant::StringConcatenation { left, right, .. } => {
+                self.constant(left);
+                self.constant(right);
             }
         }
     }
 }
 
-/// Determine the order in which functions should be compiled and if any
+/// Determine the order in which functions and constants should be compiled and if any
 /// mutually recursive functions need to be compiled together.
 ///
 pub fn into_dependency_order(
     functions: Vec<UntypedFunction>,
-) -> Result<Vec<Vec<UntypedFunction>>, Error> {
+    constants: Vec<UntypedModuleConstant>,
+) -> Result<Vec<Vec<CallGraphNode>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
-        grapher.register_module_function_existance(function)?;
+        grapher.register_module_function_existence(function)?;
+    }
+
+    for constant in &constants {
+        grapher.register_module_const_existence(constant)?;
     }
 
     // Build the call graph between the module functions.
@@ -407,24 +495,34 @@ pub fn into_dependency_order(
         grapher.register_references(function);
     }
 
+    for constant in &constants {
+        grapher.register_references_constant(constant);
+    }
+
     // Consume the grapher to get the graph
     let graph = grapher.into_graph();
 
     // Determine the order in which the functions should be compiled by looking
     // at which other functions they depend on.
-    let indicies = crate::graph::into_dependency_order(graph);
+    let indices = crate::graph::into_dependency_order(graph);
 
-    // We got node indicies back, so we need to map them back to the functions
+    // We got node indices back, so we need to map them back to the functions
     // they represent.
     // We wrap them each with `Some` so we can use `.take()`.
-    let mut functions = functions.into_iter().map(Some).collect_vec();
-    let ordered = indicies
+    let mut definitions = functions
+        .into_iter()
+        .map(CallGraphNode::Function)
+        .chain(constants.into_iter().map(CallGraphNode::ModuleConstant))
+        .map(Some)
+        .collect_vec();
+
+    let ordered = indices
         .into_iter()
         .map(|level| {
             level
                 .into_iter()
                 .map(|index| {
-                    functions
+                    definitions
                         .get_mut(index.index())
                         .expect("Index out of bounds")
                         .take()

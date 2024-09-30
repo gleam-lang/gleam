@@ -5,13 +5,13 @@ use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
 use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
-use hexpm::version::Version;
+use hexpm::version::{self, Version};
 use http::Uri;
 use serde::Deserialize;
-use smol_str::SmolStr;
 use std::collections::{HashMap, HashSet};
-use std::fmt;
+use std::fmt::{self};
 use std::marker::PhantomData;
 
 #[cfg(test)]
@@ -31,7 +31,7 @@ fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
 
-pub type Dependencies = HashMap<SmolStr, Requirement>;
+pub type Dependencies = HashMap<EcoString, Requirement>;
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct SpdxLicense {
@@ -49,7 +49,7 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     where
         D: serde::Deserializer<'de>,
     {
-        let s: &str = serde::de::Deserialize::deserialize(deserializer)?;
+        let s: &str = Deserialize::deserialize(deserializer)?;
         match spdx::license_id(s) {
             None => Err(serde::de::Error::custom(format!(
                 "{s} is not a valid SPDX License ID"
@@ -70,15 +70,20 @@ impl AsRef<str> for SpdxLicense {
 #[derive(Deserialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
     #[serde(with = "package_name")]
-    pub name: SmolStr,
+    pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
-    #[serde(default, rename = "gleam")]
-    pub gleam_version: Option<SmolStr>,
+    #[serde(
+        default,
+        rename = "gleam",
+        serialize_with = "serialise_range",
+        deserialize_with = "deserialise_range"
+    )]
+    pub gleam_version: Option<pubgrub::range::Range<Version>>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
-    pub description: SmolStr,
+    pub description: EcoString,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
     #[serde(default)]
@@ -99,15 +104,46 @@ pub struct PackageConfig {
     pub internal_modules: Option<Vec<Glob>>,
 }
 
+pub fn serialise_range<S>(
+    range: Option<pubgrub::range::Range<Version>>,
+    serialiser: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: serde::Serializer,
+{
+    match range {
+        Some(range) => serialiser.serialize_some(&range.to_string()),
+        None => serialiser.serialize_none(),
+    }
+}
+
+pub fn deserialise_range<'de, D>(
+    deserialiser: D,
+) -> Result<Option<pubgrub::range::Range<Version>>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match Deserialize::deserialize(deserialiser)? {
+        Some(range_string) => Ok(Some(
+            version::Range::new(range_string)
+                .to_pubgrub()
+                .map_err(serde::de::Error::custom)?,
+        )),
+        None => Ok(None),
+    }
+}
+
 impl PackageConfig {
     pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
         match mode {
-            Mode::Dev | Mode::Lsp => self.all_dependencies(),
+            Mode::Dev | Mode::Lsp => self.all_drect_dependencies(),
             Mode::Prod => Ok(self.dependencies.clone()),
         }
     }
 
-    pub fn all_dependencies(&self) -> Result<Dependencies> {
+    // Return all the dependencies listed in the configuration, that is, all the
+    // direct dependencies, both in the `dependencies` and `dev-dependencies`.
+    pub fn all_drect_dependencies(&self) -> Result<Dependencies> {
         let mut deps =
             HashMap::with_capacity(self.dependencies.len() + self.dev_dependencies.len());
         for (name, requirement) in self.dependencies.iter().chain(&self.dev_dependencies) {
@@ -144,13 +180,13 @@ impl PackageConfig {
     /// outdated deps are removed from the manifest and not locked to the
     /// previously selected versions.
     ///
-    pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<SmolStr, Version>> {
-        Ok(match manifest {
-            None => HashMap::new(),
+    pub fn locked(&self, manifest: Option<&Manifest>) -> Result<HashMap<EcoString, Version>> {
+        match manifest {
+            None => Ok(HashMap::new()),
             Some(manifest) => {
-                StalePackageRemover::fresh_and_locked(&self.all_dependencies()?, manifest)
+                StalePackageRemover::fresh_and_locked(&self.all_drect_dependencies()?, manifest)
             }
-        })
+        }
     }
 
     /// Determines whether the given module should be hidden in the docs or not
@@ -178,22 +214,21 @@ impl PackageConfig {
         .is_match(module)
     }
 
-    // Checks to see if the gleam version specified in the config is compatable
+    // Checks to see if the gleam version specified in the config is compatible
     // with the current compiler version
-    pub fn check_gleam_compatability(&self) -> Result<(), Error> {
-        if let Some(required_version) = &self.gleam_version {
-            let compiler_version = hexpm::version::Version::parse(COMPILER_VERSION)
-                .expect("Parse compiler semantic version");
-            let range = hexpm::version::Range::new(required_version.to_string())
-                .to_pubgrub()
-                .map_err(|error| Error::InvalidVersionFormat {
-                    input: required_version.to_string(),
-                    error: error.to_string(),
-                })?;
-            if !range.contains(&compiler_version) {
+    pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
+        if let Some(range) = &self.gleam_version {
+            let compiler_version =
+                Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
+
+            // We ignore the pre-release and build metadata when checking compatibility
+            let mut version_without_pre = compiler_version.clone();
+            version_without_pre.pre = vec![];
+            version_without_pre.build = None;
+            if !range.contains(&version_without_pre) {
                 return Err(Error::IncompatibleCompilerVersion {
                     package: self.name.to_string(),
-                    required_version: required_version.to_string(),
+                    required_version: range.to_string(),
                     gleam_version: COMPILER_VERSION.to_string(),
                 });
             }
@@ -207,18 +242,18 @@ struct StalePackageRemover<'a> {
     // These are the packages for which the requirement or their parents
     // requirement has not changed.
     fresh: HashSet<&'a str>,
-    locked: HashMap<SmolStr, &'a Vec<String>>,
+    locked: HashMap<EcoString, &'a Vec<EcoString>>,
 }
 
 impl<'a> StalePackageRemover<'a> {
     pub fn fresh_and_locked(
-        requirements: &'a HashMap<SmolStr, Requirement>,
+        requirements: &'a HashMap<EcoString, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<SmolStr, Version> {
+    ) -> Result<HashMap<EcoString, Version>> {
         let locked = manifest
             .packages
             .iter()
-            .map(|p| (p.name.as_str().into(), &p.requirements))
+            .map(|p| (p.name.clone(), &p.requirements))
             .collect();
         Self {
             fresh: HashSet::new(),
@@ -229,9 +264,9 @@ impl<'a> StalePackageRemover<'a> {
 
     fn run(
         &mut self,
-        requirements: &'a HashMap<SmolStr, Requirement>,
+        requirements: &'a HashMap<EcoString, Requirement>,
         manifest: &'a Manifest,
-    ) -> HashMap<SmolStr, Version> {
+    ) -> Result<HashMap<EcoString, Version>> {
         // Record all the requirements that have not changed
         for (name, requirement) in requirements {
             if manifest.requirements.get(name) != Some(requirement) {
@@ -239,12 +274,12 @@ impl<'a> StalePackageRemover<'a> {
             }
 
             // Recursively record the package and its deps as being fresh
-            self.record_tree_fresh(name);
+            self.record_tree_fresh(name)?;
         }
 
         // Return all the previously resolved packages that have not been
         // recorded as fresh
-        manifest
+        Ok(manifest
             .packages
             .iter()
             .filter(|package| {
@@ -258,21 +293,19 @@ impl<'a> StalePackageRemover<'a> {
                 locked
             })
             .map(|package| (package.name.clone(), package.version.clone()))
-            .collect()
+            .collect())
     }
 
-    fn record_tree_fresh(&mut self, name: &'a str) {
+    fn record_tree_fresh(&mut self, name: &'a str) -> Result<()> {
         // Record the top level package
         let _ = self.fresh.insert(name);
 
-        let deps = self
-            .locked
-            .get(name)
-            .expect("Package fresh but not in manifest");
+        let deps = self.locked.get(name).ok_or(Error::CorruptManifest)?;
         // Record each of its deps recursively
         for package in *deps {
-            self.record_tree_fresh(package);
+            self.record_tree_fresh(package)?;
         }
+        Ok(())
     }
 }
 
@@ -306,7 +339,7 @@ fn locked_no_changes() {
     ]
     .into();
     let manifest = Manifest {
-        requirements: config.all_dependencies().unwrap(),
+        requirements: config.all_drect_dependencies().unwrap(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]),
@@ -332,7 +365,7 @@ fn locked_some_removed() {
     config.dependencies = [("prod1".into(), Requirement::hex("~> 1.0"))].into();
     config.dev_dependencies = [("dev2".into(), Requirement::hex("~> 2.0"))].into();
     let manifest = Manifest {
-        requirements: config.all_dependencies().unwrap(),
+        requirements: config.all_drect_dependencies().unwrap(),
         packages: vec![
             manifest_package("prod1", "1.1.0", &[]),
             manifest_package("prod2", "1.2.0", &[]), // Not in config
@@ -592,7 +625,7 @@ fn manifest_package(
 }
 
 #[cfg(test)]
-fn locked_version(name: &'static str, version: &'static str) -> (SmolStr, Version) {
+fn locked_version(name: &'static str, version: &'static str) -> (EcoString, Version) {
     (name.into(), Version::parse(version).unwrap())
 }
 
@@ -620,9 +653,9 @@ impl Default for PackageConfig {
 #[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
-    pub application_start_module: Option<SmolStr>,
+    pub application_start_module: Option<EcoString>,
     #[serde(default)]
-    pub extra_applications: Vec<SmolStr>,
+    pub extra_applications: Vec<EcoString>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Default, Clone)]
@@ -708,15 +741,43 @@ pub struct DenoConfig {
     pub allow_all: bool,
     #[serde(default)]
     pub unstable: bool,
+    #[serde(default, deserialize_with = "uri_serde::deserialize_option")]
+    pub location: Option<Uri>,
 }
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
-    GitHub { user: String, repo: String },
-    GitLab { user: String, repo: String },
-    BitBucket { user: String, repo: String },
-    Custom { url: String },
+    GitHub {
+        user: String,
+        repo: String,
+    },
+    GitLab {
+        user: String,
+        repo: String,
+    },
+    BitBucket {
+        user: String,
+        repo: String,
+    },
+    Codeberg {
+        user: String,
+        repo: String,
+    },
+    #[serde(alias = "forgejo")]
+    Gitea {
+        user: String,
+        repo: String,
+        #[serde(with = "uri_serde_default_https")]
+        host: Uri,
+    },
+    SourceHut {
+        user: String,
+        repo: String,
+    },
+    Custom {
+        url: String,
+    },
     None,
 }
 
@@ -728,6 +789,13 @@ impl Repository {
             Repository::BitBucket { repo, user } => {
                 Some(format!("https://bitbucket.com/{user}/{repo}"))
             }
+            Repository::Codeberg { repo, user } => {
+                Some(format!("https://codeberg.org/{user}/{repo}"))
+            }
+            Repository::SourceHut { repo, user } => {
+                Some(format!("https://git.sr.ht/~{user}/{repo}"))
+            }
+            Repository::Gitea { repo, user, host } => Some(format!("{host}/{user}/{repo}")),
             Repository::Custom { url } => Some(url.clone()),
             Repository::None => None,
         }
@@ -778,25 +846,64 @@ mod uri_serde {
         }
         Ok(uri)
     }
+
+    pub fn deserialize_option<'de, D>(deserializer: D) -> Result<Option<http::Uri>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string: Option<String> = Option::deserialize(deserializer)?;
+        match string {
+            Some(s) => {
+                let deserializer = serde::de::value::StringDeserializer::new(s);
+                deserialize(deserializer).map(Some)
+            }
+            None => Ok(None),
+        }
+    }
+}
+
+// This prefixes https as a default in the event no scheme was provided
+mod uri_serde_default_https {
+    use http::uri::InvalidUri;
+    use serde::{de::Error as _, Deserialize, Deserializer};
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<http::Uri, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        let string = String::deserialize(deserializer)?;
+        let uri: http::Uri = string
+            .parse()
+            .map_err(|err: InvalidUri| D::Error::custom(err.to_string()))?;
+        if uri.host().is_none() {
+            return Err(D::Error::custom("uri without host"));
+        }
+        match uri.scheme().is_none() {
+            true => format!("https://{string}")
+                .parse()
+                .map_err(|err: InvalidUri| D::Error::custom(err.to_string())),
+            false => Ok(uri),
+        }
+    }
 }
 
 mod package_name {
-    use lazy_static::lazy_static;
+    use ecow::EcoString;
     use regex::Regex;
     use serde::Deserializer;
-    use smol_str::SmolStr;
+    use std::sync::OnceLock;
 
-    lazy_static! {
-        static ref PACKAGE_NAME_PATTERN: Regex =
-            Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex");
-    }
+    static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<SmolStr, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<EcoString, D::Error>
     where
         D: Deserializer<'de>,
     {
         let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        if PACKAGE_NAME_PATTERN.is_match(name) {
+        if PACKAGE_NAME_PATTERN
+            .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
+            .is_match(name)
+        {
             Ok(name.into())
         } else {
             let error =

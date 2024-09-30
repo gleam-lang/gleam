@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub type Direction {\n  /// Hello\n  Left\n  /// Goodbye\n  Right\n}\n"
+---
+|
+pub type Direction {
+  /// Hello
+  Left
+  /// Goodbye
+  Right
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Left
+  kind:   EnumMember
+  detail: Direction
+  sort:   2_Left
+  desc:   app
+  docs:   " Hello\n"
+  edits:
+    [1:0-1:0]: "Left"
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+Right
+  kind:   EnumMember
+  detail: Direction
+  sort:   2_Right
+  desc:   app
+  docs:   " Goodbye\n"
+  edits:
+    [1:0-1:0]: "Right"
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True

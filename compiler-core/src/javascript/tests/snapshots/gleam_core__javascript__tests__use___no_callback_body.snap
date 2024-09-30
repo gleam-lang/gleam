@@ -14,10 +14,9 @@ export function main() {
         "my/mod",
         4,
         "",
-        "This has not yet been implemented",
+        "`todo` expression evaluated. This code has not yet been implemented.",
         {}
       )
     },
   );
 }
-

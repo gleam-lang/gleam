@@ -6,34 +6,38 @@ use super::*;
 pub enum UntypedExpr {
     Int {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Float {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     String {
         location: SrcSpan,
-        value: SmolStr,
+        value: EcoString,
     },
 
     Block {
         location: SrcSpan,
-        statements: Vec1<Statement<(), Self>>,
+        statements: Vec1<UntypedStatement>,
     },
 
     Var {
         location: SrcSpan,
-        name: SmolStr,
+        name: EcoString,
     },
 
     // TODO: create new variant for captures specifically
     Fn {
+        /// For anonymous functions, this is the location of the entire function including the end of the body.
+        /// For named functions, this is the location of the function head.
         location: SrcSpan,
+        /// The byte location of the end of the function head before the opening bracket
+        end_of_head_byte_index: u32,
         is_capture: bool,
-        arguments: Vec<Arg<()>>,
+        arguments: Vec<UntypedArg>,
         body: Vec1<UntypedStatement>,
         return_annotation: Option<TypeAst>,
     },
@@ -68,8 +72,15 @@ pub enum UntypedExpr {
     },
 
     FieldAccess {
+        // This is the location of the whole record and field
+        //   user.name
+        //   ^^^^^^^^^
         location: SrcSpan,
-        label: SmolStr,
+        // This is the location of just the field access
+        //   user.name
+        //       ^^^^^
+        label_location: SrcSpan,
+        label: EcoString,
         container: Box<Self>,
     },
 
@@ -87,17 +98,17 @@ pub enum UntypedExpr {
     Todo {
         kind: TodoKind,
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<Box<Self>>,
     },
 
     Panic {
         location: SrcSpan,
-        message: Option<SmolStr>,
+        message: Option<Box<Self>>,
     },
 
-    BitString {
+    BitArray {
         location: SrcSpan,
-        segments: Vec<UntypedExprBitStringSegment>,
+        segments: Vec<UntypedExprBitArraySegment>,
     },
 
     RecordUpdate {
@@ -146,7 +157,7 @@ impl UntypedExpr {
             | Self::Tuple { location, .. }
             | Self::Panic { location, .. }
             | Self::String { location, .. }
-            | Self::BitString { location, .. }
+            | Self::BitArray { location, .. }
             | Self::NegateInt { location, .. }
             | Self::NegateBool { location, .. }
             | Self::TupleIndex { location, .. }
@@ -158,17 +169,24 @@ impl UntypedExpr {
 
     pub fn start_byte_index(&self) -> u32 {
         match self {
-            Self::Block { statements, .. } => statements.first().start_byte_index(),
+            Self::Block { location, .. } => location.start,
             Self::PipeLine { expressions, .. } => expressions.first().start_byte_index(),
             _ => self.location().start,
         }
     }
 
-    pub fn binop_precedence(&self) -> u8 {
+    pub fn bin_op_precedence(&self) -> u8 {
         match self {
             Self::BinOp { name, .. } => name.precedence(),
             Self::PipeLine { .. } => 5,
-            _ => std::u8::MAX,
+            _ => u8::MAX,
+        }
+    }
+
+    pub fn bin_op_name(&self) -> Option<&BinOp> {
+        match self {
+            UntypedExpr::BinOp { name, .. } => Some(name),
+            _ => None,
         }
     }
 
@@ -177,6 +195,13 @@ impl UntypedExpr {
             self,
             Self::String { .. } | Self::Int { .. } | Self::Float { .. }
         )
+    }
+
+    pub fn is_tuple(&self) -> bool {
+        match self {
+            UntypedExpr::Tuple { .. } => true,
+            _ => false,
+        }
     }
 
     /// Returns `true` if the untyped expr is [`Call`].
@@ -194,6 +219,26 @@ impl UntypedExpr {
     pub fn is_placeholder(&self) -> bool {
         matches!(self, Self::Placeholder { .. })
     }
+
+    #[must_use]
+    pub fn is_binop(&self) -> bool {
+        matches!(self, Self::BinOp { .. })
+    }
+
+    #[must_use]
+    pub fn is_pipeline(&self) -> bool {
+        matches!(self, Self::PipeLine { .. })
+    }
+
+    #[must_use]
+    pub fn is_todo(&self) -> bool {
+        matches!(self, Self::Todo { .. })
+    }
+
+    #[must_use]
+    pub fn is_panic(&self) -> bool {
+        matches!(self, Self::Panic { .. })
+    }
 }
 
 impl HasLocation for UntypedExpr {
@@ -204,7 +249,36 @@ impl HasLocation for UntypedExpr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Use {
-    pub location: SrcSpan,
+    /// This is the expression with the untyped/typed code of the use callback
+    /// function.
+    ///
     pub call: Box<UntypedExpr>,
+
+    /// This is the location of the whole use line, starting from the `use`
+    /// keyword and ending with the function call on the right hand side of
+    /// `<-`.
+    ///
+    /// ```gleam
+    /// use a <- reult.try(result)
+    /// ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    pub location: SrcSpan,
+
+    /// This is the SrcSpan of the patterns you find on the left hand side of
+    /// `<-` in a use expression.
+    ///
+    /// ```gleam
+    /// use pattern1, pattern2 <- todo
+    ///     ^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    /// In case there's no patterns it will be corresponding to the SrcSpan of
+    /// the `use` keyword itself.
+    ///
+    pub assignments_location: SrcSpan,
+
+    /// The patterns on the left hand side of `<-` in a use expression.
+    ///
     pub assignments: Vec<UseAssignment>,
 }

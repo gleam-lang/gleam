@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "fn use_test(f) { f(Nil) }\npub fn main() { use _discardVar <- use_test() }"
+---
+error: Invalid discard name
+  ┌─ /src/one/two.gleam:2:21
+  │
+2 │ pub fn main() { use _discardVar <- use_test() }
+  │                     ^^^^^^^^^^^ This is not a valid discard name
+
+Hint: Discard names start with _ and contain a-z, 0-9, or _.
+Try: _discard_var

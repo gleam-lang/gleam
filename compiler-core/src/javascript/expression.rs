@@ -6,6 +6,7 @@ use super::{
 };
 use crate::{
     ast::*,
+    javascript::endianness::Endianness,
     line_numbers::LineNumbers,
     pretty::*,
     type_::{ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
@@ -30,17 +31,17 @@ impl Position {
 
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
-    module_name: SmolStr,
+    module_name: EcoString,
     line_numbers: &'module LineNumbers,
-    function_name: Option<&'module SmolStr>,
-    function_arguments: Vec<Option<&'module SmolStr>>,
-    current_scope_vars: im::HashMap<SmolStr, usize>,
+    function_name: Option<EcoString>,
+    function_arguments: Vec<Option<&'module EcoString>>,
+    current_scope_vars: im::HashMap<EcoString, usize>,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
     // the module generator can output a suitable function if it is needed.
     pub tracker: &'module mut UsageTracker,
-    // We track whether tail call recusion is used so that we can render a loop
+    // We track whether tail call recursion is used so that we can render a loop
     // at the top level of the function to use in place of pushing new stack
     // frames.
     pub tail_recursion_used: bool,
@@ -49,21 +50,29 @@ pub(crate) struct Generator<'module> {
 impl<'module> Generator<'module> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
-        module_name: SmolStr,
+        module_name: EcoString,
         line_numbers: &'module LineNumbers,
-        function_name: &'module SmolStr,
-        function_arguments: Vec<Option<&'module SmolStr>>,
+        function_name: EcoString,
+        function_arguments: Vec<Option<&'module EcoString>>,
         tracker: &'module mut UsageTracker,
-        mut current_scope_vars: im::HashMap<SmolStr, usize>,
+        mut current_scope_vars: im::HashMap<EcoString, usize>,
     ) -> Self {
+        let mut function_name = Some(function_name);
         for &name in function_arguments.iter().flatten() {
+            // Initialise the function arguments
             let _ = current_scope_vars.insert(name.clone(), 0);
+
+            // If any of the function arguments shadow the current function then
+            // recursion is no longer possible.
+            if function_name.as_ref() == Some(name) {
+                function_name = None;
+            }
         }
         Self {
             tracker,
             module_name,
             line_numbers,
-            function_name: Some(function_name),
+            function_name,
             function_arguments,
             tail_recursion_used: false,
             current_scope_vars,
@@ -72,19 +81,19 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var<'a>(&mut self, name: &'a SmolStr) -> Document<'a> {
+    pub fn local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
         match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.clone(), 0);
                 maybe_escape_identifier_doc(name)
             }
             Some(0) => maybe_escape_identifier_doc(name),
-            Some(n) if name == "$" => Document::String(format!("${n}")),
-            Some(n) => Document::String(format!("{name}${n}")),
+            Some(n) if name == "$" => eco_format!("${n}").to_doc(),
+            Some(n) => eco_format!("{name}${n}").to_doc(),
         }
     }
 
-    pub fn next_local_var<'a>(&mut self, name: &'a SmolStr) -> Document<'a> {
+    pub fn next_local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.current_scope_vars.insert(name.clone(), next);
         self.local_var(name)
@@ -119,9 +128,7 @@ impl<'module> Generator<'module> {
     fn statement<'a>(&mut self, statement: &'a TypedStatement) -> Output<'a> {
         match statement {
             Statement::Expression(expression) => self.expression(expression),
-            Statement::Assignment(assignment) => {
-                self.assignment(&assignment.value, &assignment.pattern)
-            }
+            Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(_use) => {
                 unreachable!("Use must not be present for JavaScript generation")
             }
@@ -135,26 +142,24 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { elements, tail, .. } => {
-                self.tracker.list_used = true;
-                self.not_in_tail_position(|gen| {
-                    let tail = match tail {
-                        Some(tail) => Some(gen.wrap_expression(tail)?),
-                        None => None,
-                    };
-                    list(elements.iter().map(|e| gen.wrap_expression(e)), tail)
-                })
-            }
+            TypedExpr::List { elements, tail, .. } => self.not_in_tail_position(|gen| match tail {
+                Some(tail) => {
+                    gen.tracker.prepend_used = true;
+                    let tail = gen.wrap_expression(tail)?;
+                    prepend(elements.iter().map(|e| gen.wrap_expression(e)), tail)
+                }
+                None => {
+                    gen.tracker.list_used = true;
+                    list(elements.iter().map(|e| gen.wrap_expression(e)))
+                }
+            }),
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {
-                location,
-                subjects,
-                clauses,
-                ..
-            } => self.case(*location, subjects, clauses),
+                subjects, clauses, ..
+            } => self.case(subjects, clauses),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
@@ -180,13 +185,13 @@ impl<'module> Generator<'module> {
 
             TypedExpr::Todo {
                 message, location, ..
-            } => Ok(self.todo(message, location)),
+            } => self.todo(message.as_ref().map(|m| &**m), location),
 
             TypedExpr::Panic {
                 location, message, ..
-            } => Ok(self.panic(location, message.as_deref())),
+            } => self.panic(location, message.as_ref().map(|m| &**m)),
 
-            TypedExpr::BitString { segments, .. } => self.bit_string(segments),
+            TypedExpr::BitArray { segments, .. } => self.bit_array(segments),
 
             TypedExpr::ModuleSelect {
                 module_alias,
@@ -198,6 +203,10 @@ impl<'module> Generator<'module> {
             TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
+
+            TypedExpr::Invalid { .. } => {
+                panic!("invalid expressions should not reach code generation")
+            }
         }?;
         Ok(if expression.handles_own_return() {
             document
@@ -210,58 +219,147 @@ impl<'module> Generator<'module> {
         self.not_in_tail_position(|gen| Ok(docvec!(with, gen.wrap_expression(value)?)))
     }
 
-    fn bit_string<'a>(&mut self, segments: &'a [TypedExprBitStringSegment]) -> Output<'a> {
-        self.tracker.bit_string_literal_used = true;
+    fn bit_array<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
+        self.tracker.bit_array_literal_used = true;
 
-        use BitStringSegmentOption as Opt;
+        use BitArrayOption as Opt;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
             let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
-            match segment.options.as_slice() {
-                // Ints
-                [] | [Opt::Int { .. }] => Ok(value),
 
-                // Sized ints
-                [Opt::Size { value: size, .. }] => {
-                    self.tracker.sized_integer_segment_used = true;
-                    let size = self.not_in_tail_position(|gen| gen.wrap_expression(size))?;
-                    Ok(docvec!["sizedInt(", value, ", ", size, ")"])
+            if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+                let details = self.sized_bit_array_segment_details(segment)?;
+
+                if segment.type_ == crate::type_::int() {
+                    if details.has_explicit_size {
+                        self.tracker.sized_integer_segment_used = true;
+                        Ok(docvec![
+                            "sizedInt(",
+                            value,
+                            ", ",
+                            details.size,
+                            ", ",
+                            bool(details.endianness.is_big()),
+                            ")"
+                        ])
+                    } else {
+                        Ok(value)
+                    }
+                } else {
+                    self.tracker.float_bit_array_segment_used = true;
+                    Ok(docvec![
+                        "sizedFloat(",
+                        value,
+                        ", ",
+                        details.size,
+                        ", ",
+                        bool(details.endianness.is_big()),
+                        ")"
+                    ])
                 }
+            } else {
+                match segment.options.as_slice() {
+                    // UTF8 strings
+                    [Opt::Utf8 { .. }] => {
+                        self.tracker.string_bit_array_segment_used = true;
+                        Ok(docvec!["stringBits(", value, ")"])
+                    }
 
-                // Floats
-                [Opt::Float { .. }] => {
-                    self.tracker.float_bit_string_segment_used = true;
-                    Ok(docvec!["float64Bits(", value, ")"])
+                    // UTF8 codepoints
+                    [Opt::Utf8Codepoint { .. }] => {
+                        self.tracker.codepoint_bit_array_segment_used = true;
+                        Ok(docvec!["codepointBits(", value, ")"])
+                    }
+
+                    // Bit arrays
+                    [Opt::Bytes { .. } | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+
+                    // Anything else
+                    _ => Err(Error::Unsupported {
+                        feature: "This bit array segment option".into(),
+                        location: segment.location,
+                    }),
                 }
-
-                // UTF8 strings
-                [Opt::Utf8 { .. }] => {
-                    self.tracker.string_bit_string_segment_used = true;
-                    Ok(docvec!["stringBits(", value, ")"])
-                }
-
-                // UTF8 codepoints
-                [Opt::Utf8Codepoint { .. }] => {
-                    self.tracker.codepoint_bit_string_segment_used = true;
-                    Ok(docvec!["codepointBits(", value, ")"])
-                }
-
-                // Bit strings
-                [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
-
-                // Anything else
-                _ => Err(Error::Unsupported {
-                    feature: "This bit string segment option".into(),
-                    location: segment.location,
-                }),
             }
         }))?;
 
-        Ok(docvec!["toBitString(", segments_array, ")"])
+        Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
-    pub fn wrap_return<'a>(&self, document: Document<'a>) -> Document<'a> {
+    fn sized_bit_array_segment_details<'a>(
+        &mut self,
+        segment: &'a TypedExprBitArraySegment,
+    ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+        use BitArrayOption as Opt;
+
+        if segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Native { .. }))
+        {
+            return Err(Error::Unsupported {
+                feature: "This bit array segment option".into(),
+                location: segment.location,
+            });
+        }
+
+        let endianness = if segment
+            .options
+            .iter()
+            .any(|x| matches!(x, Opt::Little { .. }))
+        {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        };
+
+        let size = segment
+            .options
+            .iter()
+            .find(|x| matches!(x, Opt::Size { .. }));
+
+        let has_explicit_size = size.is_some();
+
+        let size = match size {
+            Some(Opt::Size { value: size, .. }) => {
+                let size_int = match *size.clone() {
+                    TypedExpr::Int {
+                        location: _,
+                        type_: _,
+                        value,
+                    } => value.parse().unwrap_or(0),
+                    _ => 0,
+                };
+
+                if size_int > 0 && size_int % 8 != 0 {
+                    return Err(Error::Unsupported {
+                        feature: "Non byte aligned array".into(),
+                        location: segment.location,
+                    });
+                }
+
+                self.not_in_tail_position(|gen| gen.wrap_expression(size))?
+            }
+            _ => {
+                let default_size = if segment.type_ == crate::type_::int() {
+                    8usize
+                } else {
+                    64usize
+                };
+
+                docvec![default_size]
+            }
+        };
+
+        Ok(SizedBitArraySegmentDetails {
+            has_explicit_size,
+            size,
+            endianness,
+        })
+    }
+
+    pub fn wrap_return<'a>(&mut self, document: Document<'a>) -> Document<'a> {
         if self.scope_position.is_tail() {
             docvec!["return ", document, ";"]
         } else {
@@ -302,15 +400,22 @@ impl<'module> Generator<'module> {
 
     /// Wrap an expression in an immediately involked function expression if
     /// required due to being a JS statement, or in parens if required due to
-    /// being an operator
+    /// being an operator or a function literal.
     pub fn child_expression<'a>(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
-            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {
-                Ok(docvec!("(", self.expression(expression)?, ")"))
-            }
+            TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
+            TypedExpr::Fn { .. } => {}
 
-            _ => self.wrap_expression(expression),
+            _ => return self.wrap_expression(expression),
         }
+
+        let document = self.expression(expression)?;
+        Ok(if self.scope_position.is_tail() {
+            // Here the document is a return statement: `return <expr>;`
+            document
+        } else {
+            docvec!("(", document, ")")
+        })
     }
 
     /// Wrap an expression in an immediately involked function expression
@@ -337,75 +442,27 @@ impl<'module> Generator<'module> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        Ok(self.immediately_involked_function_expression_document(result?))
+        let doc = immediately_involked_function_expression_document(result?);
+        Ok(self.wrap_return(doc))
     }
 
-    /// Wrap a document in an immediately involked function expression
-    fn immediately_involked_function_expression_document<'a>(
+    fn variable<'a>(
         &mut self,
-        document: Document<'a>,
-    ) -> Document<'a> {
-        docvec!(
-            docvec!("(() => {", break_("", " "), document).nest(INDENT),
-            break_("", " "),
-            "})()",
-        )
-        .group()
-    }
-
-    fn variable<'a>(&mut self, name: &'a SmolStr, constructor: &'a ValueConstructor) -> Output<'a> {
+        name: &'a EcoString,
+        constructor: &'a ValueConstructor,
+    ) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
-                constant_expression(self.tracker, literal)
+                constant_expression(Context::Function, self.tracker, literal)
             }
             ValueConstructorVariant::Record { arity, .. } => {
-                Ok(self.record_constructor(constructor.type_.clone(), None, name, *arity))
+                let type_ = constructor.type_.clone();
+                let tracker = &mut self.tracker;
+                Ok(record_constructor(type_, None, name, *arity, tracker))
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
             | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name)),
-        }
-    }
-
-    fn record_constructor<'a>(
-        &mut self,
-        type_: Arc<Type>,
-        qualifier: Option<&'a str>,
-        name: &'a str,
-        arity: u16,
-    ) -> Document<'a> {
-        if qualifier.is_none() && type_.is_result_constructor() {
-            if name == "Ok" {
-                self.tracker.ok_used = true;
-            } else if name == "Error" {
-                self.tracker.error_used = true;
-            }
-        }
-        if type_.is_bool() && name == "True" {
-            "true".to_doc()
-        } else if type_.is_bool() {
-            "false".to_doc()
-        } else if type_.is_nil() {
-            "undefined".to_doc()
-        } else if arity == 0 {
-            match qualifier {
-                Some(module) => docvec!["new $", module, ".", name, "()"],
-                None => docvec!["new ", name, "()"],
-            }
-        } else {
-            let vars = (0..arity).map(|i| Document::String(format!("var{i}")));
-            let body = docvec![
-                "return ",
-                construct_record(qualifier, name, vars.clone()),
-                ";"
-            ];
-            docvec!(
-                docvec!(wrap_args(vars), " => {", break_("", " "), body)
-                    .nest(INDENT)
-                    .append(break_("", " "))
-                    .group(),
-                "}",
-            )
         }
     }
 
@@ -417,9 +474,7 @@ impl<'module> Generator<'module> {
         let count = assignments.len();
         let mut documents = Vec::with_capacity((count + 1) * 2);
         for assignment in assignments.iter() {
-            documents.push(self.not_in_tail_position(|gen| {
-                gen.assignment(&assignment.value, &assignment.pattern)
-            })?);
+            documents.push(self.not_in_tail_position(|gen| gen.assignment(assignment))?);
             documents.push(line());
         }
         documents.push(self.expression(finally)?);
@@ -474,10 +529,18 @@ impl<'module> Generator<'module> {
         }
     }
 
-    fn assignment<'a>(&mut self, value: &'a TypedExpr, pattern: &'a TypedPattern) -> Output<'a> {
+    fn assignment<'a>(&mut self, assignment: &'a TypedAssignment) -> Output<'a> {
+        let TypedAssignment {
+            pattern,
+            kind,
+            value,
+            annotation: _,
+            location: _,
+        } = assignment;
+
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
-        if let TypedPattern::Var { name, .. } = pattern {
+        if let TypedPattern::Variable { name, .. } = pattern {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
             let js_name = self.next_local_var(name);
@@ -509,23 +572,23 @@ impl<'module> Generator<'module> {
 
         // If we are in tail position we can return value being assigned
         let afterwards = if self.scope_position.is_tail() {
-            line()
-                .append("return ")
-                .append(subject_assignment.clone().unwrap_or_else(|| value.clone()))
-                .append(";")
+            docvec![
+                line(),
+                "return ",
+                subject_assignment.clone().unwrap_or_else(|| value.clone()),
+                ";"
+            ]
         } else {
             nil()
         };
 
+        let compiled =
+            self.pattern_into_assignment_doc(compiled, subject, pattern.location(), *kind)?;
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let doc = match subject_assignment {
-            Some(name) => {
-                let compiled =
-                    self.pattern_into_assignment_doc(compiled, subject, pattern.location())?;
-                docvec!("let ", name, " = ", value, ";", line(), compiled)
-            }
-            None => self.pattern_into_assignment_doc(compiled, subject, pattern.location())?,
+            Some(name) => docvec!("let ", name, " = ", value, ";", line(), compiled),
+            None => compiled,
         };
 
         Ok(doc.append(afterwards).force_break())
@@ -533,12 +596,9 @@ impl<'module> Generator<'module> {
 
     fn case<'a>(
         &mut self,
-        location: SrcSpan,
         subject_values: &'a [TypedExpr],
         clauses: &'a [TypedClause],
     ) -> Output<'a> {
-        let mut possibility_of_no_match = true;
-
         let (subjects, subject_assignments): (Vec<_>, Vec<_>) =
             pattern::assign_subjects(self, subject_values)
                 .into_iter()
@@ -590,17 +650,16 @@ impl<'module> Generator<'module> {
                 let is_final_clause = clause_number == total_patterns;
                 let is_first_clause = clause_number == 1;
                 let is_only_clause = is_final_clause && is_first_clause;
-                let is_catch_all = !compiled.has_checks() && clause.guard.is_none();
 
-                if is_catch_all {
-                    possibility_of_no_match = false;
-                }
-
-                doc = if is_only_clause && is_catch_all {
+                doc = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
-                    doc.append(body)
-                } else if is_final_clause && is_catch_all {
+                    // A block is used as it could declare variables still.
+                    doc.append("{")
+                        .append(docvec!(line(), body).nest(INDENT))
+                        .append(line())
+                        .append("}")
+                } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
                     doc.append(" else {")
@@ -625,16 +684,6 @@ impl<'module> Generator<'module> {
             }
         }
 
-        if possibility_of_no_match {
-            // Lastly append an error if no clause matches.
-            // We can remove this when we get exhaustiveness checking.
-            doc = doc
-                .append(" else {")
-                .append(docvec!(line(), self.case_no_match(location, subjects)?).nest(INDENT))
-                .append(line())
-                .append("}")
-        }
-
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let subject_assignments: Vec<_> = subject_assignments
@@ -650,22 +699,10 @@ impl<'module> Generator<'module> {
         Ok(docvec![subject_assignments, doc].force_break())
     }
 
-    fn case_no_match<'a, Subjects>(&mut self, location: SrcSpan, subjects: Subjects) -> Output<'a>
-    where
-        Subjects: IntoIterator<Item = Document<'a>>,
-    {
-        Ok(self.throw_error(
-            "case_no_match",
-            "No case clause matched",
-            location,
-            [("values", array(subjects.into_iter().map(Ok))?)],
-        ))
-    }
-
     fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {
         Ok(self.throw_error(
-            "assignment_no_match",
-            "Assignment pattern did not match",
+            "let_assert",
+            &string("Pattern match failed, no pattern matched the value."),
             location,
             [("value", subject)],
         ))
@@ -678,18 +715,10 @@ impl<'module> Generator<'module> {
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
-        let scope_position = self.scope_position;
-        let function_position = self.function_position;
-
-        self.scope_position = Position::NotTail;
-        self.function_position = Position::NotTail;
         let arguments = arguments
             .iter()
-            .map(|element| self.wrap_expression(&element.value))
+            .map(|element| self.not_in_tail_position(|gen| gen.wrap_expression(&element.value)))
             .try_collect()?;
-
-        self.function_position = function_position;
-        self.scope_position = scope_position;
 
         self.call_with_doc_args(fun, arguments)
     }
@@ -732,7 +761,7 @@ impl<'module> Generator<'module> {
             // and we are in tail position we can avoid creating a new stack
             // frame, enabling recursion with constant memory usage.
             TypedExpr::Var { name, .. }
-                if self.function_name == Some(name)
+                if self.function_name.as_ref() == Some(name)
                     && self.function_position.is_tail()
                     && self.current_scope_vars.get(name) == Some(&0) =>
             {
@@ -752,7 +781,7 @@ impl<'module> Generator<'module> {
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
                         docs.push("loop$".to_doc());
-                        docs.push(Document::String((*name).to_string()));
+                        docs.push(name.to_doc());
                         docs.push(" = ".to_doc());
                     }
                     // Render the value given to the function. Even if it is not
@@ -848,7 +877,7 @@ impl<'module> Generator<'module> {
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
-            Ok(docvec![tuple, Document::String(format!("[{index}]"))])
+            Ok(docvec![tuple, eco_format!("[{index}]")])
         })
     }
 
@@ -879,22 +908,22 @@ impl<'module> Generator<'module> {
     }
 
     fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.int_division_used = true;
         Ok(docvec!("divideInt", wrap_args([left, right])))
     }
 
     fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.int_remainder_used = true;
         Ok(docvec!("remainderInt", wrap_args([left, right])))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.expression(right))?;
+        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.float_division_used = true;
         Ok(docvec!("divideFloat", wrap_args([left, right])))
     }
@@ -948,40 +977,30 @@ impl<'module> Generator<'module> {
         Ok(docvec!(left, " ", op, " ", right))
     }
 
-    fn todo<'a>(&mut self, message: &'a Option<SmolStr>, location: &'a SrcSpan) -> Document<'a> {
-        let scope_position = self.scope_position;
-        self.scope_position = Position::NotTail;
+    fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
+        let message = match message {
+            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
+            None => string("`todo` expression evaluated. This code has not yet been implemented."),
+        };
+        let doc = self.throw_error("todo", &message, *location, vec![]);
 
-        let message = message
-            .as_deref()
-            .unwrap_or("This has not yet been implemented");
-        let doc = self.throw_error("todo", message, *location, vec![]);
-
-        // Reset tail position so later values are returned as needed. i.e.
-        // following clauses in a case expression.
-        self.scope_position = scope_position;
-
-        doc
+        Ok(doc)
     }
 
-    fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a str>) -> Document<'a> {
-        let scope_position = self.scope_position;
-        self.scope_position = Position::NotTail;
-        let message = message.unwrap_or("panic expression evaluated");
+    fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
+        let message = match message {
+            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
+            None => string("`panic` expression evaluated."),
+        };
+        let doc = self.throw_error("panic", &message, *location, vec![]);
 
-        let doc = self.throw_error("todo", message, *location, vec![]);
-
-        // Reset tail position so later values are returned as needed. i.e.
-        // following clauses in a case expression.
-        self.scope_position = scope_position;
-
-        doc
+        Ok(doc)
     }
 
     fn throw_error<'a, Fields>(
         &mut self,
         error_name: &'a str,
-        message: &'a str,
+        message: &Document<'a>,
         location: SrcSpan,
         fields: Fields,
     ) -> Document<'a>
@@ -992,12 +1011,13 @@ impl<'module> Generator<'module> {
         let module = self.module_name.clone().to_doc().surround('"', '"');
         let function = self
             .function_name
-            .cloned()
+            .clone()
             .unwrap_or_default()
             .to_doc()
             .surround("\"", "\"");
         let line = self.line_numbers.line_number(location.start).to_doc();
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
+
         docvec![
             "throw makeError",
             wrap_args([
@@ -1005,7 +1025,7 @@ impl<'module> Generator<'module> {
                 module,
                 line,
                 function,
-                string(message),
+                message.clone(),
                 fields
             ]),
         ]
@@ -1024,7 +1044,7 @@ impl<'module> Generator<'module> {
 
             ModuleValueConstructor::Record {
                 name, arity, type_, ..
-            } => self.record_constructor(type_.clone(), Some(module), name, *arity),
+            } => record_constructor(type_.clone(), Some(module), name, *arity, self.tracker),
         }
     }
 
@@ -1033,19 +1053,26 @@ impl<'module> Generator<'module> {
         compiled_pattern: CompiledPattern<'a>,
         subject: Document<'a>,
         location: SrcSpan,
+        kind: AssignmentKind,
     ) -> Output<'a> {
-        if compiled_pattern.checks.is_empty() {
-            return Ok(Self::pattern_assignments_doc(compiled_pattern.assignments));
-        }
-        if compiled_pattern.assignments.is_empty() {
-            return self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location);
-        }
+        let any_assignments = !compiled_pattern.assignments.is_empty();
+        let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
 
-        Ok(docvec![
-            self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location)?,
-            line(),
-            Self::pattern_assignments_doc(compiled_pattern.assignments)
-        ])
+        // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
+        // provided that does not get matched the code needs to throw an exception, which is done
+        // by the pattern_checks_or_throw_doc method.
+        if kind.is_assert() && !compiled_pattern.checks.is_empty() {
+            let checks =
+                self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location)?;
+
+            if !any_assignments {
+                Ok(checks)
+            } else {
+                Ok(docvec![checks, line(), assignments])
+            }
+        } else {
+            Ok(assignments)
+        }
     }
 
     fn pattern_checks_or_throw_doc<'a>(
@@ -1068,8 +1095,8 @@ impl<'module> Generator<'module> {
     }
 
     fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
-        let assignments = assignments.into_iter().map(pattern::Assignment::into_doc);
-        concat(Itertools::intersperse(assignments, line()))
+        let assignments = assignments.into_iter().map(Assignment::into_doc);
+        join(assignments, line())
     }
 
     fn pattern_take_assignments_doc<'a>(
@@ -1103,22 +1130,70 @@ impl<'module> Generator<'module> {
             break_(" ||", " || ")
         };
 
-        concat(Itertools::intersperse(
-            checks
-                .into_iter()
-                .map(|check| check.into_doc(match_desired)),
+        let checks_len = checks.len();
+        join(
+            checks.into_iter().map(|check| {
+                if checks_len > 1 && check.may_require_wrapping() {
+                    docvec!["(", check.into_doc(match_desired), ")"]
+                } else {
+                    check.into_doc(match_desired)
+                }
+            }),
             operator,
-        ))
+        )
         .group()
     }
 }
 
 pub fn int(value: &str) -> Document<'_> {
-    value.to_doc()
+    let mut out = EcoString::with_capacity(value.len());
+
+    if value.starts_with('-') {
+        out.push('-');
+    } else if value.starts_with('+') {
+        out.push('+');
+    };
+    let value = value.trim_start_matches(['+', '-'].as_ref());
+
+    let value = if value.starts_with("0x") {
+        out.push_str("0x");
+        value.trim_start_matches("0x")
+    } else if value.starts_with("0o") {
+        out.push_str("0o");
+        value.trim_start_matches("0o")
+    } else if value.starts_with("0b") {
+        out.push_str("0b");
+        value.trim_start_matches("0b")
+    } else {
+        value
+    };
+
+    let value = value.trim_start_matches('0');
+    if value.is_empty() {
+        out.push('0');
+    }
+    out.push_str(value);
+
+    out.to_doc()
 }
 
 pub fn float(value: &str) -> Document<'_> {
-    value.to_doc()
+    let mut out = EcoString::with_capacity(value.len());
+
+    if value.starts_with('-') {
+        out.push('-');
+    } else if value.starts_with('+') {
+        out.push('+');
+    };
+    let value = value.trim_start_matches(['+', '-'].as_ref());
+
+    let value = value.trim_start_matches('0');
+    if value.starts_with(['.', 'e', 'E']) {
+        out.push('0');
+    }
+    out.push_str(value);
+
+    out.to_doc()
 }
 
 pub(crate) fn guard_constant_expression<'a>(
@@ -1139,25 +1214,25 @@ pub(crate) fn guard_constant_expression<'a>(
                 elements
                     .iter()
                     .map(|e| guard_constant_expression(assignments, tracker, e)),
-                None,
             )
         }
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
             Ok("false".to_doc())
         }
-        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
+        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
 
         Constant::Record {
-            tag,
-            typ,
             args,
             module,
+            name,
+            tag,
+            type_,
             ..
         } => {
-            if typ.is_result() {
+            if type_.is_result() {
                 if tag == "Ok" {
                     tracker.ok_used = true;
                 } else {
@@ -1168,19 +1243,41 @@ pub(crate) fn guard_constant_expression<'a>(
                 .iter()
                 .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(module.as_deref(), tag, field_values))
+            Ok(construct_record(
+                module.as_ref().map(|(module, _)| module.as_str()),
+                name,
+                field_values,
+            ))
         }
+
+        Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {
+            guard_constant_expression(assignments, tracker, constant)
+        }),
 
         Constant::Var { name, .. } => Ok(assignments
             .iter()
             .find(|assignment| assignment.name == name)
             .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
-            .unwrap_or_else(|| name.to_doc())),
-        expression => constant_expression(tracker, expression),
+            .unwrap_or_else(|| maybe_escape_identifier_doc(name))),
+
+        expression => constant_expression(Context::Function, tracker, expression),
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+/// The context where the constant expression is used, it might be inside a
+/// function call, or in the definition of another constant.
+///
+/// Based on the context we might want to annotate pure function calls as
+/// "@__PURE__".
+///
+pub enum Context {
+    Constant,
+    Function,
+}
+
 pub(crate) fn constant_expression<'a>(
+    context: Context,
     tracker: &mut UsageTracker,
     expression: &'a TypedConstant,
 ) -> Output<'a> {
@@ -1188,114 +1285,266 @@ pub(crate) fn constant_expression<'a>(
         Constant::Int { value, .. } => Ok(int(value)),
         Constant::Float { value, .. } => Ok(float(value)),
         Constant::String { value, .. } => Ok(string(value)),
-        Constant::Tuple { elements, .. } => {
-            array(elements.iter().map(|e| constant_expression(tracker, e)))
-        }
+        Constant::Tuple { elements, .. } => array(
+            elements
+                .iter()
+                .map(|e| constant_expression(context, tracker, e)),
+        ),
 
         Constant::List { elements, .. } => {
             tracker.list_used = true;
-            list(
-                elements.iter().map(|e| constant_expression(tracker, e)),
-                None,
-            )
+            let list = list(
+                elements
+                    .iter()
+                    .map(|e| constant_expression(context, tracker, e)),
+            )?;
+
+            match context {
+                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", list]),
+                Context::Function => Ok(list),
+            }
         }
 
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "True" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
             Ok("true".to_doc())
         }
-        Constant::Record { typ, name, .. } if typ.is_bool() && name == "False" => {
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
             Ok("false".to_doc())
         }
-        Constant::Record { typ, .. } if typ.is_nil() => Ok("undefined".to_doc()),
+        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
 
         Constant::Record {
-            tag,
-            typ,
             args,
             module,
+            name,
+            tag,
+            type_,
             ..
         } => {
-            if typ.is_result() {
+            if type_.is_result() {
                 if tag == "Ok" {
                     tracker.ok_used = true;
                 } else {
                     tracker.error_used = true;
                 }
             }
+
+            // If there's no arguments and the type is a function that takes
+            // arguments then this is the constructor being referenced, not the
+            // function being called.
+            if let Some(arity) = type_.fn_arity() {
+                if args.is_empty() && arity != 0 {
+                    let arity = arity as u16;
+                    return Ok(record_constructor(
+                        type_.clone(),
+                        None,
+                        name,
+                        arity,
+                        tracker,
+                    ));
+                }
+            }
+
             let field_values: Vec<_> = args
                 .iter()
-                .map(|arg| constant_expression(tracker, &arg.value))
+                .map(|arg| constant_expression(context, tracker, &arg.value))
                 .try_collect()?;
-            Ok(construct_record(module.as_deref(), tag, field_values))
+
+            let constructor = construct_record(
+                module.as_ref().map(|(module, _)| module.as_str()),
+                name,
+                field_values,
+            );
+            match context {
+                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", constructor]),
+                Context::Function => Ok(constructor),
+            }
         }
 
-        Constant::BitString { segments, .. } => bit_string(tracker, segments),
+        Constant::BitArray { segments, .. } => {
+            let bit_array = bit_array(tracker, segments, |tracker, expr| {
+                constant_expression(context, tracker, expr)
+            })?;
+            match context {
+                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", bit_array]),
+                Context::Function => Ok(bit_array),
+            }
+        }
 
         Constant::Var { name, module, .. } => Ok({
             match module {
-                None => name.to_doc(),
-                Some(module) => docvec!["$", module, ".", name],
+                None => maybe_escape_identifier_doc(name),
+                Some((module, _)) => {
+                    // JS keywords can be accessed here, but we must escape anyway
+                    // as we escape when exporting such names in the first place,
+                    // and the imported name has to match the exported name.
+                    docvec!["$", module, ".", maybe_escape_identifier_doc(name)]
+                }
             }
         }),
+
+        Constant::StringConcatenation { left, right, .. } => {
+            let left = constant_expression(context, tracker, left)?;
+            let right = constant_expression(context, tracker, right)?;
+            Ok(docvec!(left, " + ", right))
+        }
+
+        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
     }
 }
 
-fn bit_string<'a>(
+fn bit_array<'a>(
     tracker: &mut UsageTracker,
-    segments: &'a [BitStringSegment<TypedConstant, Arc<Type>>],
-) -> Result<Document<'a>, Error> {
-    tracker.bit_string_literal_used = true;
+    segments: &'a [TypedConstantBitArraySegment],
+    mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
+) -> Output<'a> {
+    tracker.bit_array_literal_used = true;
 
-    use BitStringSegmentOption as Opt;
+    use BitArrayOption as Opt;
 
     let segments_array = array(segments.iter().map(|segment| {
-        let value = constant_expression(tracker, &segment.value)?;
-        match segment.options.as_slice() {
-            // Ints
-            [] | [Opt::Int { .. }] => Ok(value),
+        let value = constant_expr_fun(tracker, &segment.value)?;
 
-            // Sized ints
-            [Opt::Size { value: size, .. }] => {
-                tracker.sized_integer_segment_used = true;
-                let size = constant_expression(tracker, size)?;
-                Ok(docvec!["sizedInt(", value, ", ", size, ")"])
+        if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+            let details =
+                sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
+
+            if segment.type_ == crate::type_::int() {
+                if details.has_explicit_size {
+                    tracker.sized_integer_segment_used = true;
+                    Ok(docvec![
+                        "sizedInt(",
+                        value,
+                        ", ",
+                        details.size,
+                        ", ",
+                        bool(details.endianness.is_big()),
+                        ")"
+                    ])
+                } else {
+                    Ok(value)
+                }
+            } else {
+                tracker.float_bit_array_segment_used = true;
+                Ok(docvec![
+                    "sizedFloat(",
+                    value,
+                    ", ",
+                    details.size,
+                    ", ",
+                    bool(details.endianness.is_big()),
+                    ")"
+                ])
             }
+        } else {
+            match segment.options.as_slice() {
+                // UTF8 strings
+                [Opt::Utf8 { .. }] => {
+                    tracker.string_bit_array_segment_used = true;
+                    Ok(docvec!["stringBits(", value, ")"])
+                }
 
-            // Floats
-            [Opt::Float { .. }] => {
-                tracker.float_bit_string_segment_used = true;
-                Ok(docvec!["float64Bits(", value, ")"])
+                // UTF8 codepoints
+                [Opt::Utf8Codepoint { .. }] => {
+                    tracker.codepoint_bit_array_segment_used = true;
+                    Ok(docvec!["codepointBits(", value, ")"])
+                }
+
+                // Bit strings
+                [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+
+                // Anything else
+                _ => Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                }),
             }
-
-            // UTF8 strings
-            [Opt::Utf8 { .. }] => {
-                tracker.string_bit_string_segment_used = true;
-                Ok(docvec!["stringBits(", value, ")"])
-            }
-
-            // UTF8 codepoints
-            [Opt::Utf8Codepoint { .. }] => {
-                tracker.codepoint_bit_string_segment_used = true;
-                Ok(docvec!["codepointBits(", value, ")"])
-            }
-
-            // Bit strings
-            [Opt::BitString { .. }] => Ok(docvec![value, ".buffer"]),
-
-            // Anything else
-            _ => Err(Error::Unsupported {
-                feature: "This bit string segment option".into(),
-                location: segment.location,
-            }),
         }
     }))?;
 
-    Ok(docvec!["toBitString(", segments_array, ")"])
+    Ok(docvec!["toBitArray(", segments_array, ")"])
+}
+
+#[derive(Debug)]
+struct SizedBitArraySegmentDetails<'a> {
+    has_explicit_size: bool,
+    size: Document<'a>,
+    endianness: Endianness,
+}
+
+fn sized_bit_array_segment_details<'a>(
+    segment: &'a TypedConstantBitArraySegment,
+    tracker: &mut UsageTracker,
+    constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
+) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+    use BitArrayOption as Opt;
+
+    if segment
+        .options
+        .iter()
+        .any(|x| matches!(x, Opt::Native { .. }))
+    {
+        return Err(Error::Unsupported {
+            feature: "This bit array segment option".into(),
+            location: segment.location,
+        });
+    }
+
+    let endianness = if segment
+        .options
+        .iter()
+        .any(|x| matches!(x, Opt::Little { .. }))
+    {
+        Endianness::Little
+    } else {
+        Endianness::Big
+    };
+
+    let size = segment
+        .options
+        .iter()
+        .find(|x| matches!(x, Opt::Size { .. }));
+
+    let has_explicit_size = size.is_some();
+
+    let size = match size {
+        Some(Opt::Size { value: size, .. }) => {
+            let size_int = match *size.clone() {
+                Constant::Int { location: _, value } => value.parse().unwrap_or(0),
+                _ => 0,
+            };
+            if size_int > 0 && size_int % 8 != 0 {
+                return Err(Error::Unsupported {
+                    feature: "Non byte aligned array".into(),
+                    location: segment.location,
+                });
+            }
+
+            constant_expr_fun(tracker, size)?
+        }
+        _ => {
+            let default_size = if segment.type_ == crate::type_::int() {
+                8usize
+            } else {
+                64usize
+            };
+
+            docvec![default_size]
+        }
+    };
+
+    Ok(SizedBitArraySegmentDetails {
+        has_explicit_size,
+        size,
+        endianness,
+    })
 }
 
 pub fn string(value: &str) -> Document<'_> {
     if value.contains('\n') {
-        Document::String(value.replace('\n', r"\n")).surround("\"", "\"")
+        EcoString::from(value.replace('\n', r"\n"))
+            .to_doc()
+            .surround("\"", "\"")
     } else {
         value.to_doc().surround("\"", "\"")
     }
@@ -1303,37 +1552,46 @@ pub fn string(value: &str) -> Document<'_> {
 
 pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
     let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
-        .collect::<Result<Vec<_>, _>>()?
-        .to_doc();
-    Ok(docvec![
-        "[",
-        docvec![break_("", ""), elements].nest(INDENT),
-        break_(",", ""),
-        "]"
-    ]
-    .group())
+        .collect::<Result<Vec<_>, _>>()?;
+    if elements.is_empty() {
+        // Do not add a trailing comma since that adds an 'undefined' element
+        Ok("[]".to_doc())
+    } else {
+        Ok(docvec![
+            "[",
+            docvec![break_("", ""), elements].nest(INDENT),
+            break_(",", ""),
+            "]"
+        ]
+        .group())
+    }
 }
 
-fn list<'a, I: IntoIterator<Item = Output<'a>>>(
-    elements: I,
-    tail: Option<Document<'a>>,
-) -> Output<'a>
+fn list<'a, I: IntoIterator<Item = Output<'a>>>(elements: I) -> Output<'a>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
     let array = array(elements);
-    if let Some(tail) = tail {
-        let args = [array, Ok(tail)];
-        Ok(docvec!["toList", call_arguments(args)?])
-    } else {
-        Ok(docvec!["toList(", array?, ")"])
-    }
+    Ok(docvec!["toList(", array?, ")"])
+}
+
+fn prepend<'a, I: IntoIterator<Item = Output<'a>>>(elements: I, tail: Document<'a>) -> Output<'a>
+where
+    I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
+{
+    elements.into_iter().rev().try_fold(tail, |tail, element| {
+        let args = call_arguments([element, Ok(tail)])?;
+        Ok(docvec!["listPrepend", args])
+    })
 }
 
 fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
     let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
         .collect::<Result<Vec<_>, _>>()?
         .to_doc();
+    if elements.is_empty() {
+        return Ok("()".to_doc());
+    }
     Ok(docvec![
         "(",
         docvec![break_("", ""), elements].nest(INDENT),
@@ -1349,13 +1607,12 @@ fn construct_record<'a>(
     arguments: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
     let mut any_arguments = false;
-    let arguments = concat(Itertools::intersperse(
-        arguments.into_iter().map(|a| {
+    let arguments = join(
+        arguments.into_iter().inspect(|_| {
             any_arguments = true;
-            a
         }),
         break_(",", ", "),
-    ));
+    );
     let arguments = docvec![break_("", ""), arguments].nest(INDENT);
     let name = if let Some(module) = module {
         docvec!["$", module, ".", name]
@@ -1390,10 +1647,11 @@ impl TypedExpr {
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. } => false,
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 }
@@ -1444,23 +1702,76 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::BinOp { .. }
             | TypedExpr::Tuple { .. }
             | TypedExpr::NegateInt { .. }
-            | TypedExpr::BitString { .. }
+            | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::RecordAccess { .. }
-            | TypedExpr::ModuleSelect { .. },
+            | TypedExpr::ModuleSelect { .. }
+            | TypedExpr::Block { .. },
         ) => true,
 
         Statement::Expression(
             TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
-            | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. },
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Invalid { .. },
         ) => false,
 
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
+    }
+}
+
+/// Wrap a document in an immediately involked function expression
+fn immediately_involked_function_expression_document(document: Document<'_>) -> Document<'_> {
+    docvec!(
+        docvec!("(() => {", break_("", " "), document).nest(INDENT),
+        break_("", " "),
+        "})()",
+    )
+    .group()
+}
+
+fn record_constructor<'a>(
+    type_: Arc<Type>,
+    qualifier: Option<&'a str>,
+    name: &'a str,
+    arity: u16,
+    tracker: &mut UsageTracker,
+) -> Document<'a> {
+    if qualifier.is_none() && type_.is_result_constructor() {
+        if name == "Ok" {
+            tracker.ok_used = true;
+        } else if name == "Error" {
+            tracker.error_used = true;
+        }
+    }
+    if type_.is_bool() && name == "True" {
+        "true".to_doc()
+    } else if type_.is_bool() {
+        "false".to_doc()
+    } else if type_.is_nil() {
+        "undefined".to_doc()
+    } else if arity == 0 {
+        match qualifier {
+            Some(module) => docvec!["new $", module, ".", name, "()"],
+            None => docvec!["new ", name, "()"],
+        }
+    } else {
+        let vars = (0..arity).map(|i| eco_format!("var{i}").to_doc());
+        let body = docvec![
+            "return ",
+            construct_record(qualifier, name, vars.clone()),
+            ";"
+        ];
+        docvec!(
+            docvec!(wrap_args(vars), " => {", break_("", " "), body)
+                .nest(INDENT)
+                .append(break_("", " "))
+                .group(),
+            "}",
+        )
     }
 }

@@ -1,14 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 137
+assertion_line: 163
 expression: "pub fn t() { True }"
 ---
 -module(my@mod).
--compile([no_auto_import, nowarn_unused_vars]).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
 -export([t/0]).
 
+-file("/root/project/test/my/mod.gleam", 1).
 -spec t() -> boolean().
 t() ->
     true.
-

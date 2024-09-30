@@ -1,18 +1,20 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
+use ecow::EcoString;
 use itertools::Itertools;
-use smol_str::SmolStr;
 
 use crate::{
     ast::{
-        BitStringSegment, BitStringSegmentOption, CallArg, Constant, SrcSpan, TypedConstant,
-        TypedConstantBitStringSegment, TypedConstantBitStringSegmentOption,
+        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
+        TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
+    line_numbers::LineNumbers,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
-        TypeConstructor, ValueConstructor, ValueConstructorVariant,
+        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
+        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
@@ -66,15 +68,20 @@ impl ModuleDecoder {
         Ok(ModuleInterface {
             name: reader.get_name()?.into(),
             package: reader.get_package()?.into(),
+            is_internal: reader.get_is_internal(),
             origin: Origin::Src,
+            values: read_hashmap!(reader.get_values()?, self, value_constructor),
             types: read_hashmap!(reader.get_types()?, self, type_constructor),
-            types_constructors: read_hashmap!(
+            types_value_constructors: read_hashmap!(
                 reader.get_types_constructors()?,
                 self,
-                constructors_list
+                type_variants_constructors
             ),
-            values: read_hashmap!(reader.get_values()?, self, value_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
+            line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
+            src_path: reader.get_src_path()?.into(),
+            warnings: vec![],
+            minimum_required_version: self.version(&reader.get_required_version()?),
         })
     }
 
@@ -83,12 +90,20 @@ impl ModuleDecoder {
         reader: &type_constructor::Reader<'_>,
     ) -> Result<TypeConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
+        let deprecation = match reader.get_deprecated()? {
+            "" => Deprecation::NotDeprecated,
+            message => Deprecation::Deprecated {
+                message: message.into(),
+            },
+        };
         Ok(TypeConstructor {
-            public: reader.get_public(),
-            origin: Default::default(),
+            publicity: self.publicity(reader.get_publicity()?)?,
+            origin: self.src_span(&reader.get_origin()?)?,
             module: reader.get_module()?.into(),
             parameters: read_vec!(reader.get_parameters()?, self, type_),
-            typ: type_,
+            type_,
+            deprecation,
+            documentation: self.optional_string(reader.get_documentation()?),
         })
     }
 
@@ -103,11 +118,13 @@ impl ModuleDecoder {
     }
 
     fn type_app(&mut self, reader: &schema::type_::app::Reader<'_>) -> Result<Arc<Type>> {
+        let package = reader.get_package()?.into();
         let module = reader.get_module()?.into();
         let name = reader.get_name()?.into();
         let args = read_vec!(&reader.get_parameters()?, self, type_);
         Ok(Arc::new(Type::Named {
-            public: true,
+            publicity: Publicity::Public,
+            package,
             module,
             name,
             args,
@@ -127,19 +144,66 @@ impl ModuleDecoder {
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {
         let serialized_id = reader.get_id();
-        let id = match self.type_var_id_map.get(&serialized_id) {
-            Some(&id) => id,
-            None => {
-                let new_id = self.ids.next();
-                let _ = self.type_var_id_map.insert(serialized_id, new_id);
-                new_id
-            }
-        };
+        let id = self.get_or_insert_type_var_id(serialized_id);
         Ok(type_::generic_var(id))
     }
 
-    fn constructors_list(&mut self, reader: &capnp::text_list::Reader<'_>) -> Result<Vec<SmolStr>> {
-        Ok(reader.iter().map_ok(SmolStr::new).try_collect()?)
+    fn get_or_insert_type_var_id(&mut self, id: u64) -> u64 {
+        match self.type_var_id_map.get(&id) {
+            Some(&id) => id,
+            None => {
+                let new_id = self.ids.next();
+                let _ = self.type_var_id_map.insert(id, new_id);
+                new_id
+            }
+        }
+    }
+
+    fn type_variants_constructors(
+        &mut self,
+        reader: &types_variant_constructors::Reader<'_>,
+    ) -> Result<TypeVariantConstructors> {
+        let variants = reader
+            .get_variants()?
+            .iter()
+            .map(|r| self.type_value_constructor(&r))
+            .try_collect()?;
+        let type_parameters_ids = read_vec!(
+            reader.get_type_parameters_ids()?,
+            self,
+            type_variant_constructor_type_parameter_id
+        );
+        Ok(TypeVariantConstructors {
+            variants,
+            type_parameters_ids,
+        })
+    }
+
+    fn type_variant_constructor_type_parameter_id(&mut self, i: &u16) -> Result<u64> {
+        Ok(self.get_or_insert_type_var_id(*i as u64))
+    }
+
+    fn type_value_constructor(
+        &mut self,
+        reader: &type_value_constructor::Reader<'_>,
+    ) -> Result<TypeValueConstructor> {
+        Ok(TypeValueConstructor {
+            name: reader.get_name()?.into(),
+            parameters: read_vec!(
+                reader.get_parameters()?,
+                self,
+                type_value_constructor_parameter
+            ),
+        })
+    }
+
+    fn type_value_constructor_parameter(
+        &mut self,
+        reader: &type_value_constructor_parameter::Reader<'_>,
+    ) -> Result<TypeValueConstructorField> {
+        Ok(TypeValueConstructorField {
+            type_: self.type_(&reader.get_type()?)?,
+        })
     }
 
     fn value_constructor(
@@ -148,7 +212,7 @@ impl ModuleDecoder {
     ) -> Result<ValueConstructor> {
         let type_ = self.type_(&reader.get_type()?)?;
         let variant = self.value_constructor_variant(&reader.get_variant()?)?;
-        let public = reader.get_public();
+        let publicity = self.publicity(reader.get_publicity()?)?;
         let deprecation = match reader.get_deprecated()? {
             "" => Deprecation::NotDeprecated,
             message => Deprecation::Deprecated {
@@ -157,10 +221,25 @@ impl ModuleDecoder {
         };
         Ok(ValueConstructor {
             deprecation,
-            public,
+            publicity,
             type_,
             variant,
         })
+    }
+
+    fn publicity(&self, reader: publicity::Reader<'_>) -> Result<Publicity> {
+        match reader.which()? {
+            publicity::Which::Public(()) => Ok(Publicity::Public),
+            publicity::Which::Private(()) => Ok(Publicity::Private),
+            publicity::Which::Internal(reader) => match reader?.which()? {
+                option::Which::None(()) => Ok(Publicity::Internal {
+                    attribute_location: None,
+                }),
+                option::Which::Some(reader) => Ok(Publicity::Internal {
+                    attribute_location: Some(self.src_span(&reader?)?),
+                }),
+            },
+        }
     }
 
     fn constant(&mut self, reader: &constant::Reader<'_>) -> Result<TypedConstant> {
@@ -172,8 +251,9 @@ impl ModuleDecoder {
             Which::Tuple(reader) => self.constant_tuple(&reader?),
             Which::List(reader) => self.constant_list(&reader),
             Which::Record(reader) => self.constant_record(&reader),
-            Which::BitString(reader) => self.constant_bit_string(&reader?),
+            Which::BitArray(reader) => self.constant_bit_array(&reader?),
             Which::Var(reader) => self.constant_var(&reader),
+            Which::StringConcatenation(reader) => self.constant_string_concatenation(&reader),
         }
     }
 
@@ -213,12 +293,12 @@ impl ModuleDecoder {
         Ok(Constant::List {
             location: Default::default(),
             elements: read_vec!(reader.get_elements()?, self, constant),
-            typ: type_,
+            type_,
         })
     }
 
     fn constant_record(&mut self, reader: &constant::record::Reader<'_>) -> Result<TypedConstant> {
-        let type_ = self.type_(&reader.get_typ()?)?;
+        let type_ = self.type_(&reader.get_type()?)?;
         let tag = reader.get_tag()?.into();
         let args = read_vec!(reader.get_args()?, self, constant_call_arg);
         Ok(Constant::Record {
@@ -227,7 +307,7 @@ impl ModuleDecoder {
             name: Default::default(),
             args,
             tag,
-            typ: type_,
+            type_,
             field_map: None,
         })
     }
@@ -237,25 +317,25 @@ impl ModuleDecoder {
         reader: &constant::Reader<'_>,
     ) -> Result<CallArg<TypedConstant>> {
         Ok(CallArg {
-            implicit: false,
+            implicit: None,
             label: Default::default(),
             location: Default::default(),
             value: self.constant(reader)?,
         })
     }
 
-    fn constant_bit_string(
+    fn constant_bit_array(
         &mut self,
-        reader: &capnp::struct_list::Reader<'_, bit_string_segment::Owned>,
+        reader: &capnp::struct_list::Reader<'_, bit_array_segment::Owned>,
     ) -> Result<TypedConstant> {
-        Ok(Constant::BitString {
+        Ok(Constant::BitArray {
             location: Default::default(),
-            segments: read_vec!(reader, self, bit_string_segment),
+            segments: read_vec!(reader, self, bit_array_segment),
         })
     }
 
     fn constant_var(&mut self, reader: &constant::var::Reader<'_>) -> Result<TypedConstant> {
-        let type_ = self.type_(&reader.get_typ()?)?;
+        let type_ = self.type_(&reader.get_type()?)?;
         let module = match reader.get_module()? {
             "" => None,
             module_str => Some(module_str),
@@ -264,82 +344,93 @@ impl ModuleDecoder {
         let constructor = self.value_constructor(&reader.get_constructor()?)?;
         Ok(Constant::Var {
             location: Default::default(),
-            module: module.map(SmolStr::from),
+            module: module.map(|module| (EcoString::from(module), Default::default())),
             name: name.into(),
             constructor: Some(Box::from(constructor)),
-            typ: type_,
+            type_,
         })
     }
 
-    fn bit_string_segment(
+    fn constant_string_concatenation(
         &mut self,
-        reader: &bit_string_segment::Reader<'_>,
-    ) -> Result<TypedConstantBitStringSegment> {
-        Ok(BitStringSegment {
+        reader: &constant::string_concatenation::Reader<'_>,
+    ) -> Result<TypedConstant> {
+        Ok(Constant::StringConcatenation {
+            location: Default::default(),
+            left: Box::new(self.constant(&reader.get_left()?)?),
+            right: Box::new(self.constant(&reader.get_right()?)?),
+        })
+    }
+
+    fn bit_array_segment(
+        &mut self,
+        reader: &bit_array_segment::Reader<'_>,
+    ) -> Result<TypedConstantBitArraySegment> {
+        Ok(BitArraySegment {
             location: Default::default(),
             type_: self.type_(&reader.get_type()?)?,
             value: Box::new(self.constant(&reader.get_value()?)?),
-            options: read_vec!(reader.get_options()?, self, bit_string_segment_option),
+            options: read_vec!(reader.get_options()?, self, bit_array_segment_option),
         })
     }
 
-    fn bit_string_segment_option(
+    fn bit_array_segment_option(
         &mut self,
-        reader: &bit_string_segment_option::Reader<'_>,
-    ) -> Result<TypedConstantBitStringSegmentOption> {
-        use bit_string_segment_option::Which;
+        reader: &bit_array_segment_option::Reader<'_>,
+    ) -> Result<TypedConstantBitArraySegmentOption> {
+        use bit_array_segment_option::Which;
         Ok(match reader.which()? {
-            Which::Binary(_) => BitStringSegmentOption::Binary {
+            Which::Bytes(_) => BitArrayOption::Bytes {
                 location: Default::default(),
             },
-            Which::Integer(_) => BitStringSegmentOption::Int {
+            Which::Integer(_) => BitArrayOption::Int {
                 location: Default::default(),
             },
-            Which::Float(_) => BitStringSegmentOption::Float {
+            Which::Float(_) => BitArrayOption::Float {
                 location: Default::default(),
             },
-            Which::Bitstring(_) => BitStringSegmentOption::BitString {
+            Which::Bits(_) => BitArrayOption::Bits {
                 location: Default::default(),
             },
-            Which::Utf8(_) => BitStringSegmentOption::Utf8 {
+            Which::Utf8(_) => BitArrayOption::Utf8 {
                 location: Default::default(),
             },
-            Which::Utf16(_) => BitStringSegmentOption::Utf16 {
+            Which::Utf16(_) => BitArrayOption::Utf16 {
                 location: Default::default(),
             },
-            Which::Utf32(_) => BitStringSegmentOption::Utf32 {
+            Which::Utf32(_) => BitArrayOption::Utf32 {
                 location: Default::default(),
             },
-            Which::Utf8Codepoint(_) => BitStringSegmentOption::Utf8Codepoint {
+            Which::Utf8Codepoint(_) => BitArrayOption::Utf8Codepoint {
                 location: Default::default(),
             },
-            Which::Utf16Codepoint(_) => BitStringSegmentOption::Utf16Codepoint {
+            Which::Utf16Codepoint(_) => BitArrayOption::Utf16Codepoint {
                 location: Default::default(),
             },
-            Which::Utf32Codepoint(_) => BitStringSegmentOption::Utf32Codepoint {
+            Which::Utf32Codepoint(_) => BitArrayOption::Utf32Codepoint {
                 location: Default::default(),
             },
-            Which::Signed(_) => BitStringSegmentOption::Signed {
+            Which::Signed(_) => BitArrayOption::Signed {
                 location: Default::default(),
             },
-            Which::Unsigned(_) => BitStringSegmentOption::Unsigned {
+            Which::Unsigned(_) => BitArrayOption::Unsigned {
                 location: Default::default(),
             },
-            Which::Big(_) => BitStringSegmentOption::Big {
+            Which::Big(_) => BitArrayOption::Big {
                 location: Default::default(),
             },
-            Which::Little(_) => BitStringSegmentOption::Little {
+            Which::Little(_) => BitArrayOption::Little {
                 location: Default::default(),
             },
-            Which::Native(_) => BitStringSegmentOption::Native {
+            Which::Native(_) => BitArrayOption::Native {
                 location: Default::default(),
             },
-            Which::Size(reader) => BitStringSegmentOption::Size {
+            Which::Size(reader) => BitArrayOption::Size {
                 location: Default::default(),
                 short_form: reader.get_short_form(),
                 value: Box::new(self.constant(&reader.get_value()?)?),
             },
-            Which::Unit(reader) => BitStringSegmentOption::Unit {
+            Which::Unit(reader) => BitArrayOption::Unit {
                 location: Default::default(),
                 value: reader.get_value(),
             },
@@ -367,10 +458,11 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: reader.get_module()?.into(),
+            implementations: self.implementations(reader.get_implementations()?),
         })
     }
 
-    fn optional_string(&self, str: &str) -> Option<SmolStr> {
+    fn optional_string(&self, str: &str) -> Option<EcoString> {
         if str.is_empty() {
             None
         } else {
@@ -396,7 +488,20 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
+            implementations: self.implementations(reader.get_implementations()?),
+            external_erlang: self.optional_external(reader.get_external_erlang()?)?,
+            external_javascript: self.optional_external(reader.get_external_javascript()?)?,
         })
+    }
+
+    fn implementations(&self, reader: implementations::Reader<'_>) -> Implementations {
+        Implementations {
+            gleam: reader.get_gleam(),
+            uses_erlang_externals: reader.get_uses_erlang_externals(),
+            uses_javascript_externals: reader.get_uses_javascript_externals(),
+            can_run_on_erlang: reader.get_can_run_on_erlang(),
+            can_run_on_javascript: reader.get_can_run_on_javascript(),
+        }
     }
 
     fn record(
@@ -411,6 +516,7 @@ impl ModuleDecoder {
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
+            constructor_index: reader.get_constructor_index(),
         })
     }
 
@@ -434,7 +540,7 @@ impl ModuleDecoder {
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
         Ok(AccessorsMap {
-            public: true,
+            publicity: Publicity::Public,
             type_: self.type_(&reader.get_type()?)?,
             accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
         })
@@ -446,5 +552,35 @@ impl ModuleDecoder {
             label: reader.get_label()?.into(),
             type_: self.type_(&reader.get_type()?)?,
         })
+    }
+
+    fn line_starts(&mut self, i: &u32) -> Result<u32> {
+        Ok(*i)
+    }
+
+    fn line_numbers(&mut self, reader: &line_numbers::Reader<'_>) -> Result<LineNumbers> {
+        Ok(LineNumbers {
+            length: reader.get_length(),
+            line_starts: read_vec!(reader.get_line_starts()?, self, line_starts),
+        })
+    }
+
+    fn version(&self, reader: &version::Reader<'_>) -> hexpm::version::Version {
+        hexpm::version::Version::new(reader.get_major(), reader.get_minor(), reader.get_patch())
+    }
+
+    fn optional_external(
+        &self,
+        reader: option::Reader<'_, external::Owned>,
+    ) -> Result<Option<(EcoString, EcoString)>> {
+        match reader.which()? {
+            option::Which::None(()) => Ok(None),
+            option::Which::Some(reader) => {
+                let reader = reader?;
+                let module = EcoString::from(reader.get_module()?);
+                let function = EcoString::from(reader.get_function()?);
+                Ok(Some((module, function)))
+            }
+        }
     }
 }

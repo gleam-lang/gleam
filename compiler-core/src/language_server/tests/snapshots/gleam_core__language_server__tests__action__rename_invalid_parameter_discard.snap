@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "fn ignore(_ignoreMe: Bool) { 98 }"
+---
+----- BEFORE ACTION
+fn ignore(_ignoreMe: Bool) { 98 }
+   ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑   
+
+
+----- AFTER ACTION
+fn ignore(_ignore_me: Bool) { 98 }

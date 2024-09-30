@@ -1,0 +1,79 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "let assert [x]: List(Int) = [2]"
+---
+[
+    Assignment(
+        Assignment {
+            location: SrcSpan {
+                start: 0,
+                end: 31,
+            },
+            value: List {
+                location: SrcSpan {
+                    start: 28,
+                    end: 31,
+                },
+                elements: [
+                    Int {
+                        location: SrcSpan {
+                            start: 29,
+                            end: 30,
+                        },
+                        value: "2",
+                    },
+                ],
+                tail: None,
+            },
+            pattern: List {
+                location: SrcSpan {
+                    start: 11,
+                    end: 14,
+                },
+                elements: [
+                    Variable {
+                        location: SrcSpan {
+                            start: 12,
+                            end: 13,
+                        },
+                        name: "x",
+                        type_: (),
+                    },
+                ],
+                tail: None,
+                type_: (),
+            },
+            kind: Assert {
+                location: SrcSpan {
+                    start: 4,
+                    end: 10,
+                },
+            },
+            annotation: Some(
+                Constructor(
+                    TypeAstConstructor {
+                        location: SrcSpan {
+                            start: 16,
+                            end: 25,
+                        },
+                        module: None,
+                        name: "List",
+                        arguments: [
+                            Constructor(
+                                TypeAstConstructor {
+                                    location: SrcSpan {
+                                        start: 21,
+                                        end: 24,
+                                    },
+                                    module: None,
+                                    name: "Int",
+                                    arguments: [],
+                                },
+                            ),
+                        ],
+                    },
+                ),
+            ),
+        },
+    ),
+]

@@ -1,74 +1,92 @@
 export class CustomType {
-  inspect(): string;
   withFields<K extends keyof this>(fields: { [P in K]: this[P] }): this;
 }
 
-export interface ListStatic {
-  fromArray<T>(array: Array<T>): List<T>;
-  isList(value: unknown): boolean;
-}
-
-export interface List<T> extends Iterable<T> {
-  get __gleam_prelude_variant__(): "EmptyList" | "NonEmptyList";
+export class List<T> implements Iterable<T> {
   head?: T;
   tail?: List<T>;
-  inspect(): string;
+  static fromArray<T>(array: Array<T>): List<T>;
   toArray(): Array<T>;
   atLeastLength(desired: number): boolean;
   hasLength(desired: number): boolean;
   countLength(): number;
+
+  [Symbol.iterator](): Iterator<T>;
 }
 
+export function prepend<T>(element: T, tail: List<T>): List<T>;
 export function toList<T>(array: Array<T>): List<T>;
 
-export interface BitStringStatic {
-  isBitString(value: unknown): boolean;
-}
+export class Empty<T = never> extends List<T> {}
 
-export interface BitString {
-  get __gleam_prelude_variant__(): "BitString";
+export class NonEmpty<T> extends List<T> {}
+
+export class BitArray {
+  buffer: Uint8Array;
   get length(): number;
-  inspect(): string;
   byteAt(index: number): number;
-  floatAt(index: number): number;
-  intFromSlice(start: number, end: number): number;
-  sliceAfter(index: number): BitString;
+  floatFromSlice(index: number, end: number, isBigEndian: boolean): number;
+  intFromSlice(
+    start: number,
+    end: number,
+    isBigEndian: boolean,
+    isSigned: boolean
+  ): number;
+  binaryFromSlice(start: number, end: number): BitArray;
+  sliceAfter(index: number): BitArray;
 }
 
-export interface Utf8Codepoint {
-  get __gleam_prelude_variant__(): "UtfCodepoint";
-  inspect(): string;
+export class UtfCodepoint {
+  value: string;
 }
 
-export function toBitString(segments: Array<number | Uint8Array>): BitString;
+export function toBitArray(segments: Array<number | Uint8Array>): BitArray;
 
-export function sizedInt(number: number, size: number): BitString;
+export function sizedInt(
+  int: number,
+  size: number,
+  isBigEndian: boolean
+): Uint8Array;
+
+export function byteArrayToInt(
+  byteArray: Uint8Array,
+  start: number,
+  end: number,
+  isBigEndian: boolean,
+  isSigned: boolean
+): number;
+
+export function byteArrayToFloat(
+  byteArray: Uint8Array,
+  start: number,
+  end: number,
+  isBigEndian: boolean
+): number;
 
 export function stringBits(string: string): Uint8Array;
 
-export function codepointBits(codepoint: Utf8Codepoint): Uint8Array;
+export function codepointBits(codepoint: UtfCodepoint): Uint8Array;
 
-export function float64Bits(float: number): Uint8Array;
+export function sizedFloat(
+  float: number,
+  size: number,
+  isBigEndian: boolean
+): Uint8Array;
 
-export interface Result<T, E> {
-  get __gleam_prelude_variant__(): "Ok" | "Error";
+export class Result<T, E> extends CustomType {
+  static isResult(data: unknown): boolean;
   isOk(): boolean;
-  inspect(): string;
 }
 
-export interface ResultStatic {
-  isResult(value: unknown): boolean;
+export class Ok<T, E> extends Result<T, E> {
+  0: T;
+  constructor(value: T);
 }
 
-export interface OkStatic extends ResultStatic {
-  new <T, E>(value: T): Result<T, E>;
+export class Error<T, E> extends Result<T, E> {
+  0: E;
+  constructor(value: E);
 }
-
-export interface ErrorStatic extends ResultStatic {
-  new <T, E>(value: E): Result<T, E>;
-}
-
-export function inspect(value: any): string;
 
 export function isEqual(a: any, b: any): boolean;
 
