@@ -65,6 +65,7 @@ walkdir.workspace = true
 # Creation of temporary directories
 tempfile = "3"
 pretty_assertions.workspace = true
+insta.workspace = true
 
 [build-dependencies]
 # For statically linking the VCRuntime on Windows when

@@ -669,21 +669,21 @@ fn const_segment<'a>(
     options: &'a [TypedConstantBitArraySegmentOption],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let mut value_is_a_string_literal = false;
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => {
-            value_is_a_string_literal = true;
-            value.to_doc().surround("\"", "\"")
-        }
+    let value_is_a_string_literal = matches!(value, Constant::String { .. });
 
-        // As normal
-        Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
-            const_inline(value, env)
-        }
+    let create_document = |env: &mut Env<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds
+            Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-        // Wrap anything else in parentheses
-        value => const_inline(value, env).surround("(", ")"),
+            // As normal
+            Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
+                const_inline(value, env)
+            }
+
+            // Wrap anything else in parentheses
+            value => const_inline(value, env).surround("(", ")"),
+        }
     };
 
     let size = |value: &'a TypedConstant, env: &mut Env<'a>| match value {
@@ -697,7 +697,7 @@ fn const_segment<'a>(
     let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
-        document,
+        create_document,
         options,
         size,
         unit,
@@ -722,23 +722,22 @@ fn expr_segment<'a>(
     options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let mut value_is_a_string_literal = false;
+    let value_is_a_string_literal = matches!(value, TypedExpr::String { .. });
 
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds and set the string literal flag
-        TypedExpr::String { value, .. } => {
-            value_is_a_string_literal = true;
-            string_inner(value).surround("\"", "\"")
+    let create_document = |env: &mut Env<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds and set the string literal flag
+            TypedExpr::String { value, .. } => string_inner(value).surround("\"", "\""),
+
+            // As normal
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::BitArray { .. } => expr(value, env),
+
+            // Wrap anything else in parentheses
+            value => expr(value, env).surround("(", ")"),
         }
-
-        // As normal
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::BitArray { .. } => expr(value, env),
-
-        // Wrap anything else in parentheses
-        value => expr(value, env).surround("(", ")"),
     };
 
     let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
@@ -764,7 +763,7 @@ fn expr_segment<'a>(
     let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
-        document,
+        create_document,
         options,
         size,
         unit,
@@ -774,8 +773,8 @@ fn expr_segment<'a>(
     )
 }
 
-fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
-    mut document: Document<'a>,
+fn bit_array_segment<'a, Value: 'a, CreateDoc, SizeToDoc, UnitToDoc>(
+    mut create_document: CreateDoc,
     options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
@@ -784,6 +783,7 @@ fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     env: &mut Env<'a>,
 ) -> Document<'a>
 where
+    CreateDoc: FnMut(&mut Env<'a>) -> Document<'a>,
     SizeToDoc: FnMut(&'a Value, &mut Env<'a>) -> Option<Document<'a>>,
     UnitToDoc: FnMut(&'a u8) -> Option<Document<'a>>,
 {
@@ -825,6 +825,8 @@ where
             Opt::Unit { value, .. } => unit = unit_to_doc(value),
         }
     }
+
+    let mut document = create_document(env);
 
     document = document.append(size);
     let others_is_empty = others.is_empty();
