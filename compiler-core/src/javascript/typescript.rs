@@ -19,15 +19,16 @@ use crate::{
         TypedConstant, TypedDefinition, TypedModule, TypedRecordConstructor,
     },
     docvec,
-    javascript::JavaScriptCodegenTarget,
+    javascript::{
+        import::{ImportLocation, Imports},
+        join, line, lines, wrap_args, JavaScriptCodegenTarget, Output, INDENT,
+    },
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
 use ecow::{eco_format, EcoString};
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
-
-use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated
@@ -207,7 +208,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         if self.prelude_used() {
             let path = self.import_path(&self.module.type_info.package, PRELUDE_MODULE_NAME);
-            imports.register_module(path, ["_".into()], []);
+            imports.register_module(path, ImportLocation::Prelude, ["_".into()], []);
         }
 
         if imports.is_empty() && statements.is_empty() {
@@ -216,10 +217,16 @@ impl<'a> TypeScriptGenerator<'a> {
             statements.push(line());
             Ok(statements.to_doc())
         } else if statements.is_empty() {
-            Ok(imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations))
+            Ok(imports.into_doc(
+                JavaScriptCodegenTarget::TypeScriptDeclarations,
+                &self.module.type_info.line_numbers,
+            ))
         } else {
             Ok(docvec![
-                imports.into_doc(JavaScriptCodegenTarget::TypeScriptDeclarations),
+                imports.into_doc(
+                    JavaScriptCodegenTarget::TypeScriptDeclarations,
+                    &self.module.type_info.line_numbers
+                ),
                 line(),
                 statements,
                 line()
@@ -244,10 +251,6 @@ impl<'a> TypeScriptGenerator<'a> {
                     self.collect_imports_for_type(return_type, &mut imports);
                 }
 
-                Definition::TypeAlias(TypeAlias { type_, .. }) => {
-                    self.collect_imports_for_type(type_, &mut imports)
-                }
-
                 Definition::CustomType(CustomType {
                     constructors,
                     typed_parameters,
@@ -265,6 +268,10 @@ impl<'a> TypeScriptGenerator<'a> {
                 }
 
                 Definition::ModuleConstant(ModuleConstant { type_, .. }) => {
+                    self.collect_imports_for_type(type_, &mut imports)
+                }
+
+                Definition::TypeAlias(TypeAlias { type_, .. }) => {
                     self.collect_imports_for_type(type_, &mut imports)
                 }
 
@@ -296,7 +303,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 let is_current_module = *module == self.module.name;
 
                 if !is_prelude && !is_current_module {
-                    self.register_import(imports, package, module);
+                    self.register_import(imports, ImportLocation::Prelude, package, module);
                 }
 
                 for arg in args {
@@ -335,11 +342,12 @@ impl<'a> TypeScriptGenerator<'a> {
     fn register_import<'b>(
         &mut self,
         imports: &mut Imports<'a>,
+        location: ImportLocation,
         package: &'b str,
         module: &'b str,
     ) {
         let path = self.import_path(package, module);
-        imports.register_module(path, [self.module_name(module)], []);
+        imports.register_module(path, location, [self.module_name(module)], []);
     }
 
     /// Calculates the path of where to import an external module from
