@@ -4,6 +4,10 @@
 
 ### Build tool
 
+- The `--template` flag for `gleam new` takes the values `erlang` and
+  `javascript` to specify what target to use, with `erlang` being the default.
+  ([Mohammed Khouni](https://github.com/Tar-Tarus))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
