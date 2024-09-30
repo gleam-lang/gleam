@@ -1057,11 +1057,12 @@ fn find_deps_to_unlock(
         .requirements
         .iter()
         .filter(|&dep| {
-            locked.contains_key(dep) &&
-            !manifest.requirements.contains_key(dep) &&
-            manifest.packages
-                .iter()
-                .all(|p| !locked.contains_key(&p.name) || !p.requirements.contains(dep))
+            locked.contains_key(dep)
+                && !manifest.requirements.contains_key(dep)
+                && manifest
+                    .packages
+                    .iter()
+                    .all(|p| !locked.contains_key(&p.name) || !p.requirements.contains(dep))
         })
         .cloned()
         .collect()
@@ -1530,7 +1531,12 @@ fn create_testable_unlock_manifest(
     let root_requirements = requirements
         .into_iter()
         .map(|(name, range)| {
-            (name, Requirement::Hex { version: hexpm::version::Range::new(range.into()) })
+            (
+                name,
+                Requirement::Hex {
+                    version: hexpm::version::Range::new(range.into()),
+                },
+            )
         })
         .collect();
 
@@ -1550,8 +1556,16 @@ fn test_unlock_package() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
-        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
         ("package_c".into(), Version::new(3, 0, 0), vec![]),
         ("package_d".into(), Version::new(4, 0, 0), vec![]),
     ];
@@ -1591,7 +1605,11 @@ fn test_unlock_nonexistent_package() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
         ("package_b".into(), Version::new(2, 0, 0), vec![]),
     ];
 
@@ -1618,10 +1636,22 @@ fn test_unlock_multiple_packages() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
-        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
         ("package_c".into(), Version::new(3, 0, 0), vec![]),
-        ("package_d".into(), Version::new(4, 0, 0), vec!["package_e".into()]),
+        (
+            "package_d".into(),
+            Version::new(4, 0, 0),
+            vec!["package_e".into()],
+        ),
         ("package_e".into(), Version::new(5, 0, 0), vec![]),
     ];
 
@@ -1645,7 +1675,11 @@ fn test_unlock_packages_empty_input() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
         ("package_b".into(), Version::new(2, 0, 0), vec![]),
     ];
 
@@ -1670,8 +1704,16 @@ fn test_unlock_package_preserve_shared_deps() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_c".into()]),
-        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_c".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
         ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
@@ -1694,14 +1736,20 @@ fn test_unlock_package_with_root_dep() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
-        ("package_b".into(), Version::new(2, 0, 0), vec!["package_c".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
         ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let requirements = vec![
-        ("package_b".into(), ">= 2.0.0".into()),
-    ];
+    let requirements = vec![("package_b".into(), ">= 2.0.0".into())];
 
     let manifest = create_testable_unlock_manifest(packages, requirements);
 
@@ -1722,14 +1770,16 @@ fn test_unlock_root_dep_package() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
         ("package_b".into(), Version::new(2, 0, 0), vec![]),
         ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let requirements = vec![
-        ("package_a".into(), ">= 1.0.0".into()),
-    ];
+    let requirements = vec![("package_a".into(), ">= 1.0.0".into())];
 
     let manifest = create_testable_unlock_manifest(packages, requirements);
 
@@ -1750,14 +1800,16 @@ fn test_unlock_package_with_and_without_root_dep() {
     ]);
 
     let packages = vec![
-        ("package_a".into(), Version::new(1, 0, 0), vec!["package_b".into(), "package_c".into()]),
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into(), "package_c".into()],
+        ),
         ("package_b".into(), Version::new(2, 0, 0), vec![]),
         ("package_c".into(), Version::new(3, 0, 0), vec![]),
     ];
 
-    let requirements = vec![
-        ("package_b".into(), ">= 2.0.0".into()),
-    ];
+    let requirements = vec![("package_b".into(), ">= 2.0.0".into())];
 
     let manifest = create_testable_unlock_manifest(packages, requirements);
 
