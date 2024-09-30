@@ -35,7 +35,7 @@ impl Position {
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
     module_name: EcoString,
-    line_numbers: &'module LineNumbers,
+    pub line_numbers: &'module LineNumbers,
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_scope_vars: im::HashMap<EcoString, usize>,
@@ -1079,6 +1079,10 @@ impl<'module> Generator<'module> {
         let line = self.line_numbers.line_number(location.start).to_doc();
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
+        let (location_start, location_end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(location);
+
         docvec![
             "throw makeError",
             wrap_args([
@@ -1090,6 +1094,7 @@ impl<'module> Generator<'module> {
                 fields
             ]),
         ]
+        .attach_sourcemap_location(location_start, location_end)
     }
 
     fn module_select<'a>(

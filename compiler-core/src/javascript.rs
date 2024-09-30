@@ -461,11 +461,15 @@ impl<'a> Generator<'a> {
         let module_name = eco_format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified.iter().map(|i| {
+            let (location_start, location_end) = self
+                .line_numbers
+                .line_and_column_number_of_src_span(i.location);
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
                 maybe_escape_identifier_doc(n)
             });
-            let name = maybe_escape_identifier_doc(&i.name);
+            let name = maybe_escape_identifier_doc(&i.name)
+                .attach_sourcemap_location(location_start, location_end);
             Member { name, alias }
         });
 
