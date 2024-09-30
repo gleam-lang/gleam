@@ -12,6 +12,7 @@ use num_traits::ToPrimitive;
 use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::codegen::TypeScriptDeclarations;
+use crate::javascript::import::{ImportLocation, Imports, Member};
 use crate::sourcemap::SourceMapEmitter;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -24,8 +25,6 @@ use camino::Utf8Path;
 use ecow::{eco_format, EcoString};
 use expression::Context;
 use itertools::Itertools;
-
-use self::import::{Imports, Member};
 
 const INDENT: isize = 2;
 
@@ -210,13 +209,13 @@ impl<'a> Generator<'a> {
         } else if statements.is_empty() {
             Ok(docvec![
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript, self.line_numbers),
                 sourcemap_reference,
             ])
         } else {
             Ok(docvec![
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript, self.line_numbers),
                 line(),
                 statements,
                 line(),
@@ -236,7 +235,7 @@ impl<'a> Generator<'a> {
             name: name.to_doc(),
             alias: alias.map(|a| a.to_doc()),
         };
-        imports.register_module(path, [], [member]);
+        imports.register_module(path, ImportLocation::Prelude, [], [member]);
     }
 
     pub fn statement(&mut self, statement: &'a TypedDefinition) -> Option<Output<'a>> {
@@ -388,9 +387,17 @@ impl<'a> Generator<'a> {
                     as_name,
                     unqualified_values: unqualified,
                     package,
+                    location,
                     ..
                 }) => {
-                    self.register_import(&mut imports, package, module, as_name, unqualified);
+                    self.register_import(
+                        &mut imports,
+                        ImportLocation::AtLocation(*location),
+                        package,
+                        module,
+                        as_name,
+                        unqualified,
+                    );
                 }
 
                 Definition::Function(Function {
@@ -440,6 +447,7 @@ impl<'a> Generator<'a> {
     fn register_import(
         &mut self,
         imports: &mut Imports<'a>,
+        location: ImportLocation,
         package: &'a str,
         module: &'a str,
         as_name: &'a Option<(AssignName, SrcSpan)>,
@@ -474,7 +482,7 @@ impl<'a> Generator<'a> {
         });
 
         let aliases = if discarded { vec![] } else { vec![module_name] };
-        imports.register_module(path, aliases, unqualified_imports);
+        imports.register_module(path, location, aliases, unqualified_imports);
     }
 
     fn register_external_function(
@@ -499,7 +507,12 @@ impl<'a> Generator<'a> {
         if publicity.is_importable() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(EcoString::from(module), [], [member]);
+        imports.register_module(
+            EcoString::from(module),
+            ImportLocation::Prelude,
+            [],
+            [member],
+        );
     }
 
     fn module_constant(
