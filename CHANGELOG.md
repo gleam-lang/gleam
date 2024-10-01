@@ -174,6 +174,10 @@
   ```
   ([Jiangda Wang](https://github.com/Frank-III))
 
+- The Language Server now looks for gleam.toml in the workspace directories,
+  whereas previously it was dependent on clients implementation of file watching.
+  ([Piotr Osiewicz](https://github.com/osiewicz))
+
 ### Bug Fixes
 
 - Fixed a bug in the compiler where shadowing a sized value in a bit pattern

@@ -19,8 +19,8 @@ use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
 use itertools::Itertools;
 use lsp_types::{
-    self as lsp, GlobPattern, HoverProviderCapability, InitializeParams, Position,
-    PublishDiagnosticsParams, Range, TextEdit, Url,
+    self as lsp, FileSystemWatcher, GlobPattern, HoverProviderCapability, InitializeParams,
+    Position, PublishDiagnosticsParams, Range, TextEdit, Url,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -180,41 +180,7 @@ where
 
         // Register gleam.toml as a watched file so we get a notification when
         // it changes and thus know that we need to rebuild the entire project.
-        #[allow(deprecated)]
-        let root_uri = self.initialise_params.root_uri.clone();
-        let roots = if let Some(folders) = self
-            .initialise_params
-            .capabilities
-            .workspace
-            .as_ref()
-            .is_some_and(|workspace| workspace.workspace_folders.unwrap_or_default())
-            .then(|| self.initialise_params.workspace_folders.clone())
-            .flatten()
-        {
-            folders
-                .into_iter()
-                .map(|folder| folder.uri.clone())
-                .collect::<Vec<_>>()
-        } else if let Some(uri) = root_uri {
-            vec![uri]
-        } else {
-            vec![]
-        };
-
-        let watchers = roots
-            .into_iter()
-            .filter_map(|uri| {
-                let mut path = uri.to_file_path().ok()?.to_str()?.to_owned();
-                if !path.ends_with(std::path::MAIN_SEPARATOR) {
-                    path.push(std::path::MAIN_SEPARATOR)
-                }
-                path.push_str("**/gleam.toml");
-                Some(lsp::FileSystemWatcher {
-                    glob_pattern: GlobPattern::String(path),
-                    kind: Some(lsp::WatchKind::Change),
-                })
-            })
-            .collect();
+        let watchers = workspace_root_watchers(&self.initialise_params);
         let watch_config = lsp::Registration {
             id: "watch-gleam-toml".into(),
             method: "workspace/didChangeWatchedFiles".into(),
@@ -476,6 +442,48 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
     initialise_params
 }
 
+fn workspace_root_watchers(initialise_params: &InitializeParams) -> Vec<FileSystemWatcher> {
+    #[allow(deprecated)]
+    let root_uri = initialise_params.root_uri.clone();
+    let roots = if let Some(folders) = initialise_params
+        .capabilities
+        .workspace
+        .as_ref()
+        .is_some_and(|workspace| workspace.workspace_folders.unwrap_or_default())
+        .then(|| {
+            initialise_params
+                .workspace_folders
+                .clone()
+                .filter(|folders| !folders.is_empty())
+        })
+        .flatten()
+    {
+        folders
+            .into_iter()
+            .map(|folder| folder.uri.clone())
+            .collect::<Vec<_>>()
+    } else if let Some(uri) = root_uri {
+        vec![uri]
+    } else {
+        vec![]
+    };
+
+    roots
+        .into_iter()
+        .filter_map(|uri| {
+            let mut path = uri.to_file_path().ok()?.to_str()?.to_owned();
+            if !path.ends_with('/') {
+                path.push('/')
+            }
+            path.push_str("**/gleam.toml");
+            Some(FileSystemWatcher {
+                glob_pattern: GlobPattern::String(path),
+                kind: Some(lsp::WatchKind::Change),
+            })
+        })
+        .collect()
+}
+
 fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
     let severity = match diagnostic.level {
         Level::Error => lsp::DiagnosticSeverity::ERROR,
@@ -564,4 +572,99 @@ fn path_to_uri(path: Utf8PathBuf) -> Url {
     let mut file: String = "file://".into();
     file.push_str(&path.as_os_str().to_string_lossy());
     Url::parse(&file).expect("path_to_uri URL parse")
+}
+
+#[cfg(test)]
+mod tests {
+    use lsp_types::{
+        FileSystemWatcher, InitializeParams, Url, WatchKind, WorkspaceClientCapabilities,
+        WorkspaceFolder,
+    };
+
+    use crate::language_server::server::workspace_root_watchers;
+
+    #[test]
+    fn watched_paths_with_capabilities() {
+        #![allow(deprecated)]
+        let capabilities = lsp_types::ClientCapabilities {
+            workspace: Some(WorkspaceClientCapabilities {
+                workspace_folders: Some(true),
+                ..Default::default()
+            }),
+
+            ..Default::default()
+        };
+        let mut initialise_params = InitializeParams {
+            capabilities,
+            workspace_folders: Some(vec![
+                WorkspaceFolder {
+                    uri: Url::from_directory_path("/home/gleam/is/cool/").unwrap(),
+                    name: "".into(),
+                },
+                WorkspaceFolder {
+                    // The path that's passed doesn't have to end with `/`.
+                    uri: Url::from_directory_path("/home/I/mean/it").unwrap(),
+                    name: "".into(),
+                },
+            ]),
+            ..Default::default()
+        };
+        assert_eq!(
+            workspace_root_watchers(&initialise_params),
+            vec![
+                FileSystemWatcher {
+                    glob_pattern: lsp_types::GlobPattern::String(
+                        "/home/gleam/is/cool/**/gleam.toml".into()
+                    ),
+                    kind: Some(WatchKind::Change)
+                },
+                FileSystemWatcher {
+                    glob_pattern: lsp_types::GlobPattern::String(
+                        "/home/I/mean/it/**/gleam.toml".into()
+                    ),
+                    kind: Some(WatchKind::Change)
+                },
+            ]
+        );
+        // Workspace folders take precedence over root_uri.
+        initialise_params.root_uri = Some(Url::from_directory_path("/home/root_uri").unwrap());
+        assert_eq!(
+            workspace_root_watchers(&initialise_params),
+            vec![
+                FileSystemWatcher {
+                    glob_pattern: lsp_types::GlobPattern::String(
+                        "/home/gleam/is/cool/**/gleam.toml".into()
+                    ),
+                    kind: Some(WatchKind::Change)
+                },
+                FileSystemWatcher {
+                    glob_pattern: lsp_types::GlobPattern::String(
+                        "/home/I/mean/it/**/gleam.toml".into()
+                    ),
+                    kind: Some(WatchKind::Change)
+                },
+            ]
+        );
+        // But, if workspace folders are empty (yet client declares a capability for them), we'll prefer `root_uri`.
+        let _ = initialise_params.workspace_folders.take();
+        assert_eq!(
+            workspace_root_watchers(&initialise_params),
+            vec![FileSystemWatcher {
+                glob_pattern: lsp_types::GlobPattern::String("/home/root_uri/**/gleam.toml".into()),
+                kind: Some(WatchKind::Change)
+            },]
+        );
+        // Obviously, if the `workspace_folders` capability is not declared, we'll also use `root_uri`.
+        let _ = initialise_params.capabilities.workspace.take();
+        assert_eq!(
+            workspace_root_watchers(&initialise_params),
+            vec![FileSystemWatcher {
+                glob_pattern: lsp_types::GlobPattern::String("/home/root_uri/**/gleam.toml".into()),
+                kind: Some(WatchKind::Change)
+            },]
+        );
+        // Finally, we're not going to watch anything if there is no path we could pivot on.
+        let _ = initialise_params.root_uri.take();
+        assert_eq!(workspace_root_watchers(&initialise_params), vec![]);
+    }
 }
