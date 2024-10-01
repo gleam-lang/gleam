@@ -1049,16 +1049,20 @@ pub struct QualifiedToUnqualifiedImport<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
-    import: Option<ModuleImport<'a>>,
+    qualified_constructor: Option<QualifiedConstructor<'a>>,
     edits: Vec<TextEdit>,
     should_stop: bool,
+    second_pass: bool,
 }
 
-struct ModuleImport<'a> {
+struct QualifiedConstructor<'a> {
     hover_location: SrcSpan,
     import: &'a ast::Import<EcoString>,
+    module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
+    // to differentiate type constructor and value constructor
+    is_type: bool,
 }
 
 impl<'a> QualifiedToUnqualifiedImport<'a> {
@@ -1069,15 +1073,15 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             params,
             line_numbers,
             edits: vec![],
-            import: None,
+            qualified_constructor: None,
             should_stop: false,
+            second_pass: false,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
-        // the first pass is to find the hovered constructor
         self.visit_typed_module(&self.module.ast);
-        // the second pass is to find all edits
+        self.second_pass = true;
         self.visit_typed_module(&self.module.ast);
         if self.edits.is_empty() {
             return vec![];
@@ -1097,79 +1101,126 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             .definitions
             .iter()
             .find_map(|def| match def {
-                ast::Definition::Import(import)
-                    if import.module == *module_name && import.as_name.is_none() =>
-                {
-                    Some(import)
-                }
+                ast::Definition::Import(import) if import.module == *module_name => Some(import),
                 _ => None,
             })
     }
 
-    fn has_brace(&self) -> bool {
-        self.import.as_ref().is_some_and(|import| {
-            self.module
-                .code
-                .chars()
-                .skip(import.import.location.end as usize - 1)
-                .take(1)
-                .next()
-                .is_some_and(|c| c == '}')
-        })
+    fn find_in_code(
+        &self,
+        start: usize,
+        end: usize,
+        predicate: impl Fn(&str) -> Option<usize>,
+    ) -> Option<usize> {
+        self.module
+            .code
+            .get(start..end)
+            .and_then(predicate)
+            .map(|pos| start + pos)
     }
 
-    fn trailing_comma_pos(&self) -> Option<usize> {
-        self.import.as_ref().and_then(|import| {
-            self.module
-                .code
-                .chars()
-                .enumerate()
-                .skip(import.import.location.start as usize)
-                .take_while(|(i, _)| *i < import.import.location.end as usize)
-                .filter(|(_, c)| *c == ',')
-                .last()
-                .map(|(i, _)| i)
-        })
+    fn find_trailing_comma_before_closing_brace(
+        &self,
+        import_start: usize,
+        import_end: usize,
+    ) -> Option<usize> {
+        let import_code = self.module.code.get(import_start..import_end)?;
+        let closing_brace_pos = import_code.rfind('}')?;
+
+        // Move backwards from closing_brace_pos - 1, skipping whitespace
+        let bytes = import_code.as_bytes();
+        let mut pos = closing_brace_pos;
+        while pos > 0 {
+            pos -= 1;
+            let c = (*bytes.get(pos)?) as char;
+            if c.is_whitespace() {
+                continue;
+            } else if c == ',' {
+                // Found the trailing comma
+                return Some(import_start + pos);
+            } else {
+                // No trailing comma
+                break;
+            }
+        }
+        None
     }
 
-    fn edit_import(&mut self, has_brace: bool, trailing_comma_pos: Option<usize>, name: String) {
-        let import = self.import.as_mut().expect("import should be set");
-        let (end, new_text) = match (has_brace, trailing_comma_pos) {
-            // import gleam/option
-            (false, None) => (
-                SrcSpan::new(import.import.location.end, import.import.location.end),
-                format!(".{{{name}}}"),
-            ),
-            // import gleam/option.{} or import gleam/option.{Some}
-            (true, None) => (
-                SrcSpan::new(
-                    import.import.location.end - 1,
-                    import.import.location.end - 1,
-                ),
-                format!(", {name}"),
-            ),
-            // import gleam/option.{Some,}
-            (true, Some(pos)) if pos == import.import.location.end as usize - 1 => (
-                SrcSpan::new(
-                    import.import.location.end - 1,
-                    import.import.location.end - 1,
-                ),
-                format!(" {name}"),
-            ),
-            // import gleam/option.{Some,  }
-            (true, Some(pos)) => (
-                SrcSpan::new(pos as u32 + 1, pos as u32 + 1),
-                format!(" {name}"),
-            ),
-            (false, Some(_)) => unreachable!("Syntax error: trailing comma found without braces."),
+    fn edit_import(&mut self, name: String) {
+        let qualified_constructor = self
+            .qualified_constructor
+            .as_ref()
+            .expect("import should be set");
+        let import_start = qualified_constructor.import.location.start as usize;
+        let import_end = qualified_constructor.import.location.end as usize;
+
+        // Determine if the import has braces
+        let has_brace = self
+            .find_in_code(import_start, import_end, |s| s.rfind('}'))
+            .is_some();
+
+        let trailing_comma_pos = if has_brace {
+            self.find_trailing_comma_before_closing_brace(import_start, import_end)
+        } else {
+            None
         };
+
+        let (insert_pos, new_text) = match (
+            has_brace,
+            trailing_comma_pos,
+            qualified_constructor.module_aliased,
+        ) {
+            // Case: import gleam/option
+            (false, None, false) => (
+                qualified_constructor.import.location.end,
+                format!(".{{{}}}", name),
+            ),
+            // Case: import gleam/option as opt
+            (false, None, true) => {
+                let as_pos = self
+                    .find_in_code(import_start, import_end, |s| s.find(" as "))
+                    .expect("Expected 'as' in import statement");
+
+                let non_space_before_as = self
+                    .find_in_code(import_start, as_pos, |s| {
+                        s.rfind(|c: char| !c.is_whitespace())
+                    })
+                    .expect("Expected non-whitespace character before 'as'")
+                    as u32;
+
+                (non_space_before_as + 1, format!(".{{{}}}", name))
+            }
+            // Case: import gleam/option.{} or import gleam/option.{Some}
+            (true, None, false) => (import_end as u32 - 1, format!(", {}", name)),
+            // Case: import gleam/option.{Some} as opt
+            (true, None, true) => {
+                let right_brace_pos = self
+                    .find_in_code(import_start, import_end, |s| s.rfind('}'))
+                    .expect("Expected '}' before 'as' in import statement")
+                    as u32;
+
+                (right_brace_pos, format!(", {}", name))
+            }
+            // Case: import gleam/option.{Some, } (as opt)
+            (true, Some(pos), _) => (pos as u32 + 1, format!(" {}", name)),
+            // Invalid case: trailing comma without braces
+            (false, Some(_), _) => {
+                unreachable!("Syntax error: trailing comma found without braces.")
+            }
+        };
+
+        let span = SrcSpan::new(insert_pos, insert_pos);
         self.edits.push(TextEdit {
-            range: src_span_to_lsp_range(end, &self.line_numbers),
+            range: src_span_to_lsp_range(span, &self.line_numbers),
             new_text,
         });
     }
+
     fn add_import_edits(&mut self, name: &str, is_type: bool) {
-        let import = self.import.as_mut().expect("import should be set");
+        let import = self
+            .qualified_constructor
+            .as_mut()
+            .expect("import should be set");
         let is_imported = if is_type {
             import
                 .import
@@ -1189,9 +1240,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             name.to_string()
         };
         if !is_imported {
-            let has_brace = self.has_brace();
-            let trailing_comma_pos = has_brace.then(|| self.trailing_comma_pos()).flatten();
-            self.edit_import(has_brace, trailing_comma_pos, name);
+            self.edit_import(name);
         }
     }
 
@@ -1200,9 +1249,9 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         new_import: Option<&ast::Import<EcoString>>,
         hover_location: SrcSpan,
     ) -> bool {
-        match (self.import.as_ref(), new_import) {
+        match (self.qualified_constructor.as_ref(), new_import) {
             (
-                Some(ModuleImport {
+                Some(QualifiedConstructor {
                     hover_location: old_src,
                     import: old_import,
                     ..
@@ -1214,11 +1263,14 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
     }
 
     fn remove_module_qualifier(&mut self, location: SrcSpan, is_type: bool) {
-        let import = self.import.as_ref().expect("import should be set");
+        let import = self
+            .qualified_constructor
+            .as_ref()
+            .expect("import should be set");
         let span = if is_type {
             SrcSpan::new(
                 location.start,
-                location.start + import.used_name.len() as u32 + 1,
+                location.start + import.used_name.len() as u32 + 1, // plus .
             )
         } else {
             SrcSpan::new(
@@ -1230,6 +1282,83 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             range: src_span_to_lsp_range(span, &self.line_numbers),
             new_text: "".to_string(),
         });
+    }
+
+    fn process_constructor(
+        &mut self,
+        module_alias: &EcoString,
+        // use to find type constructor import location
+        module_location: Option<SrcSpan>,
+        module_name: Option<&EcoString>,
+        constructor: &EcoString,
+        location: SrcSpan,
+        is_type: bool,
+    ) {
+        if self.should_stop {
+            return;
+        }
+        let range = src_span_to_lsp_range(location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            let import = if is_type {
+                let module_location = module_location
+                    .expect("module location should be present when type constructor is hovered");
+                self.module
+                    .find_node(module_location.start)
+                    .and_then(|node| {
+                        if let Located::Annotation(_, ty) = node {
+                            if let Some((module, _)) = ty.named_type_name() {
+                                return self.get_module_import(&module);
+                            }
+                        }
+                        None
+                    })
+            } else {
+                let module_name = module_name
+                    .expect("module name should be present when value constructor is hovered");
+                self.get_module_import(module_name)
+            };
+            // when the second time we come across the inner most hovered constructor, we should stop.
+            if self.import_match(import, location) {
+                self.should_stop = true;
+                return;
+            }
+            // to make sure the second pass the outer hovered contructor won't override all edits
+            if !self.second_pass {
+                // clean the outer hovered constructor edits
+                if self.qualified_constructor.is_some() {
+                    self.edits.clear();
+                }
+
+                if let Some(import) = import {
+                    self.qualified_constructor = Some(QualifiedConstructor {
+                        hover_location: location,
+                        import,
+                        used_name: module_alias.clone(),
+                        constructor: constructor.clone(),
+                        is_type: is_type,
+                        module_aliased: import.as_name.is_some(),
+                    });
+                    self.add_import_edits(constructor, is_type);
+                    self.remove_module_qualifier(location, is_type);
+                }
+            }
+        } else {
+            // would add all edits that are after the hovered in the first pass, and everything above the second pass
+            if let Some(QualifiedConstructor {
+                used_name,
+                constructor: wanted_constructor,
+                is_type: constructor_type,
+                ..
+            }) = self.qualified_constructor.as_ref()
+            {
+                if constructor_type == &is_type
+                    && used_name.as_str() == (*module_alias).as_str()
+                    && wanted_constructor.as_str() == (*constructor).as_str()
+                {
+                    self.remove_module_qualifier(location, is_type);
+                }
+            }
+        }
     }
 }
 
@@ -1282,57 +1411,15 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
-        if self.should_stop {
-            return;
-        }
-        let range = src_span_to_lsp_range(*location, &self.line_numbers);
-        if overlaps(self.params.range, range) {
-            if let Some((module_name, module_location)) = module {
-                let import = self
-                    .module
-                    .find_node(module_location.start)
-                    .and_then(|node| {
-                        if let Located::Annotation(_, ty) = node {
-                            if let Some((module, _)) = ty.named_type_name() {
-                                return self.get_module_import(&module);
-                            }
-                        }
-                        None
-                    });
-                // the second pass to the correct position
-                if self.import_match(import, *location) {
-                    self.should_stop = true;
-                    return;
-                }
-                if self.import.is_some() {
-                    self.edits.clear();
-                }
-                if let Some(import) = import {
-                    self.import = Some(ModuleImport {
-                        hover_location: *location,
-                        import,
-                        used_name: module_name.clone(),
-                        constructor: name.clone(),
-                    });
-                    self.add_import_edits(name, true);
-                    self.remove_module_qualifier(*location, true);
-                }
-            };
-        } else {
-            if let Some(ModuleImport {
-                used_name,
-                constructor,
-                ..
-            }) = self.import.as_ref()
-            {
-                if let Some((module_name, _)) = module {
-                    if used_name.as_str() == (*module_name).as_str()
-                        && constructor.as_str() == (*name).as_str()
-                    {
-                        self.remove_module_qualifier(*location, true);
-                    }
-                }
-            }
+        if let Some((module_name, module_location)) = module {
+            self.process_constructor(
+                module_name,
+                Some(*module_location),
+                None,
+                name,
+                *location,
+                true,
+            );
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
     }
@@ -1346,47 +1433,15 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         module_alias: &'ast EcoString,
         constructor: &'ast ModuleValueConstructor,
     ) {
-        if self.should_stop {
-            return;
-        }
-        let select_range = src_span_to_lsp_range(*location, &self.line_numbers);
-        if overlaps(self.params.range, select_range) {
-            let import = self.get_module_import(module_name);
-            if self.import_match(import, *location) {
-                self.should_stop = true;
-                return;
-            }
-            if self.import.is_some() {
-                self.edits.clear();
-            }
-            if let Some(import) = import {
-                if let ModuleValueConstructor::Record { name, .. } = constructor {
-                    self.import = Some(ModuleImport {
-                        hover_location: *location,
-                        import,
-                        used_name: module_alias.clone(),
-                        constructor: name.clone(),
-                    });
-                    self.add_import_edits(name, false);
-                    self.remove_module_qualifier(*location, false);
-                }
-            }
-        } else {
-            if let Some(ModuleImport {
-                // import,
-                used_name,
-                constructor: wanted_constructor,
-                ..
-            }) = self.import.as_ref()
-            {
-                if let ModuleValueConstructor::Record { name, .. } = constructor {
-                    if used_name.as_str() == (*module_alias).as_str()
-                        && wanted_constructor.as_str() == (*name).as_str()
-                    {
-                        self.remove_module_qualifier(*location, false);
-                    }
-                }
-            }
+        if let ModuleValueConstructor::Record { name, .. } = constructor {
+            self.process_constructor(
+                &module_alias,
+                None,
+                Some(module_name),
+                name,
+                *location,
+                false,
+            );
         }
         ast::visit::visit_typed_expr_module_select(
             self,

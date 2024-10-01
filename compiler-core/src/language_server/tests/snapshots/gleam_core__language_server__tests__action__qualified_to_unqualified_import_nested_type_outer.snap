@@ -7,7 +7,7 @@ expression: "\nimport option\nimport wobble\npub fn main(x) -> option.Option(wob
 import option
 import wobble
 pub fn main(x) -> option.Option(wobble.Wibble) {
-           ↑                                    
+                        ▔▔↑                     
     todo
 }
 
