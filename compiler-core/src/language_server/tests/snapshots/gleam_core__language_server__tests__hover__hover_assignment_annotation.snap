@@ -12,6 +12,6 @@ fn wibble() {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nInt\n```\n",
+        "```gleam\ngleam.Int\n```\n",
     ),
 )

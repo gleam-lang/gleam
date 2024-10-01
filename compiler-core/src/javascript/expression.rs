@@ -88,8 +88,8 @@ impl<'module> Generator<'module> {
                 maybe_escape_identifier_doc(name)
             }
             Some(0) => maybe_escape_identifier_doc(name),
-            Some(n) if name == "$" => Document::String(format!("${n}")),
-            Some(n) => Document::String(format!("{name}${n}")),
+            Some(n) if name == "$" => eco_format!("${n}").to_doc(),
+            Some(n) => eco_format!("{name}${n}").to_doc(),
         }
     }
 
@@ -781,7 +781,7 @@ impl<'module> Generator<'module> {
                     // Create an assignment for each variable created by the function arguments
                     if let Some(name) = argument {
                         docs.push("loop$".to_doc());
-                        docs.push(Document::String((*name).to_string()));
+                        docs.push(name.to_doc());
                         docs.push(" = ".to_doc());
                     }
                     // Render the value given to the function. Even if it is not
@@ -877,7 +877,7 @@ impl<'module> Generator<'module> {
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let tuple = gen.wrap_expression(tuple)?;
-            Ok(docvec![tuple, Document::String(format!("[{index}]"))])
+            Ok(docvec![tuple, eco_format!("[{index}]")])
         })
     }
 
@@ -1542,7 +1542,9 @@ fn sized_bit_array_segment_details<'a>(
 
 pub fn string(value: &str) -> Document<'_> {
     if value.contains('\n') {
-        Document::String(value.replace('\n', r"\n")).surround("\"", "\"")
+        EcoString::from(value.replace('\n', r"\n"))
+            .to_doc()
+            .surround("\"", "\"")
     } else {
         value.to_doc().surround("\"", "\"")
     }
@@ -1606,9 +1608,8 @@ fn construct_record<'a>(
 ) -> Document<'a> {
     let mut any_arguments = false;
     let arguments = join(
-        arguments.into_iter().map(|a| {
+        arguments.into_iter().inspect(|_| {
             any_arguments = true;
-            a
         }),
         break_(",", ", "),
     );
@@ -1759,7 +1760,7 @@ fn record_constructor<'a>(
             None => docvec!["new ", name, "()"],
         }
     } else {
-        let vars = (0..arity).map(|i| Document::String(format!("var{i}")));
+        let vars = (0..arity).map(|i| eco_format!("var{i}").to_doc());
         let body = docvec![
             "return ",
             construct_record(qualifier, name, vars.clone()),

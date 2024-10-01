@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n  let a = if wibble {\n    wobble\n  }\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:11
+  │
+3 │   let a = if wibble {
+  │           ^^ Gleam doesn't have if expressions
+
+If you want to write a conditional expression you can use a `case`:
+
+    case condition {
+      True -> todo
+      False -> todo
+    }
+
+See: https://tour.gleam.run/flow-control/case-expressions/

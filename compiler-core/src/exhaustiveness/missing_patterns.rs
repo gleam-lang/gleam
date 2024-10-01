@@ -74,7 +74,7 @@ fn add_missing_patterns(
 
         Decision::Failure => {
             let mut mapping = HashMap::new();
-            let printer = Printer::new(&environment.value_names);
+            let printer = Printer::new(&environment.names);
 
             // At this point the terms stack looks something like this:
             // `[term, term + arguments, term, ...]`. To construct a pattern

@@ -2,7 +2,7 @@
 source: test-package-compiler/src/generated_tests.rs
 expression: "./cases/opaque_type_destructure"
 ---
-error: Unknown module field
+error: Unknown module value
   ┌─ src/two.gleam:7:7
   │
 7 │   let one.User(name: name, score: score) = user

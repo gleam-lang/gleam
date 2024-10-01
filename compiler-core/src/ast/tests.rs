@@ -59,7 +59,7 @@ fn get_bare_expression(statement: &TypedStatement) -> &TypedExpr {
     match statement {
         Statement::Expression(expression) => expression,
         Statement::Use(_) | Statement::Assignment(_) => {
-            panic!("Expected expression, got {:?}", statement)
+            panic!("Expected expression, got {statement:?}")
         }
     }
 }
@@ -77,6 +77,7 @@ fn compile_expression(src: &str) -> TypedStatement {
     let mut environment = Environment::new(
         ids,
         "mypackage".into(),
+        None,
         "mymod".into(),
         Target::Erlang,
         &modules,
@@ -360,6 +361,8 @@ fn find_node_module_select() {
         constructor: ModuleValueConstructor::Fn {
             module: "module".into(),
             name: "function".into(),
+            external_erlang: None,
+            external_javascript: None,
             location: SrcSpan { start: 1, end: 55 },
             documentation: None,
             field_map: None,

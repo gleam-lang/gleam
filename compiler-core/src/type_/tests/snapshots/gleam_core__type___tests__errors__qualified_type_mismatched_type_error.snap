@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\nconst my_wobble: wibble.Wobble = Nil\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:34
+  │
+3 │ const my_wobble: wibble.Wobble = Nil
+  │                                  ^^^
+
+Expected type:
+
+    wibble.Wobble
+
+Found type:
+
+    Nil

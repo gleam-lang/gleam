@@ -2,7 +2,7 @@ use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
 
 use super::*;
 
-fn definition(tester: TestProject<'_>, position: Position) -> Option<Location> {
+fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> {
     tester.at(position, |engine, param, _| {
         let params = GotoDefinitionParams {
             text_document_position_params: param,
@@ -15,106 +15,99 @@ fn definition(tester: TestProject<'_>, position: Position) -> Option<Location> {
     })
 }
 
+fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
+    let position = position_finder.find_position(project.src);
+    let location = definition(&project, position).expect("a location to jump to");
+    let pretty_destination = location
+        .uri
+        .path_segments()
+        .expect("a location to jump to")
+        // To make snapshots the same both on windows and unix systems we need
+        // to discard windows' `C:` path segment at the beginning of a uri.
+        .skip_while(|segment| *segment == "C:")
+        .join("/");
+
+    let src = hover::show_hover(
+        project.src,
+        Range {
+            start: position,
+            end: position,
+        },
+        position,
+    );
+
+    let destination = hover::show_hover(
+        project
+            .src_from_module_url(&location.uri)
+            .expect("a module to jump to"),
+        location.range,
+        location.range.start,
+    );
+
+    format!(
+        "----- Jumping from `src/app.gleam`
+{src}
+----- Jumped to `{pretty_destination}`
+{destination}",
+    )
+}
+
+#[macro_export]
+macro_rules! assert_goto {
+    ($src:literal, $position:expr) => {
+        let project = TestProject::for_source($src);
+        assert_goto!(project, $position);
+    };
+    ($project:expr, $position:expr) => {
+        let output = pretty_definition($project, $position);
+        insta::assert_snapshot!(insta::internals::AutoName, output);
+    };
+}
+
 #[test]
 fn goto_definition_local_variable() {
-    let code = "
+    assert_goto!(
+        "
 pub fn main() {
   let x = 1
   x
-}";
-
-    assert_eq!(
-        definition(TestProject::for_source(code), Position::new(3, 2)),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\app.gleam"
-            } else {
-                "/src/app.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 2,
-                    character: 6
-                },
-                end: Position {
-                    line: 2,
-                    character: 7
-                }
-            }
-        })
-    )
+}",
+        find_position_of("x").nth_occurrence(2)
+    );
 }
 
 #[test]
 fn goto_definition_same_module_constants() {
-    let code = "
+    assert_goto!(
+        "
 const x = 1
 
 pub fn main() {
   x
-}";
-
-    assert_eq!(
-        definition(TestProject::for_source(code), Position::new(4, 2)),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\app.gleam"
-            } else {
-                "/src/app.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 1,
-                    character: 0
-                },
-                end: Position {
-                    line: 1,
-                    character: 7
-                }
-            }
-        })
-    )
+}",
+        find_position_of("x").nth_occurrence(2)
+    );
 }
 
 #[test]
 fn goto_definition_same_module_functions() {
-    let code = "
+    assert_goto!(
+        "
 fn add_2(x) {
   x + 2
 }
 
 pub fn main() {
   add_2(1)
-}";
-
-    assert_eq!(
-        definition(TestProject::for_source(code), Position::new(6, 3)),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\app.gleam"
-            } else {
-                "/src/app.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 1,
-                    character: 0
-                },
-                end: Position {
-                    line: 1,
-                    character: 11
-                }
-            }
-        })
-    )
+}",
+        find_position_of("add_2(1)")
+    );
 }
 
 #[test]
 fn goto_definition_same_module_records() {
-    let code = "
+    assert_goto!(
+        "
 pub type Rec {
   Var1(Int)
   Var2(Int, Int)
@@ -123,29 +116,9 @@ pub type Rec {
 pub fn main() {
   let a = Var1(1)
   let b = Var2(2, 3)
-}";
-
-    assert_eq!(
-        definition(TestProject::for_source(code), Position::new(7, 11)),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\app.gleam"
-            } else {
-                "/src/app.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 2,
-                    character: 2
-                },
-                end: Position {
-                    line: 2,
-                    character: 11
-                }
-            }
-        })
-    )
+}",
+        find_position_of("Var1(1)")
+    );
 }
 
 #[test]
@@ -157,30 +130,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
-            Position::new(3, 19)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 16
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
+        find_position_of("my_num")
+    );
 }
 
 #[test]
@@ -192,30 +145,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
-            Position::new(3, 3)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 16
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
+        find_position_of("my_num").nth_occurrence(2)
+    );
 }
 
 #[test]
@@ -227,30 +160,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
-            Position::new(3, 19)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 14
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub fn my_fn() { Nil }"),
+        find_position_of("my_fn")
+    );
 }
 
 #[test]
@@ -268,30 +181,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", dep_src),
-            Position::new(3, 20)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 2,
-                    character: 2
-                },
-                end: Position {
-                    line: 2,
-                    character: 11
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", dep_src),
+        find_position_of("Var1(1)")
+    );
 }
 
 #[test]
@@ -309,30 +202,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", dep_src),
-            Position::new(3, 3)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 2,
-                    character: 2
-                },
-                end: Position {
-                    line: 2,
-                    character: 11
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", dep_src),
+        find_position_of("Var1(1)").under_char('a')
+    );
 }
 
 #[test]
@@ -344,30 +217,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_hex_module("example_module", "pub const my_num = 1"),
-            Position::new(3, 20)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\hex\src\example_module.gleam"
-            } else {
-                "/build/packages/hex/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 16
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_hex_module("example_module", "pub const my_num = 1"),
+        find_position_of("my_num").under_char('u')
+    );
 }
 
 #[test]
@@ -379,31 +232,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code)
-                .add_hex_module("example_module", "pub fn my_fn() { Nil }"),
-            Position::new(3, 20)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\hex\src\example_module.gleam"
-            } else {
-                "/build/packages/hex/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 14
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_hex_module("example_module", "pub fn my_fn() { Nil }"),
+        find_position_of("my_fn")
+    );
 }
 
 #[test]
@@ -571,30 +403,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_hex_module("example_module", hex_src),
-            Position::new(3, 20)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\hex\src\example_module.gleam"
-            } else {
-                "/build/packages/hex/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 2,
-                    character: 2
-                },
-                end: Position {
-                    line: 2,
-                    character: 11
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_hex_module("example_module", hex_src),
+        find_position_of("Var1(1)").under_char('r')
+    );
 }
 
 #[test]
@@ -606,36 +418,16 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code)
-                .add_dep_module("example_module", "pub fn my_fn() { Nil }"),
-            Position::new(3, 20)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\dep\src\example_module.gleam"
-            } else {
-                "/dep/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 14
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_dep_module("example_module", "pub fn my_fn() { Nil }"),
+        find_position_of("my_fn").under_char('y')
+    );
 }
 
 #[test]
 fn goto_definition_type() {
-    let code = "
+    assert_goto!(
+        "
 pub type Rec {
   Var1(Int)
   Var2(Int, Int)
@@ -643,29 +435,9 @@ pub type Rec {
 
 pub fn make_var() -> Rec {
   Var1(1)
-}";
-
-    assert_eq!(
-        definition(TestProject::for_source(code), Position::new(6, 22)),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\app.gleam"
-            } else {
-                "/src/app.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 1,
-                    character: 0
-                },
-                end: Position {
-                    line: 1,
-                    character: 12
-                }
-            }
-        })
-    )
+}",
+        find_position_of("Rec").nth_occurrence(2)
+    );
 }
 
 #[test]
@@ -684,30 +456,10 @@ fn make_var() -> example_module.Rec {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_hex_module("example_module", hex_src),
-            Position::new(2, 33)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\hex\src\example_module.gleam"
-            } else {
-                "/build/packages/hex/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 1,
-                    character: 0
-                },
-                end: Position {
-                    line: 1,
-                    character: 12
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_hex_module("example_module", hex_src),
+        find_position_of("Rec")
+    );
 }
 
 #[test]
@@ -726,30 +478,10 @@ fn make_var() -> example_module.Rec {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_dep_module("example_module", dep),
-            Position::new(2, 33)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\dep\src\example_module.gleam"
-            } else {
-                "/dep/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 1,
-                    character: 0
-                },
-                end: Position {
-                    line: 1,
-                    character: 12
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_dep_module("example_module", dep),
+        find_position_of("Rec")
+    );
 }
 
 #[test]
@@ -775,30 +507,10 @@ fn make_var() -> example_module.Wabble(example_module.Wibble(example_module.Wobb
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_hex_module("example_module", hex_src),
-            Position::new(2, 80)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\build\packages\hex\src\example_module.gleam"
-            } else {
-                "/build/packages/hex/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 1,
-                    character: 0
-                },
-                end: Position {
-                    line: 1,
-                    character: 15
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_hex_module("example_module", hex_src),
+        find_position_of("Wobble").under_char('o')
+    );
 }
 
 #[test]
@@ -810,30 +522,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
-            Position::new(1, 13)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 0
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
+        find_position_of("example_module").under_char('p')
+    );
 }
 
 #[test]
@@ -845,30 +537,12 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
-            Position::new(1, 29)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 0
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
+        find_position_of("example")
+            .nth_occurrence(2)
+            .under_char('x')
+    );
 }
 
 #[test]
@@ -880,30 +554,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
-            Position::new(1, 26)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 16
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub const my_num = 1"),
+        find_position_of("my_num").under_char('_')
+    );
 }
 
 #[test]
@@ -915,30 +569,10 @@ fn main() {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("wibble", "pub fn wobble() {}"),
-            Position::new(3, 5)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\wibble.gleam"
-            } else {
-                "/src/wibble.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 15
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("wibble", "pub fn wobble() {}"),
+        find_position_of("wobble").nth_occurrence(2).under_char('o')
+    );
 }
 
 #[test]
@@ -950,28 +584,28 @@ fn main() -> MyType {
 }
 ";
 
-    assert_eq!(
-        definition(
-            TestProject::for_source(code).add_module("example_module", "pub type MyType = Int"),
-            Position::new(1, 33)
-        ),
-        Some(Location {
-            uri: Url::from_file_path(Utf8PathBuf::from(if cfg!(target_family = "windows") {
-                r"\\?\C:\src\example_module.gleam"
-            } else {
-                "/src/example_module.gleam"
-            }))
-            .unwrap(),
-            range: Range {
-                start: Position {
-                    line: 0,
-                    character: 0
-                },
-                end: Position {
-                    line: 0,
-                    character: 21
-                }
-            }
-        })
-    )
+    assert_goto!(
+        TestProject::for_source(code).add_module("example_module", "pub type MyType = Int"),
+        find_position_of("MyType").under_char('T')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3610
+#[test]
+fn goto_definition_of_external_function_in_same_module() {
+    let code = "
+@external(erlang, \"wibble\", \"wobble\")
+fn external_function() -> Nil
+
+fn main() {
+  external_function()
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code),
+        find_position_of("external_function")
+            .nth_occurrence(2)
+            .under_char('l')
+    );
 }

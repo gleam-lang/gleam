@@ -23,7 +23,7 @@ use crate::{
     pretty::{break_, Document, Documentable},
     type_::{Type, TypeVar},
 };
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
@@ -144,7 +144,7 @@ where
 /// Returns a name that can be used as a TypeScript type name. If there is a
 /// naming clash a '_' will be appended.
 ///
-fn ts_safe_type_name(mut name: String) -> String {
+fn ts_safe_type_name(mut name: String) -> EcoString {
     if matches!(
         name.as_str(),
         "any"
@@ -163,7 +163,7 @@ fn ts_safe_type_name(mut name: String) -> String {
             | "of"
     ) {
         name.push('_');
-        name
+        EcoString::from(name)
     } else {
         super::maybe_escape_identifier_string(&name)
     }
@@ -270,23 +270,23 @@ impl<'a> TypeScriptGenerator<'a> {
 
     /// Calculates the path of where to import an external module from
     ///
-    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
         // DUPE: current_module_name_segments_count
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.d.mts"),
+                1 => eco_format!("./{module}.d.mts"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.d.mts")
+                    eco_format!("{prefix}{module}.d.mts")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.d.mts")
+            eco_format!("{prefix}{package}/{module}.d.mts")
         }
     }
 
@@ -338,7 +338,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn type_alias(&mut self, alias: &str, type_: &Type) -> Output<'a> {
         Ok(docvec![
             "export type ",
-            Document::String(ts_safe_type_name(alias.to_string())),
+            ts_safe_type_name(alias.to_string()),
             " = ",
             self.print_type(type_),
             ";"
@@ -379,7 +379,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         definitions.push(Ok(docvec![
             "export type ",
-            name_with_generics(Document::String(format!("{name}$")), typed_parameters),
+            name_with_generics(eco_format!("{name}$").to_doc(), typed_parameters),
             " = ",
             definition,
             ";",
@@ -422,7 +422,7 @@ impl<'a> TypeScriptGenerator<'a> {
                     .label
                     .as_ref()
                     .map(|(_, s)| super::maybe_escape_identifier_doc(s))
-                    .unwrap_or_else(|| Document::String(format!("argument${i}")));
+                    .unwrap_or_else(|| eco_format!("argument${i}").to_doc());
                 docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
@@ -435,7 +435,7 @@ impl<'a> TypeScriptGenerator<'a> {
                         .label
                         .as_ref()
                         .map(|(_, s)| super::maybe_escape_identifier_doc(s))
-                        .unwrap_or_else(|| Document::String(format!("{i}")));
+                        .unwrap_or_else(|| eco_format!("{i}").to_doc());
                     docvec![
                         name,
                         ": ",
@@ -531,22 +531,18 @@ impl<'a> TypeScriptGenerator<'a> {
     /// Get the locally used name for a module. Either the last segment, or the
     /// alias if one was given when imported.
     ///
-    fn module_name(&self, name: &str) -> String {
+    fn module_name(&self, name: &str) -> EcoString {
         // The prelude is always `_`
         if name.is_empty() {
             return "_".into();
         }
 
         let name = match self.aliased_module_names.get(name) {
-            Some(name) => (*name).to_string(),
-            None => name
-                .split('/')
-                .last()
-                .expect("Non empty module path")
-                .to_string(),
+            Some(name) => name,
+            None => name.split('/').last().expect("Non empty module path"),
         };
 
-        format!("${name}")
+        eco_format!("${name}")
     }
 
     fn do_print(
@@ -668,17 +664,13 @@ impl<'a> TypeScriptGenerator<'a> {
         module: &str,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
-        let name = format!("{}$", ts_safe_type_name(name.to_string()));
+        let name = eco_format!("{}$", ts_safe_type_name(name.to_string()));
         let name = match module == self.module.name {
-            true => Document::String(name),
+            true => name.to_doc(),
             false => {
                 // If type comes from a separate module, use that module's name
                 // as a TypeScript namespace prefix
-                docvec![
-                    Document::String(self.module_name(module)),
-                    ".",
-                    Document::String(name),
-                ]
+                docvec![self.module_name(module), ".", name]
             }
         };
         if args.is_empty() {

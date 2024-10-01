@@ -54,7 +54,7 @@ error_class(Class, _) -> ["Erlang ", atom_to_binary(Class)].
 error_message(#{gleam_error := _, message := M}) ->
     M;
 error_message(undef) ->
-    <<"A function was called but it did not exist.\n"/utf8 >>;
+    <<"A function was called but it did not exist."/utf8 >>;
 error_message({case_clause, _}) ->
     <<"No pattern matched in an Erlang case expression."/utf8>>;
 error_message({badmatch, _}) ->

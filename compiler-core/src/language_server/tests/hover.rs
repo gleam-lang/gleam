@@ -20,7 +20,7 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
     // When we display the over range the end character is always excluded!
     let end = Position::new(end.line, end.character);
 
-    let mut str: String = "".into();
+    let mut buffer: String = "".into();
     for (line_number, line) in code.lines().enumerate() {
         let mut underline: String = "".into();
         let mut underline_empty = true;
@@ -38,15 +38,15 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
             }
         }
 
-        str.push_str(line);
+        buffer.push_str(line);
         if !underline_empty {
-            str.push('\n');
-            str.push_str(&underline);
+            buffer.push('\n');
+            buffer.push_str(&underline);
         }
-        str.push('\n');
+        buffer.push('\n');
     }
 
-    str
+    buffer
 }
 
 #[macro_export]
@@ -794,5 +794,403 @@ pub fn main() {
 }
 ",
         find_position_of("arg2:").nth_occurrence(2).under_char('r')
+    );
+}
+
+#[test]
+fn hover_contextual_type() {
+    let code = "
+import wibble/wobble
+const value = wobble.Wobble
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("value").under_char('v')
+    );
+}
+
+#[test]
+fn hover_contextual_type_aliased_module() {
+    let code = "
+import wibble/wobble as wubble
+const value = wubble.Wobble
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("value").under_char('v')
+    );
+}
+
+#[test]
+fn hover_contextual_type_unqualified() {
+    let code = "
+import wibble/wobble.{type Wibble}
+const value = wobble.Wobble
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("value").under_char('v')
+    );
+}
+
+#[test]
+fn hover_contextual_type_unqualified_aliased() {
+    let code = "
+import wibble/wobble.{type Wibble as Wobble}
+const value = wobble.Wobble
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("value").under_char('v')
+    );
+}
+
+#[test]
+fn hover_contextual_type_aliased() {
+    let code = "
+import wibble/wobble
+type Local = wobble.Wibble
+const value = wobble.Wobble
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("value").under_char('v')
+    );
+}
+
+#[test]
+fn hover_contextual_type_function() {
+    let code = "
+import wibble/wobble
+type MyInt = Int
+fn func(value: wobble.Wibble) -> MyInt { 1 }
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("func").under_char('f')
+    );
+}
+
+#[test]
+fn hover_contextual_type_unqualified_import() {
+    let code = "
+import wibble/wobble.{type Wibble as Wobble, Wobble}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wobble }"),
+        find_position_of("Wobble}").under_char('W')
+    );
+}
+
+#[test]
+fn hover_contextual_type_pattern() {
+    let code = "
+import wibble/wobble.{Wibble, Wobble, Wubble}
+
+pub fn cycle(wibble: wobble.Wibble) {
+  case wibble {
+    Wibble -> Wobble
+    Wobble -> Wubble
+    Wubble -> Wibble
+  }
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code)
+            .add_hex_module("wibble/wobble", "pub type Wibble { Wibble Wobble Wubble }"),
+        find_position_of("Wubble ->").under_char('u')
+    );
+}
+
+#[test]
+fn hover_contextual_type_pattern_spread() {
+    let code = "
+import wibble/wobble.{type Wibble as Wobble}
+
+type Thing {
+  Thing(id: Int, value: Wobble)
+}
+
+pub fn main(thing: Thing) {
+  case thing {
+    Thing(id: 0, ..) -> 12
+    _ -> 14
+  }
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of("..").under_char('.')
+    );
+}
+
+#[test]
+fn hover_contextual_type_expression() {
+    let code = "
+import wibble/wobble
+
+pub fn main() {
+  let wibble = wobble.Wibble
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of(".Wibble").under_char('l')
+    );
+}
+
+#[test]
+fn hover_contextual_type_arg() {
+    let code = "
+import wibble/wobble
+
+fn do_things(wibble: wobble.Wibble) { wibble }
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of("wibble:").under_char('w')
+    );
+}
+
+#[test]
+fn hover_print_type_variable_names() {
+    let code = "
+fn main(value: Result(ok, error)) {
+  let v = value
+  v
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("let v").under_char('v')
+    );
+}
+
+#[test]
+fn hover_print_unbound_type_variable_names() {
+    let code = "
+fn make_ok(value: some_type) {
+  let result = Ok(value)
+  result
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("result =").under_char('s')
+    );
+}
+
+#[test]
+fn hover_print_unbound_type_variable_name_without_conflicts() {
+    let code = "
+fn make_ok(value: a) {
+  let result = Ok(value)
+  result
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("result =").under_char('s')
+    );
+}
+
+#[test]
+fn hover_print_imported_alias() {
+    let code = "
+import aliases.{type Aliased}
+const thing: Aliased = 10
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("aliases", "pub type Aliased = Int"),
+        find_position_of("thing").under_char('g')
+    );
+}
+
+#[test]
+fn hover_prelude_type() {
+    let code = "
+const number = 100
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("number").under_char('b')
+    );
+}
+
+#[test]
+fn hover_shadowed_prelude_type() {
+    let code = "
+type Int { Int }
+const number = 100
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("number").under_char('b')
+    );
+}
+
+#[test]
+fn hover_shadowed_prelude_type_imported() {
+    let code = "
+import numbers.{type Int}
+const number = 100
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("numbers", "pub type Int"),
+        find_position_of("number =").under_char('b')
+    );
+}
+
+#[test]
+fn hover_contextual_type_annotation() {
+    let code = "
+import wibble/wobble
+
+fn make_wibble() -> wobble.Wibble { wobble.Wibble }
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of("-> wobble").under_char('o')
+    );
+}
+
+#[test]
+fn hover_contextual_type_annotation_prelude() {
+    let code = "
+fn add_one(a: Int) -> Int {
+  a + 1
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of("-> Int").under_char('I')
+    );
+}
+
+#[test]
+fn hover_contextual_type_annotation_unqualified() {
+    let code = "
+import wibble/wobble.{type Wibble}
+
+fn main(wibble: Wibble) {
+  wibble
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of(": Wibble").under_char('W')
+    );
+}
+
+#[test]
+fn hover_contextual_type_annotation_unqualified_aliased() {
+    let code = "
+import wibble/wobble.{type Wibble as Wubble}
+
+fn main(wibble: Wubble) {
+  wibble
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of(": Wubble").under_char('W')
+    );
+}
+
+#[test]
+fn hover_contextual_type_annotation_aliased_module() {
+    let code = "
+import wibble/wobble as wubble
+
+fn main(wibble: wubble.Wibble) {
+  wibble
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of(": wubble").under_char('e')
+    );
+}
+
+#[test]
+fn hover_contextual_type_annotation_aliased() {
+    let code = "
+import wibble/wobble
+
+type Wubble = wobble.Wibble
+
+fn main(wibble: Wubble) {
+  wibble
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
+        find_position_of(": Wubble").under_char('e')
+    );
+}
+
+#[test]
+fn hover_print_underlying_for_alias_with_parameters() {
+    let code = "
+type LocalResult = Result(String, Int)
+
+fn do_thing() -> LocalResult {
+  Error(1)
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("do_thing").under_char('d')
+    );
+}
+
+#[test]
+fn hover_print_qualified_prelude_type_when_shadowed_by_alias() {
+    let code = "
+type Result = #(Bool, String)
+const ok = Ok(10)
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("ok").under_char('k')
+    );
+}
+
+#[test]
+fn hover_print_qualified_prelude_type_when_shadowed_by_imported_alias() {
+    let code = "
+import alias.{type Bool}
+const value = True
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("alias", "pub type Bool = #(Int, Int)"),
+        find_position_of("value").under_char('v')
     );
 }

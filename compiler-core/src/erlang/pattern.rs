@@ -1,3 +1,7 @@
+use std::cell::RefCell;
+
+use ecow::eco_format;
+
 use crate::analyse::Inferred;
 
 use super::*;
@@ -192,39 +196,41 @@ fn pattern_segment<'a>(
     env: &mut Env<'a>,
     guards: &mut Vec<Document<'a>>,
 ) -> Document<'a> {
-    let mut pattern_is_a_string_literal = false;
-    let mut pattern_is_a_discard = false;
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        Pattern::String { value, .. } => {
-            pattern_is_a_string_literal = true;
-            value.to_doc().surround("\"", "\"")
-        }
+    let pattern_is_a_string_literal = matches!(value, Pattern::String { .. });
+    let pattern_is_a_discard = matches!(value, Pattern::Discard { .. });
 
-        // As normal
-        Pattern::Discard { .. } => {
-            pattern_is_a_discard = true;
-            print(value, vars, define_variables, env, guards)
-        }
-        Pattern::Variable { .. } | Pattern::Int { .. } | Pattern::Float { .. } => {
-            print(value, vars, define_variables, env, guards)
-        }
+    let vars = RefCell::new(vars);
+    let guards = RefCell::new(guards);
 
-        // No other pattern variants are allowed in pattern bit array segments
+    let create_document = |env: &mut Env<'a>| match value {
+        Pattern::String { value, .. } => value.to_doc().surround("\"", "\""),
+        Pattern::Discard { .. }
+        | Pattern::Variable { .. }
+        | Pattern::Int { .. }
+        | Pattern::Float { .. } => print(
+            value,
+            &mut vars.borrow_mut(),
+            define_variables,
+            env,
+            &mut guards.borrow_mut(),
+        ),
         _ => panic!("Pattern segment match not recognised"),
     };
 
     let size = |value: &'a TypedPattern, env: &mut Env<'a>| {
-        Some(
-            ":".to_doc()
-                .append(print(value, vars, define_variables, env, guards)),
-        )
+        Some(":".to_doc().append(print(
+            value,
+            &mut vars.borrow_mut(),
+            define_variables,
+            env,
+            &mut guards.borrow_mut(),
+        )))
     };
 
-    let unit = |value: &'a u8| Some(Document::String(format!("unit:{value}")));
+    let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
-        document,
+        create_document,
         options,
         size,
         unit,

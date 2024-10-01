@@ -47,6 +47,7 @@ impl<'a> ModuleEncoder<'a> {
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
         self.set_line_numbers(&mut module);
+        self.set_version(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
@@ -150,6 +151,13 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn set_version(&mut self, module: &mut module::Builder<'_>) {
+        let mut version = module.reborrow().init_required_version();
+        version.set_major(self.data.minimum_required_version.major);
+        version.set_minor(self.data.minimum_required_version.minor);
+        version.set_patch(self.data.minimum_required_version.patch);
+    }
+
     fn build_type_constructor(
         &mut self,
         mut builder: type_constructor::Builder<'_>,
@@ -160,7 +168,7 @@ impl<'a> ModuleEncoder<'a> {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
-        builder.set_publicity(self.publicity(constructor.publicity));
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.type_);
         self.build_types(
@@ -211,16 +219,29 @@ impl<'a> ModuleEncoder<'a> {
             Deprecation::NotDeprecated => "",
             Deprecation::Deprecated { message } => message,
         });
-        builder.set_publicity(self.publicity(constructor.publicity));
+
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
         self.build_type(builder.reborrow().init_type(), &constructor.type_);
         self.build_value_constructor_variant(builder.init_variant(), &constructor.variant);
     }
 
-    fn publicity(&self, publicity: Publicity) -> crate::schema_capnp::Publicity {
+    fn build_publicity(&mut self, mut builder: publicity::Builder<'_>, publicity: Publicity) {
         match publicity {
-            Publicity::Public => crate::schema_capnp::Publicity::Public,
-            Publicity::Private => crate::schema_capnp::Publicity::Private,
-            Publicity::Internal => crate::schema_capnp::Publicity::Internal,
+            Publicity::Public => builder.set_public(()),
+            Publicity::Private => builder.set_private(()),
+            Publicity::Internal {
+                attribute_location: None,
+            } => {
+                let mut builder = builder.init_internal();
+                builder.set_none(());
+            }
+            Publicity::Internal {
+                attribute_location: Some(location),
+            } => {
+                let builder = builder.init_internal();
+                let builder = builder.init_some();
+                self.build_src_span(builder, location);
+            }
         }
     }
 
@@ -287,12 +308,19 @@ impl<'a> ModuleEncoder<'a> {
                 location,
                 documentation: doc,
                 implementations,
+                external_erlang,
+                external_javascript,
             } => {
                 let mut builder = builder.init_module_fn();
                 builder.set_name(name);
                 builder.set_module(module);
                 builder.set_arity(*arity as u16);
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
+                self.build_external(builder.reborrow().init_external_erlang(), external_erlang);
+                self.build_external(
+                    builder.reborrow().init_external_javascript(),
+                    external_javascript,
+                );
                 self.build_optional_field_map(builder.reborrow().init_field_map(), field_map);
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_implementations(builder.init_implementations(), *implementations);
@@ -535,5 +563,20 @@ impl<'a> ModuleEncoder<'a> {
         builder.set_uses_javascript_externals(implementations.uses_javascript_externals);
         builder.set_can_run_on_erlang(implementations.can_run_on_erlang);
         builder.set_can_run_on_javascript(implementations.can_run_on_javascript);
+    }
+
+    fn build_external(
+        &self,
+        mut builder: option::Builder<'_, external::Owned>,
+        external: &Option<(EcoString, EcoString)>,
+    ) {
+        match external {
+            None => builder.set_none(()),
+            Some((module, function)) => {
+                let mut builder = builder.init_some();
+                builder.set_module(module);
+                builder.set_function(function);
+            }
+        }
     }
 }

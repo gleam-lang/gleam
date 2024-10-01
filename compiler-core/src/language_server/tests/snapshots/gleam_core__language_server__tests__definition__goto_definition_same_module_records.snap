@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+pub type Rec {
+  Var1(Int)
+  Var2(Int, Int)
+}
+
+pub fn main() {
+  let a = Var1(1)
+          ↑      
+  let b = Var2(2, 3)
+}
+
+----- Jumped to `src/app.gleam`
+
+pub type Rec {
+  Var1(Int)
+  ↑▔▔▔▔▔▔▔▔
+  Var2(Int, Int)
+}
+
+pub fn main() {
+  let a = Var1(1)
+  let b = Var2(2, 3)
+}

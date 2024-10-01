@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 222
 expression: "\npub type Direction {\n  Left\n  Right\n}\n"
 ---
 |
@@ -11,6 +10,14 @@ pub type Direction {
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
 Left
   kind:   EnumMember
   detail: Direction
@@ -18,6 +25,14 @@ Left
   desc:   app
   edits:
     [1:0-1:0]: "Left"
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
 Right
   kind:   EnumMember
   detail: Direction
@@ -25,3 +40,7 @@ Right
   desc:   app
   edits:
     [1:0-1:0]: "Right"
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True

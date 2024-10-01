@@ -17,7 +17,7 @@ use crate::{
     pretty::*,
 };
 use camino::Utf8Path;
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use expression::Context;
 use itertools::Itertools;
 
@@ -69,7 +69,7 @@ impl<'a> Generator<'a> {
 
     fn type_reference(&self) -> Document<'a> {
         if self.typescript == TypeScriptDeclarations::None {
-            return Document::Str("");
+            return "".to_doc();
         }
 
         // Get the name of the module relative the directory (similar to basename)
@@ -81,9 +81,7 @@ impl<'a> Generator<'a> {
             .last()
             .expect("JavaScript generator could not identify imported module name.");
 
-        let name = Document::Str(module);
-
-        docvec!["/// <reference types=\"./", name, ".d.mts\" />", line()]
+        docvec!["/// <reference types=\"./", module, ".d.mts\" />", line()]
     }
 
     pub fn compile(&mut self) -> Output<'a> {
@@ -271,7 +269,7 @@ impl<'a> Generator<'a> {
             arg.label
                 .as_ref()
                 .map(|(_, s)| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| Document::String(format!("x{i}")))
+                .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
         let head = if publicity.is_private() || opaque {
@@ -353,7 +351,7 @@ impl<'a> Generator<'a> {
                 Definition::Function(Function {
                     name: Some((_, name)),
                     publicity,
-                    external_javascript: Some((module, function)),
+                    external_javascript: Some((module, function, _location)),
                     ..
                 }) => {
                     self.register_external_function(
@@ -375,22 +373,22 @@ impl<'a> Generator<'a> {
         imports
     }
 
-    fn import_path(&self, package: &'a str, module: &'a str) -> String {
+    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again
         if package == self.module.type_info.package || package.is_empty() {
             // Same package
             match self.current_module_name_segments_count {
-                1 => format!("./{module}.mjs"),
+                1 => eco_format!("./{module}.mjs"),
                 _ => {
                     let prefix = "../".repeat(self.current_module_name_segments_count - 1);
-                    format!("{prefix}{module}.mjs")
+                    eco_format!("{prefix}{module}.mjs")
                 }
             }
         } else {
             // Different package
             let prefix = "../".repeat(self.current_module_name_segments_count);
-            format!("{prefix}{package}/{module}.mjs")
+            eco_format!("{prefix}{package}/{module}.mjs")
         }
     }
 
@@ -415,7 +413,7 @@ impl<'a> Generator<'a> {
             Some((AssignName::Variable(name), _)) => (false, name.as_str()),
         };
 
-        let module_name = format!("${module_name}");
+        let module_name = eco_format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
@@ -444,7 +442,7 @@ impl<'a> Generator<'a> {
             alias: if name == fun && !needs_escaping {
                 None
             } else if needs_escaping {
-                Some(Document::String(escape_identifier(name)))
+                Some(escape_identifier(name).to_doc())
             } else {
                 Some(name.to_doc())
             },
@@ -452,7 +450,7 @@ impl<'a> Generator<'a> {
         if publicity.is_importable() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(module.to_string(), [], [member]);
+        imports.register_module(EcoString::from(module), [], [member]);
     }
 
     fn module_constant(
@@ -616,12 +614,12 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             let doc = if discards == 0 {
                 "_".to_doc()
             } else {
-                Document::String(format!("_{discards}"))
+                eco_format!("_{discards}").to_doc()
             };
             discards += 1;
             doc
         }
-        Some(name) if tail_recursion_used => Document::String(format!("loop${name}")),
+        Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
         Some(name) => maybe_escape_identifier_doc(name),
     }))
 }
@@ -742,23 +740,23 @@ fn is_usable_js_identifier(word: &str) -> bool {
     )
 }
 
-fn maybe_escape_identifier_string(word: &str) -> String {
+fn maybe_escape_identifier_string(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
-        word.to_string()
+        EcoString::from(word)
     } else {
         escape_identifier(word)
     }
 }
 
-fn escape_identifier(word: &str) -> String {
-    format!("{word}$")
+fn escape_identifier(word: &str) -> EcoString {
+    eco_format!("{word}$")
 }
 
 fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
     if is_usable_js_identifier(word) {
         word.to_doc()
     } else {
-        Document::String(escape_identifier(word))
+        escape_identifier(word).to_doc()
     }
 }
 

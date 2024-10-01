@@ -1,4 +1,4 @@
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 // https://github.com/gleam-lang/gleam/issues/2083
 #[test]
@@ -63,6 +63,40 @@ fn constant_long_list_of_tuples() {
 
 pub fn main() {
   todo
+}
+"#
+    );
+}
+
+#[test]
+fn nested_tuple_access() {
+    assert_format!(
+        r#"pub fn main() {
+  wibble.1.0
+}
+"#
+    );
+}
+
+#[test]
+fn nested_tuple_with_needless_block() {
+    assert_format_rewrite!(
+        r#"pub fn main() {
+  { wibble.1 }.0
+}
+"#,
+        r#"pub fn main() {
+  wibble.1.0
+}
+"#
+    );
+}
+
+#[test]
+fn nested_literal_tuple_with_needless_block_is_not_changed() {
+    assert_format!(
+        r#"pub fn main() {
+  { #(wibble, wobble).1 }.0
 }
 "#
     );

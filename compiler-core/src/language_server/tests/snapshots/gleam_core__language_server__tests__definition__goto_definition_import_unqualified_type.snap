@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+import example_module.{type MyType}
+                              ↑    
+fn main() -> MyType {
+  0
+}
+
+----- Jumped to `src/example_module.gleam`
+pub type MyType = Int
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔

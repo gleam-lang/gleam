@@ -95,6 +95,10 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         let type_info = type_info.clone().with_location(import.location);
 
+        self.environment
+            .names
+            .type_in_scope(imported_name.clone(), type_info.type_.as_ref());
+
         if let Err(e) = self
             .environment
             .insert_type_constructor(imported_name.clone(), type_info)
@@ -159,7 +163,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     location,
                     self.problems,
                 );
-                self.environment.value_names.named_constructor_in_scope(
+                self.environment.names.named_constructor_in_scope(
                     module.clone(),
                     name.clone(),
                     used_name.clone(),
@@ -248,8 +252,8 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 .insert(used_name.clone(), (import.location, import_info));
 
             self.environment
-                .value_names
-                .imported_module(import.module.clone(), used_name)
+                .names
+                .imported_module(import.module.clone(), used_name);
         };
 
         Ok(())

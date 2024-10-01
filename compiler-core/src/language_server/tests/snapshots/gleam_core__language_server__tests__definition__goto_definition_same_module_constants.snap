@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+----- Jumping from `src/app.gleam`
+
+const x = 1
+
+pub fn main() {
+  x
+  ↑
+}
+
+----- Jumped to `src/app.gleam`
+
+const x = 1
+↑▔▔▔▔▔▔    
+
+pub fn main() {
+  x
+}

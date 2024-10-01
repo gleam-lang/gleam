@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  let tuple = #(1, #(1, 1))\n  tuple.1.0\n}\n"
+---
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:4:3
+  │
+4 │   tuple.1.0
+  │   ^^^^^^^^^ This requires a Gleam version >= 1.1.0
+
+The ability to access nested tuple fields was introduced in version v1.1.0.
+But the Gleam version range specified in your `gleam.toml` would allow this
+code to run on an earlier version like v1.0.0, resulting in compilation
+errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.1.0"

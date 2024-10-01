@@ -11,11 +11,13 @@ use crate::{
 };
 use ecow::EcoString;
 use itertools::Itertools;
-use std::sync::Arc;
+use pubgrub::range::Range;
+use std::rc::Rc;
 use vec1::Vec1;
 
 use camino::Utf8PathBuf;
 
+mod accessors;
 mod assert;
 mod assignments;
 mod conditional_compilation;
@@ -31,6 +33,7 @@ mod pretty;
 mod target_implementations;
 mod type_alias;
 mod use_;
+mod version_inference;
 mod warnings;
 
 #[macro_export]
@@ -136,9 +139,10 @@ macro_rules! assert_error {
     };
 
     ($src:expr) => {
-        let error = $crate::type_::tests::compile_statement_sequence($src)
+        let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
+            names,
             src: $src.into(),
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
             errors: error,
@@ -172,14 +176,30 @@ macro_rules! assert_with_module_error {
     };
 }
 
-fn get_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> Vec<crate::warning::Warning> {
+fn get_warnings(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    gleam_version: Option<Range<Version>>,
+) -> Vec<crate::warning::Warning> {
     let warnings = VectorWarningEmitterIO::default();
-    _ = compile_module("test_module", src, Some(Arc::new(warnings.clone())), deps).unwrap();
+    _ = compile_module_with_opts(
+        "test_module",
+        src,
+        Some(Rc::new(warnings.clone())),
+        deps,
+        Target::Erlang,
+        TargetSupport::NotEnforced,
+        gleam_version,
+    );
     warnings.take().into_iter().collect_vec()
 }
 
-fn get_printed_warnings(src: &str, deps: Vec<DependencyModule<'_>>) -> String {
-    print_warnings(get_warnings(src, deps))
+fn get_printed_warnings(
+    src: &str,
+    deps: Vec<DependencyModule<'_>>,
+    gleam_version: Option<Range<Version>>,
+) -> String {
+    print_warnings(get_warnings(src, deps, gleam_version))
 }
 
 fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
@@ -193,14 +213,13 @@ fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
 #[macro_export]
 macro_rules! assert_warnings_with_imports {
     ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
-        let warnings = $crate::type_::tests::get_warnings(
+        let output = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![
                 $(("thepackage", $name, $module_src)),*
             ],
+            None
         );
-        assert!(!warnings.is_empty());
-        let output = $crate::type_::tests::print_warnings(warnings);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -208,7 +227,7 @@ macro_rules! assert_warnings_with_imports {
 #[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let output = $crate::type_::tests::get_printed_warnings($src, vec![]);
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![], None);
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
@@ -216,7 +235,8 @@ macro_rules! assert_warning {
     ($(($name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(("thepackage", $name, $module_src)),*]
+            vec![$(("thepackage", $name, $module_src)),*],
+            None
         );
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -225,8 +245,18 @@ macro_rules! assert_warning {
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
         let output = $crate::type_::tests::get_printed_warnings(
             $src,
-            vec![$(($package, $name, $module_src)),*]
+            vec![$(($package, $name, $module_src)),*],
+            None
         );
+        assert!(!output.is_empty());
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_warnings_with_gleam_version {
+    ($gleam_version:expr, $src:expr$(,)?) => {
+        let output = $crate::type_::tests::get_printed_warnings($src, vec![], Some($gleam_version));
         assert!(!output.is_empty());
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
@@ -235,13 +265,14 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![]);
+        let warnings = $crate::type_::tests::get_warnings($src, vec![], None);
         assert_eq!(warnings, vec![]);
     };
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
+            None,
         );
         assert_eq!(warnings, vec![]);
     };
@@ -249,7 +280,7 @@ macro_rules! assert_no_warnings {
 
 fn compile_statement_sequence(
     src: &str,
-) -> Result<Vec1<TypedStatement>, Vec1<crate::type_::Error>> {
+) -> Result<Vec1<TypedStatement>, (Vec1<crate::type_::Error>, Names)> {
     let ast = crate::parse::parse_statement_sequence(src).expect("syntax error");
     let mut modules = im::HashMap::new();
     let ids = UniqueIdGenerator::new();
@@ -259,15 +290,17 @@ fn compile_statement_sequence(
     // place.
     let _ = modules.insert(PRELUDE_MODULE_NAME.into(), build_prelude(&ids));
     let mut problems = Problems::new();
+    let mut environment = Environment::new(
+        ids,
+        "thepackage".into(),
+        None,
+        "themodule".into(),
+        Target::Erlang,
+        &modules,
+        TargetSupport::Enforced,
+    );
     let res = ExprTyper::new(
-        &mut Environment::new(
-            ids,
-            "thepackage".into(),
-            "themodule".into(),
-            Target::Erlang,
-            &modules,
-            TargetSupport::Enforced,
-        ),
+        &mut environment,
         FunctionDefinition {
             has_body: true,
             has_erlang_external: false,
@@ -278,7 +311,7 @@ fn compile_statement_sequence(
     .infer_statements(ast);
     match Vec1::try_from_vec(problems.take_errors()) {
         Err(_) => Ok(res),
-        Ok(errors) => Err(errors),
+        Ok(errors) => Err((errors, environment.names)),
     }
 }
 
@@ -320,6 +353,7 @@ pub fn infer_module_with_target(
         dep,
         target,
         TargetSupport::NotEnforced,
+        None,
     )
     .expect("should successfully infer");
     ast.type_info
@@ -337,9 +371,9 @@ pub fn infer_module_with_target(
 pub fn compile_module(
     module_name: &str,
     src: &str,
-    warnings: Option<Arc<dyn WarningEmitterIO>>,
+    warnings: Option<Rc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
-) -> Result<TypedModule, Vec<crate::type_::Error>> {
+) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
     compile_module_with_opts(
         module_name,
         src,
@@ -347,23 +381,24 @@ pub fn compile_module(
         dep,
         Target::Erlang,
         TargetSupport::NotEnforced,
+        None,
     )
 }
 
 pub fn compile_module_with_opts(
     module_name: &str,
     src: &str,
-    warnings: Option<Arc<dyn WarningEmitterIO>>,
+    warnings: Option<Rc<dyn WarningEmitterIO>>,
     dep: Vec<DependencyModule<'_>>,
     target: Target,
     target_support: TargetSupport,
-) -> Result<TypedModule, Vec<crate::type_::Error>> {
+    gleam_version: Option<Range<Version>>,
+) -> Result<TypedModule, (Vec<crate::type_::Error>, Names)> {
     let ids = UniqueIdGenerator::new();
     let mut modules = im::HashMap::new();
 
-    let emitter = WarningEmitter::new(
-        warnings.unwrap_or_else(|| Arc::new(VectorWarningEmitterIO::default())),
-    );
+    let emitter =
+        WarningEmitter::new(warnings.unwrap_or_else(|| Rc::new(VectorWarningEmitterIO::default())));
 
     // DUPE: preludeinsertion
     // TODO: Currently we do this here and also in the tests. It would be better
@@ -406,6 +441,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
+    config.gleam_version = gleam_version;
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
     let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
@@ -422,8 +458,8 @@ pub fn compile_module_with_opts(
 
     match inference_result {
         Outcome::Ok(ast) => Ok(ast),
-        Outcome::PartialFailure(_, errors) => Err(errors.into()),
-        Outcome::TotalFailure(error) => Err(error.into()),
+        Outcome::PartialFailure(ast, errors) => Err((errors.into(), ast.names)),
+        Outcome::TotalFailure(error) => Err((error.into(), Default::default())),
     }
 }
 
@@ -436,16 +472,18 @@ pub fn module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error = compile_module_with_opts(
+    let (error, names) = compile_module_with_opts(
         "themodule",
         src,
         None,
         deps,
         target,
         TargetSupport::NotEnforced,
+        None,
     )
     .expect_err("should infer an error");
     let error = Error::Type {
+        names,
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -462,16 +500,18 @@ pub fn internal_module_error_with_target(
     deps: Vec<DependencyModule<'_>>,
     target: Target,
 ) -> String {
-    let error = compile_module_with_opts(
+    let (error, names) = compile_module_with_opts(
         "thepackage/internal/themodule",
         src,
         None,
         deps,
         target,
         TargetSupport::NotEnforced,
+        None,
     )
     .expect_err("should infer an error");
     let error = Error::Type {
+        names,
         src: src.into(),
         path: Utf8PathBuf::from("/src/one/two.gleam"),
         errors: Vec1::try_from_vec(error).expect("should have at least one error"),
@@ -630,6 +670,7 @@ fn infer_module_type_retention_test() {
         name: "ok".into(),
         definitions: vec![],
         type_info: (),
+        names: Default::default(),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
@@ -717,6 +758,7 @@ fn infer_module_type_retention_test() {
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     );
 }
@@ -2224,6 +2266,8 @@ fn assert_suitable_main_function_wrong_arity() {
             documentation: None,
             location: Default::default(),
             module: "module".into(),
+            external_erlang: None,
+            external_javascript: None,
             implementations: Implementations {
                 gleam: true,
                 uses_erlang_externals: false,
@@ -2249,6 +2293,8 @@ fn assert_suitable_main_function_ok() {
             documentation: None,
             location: Default::default(),
             module: "module".into(),
+            external_erlang: None,
+            external_javascript: None,
             implementations: Implementations {
                 gleam: true,
                 uses_erlang_externals: false,
@@ -2274,6 +2320,8 @@ fn assert_suitable_main_function_erlang_not_supported() {
             documentation: None,
             location: Default::default(),
             module: "module".into(),
+            external_erlang: Some(("wibble".into(), "wobble".into())),
+            external_javascript: Some(("wobble".into(), "wibble".into())),
             implementations: Implementations {
                 gleam: false,
                 uses_erlang_externals: true,
@@ -2299,6 +2347,8 @@ fn assert_suitable_main_function_javascript_not_supported() {
             documentation: None,
             location: Default::default(),
             module: "module".into(),
+            external_erlang: Some(("wibble".into(), "wobble".into())),
+            external_javascript: Some(("wobble".into(), "wibble".into())),
             implementations: Implementations {
                 gleam: false,
                 uses_erlang_externals: true,

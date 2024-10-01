@@ -11,6 +11,6 @@ type Wibble {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nString\n```\n",
+        "```gleam\ngleam.String\n```\n",
     ),
 )

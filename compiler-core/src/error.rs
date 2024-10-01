@@ -3,14 +3,10 @@ use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::error::{MissingAnnotation, UnknownTypeHint};
 use crate::type_::error::{Named, RecordVariants};
+use crate::type_::printer::{Names, Printer};
 use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
-use crate::{
-    bit_array,
-    diagnostic::Level,
-    javascript,
-    type_::{pretty::Printer, UnifyErrorSituation},
-};
+use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
 use ecow::EcoString;
 use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
@@ -20,7 +16,7 @@ use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
 use std::collections::HashSet;
 use std::env;
-use std::fmt::Debug;
+use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
 use termcolor::Buffer;
@@ -69,6 +65,7 @@ pub enum Error {
         path: Utf8PathBuf,
         src: EcoString,
         errors: Vec1<crate::type_::Error>,
+        names: Names,
     },
 
     #[error("unknown import {import}")]
@@ -289,6 +286,40 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Version already published")]
     HexPublishReplaceRequired { version: String },
+
+    #[error("The gleam version constraint is wrong and so cannot be published")]
+    CannotPublishWrongVersion {
+        minimum_required_version: SmallVersion,
+        wrongfully_allowed_version: SmallVersion,
+    },
+}
+
+/// This is to make clippy happy and not make the error variant too big by
+/// storing an entire `hexpm::version::Version` in the error.
+///
+/// This is enough to report wrong Gleam compiler versions.
+///
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub struct SmallVersion {
+    major: u8,
+    minor: u8,
+    patch: u8,
+}
+
+impl Display for SmallVersion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(&format!("{}.{}.{}", self.major, self.minor, self.patch))
+    }
+}
+
+impl SmallVersion {
+    pub fn from_hexpm(version: hexpm::version::Version) -> Self {
+        Self {
+            major: version.major as u8,
+            minor: version.minor as u8,
+            patch: version.patch as u8,
+        }
+    }
 }
 
 impl Error {
@@ -365,7 +396,7 @@ The conflicting packages are:
 
 {}
 ",
-                    conflicting_packages.into_iter().map(|s| format!("- {}", s)).join("\n"))
+                    conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n"))
             }
 
             ResolutionError::ErrorRetrievingDependencies {
@@ -653,7 +684,7 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
     if options.len() == 1 {
         return options
             .first()
-            .map(|option| format!("Did you mean `{}`?", option));
+            .map(|option| format!("Did you mean `{option}`?"));
     }
 
     // Check for case-insensitive matches.
@@ -663,7 +694,7 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
         .iter()
         .find(|&option| option.eq_ignore_ascii_case(name))
     {
-        return Some(format!("Did you mean `{}`?", exact_match));
+        return Some(format!("Did you mean `{exact_match}`?"));
     }
 
     // Calculate the threshold as one third of the name's length, with a minimum of 1.
@@ -679,7 +710,7 @@ fn did_you_mean(name: &str, options: &[EcoString]) -> Option<String> {
                 .map(|distance| (option, distance))
         })
         .min_by_key(|&(_, distance)| distance)
-        .map(|(option, _)| format!("Did you mean `{}`?", option))
+        .map(|(option, _)| format!("Did you mean `{option}`?"))
 }
 
 impl Error {
@@ -896,6 +927,23 @@ Please remove them and try again.
                 ),
                 level: Level::Error,
                 hint: None,
+                location: None,
+            }],
+
+            Error::CannotPublishWrongVersion { minimum_required_version, wrongfully_allowed_version } => vec![Diagnostic {
+                title: "Cannot publish package with wrong Gleam version range".into(),
+                text: wrap(&format!(
+                    "Your package uses features that require at least v{minimum_required_version}.
+But the Gleam version range specified in your `gleam.toml` would allow this \
+code to run on an earlier version like v{wrongfully_allowed_version}, \
+resulting in compilation errors!"
+                )),
+                level: Level::Error,
+                hint: Some(format!(
+                    "Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = \">= {minimum_required_version}\""
+                )),
                 location: None,
             }],
 
@@ -1197,7 +1245,7 @@ Second: {second}"
                 }]
             }
 
-            Error::Type { path, src, errors: error } => error
+            Error::Type { path, src, errors: error, names } => error
                 .iter()
                 .map(|error| {
                     match error {
@@ -1502,10 +1550,10 @@ Hint: Add some type annotations and try again.")
                 }
 
                 TypeError::NotFn { location, type_ } => {
-                    let mut printer = Printer::new();
+                    let mut printer = Printer::new(names);
                     let text = format!(
-                        "This value is being called as a function but its type is:\n\n{}",
-                        printer.pretty_print(type_, 4)
+                        "This value is being called as a function but its type is:\n\n    {}",
+                        printer.print_type(type_)
                     );
                     Diagnostic {
                         title: "Type mismatch".into(),
@@ -1532,12 +1580,12 @@ Hint: Add some type annotations and try again.")
                     fields,
                     variants,
                 } => {
-                    let mut printer = Printer::new();
+                    let mut printer = Printer::new(names);
 
                     // Give a hint about what type this value has.
                     let mut text = format!(
-                        "The value being accessed has this type:\n\n{}\n",
-                        printer.pretty_print(type_, 4)
+                        "The value being accessed has this type:\n\n    {}\n",
+                        printer.print_type(type_)
                     );
 
                     // Give a hint about what record fields this value has, if any.
@@ -1606,21 +1654,19 @@ to call a method on this value you may want to use the function syntax instead."
                     expected,
                     given,
                     situation: Some(UnifyErrorSituation::Operator(op)),
-                    rigid_type_names: annotated_names,
                 } => {
-                    let mut printer = Printer::new();
-                    printer.with_names(annotated_names.clone());
+                    let mut printer = Printer::new(names);
                     let mut text = format!(
                         "The {op} operator expects arguments of this type:
 
-{expected}
+    {expected}
 
 But this argument has this type:
 
-{given}\n",
+    {given}\n",
                         op = op.name(),
-                        expected = printer.pretty_print(expected, 4),
-                        given = printer.pretty_print(given, 4),
+                        expected = printer.print_type(expected),
+                        given = printer.print_type(given),
                     );
                     if let Some(hint) = hint_alternative_operator(op, given) {
                         text.push('\n');
@@ -1649,7 +1695,6 @@ But this argument has this type:
                     expected,
                     given,
                     situation: Some(UnifyErrorSituation::PipeTypeMismatch),
-                    rigid_type_names: annotated_names,
                 } => {
                     // Remap the pipe function type into just the type expected by the pipe.
                     let expected = expected
@@ -1662,20 +1707,19 @@ But this argument has this type:
                         .and_then(|(args, _)| args.first().cloned())
                         .unwrap_or_else(|| given.clone());
 
-                    let mut printer = Printer::new();
-                    printer.with_names(annotated_names.clone());
+                    let mut printer = Printer::new(names);
                     let text = format!(
                         "The argument is:
 
-{given}
+    {given}
 
 But function expects:
 
-{expected}",
+    {expected}",
                         expected = expected
-                            .map(|v| printer.pretty_print(&v, 4))
+                            .map(|v| printer.print_type(&v))
                             .unwrap_or_else(|| "    No arguments".into()),
-                        given = printer.pretty_print(&given, 4)
+                        given = printer.print_type(&given)
                     );
 
                     Diagnostic {
@@ -1700,10 +1744,8 @@ But function expects:
                     expected,
                     given,
                     situation,
-                    rigid_type_names: annotated_names,
                 } => {
-                    let mut printer = Printer::new();
-                    printer.with_names(annotated_names.clone());
+                    let mut printer = Printer::new(names);
                     let mut text = if let Some(description) = situation.as_ref().and_then(|s| s.description()) {
                         let mut text = description.to_string();
                         text.push('\n');
@@ -1712,10 +1754,10 @@ But function expects:
                     } else {
                         "".into()
                     };
-                    text.push_str("Expected type:\n\n");
-                    text.push_str(&printer.pretty_print(expected, 4));
-                    text.push_str("\n\nFound type:\n\n");
-                    text.push_str(&printer.pretty_print(given, 4));
+                    text.push_str("Expected type:\n\n    ");
+                    text.push_str(&printer.print_type(expected));
+                    text.push_str("\n\nFound type:\n\n    ");
+                    text.push_str(&printer.print_type(given));
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
@@ -1921,7 +1963,7 @@ but no type in scope with that name."
                 }
 
                 TypeError::PrivateTypeLeak { location, leaked } => {
-                    let mut printer = Printer::new();
+                    let mut printer = Printer::new(names);
 
                     // TODO: be more precise.
                     // - is being returned by this public function
@@ -1932,10 +1974,10 @@ but no type in scope with that name."
                         "The following type is private, but is \
 being used by this public export.
 
-{}
+    {}
 
 Private types can only be used within the module that defines them.",
-                        printer.pretty_print(leaked, 4),
+                        printer.print_type(leaked),
                     );
                     Diagnostic {
                         title: "Private type used in public interface".into(),
@@ -2020,7 +2062,7 @@ Private types can only be used within the module that defines them.",
                         format!("The module `{module_name}` does not have a `{name}` value.")
                     };
                     Diagnostic {
-                        title: "Unknown module field".into(),
+                        title: "Unknown module value".into(),
                         text,
                         hint: None,
                         level: Level::Error,
@@ -2233,12 +2275,12 @@ tuple has {} elements so the highest valid index is {}.",
                 }
 
                 TypeError::NotATuple { location, given } => {
-                    let mut printer = Printer::new();
+                    let mut printer = Printer::new(names);
                     let text = format!(
                         "To index into this value it needs to be a tuple, however it has this type:
 
-{}",
-                        printer.pretty_print(given, 4),
+    {}",
+                        printer.print_type(given),
                     );
                     Diagnostic {
                         title: "Type mismatch".into(),
@@ -2823,15 +2865,15 @@ Rename or remove one of them.",
                 },
 
                 TypeError::NotFnInUse { location, type_ } => {
-                    let mut printer = Printer::new();
+                    let mut printer = Printer::new(names);
                     let text = wrap_format!(
                         "In a use expression, there should be a function on \
 the right hand side of `<-`, but this value has type:
 
-{}
+    {}
 
 See: https://tour.gleam.run/advanced-features/use/",
-                        printer.pretty_print(type_, 4)
+                        printer.print_type(type_)
                     );
 
                     Diagnostic {
@@ -2924,15 +2966,15 @@ so it cannot take the the `use` callback function as a final argument.\n")
                 },
 
                 TypeError::UseFnDoesntTakeCallback { location, actual_type: Some(actual) } => {
-                    let mut printer = Printer::new();
+                    let mut printer = Printer::new(names);
                     let text = wrap_format!("The function on the right hand side of `<-` \
 has to take a callback function as its last argument. \
 But the last argument of this function has type:
 
-{}
+    {}
 
 See: https://tour.gleam.run/advanced-features/use/",
-                        printer.pretty_print(actual, 4)
+                        printer.print_type(actual)
                     );
                     Diagnostic {
                         title: "Type mismatch".into(),

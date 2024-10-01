@@ -67,23 +67,23 @@ fn fits_test() {
     assert!(fits(0, 0, vector![(0, Unbroken, &Line(100))]));
 
     // String fits if smaller than limit
-    let doc = String("Hello".into());
+    let doc = Document::str("Hello");
     assert!(fits(5, 0, vector![(0, Broken, &doc)]));
-    let doc = String("Hello".into());
+    let doc = Document::str("Hello");
     assert!(fits(5, 0, vector![(0, Unbroken, &doc)]));
-    let doc = String("Hello".into());
+    let doc = Document::str("Hello");
     assert!(!fits(4, 0, vector![(0, Broken, &doc)]));
-    let doc = String("Hello".into());
+    let doc = Document::str("Hello");
     assert!(!fits(4, 0, vector![(0, Unbroken, &doc)]));
 
     // Cons fits if combined smaller than limit
-    let doc = String("1".into()).append(String("2".into()));
+    let doc = Document::str("1").append(Document::str("2"));
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
-    let doc = String("1".into()).append(String("2".into()));
+    let doc = Document::str("1").append(Document::str("2"));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc,)]));
-    let doc = String("1".into()).append(String("2".into()));
+    let doc = Document::str("1").append(Document::str("2"));
     assert!(!fits(1, 0, vector![(0, Broken, &doc)]));
-    let doc = String("1".into()).append(String("2".into()));
+    let doc = Document::str("1").append(Document::str("2"));
     assert!(!fits(1, 0, vector![(0, Unbroken, &doc)]));
 
     // Nest fits if combined smaller than limit
@@ -91,7 +91,7 @@ fn fits_test() {
         1,
         NestMode::Increase,
         NestCondition::Always,
-        Box::new(String("12".into())),
+        Box::new(Document::str("12")),
     );
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
@@ -103,7 +103,7 @@ fn fits_test() {
         0,
         NestMode::Increase,
         NestCondition::Always,
-        Box::new(String("12".into())),
+        Box::new(Document::str("12")),
     );
     assert!(fits(2, 0, vector![(0, Broken, &doc)]));
     assert!(fits(2, 0, vector![(0, Unbroken, &doc)]));
@@ -113,10 +113,10 @@ fn fits_test() {
 
 #[test]
 fn format_test() {
-    let doc = String("Hi".into());
+    let doc = Document::str("Hi");
     assert_eq!("Hi", doc.to_pretty_string(10));
 
-    let doc = String("Hi".into()).append(String(", world!".into()));
+    let doc = Document::str("Hi").append(Document::str(", world!"));
     assert_eq!("Hi, world!", doc.clone().to_pretty_string(10));
 
     let doc = &Break {
@@ -139,7 +139,7 @@ fn format_test() {
         2,
         NestMode::Increase,
         NestCondition::Always,
-        Box::new(String("1".into()).append(Line(1).append(String("2".into())))),
+        Box::new(Document::str("1").append(Line(1).append(Document::str("2")))),
     );
     assert_eq!("1\n  2", doc.to_pretty_string(1));
 

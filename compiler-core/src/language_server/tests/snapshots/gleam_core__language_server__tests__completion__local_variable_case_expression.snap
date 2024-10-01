@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: "\npub fn main() {\n  case True {\n    True as wibble -> { todo }\n    False -> { todo }\n  }\n}\n"
+---
+pub fn main() {
+  case True {
+    True as wibble -> { t|odo }
+    False -> { todo }
+  }
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+main
+  kind:   Function
+  detail: fn() -> a
+  sort:   2_main
+  desc:   app
+  edits:
+    [3:24-3:24]: "main"
+wibble
+  kind:   Variable
+  detail: Bool
+  sort:   2_wibble
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [3:24-3:24]: "wibble"

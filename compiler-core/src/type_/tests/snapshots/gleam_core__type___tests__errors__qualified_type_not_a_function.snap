@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble.{type Function as FuncWrapper}\npub fn main(f: FuncWrapper) {\n  f()\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   f()
+  │   ^
+
+This value is being called as a function but its type is:
+
+    FuncWrapper

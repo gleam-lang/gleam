@@ -1,9 +1,10 @@
+use pubgrub::range::Range;
+
 use crate::{
     analyse::TargetSupport,
     ast::{Publicity, PIPE_VARIABLE},
     build::Target,
     error::edit_distance,
-    exhaustiveness::printer::ValueNames,
     uid::UniqueIdGenerator,
 };
 
@@ -13,6 +14,11 @@ use std::collections::HashMap;
 #[derive(Debug)]
 pub struct Environment<'a> {
     pub current_package: EcoString,
+
+    /// The gleam version range required by the current package as stated in its
+    /// gleam.toml
+    pub gleam_version: Option<Range<Version>>,
+
     pub current_module: EcoString,
     pub target: Target,
     pub ids: UniqueIdGenerator,
@@ -57,13 +63,14 @@ pub struct Environment<'a> {
     /// compilation target.
     pub target_support: TargetSupport,
 
-    pub value_names: ValueNames,
+    pub names: Names,
 }
 
 impl<'a> Environment<'a> {
     pub fn new(
         ids: UniqueIdGenerator,
         current_package: EcoString,
+        gleam_version: Option<Range<Version>>,
         current_module: EcoString,
         target: Target,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
@@ -73,17 +80,22 @@ impl<'a> Environment<'a> {
             .get(PRELUDE_MODULE_NAME)
             .expect("Unable to find prelude in importable modules");
 
-        let mut value_names = ValueNames::new();
+        let mut names = Names::new();
         for name in prelude.values.keys() {
-            value_names.named_constructor_in_scope(
+            names.named_constructor_in_scope(
                 PRELUDE_MODULE_NAME.into(),
                 name.clone(),
                 name.clone(),
             );
         }
 
+        for name in prelude.types.keys() {
+            names.named_type_in_scope(PRELUDE_MODULE_NAME.into(), name.clone(), name.clone());
+        }
+
         Self {
             current_package: current_package.clone(),
+            gleam_version,
             previous_id: ids.next(),
             ids,
             target,
@@ -102,7 +114,7 @@ impl<'a> Environment<'a> {
             current_module,
             entity_usages: vec![HashMap::new()],
             target_support,
-            value_names,
+            names,
         }
     }
 }

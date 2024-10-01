@@ -1,4 +1,5 @@
 use ecow::{eco_format, EcoString};
+use hexpm::version::Version;
 
 use super::*;
 use crate::{
@@ -59,6 +60,7 @@ fn write_cache(
         is_internal: false,
         src_path: Utf8PathBuf::from(format!("/src/{}.gleam", name)),
         warnings: vec![],
+        minimum_required_version: Version::new(0, 1, 0),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(

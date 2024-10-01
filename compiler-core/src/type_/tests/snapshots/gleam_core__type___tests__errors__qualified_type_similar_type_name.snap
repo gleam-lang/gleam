@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\nconst value: wibble.Int = 20\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:27
+  │
+3 │ const value: wibble.Int = 20
+  │                           ^^
+
+Expected type:
+
+    wibble.Int
+
+Found type:
+
+    Int

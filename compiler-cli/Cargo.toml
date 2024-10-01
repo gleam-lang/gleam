@@ -1,6 +1,6 @@
 [package]
 name = "gleam"
-version = "1.4.1"
+version = "1.5.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -35,6 +35,8 @@ fslock = "0"
 same-file = "1"
 # Open generated docs in browser
 opener = "0"
+# Pubgrub dependency resolution algorithm
+pubgrub = "0"
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true
@@ -63,6 +65,7 @@ walkdir.workspace = true
 # Creation of temporary directories
 tempfile = "3"
 pretty_assertions.workspace = true
+insta.workspace = true
 
 [build-dependencies]
 # For statically linking the VCRuntime on Windows when

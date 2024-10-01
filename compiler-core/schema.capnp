@@ -29,6 +29,13 @@ struct Module {
   lineNumbers @6 :LineNumbers;
   srcPath @7 :Text;
   isInternal @8 :Bool;
+  requiredVersion @9 :Version;
+}
+
+struct Version {
+  major @0 :UInt32;
+  minor @1 :UInt32;
+  patch @2 :UInt32;
 }
 
 struct TypesVariantConstructors {
@@ -100,10 +107,12 @@ struct ValueConstructor {
   deprecated @3 :Text;
 }
 
-enum Publicity {
-  public @0;
-  private @1;
-  internal @2;
+struct Publicity {
+  union {
+    public @0 :Void;
+    private @1 :Void;
+    internal @2 :Option(SrcSpan);
+  }
 }
 
 struct Implementations {
@@ -132,6 +141,8 @@ struct ValueConstructorVariant {
       location @7 :SrcSpan;
       documentation @15 :Text;
       implementations @18 :Implementations;
+      externalErlang @20 :Option(External);
+      externalJavascript @21 :Option(External);
     }
 
     record :group {
@@ -145,6 +156,11 @@ struct ValueConstructorVariant {
       constructorIndex @17 :UInt16;
     }
   }
+}
+
+struct External {
+  module @0 :Text;
+  function @1 :Text;
 }
 
 struct SrcSpan {

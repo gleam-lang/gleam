@@ -88,16 +88,13 @@ pub(crate) fn erlang_shipment() -> Result<()> {
 
     println!(
         "
-Your Erlang shipment has been generated to {path}.
+Your Erlang shipment has been generated to {out}.
 
 It can be copied to a compatible server with Erlang installed and run with
-the {file} script.
+the {ENTRYPOINT_FILENAME} script.
 
     {entrypoint}
 ",
-        path = out,
-        file = ENTRYPOINT_FILENAME,
-        entrypoint = entrypoint,
     );
 
     Ok(())
@@ -105,8 +102,8 @@ the {file} script.
 
 pub fn hex_tarball() -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let config = crate::config::root_config()?;
-    let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &config)?;
+    let mut config = crate::config::root_config()?;
+    let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &mut config)?;
 
     let path = paths.build_export_hex_tarball(&config.name, &config.version.to_string());
     crate::fs::write_bytes(&path, &data)?;

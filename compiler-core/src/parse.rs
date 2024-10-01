@@ -117,8 +117,8 @@ enum InternalAttribute {
 struct Attributes {
     target: Option<Target>,
     deprecated: Deprecation,
-    external_erlang: Option<(EcoString, EcoString)>,
-    external_javascript: Option<(EcoString, EcoString)>,
+    external_erlang: Option<(EcoString, EcoString, SrcSpan)>,
+    external_javascript: Option<(EcoString, EcoString, SrcSpan)>,
     internal: InternalAttribute,
 }
 
@@ -134,7 +134,7 @@ impl Attributes {
         }
     }
 
-    fn set_external_for(&mut self, target: Target, ext: Option<(EcoString, EcoString)>) {
+    fn set_external_for(&mut self, target: Target, ext: Option<(EcoString, EcoString, SrcSpan)>) {
         match target {
             Target::Erlang => self.external_erlang = ext,
             Target::JavaScript => self.external_javascript = ext,
@@ -213,7 +213,7 @@ pub struct Parser<T: Iterator<Item = LexResult>> {
     tok0: Option<Spanned>,
     tok1: Option<Spanned>,
     extra: ModuleExtra,
-    doc_comments: VecDeque<(u32, String)>,
+    doc_comments: VecDeque<(u32, EcoString)>,
 }
 impl<T> Parser<T>
 where
@@ -242,6 +242,7 @@ where
             documentation: vec![],
             type_info: (),
             definitions,
+            names: Default::default(),
         };
         Ok(Parsed {
             module,
@@ -713,6 +714,12 @@ where
                         clauses,
                     }
                 }
+            }
+
+            // Helpful error if trying to write an if expression instead of a
+            // case.
+            Some((start, Token::If, end)) => {
+                return parse_error(ParseErrorType::IfExpression, SrcSpan { start, end });
             }
 
             // helpful error on possibly trying to group with ""
@@ -1875,7 +1882,9 @@ where
         match (internal, public) {
             (InternalAttribute::Missing, true) => Ok(Publicity::Public),
             (InternalAttribute::Missing, false) => Ok(Publicity::Private),
-            (InternalAttribute::Present(_), true) => Ok(Publicity::Internal),
+            (InternalAttribute::Present(location), true) => Ok(Publicity::Internal {
+                attribute_location: Some(location),
+            }),
             (InternalAttribute::Present(location), false) => Err(ParseError {
                 error: ParseErrorType::RedundantInternalAttribute,
                 location,
@@ -3549,7 +3558,7 @@ functions are declared separately from types.";
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
         }
 
-        attributes.set_external_for(target, Some((module, function)));
+        attributes.set_external_for(target, Some((module, function, SrcSpan { start, end })));
         Ok(end)
     }
 

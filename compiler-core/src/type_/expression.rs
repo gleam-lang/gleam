@@ -13,6 +13,7 @@ use crate::{
     build::Target,
     exhaustiveness,
 };
+use hexpm::version::Version;
 use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
@@ -194,6 +195,9 @@ pub enum ArgumentKind {
 pub(crate) struct ExprTyper<'a, 'b> {
     pub(crate) environment: &'a mut Environment<'b>,
 
+    /// The minimum Gleam version required to compile the typed expression.
+    pub minimum_required_version: Version,
+
     // This is set to true if the previous expression that has been typed is
     // determined to always panic.
     // For example when typing a literal `panic`, this flag will be set to true.
@@ -243,6 +247,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             environment,
             implementations,
             current_function_definition: definition,
+            minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
     }
@@ -532,19 +537,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.infer_iter_statements(location, count, untyped.into_iter())
     }
 
-    // Helper to push a new error to the errors list with rigid names.
-    fn error_with_rigid_names(&mut self, error: Error) {
-        let rigid_names = self.hydrator.rigid_names();
-        self.problems
-            .error(error.with_unify_error_rigid_names(&rigid_names));
-    }
-
-    // Helper to push a new error to the errors list and return an invalid expression.
-    fn error_expr_with_rigid_names(&mut self, location: SrcSpan, error: Error) -> TypedExpr {
-        self.error_with_rigid_names(error);
-        self.error_expr(location)
-    }
-
     // Helper to create a new error expr.
     fn error_expr(&mut self, location: SrcSpan) -> TypedExpr {
         TypedExpr::Invalid {
@@ -560,7 +552,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         error: Error,
         type_: Arc<Type>,
     ) -> TypedPattern {
-        self.error_with_rigid_names(error);
+        self.problems.error(error);
         Pattern::Invalid { location, type_ }
     }
 
@@ -587,7 +579,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let location = expression.location();
                     let expression = match self.infer(expression) {
                         Ok(expression) => expression,
-                        Err(error) => self.error_expr_with_rigid_names(location, error),
+                        Err(error) => {
+                            self.problems.error(error);
+                            self.error_expr(location)
+                        }
                     };
 
                     // This isn't the final expression in the sequence, so call the
@@ -1018,6 +1013,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         index: u64,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+        if let UntypedExpr::TupleIndex { .. } = tuple {
+            self.track_feature_usage(FeatureKind::NestedTupleAccess, location);
+        }
+
         let tuple = self.infer(tuple)?;
         match collapse_links(tuple.type_()).as_ref() {
             Type::Tuple { elems } => {
@@ -1060,7 +1059,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 let options = match s.value.as_ref() {
-                    UntypedExpr::String { .. } if s.options.is_empty() => {
+                    UntypedExpr::String { location, .. } if s.options.is_empty() => {
+                        self.track_feature_usage(
+                            FeatureKind::UnannotatedUtf8StringSegment,
+                            *location,
+                        );
                         vec![BitArrayOption::Utf8 {
                             location: SrcSpan::default(),
                         }]
@@ -1087,9 +1090,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|s| {
                 let options = match s.value.as_ref() {
-                    Constant::String { .. } => vec![BitArrayOption::Utf8 {
-                        location: SrcSpan::default(),
-                    }],
+                    Constant::String { location, .. } if s.options.is_empty() => {
+                        self.track_feature_usage(
+                            FeatureKind::UnannotatedUtf8StringSegment,
+                            *location,
+                        );
+                        vec![BitArrayOption::Utf8 {
+                            location: SrcSpan::default(),
+                        }]
+                    }
                     _ => s.options,
                 };
                 self.infer_bit_segment(*s.value, options, s.location, |env, expr| {
@@ -1277,22 +1286,31 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
             Ok(value) => value,
-            Err(error) => self.error_expr_with_rigid_names(value_location, error),
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(value_location)
+            }
         };
 
         let value_typ = value.type_();
 
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
-        let pattern =
-            match pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems)
-                .unify(pattern, value_typ.clone())
-            {
-                Ok(pattern) => pattern,
-                Err(error) => {
-                    self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
-                }
-            };
+        let mut pattern_typer =
+            pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems);
+        let unify_result = pattern_typer.unify(pattern, value_typ.clone());
+
+        let minimum_required_version = pattern_typer.minimum_required_version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
+        }
+
+        let pattern = match unify_result {
+            Ok(pattern) => pattern,
+            Err(error) => {
+                self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
+            }
+        };
 
         // Check that any type annotation is accurate.
         if let Some(annotation) = &annotation {
@@ -1304,11 +1322,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     if let Err(error) = unify(ann_typ, value_typ.clone())
                         .map_err(|e| convert_unify_error(e, value.type_defining_location()))
                     {
-                        self.error_with_rigid_names(error);
+                        self.problems.error(error);
                     }
                 }
                 Err(error) => {
-                    self.error_with_rigid_names(error);
+                    self.problems.error(error);
                 }
             }
         }
@@ -1318,7 +1336,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match (kind, exhaustiveness_check) {
             (AssignmentKind::Let, Ok(_)) => {}
             (AssignmentKind::Let, Err(e)) => {
-                self.error_with_rigid_names(e);
+                self.problems.error(e);
             }
             (AssignmentKind::Assert { location }, Ok(_)) => self
                 .problems
@@ -1358,7 +1376,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
             let subject = match subject {
                 Ok(subject) => subject,
-                Err(error) => self.error_expr_with_rigid_names(subject_location, error),
+                Err(error) => {
+                    self.problems.error(error);
+                    self.error_expr(subject_location)
+                }
             };
 
             any_subject_panics = any_subject_panics || self.previous_panics;
@@ -1382,7 +1403,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
                 .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))
             {
-                self.error_with_rigid_names(e);
+                self.problems.error(e);
             }
             typed_clauses.push(typed_clause);
         }
@@ -1390,7 +1411,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
         if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
-            self.error_with_rigid_names(e);
+            self.problems.error(e);
         };
 
         // We track if the case expression is used like an if: that is all its
@@ -1440,7 +1461,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Ok(res) => res,
                 // If an error occurs inferring patterns then assume no patterns
                 Err(error) => {
-                    clause_typer.error_with_rigid_names(error);
+                    clause_typer.problems.error(error);
                     (vec![], vec![])
                 }
             };
@@ -1448,13 +1469,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Ok(guard) => guard,
                 // If an error occurs inferring guard then assume no guard
                 Err(error) => {
-                    clause_typer.error_with_rigid_names(error);
+                    clause_typer.problems.error(error);
                     None
                 }
             };
             let then = match clause_typer.infer(then) {
                 Ok(then) => then,
-                Err(error) => clause_typer.error_expr_with_rigid_names(then_location, error),
+                Err(error) => {
+                    clause_typer.problems.error(error);
+                    clause_typer.error_expr(then_location)
+                }
             };
 
             Ok((guard, then, typed_pattern, typed_alternatives))
@@ -1465,7 +1489,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // NOTE: theoretically it should be impossible to get here
                 // since the individual parts have been made fault tolerant
                 // but in_new_scope requires that the return type be a result
-                self.error_with_rigid_names(error);
+                self.problems.error(error);
                 (
                     None,
                     TypedExpr::Invalid {
@@ -1505,6 +1529,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         for m in alternatives {
             typed_alternatives
                 .push(pattern_typer.infer_alternative_multi_pattern(m, subjects, location)?);
+        }
+
+        let minimum_required_version = pattern_typer.minimum_required_version;
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
 
         Ok((typed_pattern, typed_alternatives))
@@ -1847,6 +1876,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1865,6 +1895,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1884,6 +1915,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1902,6 +1934,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1921,6 +1954,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1939,6 +1973,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1958,6 +1993,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -1976,6 +2012,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(float(), left.type_())
                     .map_err(|e| convert_unify_error(e, left.location()))?;
@@ -1995,6 +2032,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 right,
                 ..
             } => {
+                self.track_feature_usage(FeatureKind::ArithmeticInGuards, location);
                 let left = self.infer_clause_guard(*left)?;
                 unify(int(), left.type_()).map_err(|e| convert_unify_error(e, left.location()))?;
                 let right = self.infer_clause_guard(*right)?;
@@ -2658,6 +2696,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .iter_mut()
                     .zip(args)
                     .map(|(type_, arg): (&mut Arc<Type>, _)| {
+                        if arg.uses_label_shorthand() {
+                            self.track_feature_usage(
+                                FeatureKind::LabelShorthandSyntax,
+                                arg.location,
+                            );
+                        }
                         let CallArg {
                             label,
                             value,
@@ -2723,6 +2767,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 left,
                 right,
             } => {
+                self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
                 let left = self.infer_const(&None, *left);
                 unify(string(), left.type_()).map_err(|e| {
                     e.operator_situation(BinOp::Concatenate)
@@ -2910,7 +2955,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let fun = match typed_fun {
             Ok(fun) => fun,
             Err(function_inference_error) => {
-                self.error_expr_with_rigid_names(function_location, function_inference_error)
+                self.problems.error(function_inference_error);
+                self.error_expr(function_location)
             }
         };
 
@@ -2977,14 +3023,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } = e
             {
                 labelled_arity_error = true;
-                self.error_with_rigid_names(Error::IncorrectArity {
+                self.problems.error(Error::IncorrectArity {
                     expected,
                     given,
                     labels,
                     location,
                 });
             } else {
-                self.error_with_rigid_names(e);
+                self.problems.error(e);
             }
         }
 
@@ -3011,7 +3057,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             // If the function has labels then arity issues will already
                             // be handled by the field map so we can ignore them here.
                             if !labelled_arity_error {
-                                self.error_with_rigid_names(converted_error);
+                                self.problems.error(converted_error);
                                 (arg_types, return_type)
                             } else {
                                 // Since arity errors with labels cause incorrect
@@ -3031,7 +3077,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             }
                         }
                         MatchFunTypeError::NotFn { .. } => {
-                            self.error_with_rigid_names(converted_error);
+                            self.problems.error(converted_error);
                             (vec![], self.new_unbound_var())
                         }
                     }
@@ -3079,6 +3125,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .zip(args)
             .enumerate()
             .map(|(i, (type_, arg))| {
+                if arg.uses_label_shorthand() {
+                    self.track_feature_usage(FeatureKind::LabelShorthandSyntax, arg.location);
+                }
+
                 let CallArg {
                     label,
                     value,
@@ -3114,7 +3164,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 let value = match self.infer_call_argument(value, type_.clone(), argument_kind) {
                     Ok(value) => value,
-                    Err(e) => self.error_expr_with_rigid_names(location, e),
+                    Err(e) => {
+                        self.problems.error(e);
+                        self.error_expr(location)
+                    }
                 };
 
                 CallArg {
@@ -3285,12 +3338,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Check that any return type is accurate.
             if let Some(return_type) = return_type {
                 if let Err(error) = unify(return_type, body.last().type_()) {
-                    let body_rigid_names = body_typer.hydrator.rigid_names();
                     let error = error
                         .return_annotation_mismatch()
-                        .into_error(body.last().type_defining_location())
-                        .with_unify_error_rigid_names(&body_rigid_names);
-                    body_typer.error_with_rigid_names(error);
+                        .into_error(body.last().type_defining_location());
+                    body_typer.problems.error(error);
 
                     // If the return type doesn't match with the annotation we
                     // add a new expression to the end of the function to match
@@ -3427,6 +3478,34 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         Ok(())
+    }
+
+    fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {
+        let minimum_required_version = feature_kind.required_version();
+
+        // Then if the required version is not in the specified version for the
+        // range we emit a warning highlighting the usage of the feature.
+        if let Some(gleam_version) = &self.environment.gleam_version {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                // There is a version in the specified range that is lower than
+                // the one required by this feature! This means that the
+                // specified range is wrong and would allow someone to run a
+                // compiler that is too old to know of this feature.
+                if minimum_required_version > lowest_allowed_version {
+                    self.problems
+                        .warning(Warning::FeatureRequiresHigherGleamVersion {
+                            location,
+                            feature_kind,
+                            minimum_required_version: minimum_required_version.clone(),
+                            wrongfully_allowed_version: lowest_allowed_version,
+                        })
+                }
+            }
+        }
+
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
+        }
     }
 }
 

@@ -182,7 +182,7 @@ pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
 
 pub fn expect_js_error(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
     let error = compile_js(src, deps).expect_err("should not compile");
-    println!("er: {:#?}", error);
+    println!("er: {error:#?}");
     let better_error = match error {
         crate::Error::JavaScript {
             error: inner_error, ..
@@ -191,7 +191,7 @@ pub fn expect_js_error(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
             path: Utf8PathBuf::from("/src/javascript/error.gleam"),
             error: inner_error,
         },
-        _ => panic!("expected js error, got {:#?}", error),
+        _ => panic!("expected js error, got {error:#?}"),
     };
     better_error.pretty_string()
 }

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1403
 expression: "\npub type Wibble {\n  Wibble(wibble: String, wobble: Int)\n}\n\nfn fun() { // completion inside parens below includes labels\n  let wibble = Wibble()\n}\n"
 ---
 pub type Wibble {
@@ -13,6 +12,26 @@ fn fun() { // completion inside parens below includes labels
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 Wibble
   kind:   Constructor
   detail: fn(String, Int) -> Wibble

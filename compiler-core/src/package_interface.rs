@@ -362,7 +362,11 @@ impl PackageInterface {
         PackageInterface {
             name: package.config.name.clone(),
             version: package.config.version.to_string().into(),
-            gleam_version_constraint: package.config.gleam_version.clone(),
+            gleam_version_constraint: package
+                .config
+                .gleam_version
+                .clone()
+                .map(|version| EcoString::from(version.to_string())),
             modules: package
                 .modules
                 .iter()

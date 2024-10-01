@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\nimport wibble\n\npub fn wobble(a) { a }\n\npub fn main() {\n  1 |> wobble |> wibble.Wibble\n  1\n}\n"
+---
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:7:3
+  │
+7 │   1 |> wobble |> wibble.Wibble
+  │   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This value is never used

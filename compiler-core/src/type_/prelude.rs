@@ -1,3 +1,4 @@
+use hexpm::version::Version;
 use strum::{EnumIter, IntoEnumIterator};
 
 use crate::{
@@ -215,6 +216,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         src_path: "".into(),
         // prelude doesn't have real line numbers
         line_numbers: LineNumbers::new(""),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     for t in PreludeType::iter() {

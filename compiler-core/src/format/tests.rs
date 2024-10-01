@@ -3166,7 +3166,7 @@ fn tuple_access2() {
 fn tuple_access3() {
     assert_format!(
         r#"fn main() {
-  { tup.1 }.2
+  tup.1.2
 }
 "#
     );
@@ -6420,6 +6420,17 @@ pub fn init(
   start: #(SupervisorFlags, List(ChildSpecification)),
 ) -> Result(#(Dynamic, Dynamic), never) {
   todo
+}
+"#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3627
+#[test]
+fn big_grapheme_cluster() {
+    assert_format!(
+        r#"pub fn main() {
+  sw("👩‍👩‍👧‍👦👩‍👩‍👧‍👦👩‍👩‍👧‍👦", [])
 }
 "#
     );

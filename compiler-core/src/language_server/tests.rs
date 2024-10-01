@@ -16,6 +16,7 @@ use ecow::EcoString;
 use hexpm::version::{Range, Version};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use itertools::Itertools;
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
 use crate::{
@@ -222,10 +223,7 @@ impl CommandExecutor for LanguageServerTestIO {
         cwd: Option<&Utf8Path>,
         stdio: crate::io::Stdio,
     ) -> Result<i32> {
-        panic!(
-            "exec({:?}, {:?}, {:?}, {:?}, {:?}) is not implemented",
-            program, args, env, cwd, stdio
-        )
+        panic!("exec({program:?}, {args:?}, {env:?}, {cwd:?}, {stdio:?}) is not implemented")
     }
 }
 
@@ -392,6 +390,34 @@ impl<'a> TestProject<'a> {
         }
     }
 
+    pub fn src_from_module_url(&self, url: &Url) -> Option<&str> {
+        let module_name: EcoString = url
+            .path_segments()?
+            .skip_while(|segment| *segment != "src")
+            .skip(1)
+            .join("/")
+            .trim_end_matches(".gleam")
+            .into();
+
+        if module_name == "app" {
+            return Some(self.src);
+        }
+
+        let find_module = |modules: &Vec<(&'a str, &'a str)>| {
+            modules
+                .iter()
+                .find(|(name, _)| *name == module_name)
+                .map(|(_, src)| *src)
+        };
+
+        find_module(&self.root_package_modules)
+            .or_else(|| find_module(&self.dependency_modules))
+            .or_else(|| find_module(&self.test_modules))
+            .or_else(|| find_module(&self.hex_modules))
+            .or_else(|| find_module(&self.dev_hex_modules))
+            .or_else(|| find_module(&self.indirect_hex_modules))
+    }
+
     pub fn add_module(mut self, name: &'a str, src: &'a str) -> Self {
         self.root_package_modules.push((name, src));
         self
@@ -512,9 +538,9 @@ impl<'a> TestProject<'a> {
         test_name: &str,
     ) -> TextDocumentPositionParams {
         let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
-            format!(r"\\?\C:\test\{}.gleam", test_name)
+            format!(r"\\?\C:\test\{test_name}.gleam")
         } else {
-            format!("/test/{}.gleam", test_name)
+            format!("/test/{test_name}.gleam")
         });
 
         let url = Url::from_file_path(path).unwrap();
@@ -565,7 +591,7 @@ impl<'a> TestProject<'a> {
     }
 
     pub fn at<T>(
-        self,
+        &self,
         position: Position,
         executor: impl FnOnce(
             &mut LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,

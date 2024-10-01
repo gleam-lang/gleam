@@ -1,6 +1,6 @@
 [package]
 name = "gleam-core"
-version = "1.4.1"
+version = "1.5.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
@@ -40,6 +40,10 @@ pubgrub = "0"
 pathdiff = { version = "0", features = ["camino"] }
 # Memory arena using ids rather than references
 id-arena = "2"
+# Unicode grapheme traversal
+unicode-segmentation = "1.12.0"
+# Bijective (bi-directional) hashmap
+bimap = "0.6.3"
 async-trait.workspace = true
 base16.workspace = true
 bytes.workspace = true

@@ -12,6 +12,6 @@ fn main() -> MyType {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nMyType\n```\n Exciting documentation\n Maybe even multiple lines\n",
+        "```gleam\nexample_module.MyType\n```\n Exciting documentation\n Maybe even multiple lines\n",
     ),
 )

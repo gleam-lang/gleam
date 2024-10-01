@@ -1,0 +1,48 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+assertion_line: 1729
+expression: "\npub fn main() {\n  let x = 1\n  let x = [1, 2]\n\n}\n"
+---
+pub fn main() {
+  let x = 1
+  let x = [1, 2]
+|
+}
+
+
+----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
+main
+  kind:   Function
+  detail: fn() -> List(Int)
+  sort:   2_main
+  desc:   app
+  edits:
+    [4:0-4:0]: "main"
+x
+  kind:   Variable
+  detail: List(Int)
+  sort:   2_x
+  desc:   app
+  docs:   "A locally defined variable."
+  edits:
+    [4:0-4:0]: "x"

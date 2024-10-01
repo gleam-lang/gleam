@@ -4,18 +4,18 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{LiteralCollectionKind, PanicPosition, TodoOrPanic},
+        error::{FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic},
         pretty::Printer,
     },
 };
 use camino::Utf8PathBuf;
 use debug_ignore::DebugIgnore;
 use ecow::EcoString;
-use std::sync::atomic::AtomicUsize;
 use std::{
     io::Write,
     sync::{atomic::Ordering, Arc},
 };
+use std::{rc::Rc, sync::atomic::AtomicUsize};
 use termcolor::Buffer;
 
 pub trait WarningEmitterIO {
@@ -73,11 +73,11 @@ pub struct WarningEmitter {
     /// package only, the count is reset back to zero after the dependencies are
     /// compiled.
     count: Arc<AtomicUsize>,
-    emitter: DebugIgnore<Arc<dyn WarningEmitterIO>>,
+    emitter: DebugIgnore<Rc<dyn WarningEmitterIO>>,
 }
 
 impl WarningEmitter {
-    pub fn new(emitter: Arc<dyn WarningEmitterIO>) -> Self {
+    pub fn new(emitter: Rc<dyn WarningEmitterIO>) -> Self {
         Self {
             count: Arc::new(AtomicUsize::new(0)),
             emitter: DebugIgnore(emitter),
@@ -85,7 +85,7 @@ impl WarningEmitter {
     }
 
     pub fn null() -> Self {
-        Self::new(Arc::new(NullWarningEmitterIO))
+        Self::new(Rc::new(NullWarningEmitterIO))
     }
 
     pub fn reset_count(&self) {
@@ -101,10 +101,10 @@ impl WarningEmitter {
         self.emitter.emit_warning(warning);
     }
 
-    pub fn vector() -> (Self, Arc<VectorWarningEmitterIO>) {
-        let io = Arc::new(VectorWarningEmitterIO::default());
+    pub fn vector() -> (Self, Rc<VectorWarningEmitterIO>) {
+        let io = Rc::new(VectorWarningEmitterIO::default());
         let emitter = Self::new(io.clone());
-        (emitter, Arc::clone(&io))
+        (emitter, Rc::clone(&io))
     }
 }
 
@@ -128,7 +128,7 @@ impl TypeWarningEmitter {
         Self {
             module_path: Utf8PathBuf::new(),
             module_src: EcoString::from(""),
-            emitter: WarningEmitter::new(Arc::new(NullWarningEmitterIO)),
+            emitter: WarningEmitter::new(Rc::new(NullWarningEmitterIO)),
         }
     }
 
@@ -996,6 +996,56 @@ See: https://tour.gleam.run/functions/pipelines/",
                         extra_labels: vec![],
                     }),
                 },
+                type_::Warning::FeatureRequiresHigherGleamVersion {
+                    location,
+                    minimum_required_version,
+                    wrongfully_allowed_version,
+                    feature_kind,
+                } => {
+                    let feature = match feature_kind {
+                        FeatureKind::LabelShorthandSyntax => "The label shorthand syntax was",
+                        FeatureKind::ConstantStringConcatenation => {
+                            "Constant strings concatenation was"
+                        }
+                        FeatureKind::ArithmeticInGuards => "Arithmetic operations in guards were",
+                        FeatureKind::UnannotatedUtf8StringSegment => {
+                            "The ability to omit the `utf8` annotation for string segments was"
+                        }
+                        FeatureKind::NestedTupleAccess => {
+                            "The ability to access nested tuple fields was"
+                        }
+                        FeatureKind::InternalAnnotation => "The `@internal` annotation was",
+                        FeatureKind::AtInJavascriptModules => {
+                            "The ability to have `@` in a Javascript module's name was"
+                        }
+                    };
+
+                    Diagnostic {
+                        title: "Incompatible gleam version range".into(),
+                        text: wrap(&format!(
+                        "{feature} introduced in version v{minimum_required_version}. But the Gleam version range \
+                        specified in your `gleam.toml` would allow this code to run on an earlier \
+                        version like v{wrongfully_allowed_version}, resulting in compilation errors!",
+                    )),
+                        hint: Some(format!(
+                            "Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = \">= {minimum_required_version}\""
+                        )),
+                        level: diagnostic::Level::Warning,
+                        location: Some(Location {
+                            label: diagnostic::Label {
+                                text: Some(format!(
+                                    "This requires a Gleam version >= {minimum_required_version}"
+                                )),
+                                span: *location,
+                            },
+                            path: path.clone(),
+                            src: src.clone(),
+                            extra_labels: vec![],
+                        }),
+                    }
+                }
             },
         }
     }

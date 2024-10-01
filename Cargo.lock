@@ -224,6 +224,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "bimap"
+version = "0.6.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "230c5f1ca6a325a32553f8640d31ac9b49f2411e901e427570154868b46da4f7"
+
+[[package]]
 name = "bincode"
 version = "1.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -793,7 +799,7 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 
 [[package]]
 name = "gleam"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "async-trait",
  "base16",
@@ -813,11 +819,13 @@ dependencies = [
  "http",
  "ignore",
  "im",
+ "insta",
  "itertools",
  "lsp-server",
  "lsp-types",
  "opener",
  "pretty_assertions",
+ "pubgrub",
  "regex",
  "reqwest",
  "rpassword",
@@ -840,11 +848,12 @@ dependencies = [
 
 [[package]]
 name = "gleam-core"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "askama",
  "async-trait",
  "base16",
+ "bimap",
  "bincode",
  "bytes",
  "camino",
@@ -885,13 +894,14 @@ dependencies = [
  "thiserror",
  "toml",
  "tracing",
+ "unicode-segmentation",
  "vec1",
  "xxhash-rust",
 ]
 
 [[package]]
 name = "gleam-wasm"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "camino",
  "console_error_panic_hook",
@@ -1179,9 +1189,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "810ae6042d48e2c9e9215043563a58a80b877bc863228a74cf10c49d4620a6f5"
 dependencies = [
  "console",
+ "globset",
  "lazy_static",
  "linked-hash-map",
  "similar",
+ "walkdir",
 ]
 
 [[package]]
@@ -2268,7 +2280,7 @@ dependencies = [
 
 [[package]]
 name = "test-package-compiler"
-version = "1.4.1"
+version = "1.5.0"
 dependencies = [
  "camino",
  "gleam-core",
@@ -2568,6 +2580,12 @@ checksum = "a56d1686db2308d901306f92a263857ef59ea39678a5458e7cb17f01415101f5"
 dependencies = [
  "tinyvec",
 ]
+
+[[package]]
+name = "unicode-segmentation"
+version = "1.12.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f6ccf251212114b54433ec949fd6a7841275f9ada20dddd2f29e9ceea4501493"
 
 [[package]]
 name = "unicode-width"

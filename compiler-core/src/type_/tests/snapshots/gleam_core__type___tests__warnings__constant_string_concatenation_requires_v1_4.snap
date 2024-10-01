@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "pub const string = \"wibble\" <> \"wobble\""
+---
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:1:20
+  │
+1 │ pub const string = "wibble" <> "wobble"
+  │                    ^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.4.0
+
+Constant strings concatenation was introduced in version v1.4.0. But the
+Gleam version range specified in your `gleam.toml` would allow this code to
+run on an earlier version like v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.4.0"

@@ -2,7 +2,7 @@
 source: compiler-core/src/type_/tests/imports.rs
 expression: "import one\n\npub fn main() {\n  one.two\n}"
 ---
-error: Unknown module field
+error: Unknown module value
   ┌─ /src/one/two.gleam:4:6
   │
 4 │   one.two

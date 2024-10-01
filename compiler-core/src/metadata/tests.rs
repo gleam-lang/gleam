@@ -1,3 +1,4 @@
+use hexpm::version::Version;
 use rand::Rng;
 use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
@@ -62,6 +63,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     }
 }
 
@@ -94,6 +96,7 @@ fn empty_module() {
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -116,6 +119,7 @@ fn with_line_numbers() {
         const c = 3",
         ),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -146,6 +150,7 @@ fn module_with_private_type() {
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -176,6 +181,7 @@ fn module_with_app_type() {
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -206,6 +212,7 @@ fn module_with_fn_type() {
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -236,6 +243,7 @@ fn module_with_tuple_type() {
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -272,6 +280,7 @@ fn module_with_generic_type() {
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     }
 
@@ -293,7 +302,7 @@ fn module_with_type_links() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    type_: type_,
+                    type_,
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
@@ -308,6 +317,7 @@ fn module_with_type_links() {
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     }
 
@@ -329,7 +339,7 @@ fn module_with_type_constructor_documentation() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    type_: type_,
+                    type_,
                     publicity: Publicity::Public,
                     origin: Default::default(),
                     module: "a".into(),
@@ -344,6 +354,7 @@ fn module_with_type_constructor_documentation() {
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     }
 
@@ -365,7 +376,7 @@ fn module_with_type_constructor_origin() {
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
-                    type_: type_,
+                    type_,
                     publicity: Publicity::Public,
                     origin: SrcSpan {
                         start: 535,
@@ -383,6 +394,7 @@ fn module_with_type_constructor_origin() {
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
+            minimum_required_version: Version::new(0, 1, 0),
         }
     }
 
@@ -413,6 +425,7 @@ fn module_type_to_constructors_mapping() {
         values: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -445,6 +458,8 @@ fn module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -458,6 +473,7 @@ fn module_fn_value() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -491,6 +507,8 @@ fn deprecated_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -504,6 +522,7 @@ fn deprecated_module_fn_value() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -535,6 +554,8 @@ fn private_module_fn_value() {
                         start: 535,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -548,6 +569,7 @@ fn private_module_fn_value() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -581,6 +603,8 @@ fn module_fn_value_regression() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: None,
+                    external_javascript: None,
                     implementations: Implementations {
                         gleam: true,
                         uses_erlang_externals: false,
@@ -594,6 +618,7 @@ fn module_fn_value_regression() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -623,6 +648,8 @@ fn module_fn_value_with_field_map() {
                         arity: 20,
                         fields: [("ok".into(), 5), ("ko".into(), 7)].into(),
                     }),
+                    external_erlang: None,
+                    external_javascript: None,
                     module: "a".into(),
                     arity: 5,
                     location: SrcSpan { start: 2, end: 11 },
@@ -639,6 +666,7 @@ fn module_fn_value_with_field_map() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -681,6 +709,7 @@ fn record_value() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -726,6 +755,7 @@ fn record_value_with_field_map() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -789,6 +819,7 @@ fn accessors() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1002,6 +1033,7 @@ fn constant_var() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1191,6 +1223,7 @@ fn deprecated_type() {
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1222,6 +1255,8 @@ fn module_fn_value_with_external_implementations() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
                     implementations: Implementations {
                         gleam: false,
                         uses_erlang_externals: true,
@@ -1235,6 +1270,7 @@ fn module_fn_value_with_external_implementations() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1254,7 +1290,9 @@ fn internal_module_fn() {
         values: [(
             "one".into(),
             ValueConstructor {
-                publicity: Publicity::Internal,
+                publicity: Publicity::Internal {
+                    attribute_location: None,
+                },
                 deprecation: Deprecation::NotDeprecated,
                 type_: type_::int(),
                 variant: ValueConstructorVariant::ModuleFn {
@@ -1267,6 +1305,8 @@ fn internal_module_fn() {
                         start: 52,
                         end: 1100,
                     },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
                     implementations: Implementations {
                         gleam: false,
                         uses_erlang_externals: true,
@@ -1280,6 +1320,60 @@ fn internal_module_fn() {
         .into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn internal_annotated_module_fn() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [(
+            "one".into(),
+            ValueConstructor {
+                publicity: Publicity::Internal {
+                    attribute_location: Some(SrcSpan {
+                        start: 11,
+                        end: 111,
+                    }),
+                },
+                deprecation: Deprecation::NotDeprecated,
+                type_: type_::int(),
+                variant: ValueConstructorVariant::ModuleFn {
+                    documentation: Some("wabble!".into()),
+                    name: "one".into(),
+                    field_map: None,
+                    module: "a".into(),
+                    arity: 5,
+                    location: SrcSpan {
+                        start: 52,
+                        end: 1100,
+                    },
+                    external_erlang: Some(("wibble".into(), "wobble".into())),
+                    external_javascript: Some(("wobble".into(), "wibble".into())),
+                    implementations: Implementations {
+                        gleam: false,
+                        uses_erlang_externals: true,
+                        uses_javascript_externals: true,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                    },
+                },
+            },
+        )]
+        .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1319,6 +1413,7 @@ fn type_variable_ids_in_constructors_are_shared() {
         values: [].into(),
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
     };
 
     let expected = HashMap::from([(

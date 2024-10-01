@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@external(javascript, \"module@module\", \"func\")\npub fn main() { Nil }\n"
+---
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ @external(javascript, "module@module", "func")
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.2.0
+
+The ability to have `@` in a Javascript module's name was introduced in
+version v1.2.0. But the Gleam version range specified in your `gleam.toml`
+would allow this code to run on an earlier version like v1.0.0, resulting
+in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.2.0"

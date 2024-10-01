@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport some_mod as sm\npub fn main(func: sm.Function(Int, String, Float)) {\n  use <- func()\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:10
+  │
+4 │   use <- func()
+  │          ^^^^^^
+
+In a use expression, there should be a function on the right hand side of
+`<-`, but this value has type:
+
+    sm.Function(Int, String, Float)
+
+See: https://tour.gleam.run/advanced-features/use/

@@ -1,3 +1,4 @@
+use hexpm::version::Version;
 use im::hashmap;
 use itertools::Itertools;
 
@@ -19,6 +20,9 @@ pub struct PatternTyper<'a, 'b> {
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
     problems: &'a mut Problems,
+
+    /// The minimum Gleam version required to compile the typed pattern.
+    pub minimum_required_version: Version,
 }
 
 enum PatternMode {
@@ -37,6 +41,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
+            minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
     }
@@ -182,9 +187,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         } = segment;
 
         let options = match value.as_ref() {
-            Pattern::String { .. } if options.is_empty() => vec![BitArrayOption::Utf8 {
-                location: SrcSpan::default(),
-            }],
+            Pattern::String { location, .. } if options.is_empty() => {
+                self.track_feature_usage(FeatureKind::UnannotatedUtf8StringSegment, *location);
+                vec![BitArrayOption::Utf8 {
+                    location: SrcSpan::default(),
+                }]
+            }
             _ => options,
         };
 
@@ -389,7 +397,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     expected: type_.clone(),
                     situation: None,
                     location,
-                    rigid_type_names: hashmap![],
                 }),
             },
 
@@ -436,7 +443,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         expected: type_,
                         situation: None,
                         location,
-                        rigid_type_names: hashmap![],
                     })
                 }
             },
@@ -627,6 +633,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .into_iter()
                                 .zip(args)
                                 .map(|(arg, type_)| {
+                                    if !arg.is_implicit() && arg.uses_label_shorthand() {
+                                        self.track_feature_usage(
+                                            FeatureKind::LabelShorthandSyntax,
+                                            arg.location,
+                                        );
+                                    }
+
                                     let CallArg {
                                         value,
                                         location,
@@ -695,6 +708,34 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn check_name_case(&mut self, location: SrcSpan, name: &EcoString, kind: Named) {
         if let Err(error) = check_name_case(location, name, kind) {
             self.problems.error(error);
+        }
+    }
+
+    fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {
+        let minimum_required_version = feature_kind.required_version();
+
+        // Then if the required version is not in the specified version for the
+        // range we emit a warning highlighting the usage of the feature.
+        if let Some(gleam_version) = &self.environment.gleam_version {
+            if let Some(lowest_allowed_version) = gleam_version.lowest_version() {
+                // There is a version in the specified range that is lower than
+                // the one required by this feature! This means that the
+                // specified range is wrong and would allow someone to run a
+                // compiler that is too old to know of this feature.
+                if minimum_required_version > lowest_allowed_version {
+                    self.problems
+                        .warning(Warning::FeatureRequiresHigherGleamVersion {
+                            location,
+                            feature_kind,
+                            minimum_required_version: minimum_required_version.clone(),
+                            wrongfully_allowed_version: lowest_allowed_version,
+                        })
+                }
+            }
+        }
+
+        if minimum_required_version > self.minimum_required_version {
+            self.minimum_required_version = minimum_required_version;
         }
     }
 }

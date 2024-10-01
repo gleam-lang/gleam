@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 427
 expression: "\nimport dep.{Left}\n"
 ---
 |
@@ -8,6 +7,14 @@ import dep.{Left}
 
 
 ----- Completion content -----
+Error
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Error
+False
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_False
 Left
   kind:   EnumMember
   detail: Direction
@@ -15,6 +22,18 @@ Left
   desc:   app
   edits:
     [1:0-1:0]: "Left"
+Nil
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_Nil
+Ok
+  kind:   Constructor
+  detail: gleam
+  sort:   4_Ok
+True
+  kind:   EnumMember
+  detail: gleam
+  sort:   4_True
 dep.Left
   kind:   EnumMember
   detail: Direction

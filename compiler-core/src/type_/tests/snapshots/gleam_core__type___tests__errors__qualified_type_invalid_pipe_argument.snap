@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport mod\npub fn main() {\n  Nil |> mod.takes_wibble\n}\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:13
+  │
+4 │   Nil |> mod.takes_wibble
+  │             ^^^^^^^^^^^^^ This function does not accept the piped type
+
+The argument is:
+
+    Nil
+
+But function expects:
+
+    mod.Wibble

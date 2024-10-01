@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nfn make_ok(value: some_type) {\n  let result = Ok(value)\n  result\n}\n"
+---
+fn make_ok(value: some_type) {
+  let result = Ok(value)
+      ▔▔↑▔▔▔            
+  result
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nResult(some_type, a)\n```\n",
+    ),
+)

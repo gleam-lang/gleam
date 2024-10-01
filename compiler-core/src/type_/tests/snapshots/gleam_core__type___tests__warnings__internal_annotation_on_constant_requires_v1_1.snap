@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@internal\npub const wibble = 1\n"
+---
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ @internal
+  │ ^^^^^^^^^ This requires a Gleam version >= 1.1.0
+
+The `@internal` annotation was introduced in version v1.1.0. But the Gleam
+version range specified in your `gleam.toml` would allow this code to run
+on an earlier version like v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.1.0"

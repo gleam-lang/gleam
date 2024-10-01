@@ -17,7 +17,9 @@ pub use environment::*;
 pub use error::{Error, Problems, UnifyErrorSituation, Warning};
 pub(crate) use expression::ExprTyper;
 pub use fields::FieldMap;
+use hexpm::version::Version;
 pub use prelude::*;
+use printer::Names;
 use serde::Serialize;
 
 use crate::{
@@ -395,6 +397,8 @@ pub enum ValueConstructorVariant {
         location: SrcSpan,
         documentation: Option<EcoString>,
         implementations: Implementations,
+        external_erlang: Option<(EcoString, EcoString)>,
+        external_javascript: Option<(EcoString, EcoString)>,
     },
 
     /// A constructor for a custom type
@@ -455,6 +459,8 @@ impl ValueConstructorVariant {
             Self::LocalVariable { location, .. } => ModuleValueConstructor::Fn {
                 name: function_name.clone(),
                 module: module_name.clone(),
+                external_erlang: None,
+                external_javascript: None,
                 documentation: None,
                 location: *location,
                 field_map: None,
@@ -466,11 +472,15 @@ impl ValueConstructorVariant {
                 location,
                 documentation,
                 field_map,
+                external_erlang,
+                external_javascript,
                 ..
             } => ModuleValueConstructor::Fn {
                 name: name.clone(),
                 module: module.clone(),
                 documentation: documentation.clone(),
+                external_erlang: external_erlang.clone(),
+                external_javascript: external_javascript.clone(),
                 location: *location,
                 field_map: field_map.clone(),
             },
@@ -543,20 +553,23 @@ pub enum ModuleValueConstructor {
     Fn {
         location: SrcSpan,
         /// The name of the module and the function
-        /// Typically this will be the module that this constructor belongs to
-        /// and the name that was used for the function. However it could also
-        /// point to some other module and function when this is an `external`
-        /// function.
+        /// This will be the module that this constructor belongs to
+        /// and the name that was used for the function.
+        module: EcoString,
+        name: EcoString,
+        /// If this is an `external` function, these will hold the name of the
+        /// external module and function.
         ///
         /// This function has module "themodule" and name "wibble"
         ///     pub fn wibble() { Nil }
         ///
-        /// This function has module "other" and name "whoop"
+        /// This function has module "themodule" and name "wibble"
+        /// and erlang external "other" and "whoop".
         ///     @external(erlang, "other", "whoop")
         ///     pub fn wibble() -> Nil
         ///
-        module: EcoString,
-        name: EcoString,
+        external_erlang: Option<(EcoString, EcoString)>,
+        external_javascript: Option<(EcoString, EcoString)>,
         field_map: Option<FieldMap>,
         documentation: Option<EcoString>,
     },
@@ -610,6 +623,8 @@ pub struct ModuleInterface {
     pub is_internal: bool,
     /// Warnings emitted during analysis of this module.
     pub warnings: Vec<Warning>,
+    /// The minimum Gleam version needed to use this module.
+    pub minimum_required_version: Version,
 }
 
 impl ModuleInterface {
@@ -681,28 +696,6 @@ pub struct TypeValueConstructorField {
 }
 
 impl ModuleInterface {
-    pub fn new(
-        name: EcoString,
-        origin: Origin,
-        package: EcoString,
-        line_numbers: LineNumbers,
-        src_path: Utf8PathBuf,
-    ) -> Self {
-        Self {
-            name,
-            origin,
-            package,
-            types: Default::default(),
-            types_value_constructors: Default::default(),
-            values: Default::default(),
-            accessors: Default::default(),
-            is_internal: false,
-            line_numbers,
-            src_path,
-            warnings: vec![],
-        }
-    }
-
     pub fn get_public_value(&self, name: &str) -> Option<&ValueConstructor> {
         let value = self.values.get(name)?;
         if value.publicity.is_importable() {

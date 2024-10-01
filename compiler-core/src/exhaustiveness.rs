@@ -490,7 +490,7 @@ impl<'a> Compiler<'a> {
                     | Pattern::Discard
                     | Pattern::EmptyList
                     | Pattern::List { .. }
-                    | Pattern::Or { .. }) => panic!("Unexpected pattern {:?}", pattern),
+                    | Pattern::Or { .. }) => panic!("Unexpected pattern {pattern:?}"),
                 };
 
                 match tested.get(&key) {
@@ -587,7 +587,7 @@ impl<'a> Compiler<'a> {
                     | Pattern::Variable { .. }
                     | Pattern::BitArray { .. }
                     | Pattern::EmptyList
-                    | Pattern::StringPrefix { .. }) => panic!("Unexpected pattern {:?}", pattern),
+                    | Pattern::StringPrefix { .. }) => panic!("Unexpected pattern {pattern:?}"),
                 };
 
                 let mut columns = row.columns;
@@ -660,7 +660,7 @@ impl<'a> Compiler<'a> {
                     | Pattern::BitArray { .. }
                     | Pattern::Constructor { .. }
                     | Pattern::StringPrefix { .. }) => {
-                        panic!("Unexpected non-list pattern {:?}", pattern)
+                        panic!("Unexpected non-list pattern {pattern:?}")
                     }
                 };
             }
