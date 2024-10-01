@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\nimport option\nimport wobble\n\npub fn main() {\n  option.Some(1)\n  wobble.Wibble(1)\n}\n"
+expression: "\nimport option\nimport wobble\n\npub fn main() {\n  option.Some(2)\n  wobble.Wibble(1)\n}\n"
 ---
 ----- BEFORE ACTION
 
@@ -8,9 +8,9 @@ import option
 import wobble
 
 pub fn main() {
-  option.Some(1)
-             ↑  
+  option.Some(2)
   wobble.Wibble(1)
+        ▔▔▔▔▔▔▔↑  
 }
 
 
@@ -20,6 +20,6 @@ import option
 import wobble.{Wibble}
 
 pub fn main() {
-  option.Some(1)
+  option.Some(2)
   Wibble(1)
 }

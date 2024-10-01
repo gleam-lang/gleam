@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option as opt\n\npub fn main() {\n  opt.Some(1)\n  opt.Some(1)\n}\n\npub fn identity(x: opt.Option(Int)) -> opt.Option(Int) {\n    opt.Some(1)\n    x\n}\n"
+---
+----- BEFORE ACTION
+
+import option as opt
+
+pub fn main() {
+  opt.Some(1)
+  ▔▔▔▔▔▔▔▔↑  
+  opt.Some(1)
+}
+
+pub fn identity(x: opt.Option(Int)) -> opt.Option(Int) {
+    opt.Some(1)
+    x
+}
+
+
+----- AFTER ACTION
+
+import option.{Some} as opt
+
+pub fn main() {
+  Some(1)
+  Some(1)
+}
+
+pub fn identity(x: opt.Option(Int)) -> opt.Option(Int) {
+    Some(1)
+    x
+}
