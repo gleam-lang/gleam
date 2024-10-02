@@ -1262,12 +1262,14 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         }
     }
 
-    fn remove_module_qualifier(&mut self, location: SrcSpan, is_type: bool) {
+    fn remove_module_qualifier(&mut self, location: SrcSpan, is_type: bool, is_pattern: bool) {
         let import = self
             .qualified_constructor
             .as_ref()
             .expect("import should be set");
-        let span = if is_type {
+        // the src_span for type constructor and constructor in pattern is : option.Some but for constructor is: option.Some
+        //                                                                   ↑   to    ↑                               ↑to ↑
+        let span = if is_type || is_pattern {
             SrcSpan::new(
                 location.start,
                 location.start + import.used_name.len() as u32 + 1, // plus .
@@ -1293,6 +1295,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         constructor: &EcoString,
         location: SrcSpan,
         is_type: bool,
+        is_pattern: bool,
     ) {
         if self.should_stop {
             return;
@@ -1339,7 +1342,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                         module_aliased: import.as_name.is_some(),
                     });
                     self.add_import_edits(constructor, is_type);
-                    self.remove_module_qualifier(location, is_type);
+                    self.remove_module_qualifier(location, is_type, is_pattern);
                 }
             }
         } else {
@@ -1355,7 +1358,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                     && used_name.as_str() == (*module_alias).as_str()
                     && wanted_constructor.as_str() == (*constructor).as_str()
                 {
-                    self.remove_module_qualifier(location, is_type);
+                    self.remove_module_qualifier(location, is_type, is_pattern);
                 }
             }
         }
@@ -1419,6 +1422,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
                 name,
                 *location,
                 true,
+                false,
             );
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
@@ -1441,6 +1445,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
                 name,
                 *location,
                 false,
+                false,
             );
         }
         ast::visit::visit_typed_expr_module_select(
@@ -1452,5 +1457,47 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
             module_alias,
             constructor,
         )
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if let Some((module_name, module_location)) = module {
+            tracing::info!(
+                "module_name: {:?}, {:?} {:?}",
+                module_name,
+                location,
+                spread
+            );
+            if let crate::analyse::Inferred::Known(constructor) = constructor {
+                tracing::info!("constructor: {:?}", constructor);
+                self.process_constructor(
+                    &module_name,
+                    Some(*module_location),
+                    Some(&constructor.module),
+                    name,
+                    *location,
+                    false,
+                    true,
+                );
+            }
+        }
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
     }
 }
