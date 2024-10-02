@@ -1112,7 +1112,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module: self.module_name.to_owned(),
             name: name.clone(),
             args: parameters.clone(),
-            constructor_index: None,
+            narrowed_variant: None,
         });
         let _ = self.hydrators.insert(name.clone(), hydrator);
         environment

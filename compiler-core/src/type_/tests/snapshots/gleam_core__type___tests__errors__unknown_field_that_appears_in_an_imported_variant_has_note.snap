@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport some_mod\npub fn main() {\n  some_mod.Wibble(1).field\n}\n"
+expression: "\nimport some_mod\npub fn main(wibble: some_mod.Wibble) {\n  wibble.field\n}\n"
 ---
 ----- SOURCE CODE
 -- some_mod.gleam
@@ -19,10 +19,10 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:4:21
+  ┌─ /src/one/two.gleam:4:9
   │
-4 │   some_mod.Wibble(1).field
-  │                     ^^^^^^ This field does not exist
+4 │   wibble.field
+  │         ^^^^^^ This field does not exist
 
 The value being accessed has this type:
 

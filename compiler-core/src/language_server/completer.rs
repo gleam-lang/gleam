@@ -729,7 +729,7 @@ where
             Type::Named {
                 name,
                 module,
-                constructor_index,
+                narrowed_variant: constructor_index,
                 ..
             } => importable_modules
                 .get(module)

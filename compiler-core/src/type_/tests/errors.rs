@@ -2435,8 +2435,8 @@ fn unknown_field_that_appears_in_an_imported_variant_has_note() {
         ),
         "
 import some_mod
-pub fn main() {
-  some_mod.Wibble(1).field
+pub fn main(wibble: some_mod.Wibble) {
+  wibble.field
 }
 "
     );
@@ -2451,8 +2451,8 @@ pub type Wibble {
   Wobble(not_field: String, field: Int)
 }
 
-pub fn main() {
-  Wibble(1).field
+pub fn main(wibble: Wibble) {
+  wibble.field
 }
 "
     );
@@ -2467,8 +2467,8 @@ pub type Wibble {
   Wobble(not_field: String, field: Int)
 }
 
-pub fn main() {
-  Wibble(1).wibble
+pub fn main(wibble: Wibble) {
+  wibble.wibble
 }
 "
     );
