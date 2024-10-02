@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-expression: "\npub type Wibble {\n  Wibble(field: Int)\n  Wobble(not_field: String, field: Int)\n}\n\npub fn main() {\n  Wibble(1).field\n}\n"
+expression: "\npub type Wibble {\n  Wibble(field: Int)\n  Wobble(not_field: String, field: Int)\n}\n\npub fn main(wibble: Wibble) {\n  wibble.field\n}\n"
 ---
 ----- SOURCE CODE
 
@@ -16,10 +16,10 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:8:12
+  ┌─ /src/one/two.gleam:8:9
   │
-8 │   Wibble(1).field
-  │            ^^^^^^ This field does not exist
+8 │   wibble.field
+  │         ^^^^^^ This field does not exist
 
 The value being accessed has this type:
 

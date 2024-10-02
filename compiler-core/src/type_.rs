@@ -63,7 +63,34 @@ pub enum Type {
         module: EcoString,
         name: EcoString,
         args: Vec<Arc<Type>>,
-        constructor_index: Option<u16>,
+
+        /// Which variant of the types this value is, if it is known from type narrowing.
+        /// This allows us to permit certain operations when we know this,
+        /// such as record updates for multi-constructor types, or field access
+        /// for fields not shared between type variants. For example:
+        ///
+        /// ```gleam
+        /// type Wibble {
+        ///   Wibble(wibble: Int, other, Int)
+        ///   Wobble(wobble: Int, something: Int)
+        /// }
+        ///
+        /// fn add_one(some_wibble: Wibble) -> Wibble {
+        ///   case some_wibble {
+        ///     Wibble(..) as wibble -> Wibble(..wibble, other: wibble.other + 1)
+        ///     Wobble(..) as wobble -> Wobble(..wobble, something: wobble.something + 1)
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Here, the `wibble` variable has a narrowed variant of `0`, since we know it's
+        /// of the `Wibble` variant. This means we can safely update it using the `Wibble`
+        /// constructor, and access the `other` field, which is only present in that variant.
+        ///
+        /// However, the parameter `some_wibble` has no known variant; it could be either of the variants,
+        /// so we can't allow any of that until we pattern match on it.
+        ///
+        narrowed_variant: Option<u16>,
     },
 
     /// The type of a function. It takes arguments and returns a value.
@@ -247,7 +274,7 @@ impl Type {
                 args,
                 ..
             } => Type::Named {
-                constructor_index: Some(index),
+                narrowed_variant: Some(index),
                 publicity,
                 package,
                 module,
@@ -261,7 +288,8 @@ impl Type {
     pub fn constructor_index(&self) -> Option<u16> {
         match self {
             Type::Named {
-                constructor_index, ..
+                narrowed_variant: constructor_index,
+                ..
             } => *constructor_index,
             Type::Var { type_ } => type_.borrow().constructor_index(),
             Type::Fn { .. } | Type::Tuple { .. } => None,
@@ -326,7 +354,7 @@ impl Type {
                         module: module.into(),
                         args: args.clone(),
                         publicity,
-                        constructor_index: None,
+                        narrowed_variant: None,
                     }),
                 };
                 Some(args)
@@ -1213,7 +1241,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             package,
             name,
             args,
-            constructor_index,
+            narrowed_variant: _,
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
@@ -1222,7 +1250,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
                 package: package.clone(),
                 name: name.clone(),
                 args,
-                constructor_index: *constructor_index,
+                narrowed_variant: None,
             })
         }
 
