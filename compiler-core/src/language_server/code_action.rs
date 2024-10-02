@@ -1127,7 +1127,6 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         let import_code = self.module.code.get(import_start..import_end)?;
         let closing_brace_pos = import_code.rfind('}')?;
 
-        // Move backwards from closing_brace_pos - 1, skipping whitespace
         let bytes = import_code.as_bytes();
         let mut pos = closing_brace_pos;
         while pos > 0 {
@@ -1135,13 +1134,11 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
             let c = (*bytes.get(pos)?) as char;
             if c.is_whitespace() {
                 continue;
-            } else if c == ',' {
-                // Found the trailing comma
-                return Some(import_start + pos);
-            } else {
-                // No trailing comma
-                break;
             }
+            if c == ',' {
+                return Some(import_start + pos);
+            }
+            break;
         }
         None
     }
@@ -1286,10 +1283,10 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
         });
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn process_constructor(
         &mut self,
         module_alias: &EcoString,
-        // use to find type constructor import location
         module_location: Option<SrcSpan>,
         module_name: Option<&EcoString>,
         constructor: &EcoString,
@@ -1338,7 +1335,7 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                         import,
                         used_name: module_alias.clone(),
                         constructor: constructor.clone(),
-                        is_type: is_type,
+                        is_type,
                         module_aliased: import.as_name.is_some(),
                     });
                     self.add_import_edits(constructor, is_type);
@@ -1414,9 +1411,9 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
-        if let Some((module_name, module_location)) = module {
+        if let Some((module_alias, module_location)) = module {
             self.process_constructor(
-                module_name,
+                module_alias,
                 Some(*module_location),
                 None,
                 name,
@@ -1439,7 +1436,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
     ) {
         if let ModuleValueConstructor::Record { name, .. } = constructor {
             self.process_constructor(
-                &module_alias,
+                module_alias,
                 None,
                 Some(module_name),
                 name,
@@ -1469,17 +1466,10 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
-        if let Some((module_name, module_location)) = module {
-            tracing::info!(
-                "module_name: {:?}, {:?} {:?}",
-                module_name,
-                location,
-                spread
-            );
+        if let Some((module_alias, module_location)) = module {
             if let crate::analyse::Inferred::Known(constructor) = constructor {
-                tracing::info!("constructor: {:?}", constructor);
                 self.process_constructor(
-                    &module_name,
+                    module_alias,
                     Some(*module_location),
                     Some(&constructor.module),
                     name,
