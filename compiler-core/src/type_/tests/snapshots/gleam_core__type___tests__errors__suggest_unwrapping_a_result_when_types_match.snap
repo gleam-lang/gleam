@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 2397
 expression: "\npub fn main() {\n  let value = Ok(1)\n  add_1(value)\n}\n\nfn add_1(to x) { x + 1 }\n"
 ---
 error: Type mismatch
