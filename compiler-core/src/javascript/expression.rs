@@ -215,11 +215,6 @@ impl<'module> Generator<'module> {
             }
         }?;
 
-        let (start, end) = self
-            .line_numbers
-            .line_and_column_number_of_src_span(expression.location());
-
-        let document = document.attach_sourcemap_location(start, end);
         Ok(if expression.handles_own_return() {
             document
         } else {
@@ -547,14 +542,24 @@ impl<'module> Generator<'module> {
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 3);
         for (i, statement) in statements.iter().enumerate() {
+            let location = statement.location();
+            let (start, end) = self
+                .line_numbers
+                .line_and_column_number_of_src_span(location);
             if i + 1 < count {
-                documents.push(self.not_in_tail_position(|gen| gen.statement(statement))?);
+                let document = self
+                    .not_in_tail_position(|gen| gen.statement(statement))?
+                    .attach_sourcemap_location(start, end);
+                documents.push(document);
                 if requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
                 documents.push(line());
             } else {
-                documents.push(self.statement(statement)?);
+                let document = self
+                    .statement(statement)?
+                    .attach_sourcemap_location(start, end);
+                documents.push(document);
             }
         }
         if count == 1 {
@@ -575,15 +580,11 @@ impl<'module> Generator<'module> {
 
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
-        if let TypedPattern::Variable { name, location, .. } = pattern {
+        if let TypedPattern::Variable { name, .. } = pattern {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+            let js_name = self.next_local_var(name);
 
-            let js_name_location_start = self.line_numbers.line_and_column_number(location.start);
-            let js_name_location_end = self.line_numbers.line_and_column_number(location.end);
-            let js_name = self
-                .next_local_var(name)
-                .attach_sourcemap_location(js_name_location_start, js_name_location_end);
             return Ok(if self.scope_position.is_tail() {
                 docvec![
                     "let ",
@@ -604,13 +605,8 @@ impl<'module> Generator<'module> {
 
         // Otherwise we need to compile the patterns
         let (subject, subject_assignment) = pattern::assign_subject(self, value);
-        let (value_location_start, value_location_end) = self
-            .line_numbers
-            .line_and_column_number_of_src_span(value.location());
         // Value needs to be rendered before traversing pattern to have correctly incremented variables.
-        let value = self
-            .not_in_tail_position(|gen| gen.wrap_expression(value))?
-            .attach_sourcemap_location(value_location_start, value_location_end);
+        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
         let mut pattern_generator = pattern::Generator::new(self);
         pattern_generator.traverse_pattern(&subject, pattern)?;
         let compiled = pattern_generator.take_compiled();
@@ -671,9 +667,18 @@ impl<'module> Generator<'module> {
             for multipatterns in multipatterns {
                 let scope = gen.expression_generator.current_scope_vars.clone();
                 let mut compiled = gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
+                let consequence_location = clause.then.location();
+                let (consequence_location_start, consequence_location_end) = gen
+                    .expression_generator
+                    .line_numbers
+                    .line_and_column_number_of_src_span(consequence_location);
                 let consequence = gen
                     .expression_generator
-                    .expression_flattening_blocks(&clause.then)?;
+                    .expression_flattening_blocks(&clause.then)?
+                    .attach_sourcemap_location(
+                        consequence_location_start,
+                        consequence_location_end,
+                    );
 
                 // We've seen one more clause
                 clause_number += 1;
@@ -727,11 +732,9 @@ impl<'module> Generator<'module> {
                         line(),
                         "}"
                     ]
-                };
-                doc = doc.append(
-                    doc_to_append
-                        .attach_sourcemap_location(clause_location_start, clause_location_end),
-                );
+                }
+                .attach_sourcemap_location(clause_location_start, clause_location_end);
+                doc = doc.append(doc_to_append);
             }
         }
 
@@ -742,8 +745,16 @@ impl<'module> Generator<'module> {
             .zip(subject_values)
             .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
             .map(|(name, value)| {
+                let location = value.location();
+                let (start, end) = gen
+                    .expression_generator
+                    .line_numbers
+                    .line_and_column_number_of_src_span(location);
                 let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-                Ok(docvec!("let ", name, " = ", value, ";", line()))
+                Ok(docvec!(
+                    docvec!["let ", name, " = ", value, ";"].attach_sourcemap_location(start, end),
+                    line()
+                ))
             })
             .try_collect()?;
 
@@ -908,8 +919,13 @@ impl<'module> Generator<'module> {
 
     fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
         self.not_in_tail_position(|gen| {
+            let location = record.location();
+            let (start, end) = gen
+                .line_numbers
+                .line_and_column_number_of_src_span(location);
             let record = gen.wrap_expression(record)?;
-            Ok(docvec![record, ".", maybe_escape_property_doc(label)])
+            Ok(docvec![record, ".", maybe_escape_property_doc(label)]
+                .attach_sourcemap_location(start, end))
         })
     }
 
@@ -1154,9 +1170,6 @@ impl<'module> Generator<'module> {
         message: Option<&'a TypedExpr>,
     ) -> Output<'a> {
         let checks = self.pattern_checks_doc(checks, false);
-        let (start, end) = self
-            .line_numbers
-            .line_and_column_number_of_src_span(location);
         Ok(docvec![
             "if (",
             docvec![break_("", ""), checks].nest(INDENT),
@@ -1170,8 +1183,7 @@ impl<'module> Generator<'module> {
             line(),
             "}",
         ]
-        .group()
-        .attach_sourcemap_location(start, end))
+        .group())
     }
 
     fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
