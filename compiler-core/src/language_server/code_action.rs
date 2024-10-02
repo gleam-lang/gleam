@@ -1061,7 +1061,6 @@ struct QualifiedConstructor<'a> {
     module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
-    // to differentiate type constructor and value constructor
     is_type: bool,
 }
 
