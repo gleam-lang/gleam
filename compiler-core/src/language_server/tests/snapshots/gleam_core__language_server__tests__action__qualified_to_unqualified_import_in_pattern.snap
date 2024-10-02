@@ -8,9 +8,8 @@ import option
 
 pub fn main() -> Int {
   case option.Some(1) {
-             ▔▔▔▔▔▔▔▔▔▔
     option.Some(value) -> value
-▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑               
+          ▔▔▔▔▔▔▔▔↑            
     option.None -> 0
   }
 }
@@ -21,7 +20,7 @@ pub fn main() -> Int {
 import option.{Some}
 
 pub fn main() -> Int {
-  case option.Some(1) {
+  case Some(1) {
     Some(value) -> value
     option.None -> 0
   }
