@@ -2261,7 +2261,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Type::Named {
                     module,
                     name,
-                    constructor_index,
+                    narrowed_variant: constructor_index,
                     ..
                 } if module == &self.environment.current_module => {
                     self.environment.accessors.get(name).map(|accessors_map| {
@@ -2276,7 +2276,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Type::Named {
                     module,
                     name,
-                    constructor_index,
+                    narrowed_variant: constructor_index,
                     ..
                 } => self
                     .environment

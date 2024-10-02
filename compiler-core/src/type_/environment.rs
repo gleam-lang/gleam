@@ -517,7 +517,7 @@ impl<'a> Environment<'a> {
                 package,
                 module,
                 args,
-                constructor_index,
+                narrowed_variant: constructor_index,
             } => {
                 let args = args
                     .iter()
@@ -529,7 +529,7 @@ impl<'a> Environment<'a> {
                     package: package.clone(),
                     module: module.clone(),
                     args,
-                    constructor_index: *constructor_index,
+                    narrowed_variant: *constructor_index,
                 })
             }
 

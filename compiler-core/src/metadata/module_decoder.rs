@@ -128,7 +128,7 @@ impl ModuleDecoder {
             module,
             name,
             args,
-            constructor_index: None,
+            narrowed_variant: None,
         }))
     }
 
