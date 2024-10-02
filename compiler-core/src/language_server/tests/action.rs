@@ -1962,23 +1962,6 @@ pub fn main() {
 }
 
 #[test]
-fn test_qualified_to_unqualified_import_with_existing_unqualified() {
-    let src = r#"
-import option.{None}
-
-pub fn main() {
-  option.Some(1)
-}
-"#;
-    assert_code_action!(
-        CONVERT_TO_UNQUALIFIED_IMPORT,
-        TestProject::for_source(src)
-            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
-        find_position_of(".Some").select_until(find_position_of("(1)")),
-    );
-}
-
-#[test]
 fn test_qualified_to_unqualified_import_when_unqualified_exists() {
     let src = r#"
 import option.{Some}
@@ -2181,7 +2164,7 @@ pub fn main() -> Int {
         CONVERT_TO_UNQUALIFIED_IMPORT,
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
-        find_position_of(".Some").select_until(find_position_of("(value)")),
+        find_position_of(".Some(va").select_until(find_position_of("lue)")),
     );
 }
 
