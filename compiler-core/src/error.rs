@@ -2014,7 +2014,7 @@ But function expects:
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: None,
+                                text: hint_wrap_value_into_result(expected, given),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -4012,6 +4012,47 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
         BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
         _ => None,
+    }
+}
+
+fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
+    let Some((expected_ok_type, expected_error_type)) = expected.result_types() else {
+        return None;
+    };
+
+    let expected_ok_type = collapse_links(expected_ok_type);
+    let given = collapse_links(given.clone());
+    if expected_ok_type == given {
+        Some("Did you mean to wrap this in an `Ok`?".into())
+    } else if expected_error_type == given {
+        Some("Did you mean to wrap this in an `Error`?".into())
+    } else {
+        None
+    }
+}
+
+fn hint_unwrap_result(
+    expected: &Arc<Type>,
+    given: &Arc<Type>,
+    printer: &mut Printer<'_>,
+) -> Option<String> {
+    // If the got type is `Result(a, _)` and the expected one is
+    // `a` then we can display the hint.
+    let wrapped_type = given.result_ok_type()?;
+    let expected = collapse_links(expected.clone());
+    if collapse_links(wrapped_type) != expected {
+        None
+    } else {
+        Some(wrap_format!(
+            "If you want to get a `{}` out of a `{}` you can pattern match on it:
+
+    case result {{
+      Ok(value) -> todo
+      Error(error) -> todo
+    }}",
+            printer.print_type(&expected),
+            printer.print_type(given),
+        ))
     }
 }
 
