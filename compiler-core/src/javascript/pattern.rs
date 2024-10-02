@@ -259,10 +259,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn guard(&mut self, guard: &'a TypedClauseGuard) -> Output<'a> {
-        let (location_guard_start, location_guard_end) = self
-            .expression_generator
-            .line_numbers
-            .line_and_column_number_of_src_span(guard.location());
         let doc = match guard {
             ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left)?;
@@ -395,7 +391,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 )
             }
         };
-        Ok(doc.attach_sourcemap_location(location_guard_start, location_guard_end))
+        Ok(doc)
     }
 
     /// Get the path that would assign a variable, if there is one for the given name.

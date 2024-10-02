@@ -251,10 +251,10 @@ impl<'a> Generator<'a> {
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
                 name,
-                name_location,
+                location,
                 value,
                 ..
-            }) => Some(self.module_constant(*publicity, name, *name_location, value)),
+            }) => Some(self.module_constant(*publicity, name, *location, value)),
 
             Definition::Function(function) => {
                 // If there's an external JavaScript implementation then it will be imported,
@@ -332,6 +332,9 @@ impl<'a> Generator<'a> {
 
         let constructor_body = join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
+                let (start, end) = self
+                    .line_numbers
+                    .line_and_column_number_of_src_span(arg.location);
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
@@ -339,6 +342,7 @@ impl<'a> Generator<'a> {
                         docvec!["this.", maybe_escape_property_doc(name), " = ", var, ";"]
                     }
                 }
+                .attach_sourcemap_location(start, end)
             }),
             line(),
         );
@@ -519,7 +523,7 @@ impl<'a> Generator<'a> {
         &mut self,
         publicity: Publicity,
         name: &'a str,
-        name_location: SrcSpan,
+        location: SrcSpan,
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if publicity.is_private() {
@@ -533,15 +537,16 @@ impl<'a> Generator<'a> {
 
         let (start, end) = self
             .line_numbers
-            .line_and_column_number_of_src_span(name_location);
+            .line_and_column_number_of_src_span(location);
 
         Ok(docvec![
             head,
-            maybe_escape_identifier_doc(name).attach_sourcemap_location(start, end),
+            maybe_escape_identifier_doc(name),
             " = ",
             document,
             ";",
-        ])
+        ]
+        .attach_sourcemap_location(start, end))
     }
 
     fn register_in_scope(&mut self, name: &str) {
@@ -587,18 +592,17 @@ impl<'a> Generator<'a> {
             Err(error) => return Some(Err(error)),
         };
 
-        let location = function
-            .name
-            .clone()
-            .map(|(location, _)| location)
-            .unwrap_or(function.full_location());
+        let location = function.full_location();
         let start = self.line_numbers.line_and_column_number(location.start);
         let end = self.line_numbers.line_and_column_number(location.end);
 
         Some(Ok(docvec![
-            head,
-            maybe_escape_identifier_doc(name.as_str()).attach_sourcemap_location(start, end),
-            fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
+            docvec![
+                head,
+                maybe_escape_identifier_doc(name.as_str()),
+                fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
+            ]
+            .attach_sourcemap_location(start, end),
             " {",
             docvec![line(), body].nest(INDENT).group(),
             line(),
