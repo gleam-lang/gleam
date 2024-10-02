@@ -421,7 +421,7 @@ fn test_local_type() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "Cat");
@@ -439,7 +439,7 @@ fn test_prelude_type() {
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "Int");
@@ -460,7 +460,7 @@ fn test_shadowed_prelude_type() {
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "gleam.Int");
@@ -509,7 +509,7 @@ fn test_tuple_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
-                constructor_index: None,
+                narrowed_variant: None,
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
@@ -517,7 +517,7 @@ fn test_tuple_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
-                constructor_index: None,
+                narrowed_variant: None,
             }),
         ],
     };
@@ -540,7 +540,7 @@ fn test_fn_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
-                constructor_index: None,
+                narrowed_variant: None,
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
@@ -548,7 +548,7 @@ fn test_fn_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
-                constructor_index: None,
+                narrowed_variant: None,
             }),
         ],
         retrn: Arc::new(Type::Named {
@@ -557,7 +557,7 @@ fn test_fn_type() {
             module: "gleam".into(),
             publicity: crate::ast::Publicity::Public,
             package: "".into(),
-            constructor_index: None,
+            narrowed_variant: None,
         }),
     };
 
@@ -576,7 +576,7 @@ fn test_module_alias() {
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "animals.Cat");
@@ -600,7 +600,7 @@ fn test_type_alias_and_generics() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "Cat(one)");
@@ -624,7 +624,7 @@ fn test_unqualified_import_and_generic() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "C(one)");
@@ -640,7 +640,7 @@ fn nested_module() {
         module: "one/two/three".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "three.Cat");
@@ -664,7 +664,7 @@ fn test_unqualified_import_and_module_alias() {
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "C");
@@ -686,7 +686,7 @@ fn test_module_imports() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     let typ1 = Type::Named {
@@ -695,7 +695,7 @@ fn test_module_imports() {
         module: "mod2".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "animals.Cat");
@@ -724,7 +724,7 @@ fn test_multiple_generic_annotations() {
         module: "tigermodule".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
-        constructor_index: None,
+        narrowed_variant: None,
     };
 
     let typ1 = Type::Var {

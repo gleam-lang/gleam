@@ -766,11 +766,11 @@ fn unify_constructor_variants(into: &mut Type, from: &Type) {
     match (into, from) {
         (
             Type::Named {
-                constructor_index: into_index,
+                narrowed_variant: into_index,
                 ..
             },
             Type::Named {
-                constructor_index: from_index,
+                narrowed_variant: from_index,
                 ..
             },
         ) if from_index != into_index => *into_index = None,
