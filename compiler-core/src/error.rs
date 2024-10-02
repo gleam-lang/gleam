@@ -1771,7 +1771,7 @@ But function expects:
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: None,
+                                text: hint_wrap_value_into_result(expected, given),
                                 span: *location,
                             },
                             path: path.clone(),
@@ -3645,6 +3645,22 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
         BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
         _ => None,
+    }
+}
+
+fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
+    let Some((expected_ok_type, expected_error_type)) = expected.result_types() else {
+        return None;
+    };
+
+    let expected_ok_type = collapse_links(expected_ok_type);
+    let given = collapse_links(given.clone());
+    if expected_ok_type == given {
+        Some("Did you mean to wrap this in an `Ok`?".into())
+    } else if expected_error_type == given {
+        Some("Did you mean to wrap this in an `Error`?".into())
+    } else {
+        None
     }
 }
 
