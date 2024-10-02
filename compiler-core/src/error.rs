@@ -3668,7 +3668,7 @@ fn hint_unwrap_result(
       Error(error) -> todo
     }}",
             printer.print_type(&expected),
-            printer.print_type(&given),
+            printer.print_type(given),
         ))
     }
 }
