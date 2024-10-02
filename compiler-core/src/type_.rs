@@ -138,6 +138,18 @@ impl Type {
         }
     }
 
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } if "Result" == name && is_prelude_module(module) => {
+                Some((args.first().cloned()?, args.get(1).cloned()?))
+            }
+            Self::Var { type_ } => type_.borrow().result_types(),
+            Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
+        }
+    }
+
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_unbound(),
@@ -966,6 +978,13 @@ impl TypeVar {
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
             TypeVar::Link { type_ } => type_.result_ok_type(),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+        }
+    }
+
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            TypeVar::Link { type_ } => type_.result_types(),
             TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
         }
     }

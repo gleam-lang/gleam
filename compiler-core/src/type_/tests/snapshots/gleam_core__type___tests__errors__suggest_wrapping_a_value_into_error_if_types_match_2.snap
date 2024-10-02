@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n    wibble(\"a\")\n}\n\nfn wibble(arg: Result(Int, String)) { todo }\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:12
+  │
+3 │     wibble("a")
+  │            ^^^ Did you mean to wrap this in an `Error`?
+
+Expected type:
+
+    Result(Int, String)
+
+Found type:
+
+    String

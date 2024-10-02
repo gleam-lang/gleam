@@ -2551,7 +2551,8 @@ pub fn main(wibble: wibble.Wibble) {
   case wibble {
     wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
     _ -> panic
-  }
+
+    }
 }
 "
     );
@@ -2653,5 +2654,60 @@ fn inexhaustive_use_reports_error() {
 use [1, 2, 3] <- todo
 todo
 "#
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> 1
+
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(1)
+}
+
+fn wibble(arg: Result(Int, String)) { todo }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_error_if_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Error(1)
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_error_if_types_match_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+    wibble(\"a\")
+}
+
+fn wibble(arg: Result(Int, String)) { todo }
+"
     );
 }
