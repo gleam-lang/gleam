@@ -125,6 +125,10 @@
   clusters properly.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed the `BitArray` constructor not being present in the types for the
+  JavaScript prelude.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes

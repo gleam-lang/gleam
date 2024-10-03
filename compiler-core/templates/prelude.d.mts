@@ -23,6 +23,7 @@ export class NonEmpty<T> extends List<T> {}
 
 export class BitArray {
   buffer: Uint8Array;
+  constructor(buffer: Uint8Array);
   get length(): number;
   byteAt(index: number): number;
   floatFromSlice(index: number, end: number, isBigEndian: boolean): number;
