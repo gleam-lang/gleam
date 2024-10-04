@@ -232,30 +232,99 @@ impl<'a> TypeScriptGenerator<'a> {
 
         for statement in &self.module.definitions {
             match statement {
-                Definition::Function(Function { .. })
-                | Definition::TypeAlias(TypeAlias { .. })
-                | Definition::CustomType(CustomType { .. })
-                | Definition::ModuleConstant(ModuleConstant { .. }) => (),
-
-                Definition::Import(Import {
-                    module,
-                    package,
-                    as_name,
+                Definition::Function(Function {
+                    arguments,
+                    return_type,
                     ..
                 }) => {
-                    match as_name {
-                        Some((AssignName::Variable(name), _)) => {
-                            let _ = self.aliased_module_names.insert(module, name);
-                        }
-                        Some((AssignName::Discard(_), _)) | None => (),
+                    for a in arguments {
+                        self.collect_imports_for_type(&a.type_, &mut imports);
                     }
 
-                    self.register_import(&mut imports, package, module);
+                    self.collect_imports_for_type(return_type, &mut imports);
                 }
+
+                Definition::TypeAlias(TypeAlias { type_, .. }) => {
+                    self.collect_imports_for_type(type_, &mut imports)
+                }
+
+                Definition::CustomType(CustomType {
+                    constructors,
+                    typed_parameters,
+                    ..
+                }) => {
+                    for t in typed_parameters {
+                        self.collect_imports_for_type(t, &mut imports);
+                    }
+
+                    for constructor in constructors {
+                        for arg in constructor.arguments.as_slice() {
+                            self.collect_imports_for_type(&arg.type_, &mut imports);
+                        }
+                    }
+                }
+
+                Definition::ModuleConstant(ModuleConstant { type_, .. }) => {
+                    self.collect_imports_for_type(type_, &mut imports)
+                }
+
+                Definition::Import(Import {
+                    module, as_name, ..
+                }) => match as_name {
+                    Some((AssignName::Variable(name), _)) => {
+                        let _ = self.aliased_module_names.insert(module, name);
+                    }
+                    Some((AssignName::Discard(_), _)) | None => (),
+                },
             }
         }
 
         imports
+    }
+
+    /// Recurses through a type and any types it references, registering all of their imports.
+    ///
+    fn collect_imports_for_type<'b>(&mut self, type_: &'b Type, imports: &mut Imports<'a>) {
+        match &type_ {
+            Type::Named {
+                package,
+                module,
+                args,
+                ..
+            } => {
+                let is_prelude = module == "gleam" && package.is_empty();
+                let is_current_module = *module == self.module.name;
+
+                if !is_prelude && !is_current_module {
+                    self.register_import(imports, package, module);
+                }
+
+                for arg in args {
+                    self.collect_imports_for_type(arg, imports);
+                }
+            }
+            Type::Fn { args, retrn } => {
+                for arg in args {
+                    self.collect_imports_for_type(arg, imports);
+                }
+                self.collect_imports_for_type(retrn, imports);
+            }
+            Type::Tuple { elems } => {
+                for elem in elems {
+                    self.collect_imports_for_type(elem, imports);
+                }
+            }
+            Type::Var { type_ } => {
+                if let TypeVar::Link { type_ } = type_
+                    .as_ref()
+                    .try_borrow()
+                    .expect("borrow type after inference")
+                    .deref()
+                {
+                    self.collect_imports_for_type(type_, imports);
+                }
+            }
+        }
     }
 
     /// Registers an import of an external module so that it can be added to
@@ -263,14 +332,19 @@ impl<'a> TypeScriptGenerator<'a> {
     /// "$" symbol to prevent any clashes with other Gleam names that may be
     /// used in this module.
     ///
-    fn register_import(&mut self, imports: &mut Imports<'a>, package: &'a str, module: &'a str) {
+    fn register_import<'b>(
+        &mut self,
+        imports: &mut Imports<'a>,
+        package: &'b str,
+        module: &'b str,
+    ) {
         let path = self.import_path(package, module);
         imports.register_module(path, [self.module_name(module)], []);
     }
 
     /// Calculates the path of where to import an external module from
     ///
-    fn import_path(&self, package: &'a str, module: &'a str) -> EcoString {
+    fn import_path<'b>(&self, package: &'b str, module: &'b str) -> EcoString {
         // DUPE: current_module_name_segments_count
         // TODO: strip shared prefixed between current module and imported
         // module to avoid descending and climbing back out again

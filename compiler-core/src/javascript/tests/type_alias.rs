@@ -23,3 +23,33 @@ pub opaque type OpaqueType {
 "#,
     );
 }
+
+#[test]
+fn import_indirect_type_alias() {
+    assert_ts_def!(
+        (
+            "wibble",
+            "wibble",
+            r#"
+pub type Wibble {
+  Wibble(Int)
+}
+"#
+        ),
+        (
+            "wobble",
+            "wobble",
+            r#"
+import wibble
+pub type Wobble = wibble.Wibble
+"#
+        ),
+        r#"
+import wobble
+
+pub fn main(x: wobble.Wobble) {
+  Nil
+}
+"#,
+    );
+}
