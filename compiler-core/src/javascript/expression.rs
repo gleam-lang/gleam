@@ -506,10 +506,18 @@ impl<'module> Generator<'module> {
         let count = assignments.len();
         let mut documents = Vec::with_capacity((count + 1) * 2);
         for assignment in assignments.iter() {
-            documents.push(self.not_in_tail_position(|gen| gen.assignment(assignment))?);
+            let (start, end) = self
+                .line_numbers
+                .line_and_column_number_of_src_span(assignment.location);
+            let document = self.not_in_tail_position(|gen| gen.assignment(assignment))?;
+            documents.push(document.attach_sourcemap_location(start, end));
             documents.push(line());
         }
-        documents.push(self.expression(finally)?);
+        let (start, end) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(finally.location());
+        let document = self.expression(finally)?;
+        documents.push(document.attach_sourcemap_location(start, end));
         Ok(documents.to_doc().force_break())
     }
 
@@ -976,22 +984,52 @@ impl<'module> Generator<'module> {
     }
 
     fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let (start_left, end_left) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(left.location());
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(start_left, end_left);
+        let (start_right, end_right) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(right.location());
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(start_right, end_right);
         self.tracker.int_division_used = true;
         Ok(docvec!("divideInt", wrap_args([left, right])))
     }
 
     fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let (start_left, end_left) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(left.location());
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(start_left, end_left);
+        let (start_right, end_right) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(right.location());
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(start_right, end_right);
         self.tracker.int_remainder_used = true;
         Ok(docvec!("remainderInt", wrap_args([left, right])))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let (start_left, end_left) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(left.location());
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(start_left, end_left);
+        let (start_right, end_right) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(right.location());
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(start_right, end_right);
         self.tracker.float_division_used = true;
         Ok(docvec!("divideFloat", wrap_args([left, right])))
     }
@@ -1002,17 +1040,32 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         should_be_equal: bool,
     ) -> Output<'a> {
+        let (start_left, end_left) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(left.location());
+        let (start_right, end_right) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(right.location());
+
         // If it is a simple scalar type then we can use JS' reference identity
         if is_js_scalar(left.type_()) {
-            let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-            let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+            let left_doc = self
+                .not_in_tail_position(|gen| gen.child_expression(left))?
+                .attach_sourcemap_location(start_left, end_left);
+            let right_doc = self
+                .not_in_tail_position(|gen| gen.child_expression(right))?
+                .attach_sourcemap_location(start_right, end_right);
             let operator = if should_be_equal { " === " } else { " !== " };
             return Ok(docvec!(left_doc, operator, right_doc));
         }
 
         // Other types must be compared using structural equality
-        let left = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
+        let left = self
+            .not_in_tail_position(|gen| gen.wrap_expression(left))?
+            .attach_sourcemap_location(start_left, end_left);
+        let right = self
+            .not_in_tail_position(|gen| gen.wrap_expression(right))?
+            .attach_sourcemap_location(start_right, end_right);
         Ok(self.prelude_equal_call(should_be_equal, left, right))
     }
 
@@ -1040,8 +1093,18 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         op: &'a str,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let (start_left, end_left) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(left.location());
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(start_left, end_left);
+        let (start_right, end_right) = self
+            .line_numbers
+            .line_and_column_number_of_src_span(right.location());
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(start_right, end_right);
         Ok(docvec!(left, " ", op, " ", right))
     }
 
