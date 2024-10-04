@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/javascript/tests/type_alias.rs
+expression: "\ntype PrivateType {\n  PrivateType\n}\n\npub opaque type OpaqueType {\n  OpaqueType(PrivateType)\n}\n"
+---
+import type * as _ from "../gleam.d.mts";
+
+declare class PrivateType extends _.CustomType {}
+
+declare type PrivateType$ = PrivateType;
+
+declare class OpaqueType extends _.CustomType {
+  constructor(argument$0: PrivateType$);
+  
+  0: PrivateType$;
+}
+
+export type OpaqueType$ = OpaqueType;

@@ -11,7 +11,7 @@
 //! <https://www.typescriptlang.org/>
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
-use crate::ast::AssignName;
+use crate::ast::{AssignName, Publicity};
 use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
 use crate::{
     ast::{
@@ -309,10 +309,13 @@ impl<'a> TypeScriptGenerator<'a> {
                 name,
                 typed_parameters,
                 ..
-            }) if publicity.is_importable() => {
-                self.custom_type_definition(name, typed_parameters, constructors, *opaque)
-            }
-            Definition::CustomType(CustomType { .. }) => vec![],
+            }) => self.custom_type_definition(
+                name,
+                typed_parameters,
+                constructors,
+                *opaque,
+                publicity,
+            ),
 
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
@@ -359,10 +362,14 @@ impl<'a> TypeScriptGenerator<'a> {
         typed_parameters: &'a [Arc<Type>],
         constructors: &'a [TypedRecordConstructor],
         opaque: bool,
+        publicity: &Publicity,
     ) -> Vec<Output<'a>> {
+        // Constructors for opaque and private types are not exported
+        let export_constructors = !opaque && publicity.is_importable();
+
         let mut definitions: Vec<Output<'_>> = constructors
             .iter()
-            .map(|constructor| Ok(self.record_definition(constructor, opaque)))
+            .map(|constructor| Ok(self.record_definition(constructor, export_constructors)))
             .collect();
 
         let definition = if constructors.is_empty() {
@@ -378,7 +385,12 @@ impl<'a> TypeScriptGenerator<'a> {
         };
 
         definitions.push(Ok(docvec![
-            "export type ",
+            if publicity.is_importable() {
+                "export ".to_doc()
+            } else {
+                "declare ".to_doc()
+            },
+            "type ",
             name_with_generics(eco_format!("{name}$").to_doc(), typed_parameters),
             " = ",
             definition,
@@ -391,15 +403,14 @@ impl<'a> TypeScriptGenerator<'a> {
     fn record_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
-        opaque: bool,
+        export: bool,
     ) -> Document<'a> {
         self.set_prelude_used();
         let head = docvec![
-            // opaque type constructors are not exposed to JS
-            if opaque {
-                super::nil()
-            } else {
+            if export {
                 "export ".to_doc()
+            } else {
+                "declare ".to_doc()
             },
             "class ",
             name_with_generics(

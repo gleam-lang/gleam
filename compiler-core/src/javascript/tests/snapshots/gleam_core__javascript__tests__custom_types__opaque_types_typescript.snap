@@ -4,13 +4,13 @@ expression: "pub opaque type Animal {\n  Cat(goes_outside: Bool)\n  Dog(plays_fe
 ---
 import type * as _ from "../gleam.d.mts";
 
-class Cat extends _.CustomType {
+declare class Cat extends _.CustomType {
   constructor(goes_outside: boolean);
   
   goes_outside: boolean;
 }
 
-class Dog extends _.CustomType {
+declare class Dog extends _.CustomType {
   constructor(plays_fetch: boolean);
   
   plays_fetch: boolean;
