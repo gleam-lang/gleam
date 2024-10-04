@@ -20,6 +20,7 @@ use crate::ast::{
     CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
     TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
+use crate::package_interface;
 use crate::type_::Type;
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -208,6 +209,7 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub cached_metadata: Vec<package_compiler::CacheMetadata>,
 }
 
 impl Package {
@@ -225,7 +227,7 @@ impl Package {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Module {
     pub name: EcoString,
     pub code: EcoString,

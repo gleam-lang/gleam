@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
 use itertools::Itertools;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 #[cfg(test)]
 mod tests;
@@ -28,7 +28,7 @@ pub struct PackageInterface {
     modules: HashMap<EcoString, ModuleInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone, Default)]
 #[serde(rename_all = "kebab-case")]
 pub struct ModuleInterface {
     /// A vector with the lines composing the module's documentation (that is
@@ -48,7 +48,7 @@ pub struct ModuleInterface {
     functions: HashMap<EcoString, FunctionInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeDefinitionInterface {
     /// The definition's documentation comment (that is every line preceded by
@@ -71,7 +71,7 @@ pub struct TypeDefinitionInterface {
     constructors: Vec<TypeConstructorInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeConstructorInterface {
     /// The constructor's documentation comment (that is every line preceded by
@@ -95,7 +95,7 @@ pub struct TypeConstructorInterface {
     parameters: Vec<ParameterInterface>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeAliasInterface {
     /// The constructor's documentation comment (that is every line preceded by
@@ -118,7 +118,7 @@ pub struct TypeAliasInterface {
     alias: TypeInterface,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ConstantInterface {
     /// The constant's documentation comment (that is every line preceded by
@@ -135,7 +135,7 @@ pub struct ConstantInterface {
 
 /// A module's function. This differs from a simple `Fn` type as its arguments
 /// can be labelled.
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct FunctionInterface {
     /// The function's documentation comment (that is every line preceded by
@@ -151,7 +151,7 @@ pub struct FunctionInterface {
 }
 
 /// Informations about how a value is implemented.
-#[derive(Debug, Serialize, Copy, Clone)]
+#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ImplementationsInterface {
     /// Set to `true` if the const/function has a pure Gleam implementation
@@ -273,7 +273,7 @@ impl ImplementationsInterface {
     }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct DeprecationInterface {
     /// The reason for the deprecation.
@@ -291,8 +291,8 @@ impl DeprecationInterface {
     }
 }
 
-#[derive(Serialize, Debug)]
-#[serde(tag = "kind")]
+#[derive(Deserialize, Serialize, Debug, Clone)]
+// #[serde(tag = "kind")]
 #[serde(rename_all = "kebab-case")]
 pub enum TypeInterface {
     /// A tuple type like `#(Int, Float)`.
@@ -339,7 +339,7 @@ pub enum TypeInterface {
     },
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Deserialize, Serialize, Debug, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ParameterInterface {
     /// If the parameter is labelled this will hold the label's name.
@@ -372,13 +372,20 @@ impl PackageInterface {
                 .iter()
                 .filter(|module| !package.config.is_internal_module(module.name.as_str()))
                 .map(|module| (module.name.clone(), ModuleInterface::from_module(module)))
+                .chain(
+                    package
+                        .cached_metadata
+                        .clone()
+                        .into_iter()
+                        .map(|module| (module.name.clone(), module.interface)),
+                )
                 .collect(),
         }
     }
 }
 
 impl ModuleInterface {
-    fn from_module(module: &Module) -> ModuleInterface {
+    pub fn from_module(module: &Module) -> ModuleInterface {
         let mut types = HashMap::new();
         let mut type_aliases = HashMap::new();
         let mut constants = HashMap::new();
