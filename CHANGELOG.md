@@ -152,6 +152,10 @@
   JavaScript prelude.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where generated TypeScript definitions were invalid for opaque
+  types that use a private type.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes

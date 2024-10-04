@@ -204,7 +204,7 @@ impl<'a> JavaScript<'a> {
             let rexport = rexport.replace(".mjs", ".d.mts");
             let prelude_declaration_path = &self.output_directory.join("gleam.d.mts");
 
-            // Type decleration may trigger badly configured watchers
+            // Type declaration may trigger badly configured watchers
             if !writer.exists(prelude_declaration_path) {
                 writer.write(prelude_declaration_path, &rexport)?;
             }
