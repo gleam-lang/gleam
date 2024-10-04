@@ -302,9 +302,9 @@ impl<'a> Generator<'a> {
                 .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
-        let (start, end) = self
+        let location = self
             .line_numbers
-            .line_and_column_number_of_src_span(constructor.location);
+            .line_and_column_number(constructor.location.start);
 
         let head = if publicity.is_private() || opaque {
             "class "
@@ -314,30 +314,26 @@ impl<'a> Generator<'a> {
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
         if constructor.arguments.is_empty() {
-            return head.append("}").attach_sourcemap_location(start, end);
+            return head.append("}").attach_sourcemap_location(location);
         };
 
         let parameters = join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
-                let (start, end) = self
-                    .line_numbers
-                    .line_and_column_number_of_src_span(arg.location);
-                parameter((i, arg)).attach_sourcemap_location(start, end)
+                let location = self.line_numbers.line_and_column_number(arg.location.start);
+                parameter((i, arg)).attach_sourcemap_location(location)
             }),
             break_(",", ", "),
         );
 
         let constructor_body = join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
-                let (start, end) = self
-                    .line_numbers
-                    .line_and_column_number_of_src_span(arg.location);
+                let location = self.line_numbers.line_and_column_number(arg.location.start);
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
                     Some((_, name)) => docvec!["this.", name, " = ", var, ";"],
                 }
-                .attach_sourcemap_location(start, end)
+                .attach_sourcemap_location(location)
             }),
             line(),
         );
@@ -353,7 +349,7 @@ impl<'a> Generator<'a> {
         ]
         .nest(INDENT);
 
-        docvec![head, class_body, line(), "}"].attach_sourcemap_location(start, end)
+        docvec![head, class_body, line(), "}"].attach_sourcemap_location(location)
     }
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
@@ -470,15 +466,12 @@ impl<'a> Generator<'a> {
         let module_name = eco_format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified.iter().map(|i| {
-            let (location_start, location_end) = self
-                .line_numbers
-                .line_and_column_number_of_src_span(i.location);
+            let location = self.line_numbers.line_and_column_number(i.location.start);
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
                 maybe_escape_identifier_doc(n)
             });
-            let name = maybe_escape_identifier_doc(&i.name)
-                .attach_sourcemap_location(location_start, location_end);
+            let name = maybe_escape_identifier_doc(&i.name).attach_sourcemap_location(location);
             Member { name, alias }
         });
 
@@ -528,9 +521,7 @@ impl<'a> Generator<'a> {
         let document =
             expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
 
-        let (start, end) = self
-            .line_numbers
-            .line_and_column_number_of_src_span(location);
+        let location = self.line_numbers.line_and_column_number(location.start);
 
         Ok(docvec![
             head,
@@ -539,7 +530,7 @@ impl<'a> Generator<'a> {
             document,
             ";",
         ]
-        .attach_sourcemap_location(start, end))
+        .attach_sourcemap_location(location))
     }
 
     fn register_in_scope(&mut self, name: &str) {
@@ -585,9 +576,9 @@ impl<'a> Generator<'a> {
             Err(error) => return Some(Err(error)),
         };
 
-        let location = function.full_location();
-        let start = self.line_numbers.line_and_column_number(location.start);
-        let end = self.line_numbers.line_and_column_number(location.end);
+        let location = self
+            .line_numbers
+            .line_and_column_number(function.full_location().start);
 
         Some(Ok(docvec![
             docvec![
@@ -595,7 +586,7 @@ impl<'a> Generator<'a> {
                 maybe_escape_identifier_doc(name.as_str()),
                 fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             ]
-            .attach_sourcemap_location(start, end),
+            .attach_sourcemap_location(location),
             " {",
             docvec![line(), body].nest(INDENT).group(),
             line(),

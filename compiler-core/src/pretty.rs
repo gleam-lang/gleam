@@ -195,7 +195,6 @@ pub enum Document<'a> {
     WithSourceMapLocation {
         document: Box<Self>,
         start: LineColumn,
-        end: LineColumn,
     },
 }
 
@@ -621,11 +620,7 @@ fn format(
                 docs.push_front((indent, mode, document));
             }
 
-            Document::WithSourceMapLocation {
-                document,
-                start,
-                end: _, // TODO: Learn how to use this
-            } => {
+            Document::WithSourceMapLocation { document, start } => {
                 let (line, col) = writer.position();
                 source_map_emitter.add_mapping(line as u32, col as u32, *start);
                 docs.push_front((indent, mode, document));
@@ -733,11 +728,10 @@ impl<'a> Document<'a> {
         open.to_doc().append(self).append(closed)
     }
 
-    pub fn attach_sourcemap_location(self, start: LineColumn, end: LineColumn) -> Self {
+    pub fn attach_sourcemap_location(self, start: LineColumn) -> Self {
         Document::WithSourceMapLocation {
             document: Box::new(self),
             start,
-            end,
         }
     }
 
