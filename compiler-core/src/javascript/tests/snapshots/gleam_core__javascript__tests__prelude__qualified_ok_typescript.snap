@@ -2,7 +2,6 @@
 source: compiler-core/src/javascript/tests/prelude.rs
 expression: "import gleam\npub fn go() { gleam.Ok(1) }\n"
 ---
-import type * as $gleam from "../gleam.d.mts";
 import type * as _ from "../gleam.d.mts";
 
 export function go(): _.Result<number, any>;

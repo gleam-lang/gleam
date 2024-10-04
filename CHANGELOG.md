@@ -151,7 +151,9 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The Language Server now suggests a code action to convert qualified imports to unqualified imports, which updates all occurrences of the qualified name throughout the module:
+- The Language Server now suggests a code action to convert qualified imports to
+  unqualified imports, which updates all occurrences of the qualified name
+  throughout the module:
 
   ```gleam
   import option
@@ -196,6 +198,10 @@
 - Fixed a bug where the compiler would incorrectly type-check and compile
   calls to functions with labelled arguments in certain cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where importing type aliases that reference unimported modules
+  would generate invalid TypeScript definitions.
+  ([Richard Viney](https://github.com/richard-viney))
 
 ## v1.5.1 - 2024-09-26
 

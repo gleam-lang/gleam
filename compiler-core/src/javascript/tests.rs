@@ -83,6 +83,18 @@ macro_rules! assert_js_error {
 
 #[macro_export]
 macro_rules! assert_ts_def {
+    (($dep_1_package:expr, $dep_1_name:expr, $dep_1_src:expr), ($dep_2_package:expr, $dep_2_name:expr, $dep_2_src:expr), $src:expr $(,)?) => {{
+        let output = $crate::javascript::tests::compile_ts(
+            $src,
+            vec![
+                ($dep_1_package, $dep_1_name, $dep_1_src),
+                ($dep_2_package, $dep_2_name, $dep_2_src),
+            ],
+        )
+        .expect("compilation failed");
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    }};
+
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let output =
             $crate::javascript::tests::compile_ts($src, vec![($dep_package, $dep_name, $dep_src)])
