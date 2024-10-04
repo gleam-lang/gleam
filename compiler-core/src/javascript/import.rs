@@ -123,8 +123,8 @@ impl<'a> Import<'a> {
         let maybe_location = match self.location {
             ImportLocation::Prelude => None,
             ImportLocation::AtLocation(location) => {
-                let (start, end) = line_numbers.line_and_column_number_of_src_span(location);
-                Some((start, end))
+                let location = line_numbers.line_and_column_number(location.start);
+                Some(location)
             }
         };
         let alias_imports = concat(self.aliases.into_iter().sorted().map(|alias| {
@@ -139,7 +139,7 @@ impl<'a> Import<'a> {
                 line()
             ];
             match maybe_location {
-                Some((start, end)) => doc.attach_sourcemap_location(start, end),
+                Some(start) => doc.attach_sourcemap_location(start),
                 None => doc,
             }
         }));
@@ -165,7 +165,7 @@ impl<'a> Import<'a> {
                 line()
             ];
             match maybe_location {
-                Some((start, end)) => doc.attach_sourcemap_location(start, end),
+                Some(start) => doc.attach_sourcemap_location(start),
                 None => doc,
             }
         }
