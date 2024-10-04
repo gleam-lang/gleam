@@ -116,10 +116,21 @@ impl<'module> Generator<'module> {
     }
 
     fn tail_call_loop<'a>(&mut self, body: Document<'a>, args: &'a [TypedArg]) -> Output<'a> {
-        let loop_assignments = concat(args.iter().flat_map(Arg::get_variable_name).map(|name| {
-            let var = maybe_escape_identifier_doc(name);
-            docvec!["let ", var, " = loop$", name, ";", line()]
-        }));
+        let loop_assignments = concat(
+            args.iter()
+                .filter_map(|arg| arg.get_variable_name().map(|name| (name, arg.location)))
+                .map(|(name, location)| {
+                    let (start, end) = self
+                        .line_numbers
+                        .line_and_column_number_of_src_span(location);
+                    let var = maybe_escape_identifier_doc(name);
+                    docvec![
+                        docvec!["let ", var, " = loop$", name, ";"]
+                            .attach_sourcemap_location(start, end),
+                        line()
+                    ]
+                }),
+        );
         Ok(docvec!(
             "while (true) {",
             docvec!(line(), loop_assignments, body).nest(INDENT),
