@@ -1,5 +1,3 @@
-use crate::ast::SrcSpan;
-
 #[derive(Debug, serde::Serialize, serde::Deserialize, Clone, PartialEq, Eq)]
 pub struct LineNumbers {
     pub line_starts: Vec<u32>,
@@ -35,16 +33,6 @@ impl LineNumbers {
                 .unwrap_or_default()
             + 1;
         LineColumn { line, column }
-    }
-
-    pub fn line_and_column_number_of_src_span(
-        &self,
-        location: SrcSpan,
-    ) -> (LineColumn, LineColumn) {
-        let SrcSpan { start, end } = location;
-        let start = self.line_and_column_number(start);
-        let end = self.line_and_column_number(end);
-        (start, end)
     }
 
     // TODO: handle unicode characters that may be more than 1 byte in width
