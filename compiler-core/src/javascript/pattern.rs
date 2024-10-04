@@ -426,13 +426,18 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             Pattern::Discard { .. } => Ok(()),
 
-            Pattern::Variable { name, .. } => {
-                self.push_assignment(subject.clone(), name);
+            Pattern::Variable { name, location, .. } => {
+                self.push_assignment(subject.clone(), name, *location);
                 Ok(())
             }
 
-            Pattern::Assign { name, pattern, .. } => {
-                self.push_assignment(subject.clone(), name);
+            Pattern::Assign {
+                name,
+                pattern,
+                location,
+                ..
+            } => {
+                self.push_assignment(subject.clone(), name, *location);
                 self.traverse_pattern(subject, pattern)
             }
 
@@ -502,12 +507,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 left_side_string,
                 right_side_assignment,
                 left_side_assignment,
+                left_location,
+                right_location,
                 ..
             } => {
                 self.push_string_prefix_check(subject.clone(), left_side_string);
                 if let AssignName::Variable(right) = right_side_assignment {
                     self.push_string_prefix_slice(utf16_no_escape_len(left_side_string));
-                    self.push_assignment(subject.clone(), right);
+                    self.push_assignment(subject.clone(), right, *right_location);
                     // After pushing the assignment we need to pop the prefix slicing we used to
                     // check the condition.
                     self.pop();
@@ -529,6 +536,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         path: docvec![],
                         name: left,
                         var,
+                        location: *left_location,
                     });
                 }
                 Ok(())
@@ -786,7 +794,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         })
     }
 
-    fn push_assignment(&mut self, subject: Document<'a>, name: &'a EcoString) {
+    fn push_assignment(&mut self, subject: Document<'a>, name: &'a EcoString, location: SrcSpan) {
         let var = self.next_local_var(name);
         let path = self.path_document();
         self.assignments.push(Assignment {
@@ -794,6 +802,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             path,
             var,
             name,
+            location,
         });
     }
 
@@ -884,6 +893,7 @@ pub struct Assignment<'a> {
     var: Document<'a>,
     pub subject: Document<'a>,
     pub path: Document<'a>,
+    pub location: SrcSpan,
 }
 
 impl<'a> Assignment<'a> {
