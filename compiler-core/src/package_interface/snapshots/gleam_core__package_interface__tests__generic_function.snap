@@ -40,16 +40,18 @@ expression: "\npub type Wob(a) { Wob }\n@deprecated(\"deprecation message\")\npu
           },
           "parameters": [],
           "return": {
-            "kind": "named",
-            "name": "Wob",
-            "package": "my_package",
-            "module": "my/module",
-            "parameters": [
-              {
-                "kind": "variable",
-                "id": 0
-              }
-            ]
+            "named": {
+              "name": "Wob",
+              "package": "my_package",
+              "module": "my/module",
+              "parameters": [
+                {
+                  "variable": {
+                    "id": 0
+                  }
+                }
+              ]
+            }
           }
         }
       }

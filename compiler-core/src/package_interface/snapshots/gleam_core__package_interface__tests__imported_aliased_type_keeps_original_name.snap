@@ -25,24 +25,27 @@ expression: "\nimport other_module.{type Element as Alias} as module_alias\npub 
           },
           "parameters": [],
           "return": {
-            "kind": "named",
-            "name": "Element",
-            "package": "other_package",
-            "module": "other_module",
-            "parameters": [
-              {
-                "kind": "named",
-                "name": "Element",
-                "package": "other_package",
-                "module": "other_module",
-                "parameters": [
-                  {
-                    "kind": "variable",
-                    "id": 0
+            "named": {
+              "name": "Element",
+              "package": "other_package",
+              "module": "other_module",
+              "parameters": [
+                {
+                  "named": {
+                    "name": "Element",
+                    "package": "other_package",
+                    "module": "other_module",
+                    "parameters": [
+                      {
+                        "variable": {
+                          "id": 0
+                        }
+                      }
+                    ]
                   }
-                ]
-              }
-            ]
+                }
+              ]
+            }
           }
         }
       }

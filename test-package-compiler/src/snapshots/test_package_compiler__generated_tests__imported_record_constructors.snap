@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 184
 expression: "./cases/imported_record_constructors"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.cache_meta
-<89 byte binary>
+<507 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one@one.erl
 -module(one@one).
@@ -28,7 +27,7 @@ expression: "./cases/imported_record_constructors"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<491 byte binary>
+<3990 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

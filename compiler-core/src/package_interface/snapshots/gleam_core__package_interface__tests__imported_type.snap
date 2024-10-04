@@ -25,19 +25,21 @@ expression: "\nimport other_module.{type Element}\npub fn main() -> Element(Int)
           },
           "parameters": [],
           "return": {
-            "kind": "named",
-            "name": "Element",
-            "package": "other_package",
-            "module": "other_module",
-            "parameters": [
-              {
-                "kind": "named",
-                "name": "Int",
-                "package": "",
-                "module": "gleam",
-                "parameters": []
-              }
-            ]
+            "named": {
+              "name": "Element",
+              "package": "other_package",
+              "module": "other_module",
+              "parameters": [
+                {
+                  "named": {
+                    "name": "Int",
+                    "package": "",
+                    "module": "gleam",
+                    "parameters": []
+                  }
+                }
+              ]
+            }
           }
         }
       }

@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 74
 expression: "./cases/erlang_import"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<88 byte binary>
+<261 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -26,7 +25,7 @@ unbox(X) ->
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<57 byte binary>
+<202 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

@@ -1,13 +1,12 @@
 ---
 source: test-package-compiler/src/generated_tests.rs
-assertion_line: 63
 expression: "./cases/erlang_escape_names"
 ---
 //// /out/lib/the_package/_gleam_artefacts/one.cache
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<61 byte binary>
+<167 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -25,7 +24,7 @@ expression: "./cases/erlang_escape_names"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<136 byte binary>
+<501 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

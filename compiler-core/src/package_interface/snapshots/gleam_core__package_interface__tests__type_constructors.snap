@@ -23,18 +23,20 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                 {
                   "label": null,
                   "type": {
-                    "kind": "variable",
-                    "id": 1
+                    "variable": {
+                      "id": 1
+                    }
                   }
                 },
                 {
                   "label": null,
                   "type": {
-                    "kind": "named",
-                    "name": "Int",
-                    "package": "",
-                    "module": "gleam",
-                    "parameters": []
+                    "named": {
+                      "name": "Int",
+                      "package": "",
+                      "module": "gleam",
+                      "parameters": []
+                    }
                   }
                 }
               ]
@@ -46,18 +48,20 @@ expression: "\npub type Box(a, b) {\n  Box(b, Int)\n  OtherBox(message: String, 
                 {
                   "label": "message",
                   "type": {
-                    "kind": "named",
-                    "name": "String",
-                    "package": "",
-                    "module": "gleam",
-                    "parameters": []
+                    "named": {
+                      "name": "String",
+                      "package": "",
+                      "module": "gleam",
+                      "parameters": []
+                    }
                   }
                 },
                 {
                   "label": "a",
                   "type": {
-                    "kind": "variable",
-                    "id": 0
+                    "variable": {
+                      "id": 0
+                    }
                   }
                 }
               ]
