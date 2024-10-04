@@ -1187,7 +1187,7 @@ impl<'module> Generator<'module> {
         kind: AssignmentKind,
     ) -> Output<'a> {
         let any_assignments = !compiled_pattern.assignments.is_empty();
-        let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
+        let assignments = self.pattern_assignments_doc(compiled_pattern.assignments);
 
         // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
         // provided that does not get matched the code needs to throw an exception, which is done
@@ -1225,8 +1225,13 @@ impl<'module> Generator<'module> {
         .group())
     }
 
-    fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
-        let assignments = assignments.into_iter().map(Assignment::into_doc);
+    fn pattern_assignments_doc<'a>(&self, assignments: Vec<Assignment<'a>>) -> Document<'a> {
+        let assignments = assignments.into_iter().map(|assignment| {
+            let (start, end) = self
+                .line_numbers
+                .line_and_column_number_of_src_span(assignment.location);
+            assignment.into_doc().attach_sourcemap_location(start, end)
+        });
         join(assignments, line())
     }
 
@@ -1235,7 +1240,7 @@ impl<'module> Generator<'module> {
         compiled_pattern: &mut CompiledPattern<'a>,
     ) -> Document<'a> {
         let assignments = std::mem::take(&mut compiled_pattern.assignments);
-        Self::pattern_assignments_doc(assignments)
+        self.pattern_assignments_doc(assignments)
     }
 
     fn pattern_take_checks_doc<'a>(
