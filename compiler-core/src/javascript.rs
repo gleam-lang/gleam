@@ -408,10 +408,12 @@ impl<'a> Generator<'a> {
                     name: Some((_, name)),
                     publicity,
                     external_javascript: Some((module, function, _location)),
+                    location,
                     ..
                 }) => {
                     self.register_external_function(
                         &mut imports,
+                        ImportLocation::AtLocation(*location),
                         *publicity,
                         name,
                         module,
@@ -492,6 +494,7 @@ impl<'a> Generator<'a> {
     fn register_external_function(
         &mut self,
         imports: &mut Imports<'a>,
+        location: ImportLocation,
         publicity: Publicity,
         name: &'a str,
         module: &'a str,
@@ -511,12 +514,7 @@ impl<'a> Generator<'a> {
         if publicity.is_importable() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(
-            EcoString::from(module),
-            ImportLocation::Prelude,
-            [],
-            [member],
-        );
+        imports.register_module(EcoString::from(module), location, [], [member]);
     }
 
     fn module_constant(
