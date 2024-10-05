@@ -84,7 +84,7 @@ where
             }
         }
 
-        Ok(Input::Cached((self.cached(name, meta.clone()), meta)))
+        Ok(Input::Cached(self.cached(name, meta.clone()), meta))
     }
 
     /// Read the timestamp file from the artefact directory for the given

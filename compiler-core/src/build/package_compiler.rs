@@ -603,28 +603,28 @@ pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) 
 #[derive(Debug)]
 pub(crate) enum Input {
     New(UncompiledModule),
-    Cached((CachedModule, CacheMetadata)),
+    Cached(CachedModule, CacheMetadata),
 }
 
 impl Input {
     pub fn name(&self) -> &EcoString {
         match self {
             Input::New(m) => &m.name,
-            Input::Cached(m) => &m.0.name,
+            Input::Cached(m, _) => &m.name,
         }
     }
 
     pub fn source_path(&self) -> &Utf8Path {
         match self {
             Input::New(m) => &m.path,
-            Input::Cached(m) => &m.0.source_path,
+            Input::Cached(m, _) => &m.source_path,
         }
     }
 
     pub fn dependencies(&self) -> Vec<EcoString> {
         match self {
             Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
-            Input::Cached(m) => m.0.dependencies.iter().map(|(n, _)| n.clone()).collect(),
+            Input::Cached(m, _) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
         }
     }
 
