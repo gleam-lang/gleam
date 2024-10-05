@@ -1300,12 +1300,6 @@ pub enum UnifyErrorSituation {
     /// The operands of a binary operator were incorrect.
     Operator(BinOp),
 
-    /// A try expression returned a different error type to the previous try.
-    TryErrorMismatch,
-
-    /// The final value of a try expression was not a Result.
-    TryReturnResult,
-
     /// One of the elements of a list was not the same type as the others.
     ListElementMismatch,
 
@@ -1350,17 +1344,6 @@ annotation of this function.",
                 Some("This function cannot handle the argument sent through the (|>) pipe:")
             }
             Self::Operator(_op) => None,
-
-            Self::TryErrorMismatch => Some(
-                "This returned value has a type incompatible with the previous try expression.
-All the try expressions in a block and the final result value must have
-the same error type.",
-            ),
-
-            Self::TryReturnResult => Some(
-                "This returned value has a type incompatible with the previous try expression.
-The returned value after a try must be of type Result.",
-            ),
 
             Self::ListElementMismatch => Some(
                 "All elements of a list must be the same type, but this one doesn't
@@ -1432,14 +1415,6 @@ impl UnifyError {
 
     pub fn operator_situation(self, binop: BinOp) -> Self {
         self.with_unify_error_situation(UnifyErrorSituation::Operator(binop))
-    }
-
-    pub fn inconsistent_try(self, return_value_is_result: bool) -> Self {
-        self.with_unify_error_situation(if return_value_is_result {
-            UnifyErrorSituation::TryErrorMismatch
-        } else {
-            UnifyErrorSituation::TryReturnResult
-        })
     }
 
     pub fn into_error(self, location: SrcSpan) -> Error {
