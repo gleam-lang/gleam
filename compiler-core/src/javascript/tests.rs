@@ -7,6 +7,7 @@ use crate::{
     warning::{TypeWarningEmitter, WarningEmitter},
 };
 use camino::{Utf8Path, Utf8PathBuf};
+use sourcemap::{SourceMap, SourceMapBuilder};
 
 mod assignments;
 mod bit_arrays;
@@ -27,6 +28,7 @@ mod prelude;
 mod records;
 mod recursion;
 mod results;
+mod sourcemaps;
 mod strings;
 mod todo;
 mod tuples;
@@ -217,6 +219,29 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     ts_declaration(&ast, Utf8Path::new(""), &src.into())
+}
+
+pub fn compile_js_and_sourcemap(
+    src: &str,
+    deps: Vec<(&str, &str, &str)>,
+) -> Result<(String, SourceMap), crate::Error> {
+    let ast = compile(src, deps);
+    let line_numbers = LineNumbers::new(src);
+    let mut sourcemap_emitter = SourceMapEmitter::Emit(SourceMapBuilder::new(None));
+    let js = module(
+        &ast,
+        &line_numbers,
+        Utf8Path::new(""),
+        &"".into(),
+        TargetSupport::Enforced,
+        TypeScriptDeclarations::None,
+        &mut sourcemap_emitter,
+    )?;
+    let sourcemap = match sourcemap_emitter {
+        SourceMapEmitter::Emit(builder) => builder.into_sourcemap(),
+        SourceMapEmitter::Null => panic!("Should have generated a sourcemap"),
+    };
+    Ok((js, sourcemap))
 }
 
 pub fn expect_js_error(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
