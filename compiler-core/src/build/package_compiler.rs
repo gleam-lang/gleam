@@ -170,8 +170,6 @@ where
             }
         }
 
-        println!("{:?}", loaded.cached_metadata);
-
         // Type check the modules that are new or have changed
         tracing::info!(count=%loaded.to_compile.len(), "analysing_modules");
         let outcome = analyse(
