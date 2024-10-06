@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport some_mod\npub fn main() {\n  some_mod.Wibble(1).field\n}\n"
+---
+error: Unknown record field
+  ┌─ /src/one/two.gleam:4:21
+  │
+4 │   some_mod.Wibble(1).field
+  │                     ^^^^^^ This field does not exist
+
+The value being accessed has this type:
+
+    some_mod.Wibble
+
+It does not have any fields.
+
+Note: The field you are trying to access might not be consistently present
+or positioned across the custom type's variants, preventing reliable
+access. Ensure the field exists in the same position and has the same type
+in all variants to enable direct accessor syntax.

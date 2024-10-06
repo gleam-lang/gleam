@@ -468,6 +468,36 @@ impl<'a> Environment<'a> {
         }
     }
 
+    pub fn get_type_variants_fields(
+        &self,
+        module: &EcoString,
+        name: &EcoString,
+    ) -> Vec<&EcoString> {
+        self.get_constructors_for_type(module, name)
+            .iter()
+            .flat_map(|c| &c.variants)
+            .filter_map(|variant| {
+                self.type_value_constructor_to_constructor(module, variant)?
+                    .variant
+                    .record_field_map()
+            })
+            .flat_map(|field_map| field_map.fields.keys())
+            .collect_vec()
+    }
+
+    fn type_value_constructor_to_constructor(
+        &self,
+        module: &EcoString,
+        variant: &TypeValueConstructor,
+    ) -> Option<&ValueConstructor> {
+        if *module == self.current_module {
+            self.scope.get(&variant.name)
+        } else {
+            let (_, module) = self.imported_modules.get(module)?;
+            module.get_public_value(&variant.name)
+        }
+    }
+
     pub fn insert_accessors(&mut self, type_name: EcoString, accessors: AccessorsMap) {
         let _ = self.accessors.insert(type_name, accessors);
     }

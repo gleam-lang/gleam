@@ -547,6 +547,16 @@ impl ValueConstructorVariant {
             } => *implementations,
         }
     }
+
+    fn record_field_map(&self) -> Option<&FieldMap> {
+        match self {
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::ModuleConstant { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::ModuleFn { .. } => None,
+            ValueConstructorVariant::Record { field_map, .. } => field_map.as_ref(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

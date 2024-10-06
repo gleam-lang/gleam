@@ -2232,19 +2232,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
-        let has_variants = match &*record_type {
-            Type::Named { name, .. } => self
+        let appears_in_a_variant = match &*record_type {
+            Type::Named { module, name, .. } => self
                 .environment
-                .module_types_constructors
-                .get(name)
-                .map_or(RecordVariants::NoVariants, |type_variant_constructors| {
-                    if type_variant_constructors.variants.len() > 1 {
-                        RecordVariants::HasVariants
-                    } else {
-                        RecordVariants::NoVariants
-                    }
-                }),
-            _ => RecordVariants::NoVariants,
+                .get_type_variants_fields(module, name)
+                .iter()
+                .contains(&&label),
+            _ => false,
         };
 
         let unknown_field = |fields| Error::UnknownRecordField {
@@ -2253,7 +2247,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             location,
             label: label.clone(),
             fields,
-            variants: has_variants,
+            unknown_field: if appears_in_a_variant {
+                UnknownField::AppearsInAVariant
+            } else {
+                UnknownField::TrulyUnknown
+            },
         };
         let accessors = match collapse_links(record_type.clone()).as_ref() {
             // A type in the current module which may have fields
