@@ -412,7 +412,7 @@ fn derivation_tree_to_pretty_error_message(
     mut derivation_tree: DerivationTree<String, hexpm::version::Version>,
 ) -> String {
     derivation_tree.collapse_no_versions();
-    let derivation_tree = simplify_error(derivation_tree);
+    let derivation_tree = simplify_derivation_tree(derivation_tree);
 
     pprint_error(0, &derivation_tree);
     // TODO))
@@ -570,7 +570,26 @@ fn collect_conflicting_packages<'dt, P: Package, V: Version>(
     }
 }
 
-fn simplify_error<'dt, P: Package, V: Version>(
+/// This function collapses adjacent levels of a derivation tree that are all
+/// relative to the same dependency.
+///
+/// By default a derivation tree might have many nodes for a specific package,
+/// each node referring to a specific version range. For example:
+///
+///   - package_wibble `>= 1.0.0 and < 1.1.0` requires package_wobble `>= 1.1.0`
+///   - package_wibble `>= 1.1.0 and < 1.2.0` requires package_wobble `>= 1.2.0`
+///   - package_wibble `1.1.0` requires package_wobble `>= 1.1.0`
+///
+/// This level of fine-grained detail would be quite overwhelming in the vast
+/// majority of cases so we're fine with collapsing all these details into a
+/// single node taking the union of all the ranges that are there:
+///
+///   - package_wibble `>= 1.0.0 and < 1.2.0` requires package_wobble `>= 1.1.0`
+///
+/// This way we can print an error message that is way more concise and still
+/// informative about what went wrong.
+///
+fn simplify_derivation_tree<'dt, P: Package, V: Version>(
     derivation_tree: DerivationTree<P, V>,
 ) -> DerivationTree<P, V> {
     match derivation_tree {
@@ -580,16 +599,16 @@ fn simplify_error<'dt, P: Package, V: Version>(
             cause2,
             terms,
             shared_id,
-        }) => merge_trees_step(
-            simplify_error(*cause1),
-            simplify_error(*cause2),
+        }) => simplify_outer_derivation_tree(
+            simplify_derivation_tree(*cause1),
+            simplify_derivation_tree(*cause2),
             terms,
             shared_id,
         ),
     }
 }
 
-fn merge_trees_step<'dt, P: Package, V: Version>(
+fn simplify_outer_derivation_tree<'dt, P: Package, V: Version>(
     one: DerivationTree<P, V>,
     other: DerivationTree<P, V>,
     terms: pubgrub::type_aliases::Map<P, pubgrub::term::Term<V>>,
@@ -597,27 +616,35 @@ fn merge_trees_step<'dt, P: Package, V: Version>(
 ) -> DerivationTree<P, V> {
     match (one, other) {
         (
+            // The way an External::FromDependencyOf is read is: `package` in
+            // range `package_range` requires `required_package` to be in range
+            // `required_package_range`...
             DerivationTree::External(External::FromDependencyOf(
-                cause1_p1,
-                cause1_r1,
-                cause1_p2,
-                cause1_r2,
+                package,
+                package_range,
+                required_package,
+                required_package_range,
             )),
             DerivationTree::External(External::FromDependencyOf(
-                cause2_p1,
-                cause2_r1,
-                cause2_p2,
-                cause2_r2,
+                maybe_package,
+                other_package_range,
+                maybe_required_package,
+                other_required_package_range,
             )),
-        ) if cause1_p1 == cause2_p1 && cause1_p2 == cause2_p2 => {
+        )
+        // ...So we can simplify two adjacent dependency failures if they are
+        // talking about the same pair of packages by taking the union of the
+        // respsective ranges.
+        if package == maybe_package && required_package == maybe_required_package => {
             DerivationTree::External(External::FromDependencyOf(
-                cause1_p1,
-                cause1_r1.union(&cause2_r1),
-                cause1_p2,
-                cause1_r2.union(&cause2_r2),
+                package,
+                package_range.union(&other_package_range),
+                required_package,
+                required_package_range.union(&other_required_package_range),
             ))
         }
 
+        // Otherwise there's no way to simplify it!
         (cause1, cause2) => DerivationTree::Derived(Derived {
             cause1: Box::new(cause1),
             cause2: Box::new(cause2),
