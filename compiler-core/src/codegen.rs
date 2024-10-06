@@ -252,9 +252,7 @@ impl<'a> JavaScript<'a> {
         js_name: &str,
     ) -> Result<()> {
         let name = format!("{js_name}.mjs");
-        let sourcemap_name = format!("{js_name}.mjs.map");
         let path = self.output_directory.join(name);
-        let sourcemap_path = self.output_directory.join(sourcemap_name);
         let line_numbers = LineNumbers::new(&module.code);
         let output = javascript::module(
             &module.ast,
@@ -271,20 +269,19 @@ impl<'a> JavaScript<'a> {
         match source_map_emitter {
             SourceMapEmitter::Null => Ok(()),
             SourceMapEmitter::Emit(builder) => {
+                let sourcemap_name = format!("{js_name}.mjs.map");
+                let sourcemap_path = self.output_directory.join(sourcemap_name);
+                tracing::debug!(path = ?sourcemap_path, name = ?js_name, "Emitting sourcemap for module");
+
                 // NOTE: This is a bit inefficient
                 // * we first write to a buffer
                 // * then construct a String based on the output
                 // * then write to the output
                 let sourcemap = builder.into_sourcemap();
-                let mut output = Vec::new();
 
-                // TODO: proper error handling
-                sourcemap
-                    .to_writer(&mut output)
-                    .expect("Failed to write sourcemap to memory");
-                // TODO: proper error handling
-                let output =
-                    String::from_utf8(output).expect("Failed to write sourcemap to memory");
+                let mut output = Vec::new();
+                sourcemap.to_writer(&mut output).expect("Failed to write sourcemap to memory. This is a bug in sourcemap, please report.");
+                let output = String::from_utf8(output).expect("Sourcemap did not generate valid UTF-8. This is a bug in sourcemap, please report.");
 
                 writer.write(&sourcemap_path, &output)
             }
