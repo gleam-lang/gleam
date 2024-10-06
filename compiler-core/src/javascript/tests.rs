@@ -227,7 +227,7 @@ pub fn compile_js_and_sourcemap(
 ) -> Result<(String, SourceMap), crate::Error> {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    let mut sourcemap_emitter = SourceMapEmitter::Emit(SourceMapBuilder::new(None));
+    let mut sourcemap_emitter = SourceMapEmitter::Emit(Box::new(SourceMapBuilder::new(None)));
     let js = module(
         &ast,
         &line_numbers,
