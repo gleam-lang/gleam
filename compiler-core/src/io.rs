@@ -69,6 +69,62 @@ impl Utf8Writer for String {
     }
 }
 
+/// A wrapper for any writer that keeps track of what line/column it is
+/// currently on.
+///
+/// Used to produce SourceMaps.
+#[derive(Debug)]
+pub struct CursorPositionWriter<'a, W> {
+    /// The wrapper writer
+    writer: &'a mut W,
+    /// 0-indexed line the cursor is at right now
+    line: usize,
+    /// 0-indexed column the cursor is at right now
+    column: usize,
+}
+
+impl<'a, W> CursorPositionWriter<'a, W> {
+    pub fn position(&self) -> (usize, usize) {
+        (self.line, self.column)
+    }
+
+    pub fn new(writer: &'a mut W) -> Self {
+        CursorPositionWriter {
+            writer,
+            line: 0,
+            column: 0,
+        }
+    }
+}
+
+impl<'a, W: std::fmt::Write> std::fmt::Write for CursorPositionWriter<'a, W> {
+    fn write_str(&mut self, s: &str) -> std::fmt::Result {
+        self.writer.write_str(s)
+    }
+}
+
+impl<'a, W: Utf8Writer + std::fmt::Write> Utf8Writer for CursorPositionWriter<'a, W> {
+    /// A wrapper around `fmt::Write` that has Gleam's error handling.
+    fn str_write(&mut self, str: &str) -> Result<()> {
+        if str.is_empty() {
+            return Ok(());
+        }
+        let newline_count = str.rmatches('\n').count();
+        self.line += newline_count;
+        if newline_count > 0 {
+            let lastline = str.lines().last().expect("Should have at least one line");
+            self.column = lastline.len();
+        } else {
+            self.column += str.len();
+        }
+        self.writer.write_str(str).map_err(|e| self.convert_err(e))
+    }
+
+    fn convert_err<E: std::error::Error>(&self, err: E) -> Error {
+        self.writer.convert_err(err)
+    }
+}
+
 pub trait Writer: io::Write + Utf8Writer {
     /// A wrapper around `io::Write` that has Gleam's error handling.
     fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {

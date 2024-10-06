@@ -8,7 +8,6 @@ pub enum SourceMapSupport {
     None,
 }
 
-// TODO: Does this need to be public ?
 pub enum SourceMapEmitter {
     Null,
     Emit(SourceMapBuilder),
