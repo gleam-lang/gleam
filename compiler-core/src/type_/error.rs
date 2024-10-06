@@ -66,10 +66,36 @@ pub struct UnknownType {
     pub name: EcoString,
 }
 
+/// This is used by the unknown record field error to tell if an unknown field
+/// is a field appearing in another variant of the same type to provide a better
+/// error message explaining why it can't be accessed:
+///
+/// ```gleam
+/// pub type Wibble {
+///   Wibble(field: Int)
+///   Wobble(thing: String)
+/// }
+///
+/// Wobble("hello").field
+/// //             ^^^^^^
+/// ```
+///
+/// Here the error can be extra useful and explain that to access `field` all
+/// variants should have that field at the same position and with the same type.
+///
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
-pub enum RecordVariants {
-    HasVariants,
-    NoVariants,
+pub enum UnknownField {
+    /// The field we're trying to access appears in at least a variant, so it
+    /// can be useulf to explain why it cannot be accessed and how to fix it
+    /// (adding it to all variants/making sure it has the same type/making sure
+    /// it's in the same position).
+    ///
+    AppearsInAVariant,
+
+    /// The field is not in any of the variants, this might truly be a typo and
+    /// there's no need to add further explanations.
+    ///
+    TrulyUnknown,
 }
 
 /// A suggestion for an unknown module
@@ -183,7 +209,7 @@ pub enum Error {
         label: EcoString,
         fields: Vec<EcoString>,
         usage: FieldAccessUsage,
-        variants: RecordVariants,
+        unknown_field: UnknownField,
     },
 
     IncorrectArity {

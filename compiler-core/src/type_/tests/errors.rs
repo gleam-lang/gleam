@@ -2405,3 +2405,69 @@ fn add_1(to x) { x + 1 }
 "
     );
 }
+
+#[test]
+fn unknown_field_that_appears_in_an_imported_variant_has_note() {
+    assert_with_module_error!(
+        (
+            "some_mod",
+            "pub type Wibble {
+              Wibble(field: Int)
+              Wobble(not_field: String, field: Int)
+            }"
+        ),
+        "
+import some_mod
+pub fn main() {
+  some_mod.Wibble(1).field
+}
+"
+    );
+}
+
+#[test]
+fn unknown_field_that_appears_in_a_variant_has_note() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(field: Int)
+  Wobble(not_field: String, field: Int)
+}
+
+pub fn main() {
+  Wibble(1).field
+}
+"
+    );
+}
+
+#[test]
+fn unknown_field_that_does_not_appear_in_variant_has_no_note() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(field: Int)
+  Wobble(not_field: String, field: Int)
+}
+
+pub fn main() {
+  Wibble(1).wibble
+}
+"
+    );
+}
+
+#[test]
+fn no_note_about_reliable_access_if_the_accessed_type_has_a_single_variant() {
+    assert_module_error!(
+        "
+pub type User {
+  User(name: String)
+}
+
+pub fn main() {
+  User(\"Jak\").nam
+}
+"
+    );
+}
