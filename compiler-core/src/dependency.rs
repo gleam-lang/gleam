@@ -4,18 +4,15 @@ use crate::{Error, Result};
 
 use ecow::EcoString;
 use hexpm::{
-    version::{Range, Version},
+    version::{Range, ResolutionError, Version},
     Dependency, Release,
 };
 use pubgrub::{
-    error::PubGrubError,
     solver::{choose_package_with_fewest_versions, Dependencies},
     type_aliases::Map,
 };
 
 pub type PackageVersions = HashMap<String, Version>;
-
-pub type ResolutionError = PubGrubError<String, Version>;
 
 type PubgrubRange = pubgrub::range::Range<Version>;
 
@@ -156,6 +153,7 @@ struct DependencyProvider<'a> {
     // We need this because by default pubgrub checks exact version by checking if a version is between the exact
     // and the version 1 bump ahead. That default breaks on prerelease builds since a bump includes the whole patch
     exact_only: &'a HashMap<String, Version>,
+    optional_dependencies: RefCell<HashMap<EcoString, pubgrub::range::Range<Version>>>,
 }
 
 impl<'a> DependencyProvider<'a> {
@@ -172,6 +170,7 @@ impl<'a> DependencyProvider<'a> {
             locked,
             remote,
             exact_only,
+            optional_dependencies: RefCell::new(Default::default()),
         }
     }
 
@@ -219,7 +218,7 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
                 Ok(pair)
             })
             .collect::<Result<_, _>>()?;
-        let list_available_versions = |name: &String| {
+        let list_available_versions = |name: &PackageName| {
             let name = name.as_str();
             let exact_package = self.exact_only.get(name);
             self.packages
@@ -266,13 +265,26 @@ impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for Dependenc
             return Ok(Dependencies::Unknown);
         }
 
-        let mut deps: Map<String, PubgrubRange> = Default::default();
+        let mut deps: Map<PackageName, PubgrubRange> = Default::default();
         for (name, d) in &release.requirements {
-            // skip optional dependencies and let the user provide them if they want
-            if d.optional {
+            let mut range = d.requirement.to_pubgrub()?;
+            let mut opt_deps = self.optional_dependencies.borrow_mut();
+            // if it's optional and it was not provided yet, store and skip
+            if d.optional && !packages.contains_key(name.as_str()) {
+                let _ = opt_deps
+                    .entry(name.into())
+                    .and_modify(|stored_range| {
+                        *stored_range = range.intersection(stored_range);
+                    })
+                    .or_insert(range);
                 continue;
             }
-            let range = d.requirement.to_pubgrub()?;
+
+            // if a now required dep was optional before, add back the constraints
+            if let Some(other_range) = opt_deps.remove(name.as_str()) {
+                range = range.intersection(&other_range);
+            }
+
             let _ = deps.insert(name.clone(), range);
         }
         Ok(Dependencies::Known(deps))
@@ -448,7 +460,7 @@ mod tests {
                             app: None,
                             optional: true,
                             repository: None,
-                            requirement: Range::new(">= 0.1.0".into()),
+                            requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
                         },
                     )]
                     .into(),
@@ -571,16 +583,48 @@ mod tests {
         assert_eq!(
             result,
             vec![
+                ("gleam_stdlib".into(), Version::try_from("0.2.2").unwrap()),
                 (
                     "package_with_optional".into(),
                     Version::try_from("0.1.0").unwrap()
                 ),
-                ("gleam_stdlib".into(), Version::try_from("0.3.0").unwrap())
             ]
             .into_iter()
             .collect()
         );
     }
+
+    #[test]
+    fn resolution_with_optional_deps_required_by_nested_deps() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![
+                ("package_with_optional".into(), Range::new("~> 0.1".into())),
+                ("gleam_otp".into(), Range::new("~> 0.1".into())),
+            ]
+            .into_iter(),
+            &vec![].into_iter().collect(),
+        )
+        .unwrap();
+        assert_eq!(
+            result,
+            vec![
+                ("gleam_stdlib".into(), Version::try_from("0.2.2").unwrap()),
+                ("gleam_otp".into(), Version::try_from("0.2.0").unwrap()),
+                (
+                    "package_with_optional".into(),
+                    Version::try_from("0.1.0").unwrap()
+                ),
+            ]
+            .into_iter()
+            .collect()
+        );
+    }
+
+    #[test]
+    fn resolution_with_optional_deps_keep_constraints() {}
 
     #[test]
     fn resolution_locked_to_older_version() {
