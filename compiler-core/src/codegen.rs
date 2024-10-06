@@ -195,7 +195,7 @@ impl<'a> JavaScript<'a> {
                 SourceMapSupport::Emit => {
                     let mut builder = SourceMapBuilder::new(Some(&js_filename));
                     let _ = builder.add_source(module.input_path.as_str());
-                    SourceMapEmitter::Emit(builder)
+                    SourceMapEmitter::Emit(Box::new(builder))
                 }
             };
             self.js_module(writer, module, source_map_emitter, &js_name)?;

@@ -10,7 +10,7 @@ pub enum SourceMapSupport {
 
 pub enum SourceMapEmitter {
     Null,
-    Emit(SourceMapBuilder),
+    Emit(Box<SourceMapBuilder>),
 }
 
 // A manual implementation of Debug since SourceMapBuilder doesn't support Debug
