@@ -14,10 +14,8 @@ use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
-use pubgrub::range::Range;
 use pubgrub::report::{DerivationTree, Derived, External};
 use pubgrub::version::Version;
-use std::collections::HashSet;
 use std::env;
 use std::fmt::{Debug, Display};
 use std::io::Write;
@@ -361,8 +359,12 @@ impl Error {
 
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
         Self::DependencyResolutionFailed(match error {
-            ResolutionError::NoSolution(derivation_tree) =>
-                derivation_tree_to_pretty_error_message(derivation_tree),
+            ResolutionError::NoSolution(mut derivation_tree) => {
+                derivation_tree.collapse_no_versions();
+                let derivation_tree = simplify_derivation_tree(derivation_tree);
+                // TODO)) find a way to use the root package name, here it is hardcoded!
+                DerivationTreePrinter::new("one".into()).print(&derivation_tree)
+            }
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
@@ -408,164 +410,57 @@ impl Error {
     }
 }
 
-fn derivation_tree_to_pretty_error_message(
-    mut derivation_tree: DerivationTree<String, hexpm::version::Version>,
-) -> String {
-    derivation_tree.collapse_no_versions();
-    let derivation_tree = simplify_derivation_tree(derivation_tree);
-
-    pprint_error(0, &derivation_tree);
-    // TODO))
-    // This order is not deterministic, so sometimes it will default to the
-    // original version even though it's almost the same!!
-    match &derivation_tree {
-        DerivationTree::Derived(Derived { cause1, cause2, .. }) => {
-            match (cause1.as_ref(), cause2.as_ref()) {
-                (
-                    DerivationTree::Derived(Derived { cause1, cause2, .. }),
-                    DerivationTree::External(External::FromDependencyOf(
-                        root,
-                        root_range,
-                        dep,
-                        dep_range_from_root,
-                    )),
-                ) => match (cause1.as_ref(), cause2.as_ref()) {
-                    (
-                        DerivationTree::External(External::FromDependencyOf(
-                            maybe_common,
-                            maybe_common_range,
-                            maybe_dep,
-                            dep_range_from_common,
-                        )),
-                        DerivationTree::External(External::FromDependencyOf(
-                            maybe_root,
-                            maybe_root_range,
-                            common,
-                            common_range,
-                        )),
-                    ) if maybe_common == common
-                        && maybe_common_range == common_range
-                        && maybe_root == root
-                        && maybe_root_range == root_range
-                        && maybe_dep == dep =>
-                    {
-                        // TODO))
-                        // The default look of ranges is confusing and we want to switch
-                        // to one more similar to Gleam's constraints.
-                        // However, at the moment there's no way of doing this:
-                        // https://github.com/pubgrub-rs/pubgrub/issues/258
-                        //
-                        wrap_format!(
-                            "Unable to find compatible versions for the version \
-constraints in your gleam.toml:
-
-- `{root}` requires `{common}` to be `{common_range}`
-- and all versions of `{common}` in that range require `{dep}` to be `{dep_range_from_common}`
-- but `{root}` also requires `{dep}` to be `{dep_range_from_root}`
-- and there is no version of `{dep}` that satisfies both constraints
-"
-                        )
-                    }
-                    _ => derivation_tree_to_default_error_message(derivation_tree),
-                },
-                _ => derivation_tree_to_default_error_message(derivation_tree),
-            }
-        }
-        // In case we can't figure out a good way to display the constraint
-        // failure then we just use a default error message that just lists the
-        // conflicting packages; leaving to the user to figure out what went
-        // wrong.
-        _ => derivation_tree_to_default_error_message(derivation_tree),
-    }
+struct DerivationTreePrinter<'a> {
+    previous_subject: Option<&'a String>,
+    previous_object: Option<&'a String>,
+    root_package_name: String,
 }
 
-fn derivation_tree_to_default_error_message(
-    derivation_tree: DerivationTree<String, hexpm::version::Version>,
-) -> String {
-    let mut conflicting_packages = HashSet::new();
-    collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
+impl<'a> DerivationTreePrinter<'a> {
+    pub fn print(
+        &mut self,
+        derivation_tree: &'a DerivationTree<String, hexpm::version::Version>,
+    ) -> String {
+        match &derivation_tree {
+            DerivationTree::External(External::FromDependencyOf(
+                package,
+                _package_version,
+                required_package,
+                required_package_version,
+            )) => {
+                let start = if self.previous_subject == Some(package) {
+                    "it also".to_string()
+                } else if package == &self.root_package_name {
+                    "your package".to_string()
+                } else if self.previous_object == Some(package) {
+                    format!("and `{package}`")
+                } else {
+                    format!("`{package}`")
+                };
 
-    wrap_format!(
-        "Unable to find compatible versions for the version constraints in \
-your gleam.toml. The conflicting packages are:
+                self.previous_subject = Some(package);
+                self.previous_object = Some(required_package);
 
-{}
-",
-        conflicting_packages
-            .into_iter()
-            .map(|s| format!("- {}", s))
-            .join("\n")
-    )
-}
-
-fn pprint_error<'dt, P: Package, V: Version>(
-    nest: usize,
-    derivation_tree: &'dt DerivationTree<P, V>,
-) {
-    match derivation_tree {
-        DerivationTree::External(external) => match external {
-            External::NotRoot(_, _) => panic!(),
-            External::NoVersions(_, _) => panic!(),
-            External::UnavailableDependencies(_, _) => panic!(),
-            External::FromDependencyOf(p1, range1, p2, range2) => {
-                let nesting = " ".repeat(nest);
-                print!(
-                    "{nesting}FromDepOf {{
-{nesting}  {p1}: {range1},
-{nesting}  {p2}: {range2},
-{nesting}}}"
+                format!(
+                    "- {start} requires `{required_package}` to be `{required_package_version}`"
                 )
             }
-        },
-
-        DerivationTree::Derived(Derived {
-            terms: _,
-            shared_id: _,
-            cause1,
-            cause2,
-        }) => {
-            let nesting = " ".repeat(nest);
-            print!(
-                "{nesting}Derived {{
-{nesting}  cause1: "
-            );
-            pprint_error(nest + 2, cause1.as_ref());
-            print!(
-                ",
-{nesting}  cause2: "
-            );
-            pprint_error(nest + 2, cause2.as_ref());
-            print!(
-                ",
-{nesting}}}",
-            )
+            DerivationTree::External(_) => todo!(),
+            DerivationTree::Derived(Derived { cause1, cause2, .. }) => {
+                format!(
+                    "{}\n{}",
+                    self.print(cause2.as_ref()),
+                    self.print(cause1.as_ref()),
+                )
+            }
         }
     }
-}
 
-fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-    derivation_tree: &'dt DerivationTree<P, V>,
-    conflicting_packages: &mut HashSet<&'dt P>,
-) {
-    match derivation_tree {
-        DerivationTree::External(external) => match external {
-            External::NotRoot(package, _) => {
-                let _ = conflicting_packages.insert(package);
-            }
-            External::NoVersions(package, _) => {
-                let _ = conflicting_packages.insert(package);
-            }
-            External::UnavailableDependencies(package, _) => {
-                let _ = conflicting_packages.insert(package);
-            }
-            External::FromDependencyOf(package, _, dep_package, _) => {
-                let _ = conflicting_packages.insert(package);
-                let _ = conflicting_packages.insert(dep_package);
-            }
-        },
-        DerivationTree::Derived(derived) => {
-            collect_conflicting_packages(&derived.cause1, conflicting_packages);
-            collect_conflicting_packages(&derived.cause2, conflicting_packages);
+    fn new(root_package_name: String) -> Self {
+        Self {
+            previous_subject: None,
+            previous_object: None,
+            root_package_name,
         }
     }
 }
