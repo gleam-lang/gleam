@@ -1,0 +1,47 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "echo { 1 + 1 }"
+---
+[
+    Expression(
+        Echo {
+            location: SrcSpan {
+                start: 0,
+                end: 14,
+            },
+            expression: Some(
+                Block {
+                    location: SrcSpan {
+                        start: 5,
+                        end: 14,
+                    },
+                    statements: [
+                        Expression(
+                            BinOp {
+                                location: SrcSpan {
+                                    start: 7,
+                                    end: 12,
+                                },
+                                name: AddInt,
+                                left: Int {
+                                    location: SrcSpan {
+                                        start: 7,
+                                        end: 8,
+                                    },
+                                    value: "1",
+                                },
+                                right: Int {
+                                    location: SrcSpan {
+                                        start: 11,
+                                        end: 12,
+                                    },
+                                    value: "1",
+                                },
+                            },
+                        ),
+                    ],
+                },
+            ),
+        },
+    ),
+]

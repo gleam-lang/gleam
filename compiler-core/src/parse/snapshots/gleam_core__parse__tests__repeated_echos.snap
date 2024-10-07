@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: echo echo echo 1
+---
+[
+    Expression(
+        Echo {
+            location: SrcSpan {
+                start: 0,
+                end: 16,
+            },
+            expression: Some(
+                Echo {
+                    location: SrcSpan {
+                        start: 5,
+                        end: 16,
+                    },
+                    expression: Some(
+                        Echo {
+                            location: SrcSpan {
+                                start: 10,
+                                end: 16,
+                            },
+                            expression: Some(
+                                Int {
+                                    location: SrcSpan {
+                                        start: 15,
+                                        end: 16,
+                                    },
+                                    value: "1",
+                                },
+                            ),
+                        },
+                    ),
+                },
+            ),
+        },
+    ),
+]

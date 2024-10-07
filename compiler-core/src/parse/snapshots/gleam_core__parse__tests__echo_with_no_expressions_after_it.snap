@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: echo
+---
+[
+    Expression(
+        Echo {
+            location: SrcSpan {
+                start: 0,
+                end: 4,
+            },
+            expression: None,
+        },
+    ),
+]
