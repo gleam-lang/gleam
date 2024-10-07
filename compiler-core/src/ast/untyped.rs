@@ -106,6 +106,11 @@ pub enum UntypedExpr {
         message: Option<Box<Self>>,
     },
 
+    Echo {
+        location: SrcSpan,
+        expression: Option<Box<Self>>,
+    },
+
     BitArray {
         location: SrcSpan,
         segments: Vec<UntypedExprBitArraySegment>,
@@ -148,6 +153,7 @@ impl UntypedExpr {
             | Self::Var { location, .. }
             | Self::Int { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
