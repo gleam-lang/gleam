@@ -554,7 +554,7 @@ where
 
             Target::JavaScript => super::TargetCodegenConfiguration::JavaScript {
                 emit_typescript_definitions: self.config.javascript.typescript_declarations,
-                emit_source_map: self.config.javascript.sourcemap,
+                emit_source_map: self.config.javascript.sourcemaps,
                 // This path is relative to each package output directory
                 prelude_location: Utf8PathBuf::from("../prelude.mjs"),
             },

@@ -663,7 +663,7 @@ pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
     #[serde(default)]
-    pub sourcemap: bool,
+    pub sourcemaps: bool,
     #[serde(default = "default_javascript_runtime")]
     pub runtime: Runtime,
     #[serde(default, rename = "deno")]
