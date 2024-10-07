@@ -595,6 +595,22 @@ mod tests {
     }
 
     #[test]
+    fn resolution_with_optional_deps_incompatible() {
+        let result = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![
+                ("package_with_optional".into(), Range::new("~> 0.1".into())),
+                ("gleam_stdlib".into(), Range::new("~> 0.3".into())),
+            ]
+            .into_iter(),
+            &vec![].into_iter().collect(),
+        );
+        assert!(result.is_err());
+    }
+
+    #[test]
     fn resolution_with_optional_deps_required_by_nested_deps() {
         let result = resolve_versions(
             make_remote(),
