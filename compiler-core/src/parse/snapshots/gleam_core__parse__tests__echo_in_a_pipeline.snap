@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "[] |> echo |> wibble"
+---
+[
+    Expression(
+        PipeLine {
+            expressions: [
+                List {
+                    location: SrcSpan {
+                        start: 0,
+                        end: 2,
+                    },
+                    elements: [],
+                    tail: None,
+                },
+                Echo {
+                    location: SrcSpan {
+                        start: 6,
+                        end: 10,
+                    },
+                    expression: None,
+                },
+                Var {
+                    location: SrcSpan {
+                        start: 14,
+                        end: 20,
+                    },
+                    name: "wibble",
+                },
+            ],
+        },
+    ),
+]

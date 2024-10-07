@@ -467,15 +467,6 @@ where
         Ok(())
     }
 
-    fn parse_expression_unit_collapsing_single_value_blocks(
-        &mut self,
-    ) -> Result<Option<UntypedExpr>, ParseError> {
-        match self.parse_expression_unit()? {
-            Some(expression) => Ok(Some(expression)),
-            None => Ok(None),
-        }
-    }
-
     // examples:
     //   1
     //   "one"
@@ -545,6 +536,16 @@ where
                 UntypedExpr::Panic {
                     location: SrcSpan { start, end },
                     message: label,
+                }
+            }
+
+            Some((start, Token::Echo, end)) => {
+                self.advance();
+                let expression = self.parse_expression_unit()?;
+                let end = expression.as_ref().map_or(end, |e| e.location().end);
+                UntypedExpr::Echo {
+                    location: SrcSpan { start, end },
+                    expression: expression.map(Box::new),
                 }
             }
 
@@ -649,7 +650,7 @@ where
                     &|s| {
                         Parser::parse_bit_array_segment(
                             s,
-                            &Parser::parse_expression_unit_collapsing_single_value_blocks,
+                            &Parser::parse_expression_unit,
                             &Parser::expect_expression,
                             &bit_array_expr_int,
                         )
