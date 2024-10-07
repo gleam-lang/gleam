@@ -24,17 +24,21 @@ impl std::fmt::Debug for SourceMapEmitter {
 }
 
 impl SourceMapEmitter {
-    pub fn add_mapping(&mut self, dst_line: u32, dst_col: u32, src_location: LineColumn) {
+    pub fn add_mapping(
+        &mut self,
+        generated_code_line: u32,
+        generated_code_column: u32,
+        source_location: LineColumn,
+    ) {
         match self {
             SourceMapEmitter::Null => (),
             SourceMapEmitter::Emit(source_map) => {
-                tracing::debug!("emitting one sourcemap entry");
                 let _ = source_map.add_raw(
-                    dst_line,
-                    dst_col,
+                    generated_code_line,
+                    generated_code_column,
                     // -1 Because sourcemaps are 0-indexed, LineColumn isn't
-                    src_location.line - 1,
-                    src_location.column - 1,
+                    source_location.line - 1,
+                    source_location.column - 1,
                     Some(0), // Because one Gleam file -> one target file
                     None,
                     false,

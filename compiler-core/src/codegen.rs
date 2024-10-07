@@ -280,8 +280,11 @@ impl<'a> JavaScript<'a> {
                 let sourcemap = builder.into_sourcemap();
 
                 let mut output = Vec::new();
-                sourcemap.to_writer(&mut output).expect("Failed to write sourcemap to memory. This is a bug in sourcemap, please report.");
-                let output = String::from_utf8(output).expect("Sourcemap did not generate valid UTF-8. This is a bug in sourcemap, please report.");
+                sourcemap
+                    .to_writer(&mut output)
+                    .expect("Failed to write sourcemap to memory.");
+                let output =
+                    String::from_utf8(output).expect("Sourcemap did not generate valid UTF-8.");
 
                 writer.write(&sourcemap_path, &output)
             }
