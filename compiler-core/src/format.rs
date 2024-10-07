@@ -941,6 +941,16 @@ impl<'comments> Formatter<'comments> {
                 message: Some(l), ..
             } => docvec!["todo as ", self.expr(l)],
 
+            UntypedExpr::Echo {
+                expression: None,
+                location: _,
+            } => "echo".to_doc(),
+
+            UntypedExpr::Echo {
+                expression: Some(e),
+                location: _,
+            } => docvec!["echo ", self.expr(e)],
+
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
             UntypedExpr::Int { value, .. } => self.int(value),
@@ -1204,6 +1214,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::Tuple { .. }
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
+            | UntypedExpr::Echo { .. }
             | UntypedExpr::Panic { .. }
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
@@ -2470,6 +2481,7 @@ impl<'comments> Formatter<'comments> {
             | UntypedExpr::TupleIndex { .. }
             | UntypedExpr::Todo { .. }
             | UntypedExpr::Panic { .. }
+            | UntypedExpr::Echo { .. }
             | UntypedExpr::BitArray { .. }
             | UntypedExpr::RecordUpdate { .. }
             | UntypedExpr::NegateBool { .. }
