@@ -179,6 +179,15 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
+            UntypedExpr::Echo {
+                expression,
+                location: _,
+            } => {
+                if let Some(expression) = expression {
+                    self.expression(expression);
+                }
+            }
+
             // Aha! A variable is being referenced.
             UntypedExpr::Var { name, .. } => {
                 self.referenced(name);
