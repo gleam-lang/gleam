@@ -3455,6 +3455,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                         }),
                     }
                 },
+
                         TypeError::AllVariantsDeprecated { location } => {
                             let text = String::from("Consider deprecating the type as a whole.
 
@@ -3501,6 +3502,22 @@ Consider removing the deprecation attribute on the variant.");
                                 })
                             }
                         }
+
+                TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
+                    title: format!("Invalid echo use"),
+                    text: wrap("The `echo` keyword should be followed by a value to print."),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some("I was expecting a value after this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             }
         }).collect_vec(),
 
