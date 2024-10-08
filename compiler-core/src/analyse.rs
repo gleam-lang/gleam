@@ -1000,13 +1000,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     .documentation
                     .as_ref()
                     .map(|(_, doc)| doc.clone()),
-                constructors_count: constructors.len() as u16,
+                variants_count: constructors.len() as u16,
                 name: constructor.name.clone(),
                 arity: constructor.arguments.len() as u16,
                 field_map: field_map.clone(),
                 location: constructor.location,
                 module: self.module_name.clone(),
-                constructor_index: index as u16,
+                variant_index: index as u16,
             };
             index += 1;
 

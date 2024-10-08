@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 1987
 expression: "\npub type Point {\n  Point2(a: Int, b: Int)\n  Point3(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  Point3(..Point2(a: 1, b: 2))\n}"
 ---
 ----- SOURCE CODE
@@ -14,13 +15,11 @@ pub fn main() {
 }
 
 ----- ERROR
-error: Mismatched record update
+error: Incorrect record update
   ┌─ /src/one/two.gleam:8:3
   │
 8 │   Point3(..Point2(a: 1, b: 2))
-  │   ^^^^^^ This is never the right constructor
+  │   ^^^^^^ This is not the right constructor
 
-This value is never the same constructor as the one being updated.
-
-If you want to change one variant of a type into another, each field of the
-new type must be specified explicitly.
+This record is a different variant to the one used for the update, so it
+would never be correct.
