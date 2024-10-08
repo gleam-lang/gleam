@@ -129,6 +129,12 @@ pub enum TypedExpr {
         type_: Arc<Type>,
     },
 
+    Echo {
+        location: SrcSpan,
+        type_: Arc<Type>,
+        expression: Option<Box<Self>>,
+    },
+
     BitArray {
         location: SrcSpan,
         type_: Arc<Type>,
@@ -194,6 +200,11 @@ impl TypedExpr {
             | Self::String { .. }
             | Self::ModuleSelect { .. }
             | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+
+            Self::Echo { expression, .. } => expression
+                .as_ref()
+                .and_then(|e| e.find_node(byte_index))
+                .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::Todo { kind, .. } => match kind {
                 TodoKind::Keyword => self.self_if_contains_location(byte_index),
@@ -350,6 +361,7 @@ impl TypedExpr {
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
@@ -377,6 +389,7 @@ impl TypedExpr {
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
@@ -406,6 +419,7 @@ impl TypedExpr {
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::Float { .. }
@@ -447,6 +461,7 @@ impl TypedExpr {
             Self::Fn { type_, .. }
             | Self::Int { type_, .. }
             | Self::Todo { type_, .. }
+            | Self::Echo { type_, .. }
             | Self::Case { type_, .. }
             | Self::List { type_, .. }
             | Self::Call { type_, .. }
@@ -507,6 +522,7 @@ impl TypedExpr {
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
@@ -602,6 +618,13 @@ impl TypedExpr {
                 subjects.iter().all(|s| s.is_pure_value_constructor())
                     && clauses.iter().all(|c| c.then.is_pure_value_constructor())
             }
+
+            // `echo` just returns the thing its printing, so it's pure as long as
+            // the printed thing is. If it's being used as a step of a pipeline then
+            // we always consider it pure
+            TypedExpr::Echo { expression, .. } => expression
+                .as_ref()
+                .map_or(true, |e| e.is_pure_value_constructor()),
 
             // `panic`, `todo`, and placeholders are never considered pure value constructors,
             // we don't want to raise a warning for an unused value if it's one
