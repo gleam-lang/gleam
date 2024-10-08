@@ -28,12 +28,11 @@ expression: "\n//// Some package\n//// documentation!\n\npub fn main() { 1 }\n"
           },
           "parameters": [],
           "return": {
-            "named": {
-              "name": "Int",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "named",
+            "name": "Int",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         }
       }

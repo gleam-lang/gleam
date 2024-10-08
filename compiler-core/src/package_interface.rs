@@ -2,7 +2,7 @@ use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
 use itertools::Itertools;
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 
 #[cfg(test)]
 mod tests;
@@ -28,7 +28,7 @@ pub struct PackageInterface {
     modules: HashMap<EcoString, ModuleInterface>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone, Default)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ModuleInterface {
     /// A vector with the lines composing the module's documentation (that is
@@ -48,7 +48,7 @@ pub struct ModuleInterface {
     functions: HashMap<EcoString, FunctionInterface>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeDefinitionInterface {
     /// The definition's documentation comment (that is every line preceded by
@@ -71,7 +71,7 @@ pub struct TypeDefinitionInterface {
     constructors: Vec<TypeConstructorInterface>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeConstructorInterface {
     /// The constructor's documentation comment (that is every line preceded by
@@ -95,7 +95,7 @@ pub struct TypeConstructorInterface {
     parameters: Vec<ParameterInterface>,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct TypeAliasInterface {
     /// The constructor's documentation comment (that is every line preceded by
@@ -118,7 +118,7 @@ pub struct TypeAliasInterface {
     alias: TypeInterface,
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ConstantInterface {
     /// The constant's documentation comment (that is every line preceded by
@@ -135,7 +135,7 @@ pub struct ConstantInterface {
 
 /// A module's function. This differs from a simple `Fn` type as its arguments
 /// can be labelled.
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct FunctionInterface {
     /// The function's documentation comment (that is every line preceded by
@@ -151,7 +151,7 @@ pub struct FunctionInterface {
 }
 
 /// Informations about how a value is implemented.
-#[derive(Debug, Deserialize, Serialize, Copy, Clone)]
+#[derive(Debug, Serialize, Copy, Clone)]
 #[serde(rename_all = "kebab-case")]
 pub struct ImplementationsInterface {
     /// Set to `true` if the const/function has a pure Gleam implementation
@@ -273,7 +273,7 @@ impl ImplementationsInterface {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct DeprecationInterface {
     /// The reason for the deprecation.
@@ -291,8 +291,8 @@ impl DeprecationInterface {
     }
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
-// #[serde(tag = "kind")]
+#[derive(Serialize, Debug)]
+#[serde(tag = "kind")]
 #[serde(rename_all = "kebab-case")]
 pub enum TypeInterface {
     /// A tuple type like `#(Int, Float)`.
@@ -339,7 +339,7 @@ pub enum TypeInterface {
     },
 }
 
-#[derive(Deserialize, Serialize, Debug, Clone)]
+#[derive(Serialize, Debug)]
 #[serde(rename_all = "kebab-case")]
 pub struct ParameterInterface {
     /// If the parameter is labelled this will hold the label's name.
@@ -372,13 +372,6 @@ impl PackageInterface {
                 .iter()
                 .filter(|module| !package.config.is_internal_module(module.name.as_str()))
                 .map(|module| (module.name.clone(), ModuleInterface::from_module(module)))
-                .chain(
-                    package
-                        .cached_metadata
-                        .clone()
-                        .into_iter()
-                        .map(|module| (module.name.clone(), module.interface)),
-                )
                 .collect(),
         }
     }

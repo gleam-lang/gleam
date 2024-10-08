@@ -39,13 +39,11 @@ fn write_cache(
     let line_numbers = line_numbers::LineNumbers::new(src);
     let mtime = SystemTime::UNIX_EPOCH + Duration::from_secs(seconds);
     let cache_metadata = CacheMetadata {
-        name: name.into(),
         mtime,
         codegen_performed: true,
         dependencies: deps,
         fingerprint: SourceFingerprint::new(src),
         line_numbers: line_numbers.clone(),
-        interface: package_interface::ModuleInterface::default(),
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();

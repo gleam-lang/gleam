@@ -185,6 +185,7 @@ pub enum Mode {
     Dev,
     Prod,
     Lsp,
+    PackageInterface,
 }
 
 impl Mode {
@@ -193,7 +194,7 @@ impl Mode {
     pub fn includes_tests(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
-            Self::Prod => false,
+            Self::Prod | Self::PackageInterface => false,
         }
     }
 }
@@ -209,7 +210,6 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
-    pub cached_metadata: Vec<package_compiler::CacheMetadata>,
 }
 
 impl Package {
@@ -227,7 +227,7 @@ impl Package {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Module {
     pub name: EcoString,
     pub code: EcoString,

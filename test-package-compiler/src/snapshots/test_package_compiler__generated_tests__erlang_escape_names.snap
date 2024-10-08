@@ -6,7 +6,7 @@ expression: "./cases/erlang_escape_names"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<167 byte binary>
+<61 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -24,7 +24,7 @@ expression: "./cases/erlang_escape_names"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<501 byte binary>
+<136 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

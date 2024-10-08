@@ -106,7 +106,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<(Vec<Module>, Vec<CacheMetadata>), Error> {
+    ) -> Outcome<Vec<Module>, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -186,9 +186,7 @@ where
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(modules, err) => {
-                return Outcome::PartialFailure((modules, loaded.cached_metadata), err)
-            }
+            Outcome::PartialFailure(modules, err) => return Outcome::PartialFailure(modules, err),
             Outcome::TotalFailure(err) => return Outcome::TotalFailure(err),
         };
 
@@ -202,7 +200,7 @@ where
             return error.into();
         }
 
-        Outcome::Ok((modules, loaded.cached_metadata))
+        Outcome::Ok(modules)
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
@@ -309,13 +307,11 @@ where
             let name = format!("{}.cache_meta", &module_name);
             let path = artefact_dir.join(name);
             let info = CacheMetadata {
-                name: module.name.clone(),
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
                 dependencies: module.dependencies.clone(),
                 fingerprint: SourceFingerprint::new(&module.code),
                 line_numbers: module.ast.type_info.line_numbers.clone(),
-                interface: package_interface::ModuleInterface::from_module(module),
             };
             self.io.write_bytes(&path, &info.to_binary())?;
 
@@ -601,28 +597,28 @@ pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) 
 #[derive(Debug)]
 pub(crate) enum Input {
     New(UncompiledModule),
-    Cached(CachedModule, CacheMetadata),
+    Cached(CachedModule),
 }
 
 impl Input {
     pub fn name(&self) -> &EcoString {
         match self {
             Input::New(m) => &m.name,
-            Input::Cached(m, _) => &m.name,
+            Input::Cached(m) => &m.name,
         }
     }
 
     pub fn source_path(&self) -> &Utf8Path {
         match self {
             Input::New(m) => &m.path,
-            Input::Cached(m, _) => &m.source_path,
+            Input::Cached(m) => &m.source_path,
         }
     }
 
     pub fn dependencies(&self) -> Vec<EcoString> {
         match self {
             Input::New(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
-            Input::Cached(m, _) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
+            Input::Cached(m) => m.dependencies.iter().map(|(n, _)| n.clone()).collect(),
         }
     }
 
@@ -652,15 +648,13 @@ pub(crate) struct CachedModule {
     pub line_numbers: LineNumbers,
 }
 
-#[derive(Debug, serde::Serialize, serde::Deserialize, Clone)]
+#[derive(Debug, serde::Serialize, serde::Deserialize)]
 pub struct CacheMetadata {
-    pub name: EcoString,
     pub mtime: SystemTime,
     pub codegen_performed: bool,
     pub dependencies: Vec<(EcoString, SrcSpan)>,
     pub fingerprint: SourceFingerprint,
     pub line_numbers: LineNumbers,
-    pub interface: package_interface::ModuleInterface,
 }
 
 impl CacheMetadata {
@@ -673,11 +667,10 @@ impl CacheMetadata {
     }
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug, Default, PartialEq, Eq)]
 pub(crate) struct Loaded {
     pub to_compile: Vec<UncompiledModule>,
     pub cached: Vec<type_::ModuleInterface>,
-    pub cached_metadata: Vec<CacheMetadata>,
 }
 
 impl Loaded {
@@ -685,12 +678,11 @@ impl Loaded {
         Self {
             to_compile: vec![],
             cached: vec![],
-            cached_metadata: vec![],
         }
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq)]
 pub(crate) struct UncompiledModule {
     pub path: Utf8PathBuf,
     pub name: EcoString,

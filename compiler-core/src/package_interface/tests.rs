@@ -172,7 +172,6 @@ fn package_from_module(module: Module) -> Package {
                 .expect("internals glob")]),
         },
         modules: vec![module],
-        cached_metadata: vec![],
     }
 }
 

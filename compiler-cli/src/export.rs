@@ -130,7 +130,7 @@ pub fn package_interface(path: Utf8PathBuf) -> Result<()> {
     // Build the project
     let mut built = crate::build::main(
         Options {
-            mode: Mode::Prod,
+            mode: Mode::PackageInterface,
             target: None,
             codegen: Codegen::All,
             compile: Compile::All,

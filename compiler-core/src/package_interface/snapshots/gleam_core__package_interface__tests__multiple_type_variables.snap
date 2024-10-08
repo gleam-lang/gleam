@@ -34,60 +34,52 @@ expression: "\npub type Box(a, b)\npub fn some_type_variables(a: a, b: b, c: Box
             {
               "label": null,
               "type": {
-                "variable": {
-                  "id": 0
-                }
+                "kind": "variable",
+                "id": 0
               }
             },
             {
               "label": null,
               "type": {
-                "variable": {
-                  "id": 1
-                }
+                "kind": "variable",
+                "id": 1
               }
             },
             {
               "label": null,
               "type": {
-                "named": {
-                  "name": "Box",
-                  "package": "my_package",
-                  "module": "my/module",
-                  "parameters": [
-                    {
-                      "variable": {
-                        "id": 2
-                      }
-                    },
-                    {
-                      "variable": {
-                        "id": 3
-                      }
-                    }
-                  ]
-                }
+                "kind": "named",
+                "name": "Box",
+                "package": "my_package",
+                "module": "my/module",
+                "parameters": [
+                  {
+                    "kind": "variable",
+                    "id": 2
+                  },
+                  {
+                    "kind": "variable",
+                    "id": 3
+                  }
+                ]
               }
             }
           ],
           "return": {
-            "named": {
-              "name": "Box",
-              "package": "my_package",
-              "module": "my/module",
-              "parameters": [
-                {
-                  "variable": {
-                    "id": 0
-                  }
-                },
-                {
-                  "variable": {
-                    "id": 3
-                  }
-                }
-              ]
-            }
+            "kind": "named",
+            "name": "Box",
+            "package": "my_package",
+            "module": "my/module",
+            "parameters": [
+              {
+                "kind": "variable",
+                "id": 0
+              },
+              {
+                "kind": "variable",
+                "id": 3
+              }
+            ]
           }
         }
       }

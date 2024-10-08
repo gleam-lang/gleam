@@ -148,7 +148,7 @@ where
                 // A cached module with dependencies that are stale must be
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
-                Input::Cached(info, _) if self.stale_modules.includes_any(&info.dependencies) => {
+                Input::Cached(info) if self.stale_modules.includes_any(&info.dependencies) => {
                     tracing::debug!(module = %info.name, "module_to_be_compiled");
                     self.stale_modules.add(info.name.clone());
                     let module = self.load_and_parse(info)?;
@@ -157,12 +157,18 @@ where
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                Input::Cached(info, meta) => {
-                    tracing::debug!(module = %info.name, "module_to_load_from_cache");
-                    let module = self.load_cached_module(info)?;
-                    loaded.cached.push(module);
-                    loaded.cached_metadata.push(meta);
-                }
+                Input::Cached(info) => match self.mode {
+                    Mode::PackageInterface => {
+                        tracing::debug!(module = %info.name, "module_to_be_compiled");
+                        let module = self.load_and_parse(info)?;
+                        loaded.to_compile.push(module);
+                    }
+                    _ => {
+                        tracing::debug!(module = %info.name, "module_to_load_from_cache");
+                        let module = self.load_cached_module(info)?;
+                        loaded.cached.push(module);
+                    }
+                },
             }
         }
 
@@ -325,7 +331,7 @@ where
                                     src: module.code.clone(),
                                 }
                             }
-                            Input::Cached(cached_module, _) => {
+                            Input::Cached(cached_module) => {
                                 let (_, location) = cached_module
                                     .dependencies
                                     .iter()

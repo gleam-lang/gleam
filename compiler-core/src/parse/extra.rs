@@ -4,7 +4,7 @@ use ecow::EcoString;
 
 use crate::ast::SrcSpan;
 
-#[derive(Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct ModuleExtra {
     pub module_comments: Vec<SrcSpan>,
     pub doc_comments: Vec<SrcSpan>,

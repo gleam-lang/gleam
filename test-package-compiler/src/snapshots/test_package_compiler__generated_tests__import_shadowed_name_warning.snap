@@ -6,7 +6,7 @@ expression: "./cases/import_shadowed_name_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.cache_meta
-<138 byte binary>
+<57 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/one.erl
 -module(one).
@@ -23,7 +23,7 @@ expression: "./cases/import_shadowed_name_warning"
 <.cache binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.cache_meta
-<297 byte binary>
+<120 byte binary>
 
 //// /out/lib/the_package/_gleam_artefacts/two.erl
 -module(two).

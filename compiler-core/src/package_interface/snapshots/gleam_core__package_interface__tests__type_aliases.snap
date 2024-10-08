@@ -15,18 +15,16 @@ expression: pub type Wibble(a) = List(a)
           "deprecation": null,
           "parameters": 1,
           "alias": {
-            "named": {
-              "name": "List",
-              "package": "",
-              "module": "gleam",
-              "parameters": [
-                {
-                  "variable": {
-                    "id": 0
-                  }
-                }
-              ]
-            }
+            "kind": "named",
+            "name": "List",
+            "package": "",
+            "module": "gleam",
+            "parameters": [
+              {
+                "kind": "variable",
+                "id": 0
+              }
+            ]
           }
         }
       },

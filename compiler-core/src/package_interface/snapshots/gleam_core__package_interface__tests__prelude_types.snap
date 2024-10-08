@@ -23,12 +23,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "can-run-on-javascript": true
           },
           "type": {
-            "named": {
-              "name": "Bool",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "named",
+            "name": "Bool",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         },
         "float": {
@@ -42,12 +41,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "can-run-on-javascript": true
           },
           "type": {
-            "named": {
-              "name": "Float",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "named",
+            "name": "Float",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         },
         "int": {
@@ -61,12 +59,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "can-run-on-javascript": true
           },
           "type": {
-            "named": {
-              "name": "Int",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "named",
+            "name": "Int",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         },
         "string": {
@@ -80,12 +77,11 @@ expression: "\npub const float = 1.1\npub const string = \"\"\npub const int = 1
             "can-run-on-javascript": true
           },
           "type": {
-            "named": {
-              "name": "String",
-              "package": "",
-              "module": "gleam",
-              "parameters": []
-            }
+            "kind": "named",
+            "name": "String",
+            "package": "",
+            "module": "gleam",
+            "parameters": []
           }
         }
       },
