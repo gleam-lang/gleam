@@ -1,14 +1,13 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
+assertion_line: 2493
 expression: "\npub type MyRecord {\n  A(common: Int, other: String)\n  B(common: Int, different: Float)\n}\n\npub fn b_to_a(value: MyRecord) {\n  case value {\n    A(..) -> value\n    B(..) as b -> A(..b, other: \"Hi\")\n  }\n}\n"
 ---
-error: Mismatched record update
+error: Incorrect record update
    ┌─ /src/one/two.gleam:10:19
    │
 10 │     B(..) as b -> A(..b, other: "Hi")
-   │                   ^ This is never the right constructor
+   │                   ^ This is not the right constructor
 
-This value is never the same constructor as the one being updated.
-
-If you want to change one variant of a type into another, each field of the
-new type must be specified explicitly.
+This record is a different variant to the one used for the update, so it
+would never be correct.
