@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/externals.rs
+expression: "\n@external(javascript, \"wibble\", \"wobble\")\npub fn woo(_ignored: a) -> Nil\n"
+---
+import { wobble as woo } from "wibble";
+
+export { woo };

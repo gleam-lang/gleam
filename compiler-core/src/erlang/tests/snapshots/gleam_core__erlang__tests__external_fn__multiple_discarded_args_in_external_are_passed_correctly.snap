@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/erlang/tests/external_fn.rs
+expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub fn woo(_: a, _: b) -> Nil\n"
+---
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([woo/2]).
+
+-file("/root/project/test/my/mod.gleam", 3).
+-spec woo(any(), any()) -> nil.
+woo(_ignored, _ignored@1) ->
+    wibble:wobble(_ignored, _ignored@1).
