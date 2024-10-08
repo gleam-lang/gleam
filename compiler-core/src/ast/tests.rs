@@ -138,8 +138,8 @@ fn compile_expression(src: &str) -> TypedStatement {
         AccessorsMap {
             publicity: Publicity::Public,
             type_: cat_type,
-            accessors: accessors.clone().into(),
-            constructor_accessors: vec![accessors.into()],
+            shared_accessors: accessors.clone().into(),
+            variant_specific_accessors: vec![accessors.into()],
         },
     );
     let mut problems = Problems::new();
