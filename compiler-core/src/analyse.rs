@@ -920,8 +920,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .type_
             .clone();
 
-        let (accessors, constructor_accessors) =
-            custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?;
+        let Accessors {
+            shared_accessors,
+            variant_specific_accessors,
+        } = custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?;
 
         let map = AccessorsMap {
             publicity: if *opaque {
@@ -929,11 +931,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             } else {
                 *publicity
             },
-            accessors,
+            shared_accessors,
             // TODO: improve the ownership here so that we can use the
             // `return_type_constructor` below rather than looking it up twice.
             type_: type_.clone(),
-            constructor_accessors,
+            variant_specific_accessors,
         };
         environment.insert_accessors(name.clone(), map);
 
@@ -983,7 +985,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             }
             let field_map = field_map.into_option();
             // Insert constructor function into module scope
-            let type_ = Arc::new(type_.deref().clone().with_constructor_index(index as u16));
+            let type_ = Arc::new(
+                type_
+                    .deref()
+                    .clone()
+                    .narrow_custom_type_variant(index as u16),
+            );
             let type_ = match constructor.arguments.len() {
                 0 => type_.clone(),
                 _ => fn_(args_types.clone(), type_.clone()),
@@ -1673,10 +1680,10 @@ fn assert_unique_name(
     }
 }
 
-type Accessors = (
-    HashMap<EcoString, RecordAccessor>,
-    Vec<HashMap<EcoString, RecordAccessor>>,
-);
+struct Accessors {
+    shared_accessors: HashMap<EcoString, RecordAccessor>,
+    variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+}
 
 fn custom_type_accessors<A: std::fmt::Debug>(
     constructors: &[RecordConstructor<A>],
@@ -1686,12 +1693,12 @@ fn custom_type_accessors<A: std::fmt::Debug>(
 ) -> Result<Accessors, Error> {
     let args = get_compatible_record_fields(constructors);
 
-    let mut fields = HashMap::with_capacity(args.len());
+    let mut shared_accessors = HashMap::with_capacity(args.len());
 
     hydrator.disallow_new_type_variables();
     for (index, label, ast) in args {
         let type_ = hydrator.type_from_ast(ast, environment, problems)?;
-        let _ = fields.insert(
+        let _ = shared_accessors.insert(
             label.clone(),
             RecordAccessor {
                 index: index as u64,
@@ -1701,7 +1708,7 @@ fn custom_type_accessors<A: std::fmt::Debug>(
         );
     }
 
-    let mut constructor_accessors = Vec::with_capacity(constructors.len());
+    let mut variant_specific_accessors = Vec::with_capacity(constructors.len());
 
     for constructor in constructors {
         let mut fields = HashMap::with_capacity(constructor.arguments.len());
@@ -1721,10 +1728,13 @@ fn custom_type_accessors<A: std::fmt::Debug>(
                 },
             );
         }
-        constructor_accessors.push(fields);
+        variant_specific_accessors.push(fields);
     }
 
-    Ok((fields, constructor_accessors))
+    Ok(Accessors {
+        shared_accessors,
+        variant_specific_accessors,
+    })
 }
 
 /// Returns the fields that have the same label and type across all variants of

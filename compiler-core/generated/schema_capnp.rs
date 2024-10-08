@@ -1678,19 +1678,19 @@ pub mod accessors_map {
       !self.reader.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn get_accessors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>> {
+    pub fn get_shared_accessors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(1), ::core::option::Option::None)
     }
     #[inline]
-    pub fn has_accessors(&self) -> bool {
+    pub fn has_shared_accessors(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_constructor_accessors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::constructor_accessors::Owned>> {
+    pub fn get_variant_specific_accessors(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::variant_specific_accessors::Owned>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
     }
     #[inline]
-    pub fn has_constructor_accessors(&self) -> bool {
+    pub fn has_variant_specific_accessors(&self) -> bool {
       !self.reader.get_pointer_field(2).is_null()
     }
   }
@@ -1760,35 +1760,35 @@ pub mod accessors_map {
       !self.builder.get_pointer_field(0).is_null()
     }
     #[inline]
-    pub fn get_accessors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>> {
+    pub fn get_shared_accessors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(1), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_accessors(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>) -> ::capnp::Result<()> {
+    pub fn set_shared_accessors(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(1), value, false)
     }
     #[inline]
-    pub fn init_accessors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>> {
+    pub fn init_shared_accessors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::record_accessor::Owned>> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(1), size)
     }
     #[inline]
-    pub fn has_accessors(&self) -> bool {
+    pub fn has_shared_accessors(&self) -> bool {
       !self.builder.get_pointer_field(1).is_null()
     }
     #[inline]
-    pub fn get_constructor_accessors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::constructor_accessors::Owned>> {
+    pub fn get_variant_specific_accessors(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::variant_specific_accessors::Owned>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
     }
     #[inline]
-    pub fn set_constructor_accessors(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::constructor_accessors::Owned>) -> ::capnp::Result<()> {
+    pub fn set_variant_specific_accessors(&mut self, value: ::capnp::struct_list::Reader<'a,crate::schema_capnp::variant_specific_accessors::Owned>) -> ::capnp::Result<()> {
       ::capnp::traits::SetPointerBuilder::set_pointer_builder(self.builder.get_pointer_field(2), value, false)
     }
     #[inline]
-    pub fn init_constructor_accessors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::constructor_accessors::Owned> {
+    pub fn init_variant_specific_accessors(self, size: u32) -> ::capnp::struct_list::Builder<'a,crate::schema_capnp::variant_specific_accessors::Owned> {
       ::capnp::traits::FromPointerBuilder::init_pointer(self.builder.get_pointer_field(2), size)
     }
     #[inline]
-    pub fn has_constructor_accessors(&self) -> bool {
+    pub fn has_variant_specific_accessors(&self) -> bool {
       !self.builder.get_pointer_field(2).is_null()
     }
   }
@@ -1811,7 +1811,7 @@ pub mod accessors_map {
   }
 }
 
-pub mod constructor_accessors {
+pub mod variant_specific_accessors {
   #[derive(Copy, Clone)]
   pub struct Owned(());
   impl <'a> ::capnp::traits::Owned<'a> for Owned { type Reader = Reader<'a>; type Builder = Builder<'a>; }
@@ -1944,7 +1944,7 @@ pub mod constructor_accessors {
   mod _private {
     use capnp::private::layout;
     pub const STRUCT_SIZE: layout::StructSize = layout::StructSize { data: 0, pointers: 1 };
-    pub const TYPE_ID: u64 = 0xbba1_598b_1fbd_3f5e;
+    pub const TYPE_ID: u64 = 0xc522_adaa_f3af_3519;
   }
 }
 
