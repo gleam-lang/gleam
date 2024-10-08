@@ -2266,7 +2266,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 } if module == &self.environment.current_module => {
                     self.environment.accessors.get(name).map(|accessors_map| {
                         (
-                            accessors_map.accessors_for_constructor(*constructor_index),
+                            accessors_map.accessors_for_variant(*constructor_index),
                             accessors_map.type_.clone(),
                         )
                     })
@@ -2288,7 +2288,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     })
                     .map(|accessors_map| {
                         (
-                            accessors_map.accessors_for_constructor(*constructor_index),
+                            accessors_map.accessors_for_variant(*constructor_index),
                             accessors_map.type_.clone(),
                         )
                     }),
