@@ -11,6 +11,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
+use itertools::Itertools;
 
 #[derive(Debug)]
 struct BeamCompilerInner {
@@ -45,21 +46,17 @@ impl BeamCompiler {
             None => self.inner.insert(self.spawn(io, out)?),
         };
 
-        let mut args = vec![
-            "--lib".into(),
-            lib.to_string(),
-            "--out".into(),
-            out.join("ebin").to_string(),
-        ];
+        let args = format!("{{\"{}\", \"{}\", [\"{}\"]}}",
+            escape_path(lib),
+            escape_path(out.join("ebin")),
+            modules
+                .iter()
+                .map(|module| escape_path(out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module)))
+                .join("\", \""));
 
-        for module in modules {
-            let path = out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module);
-            args.push(path.to_string());
-        }
+        tracing::debug!(args=?args, "call_beam_compiler");
 
-        tracing::debug!(args=?args.join(" "), "call_beam_compiler");
-
-        writeln!(inner.stdin, "{}", args.join("\x1f")).map_err(|e| Error::ShellCommand {
+        writeln!(inner.stdin, "{}.", args).map_err(|e| Error::ShellCommand {
             program: "escript".into(),
             err: Some(e.kind()),
         })?;
@@ -138,4 +135,8 @@ impl Drop for BeamCompiler {
             let _ = inner.process.wait();
         }
     }
+}
+
+fn escape_path<T: AsRef<str>>(path: T) -> String {
+    path.as_ref().replace("\\", "\\\\")
 }
