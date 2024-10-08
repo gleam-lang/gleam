@@ -1,15 +1,16 @@
 ---
 source: compiler-core/src/type_/tests.rs
+assertion_line: 1803
 expression: "\npub type Vector {\n  Vector2(x: Float, y: Float)\n  Vector3(x: Float, y: Float, z: Float)\n}\n\npub fn increase_y(vector, by increase) {\n  case vector {\n    Vector2(y:, ..) as vector | Vector3(y:, ..) as vector ->\n      Vector2(..vector, y: y +. increase)\n  }\n}\n"
 ---
 error: Unsafe record update
    ┌─ /src/one/two.gleam:10:7
    │
 10 │       Vector2(..vector, y: y +. increase)
-   │       ^^^^^^^ I can't tell this is always the right constructor
+   │       ^^^^^^^ I can't tell this is always the right variant
 
-This type has multiple constructors so it cannot be safely updated. If
-this value was one of the other variants then the update would be produce
+This type has multiple variants so it cannot be safely updated. If this
+value was one of the other variants then the update would be produce
 incorrect results.
 
 Consider pattern matching on it with a case expression and then
