@@ -697,12 +697,12 @@ fn record_value() {
                     module: "themodule".into(),
                     field_map: None,
                     arity: random.gen(),
-                    constructors_count: random.gen(),
+                    variants_count: random.gen(),
                     location: SrcSpan {
                         start: random.gen(),
                         end: random.gen(),
                     },
-                    constructor_index: random.gen(),
+                    variant_index: random.gen(),
                 },
             },
         )]
@@ -743,8 +743,8 @@ fn record_value_with_field_map() {
                         fields: [("ok".into(), random.gen()), ("ko".into(), random.gen())].into(),
                     }),
                     arity: random.gen(),
-                    constructors_count: random.gen(),
-                    constructor_index: random.gen(),
+                    variants_count: random.gen(),
+                    variant_index: random.gen(),
                     location: SrcSpan {
                         start: random.gen(),
                         end: random.gen(),

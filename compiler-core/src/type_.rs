@@ -490,8 +490,8 @@ pub enum ValueConstructorVariant {
         field_map: Option<FieldMap>,
         location: SrcSpan,
         module: EcoString,
-        constructors_count: u16,
-        constructor_index: u16,
+        variants_count: u16,
+        variant_index: u16,
         documentation: Option<EcoString>,
     },
 }
