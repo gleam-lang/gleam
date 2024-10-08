@@ -496,12 +496,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let typed_expression = self.infer(*expression);
             Ok(todo!("typed expr ECHO"))
         } else {
-            todo!(
-                "
-echo with no expression after it
-should only be in a pipeline
-"
-            )
+            Err(Error::EchoWithNoFollowingExpression { location })
         }
     }
 
