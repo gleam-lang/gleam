@@ -1,28 +1,25 @@
 #!/usr/bin/env escript
+-mode(compile).
 
 % TODO: Don't concurrently print warnings and errors
 % TODO: Some tests
 
--record(arguments, {lib = "./", out = "./", modules = []}).
-
 main(_) -> compile_package_loop().
 
 compile_package_loop() ->
-    case io:get_line("") of
+    case file:read_line(standard_io) of
         eof -> ok;
-        Line ->
-            % $\x1f is the "unit separator" character
-            Args = string:split(string:trim(Line), "\x1f", all),
-            case compile_package(Args) of
+        {ok, Line} ->
+            {ok, Tokens, _} = erl_scan:string(Line),
+            {ok, {Lib, Out, Modules}} = erl_parse:parse_term(Tokens),
+            case compile_package(Lib, Out, Modules) of
                 ok -> io:put_chars("gleam-compile-result-ok\n");
                 err -> io:put_chars("gleam-compile-result-error\n")
             end,
-            compile_package(Args),
             compile_package_loop()
     end.
 
-compile_package(Args) ->
-    #arguments{out = Out, lib = Lib, modules = Modules} = parse(Args),
+compile_package(Lib, Out, Modules) ->
     IsElixirModule = fun(Module) ->
         filename:extension(Module) =:= ".ex"
     end,
@@ -153,18 +150,6 @@ add_lib_to_erlang_path(Lib) ->
 
 del_lib_from_erlang_path(Lib) ->
     code:del_paths(filelib:wildcard([Lib, "/*/ebin"])).
-
-parse(Args) ->
-    parse(Args, #arguments{}).
-
-parse([], Arguments) ->
-    Arguments;
-parse(["--lib", Lib | Rest], Arguments) ->
-    parse(Rest, Arguments#arguments{lib = Lib});
-parse(["--out", Out | Rest], Arguments) ->
-    parse(Rest, Arguments#arguments{out = Out});
-parse([Module | Rest], Arguments = #arguments{modules = Modules}) ->
-    parse(Rest, Arguments#arguments{modules = [Module | Modules]}).
 
 configure_logging() ->
     Enabled = os:getenv("GLEAM_LOG") /= false,
