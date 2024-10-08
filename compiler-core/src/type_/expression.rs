@@ -493,8 +493,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         expression: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
         if let Some(expression) = expression {
-            let typed_expression = self.infer(*expression);
-            Ok(todo!("typed expr ECHO"))
+            let expression = self.infer(*expression)?;
+            Ok(TypedExpr::Echo {
+                location,
+                type_: expression.type_(),
+                expression: Some(Box::new(expression)),
+            })
         } else {
             Err(Error::EchoWithNoFollowingExpression { location })
         }
