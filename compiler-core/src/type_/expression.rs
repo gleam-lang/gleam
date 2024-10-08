@@ -2379,7 +2379,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         unify(return_type, spread_type.clone())
             .map_err(|e| convert_unify_error(e, spread.location()))?;
 
-        let spread_index = spread_type.constructor_index();
+        let spread_index = spread_type.custom_type_narrowed_variant();
 
         // Updating a record with only one constructor is always safe
         if constructors_count != 1 {
