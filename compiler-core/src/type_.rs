@@ -433,7 +433,7 @@ pub struct AccessorsMap {
 }
 
 impl AccessorsMap {
-    pub fn accessors_for_constructor(
+    pub fn accessors_for_variant(
         &self,
         constructor_index: Option<u16>,
     ) -> &HashMap<EcoString, RecordAccessor> {
