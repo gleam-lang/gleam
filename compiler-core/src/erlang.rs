@@ -1856,6 +1856,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::Tuple { .. }
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
+        | TypedExpr::Echo { .. }
         | TypedExpr::Panic { .. }
         | TypedExpr::BitArray { .. }
         | TypedExpr::NegateBool { .. }
@@ -2017,6 +2018,12 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         ),
 
         TypedExpr::Invalid { .. } => panic!("invalid expressions should not reach code generation"),
+
+        TypedExpr::Echo {
+            location: _,
+            expression: _,
+            type_: _,
+        } => todo!("generate code for echo"),
     }
 }
 

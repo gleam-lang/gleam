@@ -171,7 +171,16 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     expression: None,
                 } => {
-                    todo!("This echo is actually ok!")
+                    // An echo that is not followed by an expression that is
+                    // used as a pipeline's step is just like the identity
+                    // function.
+                    // So it gets the type of the value coming from the previous
+                    // step of the pipeline.
+                    TypedExpr::Echo {
+                        location,
+                        expression: None,
+                        type_: self.argument_type.clone(),
+                    }
                 }
 
                 // right(left)
