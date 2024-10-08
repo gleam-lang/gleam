@@ -167,6 +167,13 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     }
                 }
 
+                UntypedExpr::Echo {
+                    location,
+                    expression: None,
+                } => {
+                    todo!("This echo is actually ok!")
+                }
+
                 // right(left)
                 call => (
                     PipelineAssignmentKind::FunctionCall,

@@ -568,7 +568,7 @@ pub enum Error {
         name: EcoString,
     },
 
-    /// Occers when all the variant types of a custom type are deprecated
+    /// Occurs when all the variant types of a custom type are deprecated
     ///
     /// ```gleam
     /// type Wibble {
@@ -597,6 +597,19 @@ pub enum Error {
 pub enum ModuleValueUsageContext {
     UnqualifiedImport,
     ModuleAccess,
+    /// When the echo keyword is not followed by an expression to be printed.
+    /// The only place where echo is allowed to appear on its own is as a step
+    /// of a pipeline, otherwise omitting the expression will result in this
+    /// error. For example:
+    ///
+    /// ```gleam
+    /// call(echo, 1, 2)
+    /// //   ^^^^ Error!
+    /// ```
+    ///
+    EchoWithNoFollowingExpression {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1053,8 +1066,10 @@ impl Error {
             | Error::UseFnIncorrectArity { location, .. }
             | Error::BadName { location, .. }
             | Error::AllVariantsDeprecated { location }
+            | Error::EchoWithNoFollowingExpression { location }
             | Error::DeprecatedVariantOnDeprecatedType { location }
             | Error::ErlangFloatUnsafe { location } => location.start,
+
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
