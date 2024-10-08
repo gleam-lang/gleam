@@ -213,6 +213,12 @@ impl<'module> Generator<'module> {
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
 
+            TypedExpr::Echo {
+                location: _,
+                expression: _,
+                type_: _,
+            } => todo!("generate js code for echo"),
+
             TypedExpr::Invalid { .. } => {
                 panic!("invalid expressions should not reach code generation")
             }
@@ -1746,6 +1752,8 @@ impl TypedExpr {
             | TypedExpr::Pipeline { .. }
             | TypedExpr::RecordUpdate { .. } => true,
 
+            TypedExpr::Echo { .. } => todo!("understand what this means"),
+
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
@@ -1818,6 +1826,8 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Block { .. },
         ) => true,
+
+        Statement::Expression(TypedExpr::Echo { .. }) => todo!("understand if it is required"),
 
         Statement::Expression(
             TypedExpr::Todo { .. }
