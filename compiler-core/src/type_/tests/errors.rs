@@ -2577,8 +2577,8 @@ pub fn main() {
     );
 }
 
-#[test]
 // https://github.com/gleam-lang/gleam/issues/3783
+#[test]
 fn duplicate_fields_in_record_update_reports_error() {
     assert_module_error!(
         "
@@ -2640,8 +2640,7 @@ pub type Wibble(a) {
 
 pub fn b_to_a(value: Wibble(a)) -> Wibble(Int) {
   Wibble(..value, a: 5)
-}
-"#
+  "#
     );
 }
 
@@ -2857,6 +2856,115 @@ fn let_assert_binding_cannot_be_used_in_panic_message() {
         r#"
 pub fn main() {
   let assert Ok(message) = Error("Not Message") as { "Uh oh: " <> message }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression() {
+    assert_error!("echo");
+}
+
+#[test]
+fn echo_followed_by_no_expression_2() {
+    assert_module_error!(
+        r#"
+  pub fn wibble(a) { a }
+
+  pub fn main() {
+    wibble(echo)
+  }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_3() {
+    assert_module_error!(
+        r#"
+  pub fn main() {
+    echo + 1
+  }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_4() {
+    assert_module_error!(
+        r#"
+  pub fn main() {
+    "wibble" <> echo
+  }
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_5() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  panic as echo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_6() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  [echo, 1, 2]
+}
+"#
+    );
+}
+#[test]
+fn echo_followed_by_no_expression_7() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  #(1, echo)
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_8() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  todo
+  |> fn(_) { echo }
+  |> todo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_9() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  todo
+  |> { echo }
+  |> todo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_followed_by_no_expression_10() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  echo
+  |> todo
 }
 "#
     );
