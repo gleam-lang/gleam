@@ -306,8 +306,8 @@ impl<'a> ModuleEncoder<'a> {
                 arity,
                 location,
                 module,
-                constructors_count,
-                constructor_index,
+                variants_count: constructors_count,
+                variant_index: constructor_index,
                 documentation: doc,
             } => {
                 let mut builder = builder.init_record();

@@ -1885,7 +1885,7 @@ assigned variables to all of them."
                 TypeError::UnsafeRecordUpdate { location, reason } =>
                     match reason {
                         UnsafeRecordUpdateReason::UnknownVariant => {
-                            let text = wrap("This type has multiple constructors \
+                            let text = wrap("This type has multiple variants \
 so it cannot be safely updated. If this value was one of the other variants \
 then the update would be produce incorrect results.
 
@@ -1899,7 +1899,7 @@ constructing a new record with its values.");
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
-                                        text: Some("I can't tell this is always the right constructor".into()),
+                                        text: Some("I can't tell this is always the right variant".into()),
                                         span: *location,
                                     },
                                     path: path.clone(),
@@ -1909,19 +1909,17 @@ constructing a new record with its values.");
                             }
                         },
                         UnsafeRecordUpdateReason::WrongVariant => {
-                            let text = wrap("This value is never the same constructor as the one being updated.
-
-If you want to change one variant of a type into another, \
-each field of the new type must be specified explicitly.");
+                            let text = wrap("This record is a different variant to the \
+one used for the update, so it would never be correct.");
 
                             Diagnostic {
-                                title: "Mismatched record update".into(),
+                                title: "Incorrect record update".into(),
                                 text,
                                 hint: None,
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
-                                        text: Some("This is never the right constructor".into()),
+                                        text: Some("This is not the right constructor".into()),
                                         span: *location,
                                     },
                                     path: path.clone(),

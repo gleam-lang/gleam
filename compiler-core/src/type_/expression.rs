@@ -2349,13 +2349,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .clone();
 
         // It must be a record with a field map for us to be able to update it
-        let (field_map, constructors_count, constructor_index) = match &value_constructor.variant {
+        let (field_map, variants_count, variant_index) = match &value_constructor.variant {
             ValueConstructorVariant::Record {
                 field_map: Some(field_map),
-                constructors_count,
-                constructor_index,
+                variants_count,
+                variant_index,
                 ..
-            } => (field_map, *constructors_count, *constructor_index),
+            } => (field_map, *variants_count, *variant_index),
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
@@ -2383,11 +2383,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let record_index = record_type.custom_type_narrowed_variant();
 
-        // Updating a record with only one constructor is always safe
-        if constructors_count != 1 {
+        // Updating a record with only one variant is always safe
+        if variants_count != 1 {
             // If we know the variant of the value being spread, and it doesn't match the
             // one being constructed, we can tell the user that it's always wrong
-            if record_index.is_some_and(|index| index != constructor_index) {
+            if record_index.is_some_and(|index| index != variant_index) {
                 return Err(Error::UnsafeRecordUpdate {
                     location: constructor.location(),
                     reason: UnsafeRecordUpdateReason::WrongVariant,

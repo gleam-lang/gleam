@@ -513,11 +513,11 @@ impl ModuleDecoder {
             name: reader.get_name()?.into(),
             module: reader.get_module()?.into(),
             arity: reader.get_arity(),
-            constructors_count: reader.get_constructors_count(),
+            variants_count: reader.get_constructors_count(),
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
-            constructor_index: reader.get_constructor_index(),
+            variant_index: reader.get_constructor_index(),
         })
     }
 
