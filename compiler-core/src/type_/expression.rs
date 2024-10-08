@@ -2381,7 +2381,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         unify(return_type, record_type.clone())
             .map_err(|e| convert_unify_error(e, record.location()))?;
 
-        let record_index = record_type.constructor_index();
+        let record_index = record_type.custom_type_narrowed_variant();
 
         // Updating a record with only one constructor is always safe
         if constructors_count != 1 {

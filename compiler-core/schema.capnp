@@ -67,11 +67,11 @@ struct TypeConstructor {
 
 struct AccessorsMap {
   type @0 :Type;
-  accessors @1 :List(Property(RecordAccessor));
-  constructorAccessors @2 :List(ConstructorAccessors);
+  sharedAccessors @1 :List(Property(RecordAccessor));
+  variantSpecificAccessors @2 :List(VariantSpecificAccessors);
 }
 
-struct ConstructorAccessors {
+struct VariantSpecificAccessors {
   accessors @0 :List(Property(RecordAccessor));
 }
 
