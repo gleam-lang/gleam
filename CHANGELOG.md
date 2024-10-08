@@ -92,6 +92,10 @@
   note on how to have a field accessor only if it makes sense.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixes a bug where incorrect code would be generated for external function on
+  the Erlang target if any of their arguments were discarded.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Language Server
