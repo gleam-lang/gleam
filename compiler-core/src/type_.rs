@@ -264,7 +264,7 @@ impl Type {
         }
     }
 
-    pub fn with_constructor_index(self, index: u16) -> Self {
+    pub fn narrow_custom_type_variant(self, index: u16) -> Self {
         match self {
             Type::Named {
                 publicity,
@@ -285,13 +285,12 @@ impl Type {
         }
     }
 
-    pub fn constructor_index(&self) -> Option<u16> {
+    pub fn custom_type_narrowed_variant(&self) -> Option<u16> {
         match self {
             Type::Named {
-                narrowed_variant: constructor_index,
-                ..
-            } => *constructor_index,
-            Type::Var { type_ } => type_.borrow().constructor_index(),
+                narrowed_variant, ..
+            } => *narrowed_variant,
+            Type::Var { type_ } => type_.borrow().custom_type_narrowed_variant(),
             Type::Fn { .. } | Type::Tuple { .. } => None,
         }
     }
@@ -429,8 +428,8 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
 pub struct AccessorsMap {
     pub publicity: Publicity,
     pub type_: Arc<Type>,
-    pub accessors: HashMap<EcoString, RecordAccessor>,
-    pub constructor_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+    pub shared_accessors: HashMap<EcoString, RecordAccessor>,
+    pub variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
 }
 
 impl AccessorsMap {
@@ -439,8 +438,8 @@ impl AccessorsMap {
         constructor_index: Option<u16>,
     ) -> &HashMap<EcoString, RecordAccessor> {
         constructor_index
-            .and_then(|index| self.constructor_accessors.get(index as usize))
-            .unwrap_or(&self.accessors)
+            .and_then(|index| self.variant_specific_accessors.get(index as usize))
+            .unwrap_or(&self.shared_accessors)
     }
 }
 
@@ -923,9 +922,9 @@ impl TypeVar {
         }
     }
 
-    pub fn constructor_index(&self) -> Option<u16> {
+    pub fn custom_type_narrowed_variant(&self) -> Option<u16> {
         match self {
-            Self::Link { type_ } => type_.constructor_index(),
+            Self::Link { type_ } => type_.custom_type_narrowed_variant(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }

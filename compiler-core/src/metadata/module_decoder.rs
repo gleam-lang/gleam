@@ -543,18 +543,18 @@ impl ModuleDecoder {
         Ok(AccessorsMap {
             publicity: Publicity::Public,
             type_: self.type_(&reader.get_type()?)?,
-            accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
-            constructor_accessors: read_vec!(
-                &reader.get_constructor_accessors()?,
+            shared_accessors: read_hashmap!(&reader.get_shared_accessors()?, self, record_accessor),
+            variant_specific_accessors: read_vec!(
+                &reader.get_variant_specific_accessors()?,
                 self,
-                constructor_accessors
+                variant_specific_accessors
             ),
         })
     }
 
-    fn constructor_accessors(
+    fn variant_specific_accessors(
         &mut self,
-        reader: &constructor_accessors::Reader<'_>,
+        reader: &variant_specific_accessors::Reader<'_>,
     ) -> Result<HashMap<EcoString, RecordAccessor>> {
         Ok(read_hashmap!(
             &reader.get_accessors()?,
