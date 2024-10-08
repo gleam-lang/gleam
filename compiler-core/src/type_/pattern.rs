@@ -595,7 +595,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         documentation,
                         module,
                         location,
-                        constructor_index,
+                        variant_index: constructor_index,
                         ..
                     } => PatternConstructor {
                         documentation: documentation.clone(),
