@@ -2,6 +2,4 @@
 source: compiler-core/src/javascript/tests/prelude.rs
 expression: "import gleam\npub fn go() { gleam.Nil }\n"
 ---
-import type * as $gleam from "../gleam.d.mts";
-
 export function go(): undefined;
