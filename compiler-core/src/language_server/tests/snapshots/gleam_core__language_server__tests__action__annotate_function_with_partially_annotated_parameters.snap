@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn add(a: Float, b) -> Float {\n  a +. b\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn add(a: Float, b) -> Float {
+    ▔▔▔▔▔▔↑                       
+  a +. b
+}
+
+
+----- AFTER ACTION
+
+pub fn add(a: Float, b: Float) -> Float {
+  a +. b
+}

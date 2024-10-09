@@ -121,6 +121,23 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The Language Server now suggests a code action to add type annotations to
+  local variables, constants and functions:
+
+  ```gleam
+  pub fn add_int_to_float(a, b) {
+    a +. int.to_float(b)
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  pub fn add_int_to_float(a: Float, b: Int) -> Float {
+    a +. int.to_float(b)
+  }
+  ```
+
 ### Bug Fixes
 
 - Fixed a bug in the compiler where shadowing a sized value in a bit pattern

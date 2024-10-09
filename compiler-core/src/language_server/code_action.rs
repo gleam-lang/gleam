@@ -8,12 +8,15 @@ use crate::{
             visit_typed_record_update_arg, Visit as _,
         },
         AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
-        TypedPattern, TypedRecordUpdateArg,
+        TypedModuleConstant, TypedPattern, TypedRecordUpdateArg,
     },
     build::{Located, Module},
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
-    type_::{self, error::ModuleSuggestion, FieldMap, ModuleValueConstructor, Type, TypedCallArg},
+    type_::{
+        self, error::ModuleSuggestion, printer::Printer, FieldMap, ModuleValueConstructor, Type,
+        TypedCallArg,
+    },
     Error,
 };
 use ecow::EcoString;
@@ -905,6 +908,137 @@ pub fn code_action_add_missing_patterns(
         CodeActionBuilder::new("Add missing patterns")
             .kind(CodeActionKind::QUICKFIX)
             .changes(uri.clone(), edits)
+            .preferred(true)
+            .push_to(actions);
+    }
+}
+
+/// Builder for code action to add annotations to an assignment or function
+///
+pub struct AddAnnotations<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: Vec<TextEdit>,
+    line_numbers: LineNumbers,
+    printer: Printer<'a>,
+}
+
+impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
+    fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
+        self.visit_typed_expr(&assignment.value);
+
+        let code_action_range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
+
+        // Only offer the code action if the cursor is over the statement
+        if !overlaps(code_action_range, self.params.range) {
+            return;
+        }
+
+        // We don't need to add an annotation if there already is one
+        if assignment.annotation.is_some() {
+            return;
+        }
+
+        let pattern_location = assignment.pattern.location();
+        let insert_location = SrcSpan::new(pattern_location.end, pattern_location.end);
+        let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+        self.edits.push(TextEdit {
+            range,
+            new_text: format!(": {}", self.printer.print_type(&assignment.type_())),
+        });
+    }
+
+    fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        let code_action_range = src_span_to_lsp_range(constant.location, &self.line_numbers);
+
+        // Only offer the code action if the cursor is over the statement
+        if !overlaps(code_action_range, self.params.range) {
+            return;
+        }
+
+        // We don't need to add an annotation if there already is one
+        if constant.annotation.is_some() {
+            return;
+        }
+
+        let insert_location = SrcSpan::new(constant.name_location.end, constant.name_location.end);
+        let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+        self.edits.push(TextEdit {
+            range,
+            new_text: format!(": {}", self.printer.print_type(&constant.type_)),
+        });
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        ast::visit::visit_typed_function(self, fun);
+
+        let code_action_range = src_span_to_lsp_range(fun.location, &self.line_numbers);
+
+        // Only offer the code action if the cursor is over the statement
+        if !overlaps(code_action_range, self.params.range) {
+            return;
+        }
+
+        // Annotate each argument separately
+        for argument in fun.arguments.iter() {
+            // Don't annotate the argument if it's already annotated
+            if argument.annotation.is_some() {
+                continue;
+            }
+
+            let insert_location = SrcSpan::new(argument.location.end, argument.location.end);
+            let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+            self.edits.push(TextEdit {
+                range,
+                new_text: format!(": {}", self.printer.print_type(&argument.type_)),
+            });
+        }
+
+        // Annotate the return type if it isn't already annotated
+        if fun.return_annotation.is_none() {
+            let insert_location = SrcSpan::new(fun.location.end, fun.location.end);
+            let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+            self.edits.push(TextEdit {
+                range,
+                new_text: format!(" -> {}", self.printer.print_type(&fun.return_type)),
+            });
+        }
+    }
+}
+
+impl<'a> AddAnnotations<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+        Self {
+            module,
+            params,
+            edits: Vec::new(),
+            line_numbers,
+            // We need to use the same printer for all the edits because otherwise
+            // we could get duplicate type variable names.
+            printer: Printer::new(&module.ast.names),
+        }
+    }
+
+    pub fn code_action(mut self, actions: &mut Vec<CodeAction>) {
+        self.visit_typed_module(&self.module.ast);
+
+        let uri = &self.params.text_document.uri;
+
+        let title = match self.edits.len() {
+            // We don't offer a code action if there is no action to perform
+            0 => return,
+            1 => "Add type annotation",
+            _ => "Add type annotations",
+        };
+
+        CodeActionBuilder::new(title)
+            .kind(CodeActionKind::REFACTOR)
+            .changes(uri.clone(), self.edits)
             .preferred(true)
             .push_to(actions);
     }

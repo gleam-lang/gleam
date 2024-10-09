@@ -694,6 +694,7 @@ impl<T> Import<T> {
 }
 
 pub type UntypedModuleConstant = ModuleConstant<(), ()>;
+pub type TypedModuleConstant = ModuleConstant<Arc<Type>, EcoString>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A certain fixed value that can be used in multiple places

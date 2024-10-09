@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn do_generic_things(a, b) {\n  let a_value = a\n  let b_value = b\n  let other_value = a_value\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn do_generic_things(a, b) {
+  let a_value = a
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  let b_value = b
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+  let other_value = a_value
+▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔
+}
+↑
+
+
+----- AFTER ACTION
+
+pub fn do_generic_things(a, b) {
+  let a_value: a = a
+  let b_value: b = b
+  let other_value: a = a_value
+}
