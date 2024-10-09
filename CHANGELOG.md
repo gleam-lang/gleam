@@ -91,7 +91,9 @@
 - Improved the error message for unknown record fields, displaying an additional
   note on how to have a field accessor only if it makes sense.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-- The compiler now ignores `optional` dependencies when resolving versions unless explicitly specified.
+
+- The compiler now ignores `optional` dependencies when resolving versions
+  unless explicitly specified.
   ([Gustavo Inacio](https://github.com/gusinacio))
 
 - Fixes a bug where incorrect code would be generated for external function on
@@ -137,6 +139,8 @@
     a +. int.to_float(b)
   }
   ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Bug Fixes
 
