@@ -985,15 +985,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             }
             let field_map = field_map.into_option();
             // Insert constructor function into module scope
-            let type_ = Arc::new(
-                type_
-                    .deref()
-                    .clone()
-                    .narrow_custom_type_variant(index as u16),
-            );
+            let mut type_ = type_.deref().clone();
+            type_.narrow_custom_type_variant(index as u16);
             let type_ = match constructor.arguments.len() {
-                0 => type_.clone(),
-                _ => fn_(args_types.clone(), type_.clone()),
+                0 => Arc::new(type_),
+                _ => fn_(args_types.clone(), Arc::new(type_)),
             };
             let constructor_info = ValueConstructorVariant::Record {
                 documentation: constructor

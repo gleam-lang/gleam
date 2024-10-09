@@ -1071,10 +1071,15 @@ pub fn convert_get_value_constructor_error(
     }
 }
 
-#[derive(Debug, Eq, PartialEq, Clone, Copy)]
+#[derive(Debug, Eq, PartialEq, Clone)]
 pub enum UnsafeRecordUpdateReason {
-    UnknownVariant,
-    WrongVariant,
+    UnknownVariant {
+        constructed_variant: EcoString,
+    },
+    WrongVariant {
+        constructed_variant: EcoString,
+        spread_variant: EcoString,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

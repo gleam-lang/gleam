@@ -2543,3 +2543,67 @@ pub fn b_to_a(value: MyRecord) {
 "#
     );
 }
+
+#[test]
+fn record_update_wrong_variant_imported_type() {
+    assert_with_module_error!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wobble: Int, wubble: Int)
+}"
+        ),
+        "
+import wibble
+
+pub fn main(wibble: wibble.Wibble) {
+  case wibble {
+    wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
+    _ -> panic
+  }
+}
+"
+    );
+}
+
+#[test]
+fn narrowed_record_update_change_type_parameter() {
+    assert_module_error!(
+        r#"
+pub type Box(a) {
+  Locked(password: String, value: a)
+  Unlocked(password: String, value: a)
+}
+
+pub fn main() {
+  let box = Locked("ungu€$$4bLe", 11)
+  case box {
+    Locked(..) as box -> Locked(..box, value: True)
+    Unlocked(..) as box -> Unlocked(..box, value: False)
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn narrowed_record_update_change_type_parameter_different_branches() {
+    assert_module_error!(
+        r#"
+pub type Box(a) {
+  Locked(password: String, value: a)
+  Unlocked(password: String, value: a)
+}
+
+pub fn main() {
+  let box = Locked("ungu€$$4bLe", 11)
+  case box {
+    Locked(..) as box -> Locked(..box, value: True)
+    Unlocked(..) as box -> Unlocked(..box, password: "pwd")
+  }
+}
+"#
+    );
+}

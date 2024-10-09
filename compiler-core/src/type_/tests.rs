@@ -1845,6 +1845,30 @@ pub fn grow(shape) {
 }
 
 #[test]
+fn record_update_type_narrowing_for_original_variable() {
+    assert_module_infer!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn update(wibble: Wibble) -> Wibble {
+  case wibble {
+    Wibble(..) -> Wibble(..wibble, a: 1)
+    Wobble(..) -> Wobble(..wibble, c: "hello")
+  }
+}
+"#,
+        vec![
+            ("Wibble", "fn(Int, Int) -> Wibble"),
+            ("Wobble", "fn(Int, String) -> Wibble"),
+            ("update", "fn(Wibble) -> Wibble")
+        ]
+    );
+}
+
+#[test]
 fn record_update_type_narrowing_fails_for_several_possible_variants() {
     assert_module_error!(
         "
@@ -1860,6 +1884,68 @@ pub fn increase_y(vector, by increase) {
   }
 }
 "
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_fails_for_several_possible_variants_on_subject_variable() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn update(wibble: Wibble) -> Wibble {
+  case wibble {
+    Wibble(..) | Wobble(..) -> Wibble(..wibble, a: 1)
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn type_unification_does_not_cause_false_positives_for_variant_matching() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn wibbler() { todo }
+
+pub fn main() {
+  let c = wibbler()
+
+  case todo {
+    Wibble(..) -> Wibble(..c, b: 1)
+    _ -> todo
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn type_unification_does_not_allow_different_variants_to_be_treated_as_safe() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn main() {
+  let a = case todo {
+    Wibble(..) as b -> Wibble(..b, b: 1)
+    Wobble(..) as b -> Wobble(..b, c: "a")
+  }
+
+  a.b
+}
+"#
     );
 }
 
