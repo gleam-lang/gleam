@@ -13,7 +13,6 @@ use crate::{
         src_span_to_lsp_range, DownloadDependencies, MakeLocker,
     },
     line_numbers::LineNumbers,
-    sourcemap::SourceMapEmitter,
     Result,
 };
 use camino::{Utf8Path, Utf8PathBuf};
@@ -282,9 +281,7 @@ where
             Err(error) => return self.path_error_response(path, error),
         };
 
-        if let Err(error) =
-            crate::format::pretty(&mut new_text, &src, &path, &mut SourceMapEmitter::null())
-        {
+        if let Err(error) = crate::format::pretty(&mut new_text, &src, &path) {
             return self.path_error_response(path, error);
         }
 
