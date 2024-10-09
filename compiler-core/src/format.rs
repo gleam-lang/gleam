@@ -29,12 +29,7 @@ use camino::Utf8Path;
 
 const INDENT: isize = 2;
 
-pub fn pretty(
-    writer: &mut impl Utf8Writer,
-    src: &EcoString,
-    path: &Utf8Path,
-    source_map_emitter: &mut SourceMapEmitter,
-) -> Result<()> {
+pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) -> Result<()> {
     let parsed = crate::parse::parse_module(path.to_owned(), src, &WarningEmitter::null())
         .map_err(|error| Error::Parse {
             path: path.to_path_buf(),
@@ -44,7 +39,7 @@ pub fn pretty(
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
         .module(&parsed.module)
-        .pretty_print(80, writer, source_map_emitter)
+        .pretty_print(80, writer, &mut SourceMapEmitter::null())
 }
 
 pub(crate) struct Intermediate<'a> {
