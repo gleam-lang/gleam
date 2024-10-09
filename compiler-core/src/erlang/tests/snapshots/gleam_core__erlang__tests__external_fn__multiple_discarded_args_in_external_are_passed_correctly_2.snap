@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
+assertion_line: 374
 expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub fn woo(__: a, _two: b) -> Nil\n"
 ---
 -module(my@mod).
@@ -9,5 +10,5 @@ expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub fn woo(__: a, _two
 
 -file("/root/project/test/my/mod.gleam", 3).
 -spec woo(any(), any()) -> nil.
-woo(__ignored, _two) ->
-    wibble:wobble(__ignored, _two).
+woo(Argument, _two) ->
+    wibble:wobble(Argument, _two).

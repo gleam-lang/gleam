@@ -455,7 +455,7 @@ fn external_fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a
             | ArgNames::NamedLabelled { name, .. } => name,
         };
         if name.chars().all(|c| c == '_') {
-            env.next_local_var_name(&format!("{name}ignored"))
+            env.next_local_var_name("argument")
         } else {
             env.next_local_var_name(name)
         }
