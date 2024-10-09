@@ -378,7 +378,7 @@ impl PackageInterface {
 }
 
 impl ModuleInterface {
-    fn from_module(module: &Module) -> ModuleInterface {
+    pub fn from_module(module: &Module) -> ModuleInterface {
         let mut types = HashMap::new();
         let mut type_aliases = HashMap::new();
         let mut constants = HashMap::new();

@@ -157,11 +157,18 @@ where
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                Input::Cached(info) => {
-                    tracing::debug!(module = %info.name, "module_to_load_from_cache");
-                    let module = self.load_cached_module(info)?;
-                    loaded.cached.push(module);
-                }
+                Input::Cached(info) => match self.mode {
+                    Mode::PackageInterface => {
+                        tracing::debug!(module = %info.name, "module_to_be_compiled");
+                        let module = self.load_and_parse(info)?;
+                        loaded.to_compile.push(module);
+                    }
+                    _ => {
+                        tracing::debug!(module = %info.name, "module_to_load_from_cache");
+                        let module = self.load_cached_module(info)?;
+                        loaded.cached.push(module);
+                    }
+                },
             }
         }
 

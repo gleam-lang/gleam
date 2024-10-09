@@ -5,7 +5,7 @@ use super::*;
 use crate::{
     build::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
-    line_numbers,
+    line_numbers, package_interface,
     parse::extra::ModuleExtra,
     warning::NullWarningEmitterIO,
     Warning,
@@ -62,7 +62,7 @@ fn write_cache(
         warnings: vec![],
         minimum_required_version: Version::new(0, 1, 0),
     };
-    let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
+    let path: Utf8PathBuf = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(
         &path,
         &metadata::ModuleEncoder::new(&cache).encode().unwrap(),

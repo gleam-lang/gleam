@@ -21,7 +21,7 @@ use crate::{
 use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::range::Range;
+use pubgrub::{package, range::Range};
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -521,7 +521,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<(Vec<Module>), Error> {
         let out_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &config.name);
@@ -591,14 +591,16 @@ where
         };
 
         // Compile project to Erlang or JavaScript source code
-        compiler.compile(
+        let outcome = compiler.compile(
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
             &mut self.stale_modules,
             &mut self.incomplete_modules,
             self.telemetry,
-        )
+        );
+
+        outcome
     }
 }
 
