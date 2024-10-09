@@ -15,8 +15,8 @@ use crate::{
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        self, collapse_links, pretty::Printer, AccessorsMap, FieldMap, ModuleInterface,
-        PreludeType, Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
+        self, collapse_links, pretty::Printer, FieldMap, ModuleInterface, PreludeType,
+        RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
     },
     Result,
 };
@@ -719,13 +719,19 @@ where
         &'a self,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
         type_: Arc<Type>,
-    ) -> Option<&AccessorsMap> {
+    ) -> Option<&HashMap<EcoString, RecordAccessor>> {
         let type_ = collapse_links(type_);
         match type_.as_ref() {
-            Type::Named { name, module, .. } => importable_modules
+            Type::Named {
+                name,
+                module,
+                narrowed_variant,
+                ..
+            } => importable_modules
                 .get(module)
                 .and_then(|i| i.accessors.get(name))
-                .filter(|a| a.publicity.is_importable() || module == &self.module.name),
+                .filter(|a| a.publicity.is_importable() || module == &self.module.name)
+                .map(|a| a.accessors_for_variant(*narrowed_variant)),
             _ => None,
         }
     }
@@ -737,9 +743,8 @@ where
             self.compiler.project_compiler.get_importable_modules(),
             type_,
         )
-        .map(|accessors_map| {
-            accessors_map
-                .accessors
+        .map(|accessors| {
+            accessors
                 .values()
                 .map(|accessor| field_completion(&accessor.label, accessor.type_.clone()))
                 .collect_vec()

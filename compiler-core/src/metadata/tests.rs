@@ -697,12 +697,12 @@ fn record_value() {
                     module: "themodule".into(),
                     field_map: None,
                     arity: random.gen(),
-                    constructors_count: random.gen(),
+                    variants_count: random.gen(),
                     location: SrcSpan {
                         start: random.gen(),
                         end: random.gen(),
                     },
-                    constructor_index: random.gen(),
+                    variant_index: random.gen(),
                 },
             },
         )]
@@ -743,8 +743,8 @@ fn record_value_with_field_map() {
                         fields: [("ok".into(), random.gen()), ("ko".into(), random.gen())].into(),
                     }),
                     arity: random.gen(),
-                    constructors_count: random.gen(),
-                    constructor_index: random.gen(),
+                    variants_count: random.gen(),
+                    variant_index: random.gen(),
                     location: SrcSpan {
                         start: random.gen(),
                         end: random.gen(),
@@ -763,6 +763,34 @@ fn record_value_with_field_map() {
 
 #[test]
 fn accessors() {
+    let accessors1 = [
+        (
+            "a".into(),
+            RecordAccessor {
+                index: 6,
+                label: "siiixxx".into(),
+                type_: type_::nil(),
+            },
+        ),
+        (
+            "a".into(),
+            RecordAccessor {
+                index: 5,
+                label: "fiveee".into(),
+                type_: type_::float(),
+            },
+        ),
+    ];
+
+    let accessors2 = [(
+        "a".into(),
+        RecordAccessor {
+            index: 1,
+            label: "ok".into(),
+            type_: type_::float(),
+        },
+    )];
+
     let module = ModuleInterface {
         warnings: vec![],
         is_internal: false,
@@ -778,25 +806,8 @@ fn accessors() {
                 AccessorsMap {
                     publicity: Publicity::Public,
                     type_: type_::int(),
-                    accessors: [
-                        (
-                            "a".into(),
-                            RecordAccessor {
-                                index: 6,
-                                label: "siiixxx".into(),
-                                type_: type_::nil(),
-                            },
-                        ),
-                        (
-                            "a".into(),
-                            RecordAccessor {
-                                index: 5,
-                                label: "fiveee".into(),
-                                type_: type_::float(),
-                            },
-                        ),
-                    ]
-                    .into(),
+                    shared_accessors: accessors1.clone().into(),
+                    variant_specific_accessors: vec![accessors1.into()],
                 },
             ),
             (
@@ -804,15 +815,8 @@ fn accessors() {
                 AccessorsMap {
                     publicity: Publicity::Public,
                     type_: type_::int(),
-                    accessors: [(
-                        "a".into(),
-                        RecordAccessor {
-                            index: 1,
-                            label: "ok".into(),
-                            type_: type_::float(),
-                        },
-                    )]
-                    .into(),
+                    shared_accessors: accessors2.clone().into(),
+                    variant_specific_accessors: vec![accessors2.into()],
                 },
             ),
         ]

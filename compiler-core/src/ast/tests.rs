@@ -91,10 +91,11 @@ fn compile_expression(src: &str) -> TypedStatement {
         module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],
+        narrowed_variant: None,
     });
     let variant = ValueConstructorVariant::Record {
         documentation: Some("wibble".into()),
-        constructors_count: 1,
+        variants_count: 1,
         name: "Cat".into(),
         arity: 2,
         location: SrcSpan { start: 12, end: 15 },
@@ -103,7 +104,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             fields: [("name".into(), 0), ("age".into(), 1)].into(),
         }),
         module: "mymod".into(),
-        constructor_index: 0,
+        variant_index: 0,
     };
     environment.insert_variable(
         "Cat".into(),
@@ -113,30 +114,32 @@ fn compile_expression(src: &str) -> TypedStatement {
         Deprecation::NotDeprecated,
     );
 
+    let accessors = [
+        (
+            "name".into(),
+            RecordAccessor {
+                index: 0,
+                label: "name".into(),
+                type_: type_::string(),
+            },
+        ),
+        (
+            "age".into(),
+            RecordAccessor {
+                index: 1,
+                label: "age".into(),
+                type_: type_::int(),
+            },
+        ),
+    ];
+
     environment.insert_accessors(
         "Cat".into(),
         AccessorsMap {
             publicity: Publicity::Public,
             type_: cat_type,
-            accessors: [
-                (
-                    "name".into(),
-                    RecordAccessor {
-                        index: 0,
-                        label: "name".into(),
-                        type_: type_::string(),
-                    },
-                ),
-                (
-                    "age".into(),
-                    RecordAccessor {
-                        index: 1,
-                        label: "age".into(),
-                        type_: type_::int(),
-                    },
-                ),
-            ]
-            .into(),
+            shared_accessors: accessors.clone().into(),
+            variant_specific_accessors: vec![accessors.into()],
         },
     );
     let mut problems = Problems::new();
@@ -519,13 +522,13 @@ fn find_node_bool() {
             publicity: Publicity::Public,
             variant: ValueConstructorVariant::Record {
                 documentation: None,
-                constructors_count: 2,
+                variants_count: 2,
                 name: "True".into(),
                 arity: 0,
                 field_map: None,
                 location: SrcSpan { start: 0, end: 0 },
                 module: PRELUDE_MODULE_NAME.into(),
-                constructor_index: 0,
+                variant_index: 0,
             },
             type_: type_::bool(),
         },
