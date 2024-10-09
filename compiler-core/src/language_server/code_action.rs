@@ -1051,7 +1051,7 @@ pub struct QualifiedConstructor<'a> {
     constructor: EcoString,
     is_type: bool,
 }
-// First pass to find the hovered qualified constructor
+
 pub struct QualifiedToUnqualifiedImportFirstPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
@@ -1234,19 +1234,18 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
     }
 }
 
-// Second pass to convert all matched qualified constructor to an unqualified one
 pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
     qualified_constructor: QualifiedConstructor<'a>,
-    pub edits: Vec<TextEdit>,
+    edits: Vec<TextEdit>,
 }
 
 enum QualifiedConstructorType {
-    TypeConstructor,
-    RecordValueConstructor,
-    PatternRecordConstructor,
+    Type,
+    RecordValue,
+    PatternRecord,
 }
 
 impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
@@ -1294,10 +1293,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         // : option.Option / option.Some but for Record Constructors is: option.Some
         //   ↑           ↑   ↑         ↑                                       ↑   ↑
         // start       end start      end                                    start end
-        let span = if matches!(
-            constructor,
-            QualifiedConstructorType::RecordValueConstructor
-        ) {
+        let span = if matches!(constructor, QualifiedConstructorType::RecordValue) {
             SrcSpan::new(
                 location.start - self.qualified_constructor.used_name.len() as u32,
                 location.start + 1,
@@ -1448,7 +1444,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
                 .find('{')
                 .map(|pos| location.start as usize + pos)
                 .expect("Expected '{' in import statement");
-            (left_brace_pos as u32 + 1, format!("{}", name))
+            (left_brace_pos as u32 + 1, name)
         }
     }
 }
@@ -1511,7 +1507,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             } = &self.qualified_constructor;
 
             if *is_type && used_name == module_name && name == constructor {
-                self.remove_module_qualifier(*location, QualifiedConstructorType::TypeConstructor);
+                self.remove_module_qualifier(*location, QualifiedConstructorType::Type);
             }
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
@@ -1535,10 +1531,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             } = &self.qualified_constructor;
 
             if !*is_type && used_name == module_alias && name == constructor {
-                self.remove_module_qualifier(
-                    *location,
-                    QualifiedConstructorType::RecordValueConstructor,
-                );
+                self.remove_module_qualifier(*location, QualifiedConstructorType::RecordValue);
             }
         }
         ast::visit::visit_typed_expr_module_select(
@@ -1574,7 +1567,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
                 if !*is_type && used_name == module_alias && name == constructor {
                     self.remove_module_qualifier(
                         *location,
-                        QualifiedConstructorType::PatternRecordConstructor,
+                        QualifiedConstructorType::PatternRecord,
                     );
                 }
             }

@@ -2432,6 +2432,80 @@ pub fn main() {
         find_position_of("option.Some").select_until(find_position_of("(1)")),
     );
 }
+
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_type_inner() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() -> option.Option(opt.Option(Int)) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Option").select_until(find_position_of("(Int)")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_type_outer() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() -> option.Option(opt.Option(Int)) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.").select_until(find_position_of("Option(")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_name_inner() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() {
+    option.Some(opt.Some(1))
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Some").select_until(find_position_of("(1)")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_name_outer() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() {
+    option.Some(opt.Some(1))
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.").select_until(find_position_of("Some(")),
+    );
+}
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
