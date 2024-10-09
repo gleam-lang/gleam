@@ -2506,6 +2506,32 @@ pub fn main() {
         find_position_of("option.").select_until(find_position_of("Some(")),
     );
 }
+
+#[test]
+fn test_qualified_to_unqualified_import_constructor_complex_pattern() {
+    let src = r#"
+import option
+
+pub fn main() {
+    case [option.Some(1), option.None] {
+        [option.None, ..] -> todo
+        [option.Some(_), ..] -> todo
+        _ -> todo
+    }
+    case option.Some(1), option.Some(2) {
+        option.None, option.Some(_) -> todo
+        option.Some(_), option.Some(val) -> todo
+        _ -> todo
+    }
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.").select_until(find_position_of("Some(")),
+    );
+}
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
