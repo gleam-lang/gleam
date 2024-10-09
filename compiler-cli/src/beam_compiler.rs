@@ -46,13 +46,15 @@ impl BeamCompiler {
             None => self.inner.insert(self.spawn(io, out)?),
         };
 
-        let args = format!("{{\"{}\", \"{}\", [\"{}\"]}}",
+        let args = format!(
+            "{{\"{}\", \"{}\", [\"{}\"]}}",
             escape_path(lib),
             escape_path(out.join("ebin")),
             modules
                 .iter()
                 .map(|module| escape_path(out.join(paths::ARTEFACT_DIRECTORY_NAME).join(module)))
-                .join("\", \""));
+                .join("\", \"")
+        );
 
         tracing::debug!(args=?args, "call_beam_compiler");
 
