@@ -1044,56 +1044,30 @@ impl<'a> AddAnnotations<'a> {
     }
 }
 
-/// Builder for code action to convert qualified imports into unqualified imports.
-pub struct QualifiedToUnqualifiedImport<'a> {
-    module: &'a Module,
-    params: &'a CodeActionParams,
-    line_numbers: LineNumbers,
-    qualified_constructor: Option<QualifiedConstructor<'a>>,
-    edits: Vec<TextEdit>,
-    should_stop: bool,
-    second_pass: bool,
-}
-
-struct QualifiedConstructor<'a> {
-    hover_location: SrcSpan,
+pub struct QualifiedConstructor<'a> {
     import: &'a ast::Import<EcoString>,
     module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
     is_type: bool,
 }
+// First pass to find the hovered qualified constructor
+pub struct QualifiedToUnqualifiedImportFirstPass<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    qualified_constructor: Option<QualifiedConstructor<'a>>,
+}
 
-impl<'a> QualifiedToUnqualifiedImport<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
-        let line_numbers = LineNumbers::new(&module.code);
+impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
+    fn new(module: &'a Module, params: &'a CodeActionParams, line_numbers: LineNumbers) -> Self {
         Self {
             module,
             params,
             line_numbers,
-            edits: vec![],
             qualified_constructor: None,
-            should_stop: false,
-            second_pass: false,
         }
     }
-
-    pub fn code_actions(mut self) -> Vec<CodeAction> {
-        self.visit_typed_module(&self.module.ast);
-        self.second_pass = true;
-        self.visit_typed_module(&self.module.ast);
-        if self.edits.is_empty() {
-            return vec![];
-        }
-        let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Convert to unqualified import")
-            .kind(CodeActionKind::REFACTOR)
-            .changes(self.params.text_document.uri.clone(), self.edits)
-            .preferred(false)
-            .push_to(&mut action);
-        action
-    }
-
     fn get_module_import(&mut self, module_name: &EcoString) -> Option<&'a ast::Import<EcoString>> {
         self.module
             .ast
@@ -1104,264 +1078,9 @@ impl<'a> QualifiedToUnqualifiedImport<'a> {
                 _ => None,
             })
     }
-
-    fn find_in_code(
-        &self,
-        start: usize,
-        end: usize,
-        predicate: impl Fn(&str) -> Option<usize>,
-    ) -> Option<usize> {
-        self.module
-            .code
-            .get(start..end)
-            .and_then(predicate)
-            .map(|pos| start + pos)
-    }
-
-    fn find_trailing_comma_before_closing_brace(
-        &self,
-        import_start: usize,
-        import_end: usize,
-    ) -> Option<usize> {
-        let import_code = self.module.code.get(import_start..import_end)?;
-        let closing_brace_pos = import_code.rfind('}')?;
-
-        let bytes = import_code.as_bytes();
-        let mut pos = closing_brace_pos;
-        while pos > 0 {
-            pos -= 1;
-            let c = (*bytes.get(pos)?) as char;
-            if c.is_whitespace() {
-                continue;
-            }
-            if c == ',' {
-                return Some(import_start + pos);
-            }
-            break;
-        }
-        None
-    }
-
-    fn edit_import(&mut self, name: String) {
-        let qualified_constructor = self
-            .qualified_constructor
-            .as_ref()
-            .expect("import should be set");
-        let import_start = qualified_constructor.import.location.start as usize;
-        let import_end = qualified_constructor.import.location.end as usize;
-
-        // Determine if the import has braces
-        let has_brace = self
-            .find_in_code(import_start, import_end, |s| s.rfind('}'))
-            .is_some();
-
-        let trailing_comma_pos = if has_brace {
-            self.find_trailing_comma_before_closing_brace(import_start, import_end)
-        } else {
-            None
-        };
-
-        let (insert_pos, new_text) = match (
-            has_brace,
-            trailing_comma_pos,
-            qualified_constructor.module_aliased,
-        ) {
-            // Case: import gleam/option
-            (false, None, false) => (
-                qualified_constructor.import.location.end,
-                format!(".{{{}}}", name),
-            ),
-            // Case: import gleam/option as opt
-            (false, None, true) => {
-                let as_pos = self
-                    .find_in_code(import_start, import_end, |s| s.find(" as "))
-                    .expect("Expected 'as' in import statement");
-
-                let non_space_before_as = self
-                    .find_in_code(import_start, as_pos, |s| {
-                        s.rfind(|c: char| !c.is_whitespace())
-                    })
-                    .expect("Expected non-whitespace character before 'as'")
-                    as u32;
-
-                (non_space_before_as + 1, format!(".{{{}}}", name))
-            }
-            // Case: import gleam/option.{} or import gleam/option.{Some}
-            (true, None, false) => (import_end as u32 - 1, format!(", {}", name)),
-            // Case: import gleam/option.{Some} as opt
-            (true, None, true) => {
-                let right_brace_pos = self
-                    .find_in_code(import_start, import_end, |s| s.rfind('}'))
-                    .expect("Expected '}' before 'as' in import statement")
-                    as u32;
-
-                (right_brace_pos, format!(", {}", name))
-            }
-            // Case: import gleam/option.{Some, } (as opt)
-            (true, Some(pos), _) => (pos as u32 + 1, format!(" {}", name)),
-            // Invalid case: trailing comma without braces
-            (false, Some(_), _) => {
-                unreachable!("Syntax error: trailing comma found without braces.")
-            }
-        };
-
-        let span = SrcSpan::new(insert_pos, insert_pos);
-        self.edits.push(TextEdit {
-            range: src_span_to_lsp_range(span, &self.line_numbers),
-            new_text,
-        });
-    }
-
-    fn add_import_edits(&mut self, name: &str, is_type: bool) {
-        let import = self
-            .qualified_constructor
-            .as_mut()
-            .expect("import should be set");
-        let is_imported = if is_type {
-            import
-                .import
-                .unqualified_types
-                .iter()
-                .any(|type_| type_.used_name() == name)
-        } else {
-            import
-                .import
-                .unqualified_values
-                .iter()
-                .any(|value| value.used_name() == name)
-        };
-        let name = if is_type {
-            format!("type {name}")
-        } else {
-            name.to_string()
-        };
-        if !is_imported {
-            self.edit_import(name);
-        }
-    }
-
-    fn import_match(
-        &self,
-        new_import: Option<&ast::Import<EcoString>>,
-        hover_location: SrcSpan,
-    ) -> bool {
-        match (self.qualified_constructor.as_ref(), new_import) {
-            (
-                Some(QualifiedConstructor {
-                    hover_location: old_src,
-                    import: old_import,
-                    ..
-                }),
-                Some(new_import),
-            ) => old_import.module == new_import.module && *old_src == hover_location,
-            _ => false,
-        }
-    }
-
-    fn remove_module_qualifier(&mut self, location: SrcSpan, is_type: bool, is_pattern: bool) {
-        let import = self
-            .qualified_constructor
-            .as_ref()
-            .expect("import should be set");
-        // the src_span for type constructor and constructor in pattern is : option.Some but for constructor is: option.Some
-        //                                                                   ↑   to    ↑                               ↑to ↑
-        let span = if is_type || is_pattern {
-            SrcSpan::new(
-                location.start,
-                location.start + import.used_name.len() as u32 + 1, // plus .
-            )
-        } else {
-            SrcSpan::new(
-                location.start - import.used_name.len() as u32,
-                location.start + 1,
-            )
-        };
-        self.edits.push(TextEdit {
-            range: src_span_to_lsp_range(span, &self.line_numbers),
-            new_text: "".to_string(),
-        });
-    }
-
-    #[allow(clippy::too_many_arguments)]
-    fn process_constructor(
-        &mut self,
-        module_alias: &EcoString,
-        module_location: Option<SrcSpan>,
-        module_name: Option<&EcoString>,
-        constructor: &EcoString,
-        location: SrcSpan,
-        is_type: bool,
-        is_pattern: bool,
-    ) {
-        if self.should_stop {
-            return;
-        }
-        let range = src_span_to_lsp_range(location, &self.line_numbers);
-        if overlaps(self.params.range, range) {
-            let import = if is_type {
-                let module_location = module_location
-                    .expect("module location should be present when type constructor is hovered");
-                self.module
-                    .find_node(module_location.start)
-                    .and_then(|node| {
-                        if let Located::Annotation(_, ty) = node {
-                            if let Some((module, _)) = ty.named_type_name() {
-                                return self.get_module_import(&module);
-                            }
-                        }
-                        None
-                    })
-            } else {
-                let module_name = module_name
-                    .expect("module name should be present when value constructor is hovered");
-                self.get_module_import(module_name)
-            };
-            // when the second time we come across the inner most hovered constructor, we should stop.
-            if self.import_match(import, location) {
-                self.should_stop = true;
-                return;
-            }
-            // to make sure the second pass the outer hovered contructor won't override all edits
-            if !self.second_pass {
-                // clean the outer hovered constructor edits
-                if self.qualified_constructor.is_some() {
-                    self.edits.clear();
-                }
-
-                if let Some(import) = import {
-                    self.qualified_constructor = Some(QualifiedConstructor {
-                        hover_location: location,
-                        import,
-                        used_name: module_alias.clone(),
-                        constructor: constructor.clone(),
-                        is_type,
-                        module_aliased: import.as_name.is_some(),
-                    });
-                    self.add_import_edits(constructor, is_type);
-                    self.remove_module_qualifier(location, is_type, is_pattern);
-                }
-            }
-        } else {
-            // would add all edits that are after the hovered in the first pass, and everything above the second pass
-            if let Some(QualifiedConstructor {
-                used_name,
-                constructor: wanted_constructor,
-                is_type: constructor_type,
-                ..
-            }) = self.qualified_constructor.as_ref()
-            {
-                if constructor_type == &is_type
-                    && used_name.as_str() == (*module_alias).as_str()
-                    && wanted_constructor.as_str() == (*constructor).as_str()
-                {
-                    self.remove_module_qualifier(location, is_type, is_pattern);
-                }
-            }
-        }
-    }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
+impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'ast> {
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
@@ -1410,16 +1129,30 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            self.process_constructor(
-                module_alias,
-                Some(*module_location),
-                None,
-                name,
-                *location,
-                true,
-                false,
-            );
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let Some((module_alias, module_location)) = module {
+                if let Some(import) =
+                    self.module
+                        .find_node(module_location.start)
+                        .and_then(|node| {
+                            if let Located::Annotation(_, ty) = node {
+                                if let Some((module, _)) = ty.named_type_name() {
+                                    return self.get_module_import(&module);
+                                }
+                            }
+                            None
+                        })
+                {
+                    self.qualified_constructor = Some(QualifiedConstructor {
+                        import,
+                        module_aliased: import.as_name.is_some(),
+                        used_name: module_alias.clone(),
+                        constructor: name.clone(),
+                        is_type: true,
+                    });
+                }
+            }
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
     }
@@ -1433,16 +1166,23 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         module_alias: &'ast EcoString,
         constructor: &'ast ModuleValueConstructor,
     ) {
-        if let ModuleValueConstructor::Record { name, .. } = constructor {
-            self.process_constructor(
-                module_alias,
-                None,
-                Some(module_name),
-                name,
-                *location,
-                false,
-                false,
-            );
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let ModuleValueConstructor::Record {
+                name: constructor_name,
+                ..
+            } = constructor
+            {
+                if let Some(import) = self.get_module_import(module_name) {
+                    self.qualified_constructor = Some(QualifiedConstructor {
+                        import,
+                        module_aliased: import.as_name.is_some(),
+                        used_name: module_alias.clone(),
+                        constructor: constructor_name.clone(),
+                        is_type: false,
+                    });
+                }
+            }
         }
         ast::visit::visit_typed_expr_module_select(
             self,
@@ -1465,17 +1205,20 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
         spread: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
     ) {
-        if let Some((module_alias, module_location)) = module {
-            if let crate::analyse::Inferred::Known(constructor) = constructor {
-                self.process_constructor(
-                    module_alias,
-                    Some(*module_location),
-                    Some(&constructor.module),
-                    name,
-                    *location,
-                    false,
-                    true,
-                );
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let Some((module_alias, _)) = module {
+                if let crate::analyse::Inferred::Known(constructor) = constructor {
+                    if let Some(import) = self.get_module_import(&constructor.module) {
+                        self.qualified_constructor = Some(QualifiedConstructor {
+                            import,
+                            module_aliased: import.as_name.is_some(),
+                            used_name: module_alias.clone(),
+                            constructor: name.clone(),
+                            is_type: false,
+                        });
+                    }
+                }
             }
         }
         ast::visit::visit_typed_pattern_constructor(
@@ -1489,4 +1232,384 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImport<'_> {
             type_,
         );
     }
+}
+
+// Second pass to convert all matched qualified constructor to an unqualified one
+pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    qualified_constructor: QualifiedConstructor<'a>,
+    pub edits: Vec<TextEdit>,
+}
+
+enum QualifiedConstructorType {
+    TypeConstructor,
+    RecordValueConstructor,
+    PatternRecordConstructor,
+}
+
+impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
+    pub fn new(
+        module: &'a Module,
+        params: &'a CodeActionParams,
+        line_numbers: LineNumbers,
+        qualified_constructor: QualifiedConstructor<'a>,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            line_numbers,
+            edits: vec![],
+            qualified_constructor,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.edits.is_empty() {
+            return vec![];
+        }
+        self.edit_import();
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(&format!(
+            "Unqualify {}.{}",
+            self.qualified_constructor.used_name, self.qualified_constructor.constructor
+        ))
+        .kind(CodeActionKind::REFACTOR)
+        .changes(self.params.text_document.uri.clone(), self.edits)
+        .preferred(false)
+        .push_to(&mut action);
+        action
+    }
+
+    fn remove_module_qualifier(
+        &mut self,
+        location: SrcSpan,
+        constructor: QualifiedConstructorType,
+    ) {
+        // Find the start and end of the module qualifier
+
+        // The src_span for Type Constructors and Pattern Record Constructors is
+        // : option.Option / option.Some but for Record Constructors is: option.Some
+        //   ↑           ↑   ↑         ↑                                       ↑   ↑
+        // start       end start      end                                    start end
+        let span = if matches!(
+            constructor,
+            QualifiedConstructorType::RecordValueConstructor
+        ) {
+            SrcSpan::new(
+                location.start - self.qualified_constructor.used_name.len() as u32,
+                location.start + 1,
+            )
+        } else {
+            SrcSpan::new(
+                location.start,
+                location.start + self.qualified_constructor.used_name.len() as u32 + 1, // plus .
+            )
+        };
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(span, &self.line_numbers),
+            new_text: "".to_string(),
+        });
+    }
+
+    fn edit_import(&mut self) {
+        let QualifiedConstructor {
+            constructor,
+            is_type,
+            import,
+            ..
+        } = &self.qualified_constructor;
+        let is_imported = if *is_type {
+            import
+                .unqualified_types
+                .iter()
+                .any(|type_| type_.used_name() == constructor)
+        } else {
+            import
+                .unqualified_values
+                .iter()
+                .any(|value| value.used_name() == constructor)
+        };
+        if is_imported {
+            return;
+        }
+        let (insert_pos, new_text) = self.determine_insert_position_and_text();
+        let span = SrcSpan::new(insert_pos, insert_pos);
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(span, &self.line_numbers),
+            new_text,
+        });
+    }
+
+    fn find_last_char_before_closing_brace(&self) -> Option<(usize, char)> {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        let import_code = self.get_import_code();
+        let closing_brace_pos = import_code.rfind('}')?;
+
+        let bytes = import_code.as_bytes();
+        let mut pos = closing_brace_pos;
+        while pos > 0 {
+            pos -= 1;
+            let c = (*bytes.get(pos)?) as char;
+            if c.is_whitespace() {
+                continue;
+            }
+            if c == '{' {
+                break;
+            }
+            return Some((location.start as usize + pos, c));
+        }
+        None
+    }
+
+    fn get_import_code(&self) -> &str {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        return self
+            .module
+            .code
+            .get(location.start as usize..location.end as usize)
+            .expect("import not found");
+    }
+
+    fn determine_insert_position_and_text(&self) -> (u32, String) {
+        let QualifiedConstructor {
+            module_aliased,
+            constructor,
+            is_type,
+            ..
+        } = &self.qualified_constructor;
+
+        let name = if *is_type {
+            format!("type {}", constructor)
+        } else {
+            constructor.to_string()
+        };
+
+        let import_code = self.get_import_code();
+        let has_brace = import_code.contains('}');
+
+        if has_brace {
+            self.insert_into_braced_import(name)
+        } else {
+            self.insert_into_unbraced_import(name, *module_aliased)
+        }
+    }
+
+    // Handle inserting into an unbraced import
+    fn insert_into_unbraced_import(&self, name: String, module_aliased: bool) -> (u32, String) {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        if !module_aliased {
+            // Case: import module
+            (location.end, format!(".{{{}}}", name))
+        } else {
+            // Case: import module as alias
+            let import_code = &self.get_import_code();
+            let as_pos = import_code
+                .find(" as ")
+                .expect("Expected ' as ' in import statement");
+            let before_as_pos = import_code
+                .get(..as_pos)
+                .and_then(|s| s.rfind(|c: char| !c.is_whitespace()))
+                .map(|pos| location.start as usize + pos + 1)
+                .expect("Expected non-whitespace character before ' as '");
+            (before_as_pos as u32, format!(".{{{}}}", name))
+        }
+    }
+
+    // Handle inserting into a braced import
+    fn insert_into_braced_import(&self, name: String) -> (u32, String) {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        if let Some((pos, c)) = self.find_last_char_before_closing_brace() {
+            // Case: import module.{Existing, } (as alias)
+            if c == ',' {
+                (pos as u32 + 1, format!(" {}", name))
+            } else {
+                // Case: import module.{Existing} (as alias)
+                (pos as u32 + 1, format!(", {}", name))
+            }
+        } else {
+            // Case: import module.{} (as alias)
+            let import_code = self.get_import_code();
+            let left_brace_pos = import_code
+                .find('{')
+                .map(|pos| location.start as usize + pos)
+                .expect("Expected '{' in import statement");
+            (left_brace_pos as u32 + 1, format!("{}", name))
+        }
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        for arg in args {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+        if let Some(return_) = return_annotation {
+            self.visit_type_ast(return_);
+        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+
+        if let Some(return_annotation) = &fun.return_annotation {
+            self.visit_type_ast(return_annotation);
+        }
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::TypeAst>,
+    ) {
+        if let Some((module_name, _)) = module {
+            let QualifiedConstructor {
+                used_name,
+                constructor,
+                is_type,
+                ..
+            } = &self.qualified_constructor;
+
+            if *is_type && used_name == module_name && name == constructor {
+                self.remove_module_qualifier(*location, QualifiedConstructorType::TypeConstructor);
+            }
+        }
+        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_typed_expr_module_select(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
+    ) {
+        if let ModuleValueConstructor::Record { name, .. } = constructor {
+            let QualifiedConstructor {
+                used_name,
+                constructor,
+                is_type,
+                ..
+            } = &self.qualified_constructor;
+
+            if !*is_type && used_name == module_alias && name == constructor {
+                self.remove_module_qualifier(
+                    *location,
+                    QualifiedConstructorType::RecordValueConstructor,
+                );
+            }
+        }
+        ast::visit::visit_typed_expr_module_select(
+            self,
+            location,
+            type_,
+            label,
+            module_name,
+            module_alias,
+            constructor,
+        )
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if let Some((module_alias, _)) = module {
+            if let crate::analyse::Inferred::Known(_) = constructor {
+                let QualifiedConstructor {
+                    used_name,
+                    constructor,
+                    is_type,
+                    ..
+                } = &self.qualified_constructor;
+
+                if !*is_type && used_name == module_alias && name == constructor {
+                    self.remove_module_qualifier(
+                        *location,
+                        QualifiedConstructorType::PatternRecordConstructor,
+                    );
+                }
+            }
+        }
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
+    }
+}
+
+pub fn code_action_convert_qualified_constructor_to_unqualified(
+    module: &Module,
+    params: &CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut first_pass =
+        QualifiedToUnqualifiedImportFirstPass::new(module, params, line_numbers.clone());
+    first_pass.visit_typed_module(&module.ast);
+    let Some(qualified_constructor) = first_pass.qualified_constructor else {
+        return;
+    };
+    let second_pass = QualifiedToUnqualifiedImportSecondPass::new(
+        module,
+        params,
+        line_numbers,
+        qualified_constructor,
+    );
+    let new_actions = second_pass.code_actions();
+    actions.extend(new_actions);
 }
