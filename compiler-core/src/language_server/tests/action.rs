@@ -80,6 +80,8 @@ const USE_LABEL_SHORTHAND_SYNTAX: &str = "Use label shorthand syntax";
 const FILL_LABELS: &str = "Fill labels";
 const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
+const ADD_ANNOTATION: &str = "Add type annotation";
+const ADD_ANNOTATIONS: &str = "Add type annotations";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -1557,6 +1559,296 @@ pub fn main(res) {
         TestProject::for_source(src)
             .add_hex_module("result", "pub type Result(v, e) { Ok(v) Error(e) }"),
         find_position_of("result").select_until(find_position_of("."))
+    );
+}
+
+#[test]
+fn annotate_function() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn add_one(thing) {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_function_with_annotated_return_type() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn add_one(thing) -> Int {
+  thing + 1
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_function_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn add(a: Float, b) -> Float {
+  a +. b
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_function() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn do_a_thing(a: Int, b: Float) -> String {
+  todo
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn annotate_constant() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub const my_constant = 20
+"#,
+        find_position_of("const").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn no_code_action_for_annotated_constant() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub const PI: Float = 3.14159
+"#,
+        find_position_of("const").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_local_variable() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn main() {
+  let my_value = 10
+}
+"#,
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_local_variable_with_pattern() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  let Wibble(a, b, c) = Wibble(1, 2, 3)
+}
+"#,
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_local_variable_with_pattern2() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn main(values) {
+  let #(left, right) = values
+}
+"#,
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_local_variable_let_assert() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn fallible() -> Result(Int, Nil) {
+  todo
+}
+
+pub fn main() {
+  let assert Ok(value) = fallible()
+}
+"#,
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn no_code_action_for_annotated_local_variable() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  let typed: Int = 1.2
+}
+"#,
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn adding_annotations_correctly_prints_type_variables() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn map_result(input, function) {
+  case input {
+    Ok(value) -> Ok(function(value))
+    Error(error) -> Error(error)
+  }
+}
+"#,
+        find_position_of("fn").select_until(find_position_of("("))
+    );
+}
+
+#[test]
+fn add_multiple_annotations() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub const my_constant = 20
+
+pub fn add_my_constant(value) {
+  let result = value + my_constant
+  result
+}
+"#,
+        find_position_of("pub const").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn different_annotations_create_compatible_type_variables() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn do_generic_things(a, b) {
+  let a_value = a
+  let b_value = b
+  let other_value = a_value
+}
+"#,
+        find_position_of("let a_value").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn adding_annotations_prints_type_variable_names() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn do_generic_things(a: type_a, b: type_b) {
+  let a_value = a
+  let b_value = b
+  let other_value = a_value
+}
+"#,
+        find_position_of("let a_value").select_until(find_position_of("}"))
+    );
+}
+
+#[test]
+fn adding_annotations_prints_contextual_types() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub type IntAlias = Int
+
+pub fn main() {
+  let value = 20
+}
+"#,
+        find_position_of("let").select_until(find_position_of("value"))
+    );
+}
+
+#[test]
+fn adding_annotations_prints_contextual_types2() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub type Result
+
+pub fn main() {
+  let value = Ok(12)
+}
+"#,
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn adding_annotations_prints_contextual_types3() {
+    let src = r#"
+import wibble
+
+pub fn main() {
+  let value = wibble.Wibble
+}
+"#;
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn adding_annotations_prints_contextual_types4() {
+    let src = r#"
+import wibble as wobble
+
+pub fn main() {
+  let value = wobble.Wibble
+}
+"#;
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn adding_annotations_prints_contextual_types5() {
+    let src = r#"
+import wibble.{type Wibble as Wobble}
+
+pub fn main() {
+  let value = wibble.Wibble
+}
+"#;
+
+    assert_code_action!(
+        ADD_ANNOTATION,
+        TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        find_position_of("let").select_until(find_position_of("="))
     );
 }
 

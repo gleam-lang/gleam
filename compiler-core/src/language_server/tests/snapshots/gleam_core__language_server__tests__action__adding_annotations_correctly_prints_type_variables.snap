@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn map_result(input, function) {\n  case input {\n    Ok(value) -> Ok(function(value))\n    Error(error) -> Error(error)\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn map_result(input, function) {
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔↑                  
+  case input {
+    Ok(value) -> Ok(function(value))
+    Error(error) -> Error(error)
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn map_result(input: Result(a, b), function: fn(a) -> c) -> Result(c, b) {
+  case input {
+    Ok(value) -> Ok(function(value))
+    Error(error) -> Error(error)
+  }
+}

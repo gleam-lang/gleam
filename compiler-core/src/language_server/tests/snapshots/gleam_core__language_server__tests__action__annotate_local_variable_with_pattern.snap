@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\ntype Wibble {\n  Wibble(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  let Wibble(a, b, c) = Wibble(1, 2, 3)\n}\n"
+---
+----- BEFORE ACTION
+
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  let Wibble(a, b, c) = Wibble(1, 2, 3)
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑                
+}
+
+
+----- AFTER ACTION
+
+type Wibble {
+  Wibble(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  let Wibble(a, b, c): Wibble = Wibble(1, 2, 3)
+}

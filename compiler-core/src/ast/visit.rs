@@ -51,7 +51,7 @@ use crate::type_::Type;
 use super::{
     AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, SrcSpan, Statement, TodoKind,
     TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
+    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
     TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
 };
 
@@ -66,6 +66,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        visit_typed_module_constant(self, constant);
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -463,7 +467,7 @@ where
         Definition::TypeAlias(_typealias) => { /* TODO */ }
         Definition::CustomType(_custom_type) => { /* TODO */ }
         Definition::Import(_import) => { /* TODO */ }
-        Definition::ModuleConstant(_module_constant) => { /* TODO */ }
+        Definition::ModuleConstant(constant) => v.visit_typed_module_constant(constant),
     }
 }
 pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
@@ -473,6 +477,12 @@ where
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
     }
+}
+
+pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)
+where
+    V: Visit<'a> + ?Sized,
+{
 }
 
 pub fn visit_typed_expr<'a, V>(v: &mut V, node: &'a TypedExpr)
