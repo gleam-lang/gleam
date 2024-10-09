@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option\n\npub fn main() {\n    option.map(option.Some(1), fn(x) { x + 1 })\n}\n"
+---
+----- BEFORE ACTION
+
+import option
+
+pub fn main() {
+    option.map(option.Some(1), fn(x) { x + 1 })
+               ▔▔▔▔▔▔▔▔▔▔▔↑                    
+}
+
+
+----- AFTER ACTION
+
+import option.{Some}
+
+pub fn main() {
+    option.map(Some(1), fn(x) { x + 1 })
+}
