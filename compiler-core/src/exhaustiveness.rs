@@ -895,14 +895,14 @@ impl ConstructorSpecialiser {
                 module,
                 name,
                 args,
-                narrowed_variant: constructor_index,
+                narrowed_variant,
             } => Type::Named {
                 publicity: *publicity,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),
                 args: args.iter().map(|a| self.specialise_type(a)).collect(),
-                narrowed_variant: *constructor_index,
+                narrowed_variant: *narrowed_variant,
             },
 
             Type::Fn { args, retrn } => Type::Fn {
