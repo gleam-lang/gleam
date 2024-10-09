@@ -121,6 +121,9 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The Language Server now looks for gleam.toml in the workspace directories,
+  whereas previously it was dependent on clients implementation of file watching.
+
 ### Bug Fixes
 
 - Fixed a bug in the compiler where shadowing a sized value in a bit pattern
