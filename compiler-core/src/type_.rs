@@ -264,24 +264,23 @@ impl Type {
         }
     }
 
-    pub fn narrow_custom_type_variant(self, index: u16) -> Self {
+    pub fn narrow_custom_type_variant(&mut self, index: u16) {
         match self {
             Type::Named {
-                publicity,
-                package,
-                module,
-                name,
-                args,
-                ..
-            } => Type::Named {
-                narrowed_variant: Some(index),
-                publicity,
-                package,
-                module,
-                name,
-                args,
-            },
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => self,
+                narrowed_variant, ..
+            } => *narrowed_variant = Some(index),
+            Type::Var { type_ } => type_.borrow_mut().narrow_custom_type_variant(index),
+            Type::Fn { .. } | Type::Tuple { .. } => {}
+        }
+    }
+
+    pub fn generalise_custom_type_variant(&mut self) {
+        match self {
+            Type::Named {
+                narrowed_variant, ..
+            } => *narrowed_variant = None,
+            Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
+            Type::Fn { .. } | Type::Tuple { .. } => {}
         }
     }
 
@@ -435,9 +434,9 @@ pub struct AccessorsMap {
 impl AccessorsMap {
     pub fn accessors_for_variant(
         &self,
-        constructor_index: Option<u16>,
+        narrowed_variant: Option<u16>,
     ) -> &HashMap<EcoString, RecordAccessor> {
-        constructor_index
+        narrowed_variant
             .and_then(|index| self.variant_specific_accessors.get(index as usize))
             .unwrap_or(&self.shared_accessors)
     }
@@ -997,6 +996,20 @@ impl TypeVar {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn narrow_custom_type_variant(&mut self, index: u16) {
+        match self {
+            Self::Link { type_ } => Arc::make_mut(type_).narrow_custom_type_variant(index),
+            Self::Unbound { .. } | Self::Generic { .. } => {}
+        }
+    }
+
+    pub fn generalise_custom_type_variant(&mut self) {
+        match self {
+            Self::Link { type_ } => Arc::make_mut(type_).generalise_custom_type_variant(),
+            Self::Unbound { .. } | Self::Generic { .. } => {}
         }
     }
 }
