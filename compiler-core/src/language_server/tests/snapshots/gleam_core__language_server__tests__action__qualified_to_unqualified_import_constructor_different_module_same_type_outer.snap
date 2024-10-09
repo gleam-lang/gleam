@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option\nimport opt\n\npub fn main() -> option.Option(opt.Option(Int)) {\n    todo\n}\n"
+---
+----- BEFORE ACTION
+
+import option
+import opt
+
+pub fn main() -> option.Option(opt.Option(Int)) {
+                 ▔▔▔▔▔▔▔↑                        
+    todo
+}
+
+
+----- AFTER ACTION
+
+import option.{type Option}
+import opt
+
+pub fn main() -> Option(opt.Option(Int)) {
+    todo
+}

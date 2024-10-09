@@ -306,7 +306,6 @@ where
             actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());
             actions.extend(FillInMissingLabelledArgs::new(module, &params).code_actions());
             AddAnnotations::new(module, &params).code_action(&mut actions);
-            // actions.extend(QualifiedToUnqualifiedImport::new(module, &params).code_actions());
 
             Ok(if actions.is_empty() {
                 None
