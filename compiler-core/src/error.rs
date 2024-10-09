@@ -13,9 +13,8 @@ use heck::{ToSnakeCase, ToTitleCase, ToUpperCamelCase};
 use hexpm::version::ResolutionError;
 use itertools::Itertools;
 use pubgrub::package::Package;
-use pubgrub::report::DerivationTree;
+use pubgrub::report::{DerivationTree, Derived, External};
 use pubgrub::version::Version;
-use std::collections::HashSet;
 use std::env;
 use std::fmt::{Debug, Display};
 use std::io::Write;
@@ -358,47 +357,12 @@ impl Error {
     }
 
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
-        fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-            derivation_tree: &'dt DerivationTree<P, V>,
-            conflicting_packages: &mut HashSet<&'dt P>,
-        ) {
-            match derivation_tree {
-                DerivationTree::External(external) => match external {
-                    pubgrub::report::External::NotRoot(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::NoVersions(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::UnavailableDependencies(package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                    }
-                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                        let _ = conflicting_packages.insert(dep_package);
-                    }
-                },
-                DerivationTree::Derived(derived) => {
-                    collect_conflicting_packages(&derived.cause1, conflicting_packages);
-                    collect_conflicting_packages(&derived.cause2, conflicting_packages);
-                }
-            }
-        }
-
         Self::DependencyResolutionFailed(match error {
             ResolutionError::NoSolution(mut derivation_tree) => {
                 derivation_tree.collapse_no_versions();
-
-                let mut conflicting_packages = HashSet::new();
-                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
-
-                wrap_format!("Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
-
-{}
-",
-                    conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n"))
+                let derivation_tree = simplify_derivation_tree(derivation_tree);
+                // TODO)) find a way to use the root package name, here it is hardcoded!
+                DerivationTreePrinter::new("one".into()).print(&derivation_tree)
             }
 
             ResolutionError::ErrorRetrievingDependencies {
@@ -442,6 +406,145 @@ The conflicting packages are:
         Self::ExpandTar {
             error: error.to_string(),
         }
+    }
+}
+
+struct DerivationTreePrinter<'a> {
+    previous_subject: Option<&'a String>,
+    previous_object: Option<&'a String>,
+    root_package_name: String,
+}
+
+impl<'a> DerivationTreePrinter<'a> {
+    pub fn print(
+        &mut self,
+        derivation_tree: &'a DerivationTree<String, hexpm::version::Version>,
+    ) -> String {
+        match &derivation_tree {
+            DerivationTree::External(External::FromDependencyOf(
+                package,
+                _package_version,
+                required_package,
+                required_package_version,
+            )) => {
+                let start = if self.previous_subject == Some(package) {
+                    "it also".to_string()
+                } else if package == &self.root_package_name {
+                    "your package".to_string()
+                } else if self.previous_object == Some(package) {
+                    format!("and `{package}`")
+                } else {
+                    format!("`{package}`")
+                };
+
+                self.previous_subject = Some(package);
+                self.previous_object = Some(required_package);
+
+                format!(
+                    "- {start} requires `{required_package}` to be `{required_package_version}`"
+                )
+            }
+            DerivationTree::External(_) => todo!(),
+            DerivationTree::Derived(Derived { cause1, cause2, .. }) => {
+                format!(
+                    "{}\n{}",
+                    self.print(cause2.as_ref()),
+                    self.print(cause1.as_ref()),
+                )
+            }
+        }
+    }
+
+    fn new(root_package_name: String) -> Self {
+        Self {
+            previous_subject: None,
+            previous_object: None,
+            root_package_name,
+        }
+    }
+}
+
+/// This function collapses adjacent levels of a derivation tree that are all
+/// relative to the same dependency.
+///
+/// By default a derivation tree might have many nodes for a specific package,
+/// each node referring to a specific version range. For example:
+///
+///   - package_wibble `>= 1.0.0 and < 1.1.0` requires package_wobble `>= 1.1.0`
+///   - package_wibble `>= 1.1.0 and < 1.2.0` requires package_wobble `>= 1.2.0`
+///   - package_wibble `1.1.0` requires package_wobble `>= 1.1.0`
+///
+/// This level of fine-grained detail would be quite overwhelming in the vast
+/// majority of cases so we're fine with collapsing all these details into a
+/// single node taking the union of all the ranges that are there:
+///
+///   - package_wibble `>= 1.0.0 and < 1.2.0` requires package_wobble `>= 1.1.0`
+///
+/// This way we can print an error message that is way more concise and still
+/// informative about what went wrong.
+///
+fn simplify_derivation_tree<'dt, P: Package, V: Version>(
+    derivation_tree: DerivationTree<P, V>,
+) -> DerivationTree<P, V> {
+    match derivation_tree {
+        DerivationTree::External(_) => derivation_tree,
+        DerivationTree::Derived(Derived {
+            cause1,
+            cause2,
+            terms,
+            shared_id,
+        }) => simplify_outer_derivation_tree(
+            simplify_derivation_tree(*cause1),
+            simplify_derivation_tree(*cause2),
+            terms,
+            shared_id,
+        ),
+    }
+}
+
+fn simplify_outer_derivation_tree<'dt, P: Package, V: Version>(
+    one: DerivationTree<P, V>,
+    other: DerivationTree<P, V>,
+    terms: pubgrub::type_aliases::Map<P, pubgrub::term::Term<V>>,
+    shared_id: Option<usize>,
+) -> DerivationTree<P, V> {
+    match (one, other) {
+        (
+            // The way an External::FromDependencyOf is read is: `package` in
+            // range `package_range` requires `required_package` to be in range
+            // `required_package_range`...
+            DerivationTree::External(External::FromDependencyOf(
+                package,
+                package_range,
+                required_package,
+                required_package_range,
+            )),
+            DerivationTree::External(External::FromDependencyOf(
+                maybe_package,
+                other_package_range,
+                maybe_required_package,
+                other_required_package_range,
+            )),
+        )
+        // ...So we can simplify two adjacent dependency failures if they are
+        // talking about the same pair of packages by taking the union of the
+        // respsective ranges.
+        if package == maybe_package && required_package == maybe_required_package => {
+            DerivationTree::External(External::FromDependencyOf(
+                package,
+                package_range.union(&other_package_range),
+                required_package,
+                required_package_range.union(&other_required_package_range),
+            ))
+        }
+
+        // Otherwise there's no way to simplify it!
+        (cause1, cause2) => DerivationTree::Derived(Derived {
+            cause1: Box::new(cause1),
+            cause2: Box::new(cause2),
+            terms,
+            shared_id,
+        }),
     }
 }
 
