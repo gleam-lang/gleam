@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int)\n  Wobble(a: Int, c: String)\n}\n\npub fn wibbler() { todo }\n\npub fn main() {\n  let c = wibbler()\n\n  case todo {\n    Wibble(..) -> Wibble(..c, b: 1)\n    _ -> todo\n  }\n}\n"
+---
+error: Unsafe record update
+   ┌─ /src/one/two.gleam:13:28
+   │
+13 │     Wibble(..) -> Wibble(..c, b: 1)
+   │                            ^ I'm not sure this is always a `Wibble`
+
+
+I cannot use this value to build an updated `Wibble` as it could be
+some other variant.
+
+Consider pattern matching on it with a case expression and then
+constructing a new record with its values.

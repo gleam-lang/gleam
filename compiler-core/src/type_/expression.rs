@@ -1300,7 +1300,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let pattern_location = pattern.location();
         let mut pattern_typer =
             pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems);
-        let unify_result = pattern_typer.unify(pattern, value_typ.clone());
+        let unify_result = pattern_typer.unify(pattern, value_typ.clone(), None);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
@@ -1399,7 +1399,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let typed_clause = self.infer_clause(clause, &subject_types);
+            let typed_clause = self.infer_clause(clause, &typed_subjects);
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
             if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
@@ -1442,7 +1442,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[Arc<Type>]) -> TypedClause {
+    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[TypedExpr]) -> TypedClause {
         let Clause {
             pattern,
             alternative_patterns,
@@ -1517,7 +1517,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         pattern: UntypedMultiPattern,
         alternatives: Vec<UntypedMultiPattern>,
-        subjects: &[Arc<Type>],
+        subjects: &[TypedExpr],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
         let mut pattern_typer =
@@ -2261,12 +2261,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Type::Named {
                     module,
                     name,
-                    narrowed_variant: constructor_index,
+                    narrowed_variant,
                     ..
                 } if module == &self.environment.current_module => {
                     self.environment.accessors.get(name).map(|accessors_map| {
                         (
-                            accessors_map.accessors_for_variant(*constructor_index),
+                            accessors_map.accessors_for_variant(*narrowed_variant),
                             accessors_map.type_.clone(),
                         )
                     })
@@ -2276,7 +2276,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 Type::Named {
                     module,
                     name,
-                    narrowed_variant: constructor_index,
+                    narrowed_variant,
                     ..
                 } => self
                     .environment
@@ -2288,7 +2288,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     })
                     .map(|accessors_map| {
                         (
-                            accessors_map.accessors_for_variant(*constructor_index),
+                            accessors_map.accessors_for_variant(*narrowed_variant),
                             accessors_map.type_.clone(),
                         )
                     }),
@@ -2388,17 +2388,36 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // If we know the variant of the value being spread, and it doesn't match the
             // one being constructed, we can tell the user that it's always wrong
             if record_index.is_some_and(|index| index != variant_index) {
+                let Type::Named {
+                    module: spread_module,
+                    name: spread_name,
+                    narrowed_variant: Some(spread_index),
+                    ..
+                } = spread_type.deref()
+                else {
+                    panic!("Spread type must be named and with an index")
+                };
+
                 return Err(Error::UnsafeRecordUpdate {
-                    location: constructor.location(),
-                    reason: UnsafeRecordUpdateReason::WrongVariant,
+                    location: spread.location(),
+                    reason: UnsafeRecordUpdateReason::WrongVariant {
+                        constructed_variant: name,
+                        spread_variant: self
+                            .environment
+                            .type_variant_name(spread_module, spread_name, *spread_index)
+                            .expect("Spread type must exist and variant must be valid")
+                            .clone(),
+                    },
                 });
             }
             // If we don't have information about the variant being spread, we tell the user
             // that it's not safe to update it as it could be any variant
             else if record_index.is_none() {
                 return Err(Error::UnsafeRecordUpdate {
-                    location: constructor.location(),
-                    reason: UnsafeRecordUpdateReason::UnknownVariant,
+                    location: spread.location(),
+                    reason: UnsafeRecordUpdateReason::UnknownVariant {
+                        constructed_variant: name,
+                    },
                 });
             }
         }
