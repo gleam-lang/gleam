@@ -61,7 +61,7 @@ pub fn main() {
     assert_eq!(line_numbers.byte_index(2, 1), 18);
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub struct LineColumn {
     pub line: u32,
     pub column: u32,
