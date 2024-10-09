@@ -1884,10 +1884,10 @@ assigned variables to all of them."
 
                 TypeError::UnsafeRecordUpdate { location, reason } =>
                     match reason {
-                        UnsafeRecordUpdateReason::UnknownVariant => {
-                            let text = wrap("This type has multiple variants \
-so it cannot be safely updated. If this value was one of the other variants \
-then the update would be produce incorrect results.
+                        UnsafeRecordUpdateReason::UnknownVariant {constructed_variant} => {
+                            let text = wrap_format!("
+I cannot use this value to build an updated `{constructed_variant}` as it could be
+some other variant.
 
 Consider pattern matching on it with a case expression and then \
 constructing a new record with its values.");
@@ -1899,7 +1899,7 @@ constructing a new record with its values.");
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
-                                        text: Some("I can't tell this is always the right variant".into()),
+                                        text: Some(format!("I'm not sure this is always a `{constructed_variant}`")),
                                         span: *location,
                                     },
                                     path: path.clone(),
@@ -1908,9 +1908,12 @@ constructing a new record with its values.");
                                 }),
                             }
                         },
-                        UnsafeRecordUpdateReason::WrongVariant => {
-                            let text = wrap("This record is a different variant to the \
-one used for the update, so it would never be correct.");
+                        UnsafeRecordUpdateReason::WrongVariant {constructed_variant, spread_variant} => {
+                            let text = wrap_format!("This value is a `{spread_variant}` so \
+I cannot use it to build a `{constructed_variant}`, even if they share some fields.
+
+Note: If you want to change one variant of a type into another, you should \
+specify all fields explicitly instead of using the record update syntax.");
 
                             Diagnostic {
                                 title: "Incorrect record update".into(),
@@ -1919,7 +1922,7 @@ one used for the update, so it would never be correct.");
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
-                                        text: Some("This is not the right constructor".into()),
+                                        text: Some(format!("This is a `{spread_variant}`")),
                                         span: *location,
                                     },
                                     path: path.clone(),

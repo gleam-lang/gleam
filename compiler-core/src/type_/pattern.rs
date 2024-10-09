@@ -19,6 +19,9 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
+    /// Variables which have been narrowed to a specific variant of their type
+    /// from this pattern-matching. Key is the variable name, Value is the narrowed variant index.
+    narrowed_variables: HashMap<EcoString, u16>,
     problems: &'a mut Problems,
 
     /// The minimum Gleam version required to compile the typed pattern.
@@ -41,6 +44,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
+            narrowed_variables: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
@@ -69,6 +73,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
                 }
+                // We no longer have access to the variable from the subject of the pattern
+                // so it doesn't need to be narrowed any more.
+                let _ = self.narrowed_variables.remove(name);
                 // Record that this variable originated in this pattern so any
                 // following alternative patterns can be checked to ensure they
                 // have the same variables.
@@ -98,10 +105,59 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
+    fn narrow_subject_variable(&mut self, name: EcoString, variant_index: u16) {
+        match &self.mode {
+            PatternMode::Initial => {
+                if self.initial_pattern_vars.contains(&name) {
+                    return;
+                }
+
+                let variable = self
+                    .environment
+                    .scope
+                    .get(&name)
+                    .expect("Variable already exists in the case subjects");
+
+                let mut type_ = variable.type_.deref().clone();
+                type_.narrow_custom_type_variant(variant_index);
+                // Mark this variable as having been narrowed
+                let _ = self.narrowed_variables.insert(name.clone(), variant_index);
+                // This variable is only narrowed in this branch of the case expression
+                self.environment.insert_local_variable(
+                    name,
+                    variable.definition_location().span,
+                    Arc::new(type_),
+                );
+            }
+
+            PatternMode::Alternative(_) => {
+                // If we haven't narrowed this variable in all alternative patterns so far,
+                // we can't narrow it here
+                let Some(narrowed_variant) = self.narrowed_variables.get(&name) else {
+                    return;
+                };
+
+                // If multiple variants are possible in this pattern, we can't narrow it at all
+                // and we have to remove the narrowed_index
+                if *narrowed_variant != variant_index {
+                    // This variable is no longer narrowed
+                    let _ = self.narrowed_variables.remove(&name);
+                    let variable = self
+                        .environment
+                        .scope
+                        .get_mut(&name)
+                        .expect("Variable already exists in the case subjects");
+
+                    Arc::make_mut(&mut variable.type_).generalise_custom_type_variant();
+                }
+            }
+        }
+    }
+
     pub fn infer_alternative_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
-        subjects: &[Arc<Type>],
+        subjects: &[TypedExpr],
         location: &SrcSpan,
     ) -> Result<Vec<TypedPattern>, Error> {
         self.mode = PatternMode::Alternative(vec![]);
@@ -132,7 +188,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn infer_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
-        subjects: &[Arc<Type>],
+        subjects: &[TypedExpr],
         location: &SrcSpan,
     ) -> Result<Vec<TypedPattern>, Error> {
         // If there are N subjects the multi-pattern is expected to be N patterns
@@ -146,8 +202,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         // Unify each pattern in the multi-pattern with the corresponding subject
         let mut typed_multi = Vec::with_capacity(multi_pattern.len());
-        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects) {
-            let pattern = self.unify(pattern, subject_type.clone())?;
+        for (pattern, subject) in multi_pattern.into_iter().zip(subjects) {
+            let subject_variable = match subject {
+                TypedExpr::Var { name, .. } => Some(name.clone()),
+                _ => None,
+            };
+
+            let pattern = self.unify(pattern, subject.type_(), subject_variable)?;
             typed_multi.push(pattern);
         }
         Ok(typed_multi)
@@ -201,7 +262,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let options: Vec<_> = options
             .into_iter()
             .map(|o| {
-                crate::analyse::infer_bit_array_option(o, |value, type_| self.unify(value, type_))
+                crate::analyse::infer_bit_array_option(o, |value, type_| {
+                    self.unify(value, type_, None)
+                })
             })
             .try_collect()?;
 
@@ -222,7 +285,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 _ => Ok(segment_type),
             }
         }?;
-        let typed_value = self.unify(*value, type_.clone())?;
+        let typed_value = self.unify(*value, type_.clone(), None)?;
 
         Ok(BitArraySegment {
             location,
@@ -240,6 +303,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         pattern: UntypedPattern,
         type_: Arc<Type>,
+        // The name of the variable this pattern matches on, if any. Used for type narrowing.
+        //
+        // Example:
+        // ```gleam
+        // case some_wibble {
+        //   Wibble(..) -> {
+        //     some_wibble.field_only_present_in_wibble
+        //   }
+        //   _ -> panic
+        // }
+        // ```
+        //
+        // Here, the pattern `Wibble(..)` has the subject variable `some_wibble`, meaning that
+        // in the inner scope, we can narrow the `some_wibble` variable to the `Wibble` variant
+        //
+        subject_variable: Option<EcoString>,
     ) -> Result<TypedPattern, Error> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
@@ -332,7 +411,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                let pattern = self.unify(*pattern, type_)?;
+                let pattern = self.unify(*pattern, type_, None)?;
                 self.insert_variable(&name, pattern.type_().clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 Ok(Pattern::Assign {
@@ -377,12 +456,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .clone();
                     let elements = elements
                         .into_iter()
-                        .map(|element| self.unify(element, type_.clone()))
+                        .map(|element| self.unify(element, type_.clone(), None))
                         .try_collect()?;
                     let type_ = list(type_);
 
                     let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone())?)),
+                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone(), None)?)),
                         None => None,
                     };
 
@@ -416,7 +495,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elems = elems
                         .into_iter()
                         .zip(type_elems)
-                        .map(|(pattern, type_)| self.unify(pattern, type_.clone()))
+                        .map(|(pattern, type_)| self.unify(pattern, type_.clone(), None))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }
@@ -430,7 +509,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elems = elems
                         .into_iter()
                         .zip(elems_types)
-                        .map(|(pattern, type_)| self.unify(pattern, type_))
+                        .map(|(pattern, type_)| self.unify(pattern, type_, None))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }
@@ -648,7 +727,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         implicit,
                                         label,
                                     } = arg;
-                                    let value = self.unify(value, type_.clone())?;
+                                    let value = self.unify(value, type_.clone(), None)?;
                                     Ok(CallArg {
                                         value,
                                         location,
@@ -659,6 +738,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 .try_collect()?;
                             unify(type_, retrn.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
+
+                            if let Some((variable_to_narrow, narrowed_variant)) =
+                                subject_variable.zip(retrn.custom_type_narrowed_variant())
+                            {
+                                self.narrow_subject_variable(variable_to_narrow, narrowed_variant);
+                            }
+
                             Ok(Pattern::Constructor {
                                 location,
                                 module,
@@ -678,10 +764,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     }
 
-                    Type::Named { .. } => {
+                    Type::Named {
+                        narrowed_variant, ..
+                    } => {
                         if pattern_args.is_empty() {
                             unify(type_, instantiated_constructor_type.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
+
+                            if let Some((variable_to_narrow, narrowed_variant)) =
+                                subject_variable.zip(*narrowed_variant)
+                            {
+                                self.narrow_subject_variable(variable_to_narrow, narrowed_variant);
+                            }
+
                             Ok(Pattern::Constructor {
                                 location,
                                 module,

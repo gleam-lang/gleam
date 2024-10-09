@@ -517,7 +517,7 @@ impl<'a> Environment<'a> {
                 package,
                 module,
                 args,
-                narrowed_variant: constructor_index,
+                narrowed_variant,
             } => {
                 let args = args
                     .iter()
@@ -529,7 +529,7 @@ impl<'a> Environment<'a> {
                     package: package.clone(),
                     module: module.clone(),
                     args,
-                    narrowed_variant: *constructor_index,
+                    narrowed_variant: *narrowed_variant,
                 })
             }
 
@@ -756,6 +756,27 @@ impl<'a> Environment<'a> {
             .map(|(suggestion, _)| suggestion)
             .collect()
     }
+
+    pub fn type_variant_name(
+        &self,
+        type_module: &EcoString,
+        type_name: &EcoString,
+        variant_index: u16,
+    ) -> Option<&EcoString> {
+        let type_constructors = if type_module == &self.current_module {
+            &self.module_types_constructors
+        } else {
+            &self
+                .importable_modules
+                .get(type_module)?
+                .types_value_constructors
+        };
+
+        type_constructors
+            .get(type_name)
+            .and_then(|type_constructors| type_constructors.variants.get(variant_index as usize))
+            .map(|variant| &variant.name)
+    }
 }
 
 #[derive(Debug)]
@@ -814,7 +835,11 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
 
         return match action {
             Action::Link => {
-                *type_.borrow_mut() = TypeVar::Link { type_: t2 };
+                let mut t2 = t2.deref().clone();
+                t2.generalise_custom_type_variant();
+                *type_.borrow_mut() = TypeVar::Link {
+                    type_: Arc::new(t2),
+                };
                 Ok(())
             }
 

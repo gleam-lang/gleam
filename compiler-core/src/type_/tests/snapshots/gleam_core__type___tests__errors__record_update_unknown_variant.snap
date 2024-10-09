@@ -1,17 +1,16 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 2477
 expression: "\npub type Wibble {\n  Wibble(wibble: Int, wubble: Bool)\n  Wobble(wobble: Int, wubble: Bool)\n}\n\npub fn wibble(value: Wibble) {\n  Wibble(..value, wubble: True)\n}\n"
 ---
 error: Unsafe record update
-  ┌─ /src/one/two.gleam:8:3
+  ┌─ /src/one/two.gleam:8:12
   │
 8 │   Wibble(..value, wubble: True)
-  │   ^^^^^^ I can't tell this is always the right variant
+  │            ^^^^^ I'm not sure this is always a `Wibble`
 
-This type has multiple variants so it cannot be safely updated. If this
-value was one of the other variants then the update would be produce
-incorrect results.
+
+I cannot use this value to build an updated `Wibble` as it could be
+some other variant.
 
 Consider pattern matching on it with a case expression and then
 constructing a new record with its values.

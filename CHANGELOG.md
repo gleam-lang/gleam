@@ -130,15 +130,15 @@
   allowing for safe record updates if the variant is known:
 
   ```gleam
-  pub type Shape {
-    Circle(cx: Int, cy: Int, radius: Int)
-    Square(x: Int, y: Int, width: Int, height: Int)
+  pub type Pet {
+    Dog(name: String, cuteness: Int)
+    Turtle(name: String, speed: Int)
   }
 
-  pub fn grow(shape) {
-    case shape {
-      Circle(radius:, ..) as circle -> Circle(..circle, radius: radius + 1)
-      Square(width:, height:, ..) as square -> Square(..square, width: width + 1, height: height + 1)
+  pub fn rename(pet: Pet, to name: String) -> Pet {
+    case pet {
+      Dog(..) as dog -> Dog(..dog, name:)
+      Turtle(..) as turtle -> Turtle(..turtle, name:)
     }
   }
   ```
