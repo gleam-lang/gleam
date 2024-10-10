@@ -35,7 +35,7 @@ pub enum TypedExpr {
     /// locations when showing it in error messages, etc.
     Pipeline {
         location: SrcSpan,
-        assignments: Vec<TypedAssignment>,
+        assignments: Vec<TypedPipelineAssignment>,
         finally: Box<Self>,
     },
 
