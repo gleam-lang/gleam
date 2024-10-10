@@ -12,6 +12,11 @@
   off 0.3-0.5s per compiled package.
   ([yoshi](https://github.com/joshi-monster))
 
+- When a symlink cannot be made on Windows due to lack of permissions the error
+  now includes information on how to enable Windows' developer mode, enabling
+  symlinks.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
