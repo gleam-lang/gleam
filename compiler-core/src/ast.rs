@@ -2515,6 +2515,13 @@ impl TypedAssignment {
     }
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UseAssignment {
+    pub location: SrcSpan,
+    pub pattern: UntypedPattern,
+    pub annotation: Option<TypeAst>,
+}
+
 /// A pipeline is desugared to a series of assignments:
 ///
 /// ```gleam

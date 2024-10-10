@@ -2021,9 +2021,7 @@ fn pipeline<'a>(
     for a in assignments {
         let body = maybe_block_expr(&a.value, env).group();
         let name = env.next_local_var_name(&a.name);
-        documents.push(docvec![name, " = ", body]);
-        documents.push(','.to_doc());
-        documents.push(line());
+        documents.push(docvec![name, " = ", body, ",", line()]);
     }
 
     documents.push(expr(finally, env));
