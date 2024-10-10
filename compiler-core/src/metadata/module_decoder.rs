@@ -86,6 +86,7 @@ impl ModuleDecoder {
             minimum_required_version: self.version(&reader.get_required_version()?),
             type_aliases: read_hashmap!(reader.get_type_aliases()?, self, type_alias_constructor),
             documentation: self.string_list(reader.get_documentation()?)?,
+            contains_echo: reader.get_contains_echo(),
         })
     }
 

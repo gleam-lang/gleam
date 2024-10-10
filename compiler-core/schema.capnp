@@ -32,6 +32,7 @@ struct Module {
   requiredVersion @9 :Version;
   typeAliases @10 :List(Property(TypeAliasConstructor));
   documentation @11 :List(Text);
+  containsEcho @12 :Bool;
 }
 
 struct TypeAliasConstructor {

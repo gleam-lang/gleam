@@ -43,6 +43,7 @@ impl<'a> ModuleEncoder<'a> {
         module.set_package(&self.data.package);
         module.set_src_path(self.data.src_path.as_str());
         module.set_is_internal(self.data.is_internal);
+        module.set_contains_echo(self.data.contains_echo);
         self.set_module_types(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
