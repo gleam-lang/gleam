@@ -327,18 +327,27 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         }
     }
 
-    // If any of the modules in the package contain a todo then refuse to
-    // publish as the package is not yet finished.
-    let unfinished = built
-        .root_package
-        .modules
-        .iter()
-        .filter(|module| module.ast.type_info.contains_todo())
-        .map(|module| module.name.clone())
-        .sorted()
-        .collect_vec();
-    if !unfinished.is_empty() {
-        return Err(Error::CannotPublishTodo { unfinished });
+    // If any of the modules in the package contain a todo or an echo then
+    // refuse to publish as the package is not yet finished.
+    let mut modules_containing_todo = vec![];
+    let mut modules_containing_echo = vec![];
+
+    for module in built.root_package.modules.iter() {
+        if module.ast.type_info.contains_todo() {
+            modules_containing_todo.push(module.name.clone());
+        } else if module.ast.type_info.contains_echo {
+            modules_containing_echo.push(module.name.clone());
+        }
+    }
+
+    if !modules_containing_todo.is_empty() {
+        return Err(Error::CannotPublishTodo {
+            unfinished: modules_containing_todo,
+        });
+    } else if !modules_containing_echo.is_empty() {
+        return Err(Error::CannotPublishEcho {
+            unfinished: modules_containing_echo,
+        });
     }
 
     // TODO: If any of the modules in the package contain a leaked internal type then

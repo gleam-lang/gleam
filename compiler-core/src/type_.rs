@@ -878,9 +878,9 @@ pub struct ModuleInterface {
     pub line_numbers: LineNumbers,
     /// Used for determining the source path of the module on disk
     pub src_path: Utf8PathBuf,
-    // Whether the module is internal or not. Internal modules are technically
-    // importable by other packages but to do so is violating the contract of
-    // the package and as such is not recommended.
+    /// Whether the module is internal or not. Internal modules are technically
+    /// importable by other packages but to do so is violating the contract of
+    /// the package and as such is not recommended.
     pub is_internal: bool,
     /// Warnings emitted during analysis of this module.
     pub warnings: Vec<Warning>,
@@ -888,6 +888,8 @@ pub struct ModuleInterface {
     pub minimum_required_version: Version,
     pub type_aliases: HashMap<EcoString, TypeAliasConstructor>,
     pub documentation: Vec<EcoString>,
+    /// Wether there's any echo in the module.
+    pub contains_echo: bool,
 }
 
 impl ModuleInterface {

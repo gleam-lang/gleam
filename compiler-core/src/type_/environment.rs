@@ -66,6 +66,9 @@ pub struct Environment<'a> {
     pub target_support: TargetSupport,
 
     pub names: Names,
+
+    /// Wether we ran into an `echo` or not while analysing the current module.
+    pub echo_found: bool,
 }
 
 impl<'a> Environment<'a> {
@@ -118,6 +121,7 @@ impl<'a> Environment<'a> {
             target_support,
             names,
             module_type_aliases: HashMap::new(),
+            echo_found: false,
         }
     }
 }

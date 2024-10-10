@@ -689,6 +689,7 @@ pub mod module {
       !self.reader.get_pointer_field(8).is_null()
     }
     #[inline]
+<<<<<<< HEAD
     pub fn get_type_aliases(self) -> ::capnp::Result<::capnp::struct_list::Reader<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::type_alias_constructor::Owned>>> {
       ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(9), ::core::option::Option::None)
     }
@@ -703,6 +704,10 @@ pub mod module {
     #[inline]
     pub fn has_documentation(&self) -> bool {
       !self.reader.get_pointer_field(10).is_null()
+=======
+    pub fn get_contains_echo(self) -> bool {
+      self.reader.get_bool_field(1)
+>>>>>>> dc2234ca1 (make sure one cannot publish echo)
     }
   }
 
@@ -911,6 +916,7 @@ pub mod module {
       !self.builder.is_pointer_field_null(8)
     }
     #[inline]
+<<<<<<< HEAD
     pub fn get_type_aliases(self) -> ::capnp::Result<::capnp::struct_list::Builder<'a,crate::schema_capnp::property::Owned<crate::schema_capnp::type_alias_constructor::Owned>>> {
       ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(9), ::core::option::Option::None)
     }
@@ -941,6 +947,14 @@ pub mod module {
     #[inline]
     pub fn has_documentation(&self) -> bool {
       !self.builder.is_pointer_field_null(10)
+=======
+    pub fn get_contains_echo(self) -> bool {
+      self.builder.get_bool_field(1)
+    }
+    #[inline]
+    pub fn set_contains_echo(&mut self, value: bool)  {
+      self.builder.set_bool_field(1, value);
+>>>>>>> dc2234ca1 (make sure one cannot publish echo)
     }
   }
 
