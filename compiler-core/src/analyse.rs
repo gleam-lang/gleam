@@ -299,6 +299,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_values: values,
             accessors,
             names: type_names,
+            echo_found,
             ..
         } = env;
 
@@ -334,6 +335,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 src_path: self.src_path,
                 warnings,
                 minimum_required_version: self.minimum_required_version,
+                contains_echo: echo_found,
             },
             names: type_names,
         };

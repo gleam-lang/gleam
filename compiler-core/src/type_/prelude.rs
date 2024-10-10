@@ -217,6 +217,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         // prelude doesn't have real line numbers
         line_numbers: LineNumbers::new(""),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     for t in PreludeType::iter() {
