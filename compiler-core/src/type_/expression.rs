@@ -492,6 +492,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         expression: Option<Box<UntypedExpr>>,
     ) -> Result<TypedExpr, Error> {
+        self.environment.echo_found = true;
         if let Some(expression) = expression {
             let expression = self.infer(*expression)?;
             Ok(TypedExpr::Echo {
