@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
+---
+export function main() {
+  return echo(
+    (() => {
+      let $ = 1;
+      {
+        return 2;
+      }
+    })(),
+  );
+}
