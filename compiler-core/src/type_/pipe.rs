@@ -171,6 +171,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     location,
                     expression: None,
                 } => {
+                    self.expr_typer.environment.echo_found = true;
                     // An echo that is not followed by an expression that is
                     // used as a pipeline's step is just like the identity
                     // function.
