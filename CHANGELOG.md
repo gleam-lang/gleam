@@ -151,6 +151,27 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The Language Server now suggests a code action to convert qualified imports to unqualified imports, which updates all occurrences of the qualified name throughout the module:
+
+  ```gleam
+  import option
+
+  pub fn main() {
+    option.Some(1)
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  import option.{Some}
+
+  pub fn main() {
+    Some(1)
+  }
+  ```
+  ([Jiangda Wang](https://github.com/Frank-III))
+
 ### Bug Fixes
 
 - Fixed a bug in the compiler where shadowing a sized value in a bit pattern
