@@ -1852,6 +1852,686 @@ pub fn main() {
     );
 }
 
+#[test]
+fn test_qualified_to_unqualified_import_basic_with_argument() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_basic_record_without_argument() {
+    let src = r#"
+import wobble
+
+pub fn main() {
+  wobble.Wibble
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src).add_hex_module("wobble", "pub type Wobble { Wibble }"),
+        find_position_of(".W").select_until(find_position_of("ibble"))
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_basic_type_without_argument() {
+    let src = r#"
+import wobble
+
+pub fn identity(x: wobble.Wobble) -> wobble.Wobble {
+    x
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wobble",
+        TestProject::for_source(src).add_hex_module("wobble", "pub type Wobble { Wibble }"),
+        find_position_of(".").select_until(find_position_of("Wobble"))
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_basic_multiple() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.Some(1)
+  option.Some(1)
+  todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_when_unqualified_exists() {
+    let src = r#"
+import option.{Some}
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_comma() {
+    let src = r#"
+import option.{None, }
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_comma_pos_not_end() {
+    let src = r#"
+import option.{None,   } as opt
+
+pub fn main() {
+  opt.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_different_constructors() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.Some(1)
+  option.None
+}"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_no_action_when_already_unqualified() {
+    let src = r#"
+import option.{Some, None}
+
+pub fn main() {
+  Some(1)
+  Some(1)
+  todo
+}
+"#;
+    let title = "Unqualify option.Some";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some(").select_until(find_position_of("1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_alias() {
+    let src = r#"
+import option as opt
+
+pub fn main() {
+  opt.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_with_alias_multiple() {
+    let src = r#"
+import option as opt
+
+pub fn main() {
+  opt.Some(1)
+  opt.Some(1)
+}
+
+pub fn identity(x: opt.Option(Int)) -> opt.Option(Int) {
+    opt.Some(1)
+    x
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_imports() {
+    let src = r#"
+import option
+import wobble
+
+pub fn main() {
+  option.Some(2)
+  wobble.Wibble(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wobble { Wibble(Int)} "),
+        find_position_of(".Wibble").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_case_with_argument() {
+    let src = r#"
+import option
+
+pub fn main(x) {
+  case option.Some(1) {
+    option.Some(value) -> value
+    option.None -> 0
+  }
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some(").select_until(find_position_of("(1)"))
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_case_without_argument() {
+    let src = r#"
+import wobble
+
+pub fn main() {
+  case wobble.Wibble {
+    wobble.Wibble -> 1
+    wobble.Wubble(1) -> 2
+  }
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src)
+            .add_hex_module("wobble", "pub type Wobble { Wibble Wubble(Int) }"),
+        find_position_of(".W").select_until(find_position_of("ibble"))
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_pattern() {
+    let src = r#"
+import option
+
+pub fn main() -> Int {
+  case option.Some(1) {
+    option.Some(value) -> value
+    option.None -> 0
+  }
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some(va").select_until(find_position_of("lue)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_pattern_without_argument() {
+    let src = r#"
+import wobble
+
+pub fn main() {
+  case wobble.Wibble {
+    wobble.Wibble -> 1
+    wobble.Wubble(1) -> 2
+  }
+  let wob = wobble.Wibble
+  todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src)
+            .add_hex_module("wobble", "pub type Wobble { Wibble Wubble(Int) }"),
+        find_position_of("wobble.W").select_until(find_position_of("ibble"))
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_type() {
+    let src = r#"
+import option
+
+pub fn main(x) -> option.Option(Int) {
+    option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Option").select_until(find_position_of("(Int)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_nested_type_outer() {
+    let src = r#"
+import option
+import wobble
+pub fn main(x) -> option.Option(wobble.Wibble) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
+        find_position_of(".O").select_until(find_position_of("ption(")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_nested_constructor_outer() {
+    let src = r#"
+import option
+import wobble
+pub fn main(x) -> option.Option(wobble.Wibble) {
+    option.Some(wobble.Wobble(1))
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
+        find_position_of(".S").select_until(find_position_of("ome(")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_nested_constructor_inner() {
+    let src = r#"
+import option
+import wobble
+
+pub fn main(x) -> option.Option(wobble.Wibble) {
+    option.Some(wobble.Wobble(1))
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wobble",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
+        find_position_of(".Wobble").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_nested_type_inner() {
+    let src = r#"
+import option
+import wobble
+
+pub fn main(x) -> option.Option(wobble.Wibble) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify wobble.Wibble",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("wobble", "pub type Wibble { Wobble(Int) }"),
+        find_position_of("wobble.").select_until(find_position_of("Wibble")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_below_constructor() {
+    let src = r#"
+
+pub fn main() {
+  option.Some(1)
+}
+
+import option
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_between_constructors() {
+    let src = r#"
+
+pub fn main() {
+  option.Some(1)
+}
+
+import option
+
+pub fn identity(x: option.Option(Int)) -> option.Option(Int) {
+    option.Some(1)
+    x
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_line() {
+    let src = r#"
+import option.{
+    type Option,
+    None,
+}
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_line_bad_format_with_trailing_comma() {
+    let src = r#"
+import option.{type Option,
+    None,
+
+}
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_line_bad_format_multiple_whitespace() {
+    let src = r#"
+import option.{    }
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_multiple_line_bad_format_without_trailing_comma() {
+    let src = r#"
+import option.{type Option,
+    None
+
+}
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_multiple_line_aliased() {
+    let src = r#"
+import option.{
+    type Option,
+    None} as opt
+
+pub fn main() {
+  opt.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of(".Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_in_list_and_tuple() {
+    let src = r#"
+import option
+
+pub fn main() {
+    let list = [option.Some(1), option.None]
+    let tuple = #(option.Some(2), option.None)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_multiple_generic_type() {
+    let src = r#"
+import result
+
+pub fn main() -> result.Result(Int, String) {
+    result.Ok(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify result.Result",
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub type Result(a, e) { Ok(a) Error(e) }"),
+        find_position_of(".Result").select_until(find_position_of("(Int")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_constructor_as_argument() {
+    let src = r#"
+import option
+
+pub fn main() {
+    option.map(option.Some(1), fn(x) { x + 1 })
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src).add_hex_module(
+            "option",
+            "
+            pub type Option(v) { Some(v) None }
+            pub fn map(a, f) { todo }
+            "
+        ),
+        find_position_of("option.Some").select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_type_inner() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() -> option.Option(opt.Option(Int)) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Option").select_until(find_position_of("(Int)")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_type_outer() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() -> option.Option(opt.Option(Int)) {
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.").select_until(find_position_of("Option(")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_name_inner() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() {
+    option.Some(opt.Some(1))
+    todo
+}
+"#;
+    assert_code_action!(
+        "Unqualify opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.Some").select_until(find_position_of("(1)")),
+    );
+}
+#[test]
+fn test_qualified_to_unqualified_import_constructor_different_module_same_name_outer() {
+    let src = r#"
+import option
+import opt
+
+pub fn main() {
+    option.Some(opt.Some(1))
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.").select_until(find_position_of("Some(")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_constructor_complex_pattern() {
+    let src = r#"
+import option
+
+pub fn main() {
+    case [option.Some(1), option.None] {
+        [option.None, ..] -> todo
+        [option.Some(_), ..] -> todo
+        _ -> todo
+    }
+    case option.Some(1), option.Some(2) {
+        option.None, option.Some(_) -> todo
+        option.Some(_), option.Some(val) -> todo
+        _ -> todo
+    }
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option.").select_until(find_position_of("Some(")),
+    );
+}
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

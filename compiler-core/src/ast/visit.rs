@@ -447,6 +447,41 @@ pub trait Visit<'ast> {
             right_side_assignment,
         );
     }
+
+    fn visit_type_ast(&mut self, node: &'ast TypeAst) {
+        visit_type_ast(self, node);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<TypeAst>,
+    ) {
+        visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_type_ast_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        arguments: &'ast Vec<TypeAst>,
+        return_: &'ast TypeAst,
+    ) {
+        visit_type_ast_fn(self, location, arguments, return_);
+    }
+
+    fn visit_type_ast_var(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        visit_type_ast_var(self, location, name);
+    }
+
+    fn visit_type_ast_tuple(&mut self, location: &'ast SrcSpan, elems: &'ast Vec<TypeAst>) {
+        visit_type_ast_tuple(self, location, elems);
+    }
+
+    fn visit_type_ast_hole(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        visit_type_ast_hole(self, location, name);
+    }
 }
 
 pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
@@ -477,6 +512,89 @@ where
     for stmt in &fun.body {
         v.visit_typed_statement(stmt);
     }
+}
+
+pub fn visit_type_ast<'a, V>(v: &mut V, node: &'a TypeAst)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match node {
+        TypeAst::Constructor(super::TypeAstConstructor {
+            location,
+            arguments,
+            module,
+            name,
+        }) => {
+            v.visit_type_ast_constructor(location, module, name, arguments);
+        }
+        TypeAst::Fn(super::TypeAstFn {
+            location,
+            arguments,
+            return_,
+        }) => {
+            v.visit_type_ast_fn(location, arguments, return_);
+        }
+        TypeAst::Var(super::TypeAstVar { location, name }) => {
+            v.visit_type_ast_var(location, name);
+        }
+        TypeAst::Tuple(super::TypeAstTuple { location, elems }) => {
+            v.visit_type_ast_tuple(location, elems);
+        }
+        TypeAst::Hole(super::TypeAstHole { location, name }) => {
+            v.visit_type_ast_hole(location, name);
+        }
+    }
+}
+
+pub fn visit_type_ast_constructor<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _module: &'a Option<(EcoString, SrcSpan)>,
+    _name: &'a EcoString,
+    arguments: &'a Vec<TypeAst>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_type_ast(argument);
+    }
+}
+
+pub fn visit_type_ast_fn<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    arguments: &'a Vec<TypeAst>,
+    return_: &'a TypeAst,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_type_ast(argument);
+    }
+    v.visit_type_ast(return_);
+}
+
+pub fn visit_type_ast_var<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+    // No further traversal needed for variables
+}
+
+pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elems: &'a Vec<TypeAst>)
+where
+    V: Visit<'a> + ?Sized,
+{
+    for elem in elems {
+        v.visit_type_ast(elem);
+    }
+}
+
+pub fn visit_type_ast_hole<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+    // No further traversal needed for holes
 }
 
 pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)

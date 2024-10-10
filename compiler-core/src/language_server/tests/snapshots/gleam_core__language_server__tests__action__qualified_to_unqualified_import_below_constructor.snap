@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\n\npub fn main() {\n  option.Some(1)\n}\n\nimport option\n"
+---
+----- BEFORE ACTION
+
+
+pub fn main() {
+  option.Some(1)
+        ▔▔▔▔▔↑  
+}
+
+import option
+
+
+----- AFTER ACTION
+
+
+pub fn main() {
+  Some(1)
+}
+
+import option.{Some}

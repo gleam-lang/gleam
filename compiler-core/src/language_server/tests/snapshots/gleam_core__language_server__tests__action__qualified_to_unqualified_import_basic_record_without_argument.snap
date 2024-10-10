@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wobble\n\npub fn main() {\n  wobble.Wibble\n}\n"
+---
+----- BEFORE ACTION
+
+import wobble
+
+pub fn main() {
+  wobble.Wibble
+        ▔▔↑    
+}
+
+
+----- AFTER ACTION
+
+import wobble.{Wibble}
+
+pub fn main() {
+  Wibble
+}
