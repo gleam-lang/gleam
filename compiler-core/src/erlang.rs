@@ -1881,6 +1881,10 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
     erlang_error("panic", &message, location, vec![], env)
 }
 
+fn echo<'a>(body: Document<'a>, env: &mut Env<'a>) -> Document<'a> {
+    module_fn_with_args("mmmh", "echo", vec![body], env)
+}
+
 fn erlang_error<'a>(
     name: &'a str,
     message: &Document<'a>,
@@ -1936,6 +1940,13 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Panic {
             location, message, ..
         } => panic(*location, message.as_deref(), env),
+
+        TypedExpr::Echo { expression, .. } => {
+            let expression = expression
+                .as_ref()
+                .expect("echo with no expression outside of pipe");
+            echo(expr(expression, env), env)
+        }
 
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
@@ -2018,12 +2029,6 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         ),
 
         TypedExpr::Invalid { .. } => panic!("invalid expressions should not reach code generation"),
-
-        TypedExpr::Echo {
-            location: _,
-            expression: _,
-            type_: _,
-        } => todo!("generate code for echo"),
     }
 }
 
@@ -2038,13 +2043,41 @@ fn pipeline<'a>(
     let all_assignments = std::iter::once(first_value)
         .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
-    for a in all_assignments {
-        let body = maybe_block_expr(&a.value, env).group();
-        let name = env.next_local_var_name(&a.name);
-        documents.push(docvec![name, " = ", body, ",", line()]);
+    let echo_doc = |var_name: &Option<Document<'a>>, env: &mut Env<'a>| {
+        let name = var_name
+            .to_owned()
+            .expect("echo with no previous step in a pipe");
+        echo(name, env)
+    };
+
+    let mut prev_local_var_name = None;
+    for a in assignments {
+        match a.value.as_ref() {
+            // An echo in a pipeline won't result in an assignment, instead it
+            // just prints the previous variable assigned in the pipeline.
+            TypedExpr::Echo {
+                expression: None, ..
+            } => documents.push(echo_doc(&prev_local_var_name, env)),
+
+            // Otherwise we assign the intermediate pipe value to a variable.
+            _ => {
+                let body = maybe_block_expr(&a.value, env).group();
+                let name = env.next_local_var_name(&a.name);
+                prev_local_var_name = Some(name.clone());
+                documents.push(docvec![name, " = ", body]);
+            }
+        };
+        documents.push(",".to_doc());
+        documents.push(line());
     }
 
-    documents.push(expr(finally, env));
+    match finally {
+        TypedExpr::Echo {
+            expression: None, ..
+        } => documents.push(echo_doc(&prev_local_var_name, env)),
+        _ => documents.push(expr(finally, env)),
+    }
+
     documents.to_doc()
 }
 
