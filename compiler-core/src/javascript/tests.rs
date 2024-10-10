@@ -16,6 +16,7 @@ mod case;
 mod case_clause_guards;
 mod consts;
 mod custom_types;
+mod echo;
 mod externals;
 mod functions;
 mod generics;
