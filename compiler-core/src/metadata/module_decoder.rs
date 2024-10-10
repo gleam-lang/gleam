@@ -83,6 +83,7 @@ impl ModuleDecoder {
             src_path: self.str(reader.get_src_path()?)?.into(),
             warnings: vec![],
             minimum_required_version: self.version(&reader.get_required_version()?),
+            contains_echo: reader.get_contains_echo(),
         })
     }
 
