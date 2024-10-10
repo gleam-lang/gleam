@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo wibble\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
+---
+import { toList } from "../gleam.mjs";
+
+export function wibble(n) {
+  return n;
+}
+
+export function main() {
+  let _pipe = toList([1, 2, 3]);
+  let _pipe$1 = echo(wibble)(_pipe);
+  return wibble(_pipe$1);
+}

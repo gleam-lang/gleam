@@ -12,6 +12,18 @@ pub fn main() {
 }
 
 #[test]
+pub fn multiple_echos_inside_expression() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  echo 1
+  echo 2
+}
+"#
+    );
+}
+
+#[test]
 pub fn echo_with_a_case_expression() {
     assert_erl!(
         r#"
@@ -60,6 +72,21 @@ pub fn main() {
 }
 "#
     );
+}
+
+#[test]
+pub fn echo_with_a_function_in_a_pipeline() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  [1, 2, 3]
+  |> echo wibble
+  |> wibble
+}
+
+pub fn wibble(n) { n }
+"#
+    )
 }
 
 #[test]
