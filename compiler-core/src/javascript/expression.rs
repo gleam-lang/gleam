@@ -39,6 +39,8 @@ pub(crate) struct Generator<'module> {
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_scope_vars: im::HashMap<EcoString, usize>,
+    /// The latest local variable name that was used.
+    latest_local_var: Option<EcoString>,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
@@ -77,6 +79,7 @@ impl<'module> Generator<'module> {
             line_numbers,
             function_name,
             function_arguments,
+            latest_local_var: None,
             tail_recursion_used: false,
             current_scope_vars,
             function_position: Position::Tail,
@@ -84,16 +87,20 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var(&mut self, name: &EcoString) -> EcoString {
-        match self.current_scope_vars.get(name) {
+    pub fn local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
+        let name = match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.clone(), 0);
+                maybe_escape_identifier(name)
                 maybe_escape_identifier(name)
             }
             Some(0) => maybe_escape_identifier(name),
             Some(n) if name == "$" => eco_format!("${n}"),
             Some(n) => eco_format!("{name}${n}"),
-        }
+        };
+
+        self.latest_local_var = Some(name.clone());
+        name.to_doc()
     }
 
     pub fn next_local_var(&mut self, name: &EcoString) -> EcoString {
@@ -213,11 +220,14 @@ impl<'module> Generator<'module> {
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
 
-            TypedExpr::Echo {
-                location: _,
-                expression: _,
-                type_: _,
-            } => todo!("generate js code for echo"),
+            TypedExpr::Echo { expression, .. } => {
+                let expression = expression
+                    .as_ref()
+                    .expect("echo with no expression outside of pipe");
+                let expresion_doc =
+                    self.not_in_tail_position(|this| this.wrap_expression(&expression))?;
+                self.echo(expresion_doc)
+            }
 
             TypedExpr::Invalid { .. } => {
                 panic!("invalid expressions should not reach code generation")
@@ -522,13 +532,44 @@ impl<'module> Generator<'module> {
         let all_assignments = std::iter::once(first_value)
             .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
+        let mut documents = Vec::with_capacity((count + 1) * 2);
+
         for assignment in all_assignments {
-            documents.push(self.not_in_tail_position(|r#gen| {
-                r#gen.simple_variable_assignment(&assignment.name, &assignment.value)
-            })?);
+            match assignment.value.as_ref() {
+                // An echo in a pipeline won't result in an assignment, instead it
+                // just prints the previous variable assigned in the pipeline.
+                TypedExpr::Echo {
+                    expression: None, ..
+                } => documents.push(self.not_in_tail_position(|this| {
+                    let var = this
+                        .latest_local_var
+                        .as_ref()
+                        .expect("echo with no previous step in a pipe");
+                    this.echo(var.to_doc())
+                })?),
+
+                // Otherwise we assign the intermediate pipe value to a variable.
+                _ => documents.push(self.not_in_tail_position(|this| {
+                    this.simple_variable_assignment(&assignment.name, &assignment.value)
+                })?),
+            }
+
             documents.push(line());
         }
-        documents.push(self.expression(finally)?);
+
+        match finally {
+            TypedExpr::Echo {
+                expression: None, ..
+            } => {
+                let var = self
+                    .latest_local_var
+                    .as_ref()
+                    .expect("echo with no previous step in a pipe");
+                documents.push(self.echo(var.to_doc())?);
+            }
+            _ => documents.push(self.expression(finally)?),
+        }
+
         Ok(documents.to_doc().force_break())
     }
 
@@ -1101,6 +1142,7 @@ impl<'module> Generator<'module> {
         match constructor {
             ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
                 docvec!["$", module, ".", maybe_escape_identifier(label)]
+                docvec!["$", module, ".", maybe_escape_identifier(label)]
             }
 
             ModuleValueConstructor::Record {
@@ -1213,6 +1255,11 @@ impl<'module> Generator<'module> {
             operator,
         )
         .group()
+    }
+
+    fn echo<'a>(&mut self, expression: Document<'a>) -> Output<'a> {
+        let echo_argument = call_arguments(std::iter::once(Ok(expression)))?;
+        Ok(self.wrap_return(docvec!["echo", echo_argument]))
     }
 }
 
@@ -1345,7 +1392,7 @@ pub(crate) fn guard_constant_expression<'a>(
         Constant::Var { name, .. } => Ok(assignments
             .iter()
             .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone())
+            .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
             .unwrap_or_else(|| maybe_escape_identifier(name).to_doc())),
 
         expression => constant_expression(Context::Function, tracker, expression),
@@ -1462,10 +1509,12 @@ pub(crate) fn constant_expression<'a>(
         Constant::Var { name, module, .. } => Ok({
             match module {
                 None => maybe_escape_identifier(name).to_doc(),
+                None => maybe_escape_identifier(name).to_doc(),
                 Some((module, _)) => {
                     // JS keywords can be accessed here, but we must escape anyway
                     // as we escape when exporting such names in the first place,
                     // and the imported name has to match the exported name.
+                    docvec!["$", module, ".", maybe_escape_identifier(name)]
                     docvec!["$", module, ".", maybe_escape_identifier(name)]
                 }
             }
@@ -1749,10 +1798,9 @@ impl TypedExpr {
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Block { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::RecordUpdate { .. } => true,
-
-            TypedExpr::Echo { .. } => todo!("understand what this means"),
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -1814,6 +1862,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::Var { .. }
             | TypedExpr::List { .. }
             | TypedExpr::Call { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
             | TypedExpr::BinOp { .. }
@@ -1826,8 +1875,6 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Block { .. },
         ) => true,
-
-        Statement::Expression(TypedExpr::Echo { .. }) => todo!("understand if it is required"),
 
         Statement::Expression(
             TypedExpr::Todo { .. }

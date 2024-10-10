@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo panic\n}\n"
+---
+import { makeError } from "../gleam.mjs";
+
+export function main() {
+  return echo(
+    (() => {
+      throw makeError(
+        "panic",
+        "my/mod",
+        3,
+        "main",
+        "`panic` expression evaluated.",
+        {}
+      )
+    })(),
+  );
+}
