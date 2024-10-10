@@ -507,7 +507,8 @@ impl<'a> TypeScriptGenerator<'a> {
                     .label
                     .as_ref()
                     .map(|(_, s)| super::maybe_escape_identifier(s))
-                    .unwrap_or_else(|| eco_format!("argument${i}"));
+                    .unwrap_or_else(|| eco_format!("argument${i}"))
+                    .to_doc();
                 docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
@@ -520,7 +521,8 @@ impl<'a> TypeScriptGenerator<'a> {
                         .label
                         .as_ref()
                         .map(|(_, s)| super::maybe_escape_identifier(s))
-                        .unwrap_or_else(|| eco_format!("{i}"));
+                        .unwrap_or_else(|| eco_format!("{i}"))
+                        .to_doc();
                     docvec![
                         name,
                         ": ",
