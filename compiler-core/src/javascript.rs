@@ -283,8 +283,9 @@ impl<'a> Generator<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|(_, s)| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| eco_format!("x{i}").to_doc())
+                .map(|(_, s)| maybe_escape_identifier(s))
+                .unwrap_or_else(|| eco_format!("x{i}"))
+                .to_doc()
         }
 
         let head = if publicity.is_private() || opaque {
@@ -435,9 +436,9 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
-                maybe_escape_identifier_doc(n)
+                maybe_escape_identifier(n).to_doc()
             });
-            let name = maybe_escape_identifier_doc(&i.name);
+            let name = maybe_escape_identifier(&i.name).to_doc();
             Member { name, alias }
         });
 
@@ -487,7 +488,7 @@ impl<'a> Generator<'a> {
 
         Ok(docvec![
             head,
-            maybe_escape_identifier_doc(name),
+            maybe_escape_identifier(name),
             " = ",
             document,
             ";",
@@ -539,7 +540,7 @@ impl<'a> Generator<'a> {
 
         let document = docvec![
             head,
-            maybe_escape_identifier_doc(name.as_str()),
+            maybe_escape_identifier(name.as_str()),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
@@ -637,7 +638,7 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             doc
         }
         Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
-        Some(name) => maybe_escape_identifier_doc(name),
+        Some(name) => maybe_escape_identifier(name).to_doc(),
     }))
 }
 
@@ -769,11 +770,11 @@ fn escape_identifier(word: &str) -> EcoString {
     eco_format!("{word}$")
 }
 
-fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
+fn maybe_escape_identifier(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
-        word.to_doc()
+        EcoString::from(word)
     } else {
-        escape_identifier(word).to_doc()
+        escape_identifier(word)
     }
 }
 

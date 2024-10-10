@@ -451,7 +451,7 @@ impl<'a> TypeScriptGenerator<'a> {
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(
-                    super::maybe_escape_identifier_doc(&x.name),
+                    super::maybe_escape_identifier(&x.name).to_doc(),
                     x.arguments.iter().map(|a| &a.type_),
                 )
             });
@@ -488,7 +488,7 @@ impl<'a> TypeScriptGenerator<'a> {
             },
             "class ",
             name_with_generics(
-                super::maybe_escape_identifier_doc(&constructor.name),
+                super::maybe_escape_identifier(&constructor.name).to_doc(),
                 constructor.arguments.iter().map(|a| &a.type_)
             ),
             " extends _.CustomType {"
@@ -506,8 +506,9 @@ impl<'a> TypeScriptGenerator<'a> {
                 let name = arg
                     .label
                     .as_ref()
-                    .map(|(_, s)| super::maybe_escape_identifier_doc(s))
-                    .unwrap_or_else(|| eco_format!("argument${i}").to_doc());
+                    .map(|(_, s)| super::maybe_escape_identifier(s))
+                    .unwrap_or_else(|| eco_format!("argument${i}"))
+                    .to_doc();
                 docvec![name, ": ", self.do_print_force_generic_param(&arg.type_)]
             })),
             ";",
@@ -519,8 +520,9 @@ impl<'a> TypeScriptGenerator<'a> {
                     let name = arg
                         .label
                         .as_ref()
-                        .map(|(_, s)| super::maybe_escape_identifier_doc(s))
-                        .unwrap_or_else(|| eco_format!("{i}").to_doc());
+                        .map(|(_, s)| super::maybe_escape_identifier(s))
+                        .unwrap_or_else(|| eco_format!("{i}"))
+                        .to_doc();
                     docvec![
                         name,
                         ": ",
@@ -539,7 +541,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn module_constant(&mut self, name: &'a str, value: &'a TypedConstant) -> Output<'a> {
         Ok(docvec![
             "export const ",
-            super::maybe_escape_identifier_doc(name),
+            super::maybe_escape_identifier(name),
             ": ",
             self.print_type(&value.type_()),
             ";",
@@ -565,7 +567,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
         Ok(docvec![
             "export function ",
-            super::maybe_escape_identifier_doc(name),
+            super::maybe_escape_identifier(name),
             if generic_names.is_empty() {
                 super::nil()
             } else {
@@ -584,7 +586,7 @@ impl<'a> TypeScriptGenerator<'a> {
                             ]
                         }
                         Some(name) => docvec![
-                            super::maybe_escape_identifier_doc(name),
+                            super::maybe_escape_identifier(name),
                             ": ",
                             self.print_type_with_generic_usages(&a.type_, &generic_usages)
                         ],
