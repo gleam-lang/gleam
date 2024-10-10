@@ -1,0 +1,7 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo 1\n}\n"
+---
+export function main() {
+  return echo(1);
+}
