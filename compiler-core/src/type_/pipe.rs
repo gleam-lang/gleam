@@ -2,8 +2,7 @@ use self::expression::CallKind;
 
 use super::*;
 use crate::ast::{
-    Assignment, AssignmentKind, ImplicitCallArgOrigin, Statement, TypedAssignment, UntypedExpr,
-    PIPE_VARIABLE,
+    ImplicitCallArgOrigin, Statement, TypedPipelineAssignment, UntypedExpr, PIPE_VARIABLE,
 };
 use vec1::Vec1;
 
@@ -13,7 +12,7 @@ pub(crate) struct PipeTyper<'a, 'b, 'c> {
     argument_type: Arc<Type>,
     argument_location: SrcSpan,
     location: SrcSpan,
-    assignments: Vec<TypedAssignment>,
+    assignments: Vec<TypedPipelineAssignment>,
     expr_typer: &'a mut ExprTyper<'b, 'c>,
 }
 
@@ -222,15 +221,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             expression.type_(),
         );
         // Add the assignment to the AST
-        let assignment = Assignment {
+        let assignment = TypedPipelineAssignment {
             location,
-            annotation: None,
-            kind: AssignmentKind::Let,
-            pattern: Pattern::Variable {
-                location,
-                name: PIPE_VARIABLE.into(),
-                type_: expression.type_(),
-            },
+            name: PIPE_VARIABLE.into(),
             value: Box::new(expression),
         };
         self.assignments.push(assignment);
