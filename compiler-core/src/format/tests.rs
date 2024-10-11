@@ -6448,39 +6448,6 @@ fn echo_inside_a_pipeline() {
 }
 
 #[test]
-fn echo_with_value_inside_a_pipeline() {
-    assert_format!(
-        r#"fn main() {
-  wibble
-  |> echo value
-  |> wobble
-}
-"#
-    );
-}
-
-#[test]
-fn echo_with_long_value_inside_a_pipeline() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  wibble
-  |> echo this_is_a_looooooooong_value(that_get_split_on_multiple_lines, i_wonder_how_this_will_look)
-  |> wobble
-}
-"#,
-        r#"fn main() {
-  wibble
-  |> echo this_is_a_looooooooong_value(
-    that_get_split_on_multiple_lines,
-    i_wonder_how_this_will_look,
-  )
-  |> wobble
-}
-"#,
-    );
-}
-
-#[test]
 fn echo_inside_a_single_line_pipeline() {
     assert_format!(
         r#"fn main() {
@@ -6491,68 +6458,10 @@ fn echo_inside_a_single_line_pipeline() {
 }
 
 #[test]
-fn echo_with_value_inside_a_single_line_pipeline() {
-    assert_format!(
-        r#"fn main() {
-  wibble |> echo value |> wobble
-}
-"#
-    );
-}
-
-#[test]
-fn echo_with_long_value_inside_a_single_line_pipeline() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  wibble |> echo this_is_a_looooooooong_value(that_get_split_on_multiple_lines, i_wonder_how_this_will_look) |> wobble
-}
-"#,
-        r#"fn main() {
-  wibble
-  |> echo this_is_a_looooooooong_value(
-    that_get_split_on_multiple_lines,
-    i_wonder_how_this_will_look,
-  )
-  |> wobble
-}
-"#
-    );
-}
-
-#[test]
 fn echo_as_last_item_of_pipeline() {
     assert_format!(
         r#"fn main() {
   wibble |> wobble |> echo
-}
-"#
-    );
-}
-
-#[test]
-fn echo_with_value_as_last_item_of_pipeline() {
-    assert_format!(
-        r#"fn main() {
-  wibble |> wobble |> echo value
-}
-"#
-    );
-}
-
-#[test]
-fn echo_with_long_value_as_last_item_of_pipeline() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  wibble |> wobble |> echo this_is_a_looooooooong_value(that_get_split_on_multiple_lines, i_wonder_how_this_will_look)
-}
-"#,
-        r#"fn main() {
-  wibble
-  |> wobble
-  |> echo this_is_a_looooooooong_value(
-    that_get_split_on_multiple_lines,
-    i_wonder_how_this_will_look,
-  )
 }
 "#
     );
@@ -6571,39 +6480,6 @@ fn echo_as_last_item_of_multiline_pipeline() {
 }
 
 #[test]
-fn echo_with_value_as_last_item_of_multiline_pipeline() {
-    assert_format!(
-        r#"fn main() {
-  wibble
-  |> wobble
-  |> echo value
-}
-"#
-    );
-}
-
-#[test]
-fn echo_with_long_value_as_last_item_of_multiline_pipeline() {
-    assert_format_rewrite!(
-        r#"fn main() {
-  wibble
-  |> wobble
-  |> echo this_is_a_looooooooong_value(that_get_split_on_multiple_lines, i_wonder_how_this_will_look)
-}
-"#,
-        r#"fn main() {
-  wibble
-  |> wobble
-  |> echo this_is_a_looooooooong_value(
-    that_get_split_on_multiple_lines,
-    i_wonder_how_this_will_look,
-  )
-}
-"#
-    );
-}
-
-#[test]
 fn echo_with_related_expression_on_following_line() {
     assert_format_rewrite!(
         r#"fn main() {
@@ -6613,6 +6489,25 @@ fn echo_with_related_expression_on_following_line() {
 "#,
         r#"fn main() {
   panic as echo "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_following_value_in_a_pipeline() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  []
+  |> echo wibble
+  |> wobble
+}
+"#,
+        r#"fn main() {
+  []
+  |> echo
+  wibble
+  |> wobble
 }
 "#
     );
