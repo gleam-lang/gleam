@@ -1976,6 +1976,26 @@ pub fn increase_y(vector, by increase) {
 }
 
 #[test]
+fn type_narrowing_does_not_escape_clause_scope() {
+    assert_module_error!(
+        "
+pub type Thingy {
+  A(a: Int)
+  B(x: Int, b: Int)
+}
+
+pub fn fun(x) {
+  case x {
+    A(..) -> x.a
+    B(..) -> x.b
+  }
+  x.b
+}
+"
+    );
+}
+
+#[test]
 fn module_constants() {
     assert_module_infer!(
         "
