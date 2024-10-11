@@ -1258,6 +1258,7 @@ impl<'module> Generator<'module> {
     }
 
     fn echo<'a>(&mut self, expression: Document<'a>) -> Output<'a> {
+        self.tracker.echo_used = true;
         let echo_argument = call_arguments(std::iter::once(Ok(expression)))?;
         Ok(self.wrap_return(docvec!["echo", echo_argument]))
     }

@@ -184,17 +184,31 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "sizedFloat", None);
         };
 
+        let echo = if self.tracker.echo_used {
+            // TODO: The code is using instanceof Dict but that only
+            // works if I can import it from stdlib
+            // How do I deal with it?
+            self.register_prelude_usage(&mut imports, "BitArray", None);
+            self.register_prelude_usage(&mut imports, "List", None);
+            self.register_prelude_usage(&mut imports, "UtfCodepoint", None);
+            self.register_prelude_usage(&mut imports, "CustomType", None);
+            docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
+        } else {
+            nil()
+        };
+
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec![type_reference, "export {}", line()])
+            Ok(docvec![type_reference, "export {}", line(), echo])
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(docvec![type_reference, statements])
+            Ok(docvec![type_reference, statements, echo])
         } else if statements.is_empty() {
             Ok(docvec![
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript)
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
+                echo,
             ])
         } else {
             Ok(docvec![
@@ -202,7 +216,8 @@ impl<'a> Generator<'a> {
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
                 statements,
-                line()
+                line(),
+                echo
             ])
         }
     }
@@ -810,6 +825,7 @@ pub(crate) struct UsageTracker {
     pub string_bit_array_segment_used: bool,
     pub codepoint_bit_array_segment_used: bool,
     pub float_bit_array_segment_used: bool,
+    pub echo_used: bool,
 }
 
 fn bool(bool: bool) -> Document<'static> {
