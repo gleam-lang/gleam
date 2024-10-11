@@ -494,7 +494,8 @@ fn echo_in_a_pipeline() {
 }
 
 #[test]
-fn echo_in_a_pipeline_with_an_expression_ater_it() {
+fn echo_cannot_have_an_expression_in_a_pipeline() {
+    // So this is actually two pipelines!
     assert_parse!("[] |> echo fun |> wibble");
 }
 
