@@ -1,17 +1,3 @@
----
-source: compiler-core/src/javascript/tests/echo.rs
-expression: "\npub fn main() {\n  echo wibble(1, 2)\n}\n\nfn wibble(n: Int, m: Int) { n + m }\n"
----
-import { BitArray, List, UtfCodepoint, CustomType } from "../gleam.mjs";
-
-function wibble(n, m) {
-  return n + m;
-}
-
-export function main() {
-  return echo(wibble(1, 2));
-}
-
 // Debug printing code
 
 function echo(v) {
