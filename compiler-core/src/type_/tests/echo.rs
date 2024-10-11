@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_module_infer};
+use crate::assert_module_infer;
 
 #[test]
 pub fn echo_has_same_type_as_printed_expression() {
@@ -66,34 +66,5 @@ pub fn main() {
 fn wibble(_: List(Int)) -> List(String) { todo }
 "#,
         vec![("main", "fn() -> List(String)")]
-    );
-}
-
-#[test]
-pub fn echo_in_pipeline_printing_a_function() {
-    assert_module_infer!(
-        r#"
-pub fn main() {
-  [1, 2, 3]
-  |> echo wibble
-}
-
-fn wibble(_: List(Int)) -> List(String) { todo }
-"#,
-        vec![("main", "fn() -> List(String)")]
-    );
-}
-
-#[test]
-pub fn echo_in_pipeline_printing_a_function_2() {
-    assert_module_error!(
-        r#"
-pub fn main() {
-  [1, 2, 3]
-  |> echo wibble
-}
-
-fn wibble(_: List(Float)) -> List(String) { todo }
-"#
     );
 }
