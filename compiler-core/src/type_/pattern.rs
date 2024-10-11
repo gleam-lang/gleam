@@ -108,6 +108,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     fn narrow_subject_variable(&mut self, name: EcoString, variant_index: u16) {
         match &self.mode {
             PatternMode::Initial => {
+                // If this name is reassigned in the pattern itself, we don't need to narrow
+                // it, since it isn't accessible in this scope anymore.
                 if self.initial_pattern_vars.contains(&name) {
                     return;
                 }
@@ -118,15 +120,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .get(&name)
                     .expect("Variable already exists in the case subjects");
 
-                let mut type_ = variable.type_.deref().clone();
-                type_.narrow_custom_type_variant(variant_index);
+                // The type in this scope is now separate from the parent scope, so we
+                // remove any links to ensure that they aren't linked in any way and that
+                // we don't accidentally narrow the variable outside of this scope
+                let mut type_ = collapse_links(variable.type_.clone());
+                Arc::make_mut(&mut type_).narrow_custom_type_variant(variant_index);
                 // Mark this variable as having been narrowed
                 let _ = self.narrowed_variables.insert(name.clone(), variant_index);
                 // This variable is only narrowed in this branch of the case expression
                 self.environment.insert_local_variable(
                     name,
                     variable.definition_location().span,
-                    Arc::new(type_),
+                    type_,
                 );
             }
 
@@ -411,7 +416,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                let pattern = self.unify(*pattern, type_, None)?;
+                let pattern = self.unify(*pattern, type_, subject_variable)?;
                 self.insert_variable(&name, pattern.type_().clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 Ok(Pattern::Assign {
@@ -736,7 +741,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     })
                                 })
                                 .try_collect()?;
-                            unify(type_, retrn.clone())
+                            unify(type_.clone(), retrn.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
 
                             if let Some((variable_to_narrow, narrowed_variant)) =
