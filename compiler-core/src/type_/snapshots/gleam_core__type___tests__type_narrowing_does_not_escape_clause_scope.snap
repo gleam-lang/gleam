@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub type Thingy {\n  A(a: Int)\n  B(x: Int, b: Int)\n}\n\npub fn fun(x) {\n  case x {\n    A(..) -> x.a\n    B(..) -> x.b\n  }\n  x.b\n}\n"
+---
+error: Unknown record field
+   ┌─ /src/one/two.gleam:12:4
+   │
+12 │   x.b
+   │    ^^ This field does not exist
+
+The value being accessed has this type:
+
+    Thingy
+
+It does not have any fields.
+
+Note: The field you are trying to access might not be consistently present
+or positioned across the custom type's variants, preventing reliable
+access. Ensure the field exists in the same position and has the same type
+in all variants to enable direct accessor syntax.
