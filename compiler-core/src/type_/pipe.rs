@@ -299,11 +299,11 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 return convert_unify_error(flip_unify_error(e), function.location());
             }
             let is_pipe_mismatch = self.check_if_pipe_type_mismatch(&e);
-            let error = convert_unify_error(e, function.location());
             if is_pipe_mismatch {
-                error.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
+                convert_unify_error(e, function.location())
+                    .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
             } else {
-                error
+                convert_unify_error(flip_unify_error(e), function.location())
             }
         })?;
 
