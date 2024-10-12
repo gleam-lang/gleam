@@ -628,6 +628,18 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn deprecation_without_message() {
+    assert_module_error!(
+        r#"
+@deprecated()
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn multiple_internal_attributes() {
     assert_module_error!(
         r#"
