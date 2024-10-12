@@ -81,7 +81,8 @@ function echo(v) {
     if (v instanceof UtfCodepoint) return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
     if (v instanceof BitArray) return `<<${Array.from(v.buffer).join(", ")}>>`;
     if (v instanceof CustomType) return inspectCustomType(v);
-    if (v instanceof Dict) return inspectDict(v);
+    // TODO: what to do with a Dict?
+    // if (v instanceof Dict) return inspectDict(v);
     if (v instanceof Set) return `//js(Set(${[...v].map(inspect).join(", ")}))`;
     if (v instanceof RegExp) return `//js(${v})`;
     if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;

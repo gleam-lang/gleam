@@ -16,5 +16,5 @@ wibble(N) ->
 -spec main() -> list(integer()).
 main() ->
     _pipe = [1, 2, 3],
-    mmmh:echo(_pipe),
+    echo(_pipe),
     wibble(_pipe).

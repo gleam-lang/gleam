@@ -152,6 +152,12 @@ pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers) -> Res
     Ok(module_document(module, line_numbers)?.to_pretty_string(MAX_COLUMNS))
 }
 
+struct ModulePrinter<'a> {
+    exports: Vec<Document<'a>>,
+    type_defs: Vec<Document<'a>>,
+    type_exports: Vec<Document<'a>>,
+}
+
 fn module_document<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
@@ -1738,7 +1744,7 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
 }
 
 fn echo<'a>(body: Document<'a>, env: &mut Env<'a>) -> Document<'a> {
-    module_fn_with_args("mmmh", "echo", vec![body], env)
+    "echo".to_doc().append(wrap_args(vec![body]))
 }
 
 fn erlang_error<'a>(

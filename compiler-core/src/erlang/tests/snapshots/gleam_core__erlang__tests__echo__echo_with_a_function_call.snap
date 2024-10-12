@@ -15,4 +15,4 @@ wibble(N, M) ->
 -file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    mmmh:echo(wibble(1, 2)).
+    echo(wibble(1, 2)).

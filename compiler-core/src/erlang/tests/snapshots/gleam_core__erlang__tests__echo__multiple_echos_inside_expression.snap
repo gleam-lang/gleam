@@ -10,5 +10,5 @@ expression: "\npub fn main() {\n  echo 1\n  echo 2\n}\n"
 -file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    mmmh:echo(1),
-    mmmh:echo(2).
+    echo(1),
+    echo(2).

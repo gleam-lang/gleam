@@ -10,7 +10,7 @@ expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
 -file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    mmmh:echo(case 1 of
+    echo(case 1 of
             _ ->
                 2
         end).

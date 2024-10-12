@@ -10,4 +10,4 @@ expression: "\npub fn main() {\n  echo 1\n}\n"
 -file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    mmmh:echo(1).
+    echo(1).
