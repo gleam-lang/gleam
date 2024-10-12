@@ -18,6 +18,6 @@ error: Unknown module value
   ┌─ /src/one/two.gleam:4:6
   │
 4 │   one.Two
-  │      ^^^^
+  │      ^^^^ Did you mean `type Two`?
 
-The module `one` does not have a `Two` value.
+`Two` is only a type, it cannot be imported as a value.
