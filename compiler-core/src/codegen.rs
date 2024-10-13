@@ -201,7 +201,11 @@ impl<'a> JavaScript<'a> {
         }
 
         if self.typescript == TypeScriptDeclarations::Emit {
-            let rexport = rexport.replace(".mjs", ".d.mts");
+            let rexport = format!(
+                "export * from \"{}\";\nexport type * from \"{}\";\n",
+                self.prelude_location,
+                self.prelude_location.as_str().replace(".mjs", ".d.mts")
+            );
             let prelude_declaration_path = &self.output_directory.join("gleam.d.mts");
 
             // Type declaration may trigger badly configured watchers
