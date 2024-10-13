@@ -9,7 +9,8 @@ expression: "./cases/javascript_d_ts"
 <73 byte binary>
 
 //// /out/lib/the_package/gleam.d.mts
-export * from "../prelude.d.mts";
+export * from "../prelude.mjs";
+export type * from "../prelude.d.mts";
 
 
 //// /out/lib/the_package/gleam.mjs
