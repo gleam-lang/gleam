@@ -1,16 +1,16 @@
 ---
-source: compiler-core/src/type_/tests/errors.rs
-expression: "\nimport some_mod\npub fn main(wibble: some_mod.Wibble) {\n  wibble.field\n}\n"
+source: compiler-core/src/type_/tests.rs
+expression: "\npub type Thingy {\n  A(a: Int)\n  B(x: Int, b: Int)\n}\n\npub fn fun(x) {\n  case x {\n    A(..) -> x.a\n    B(..) -> x.b\n  }\n  x.b\n}\n"
 ---
 error: Unknown record field
-  ┌─ /src/one/two.gleam:4:9
-  │
-4 │   wibble.field
-  │         ^^^^^^ This field does not exist
+   ┌─ /src/one/two.gleam:12:4
+   │
+12 │   x.b
+   │    ^^ This field does not exist
 
 The value being accessed has this type:
 
-    some_mod.Wibble
+    Thingy
 
 It does not have any fields.
 

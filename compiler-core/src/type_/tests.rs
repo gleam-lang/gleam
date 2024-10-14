@@ -1775,6 +1775,181 @@ fn record_update_generic_unannotated() {
 }
 
 #[test]
+fn record_update_type_narrowing() {
+    assert_module_infer!(
+        "
+pub type Shape {
+  Circle(cx: Int, cy: Int, radius: Int)
+  Square(x: Int, y: Int, width: Int, height: Int)
+}
+
+pub fn grow(shape) {
+  case shape {
+    Circle(radius:, ..) as circle -> Circle(..circle, radius: radius + 1)
+    Square(width:, height:, ..) as square -> Square(..square, width: width + 1, height: height + 1)
+  }
+}
+",
+        vec![
+            ("Circle", "fn(Int, Int, Int) -> Shape"),
+            ("Square", "fn(Int, Int, Int, Int) -> Shape"),
+            ("grow", "fn(Shape) -> Shape")
+        ]
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_for_original_variable() {
+    assert_module_infer!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn update(wibble: Wibble) -> Wibble {
+  case wibble {
+    Wibble(..) -> Wibble(..wibble, a: 1)
+    Wobble(..) -> Wobble(..wibble, c: "hello")
+  }
+}
+"#,
+        vec![
+            ("Wibble", "fn(Int, Int) -> Wibble"),
+            ("Wobble", "fn(Int, String) -> Wibble"),
+            ("update", "fn(Wibble) -> Wibble")
+        ]
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_fails_for_several_possible_variants() {
+    assert_module_error!(
+        "
+pub type Vector {
+  Vector2(x: Float, y: Float)
+  Vector3(x: Float, y: Float, z: Float)
+}
+
+pub fn increase_y(vector, by increase) {
+  case vector {
+    Vector2(y:, ..) as vector | Vector3(y:, ..) as vector ->
+      Vector2(..vector, y: y +. increase)
+  }
+}
+"
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_fails_for_several_possible_variants_on_subject_variable() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn update(wibble: Wibble) -> Wibble {
+  case wibble {
+    Wibble(..) | Wobble(..) -> Wibble(..wibble, a: 1)
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn type_unification_does_not_cause_false_positives_for_variant_matching() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn wibbler() { todo }
+
+pub fn main() {
+  let c = wibbler()
+
+  case todo {
+    Wibble(..) -> Wibble(..c, b: 1)
+    _ -> todo
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn type_unification_does_not_allow_different_variants_to_be_treated_as_safe() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn main() {
+  let a = case todo {
+    Wibble(..) as b -> Wibble(..b, b: 1)
+    Wobble(..) as b -> Wobble(..b, c: "a")
+  }
+
+  a.b
+}
+"#
+    );
+}
+
+#[test]
+fn record_update_type_narrowing_in_alternate_pattern_with_all_same_variants() {
+    assert_module_infer!(
+        r#"
+pub type Vector {
+  Vector2(x: Float, y: Float)
+  Vector3(x: Float, y: Float, z: Float)
+}
+
+pub fn increase_y(vector, by increase) {
+  case vector {
+    Vector2(y:, ..) as vector -> Vector2(..vector, y: y +. increase)
+    Vector3(y:, z: 12.3, ..) as vector | Vector3(y:, z: 15.0, ..) as vector ->
+      Vector3(..vector, y: y +. increase, z: 0.0)
+    _ -> panic as "Could not increase Y"
+  }
+}
+"#,
+        vec![
+            ("Vector2", "fn(Float, Float) -> Vector"),
+            ("Vector3", "fn(Float, Float, Float) -> Vector"),
+            ("increase_y", "fn(Vector, Float) -> Vector")
+        ]
+    );
+}
+
+#[test]
+fn type_narrowing_does_not_escape_clause_scope() {
+    assert_module_error!(
+        "
+pub type Thingy {
+  A(a: Int)
+  B(x: Int, b: Int)
+}
+
+pub fn fun(x) {
+  case x {
+    A(..) -> x.a
+    B(..) -> x.b
+  }
+  x.b
+}
+"
+    );
+}
+
+#[test]
 fn module_constants() {
     assert_module_infer!(
         "

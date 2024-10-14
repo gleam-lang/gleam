@@ -109,6 +109,25 @@
   the Erlang target if any of their arguments were discarded.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now narrows the variant of custom types when pattern matching,
+  allowing for safe record updates if the variant is known:
+
+  ```gleam
+  pub type Pet {
+    Dog(name: String, cuteness: Int)
+    Turtle(name: String, speed: Int)
+  }
+
+  pub fn rename(pet: Pet, to name: String) -> Pet {
+    case pet {
+      Dog(..) as dog -> Dog(..dog, name:)
+      Turtle(..) as turtle -> Turtle(..turtle, name:)
+    }
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Language Server

@@ -1298,7 +1298,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let pattern_location = pattern.location();
         let mut pattern_typer =
             pattern::PatternTyper::new(self.environment, &self.hydrator, self.problems);
-        let unify_result = pattern_typer.unify(pattern, value_typ.clone());
+        let unify_result = pattern_typer.unify(pattern, value_typ.clone(), None);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
@@ -1397,7 +1397,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 all_patterns_are_discards && clause.pattern.iter().all(|p| p.is_discard());
 
             self.previous_panics = false;
-            let typed_clause = self.infer_clause(clause, &subject_types);
+            let typed_clause = self.infer_clause(clause, &typed_subjects);
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
             if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
@@ -1440,7 +1440,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[Arc<Type>]) -> TypedClause {
+    fn infer_clause(&mut self, clause: UntypedClause, subjects: &[TypedExpr]) -> TypedClause {
         let Clause {
             pattern,
             alternative_patterns,
@@ -1515,7 +1515,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         &mut self,
         pattern: UntypedMultiPattern,
         alternatives: Vec<UntypedMultiPattern>,
-        subjects: &[Arc<Type>],
+        subjects: &[TypedExpr],
         location: &SrcSpan,
     ) -> Result<(TypedMultiPattern, Vec<TypedMultiPattern>), Error> {
         let mut pattern_typer =
@@ -2253,35 +2253,55 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 UnknownField::TrulyUnknown
             },
         };
-        let accessors = match collapse_links(record_type.clone()).as_ref() {
-            // A type in the current module which may have fields
-            Type::Named { module, name, .. } if module == &self.environment.current_module => {
-                self.environment.accessors.get(name)
+        let (accessors, accessor_record_type) =
+            match collapse_links(record_type.clone()).as_ref() {
+                // A type in the current module which may have fields
+                Type::Named {
+                    module,
+                    name,
+                    narrowed_variant,
+                    ..
+                } if module == &self.environment.current_module => {
+                    self.environment.accessors.get(name).map(|accessors_map| {
+                        (
+                            accessors_map.accessors_for_variant(*narrowed_variant),
+                            accessors_map.type_.clone(),
+                        )
+                    })
+                }
+
+                // A type in another module which may have fields
+                Type::Named {
+                    module,
+                    name,
+                    narrowed_variant,
+                    ..
+                } => self
+                    .environment
+                    .importable_modules
+                    .get(module)
+                    .and_then(|module| module.accessors.get(name))
+                    .filter(|a| {
+                        a.publicity.is_importable() || module == &self.environment.current_module
+                    })
+                    .map(|accessors_map| {
+                        (
+                            accessors_map.accessors_for_variant(*narrowed_variant),
+                            accessors_map.type_.clone(),
+                        )
+                    }),
+
+                _something_without_fields => return Err(unknown_field(vec![])),
             }
-
-            // A type in another module which may have fields
-            Type::Named { module, name, .. } => self
-                .environment
-                .importable_modules
-                .get(module)
-                .and_then(|module| module.accessors.get(name))
-                .filter(|a| {
-                    a.publicity.is_importable() || module == &self.environment.current_module
-                }),
-
-            _something_without_fields => return Err(unknown_field(vec![])),
-        }
-        .ok_or_else(|| unknown_field(vec![]))?;
+            .ok_or_else(|| unknown_field(vec![]))?;
         let RecordAccessor {
             index,
             label,
             type_,
         } = accessors
-            .accessors
             .get(&label)
-            .ok_or_else(|| unknown_field(accessors.accessors.keys().cloned().collect()))?
+            .ok_or_else(|| unknown_field(accessors.keys().cloned().collect()))?
             .clone();
-        let accessor_record_type = accessors.type_.clone();
         let mut type_vars = hashmap![];
         let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
         let type_ = self.instantiate(type_, &mut type_vars);
@@ -2327,27 +2347,19 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .clone();
 
         // It must be a record with a field map for us to be able to update it
-        let (field_map, constructors_count) = match &value_constructor.variant {
+        let (field_map, variants_count, variant_index) = match &value_constructor.variant {
             ValueConstructorVariant::Record {
                 field_map: Some(field_map),
-                constructors_count,
+                variants_count,
+                variant_index,
                 ..
-            } => (field_map, *constructors_count),
+            } => (field_map, *variants_count, *variant_index),
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
                 });
             }
         };
-
-        // We can only update a record if it is the only variant of its type.
-        // If a record has multiple variants it cannot be safely updated as it
-        // could be one of the other variants.
-        if constructors_count != 1 {
-            return Err(Error::UpdateMultiConstructorType {
-                location: constructor.location(),
-            });
-        }
 
         // The type must be a function for it to be a record constructor
         let retrn = match value_constructor.type_.as_ref() {
@@ -2361,10 +2373,52 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let spread = self.infer(*spread.base)?;
         let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
+        let spread_type = spread.type_();
 
         // Check that the spread variable unifies with the return type of the constructor
-        unify(return_type, spread.type_())
+        unify(return_type, spread_type.clone())
             .map_err(|e| convert_unify_error(e, spread.location()))?;
+
+        let spread_index = spread_type.custom_type_narrowed_variant();
+
+        // Updating a record with only one variant is always safe
+        if variants_count != 1 {
+            // If we know the variant of the value being spread, and it doesn't match the
+            // one being constructed, we can tell the user that it's always wrong
+            if spread_index.is_some_and(|index| index != variant_index) {
+                let Type::Named {
+                    module: spread_module,
+                    name: spread_name,
+                    narrowed_variant: Some(spread_index),
+                    ..
+                } = spread_type.deref()
+                else {
+                    panic!("Spread type must be named and with an index")
+                };
+
+                return Err(Error::UnsafeRecordUpdate {
+                    location: spread.location(),
+                    reason: UnsafeRecordUpdateReason::WrongVariant {
+                        constructed_variant: name,
+                        spread_variant: self
+                            .environment
+                            .type_variant_name(spread_module, spread_name, *spread_index)
+                            .expect("Spread type must exist and variant must be valid")
+                            .clone(),
+                    },
+                });
+            }
+            // If we don't have information about the variant being spread, we tell the user
+            // that it's not safe to update it as it could be any variant
+            else if spread_index.is_none() {
+                return Err(Error::UnsafeRecordUpdate {
+                    location: spread.location(),
+                    reason: UnsafeRecordUpdateReason::UnknownVariant {
+                        constructed_variant: name,
+                    },
+                });
+            }
+        }
 
         let args: Vec<TypedRecordUpdateArg> = args
             .iter()
