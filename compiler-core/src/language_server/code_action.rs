@@ -1043,3 +1043,566 @@ impl<'a> AddAnnotations<'a> {
             .push_to(actions);
     }
 }
+
+pub struct QualifiedConstructor<'a> {
+    import: &'a ast::Import<EcoString>,
+    module_aliased: bool,
+    used_name: EcoString,
+    constructor: EcoString,
+    is_type: bool,
+}
+
+pub struct QualifiedToUnqualifiedImportFirstPass<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    qualified_constructor: Option<QualifiedConstructor<'a>>,
+}
+
+impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
+    fn new(module: &'a Module, params: &'a CodeActionParams, line_numbers: LineNumbers) -> Self {
+        Self {
+            module,
+            params,
+            line_numbers,
+            qualified_constructor: None,
+        }
+    }
+    fn get_module_import(&mut self, module_name: &EcoString) -> Option<&'a ast::Import<EcoString>> {
+        self.module
+            .ast
+            .definitions
+            .iter()
+            .find_map(|def| match def {
+                ast::Definition::Import(import) if import.module == *module_name => Some(import),
+                _ => None,
+            })
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        for arg in args {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+        if let Some(return_) = return_annotation {
+            self.visit_type_ast(return_);
+        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+
+        if let Some(return_annotation) = &fun.return_annotation {
+            self.visit_type_ast(return_annotation);
+        }
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::TypeAst>,
+    ) {
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let Some((module_alias, module_location)) = module {
+                if let Some(import) =
+                    self.module
+                        .find_node(module_location.start)
+                        .and_then(|node| {
+                            if let Located::Annotation(_, ty) = node {
+                                if let Some((module, _)) = ty.named_type_name() {
+                                    return self.get_module_import(&module);
+                                }
+                            }
+                            None
+                        })
+                {
+                    self.qualified_constructor = Some(QualifiedConstructor {
+                        import,
+                        module_aliased: import.as_name.is_some(),
+                        used_name: module_alias.clone(),
+                        constructor: name.clone(),
+                        is_type: true,
+                    });
+                }
+            }
+        }
+        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_typed_expr_module_select(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
+    ) {
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let ModuleValueConstructor::Record {
+                name: constructor_name,
+                ..
+            } = constructor
+            {
+                if let Some(import) = self.get_module_import(module_name) {
+                    self.qualified_constructor = Some(QualifiedConstructor {
+                        import,
+                        module_aliased: import.as_name.is_some(),
+                        used_name: module_alias.clone(),
+                        constructor: constructor_name.clone(),
+                        is_type: false,
+                    });
+                }
+            }
+        }
+        ast::visit::visit_typed_expr_module_select(
+            self,
+            location,
+            type_,
+            label,
+            module_name,
+            module_alias,
+            constructor,
+        )
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let Some((module_alias, _)) = module {
+                if let crate::analyse::Inferred::Known(constructor) = constructor {
+                    if let Some(import) = self.get_module_import(&constructor.module) {
+                        self.qualified_constructor = Some(QualifiedConstructor {
+                            import,
+                            module_aliased: import.as_name.is_some(),
+                            used_name: module_alias.clone(),
+                            constructor: name.clone(),
+                            is_type: false,
+                        });
+                    }
+                }
+            }
+        }
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
+    }
+}
+
+pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    qualified_constructor: QualifiedConstructor<'a>,
+    edits: Vec<TextEdit>,
+}
+
+enum QualifiedConstructorType {
+    Type,
+    RecordValue,
+    PatternRecord,
+}
+
+impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
+    pub fn new(
+        module: &'a Module,
+        params: &'a CodeActionParams,
+        line_numbers: LineNumbers,
+        qualified_constructor: QualifiedConstructor<'a>,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            line_numbers,
+            edits: vec![],
+            qualified_constructor,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.edits.is_empty() {
+            return vec![];
+        }
+        self.edit_import();
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(&format!(
+            "Unqualify {}.{}",
+            self.qualified_constructor.used_name, self.qualified_constructor.constructor
+        ))
+        .kind(CodeActionKind::REFACTOR)
+        .changes(self.params.text_document.uri.clone(), self.edits)
+        .preferred(false)
+        .push_to(&mut action);
+        action
+    }
+
+    fn remove_module_qualifier(
+        &mut self,
+        location: SrcSpan,
+        constructor: QualifiedConstructorType,
+    ) {
+        // Find the start and end of the module qualifier
+
+        // The src_span for Type Constructors and Pattern Record Constructors is
+        // : option.Option / option.Some but for Record Constructors is: option.Some
+        //   ↑           ↑   ↑         ↑                                       ↑   ↑
+        // start       end start      end                                    start end
+        let span = if matches!(constructor, QualifiedConstructorType::RecordValue) {
+            SrcSpan::new(
+                location.start - self.qualified_constructor.used_name.len() as u32,
+                location.start + 1,
+            )
+        } else {
+            SrcSpan::new(
+                location.start,
+                location.start + self.qualified_constructor.used_name.len() as u32 + 1, // plus .
+            )
+        };
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(span, &self.line_numbers),
+            new_text: "".to_string(),
+        });
+    }
+
+    fn edit_import(&mut self) {
+        let QualifiedConstructor {
+            constructor,
+            is_type,
+            import,
+            ..
+        } = &self.qualified_constructor;
+        let is_imported = if *is_type {
+            import
+                .unqualified_types
+                .iter()
+                .any(|type_| type_.used_name() == constructor)
+        } else {
+            import
+                .unqualified_values
+                .iter()
+                .any(|value| value.used_name() == constructor)
+        };
+        if is_imported {
+            return;
+        }
+        let (insert_pos, new_text) = self.determine_insert_position_and_text();
+        let span = SrcSpan::new(insert_pos, insert_pos);
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(span, &self.line_numbers),
+            new_text,
+        });
+    }
+
+    fn find_last_char_before_closing_brace(&self) -> Option<(usize, char)> {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        let import_code = self.get_import_code();
+        let closing_brace_pos = import_code.rfind('}')?;
+
+        let bytes = import_code.as_bytes();
+        let mut pos = closing_brace_pos;
+        while pos > 0 {
+            pos -= 1;
+            let c = (*bytes.get(pos)?) as char;
+            if c.is_whitespace() {
+                continue;
+            }
+            if c == '{' {
+                break;
+            }
+            return Some((location.start as usize + pos, c));
+        }
+        None
+    }
+
+    fn get_import_code(&self) -> &str {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        return self
+            .module
+            .code
+            .get(location.start as usize..location.end as usize)
+            .expect("import not found");
+    }
+
+    fn determine_insert_position_and_text(&self) -> (u32, String) {
+        let QualifiedConstructor {
+            module_aliased,
+            constructor,
+            is_type,
+            ..
+        } = &self.qualified_constructor;
+
+        let name = if *is_type {
+            format!("type {}", constructor)
+        } else {
+            constructor.to_string()
+        };
+
+        let import_code = self.get_import_code();
+        let has_brace = import_code.contains('}');
+
+        if has_brace {
+            self.insert_into_braced_import(name)
+        } else {
+            self.insert_into_unbraced_import(name, *module_aliased)
+        }
+    }
+
+    // Handle inserting into an unbraced import
+    fn insert_into_unbraced_import(&self, name: String, module_aliased: bool) -> (u32, String) {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        if !module_aliased {
+            // Case: import module
+            (location.end, format!(".{{{}}}", name))
+        } else {
+            // Case: import module as alias
+            let import_code = &self.get_import_code();
+            let as_pos = import_code
+                .find(" as ")
+                .expect("Expected ' as ' in import statement");
+            let before_as_pos = import_code
+                .get(..as_pos)
+                .and_then(|s| s.rfind(|c: char| !c.is_whitespace()))
+                .map(|pos| location.start as usize + pos + 1)
+                .expect("Expected non-whitespace character before ' as '");
+            (before_as_pos as u32, format!(".{{{}}}", name))
+        }
+    }
+
+    // Handle inserting into a braced import
+    fn insert_into_braced_import(&self, name: String) -> (u32, String) {
+        let QualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.qualified_constructor;
+        if let Some((pos, c)) = self.find_last_char_before_closing_brace() {
+            // Case: import module.{Existing, } (as alias)
+            if c == ',' {
+                (pos as u32 + 1, format!(" {}", name))
+            } else {
+                // Case: import module.{Existing} (as alias)
+                (pos as u32 + 1, format!(", {}", name))
+            }
+        } else {
+            // Case: import module.{} (as alias)
+            let import_code = self.get_import_code();
+            let left_brace_pos = import_code
+                .find('{')
+                .map(|pos| location.start as usize + pos)
+                .expect("Expected '{' in import statement");
+            (left_brace_pos as u32 + 1, name)
+        }
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        for arg in args {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+        if let Some(return_) = return_annotation {
+            self.visit_type_ast(return_);
+        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+
+        if let Some(return_annotation) = &fun.return_annotation {
+            self.visit_type_ast(return_annotation);
+        }
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::TypeAst>,
+    ) {
+        if let Some((module_name, _)) = module {
+            let QualifiedConstructor {
+                used_name,
+                constructor,
+                is_type,
+                ..
+            } = &self.qualified_constructor;
+
+            if *is_type && used_name == module_name && name == constructor {
+                self.remove_module_qualifier(*location, QualifiedConstructorType::Type);
+            }
+        }
+        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_typed_expr_module_select(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        label: &'ast EcoString,
+        module_name: &'ast EcoString,
+        module_alias: &'ast EcoString,
+        constructor: &'ast ModuleValueConstructor,
+    ) {
+        if let ModuleValueConstructor::Record { name, .. } = constructor {
+            let QualifiedConstructor {
+                used_name,
+                constructor,
+                is_type,
+                ..
+            } = &self.qualified_constructor;
+
+            if !*is_type && used_name == module_alias && name == constructor {
+                self.remove_module_qualifier(*location, QualifiedConstructorType::RecordValue);
+            }
+        }
+        ast::visit::visit_typed_expr_module_select(
+            self,
+            location,
+            type_,
+            label,
+            module_name,
+            module_alias,
+            constructor,
+        )
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if let Some((module_alias, _)) = module {
+            if let crate::analyse::Inferred::Known(_) = constructor {
+                let QualifiedConstructor {
+                    used_name,
+                    constructor,
+                    is_type,
+                    ..
+                } = &self.qualified_constructor;
+
+                if !*is_type && used_name == module_alias && name == constructor {
+                    self.remove_module_qualifier(
+                        *location,
+                        QualifiedConstructorType::PatternRecord,
+                    );
+                }
+            }
+        }
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
+    }
+}
+
+pub fn code_action_convert_qualified_constructor_to_unqualified(
+    module: &Module,
+    params: &CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut first_pass =
+        QualifiedToUnqualifiedImportFirstPass::new(module, params, line_numbers.clone());
+    first_pass.visit_typed_module(&module.ast);
+    let Some(qualified_constructor) = first_pass.qualified_constructor else {
+        return;
+    };
+    let second_pass = QualifiedToUnqualifiedImportSecondPass::new(
+        module,
+        params,
+        line_numbers,
+        qualified_constructor,
+    );
+    let new_actions = second_pass.code_actions();
+    actions.extend(new_actions);
+}
