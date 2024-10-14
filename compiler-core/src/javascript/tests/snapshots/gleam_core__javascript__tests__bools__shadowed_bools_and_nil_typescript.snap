@@ -4,11 +4,17 @@ expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  let assert
 ---
 import type * as _ from "../gleam.d.mts";
 
-export class True extends _.CustomType {}
+export class True extends _.CustomType {
+  private __brand: void;
+}
 
-export class False extends _.CustomType {}
+export class False extends _.CustomType {
+  private __brand: void;
+}
 
-export class Nil extends _.CustomType {}
+export class Nil extends _.CustomType {
+  private __brand: void;
+}
 
 export type True$ = True | False | Nil;
 

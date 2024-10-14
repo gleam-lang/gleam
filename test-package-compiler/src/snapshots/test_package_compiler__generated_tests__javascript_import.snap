@@ -26,7 +26,9 @@ export * from "../prelude.mjs";
 //// /out/lib/the_package/one/two.d.mts
 import type * as _ from "../gleam.d.mts";
 
-export class A extends _.CustomType {}
+export class A extends _.CustomType {
+  private __brand: void;
+}
 
 export type A$ = A;
 

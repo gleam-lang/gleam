@@ -5,6 +5,8 @@ expression: "\npub type TypeWithALongNameAndSeveralArguments{\n  TypeWithALongNa
 import type * as _ from "../gleam.d.mts";
 
 export class TypeWithALongNameAndSeveralArguments extends _.CustomType {
+  private __brand: void;
+
   constructor(
     argument$0: string,
     argument$1: string,

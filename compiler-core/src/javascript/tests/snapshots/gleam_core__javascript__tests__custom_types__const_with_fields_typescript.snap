@@ -5,6 +5,8 @@ expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = 
 import type * as _ from "../gleam.d.mts";
 
 export class Mine extends _.CustomType {
+  private __brand: void;
+
   constructor(a: number, b: number);
   
   a: number;

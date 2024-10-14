@@ -2,6 +2,10 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\npub type TESTitem\n\n@external(javascript, \"it\", \"one\")\npub fn one(a: TESTitem) -> TESTitem\n"
 ---
-export type TESTitem$ = any;
+declare class TESTitem extends _.CustomType {
+  private __brand: void;
+}
+
+export type TESTitem$ = TESTitem;
 
 export function one(a: TESTitem$): TESTitem$;

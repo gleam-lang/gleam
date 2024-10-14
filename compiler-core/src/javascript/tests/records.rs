@@ -1,4 +1,4 @@
-use crate::assert_js;
+use crate::{assert_js, assert_ts_def};
 
 #[test]
 fn record_accessors() {
@@ -66,5 +66,26 @@ pub type Person {
 }
 pub fn get_name(person: Person) { person.name }
 pub fn get_age(person: Person) { person.age }"
+    );
+}
+
+#[test]
+fn record_with_no_variants_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Dict(key, value)
+"#,
+    );
+}
+
+#[test]
+fn record_with_variants_typescript() {
+    assert_ts_def!(
+        r#"
+pub type Test {
+  Test1()
+  Test2()
+}
+"#,
     );
 }
