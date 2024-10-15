@@ -1,5 +1,6 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
+use crate::package_interface::{self, ModuleInterface};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -22,6 +23,7 @@ use crate::{
 };
 use askama::Template;
 use ecow::EcoString;
+use std::borrow::BorrowMut;
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 use vec1::Vec1;
@@ -182,9 +184,10 @@ where
             incomplete_modules,
         );
 
-        let modules = match outcome {
+        let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
+            Outcome::PartialFailure(modules, err) => return Outcome::PartialFailure(modules, err),
+            Outcome::TotalFailure(err) => return Outcome::TotalFailure(err),
         };
 
         tracing::debug!("performing_code_generation");
@@ -612,7 +615,7 @@ pub(crate) struct CachedModule {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub(crate) struct CacheMetadata {
+pub struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
     pub dependencies: Vec<(EcoString, SrcSpan)>,

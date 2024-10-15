@@ -20,6 +20,7 @@ use crate::ast::{
     CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
     TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
+use crate::package_interface;
 use crate::type_::Type;
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -184,6 +185,7 @@ pub enum Mode {
     Dev,
     Prod,
     Lsp,
+    PackageInterface,
 }
 
 impl Mode {
@@ -192,7 +194,7 @@ impl Mode {
     pub fn includes_tests(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
-            Self::Prod => false,
+            Self::Prod | Self::PackageInterface => false,
         }
     }
 }
