@@ -1,7 +1,6 @@
 use gleam_core::{
     error::{Error, FileIoAction, FileKind, Result, StandardIoAction, Unformatted},
-    io::Content,
-    io::OutputFile,
+    io::{Content, OutputFile},
 };
 use std::{io::Read, str::FromStr};
 

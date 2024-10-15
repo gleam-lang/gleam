@@ -20,6 +20,7 @@ use crate::ast::{
     CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
     TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
+use crate::sourcemap::SourceMapEmitter;
 use crate::type_::Type;
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -142,6 +143,7 @@ impl Default for Runtime {
 pub enum TargetCodegenConfiguration {
     JavaScript {
         emit_typescript_definitions: bool,
+        emit_source_map: bool,
         prelude_location: Utf8PathBuf,
     },
     Erlang {
