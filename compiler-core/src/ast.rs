@@ -2331,3 +2331,22 @@ pub struct UseAssignment {
     pub pattern: UntypedPattern,
     pub annotation: Option<TypeAst>,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct TypedPipelineAssignment {
+    pub location: SrcSpan,
+    pub name: EcoString,
+    pub value: Box<TypedExpr>,
+}
+
+impl TypedPipelineAssignment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value
+            .find_node(byte_index)
+            .or_else(|| self.value.find_node(byte_index))
+    }
+
+    pub fn type_(&self) -> Arc<Type> {
+        self.value.type_()
+    }
+}

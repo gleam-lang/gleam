@@ -550,6 +550,20 @@ pub enum Error {
         kind: Named,
         name: EcoString,
     },
+
+    /// When the echo keyword is not followed by an expression to be printed.
+    /// The only place where echo is allowed to appear on its own is as a step
+    /// of a pipeline, otherwise omitting the expression will result in this
+    /// error. For example:
+    ///
+    /// ```gleam
+    /// call(echo, 1, 2)
+    /// //   ^^^^ Error!
+    /// ```
+    ///
+    EchoWithNoFollowingExpression {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -938,6 +952,7 @@ impl Error {
             }
             | Error::UseFnDoesntTakeCallback { location, .. }
             | Error::UseFnIncorrectArity { location, .. }
+            | Error::EchoWithNoFollowingExpression { location }
             | Error::BadName { location, .. } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)

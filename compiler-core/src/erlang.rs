@@ -152,6 +152,12 @@ pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers) -> Res
     Ok(module_document(module, line_numbers)?.to_pretty_string(MAX_COLUMNS))
 }
 
+struct ModulePrinter<'a> {
+    exports: Vec<Document<'a>>,
+    type_defs: Vec<Document<'a>>,
+    type_exports: Vec<Document<'a>>,
+}
+
 fn module_document<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
@@ -1711,6 +1717,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::Tuple { .. }
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
+        | TypedExpr::Echo { .. }
         | TypedExpr::Panic { .. }
         | TypedExpr::BitArray { .. }
         | TypedExpr::RecordUpdate { .. }
@@ -1734,6 +1741,10 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
         None => string("`panic` expression evaluated."),
     };
     erlang_error("panic", &message, location, vec![], env)
+}
+
+fn echo<'a>(body: Document<'a>, env: &mut Env<'a>) -> Document<'a> {
+    "echo".to_doc().append(wrap_args(vec![body]))
 }
 
 fn erlang_error<'a>(
@@ -1791,6 +1802,13 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Panic {
             location, message, ..
         } => panic(*location, message.as_deref(), env),
+
+        TypedExpr::Echo { expression, .. } => {
+            let expression = expression
+                .as_ref()
+                .expect("echo with no expression outside of pipe");
+            echo(expr(expression, env), env)
+        }
 
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
@@ -1871,19 +1889,47 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn pipeline<'a>(
-    assignments: &'a [TypedAssignment],
+    assignments: &'a [TypedPipelineAssignment],
     finally: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut documents = Vec::with_capacity((assignments.len() + 1) * 3);
 
+    let echo_doc = |var_name: &Option<Document<'a>>, env: &mut Env<'a>| {
+        let name = var_name
+            .to_owned()
+            .expect("echo with no previous step in a pipe");
+        echo(name, env)
+    };
+
+    let mut prev_local_var_name = None;
     for a in assignments {
-        documents.push(assignment(a, env));
-        documents.push(','.to_doc());
+        match a.value.as_ref() {
+            // An echo in a pipeline won't result in an assignment, instead it
+            // just prints the previous variable assigned in the pipeline.
+            TypedExpr::Echo {
+                expression: None, ..
+            } => documents.push(echo_doc(&prev_local_var_name, env)),
+
+            // Otherwise we assign the intermediate pipe value to a variable.
+            _ => {
+                let body = maybe_block_expr(&a.value, env).group();
+                let name = env.next_local_var_name(&a.name);
+                prev_local_var_name = Some(name.clone());
+                documents.push(docvec![name, " = ", body]);
+            }
+        };
+        documents.push(",".to_doc());
         documents.push(line());
     }
 
-    documents.push(expr(finally, env));
+    match finally {
+        TypedExpr::Echo {
+            expression: None, ..
+        } => documents.push(echo_doc(&prev_local_var_name, env)),
+        _ => documents.push(expr(finally, env)),
+    }
+
     documents.to_doc()
 }
 

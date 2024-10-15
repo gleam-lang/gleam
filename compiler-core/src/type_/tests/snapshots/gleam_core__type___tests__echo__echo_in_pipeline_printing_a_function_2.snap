@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/type_/tests/echo.rs
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo wibble\n}\n\nfn wibble(_: List(Float)) -> List(String) { todo }\n"
+---
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:6
+  │
+4 │   |> echo wibble
+  │      ^^^^^^^^^^^ This function does not accept the piped type
+
+The argument is:
+
+    List(Int)
+
+But function expects:
+
+    List(Float)
