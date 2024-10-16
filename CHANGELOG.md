@@ -172,6 +172,10 @@
 - Fixed the prelude re-export in generated TypeScript definitions.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where the compiler would incorrectly type-check and compile
+  calls to functions with labelled arguments in certain cases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
