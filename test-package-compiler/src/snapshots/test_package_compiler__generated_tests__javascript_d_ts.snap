@@ -20,7 +20,9 @@ export * from "../prelude.mjs";
 //// /out/lib/the_package/hello.d.mts
 import type * as _ from "./gleam.d.mts";
 
-export class Woo extends _.CustomType {}
+export class Woo extends _.CustomType {
+  private __brand: void;
+}
 
 export type Wibble$ = Woo;
 

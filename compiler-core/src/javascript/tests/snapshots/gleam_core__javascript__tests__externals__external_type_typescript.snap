@@ -2,6 +2,10 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "pub type Queue(a)\n\n@external(javascript, \"queue\", \"new\")\npub fn new() -> Queue(a)\n"
 ---
-export type Queue$<I> = any;
+declare class Queue<I> extends _.CustomType {
+  private __brand: void;
+}
+
+export type Queue$<I> = Queue<I>;
 
 export function new$(): Queue$<any>;

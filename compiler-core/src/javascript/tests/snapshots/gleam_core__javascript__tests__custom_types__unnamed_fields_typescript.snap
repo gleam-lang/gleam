@@ -5,6 +5,8 @@ expression: "\npub type Ip{\n    Ip(String)\n}\n\npub const local = Ip(\"0.0.0.0
 import type * as _ from "../gleam.d.mts";
 
 export class Ip extends _.CustomType {
+  private __brand: void;
+
   constructor(argument$0: string);
   
   0: string;

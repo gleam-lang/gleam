@@ -172,6 +172,10 @@
 - Fixed the prelude re-export in generated TypeScript definitions.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed TypeScript definitions for records with identical structures not being
+  nominally typed.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes

@@ -2,6 +2,10 @@
 source: compiler-core/src/javascript/tests/generics.rs
 expression: "pub type Promise(value)\n    pub type Task(a) = fn() -> Promise(a)"
 ---
-export type Promise$<I> = any;
+declare class Promise<I> extends _.CustomType {
+  private __brand: void;
+}
+
+export type Promise$<I> = Promise<I>;
 
 export type Task = () => Promise$<any>;

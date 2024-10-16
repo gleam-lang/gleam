@@ -1,0 +1,9 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+expression: "\npub type Dict(key, value)\n"
+---
+declare class Dict<I, J> extends _.CustomType {
+  private __brand: void;
+}
+
+export type Dict$<I, J> = Dict<I, J>;

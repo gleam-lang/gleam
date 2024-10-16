@@ -5,12 +5,16 @@ expression: "pub type Animal(t) {\n  Cat(type_: t)\n  Dog(type_: t)\n}\n\npub fn
 import type * as _ from "../gleam.d.mts";
 
 export class Cat<I> extends _.CustomType {
+  private __brand: void;
+
   constructor(type_: I);
   
   type_: I;
 }
 
 export class Dog<I> extends _.CustomType {
+  private __brand: void;
+
   constructor(type_: I);
   
   type_: I;

@@ -56,10 +56,11 @@ fn name_with_generics<'a>(
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> Document<'a> {
     let generic_usages = collect_generic_usages(HashMap::new(), types);
-    let generic_names: Vec<Document<'_>> = generic_usages
-        .keys()
-        .map(|id| id_to_type_var(*id))
-        .collect();
+
+    let mut generic_ids = generic_usages.keys().copied().collect::<Vec<_>>();
+    generic_ids.sort();
+
+    let generic_names: Vec<Document<'_>> = generic_ids.into_iter().map(id_to_type_var).collect();
 
     docvec![
         name,
@@ -367,13 +368,25 @@ impl<'a> TypeScriptGenerator<'a> {
         // Constructors for opaque and private types are not exported
         let export_constructors = !opaque && publicity.is_importable();
 
-        let mut definitions: Vec<Output<'_>> = constructors
-            .iter()
-            .map(|constructor| Ok(self.record_definition(constructor, export_constructors)))
-            .collect();
+        let mut definitions: Vec<Output<'_>> = if constructors.is_empty() {
+            vec![Ok(docvec![
+                "declare class ",
+                name_with_generics(super::maybe_escape_identifier_doc(name), typed_parameters),
+                " extends _.CustomType {",
+                line(),
+                self.brand_property(),
+                line(),
+                "}"
+            ])]
+        } else {
+            constructors
+                .iter()
+                .map(|constructor| Ok(self.record_definition(constructor, export_constructors)))
+                .collect()
+        };
 
         let definition = if constructors.is_empty() {
-            "any".to_doc()
+            name_with_generics(super::maybe_escape_identifier_doc(name), typed_parameters)
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(
@@ -400,6 +413,10 @@ impl<'a> TypeScriptGenerator<'a> {
         definitions
     }
 
+    fn brand_property(&self) -> Document<'a> {
+        docvec!["  private __brand: void;"]
+    }
+
     fn record_definition(
         &mut self,
         constructor: &'a TypedRecordConstructor,
@@ -417,7 +434,10 @@ impl<'a> TypeScriptGenerator<'a> {
                 super::maybe_escape_identifier_doc(&constructor.name),
                 constructor.arguments.iter().map(|a| &a.type_)
             ),
-            " extends _.CustomType {"
+            " extends _.CustomType {",
+            line(),
+            self.brand_property(),
+            line()
         ];
 
         if constructor.arguments.is_empty() {
