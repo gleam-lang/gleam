@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/javascript/tests/records.rs
+expression: "\npub type Person\npub type Dict(key, value)\n"
+---
+declare const __brand_Person: unique symbol;
+type Person = { [__brand_Person]: void };
+
+export type Person$ = Person;
+
+declare const __brand_Dict: unique symbol;
+type Dict = { [__brand_Dict]: void };
+
+export type Dict$<I, J> = Dict;

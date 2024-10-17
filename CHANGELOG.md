@@ -109,6 +109,10 @@
   the Erlang target if any of their arguments were discarded.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Records with no variants now emit a stronger TypeScript type definition that
+  enforces type safety instead of using the `any` type.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Formatter
 
 ### Language Server

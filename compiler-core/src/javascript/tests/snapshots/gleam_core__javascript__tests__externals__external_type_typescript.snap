@@ -2,6 +2,9 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "pub type Queue(a)\n\n@external(javascript, \"queue\", \"new\")\npub fn new() -> Queue(a)\n"
 ---
-export type Queue$<I> = any;
+declare const __brand_Queue: unique symbol;
+type Queue = { [__brand_Queue]: void };
+
+export type Queue$<I> = Queue;
 
 export function new$(): Queue$<any>;
