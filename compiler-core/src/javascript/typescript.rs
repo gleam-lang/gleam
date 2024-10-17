@@ -56,10 +56,12 @@ fn name_with_generics<'a>(
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> Document<'a> {
     let generic_usages = collect_generic_usages(HashMap::new(), types);
-    let generic_names: Vec<Document<'_>> = generic_usages
-        .keys()
-        .map(|id| id_to_type_var(*id))
-        .collect();
+
+    // Sort the id keys to ensure a deterministic ordering
+    let mut generic_ids = generic_usages.keys().copied().collect::<Vec<_>>();
+    generic_ids.sort();
+
+    let generic_names: Vec<Document<'_>> = generic_ids.into_iter().map(id_to_type_var).collect();
 
     docvec![
         name,
@@ -354,7 +356,7 @@ impl<'a> TypeScriptGenerator<'a> {
     /// emits a union type to represent the TypeScript type itself. Because in
     /// Gleam constructors can have the same name as the custom type, here we
     /// append a "$" symbol to the emitted TypeScript type to prevent those
-    /// naming classes.
+    /// naming clashes.
     ///
     fn custom_type_definition(
         &mut self,
@@ -367,13 +369,29 @@ impl<'a> TypeScriptGenerator<'a> {
         // Constructors for opaque and private types are not exported
         let export_constructors = !opaque && publicity.is_importable();
 
-        let mut definitions: Vec<Output<'_>> = constructors
-            .iter()
-            .map(|constructor| Ok(self.record_definition(constructor, export_constructors)))
-            .collect();
+        let mut definitions: Vec<Output<'_>> = if constructors.is_empty() {
+            let symbol_name = docvec!["__brand_", name];
+
+            vec![Ok(docvec![
+                "declare const ",
+                symbol_name.clone(),
+                ": unique symbol;",
+                line(),
+                "type ",
+                name,
+                " = { [",
+                symbol_name,
+                "]: void };",
+            ])]
+        } else {
+            constructors
+                .iter()
+                .map(|constructor| Ok(self.record_definition(constructor, export_constructors)))
+                .collect()
+        };
 
         let definition = if constructors.is_empty() {
-            "any".to_doc()
+            docvec![name]
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(
