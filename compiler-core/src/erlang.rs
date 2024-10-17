@@ -24,6 +24,7 @@ use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
+use num::{BigInt, BigRational};
 use pattern::pattern;
 use regex::{Captures, Regex};
 use std::sync::OnceLock;
@@ -582,53 +583,120 @@ fn const_string_concatenate_bit_array<'a>(
         .group()
 }
 
-fn const_string_concatenate<'a>(
-    left: &'a TypedConstant,
-    right: &'a TypedConstant,
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    let left = const_string_concatenate_argument(left, env);
-    let right = const_string_concatenate_argument(right, env);
-    const_string_concatenate_bit_array([left, right])
+/// Represents a temporary value for computing constant operations, as most values
+/// can be represented more simply than a TypedConstant
+#[derive(Debug, Clone, PartialEq)]
+enum FoldedConstant<'a> {
+    Int(BigInt),
+    Float(BigRational),
+    String(EcoString),
+    Bool(bool),
+    /// For more complex constants, such as tuples, bit arrays and records
+    Complex(&'a TypedConstant),
 }
 
-fn const_string_concatenate_inner<'a>(
+fn const_bin_op<'a>(
     left: &'a TypedConstant,
     right: &'a TypedConstant,
-    env: &mut Env<'a>,
-) -> Document<'a> {
-    let left = const_string_concatenate_argument(left, env);
-    let right = const_string_concatenate_argument(right, env);
-    join([left, right], break_(",", ", "))
+    name: &BinOp,
+) -> FoldedConstant<'a> {
+    let left = fold_constants(left);
+    let right = fold_constants(right);
+
+    match (name, left, right) {
+        (BinOp::And, FoldedConstant::Bool(left), FoldedConstant::Bool(right)) => {
+            FoldedConstant::Bool(left && right)
+        }
+        (BinOp::Or, FoldedConstant::Bool(left), FoldedConstant::Bool(right)) => {
+            FoldedConstant::Bool(left || right)
+        }
+        (BinOp::Eq, left, right) => FoldedConstant::Bool(left == right),
+        (BinOp::NotEq, left, right) => FoldedConstant::Bool(left != right),
+        (BinOp::LtInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Bool(left < right)
+        }
+        (BinOp::LtEqInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Bool(left <= right)
+        }
+        (BinOp::LtFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Bool(left < right)
+        }
+        (BinOp::LtEqFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Bool(left <= right)
+        }
+        (BinOp::GtEqInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Bool(left >= right)
+        }
+        (BinOp::GtInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Bool(left > right)
+        }
+        (BinOp::GtEqFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Bool(left >= right)
+        }
+        (BinOp::GtFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Bool(left > right)
+        }
+        (BinOp::AddInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Int(left + right)
+        }
+        (BinOp::AddFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Float(left + right)
+        }
+        (BinOp::SubInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Int(left - right)
+        }
+        (BinOp::SubFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Float(left - right)
+        }
+        (BinOp::MultInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Int(left * right)
+        }
+        (BinOp::MultFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Float(left * right)
+        }
+        (BinOp::DivInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Int(left / right)
+        }
+        (BinOp::RemainderInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
+            FoldedConstant::Int(left % right)
+        }
+        (BinOp::DivFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
+            FoldedConstant::Float(left / right)
+        }
+        (BinOp::Concatenate, FoldedConstant::String(mut left), FoldedConstant::String(right)) => {
+            left.push_str(&right);
+            FoldedConstant::String(left)
+        }
+        _ => panic!("Types have already been checked"),
+    }
 }
 
-fn const_string_concatenate_argument<'a>(
-    value: &'a TypedConstant,
-    env: &mut Env<'a>,
-) -> Document<'a> {
+fn fold_constants<'a>(value: &'a TypedConstant) -> FoldedConstant<'a> {
     match value {
-        Constant::String { value, .. } => docvec!['"', string_inner(value), "\"/utf8"],
-
         Constant::Var {
             constructor: Some(constructor),
             ..
         } => match &constructor.variant {
-            ValueConstructorVariant::ModuleConstant {
-                literal: Constant::String { value, .. },
-                ..
-            } => docvec!['"', string_inner(value), "\"/utf8"],
-            ValueConstructorVariant::ModuleConstant {
-                literal: Constant::StringConcatenation { left, right, .. },
-                ..
-            } => const_string_concatenate_inner(left, right, env),
-            _ => const_inline(value, env),
+            ValueConstructorVariant::ModuleConstant { literal, .. } => fold_constants(literal),
+            _ => FoldedConstant::Complex(value),
         },
-
-        Constant::StringConcatenation { left, right, .. } => {
-            const_string_concatenate_inner(left, right, env)
+        Constant::BinaryOperation {
+            left, right, name, ..
+        } => const_bin_op(left, right, name),
+        Constant::Int { value, .. } => {
+            FoldedConstant::Int(value.parse().expect("Syntax should be valid"))
         }
-
-        _ => const_inline(value, env),
+        Constant::Float { value, .. } => {
+            FoldedConstant::Float(value.parse().expect("Syntax should be valid"))
+        }
+        Constant::String { value, .. } => FoldedConstant::String(value.clone()),
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
+            FoldedConstant::Bool(true)
+        }
+        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
+            FoldedConstant::Bool(false)
+        }
+        _ => FoldedConstant::Complex(value),
     }
 }
 
@@ -1210,8 +1278,17 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
             env,
         ),
 
-        Constant::StringConcatenation { left, right, .. } => {
-            const_string_concatenate(left, right, env)
+        Constant::BinaryOperation {
+            left, right, name, ..
+        } => {
+            let folded = const_bin_op(left, right, name);
+            match folded {
+                FoldedConstant::Int(value) => eco_format!("{value}").to_doc(),
+                FoldedConstant::Float(value) => eco_format!("{value}").to_doc(),
+                FoldedConstant::String(value) => value.to_doc(),
+                FoldedConstant::Bool(value) => if value { "true" } else { "false" }.to_doc(),
+                FoldedConstant::Complex(inner) => const_inline(inner, env),
+            }
         }
 
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
@@ -2370,7 +2447,7 @@ fn find_referenced_private_functions(
             .iter()
             .for_each(|arg| find_referenced_private_functions(&arg.value, already_found)),
 
-        TypedConstant::StringConcatenation { left, right, .. } => {
+        TypedConstant::BinaryOperation { left, right, .. } => {
             find_referenced_private_functions(left, already_found);
             find_referenced_private_functions(right, already_found);
         }

@@ -1014,7 +1014,10 @@ See: https://tour.gleam.run/functions/pipelines/",
                     let feature = match feature_kind {
                         FeatureKind::LabelShorthandSyntax => "The label shorthand syntax was",
                         FeatureKind::ConstantStringConcatenation => {
-                            "Constant strings concatenation was"
+                            "Constant string concatenation was"
+                        }
+                        FeatureKind::ConstantBinaryOperations => {
+                            "Binary operations in constants were"
                         }
                         FeatureKind::ArithmeticInGuards => "Arithmetic operations in guards were",
                         FeatureKind::UnannotatedUtf8StringSegment => {

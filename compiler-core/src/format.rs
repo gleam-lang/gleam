@@ -507,9 +507,11 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => docvec![module, ".", name],
 
-            Constant::StringConcatenation { left, right, .. } => self
+            Constant::BinaryOperation {
+                left, right, name, ..
+            } => self
                 .const_expr(left)
-                .append(break_("", " ").append("<>".to_doc()))
+                .append(break_("", " ").append(name.to_doc()))
                 .nest(INDENT)
                 .append(" ")
                 .append(self.const_expr(right)),

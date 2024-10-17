@@ -2,13 +2,14 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::{infer_bit_array_option, name::check_argument_names},
     ast::{
-        Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
-        ClauseGuard, Constant, FunctionLiteralKind, HasLocation, ImplicitCallArgOrigin, Layer,
-        RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment,
-        TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
-        UntypedArg, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
-        UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
-        UntypedMultiPattern, UntypedStatement, Use, UseAssignment, USE_ASSIGNMENT_VARIABLE,
+        Arg, Assignment, AssignmentKind, BinOp, BinOpInput, BinOpTypeInformation, BitArrayOption,
+        BitArraySegment, CallArg, Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation,
+        ImplicitCallArgOrigin, Layer, RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst,
+        TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
+        TypedMultiPattern, TypedStatement, UntypedArg, UntypedAssignment, UntypedClause,
+        UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment, UntypedExpr,
+        UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, Use, UseAssignment,
+        USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
     exhaustiveness::{self, Reachability},
@@ -1174,55 +1175,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         right: UntypedExpr,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let (input_type, output_type) = match &name {
-            BinOp::Eq | BinOp::NotEq => {
-                let left = self.infer(left)?;
-                let right = self.infer(right)?;
-                unify(left.type_(), right.type_())
-                    .map_err(|e| convert_unify_error(e, right.location()))?;
-
-                self.check_for_inefficient_empty_list_check(name, &left, &right, location);
-
-                return Ok(TypedExpr::BinOp {
-                    location,
-                    name,
-                    type_: bool(),
-                    left: Box::new(left),
-                    right: Box::new(right),
-                });
-            }
-            BinOp::And => (bool(), bool()),
-            BinOp::Or => (bool(), bool()),
-            BinOp::LtInt => (int(), bool()),
-            BinOp::LtEqInt => (int(), bool()),
-            BinOp::LtFloat => (float(), bool()),
-            BinOp::LtEqFloat => (float(), bool()),
-            BinOp::GtEqInt => (int(), bool()),
-            BinOp::GtInt => (int(), bool()),
-            BinOp::GtEqFloat => (float(), bool()),
-            BinOp::GtFloat => (float(), bool()),
-            BinOp::AddInt => (int(), int()),
-            BinOp::AddFloat => (float(), float()),
-            BinOp::SubInt => (int(), int()),
-            BinOp::SubFloat => (float(), float()),
-            BinOp::MultInt => (int(), int()),
-            BinOp::MultFloat => (float(), float()),
-            BinOp::DivInt => (int(), int()),
-            BinOp::DivFloat => (float(), float()),
-            BinOp::RemainderInt => (int(), int()),
-            BinOp::Concatenate => (string(), string()),
-        };
+        let BinOpTypeInformation {
+            input_type,
+            output_type,
+        } = name.type_information();
 
         let left = self.infer(left)?;
-        unify(input_type.clone(), left.type_()).map_err(|e| {
-            e.operator_situation(name)
-                .into_error(left.type_defining_location())
-        })?;
         let right = self.infer(right)?;
-        unify(input_type, right.type_()).map_err(|e| {
-            e.operator_situation(name)
-                .into_error(right.type_defining_location())
-        })?;
+
+        match input_type {
+            BinOpInput::BothMatching => {
+                unify(left.type_(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+            }
+            BinOpInput::OfType(input_type) => {
+                unify(input_type.clone(), left.type_()).map_err(|e| {
+                    e.operator_situation(name)
+                        .into_error(left.type_defining_location())
+                })?;
+                unify(input_type, right.type_()).map_err(|e| {
+                    e.operator_situation(name)
+                        .into_error(right.type_defining_location())
+                })?;
+            }
+        }
 
         self.check_for_inefficient_empty_list_check(name, &left, &right, location);
 
@@ -2672,9 +2648,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-            Constant::Float {
-                location, value, ..
-            } => Ok(Constant::Float { location, value }),
+            Constant::Float { location, value } => Ok(Constant::Float { location, value }),
 
             Constant::String {
                 location, value, ..
@@ -2903,27 +2877,46 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             }
 
-            Constant::StringConcatenation {
-                location,
+            Constant::BinaryOperation {
+                name,
                 left,
                 right,
+                location,
+                type_: _,
             } => {
-                self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
-                let left = self.infer_const(&None, *left);
-                unify(string(), left.type_()).map_err(|e| {
-                    e.operator_situation(BinOp::Concatenate)
-                        .into_error(left.location())
-                })?;
-                let right = self.infer_const(&None, *right);
-                unify(string(), right.type_()).map_err(|e| {
-                    e.operator_situation(BinOp::Concatenate)
-                        .into_error(right.location())
-                })?;
+                let left = self.infer_const_value(*left)?;
+                let right = self.infer_const_value(*right)?;
+                let BinOpTypeInformation {
+                    input_type,
+                    output_type,
+                } = name.type_information();
 
-                Ok(Constant::StringConcatenation {
+                match input_type {
+                    BinOpInput::BothMatching => {
+                        unify(left.type_(), right.type_())
+                            .map_err(|e| convert_unify_error(e, right.location()))?;
+                    }
+                    BinOpInput::OfType(input_type) => {
+                        unify(input_type.clone(), left.type_())
+                            .map_err(|e| e.operator_situation(name).into_error(left.location()))?;
+                        unify(input_type, right.type_())
+                            .map_err(|e| e.operator_situation(name).into_error(right.location()))?;
+                    }
+                }
+
+                match name {
+                    BinOp::Concatenate => {
+                        self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location)
+                    }
+                    _ => self.track_feature_usage(FeatureKind::ConstantBinaryOperations, location),
+                }
+
+                Ok(Constant::BinaryOperation {
                     location,
                     left: Box::new(left),
                     right: Box::new(right),
+                    name,
+                    type_: output_type,
                 })
             }
 

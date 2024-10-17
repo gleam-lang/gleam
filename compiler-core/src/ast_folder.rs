@@ -892,11 +892,13 @@ pub trait UntypedConstantFolder {
                 type_: (),
             } => self.fold_constant_var(location, module, name),
 
-            Constant::StringConcatenation {
+            Constant::BinaryOperation {
                 location,
                 left,
                 right,
-            } => self.fold_constant_string_concatenation(location, left, right),
+                name,
+                type_: (),
+            } => self.fold_constant_bin_op(location, left, right, name),
 
             Constant::Invalid {
                 location,
@@ -987,16 +989,19 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_string_concatenation(
+    fn fold_constant_bin_op(
         &mut self,
         location: SrcSpan,
         left: Box<UntypedConstant>,
         right: Box<UntypedConstant>,
+        name: BinOp,
     ) -> UntypedConstant {
-        Constant::StringConcatenation {
+        Constant::BinaryOperation {
             location,
             left,
             right,
+            name,
+            type_: (),
         }
     }
 
@@ -1071,17 +1076,21 @@ pub trait UntypedConstantFolder {
                 Constant::BitArray { location, segments }
             }
 
-            Constant::StringConcatenation {
+            Constant::BinaryOperation {
                 location,
                 left,
                 right,
+                name,
+                type_,
             } => {
                 let left = Box::new(self.fold_constant(*left));
                 let right = Box::new(self.fold_constant(*right));
-                Constant::StringConcatenation {
+                Constant::BinaryOperation {
                     location,
                     left,
                     right,
+                    name,
+                    type_,
                 }
             }
         }

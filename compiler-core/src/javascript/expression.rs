@@ -181,7 +181,11 @@ impl<'module> Generator<'module> {
 
             TypedExpr::BinOp {
                 name, left, right, ..
-            } => self.bin_op(name, left, right),
+            } => {
+                let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
+                let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+                bin_op(self.tracker, name, left_doc, right_doc, left.type_())
+            }
 
             TypedExpr::Todo {
                 message, location, ..
@@ -882,102 +886,6 @@ impl<'module> Generator<'module> {
         })
     }
 
-    fn bin_op<'a>(
-        &mut self,
-        name: &'a BinOp,
-        left: &'a TypedExpr,
-        right: &'a TypedExpr,
-    ) -> Output<'a> {
-        match name {
-            BinOp::And => self.print_bin_op(left, right, "&&"),
-            BinOp::Or => self.print_bin_op(left, right, "||"),
-            BinOp::LtInt | BinOp::LtFloat => self.print_bin_op(left, right, "<"),
-            BinOp::LtEqInt | BinOp::LtEqFloat => self.print_bin_op(left, right, "<="),
-            BinOp::Eq => self.equal(left, right, true),
-            BinOp::NotEq => self.equal(left, right, false),
-            BinOp::GtInt | BinOp::GtFloat => self.print_bin_op(left, right, ">"),
-            BinOp::GtEqInt | BinOp::GtEqFloat => self.print_bin_op(left, right, ">="),
-            BinOp::Concatenate | BinOp::AddInt | BinOp::AddFloat => {
-                self.print_bin_op(left, right, "+")
-            }
-            BinOp::SubInt | BinOp::SubFloat => self.print_bin_op(left, right, "-"),
-            BinOp::MultInt | BinOp::MultFloat => self.print_bin_op(left, right, "*"),
-            BinOp::RemainderInt => self.remainder_int(left, right),
-            BinOp::DivInt => self.div_int(left, right),
-            BinOp::DivFloat => self.div_float(left, right),
-        }
-    }
-
-    fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
-        self.tracker.int_division_used = true;
-        Ok(docvec!("divideInt", wrap_args([left, right])))
-    }
-
-    fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
-        self.tracker.int_remainder_used = true;
-        Ok(docvec!("remainderInt", wrap_args([left, right])))
-    }
-
-    fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
-        self.tracker.float_division_used = true;
-        Ok(docvec!("divideFloat", wrap_args([left, right])))
-    }
-
-    fn equal<'a>(
-        &mut self,
-        left: &'a TypedExpr,
-        right: &'a TypedExpr,
-        should_be_equal: bool,
-    ) -> Output<'a> {
-        // If it is a simple scalar type then we can use JS' reference identity
-        if is_js_scalar(left.type_()) {
-            let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-            let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
-            let operator = if should_be_equal { " === " } else { " !== " };
-            return Ok(docvec!(left_doc, operator, right_doc));
-        }
-
-        // Other types must be compared using structural equality
-        let left = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
-        Ok(self.prelude_equal_call(should_be_equal, left, right))
-    }
-
-    pub(super) fn prelude_equal_call<'a>(
-        &mut self,
-        should_be_equal: bool,
-        left: Document<'a>,
-        right: Document<'a>,
-    ) -> Document<'a> {
-        // Record that we need to import the prelude's isEqual function into the module
-        self.tracker.object_equality_used = true;
-        // Construct the call
-        let args = wrap_args([left, right]);
-        let operator = if should_be_equal {
-            "isEqual"
-        } else {
-            "!isEqual"
-        };
-        docvec!(operator, args)
-    }
-
-    fn print_bin_op<'a>(
-        &mut self,
-        left: &'a TypedExpr,
-        right: &'a TypedExpr,
-        op: &'a str,
-    ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
-        Ok(docvec!(left, " ", op, " ", right))
-    }
-
     fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
         let message = match message {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
@@ -1146,6 +1054,18 @@ impl<'module> Generator<'module> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
+/// The context where the constant expression is used, it might be inside a
+/// function call, or in the definition of another constant.
+///
+/// Based on the context we might want to annotate pure function calls as
+/// "@__PURE__".
+///
+pub enum Context {
+    Constant,
+    Function,
+}
+
 pub fn int(value: &str) -> Document<'_> {
     let mut out = EcoString::with_capacity(value.len());
 
@@ -1282,18 +1202,6 @@ pub(crate) fn guard_constant_expression<'a>(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-/// The context where the constant expression is used, it might be inside a
-/// function call, or in the definition of another constant.
-///
-/// Based on the context we might want to annotate pure function calls as
-/// "@__PURE__".
-///
-pub enum Context {
-    Constant,
-    Function,
-}
-
 pub(crate) fn constant_expression<'a>(
     context: Context,
     tracker: &mut UsageTracker,
@@ -1400,15 +1308,101 @@ pub(crate) fn constant_expression<'a>(
                 }
             }
         }),
-
-        Constant::StringConcatenation { left, right, .. } => {
-            let left = constant_expression(context, tracker, left)?;
-            let right = constant_expression(context, tracker, right)?;
-            Ok(docvec!(left, " + ", right))
+        Constant::BinaryOperation {
+            left, right, name, ..
+        } => {
+            let left_doc = constant_expression(context, tracker, left)?;
+            let right_doc = constant_expression(context, tracker, right)?;
+            bin_op(tracker, name, left_doc, right_doc, left.type_())
         }
 
-        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
+        Constant::Invalid { .. } => {
+            panic!("invalid constants should not reach code generation")
+        }
     }
+}
+
+fn bin_op<'a>(
+    tracker: &mut UsageTracker,
+    name: &'a BinOp,
+    left: Document<'a>,
+    right: Document<'a>,
+    type_: Arc<Type>,
+) -> Output<'a> {
+    match name {
+        BinOp::And => Ok(docvec![left, " && ", right]),
+        BinOp::Or => Ok(docvec![left, " || ", right]),
+        BinOp::LtInt | BinOp::LtFloat => Ok(docvec![left, " < ", right]),
+        BinOp::LtEqInt | BinOp::LtEqFloat => Ok(docvec![left, " <= ", right]),
+        BinOp::Eq => equal(tracker, left, right, type_, true),
+        BinOp::NotEq => equal(tracker, left, right, type_, false),
+        BinOp::GtInt | BinOp::GtFloat => Ok(docvec![left, " > ", right]),
+        BinOp::GtEqInt | BinOp::GtEqFloat => Ok(docvec![left, " >= ", right]),
+        BinOp::Concatenate | BinOp::AddInt | BinOp::AddFloat => Ok(docvec![left, " + ", right]),
+        BinOp::SubInt | BinOp::SubFloat => Ok(docvec![left, " - ", right]),
+        BinOp::MultInt | BinOp::MultFloat => Ok(docvec![left, " * ", right]),
+        BinOp::RemainderInt => remainder_int(tracker, left, right),
+        BinOp::DivInt => div_int(tracker, left, right),
+        BinOp::DivFloat => div_float(tracker, left, right),
+    }
+}
+
+fn div_int<'a>(tracker: &mut UsageTracker, left: Document<'a>, right: Document<'a>) -> Output<'a> {
+    tracker.int_division_used = true;
+    Ok(docvec!("divideInt", wrap_args([left, right])))
+}
+
+fn remainder_int<'a>(
+    tracker: &mut UsageTracker,
+    left: Document<'a>,
+    right: Document<'a>,
+) -> Output<'a> {
+    tracker.int_remainder_used = true;
+    Ok(docvec!("remainderInt", wrap_args([left, right])))
+}
+
+fn div_float<'a>(
+    tracker: &mut UsageTracker,
+    left: Document<'a>,
+    right: Document<'a>,
+) -> Output<'a> {
+    tracker.float_division_used = true;
+    Ok(docvec!("divideFloat", wrap_args([left, right])))
+}
+
+fn equal<'a>(
+    tracker: &mut UsageTracker,
+    left: Document<'a>,
+    right: Document<'a>,
+    type_: Arc<Type>,
+    should_be_equal: bool,
+) -> Output<'a> {
+    // If it is a simple scalar type then we can use JS' reference identity
+    if is_js_scalar(type_) {
+        let operator = if should_be_equal { " === " } else { " !== " };
+        return Ok(docvec!(left, operator, right));
+    }
+
+    // Other types must be compared using structural equality
+    Ok(prelude_equal_call(tracker, should_be_equal, left, right))
+}
+
+pub(super) fn prelude_equal_call<'a>(
+    tracker: &mut UsageTracker,
+    should_be_equal: bool,
+    left: Document<'a>,
+    right: Document<'a>,
+) -> Document<'a> {
+    // Record that we need to import the prelude's isEqual function into the module
+    tracker.object_equality_used = true;
+    // Construct the call
+    let args = wrap_args([left, right]);
+    let operator = if should_be_equal {
+        "isEqual"
+    } else {
+        "!isEqual"
+    };
+    docvec!(operator, args)
 }
 
 fn bit_array<'a>(

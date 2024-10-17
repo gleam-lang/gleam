@@ -2,7 +2,7 @@ use ecow::EcoString;
 
 use crate::{
     ast::{
-        Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
+        BinOp, Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
     schema_capnp::{self as schema, *},
@@ -434,15 +434,50 @@ impl<'a> ModuleEncoder<'a> {
                 );
             }
 
-            Constant::StringConcatenation { right, left, .. } => {
-                let mut builder = builder.init_string_concatenation();
+            Constant::BinaryOperation {
+                left,
+                right,
+                name,
+                type_,
+                ..
+            } => {
+                let mut builder = builder.init_binary_operation();
                 self.build_constant(builder.reborrow().init_right(), right);
                 self.build_constant(builder.reborrow().init_left(), left);
+                self.build_type(builder.reborrow().init_type(), type_);
+                self.build_bin_op(builder.reborrow().init_name(), name);
             }
 
             Constant::Invalid { .. } => {
                 panic!("invalid constants should not reach code generation")
             }
+        }
+    }
+
+    fn build_bin_op(&mut self, mut builder: bin_op::Builder<'_>, bin_op: &BinOp) {
+        match bin_op {
+            BinOp::And => builder.set_and(()),
+            BinOp::Or => builder.set_or(()),
+            BinOp::Eq => builder.set_eq(()),
+            BinOp::NotEq => builder.set_not_eq(()),
+            BinOp::LtInt => builder.set_lt_int(()),
+            BinOp::LtEqInt => builder.set_lt_eq_int(()),
+            BinOp::LtFloat => builder.set_lt_float(()),
+            BinOp::LtEqFloat => builder.set_lt_eq_float(()),
+            BinOp::GtEqInt => builder.set_gt_eq_int(()),
+            BinOp::GtInt => builder.set_gt_int(()),
+            BinOp::GtEqFloat => builder.set_gt_eq_float(()),
+            BinOp::GtFloat => builder.set_gt_float(()),
+            BinOp::AddInt => builder.set_add_int(()),
+            BinOp::AddFloat => builder.set_add_float(()),
+            BinOp::SubInt => builder.set_sub_int(()),
+            BinOp::SubFloat => builder.set_sub_float(()),
+            BinOp::MultInt => builder.set_mult_int(()),
+            BinOp::MultFloat => builder.set_mult_float(()),
+            BinOp::DivInt => builder.set_div_int(()),
+            BinOp::DivFloat => builder.set_div_float(()),
+            BinOp::RemainderInt => builder.set_remainder_int(()),
+            BinOp::Concatenate => builder.set_concatenate(()),
         }
     }
 

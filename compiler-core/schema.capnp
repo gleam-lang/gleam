@@ -215,10 +215,43 @@ struct Constant {
       constructor @13 :ValueConstructor;
     }
 
-    stringConcatenation :group {
+    binaryOperation :group {
       left @14 :Constant;
       right @15 :Constant;
+      name @16 :BinOp;
+      type @17 :Type;
     }
+  }
+}
+
+struct BinOp {
+  union {
+    and @0 :Void;
+    or @1 :Void;
+
+    eq @2 :Void;
+    notEq @3 :Void;
+
+    ltInt @4 :Void;
+    ltEqInt @5 :Void;
+    ltFloat @6 :Void;
+    ltEqFloat @7 :Void;
+    gtEqInt @8 :Void;
+    gtInt @9 :Void;
+    gtEqFloat @10 :Void;
+    gtFloat @11 :Void;
+
+    addInt @12 :Void;
+    addFloat @13 :Void;
+    subInt @14 :Void;
+    subFloat @15 :Void;
+    multInt @16 :Void;
+    multFloat @17 :Void;
+    divInt @18 :Void;
+    divFloat @19 :Void;
+    remainderInt @20 :Void;
+
+    concatenate @21 :Void;
   }
 }
 

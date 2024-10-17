@@ -5,8 +5,8 @@ use itertools::Itertools;
 
 use crate::{
     ast::{
-        BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
-        TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
+        BinOp, BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan,
+        TypedConstant, TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
     },
     build::Origin,
     line_numbers::LineNumbers,
@@ -254,7 +254,7 @@ impl ModuleDecoder {
             Which::Record(reader) => self.constant_record(&reader),
             Which::BitArray(reader) => self.constant_bit_array(&reader?),
             Which::Var(reader) => self.constant_var(&reader),
-            Which::StringConcatenation(reader) => self.constant_string_concatenation(&reader),
+            Which::BinaryOperation(reader) => self.constant_binary_operation(&reader),
         }
     }
 
@@ -353,14 +353,44 @@ impl ModuleDecoder {
         })
     }
 
-    fn constant_string_concatenation(
+    fn constant_binary_operation(
         &mut self,
-        reader: &constant::string_concatenation::Reader<'_>,
+        reader: &constant::binary_operation::Reader<'_>,
     ) -> Result<TypedConstant> {
-        Ok(Constant::StringConcatenation {
+        Ok(Constant::BinaryOperation {
             location: Default::default(),
             left: Box::new(self.constant(&reader.get_left()?)?),
             right: Box::new(self.constant(&reader.get_right()?)?),
+            name: self.bin_op(&reader.get_name()?)?,
+            type_: self.type_(&reader.get_type()?)?,
+        })
+    }
+
+    fn bin_op(&mut self, reader: &bin_op::Reader<'_>) -> Result<BinOp> {
+        use bin_op::Which;
+        Ok(match reader.which()? {
+            Which::And(_) => BinOp::And,
+            Which::Or(_) => BinOp::Or,
+            Which::Eq(_) => BinOp::Eq,
+            Which::NotEq(_) => BinOp::NotEq,
+            Which::LtInt(_) => BinOp::LtInt,
+            Which::LtEqInt(_) => BinOp::LtEqInt,
+            Which::LtFloat(_) => BinOp::LtFloat,
+            Which::LtEqFloat(_) => BinOp::LtEqFloat,
+            Which::GtEqInt(_) => BinOp::GtEqInt,
+            Which::GtInt(_) => BinOp::GtInt,
+            Which::GtEqFloat(_) => BinOp::GtEqFloat,
+            Which::GtFloat(_) => BinOp::GtFloat,
+            Which::AddInt(_) => BinOp::AddInt,
+            Which::AddFloat(_) => BinOp::AddFloat,
+            Which::SubInt(_) => BinOp::SubInt,
+            Which::SubFloat(_) => BinOp::SubFloat,
+            Which::MultInt(_) => BinOp::MultInt,
+            Which::MultFloat(_) => BinOp::MultFloat,
+            Which::DivInt(_) => BinOp::DivInt,
+            Which::DivFloat(_) => BinOp::DivFloat,
+            Which::RemainderInt(_) => BinOp::RemainderInt,
+            Which::Concatenate(_) => BinOp::Concatenate,
         })
     }
 
