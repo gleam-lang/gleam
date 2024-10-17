@@ -834,6 +834,7 @@ pub enum Warning {
 pub enum FeatureKind {
     LabelShorthandSyntax,
     ConstantStringConcatenation,
+    ConstantBinaryOperations,
     ArithmeticInGuards,
     UnannotatedUtf8StringSegment,
     NestedTupleAccess,
@@ -851,6 +852,7 @@ impl FeatureKind {
             FeatureKind::LabelShorthandSyntax => Version::new(1, 4, 0),
             FeatureKind::ConstantStringConcatenation => Version::new(1, 4, 0),
             FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
+            FeatureKind::ConstantBinaryOperations => Version::new(1, 6, 0),
         }
     }
 }
