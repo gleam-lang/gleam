@@ -2667,12 +2667,54 @@ where
     //   [1,2,3]
     //   foo <> "bar"
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
-        let constant_result = self.parse_const_value_unit();
-        if let Ok(Some(constant)) = constant_result {
-            self.parse_const_maybe_concatenation(constant)
-        } else {
-            constant_result
+        // uses the simple operator parser algorithm
+        let mut opstack = vec![];
+        let mut estack = vec![];
+        let mut last_op_start = 0;
+        let mut last_op_end = 0;
+        loop {
+            match self.parse_const_value_unit()? {
+                Some(unit) => estack.push(unit),
+                _ if estack.is_empty() => return Ok(None),
+                _ => {
+                    return parse_error(
+                        ParseErrorType::OpNakedRight,
+                        SrcSpan {
+                            start: last_op_start,
+                            end: last_op_end,
+                        },
+                    );
+                }
+            }
+
+            if let Some((op_s, t, op_e)) = self.tok0.take() {
+                if let Some(p) = precedence(&t) {
+                    // Is Op
+                    self.advance();
+                    last_op_start = op_s;
+                    last_op_end = op_e;
+                    let _ = handle_op(
+                        Some(((op_s, t, op_e), p)),
+                        &mut opstack,
+                        &mut estack,
+                        &reduce_const_bin_op,
+                    );
+                } else {
+                    // Is not Op
+                    self.tok0 = Some((op_s, t, op_e));
+                    break;
+                }
+            } else {
+                break;
+            }
         }
+
+        Ok(handle_op(
+            None,
+            &mut opstack,
+            &mut estack,
+            &reduce_const_bin_op,
+        ))
     }
 
     fn parse_const_value_unit(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
@@ -2834,40 +2876,6 @@ where
             t0 => {
                 self.tok0 = t0;
                 Ok(None)
-            }
-        }
-    }
-
-    fn parse_const_maybe_concatenation(
-        &mut self,
-        left: UntypedConstant,
-    ) -> Result<Option<UntypedConstant>, ParseError> {
-        match self.tok0.take() {
-            Some((op_start, Token::LtGt, op_end)) => {
-                self.advance();
-
-                if let Ok(Some(right_constant_value)) = self.parse_const_value() {
-                    Ok(Some(Constant::StringConcatenation {
-                        location: SrcSpan {
-                            start: left.location().start,
-                            end: right_constant_value.location().end,
-                        },
-                        left: Box::new(left),
-                        right: Box::new(right_constant_value),
-                    }))
-                } else {
-                    parse_error(
-                        ParseErrorType::OpNakedRight,
-                        SrcSpan {
-                            start: op_start,
-                            end: op_end,
-                        },
-                    )
-                }
-            }
-            t0 => {
-                self.tok0 = t0;
-                Ok(Some(left))
             }
         }
     }
@@ -3918,6 +3926,26 @@ fn clause_guard_reduction(
         },
 
         _ => panic!("Token could not be converted to Guard Op."),
+    }
+}
+
+fn reduce_const_bin_op((start, token, end): Spanned, estack: &mut Vec<UntypedConstant>) {
+    match (estack.pop(), estack.pop()) {
+        (Some(right), Some(left)) => {
+            if let Some(bin_op) = tok_to_binop(&token) {
+                let new_e = UntypedConstant::BinaryOperation {
+                    location: SrcSpan::new(start, end),
+                    left: Box::new(left),
+                    right: Box::new(right),
+                    name: bin_op,
+                    type_: (),
+                };
+                estack.push(new_e);
+            } else {
+                panic!("Could not create a binary operator");
+            }
+        }
+        _ => panic!("Tried to reduce without 2 expressions"),
     }
 }
 
