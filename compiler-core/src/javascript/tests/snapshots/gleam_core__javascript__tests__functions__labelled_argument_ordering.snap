@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/functions.rs
+expression: "\ntype A { A }\ntype B { B }\ntype C { C }\ntype D { D }\n\nfn wibble(a a: A, b b: B, c c: C, d d: D) {\n  Nil\n}\n\npub fn main() {\n  wibble(A, C, D, b: B)\n  wibble(A, C, D, b: B)\n  wibble(B, C, D, a: A)\n  wibble(B, C, a: A, d: D)\n  wibble(B, C, d: D, a: A)\n  wibble(B, D, a: A, c: C)\n  wibble(B, D, c: C, a: A)\n  wibble(C, D, b: B, a: A)\n}\n"
+---
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+class A extends $CustomType {}
+
+class B extends $CustomType {}
+
+class C extends $CustomType {}
+
+class D extends $CustomType {}
+
+function wibble(a, b, c, d) {
+  return undefined;
+}
+
+export function main() {
+  wibble(new A(), new B(), new C(), new D());
+  wibble(new A(), new B(), new C(), new D());
+  wibble(new A(), new B(), new C(), new D());
+  wibble(new A(), new B(), new C(), new D());
+  wibble(new A(), new B(), new C(), new D());
+  wibble(new A(), new B(), new C(), new D());
+  wibble(new A(), new B(), new C(), new D());
+  return wibble(new A(), new B(), new C(), new D());
+}
