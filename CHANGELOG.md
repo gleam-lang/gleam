@@ -109,6 +109,10 @@
   the Erlang target if any of their arguments were discarded.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Records with no variants now use the TypeScript type `unknown` instead of
+  `any`.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Formatter
 
 ### Language Server
