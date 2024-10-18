@@ -339,6 +339,23 @@ fn pipe_mismatch_error() {
 }
 
 #[test]
+fn pipe_value_type_mismatch_error() {
+    assert_module_error!(
+        "pub fn main() -> String {
+            eat_veggie
+            |> Orange
+         }
+
+         type Fruit{ Orange }
+         type Veg{ Lettuce }
+
+         fn eat_veggie(v: Veg) -> String {
+            \"Ok\"
+         }"
+    );
+}
+
+#[test]
 fn case_tuple_guard() {
     assert_error!("case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }");
 }
