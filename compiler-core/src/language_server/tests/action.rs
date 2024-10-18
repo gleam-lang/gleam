@@ -2654,6 +2654,184 @@ pub fn main() {
         find_position_of("option.").select_until(find_position_of("Some(")),
     );
 }
+
+#[test]
+fn test_unqualified_to_qualified_import_function() {
+    let src = r#"
+import list.{map}
+
+pub fn main() {
+    let identity = map([1, 2, 3], fn(x) { x })
+    let double = map([1, 2, 3], fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify map as list.map",
+        TestProject::for_source(src).add_hex_module("list", "pub fn map(list, f) { todo }"),
+        find_position_of("map(").select_until(find_position_of("[1, 2, 3]")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_constant() {
+    let src = r#"
+import mymath.{pi}
+
+pub fn circle_area(radius: Float) -> Float {
+    pi *. radius *. radius
+}
+
+pub fn circle_circumference(radius: Float) -> Float {
+    2. *. pi *. radius
+}
+"#;
+    assert_code_action!(
+        "Qualify pi as mymath.pi",
+        TestProject::for_source(src).add_hex_module("mymath", "pub const pi = 3.14159"),
+        find_position_of("pi *.").select_until(find_position_of(" radius")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_record_constructor() {
+    let src = r#"
+import user.{type User, User}
+
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+}
+"#;
+    assert_code_action!(
+        "Qualify User as user.User",
+        TestProject::for_source(src)
+            .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
+        find_position_of("User(").select_until(find_position_of("name: name")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_multiple_occurrences() {
+    let src = r#"
+import list.{map, filter}
+
+pub fn process_list(items: List(Int)) -> List(Int) {
+    items
+    |> map(fn(x) { x + 1 })
+    |> map(fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify map as list.map",
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("|> map").select_until(find_position_of("(fn(x)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_pattern_matching() {
+    let src = r#"
+import result.{type Result, Ok, Error}
+
+pub fn process_result(res: Result(Int, String)) -> Int {
+    case res {
+        Ok(value) -> value
+        Error(_) -> 0
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Ok as result.Ok",
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub type Result(a, e) { Ok(a) Error(e) }"),
+        find_position_of("Ok(").select_until(find_position_of("value)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_type_annotation() {
+    let src = r#"
+import option.{type Option, Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Option as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("Option(").select_until(find_position_of("Int)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_nested_function_call() {
+    let src = r#"
+import list.{map, flatten}
+import operation.{double}
+
+pub fn process_names(names: List(List(Int))) -> List(Int) {
+    names
+    |> flatten
+    |> map(double)
+}
+"#;
+    assert_code_action!(
+        "Qualify double as operation.double",
+        TestProject::for_source(src)
+            .add_hex_module(
+                "list",
+                "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }
+pub fn flatten(lists: List(List(a))) -> List(a) { todo }"
+            )
+            .add_hex_module("operation", "pub fn double(s: Int) -> Int { todo }"),
+        find_position_of("(dou").select_until(find_position_of("ble)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_with_alias() {
+    let src = r#"
+import list.{map as transform}
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify transform as list.map",
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_with_alias_and_module_alias() {
+    let src = r#"
+import list.{map as transform} as lst
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify transform as lst.map",
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {
