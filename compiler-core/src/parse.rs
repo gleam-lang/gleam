@@ -3571,7 +3571,10 @@ functions are declared separately from types.";
         if attributes.deprecated.is_deprecated() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
         }
-        let (_, message, _) = self.expect_string()?;
+        let (_, message, _) = self.expect_string().map_err(|_| ParseError {
+            error: ParseErrorType::ExpectedDeprecationMessage,
+            location: SrcSpan { start, end },
+        })?;
         let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
         Ok(end)

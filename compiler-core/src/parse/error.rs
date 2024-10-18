@@ -52,6 +52,10 @@ impl ParseError {
             ParseErrorType::ExpectedDefinition => {
                 ("I was expecting a definition after this", vec![])
             }
+            ParseErrorType::ExpectedDeprecationMessage => (
+                "A deprecation attribute must have a string message.",
+                vec![],
+            ),
             ParseErrorType::ExpectedFunctionDefinition => {
                 ("I was expecting a function definition after this", vec![])
             }
@@ -323,6 +327,7 @@ pub enum ParseErrorType {
     ExpectedValue,              // no value after "="
     ExpectedStatement,          // no statement after "@<name>"
     ExpectedDefinition,         // after attributes
+    ExpectedDeprecationMessage, // after "deprecated"
     ExpectedFunctionDefinition, // after function-only attributes
     ExprLparStart,              // it seems "(" was used to start an expression
     ExtraSeparator,             // #(1,,) <- the 2nd comma is an extra separator
