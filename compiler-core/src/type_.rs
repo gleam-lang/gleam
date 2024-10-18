@@ -63,6 +63,34 @@ pub enum Type {
         module: EcoString,
         name: EcoString,
         args: Vec<Arc<Type>>,
+
+        /// Which variant of the types this value is, if it is known from type narrowing.
+        /// This allows us to permit certain operations when we know this,
+        /// such as record updates for multi-constructor types, or field access
+        /// for fields not shared between type variants. For example:
+        ///
+        /// ```gleam
+        /// type Wibble {
+        ///   Wibble(wibble: Int, other, Int)
+        ///   Wobble(wobble: Int, something: Int)
+        /// }
+        ///
+        /// fn add_one(some_wibble: Wibble) -> Wibble {
+        ///   case some_wibble {
+        ///     Wibble(..) as wibble -> Wibble(..wibble, other: wibble.other + 1)
+        ///     Wobble(..) as wobble -> Wobble(..wobble, something: wobble.something + 1)
+        ///   }
+        /// }
+        /// ```
+        ///
+        /// Here, the `wibble` variable has a narrowed variant of `0`, since we know it's
+        /// of the `Wibble` variant. This means we can safely update it using the `Wibble`
+        /// constructor, and access the `other` field, which is only present in that variant.
+        ///
+        /// However, the parameter `some_wibble` has no known variant; it could be either of the variants,
+        /// so we can't allow any of that until we pattern match on it.
+        ///
+        narrowed_variant: Option<u16>,
     },
 
     /// The type of a function. It takes arguments and returns a value.
@@ -236,6 +264,36 @@ impl Type {
         }
     }
 
+    pub fn narrow_custom_type_variant(&mut self, index: u16) {
+        match self {
+            Type::Named {
+                narrowed_variant, ..
+            } => *narrowed_variant = Some(index),
+            Type::Var { type_ } => type_.borrow_mut().narrow_custom_type_variant(index),
+            Type::Fn { .. } | Type::Tuple { .. } => {}
+        }
+    }
+
+    pub fn generalise_custom_type_variant(&mut self) {
+        match self {
+            Type::Named {
+                narrowed_variant, ..
+            } => *narrowed_variant = None,
+            Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
+            Type::Fn { .. } | Type::Tuple { .. } => {}
+        }
+    }
+
+    pub fn custom_type_narrowed_variant(&self) -> Option<u16> {
+        match self {
+            Type::Named {
+                narrowed_variant, ..
+            } => *narrowed_variant,
+            Type::Var { type_ } => type_.borrow().custom_type_narrowed_variant(),
+            Type::Fn { .. } | Type::Tuple { .. } => None,
+        }
+    }
+
     /// Get the args for the type if the type is a specific `Type::App`.
     /// Returns None if the type is not a `Type::App` or is an incorrect `Type:App`
     ///
@@ -294,6 +352,7 @@ impl Type {
                         module: module.into(),
                         args: args.clone(),
                         publicity,
+                        narrowed_variant: None,
                     }),
                 };
                 Some(args)
@@ -368,7 +427,19 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
 pub struct AccessorsMap {
     pub publicity: Publicity,
     pub type_: Arc<Type>,
-    pub accessors: HashMap<EcoString, RecordAccessor>,
+    pub shared_accessors: HashMap<EcoString, RecordAccessor>,
+    pub variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+}
+
+impl AccessorsMap {
+    pub fn accessors_for_variant(
+        &self,
+        narrowed_variant: Option<u16>,
+    ) -> &HashMap<EcoString, RecordAccessor> {
+        narrowed_variant
+            .and_then(|index| self.variant_specific_accessors.get(index as usize))
+            .unwrap_or(&self.shared_accessors)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -418,8 +489,8 @@ pub enum ValueConstructorVariant {
         field_map: Option<FieldMap>,
         location: SrcSpan,
         module: EcoString,
-        constructors_count: u16,
-        constructor_index: u16,
+        variants_count: u16,
+        variant_index: u16,
         documentation: Option<EcoString>,
     },
 }
@@ -850,6 +921,13 @@ impl TypeVar {
         }
     }
 
+    pub fn custom_type_narrowed_variant(&self) -> Option<u16> {
+        match self {
+            Self::Link { type_ } => type_.custom_type_narrowed_variant(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
     pub fn is_result(&self) -> bool {
         match self {
             Self::Link { type_ } => type_.is_result(),
@@ -918,6 +996,20 @@ impl TypeVar {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn narrow_custom_type_variant(&mut self, index: u16) {
+        match self {
+            Self::Link { type_ } => Arc::make_mut(type_).narrow_custom_type_variant(index),
+            Self::Unbound { .. } | Self::Generic { .. } => {}
+        }
+    }
+
+    pub fn generalise_custom_type_variant(&mut self) {
+        match self {
+            Self::Link { type_ } => Arc::make_mut(type_).generalise_custom_type_variant(),
+            Self::Unbound { .. } | Self::Generic { .. } => {}
         }
     }
 }
@@ -1161,6 +1253,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             package,
             name,
             args,
+            narrowed_variant: _,
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
@@ -1169,6 +1262,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
                 package: package.clone(),
                 name: name.clone(),
                 args,
+                narrowed_variant: None,
             })
         }
 
