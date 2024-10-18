@@ -21,7 +21,7 @@ use crate::{
 use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
-use pubgrub::{package, range::Range};
+use pubgrub::range::Range;
 use std::{
     cmp,
     collections::{HashMap, HashSet},
@@ -208,7 +208,11 @@ where
     pub fn compile_root_package(&mut self) -> Outcome<Package, Error> {
         let config = self.config.clone();
         self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())
-            .map(|modules| Package { config, modules })
+            .map(|(modules, cachedModules)| Package {
+                config,
+                modules,
+                cached_modules: cachedModules,
+            })
     }
 
     /// Checks that version file found in the build directory matches the
@@ -288,7 +292,7 @@ where
         // longer need to have the package borrowed from self.packages.
         let package = self.packages.get(name).expect("Missing package").clone();
         let result = match usable_build_tools(&package)?.as_slice() {
-            &[BuildTool::Gleam] => self.compile_gleam_dep_package(&package),
+            &[BuildTool::Gleam] => self.compile_gleam_dep_package(&package).map(|_| vec![]),
             &[BuildTool::Rebar3] => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
             &[BuildTool::Mix] => self.compile_mix_dep_package(&package).map(|_| vec![]),
             &[BuildTool::Mix, BuildTool::Rebar3] => self
@@ -489,7 +493,7 @@ where
     fn compile_gleam_dep_package(
         &mut self,
         package: &ManifestPackage,
-    ) -> Result<Vec<Module>, Error> {
+    ) -> Result<(Vec<Module>, Vec<type_::ModuleInterface>), Error> {
         // TODO: Test
         let package_root = match &package.source {
             // If the path is relative it is relative to the root of the
@@ -520,7 +524,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-    ) -> Outcome<(Vec<Module>), Error> {
+    ) -> Outcome<(Vec<Module>, Vec<type_::ModuleInterface>), Error> {
         let out_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &config.name);
@@ -590,16 +594,14 @@ where
         };
 
         // Compile project to Erlang or JavaScript source code
-        let outcome = compiler.compile(
+        compiler.compile(
             &mut self.warnings,
             &mut self.importable_modules,
             &mut self.defined_modules,
             &mut self.stale_modules,
             &mut self.incomplete_modules,
             self.telemetry,
-        );
-
-        outcome
+        )
     }
 }
 

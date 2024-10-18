@@ -106,7 +106,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<(Vec<Module>, Vec<type_::ModuleInterface>), Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -148,7 +148,7 @@ where
         };
 
         // Load the cached modules that have previously been compiled
-        for module in loaded.cached.into_iter() {
+        for module in loaded.cached.clone().into_iter() {
             // Emit any cached warnings.
             // Note that `self.cached_warnings` is set to `Ignore` (such as for
             // dependency packages) then this field will not be populated.
@@ -186,7 +186,9 @@ where
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(modules, err) => return Outcome::PartialFailure(modules, err),
+            Outcome::PartialFailure(modules, err) => {
+                return Outcome::PartialFailure((modules, loaded.cached), err)
+            }
             Outcome::TotalFailure(err) => return Outcome::TotalFailure(err),
         };
 
@@ -199,8 +201,7 @@ where
         if let Err(error) = self.encode_and_write_metadata(&modules) {
             return error.into();
         }
-
-        Outcome::Ok(modules)
+        Outcome::Ok((modules, loaded.cached))
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
@@ -282,7 +283,7 @@ where
         Ok(())
     }
 
-    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
+    fn encode_and_write_metadata(&mut self, modules: &Vec<Module>) -> Result<()> {
         if !self.write_metadata {
             tracing::debug!("package_metadata_writing_disabled");
             return Ok(());
@@ -294,7 +295,8 @@ where
         let artefact_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
 
         tracing::debug!("writing_module_caches");
-        for module in modules {
+        for mut module in modules.clone() {
+            module.attach_doc_and_module_comments();
             let module_name = module.name.replace("/", "@");
 
             // Write metadata file

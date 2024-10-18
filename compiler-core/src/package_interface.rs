@@ -8,9 +8,14 @@ use serde::Serialize;
 mod tests;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias},
+    ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias, UntypedModule},
+    build::package_compiler::UncompiledModule,
     io::ordered_map,
-    type_::{expression::Implementations, Deprecation, Type, TypeVar},
+    schema_capnp::publicity,
+    type_::{
+        self, expression::Implementations, Deprecation, Type, TypeAliasConstructor,
+        TypeConstructor, TypeVar, ValueConstructorVariant,
+    },
 };
 
 use crate::build::{Module, Package};
@@ -372,13 +377,69 @@ impl PackageInterface {
                 .iter()
                 .filter(|module| !package.config.is_internal_module(module.name.as_str()))
                 .map(|module| (module.name.clone(), ModuleInterface::from_module(module)))
+                .chain(
+                    package
+                        .cached_modules
+                        .iter()
+                        .filter(|module| !package.config.is_internal_module(module.name.as_str()))
+                        .map(|interface| {
+                            (
+                                interface.name.clone(),
+                                ModuleInterface::from_untyped_module(interface),
+                            )
+                        }),
+                )
+                // .map(|(name, info)| debug_module(name, info))
                 .collect(),
         }
     }
 }
 
+// pub fn debug_module(name: EcoString, info: ModuleInterface) -> (EcoString, ModuleInterface) {
+//     println!(
+//         "Module {} has documentation size {}",
+//         name,
+//         info.documentation.iter().map(|s| s.len()).sum::<usize>()
+//     );
+//     info.types.iter().for_each(|(type_name, type_)| {
+//         println!(
+//             "Type {}/{} has documentation {}",
+//             name,
+//             type_name,
+//             type_.documentation.clone().unwrap_or_default().len(),
+//         )
+//     });
+//     info.type_aliases
+//         .iter()
+//         .for_each(|(type_alias_name, type_alias)| {
+//             println!(
+//                 "Type Alias {}/{} has documentation {}",
+//                 name,
+//                 type_alias_name,
+//                 type_alias.documentation.clone().unwrap_or_default().len(),
+//             )
+//         });
+//     info.constants.iter().for_each(|(constant_name, constant)| {
+//         println!(
+//             "Constant {}/{} has documentation {}",
+//             name,
+//             constant_name,
+//             constant.documentation.clone().unwrap_or_default().len(),
+//         )
+//     });
+//     info.functions.iter().for_each(|(function_name, function)| {
+//         println!(
+//             "Function {}/{} has documentation {}",
+//             name,
+//             function_name,
+//             function.documentation.clone().unwrap_or_default().len(),
+//         )
+//     });
+//     (name, info)
+// }
+
 impl ModuleInterface {
-    pub fn from_module(module: &Module) -> ModuleInterface {
+    fn from_module(module: &Module) -> ModuleInterface {
         let mut types = HashMap::new();
         let mut type_aliases = HashMap::new();
         let mut constants = HashMap::new();
@@ -547,6 +608,159 @@ impl ModuleInterface {
 
         ModuleInterface {
             documentation: module.ast.documentation.clone(),
+            types,
+            type_aliases,
+            constants,
+            functions,
+        }
+    }
+
+    pub fn from_untyped_module(interface: &type_::ModuleInterface) -> ModuleInterface {
+        println!(
+            "Module {} has following types {:#?}, following type constructors {:#?} and following accessors {:#?}",
+            interface.name, interface.types, interface.types_value_constructors, interface.accessors
+        );
+        let mut types = HashMap::new();
+        let mut type_aliases = HashMap::new();
+        let mut constants = HashMap::new();
+        let mut functions = HashMap::new();
+        for (name, constructor) in interface
+            .types
+            .iter()
+            .filter(|(_, c)| c.publicity.is_public())
+        {
+            let mut id_map = IdMap::new();
+
+            let TypeConstructor {
+                deprecation,
+                documentation,
+                ..
+            } = constructor;
+
+            for typed_parameter in &constructor.parameters {
+                id_map.add_type_variable_id(typed_parameter.as_ref());
+            }
+
+            let _ = types.insert(
+                name.clone(),
+                TypeDefinitionInterface {
+                    documentation: documentation.clone(),
+                    deprecation: DeprecationInterface::from_deprecation(&deprecation),
+                    parameters: interface
+                        .types
+                        .get(&name.clone())
+                        .map_or(vec![], |t| t.parameters.clone())
+                        .len(),
+                    constructors: match interface.types_value_constructors.get(&name.clone()) {
+                        Some(constructors) => constructors
+                            .variants
+                            .iter()
+                            .map(|constructor| TypeConstructorInterface {
+                                // TODO: Find documentation
+                                documentation: None,
+                                name: constructor.name.clone(),
+                                parameters: constructor
+                                    .parameters
+                                    .iter()
+                                    .map(|arg| ParameterInterface {
+                                        label: arg.label.clone(),
+                                        // label: None,
+                                        // We share the same id_map between each step so that the
+                                        // incremental ids assigned are consisten with each other
+                                        type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
+                                    })
+                                    .collect(),
+                            })
+                            .collect(),
+                        None => vec![],
+                    },
+                },
+            );
+        }
+
+        for (name, alias) in interface
+            .type_aliases
+            .iter()
+            .filter(|(_, v)| v.publicity.is_public())
+        {
+            let _ = type_aliases.insert(
+                name.clone(),
+                TypeAliasInterface {
+                    documentation: alias.documentation.clone(),
+                    deprecation: DeprecationInterface::from_deprecation(&alias.deprecation),
+                    parameters: alias.arity,
+                    alias: TypeInterface::from_type(&alias.type_),
+                },
+            );
+        }
+
+        for (name, value) in interface
+            .values
+            .iter()
+            .filter(|(_, v)| v.publicity.is_public())
+        {
+            match (value.type_.as_ref(), value.variant.clone()) {
+                (
+                    Type::Fn {
+                        args: arguments,
+                        retrn: return_type,
+                    },
+                    ValueConstructorVariant::ModuleFn {
+                        documentation,
+                        implementations,
+                        ..
+                    },
+                ) => {
+                    let mut id_map = IdMap::new();
+
+                    let _ = functions.insert(
+                        name.clone(),
+                        FunctionInterface {
+                            implementations: ImplementationsInterface::from_implementations(
+                                &implementations,
+                            ),
+                            deprecation: DeprecationInterface::from_deprecation(&value.deprecation),
+                            documentation,
+                            parameters: arguments
+                                .iter()
+                                .map(|arg| ParameterInterface {
+                                    //TODO: Find label
+                                    label: None,
+                                    type_: from_type_helper(arg.as_ref(), &mut id_map),
+                                })
+                                .collect(),
+                            return_: from_type_helper(return_type, &mut id_map),
+                        },
+                    );
+                }
+
+                (
+                    type_,
+                    ValueConstructorVariant::ModuleConstant {
+                        documentation,
+                        implementations,
+                        ..
+                    },
+                ) => {
+                    let _ = constants.insert(
+                        name.clone(),
+                        ConstantInterface {
+                            implementations: ImplementationsInterface::from_implementations(
+                                &implementations,
+                            ),
+                            type_: TypeInterface::from_type(type_),
+                            deprecation: DeprecationInterface::from_deprecation(&value.deprecation),
+                            documentation,
+                        },
+                    );
+                }
+
+                _ => {}
+            }
+        }
+
+        ModuleInterface {
+            documentation: interface.documentation.clone(),
             types,
             type_aliases,
             constants,

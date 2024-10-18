@@ -137,7 +137,7 @@ impl PackageConfig {
     pub fn dependencies_for(&self, mode: Mode) -> Result<Dependencies> {
         match mode {
             Mode::Dev | Mode::Lsp => self.all_drect_dependencies(),
-            Mode::Prod | Mode::PackageInterface => Ok(self.dependencies.clone()),
+            Mode::Prod => Ok(self.dependencies.clone()),
         }
     }
 

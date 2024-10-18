@@ -878,6 +878,7 @@ impl ConstructorSpecialiser {
         let parameters = parameters
             .iter()
             .map(|p| TypeValueConstructorField {
+                label: None,
                 type_: self.specialise_type(p.type_.as_ref()),
             })
             .collect_vec();

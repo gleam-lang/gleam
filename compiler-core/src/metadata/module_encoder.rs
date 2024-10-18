@@ -8,8 +8,8 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
-        Type, TypeConstructor, TypeValueConstructor, TypeVar, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant,
+        Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -38,11 +38,20 @@ impl<'a> ModuleEncoder<'a> {
         let mut message = capnp::message::Builder::new_default();
 
         let mut module = message.init_root::<module::Builder<'_>>();
+
+        // println!("Encoding module {}", self.data.name);
+        // println!(
+        //     "Module {} has documentation size {}",
+        //     self.data.name,
+        //     self.data.documentation.len()
+        // );
         module.set_name(&self.data.name);
         module.set_package(&self.data.package);
         module.set_src_path(self.data.src_path.as_str());
         module.set_is_internal(self.data.is_internal);
+        self.set_documentation(&mut module);
         self.set_module_types(&mut module);
+        self.set_module_type_aliases(&mut module);
         self.set_module_values(&mut module);
         self.set_module_accessors(&mut module);
         self.set_module_types_constructors(&mut module);
@@ -51,6 +60,15 @@ impl<'a> ModuleEncoder<'a> {
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
+    }
+
+    fn set_documentation(&mut self, module: &mut module::Builder<'_>) {
+        let mut documentation = module
+            .reborrow()
+            .init_documentation(self.data.documentation.len() as u32);
+        for (i, doc) in self.data.documentation.iter().enumerate() {
+            documentation.reborrow().set(i as u32, doc);
+        }
     }
 
     fn set_line_numbers(&mut self, module: &mut module::Builder<'_>) {
@@ -101,8 +119,23 @@ impl<'a> ModuleEncoder<'a> {
 
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
         tracing::trace!("Writing module metadata types");
-        let mut types = module.reborrow().init_types(self.data.types.len() as u32);
-        for (i, (name, type_)) in self.data.types.iter().enumerate() {
+        let filtered_types: Vec<_> = self
+            .data
+            .types
+            .iter()
+            .filter(|(name, _)| !self.data.type_aliases.contains_key(*name))
+            // .map(|(type_name, type_)| {
+            //     println!(
+            //         "Type {}/{} has documentation {}",
+            //         self.data.name,
+            //         type_name,
+            //         type_.documentation.clone().unwrap_or_default().len(),
+            //     );
+            //     (type_name, type_)
+            // })
+            .collect();
+        let mut types = module.reborrow().init_types(filtered_types.len() as u32);
+        for (i, (name, type_)) in filtered_types.iter().enumerate() {
             let mut property = types.reborrow().get(i as u32);
             property.set_key(name);
             self.build_type_constructor(property.init_value(), type_)
@@ -118,6 +151,32 @@ impl<'a> ModuleEncoder<'a> {
             let mut property = types_constructors.reborrow().get(i as u32);
             property.set_key(name);
             self.build_type_variant_constructors(property.init_value(), data)
+        }
+    }
+
+    fn set_module_type_aliases(&mut self, module: &mut module::Builder<'_>) {
+        tracing::trace!("Writing module metadata type aliases");
+        let mut type_aliases = module
+            .reborrow()
+            .init_type_aliases(self.data.type_aliases.len() as u32);
+        for (i, (name, data)) in self
+            .data
+            .type_aliases
+            .iter()
+            // .map(|(type_alias_name, type_alias)| {
+            //     println!(
+            //         "Type Alias {}/{} has documentation {}",
+            //         self.data.name,
+            //         type_alias_name,
+            //         type_alias.documentation.clone().unwrap_or_default().len(),
+            //     );
+            //     (type_alias_name, type_alias)
+            // })
+            .enumerate()
+        {
+            let mut property = type_aliases.reborrow().get(i as u32);
+            property.set_key(name);
+            self.build_type_aliases(property.init_value(), data)
         }
     }
 
@@ -187,6 +246,29 @@ impl<'a> ModuleEncoder<'a> {
         );
     }
 
+    fn build_type_aliases(
+        &mut self,
+        mut builder: type_alias_constructor::Builder<'_>,
+        constructor: &TypeAliasConstructor,
+    ) {
+        builder.set_module(&constructor.module);
+        builder.set_deprecated(match &constructor.deprecation {
+            Deprecation::NotDeprecated => "",
+            Deprecation::Deprecated { message } => message,
+        });
+        self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
+        let type_builder = builder.reborrow().init_type();
+        self.build_type(type_builder, &constructor.type_);
+        builder.set_arity(constructor.arity as u16);
+        builder.set_documentation(
+            constructor
+                .documentation
+                .as_ref()
+                .map(EcoString::as_str)
+                .unwrap_or_default(),
+        );
+    }
+
     fn build_type_value_constructor(
         &mut self,
         mut builder: type_value_constructor::Builder<'_>,
@@ -204,9 +286,16 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type_value_constructor_parameter(
         &mut self,
-        builder: type_value_constructor_parameter::Builder<'_>,
+        mut builder: type_value_constructor_parameter::Builder<'_>,
         parameter: &type_::TypeValueConstructorField,
     ) {
+        builder.set_label(
+            parameter
+                .label
+                .as_ref()
+                .map(EcoString::as_str)
+                .unwrap_or_default(),
+        );
         self.build_type(builder.init_type(), parameter.type_.as_ref());
     }
 

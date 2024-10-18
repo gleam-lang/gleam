@@ -185,7 +185,6 @@ pub enum Mode {
     Dev,
     Prod,
     Lsp,
-    PackageInterface,
 }
 
 impl Mode {
@@ -194,7 +193,7 @@ impl Mode {
     pub fn includes_tests(&self) -> bool {
         match self {
             Self::Dev | Self::Lsp => true,
-            Self::Prod | Self::PackageInterface => false,
+            Self::Prod => false,
         }
     }
 }
@@ -210,6 +209,7 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub cached_modules: Vec<type_::ModuleInterface>,
 }
 
 impl Package {
@@ -227,7 +227,7 @@ impl Package {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Module {
     pub name: EcoString,
     pub code: EcoString,
@@ -262,6 +262,13 @@ impl Module {
             .iter()
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
+
+        self.ast.type_info.documentation = self.ast.documentation.clone();
+        // println!(
+        //     "Module {} has documentation of length {}",
+        //     self.name,
+        //     self.ast.documentation.len()
+        // );
 
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.

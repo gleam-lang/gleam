@@ -157,18 +157,11 @@ where
 
                 // A cached module with no stale dependencies can be used as-is
                 // and does not need to be recompiled.
-                Input::Cached(info) => match self.mode {
-                    Mode::PackageInterface => {
-                        tracing::debug!(module = %info.name, "module_to_be_compiled");
-                        let module = self.load_and_parse(info)?;
-                        loaded.to_compile.push(module);
-                    }
-                    _ => {
-                        tracing::debug!(module = %info.name, "module_to_load_from_cache");
-                        let module = self.load_cached_module(info)?;
-                        loaded.cached.push(module);
-                    }
-                },
+                Input::Cached(info) => {
+                    tracing::debug!(module = %info.name, "module_to_load_from_cache");
+                    let module = self.load_cached_module(info)?;
+                    loaded.cached.push(module);
+                }
             }
         }
 
@@ -181,6 +174,12 @@ where
         let path = dir.join(name.as_ref()).with_extension("cache");
         let bytes = self.io.read_bytes(&path)?;
         let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
+
+        // println!(
+        //     "Loaded cached module {} has {} types",
+        //     module.name,
+        //     module.types.len()
+        // );
 
         // Load warnings
         if self.cached_warnings.should_use() {
