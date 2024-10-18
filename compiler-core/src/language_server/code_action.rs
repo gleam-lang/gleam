@@ -1961,6 +1961,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
     fn edit_import(&mut self) {
         let UnqualifiedConstructor {
             import: ast::Import { location, .. },
+            is_type,
             ..
         } = self.unqualified_constructor;
         let import_code = self
@@ -1969,10 +1970,17 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             .get(location.start as usize..location.end as usize)
             .expect("Failed to get import code");
         let constructor_import = self.unqualified_constructor.constructor_import();
-        let Some(first_char_pos) = import_code
-            .find(&constructor_import)
-            .map(|pos| location.start as usize + pos)
-        else {
+
+        // TODO: handle import module.{Constructor, type Constructor}
+        let Some(first_char_pos) = (if is_type {
+            import_code
+                .find(&constructor_import)
+                .map(|pos| location.start as usize + pos)
+        } else {
+            import_code
+                .rfind(&constructor_import)
+                .map(|pos| location.start as usize + pos)
+        }) else {
             return;
         };
         let mut last_char_pos = first_char_pos + constructor_import.len();
