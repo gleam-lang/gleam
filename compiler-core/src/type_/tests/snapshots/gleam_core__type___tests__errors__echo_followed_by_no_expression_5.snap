@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  panic as echo\n}\n"
+---
+error: Invalid echo use
+  ┌─ /src/one/two.gleam:3:12
+  │
+3 │   panic as echo
+  │            ^^^^ I was expecting a value after this
+
+The `echo` keyword should be followed by a value to print.

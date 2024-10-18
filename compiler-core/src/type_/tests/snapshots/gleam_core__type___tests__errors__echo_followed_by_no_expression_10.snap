@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  echo\n  |> todo\n}\n"
+---
+error: Invalid echo use
+  ┌─ /src/one/two.gleam:3:3
+  │
+3 │   echo
+  │   ^^^^ I was expecting a value after this
+
+The `echo` keyword should be followed by a value to print.

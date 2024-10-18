@@ -1,0 +1,11 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n  pub fn wibble(a) { a }\n\n  pub fn main() {\n    wibble(echo)\n  }\n"
+---
+error: Invalid echo use
+  ┌─ /src/one/two.gleam:5:12
+  │
+5 │     wibble(echo)
+  │            ^^^^ I was expecting a value after this
+
+The `echo` keyword should be followed by a value to print.

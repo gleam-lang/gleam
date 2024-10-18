@@ -306,6 +306,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, message, ..
             } => self.infer_panic(location, message),
 
+            UntypedExpr::Echo {
+                location,
+                expression,
+            } => self.infer_echo(location, expression),
+
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
             UntypedExpr::Int {
@@ -463,6 +468,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             type_,
             message,
         })
+    }
+
+    fn infer_echo(
+        &mut self,
+        location: SrcSpan,
+        expression: Option<Box<UntypedExpr>>,
+    ) -> Result<TypedExpr, Error> {
+        self.environment.echo_found = true;
+        if let Some(expression) = expression {
+            let expression = self.infer(*expression)?;
+            Ok(TypedExpr::Echo {
+                location,
+                type_: expression.type_(),
+                expression: Some(Box::new(expression)),
+            })
+        } else {
+            Err(Error::EchoWithNoFollowingExpression { location })
+        }
     }
 
     pub(crate) fn warn_for_unreachable_code(
