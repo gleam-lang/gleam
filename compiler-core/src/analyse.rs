@@ -832,6 +832,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      name,
                      arguments: args,
                      documentation,
+                     deprecation: constructor_deprecation,
                  }| {
                     self.check_name_case(name_location, &name, Named::CustomTypeVariant);
 
@@ -868,6 +869,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         name,
                         arguments: args,
                         documentation,
+                        deprecation: constructor_deprecation,
                     }
                 },
             )
