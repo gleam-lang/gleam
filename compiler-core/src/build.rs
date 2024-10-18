@@ -20,6 +20,7 @@ use crate::ast::{
     CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
     TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
+use crate::package_interface;
 use crate::type_::Type;
 use crate::{
     ast::{Definition, SrcSpan, TypedModule},
@@ -208,6 +209,7 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub cached_modules: Vec<type_::ModuleInterface>,
 }
 
 impl Package {
@@ -225,7 +227,7 @@ impl Package {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Module {
     pub name: EcoString,
     pub code: EcoString,
@@ -260,6 +262,13 @@ impl Module {
             .iter()
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
+
+        self.ast.type_info.documentation = self.ast.documentation.clone();
+        // println!(
+        //     "Module {} has documentation of length {}",
+        //     self.name,
+        //     self.ast.documentation.len()
+        // );
 
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.

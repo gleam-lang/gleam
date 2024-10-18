@@ -28,8 +28,8 @@ use crate::{
         hydrator::Hydrator,
         prelude::*,
         AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, Warning,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -296,6 +296,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let Environment {
             module_types: types,
             module_types_constructors: types_constructors,
+            module_type_aliases: type_aliases,
             module_values: values,
             accessors,
             names: type_names,
@@ -317,14 +318,21 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.warnings.emit(warning.clone());
         }
 
+        // println!(
+        //     "Generated module {} has documentation size {}",
+        //     self.module_name,
+        //     documentation.len()
+        // );
         let module = ast::Module {
-            documentation,
+            documentation: documentation.clone(),
             name: self.module_name.clone(),
             definitions: typed_statements,
             type_info: ModuleInterface {
                 name: self.module_name,
+                documentation,
                 types,
                 types_value_constructors: types_constructors,
+                type_aliases,
                 values,
                 accessors,
                 origin: self.origin,
@@ -965,7 +973,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     }
                 };
 
-                fields.push(TypeValueConstructorField { type_: t.clone() });
+                fields.push(TypeValueConstructorField {
+                    label: label.clone().map_or(None, |(_, label)| Some(label.clone())),
+                    type_: t.clone(),
+                });
 
                 // Register the type for this parameter
                 args_types.push(t);
@@ -1177,7 +1188,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // in some fashion.
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(args, &mut hydrator, environment);
-        let tryblock = || {
+        let mut tryblock = || {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
 
@@ -1191,10 +1202,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 TypeConstructor {
                     origin: *location,
                     module: self.module_name.clone(),
-                    parameters,
-                    type_,
+                    parameters: parameters.clone(),
+                    type_: type_.clone(),
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                },
+            )?;
+
+            environment.insert_type_alias(
+                name.clone(),
+                TypeAliasConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    type_: type_.as_ref().clone(),
+                    arity: parameters.len(),
+                    publicity: *publicity,
+                    deprecation: deprecation.clone(),
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
             )?;

@@ -702,6 +702,7 @@ fn infer_module_type_retention_test() {
             warnings: vec![],
             origin: Origin::Src,
             package: "thepackage".into(),
+            documentation: vec![],
             name: "ok".into(),
             is_internal: false,
             // Core type constructors like String and Int are not included
@@ -731,12 +732,14 @@ fn infer_module_type_retention_test() {
                             TypeValueConstructor {
                                 name: "Ok".into(),
                                 parameters: vec![TypeValueConstructorField {
+                                    label: None,
                                     type_: generic_var(1),
                                 }]
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
                                 parameters: vec![TypeValueConstructorField {
+                                    label: None,
                                     type_: generic_var(2),
                                 }]
                             }
@@ -754,6 +757,7 @@ fn infer_module_type_retention_test() {
                     }
                 )
             ]),
+            type_aliases: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
