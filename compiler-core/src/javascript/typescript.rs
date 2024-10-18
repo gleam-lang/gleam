@@ -56,8 +56,13 @@ fn name_with_generics<'a>(
     types: impl IntoIterator<Item = &'a Arc<Type>>,
 ) -> Document<'a> {
     let generic_usages = collect_generic_usages(HashMap::new(), types);
-    let generic_names: Vec<Document<'_>> = generic_usages
-        .keys()
+
+    // Sort the ids to ensure deterministic ordering
+    let mut generic_ids = generic_usages.keys().collect::<Vec<_>>();
+    generic_ids.sort();
+
+    let generic_names: Vec<Document<'_>> = generic_ids
+        .into_iter()
         .map(|id| id_to_type_var(*id))
         .collect();
 
@@ -428,7 +433,7 @@ impl<'a> TypeScriptGenerator<'a> {
     /// emits a union type to represent the TypeScript type itself. Because in
     /// Gleam constructors can have the same name as the custom type, here we
     /// append a "$" symbol to the emitted TypeScript type to prevent those
-    /// naming classes.
+    /// naming clashes.
     ///
     fn custom_type_definition(
         &mut self,
@@ -447,7 +452,7 @@ impl<'a> TypeScriptGenerator<'a> {
             .collect();
 
         let definition = if constructors.is_empty() {
-            "any".to_doc()
+            "unknown".to_doc()
         } else {
             let constructors = constructors.iter().map(|x| {
                 name_with_generics(
