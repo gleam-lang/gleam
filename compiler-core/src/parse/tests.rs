@@ -1506,3 +1506,30 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn deprecation_attribute_on_all_type_variants() {
+    assert_module_error!(
+        r#"
+type Wibble {
+    @deprecated("1")
+    Wibble1
+    @deprecated("2")
+    Wibble2
+}
+"#
+    );
+}
+
+#[test]
+fn deprecation_attribute_on_type_variant() {
+    assert_parse_module!(
+        r#"
+type Wibble {
+    @deprecated("1")
+    Wibble1
+    Wibble2
+}
+"#
+    );
+}
