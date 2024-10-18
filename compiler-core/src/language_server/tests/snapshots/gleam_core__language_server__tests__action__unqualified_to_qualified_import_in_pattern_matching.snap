@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport result.{type Result, Ok, Error}\n\npub fn process_result(res: Result(Int, String)) -> Int {\n    case res {\n        Ok(value) -> value\n        Error(_) -> 0\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+import result.{type Result, Ok, Error}
+
+pub fn process_result(res: Result(Int, String)) -> Int {
+    case res {
+        Ok(value) -> value
+        ▔▔▔↑              
+        Error(_) -> 0
+    }
+}
+
+
+----- AFTER ACTION
+
+import result.{type Result,  Error}
+
+pub fn process_result(res: Result(Int, String)) -> Int {
+    case res {
+        result.Ok(value) -> value
+        Error(_) -> 0
+    }
+}

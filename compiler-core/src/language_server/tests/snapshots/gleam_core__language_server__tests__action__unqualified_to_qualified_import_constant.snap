@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport mymath.{pi}\n\npub fn circle_area(radius: Float) -> Float {\n    pi *. radius *. radius\n}\n\npub fn circle_circumference(radius: Float) -> Float {\n    2. *. pi *. radius\n}\n"
+---
+----- BEFORE ACTION
+
+import mymath.{pi}
+
+pub fn circle_area(radius: Float) -> Float {
+    pi *. radius *. radius
+    ▔▔▔▔▔↑                
+}
+
+pub fn circle_circumference(radius: Float) -> Float {
+    2. *. pi *. radius
+}
+
+
+----- AFTER ACTION
+
+import mymath.{}
+
+pub fn circle_area(radius: Float) -> Float {
+    mymath.pi *. radius *. radius
+}
+
+pub fn circle_circumference(radius: Float) -> Float {
+    2. *. mymath.pi *. radius
+}

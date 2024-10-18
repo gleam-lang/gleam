@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport list.{map, flatten}\nimport operation.{double}\n\npub fn process_names(names: List(List(Int))) -> List(Int) {\n    names\n    |> flatten\n    |> map(double)\n}\n"
+---
+----- BEFORE ACTION
+
+import list.{map, flatten}
+import operation.{double}
+
+pub fn process_names(names: List(List(Int))) -> List(Int) {
+    names
+    |> flatten
+    |> map(double)
+          ▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+
+import list.{map, flatten}
+import operation.{}
+
+pub fn process_names(names: List(List(Int))) -> List(Int) {
+    names
+    |> flatten
+    |> map(operation.double)
+}
