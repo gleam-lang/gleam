@@ -2471,3 +2471,23 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn no_crash_on_duplicate_record_fields() {
+    // https://github.com/gleam-lang/gleam/issues/3713
+    assert_module_error!(
+        "
+pub type X {
+  A
+  B(e0: Int, e0: Int)
+}
+
+fn compiler_crash(x: X) {
+  case x {
+    A -> todo
+    _ -> todo
+  }
+}
+  "
+    );
+}
