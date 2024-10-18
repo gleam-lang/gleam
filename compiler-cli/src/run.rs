@@ -12,7 +12,7 @@ use gleam_core::{
     type_::ModuleFunction,
 };
 
-use crate::{config::PackageKind, fs::ProjectIO};
+use crate::{config::PackageKind, fs::ProjectIO, ErlangNodeName};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -27,6 +27,8 @@ pub fn command(
     runtime: Option<Runtime>,
     module: Option<String>,
     which: Which,
+    erlang_node_name: Option<ErlangNodeName>,
+    setcookie: Option<String>,
     no_print_progress: bool,
 ) -> Result<(), Error> {
     let paths = crate::find_project_paths()?;
@@ -73,6 +75,9 @@ pub fn command(
     });
 
     let target = target.unwrap_or(mod_config.target);
+    if target == Target::JavaScript && erlang_node_name.is_some() {
+        eprintln!("Warning: Erlang node name is ignored for JavaScript target");
+    }
 
     let options = Options {
         warnings_as_errors: false,
@@ -114,7 +119,14 @@ pub fn command(
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang(&paths, &root_config.name, &module, arguments),
+            _ => run_erlang(
+                &paths,
+                &root_config.name,
+                &module,
+                erlang_node_name,
+                setcookie,
+                arguments,
+            ),
         },
         Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno(
@@ -138,9 +150,28 @@ fn run_erlang(
     paths: &ProjectPaths,
     package: &str,
     module: &str,
+    erlang_node_name: Option<ErlangNodeName>,
+    setcookie: Option<String>,
     arguments: Vec<String>,
 ) -> Result<i32, Error> {
     let mut args = vec![];
+
+    match erlang_node_name {
+        Some(ErlangNodeName::Short(name)) => {
+            args.push("-sname".into());
+            args.push(name.into());
+        }
+        Some(ErlangNodeName::Long(name)) => {
+            args.push("-name".into());
+            args.push(name.into());
+        }
+        None => {}
+    }
+
+    if let Some(cookie) = setcookie {
+        args.push("-setcookie".into());
+        args.push(cookie.into());
+    }
 
     // Specify locations of Erlang applications
     let packages = paths.build_directory_for_target(Mode::Dev, Target::Erlang);

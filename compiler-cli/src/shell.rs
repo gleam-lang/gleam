@@ -5,7 +5,9 @@ use gleam_core::{
 };
 use std::process::Command;
 
-pub fn command() -> Result<(), Error> {
+use crate::ErlangNodeName;
+
+pub fn command(erlang_node_name: Option<ErlangNodeName>, setcookie: Option<String>) -> Result<(), Error> {
     let paths = crate::find_project_paths()?;
 
     // Build project
@@ -27,6 +29,20 @@ pub fn command() -> Result<(), Error> {
 
     // Prepare the Erlang shell command
     let mut command = Command::new("erl");
+
+    match erlang_node_name {
+        Some(ErlangNodeName::Short(name)) => {
+            let _ = command.arg("-sname").arg(name);
+        }
+        Some(ErlangNodeName::Long(name)) => {
+            let _ = command.arg("-name").arg(name);
+        }
+        None => {}
+    }
+
+    if let Some(cookie) = setcookie {
+        let _ = command.arg("-setcookie").arg(cookie);
+    }
 
     // Print character lists as lists
     let _ = command.arg("-stdlib").arg("shell_strings").arg("false");

@@ -294,6 +294,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         minimum_required_version: SmallVersion,
         wrongfully_allowed_version: SmallVersion,
     },
+
+    #[error("Either name or sname must be specified, but not both")]
+    ErlangNodeNameConflict,
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -3584,6 +3587,15 @@ or you can publish it using a different version number"),
                 location: None,
                 hint: Some("Please add the --replace flag if you want to replace the release.".into()),
             }],
+            Error::ErlangNodeNameConflict => {
+                vec![Diagnostic {
+                    title: "Erlang node name conflict".into(),
+                    text: wrap("Only either name or sname can be specified, not both."),
+                    level: Level::Error,
+                    location: None,
+                    hint: None,
+                }]
+            }
         }
     }
 }

@@ -182,7 +182,19 @@ enum Command {
     Fix,
 
     /// Start an Erlang shell
-    Shell,
+    Shell {
+        /// Node short name.
+        #[clap(long)]
+        sname: Option<String>,
+
+        /// Node long name.
+        #[clap(long)]
+        name: Option<String>,
+
+        /// Secret cookie to use for distributed Erlang.
+        #[clap(long)]
+        setcookie: Option<String>,
+    },
 
     /// Run the project
     #[command(trailing_var_arg = true)]
@@ -201,6 +213,18 @@ enum Command {
         #[clap(long)]
         no_print_progress: bool,
 
+        /// Node short name.
+        #[clap(long)]
+        sname: Option<String>,
+
+        /// Node long name.
+        #[clap(long)]
+        name: Option<String>,
+
+        /// Secret cookie to use for distributed Erlang.
+        #[clap(long)]
+        setcookie: Option<String>,
+
         arguments: Vec<String>,
     },
 
@@ -212,6 +236,18 @@ enum Command {
 
         #[arg(long, ignore_case = true, help = runtime_doc())]
         runtime: Option<Runtime>,
+
+        /// Node short name.
+        #[clap(long)]
+        sname: Option<String>,
+
+        /// Node long name.
+        #[clap(long)]
+        name: Option<String>,
+
+        /// Secret cookie to use for distributed Erlang.
+        #[clap(long)]
+        setcookie: Option<String>,
 
         arguments: Vec<String>,
     },
@@ -439,12 +475,35 @@ enum Docs {
     },
 }
 
+#[derive(Clone, Debug)]
+pub enum ErlangNodeName {
+    Short(String),
+    Long(String),
+}
+
 fn main() {
     initialise_logger();
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();
 
-    let result = match Command::parse() {
+    let result = parse_command();
+
+    match result {
+        Ok(_) => {
+            tracing::info!("Successfully completed");
+        }
+        Err(error) => {
+            tracing::error!(error = ?error, "Failed");
+            let mut buffer = stderr.buffer();
+            error.pretty(&mut buffer);
+            stderr.print(&buffer).expect("Final result error writing");
+            std::process::exit(1);
+        }
+    }
+}
+
+fn parse_command() -> Result<()> {
+    match Command::parse() {
         Command::Build {
             target,
             warnings_as_errors,
@@ -477,28 +536,56 @@ fn main() {
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 
-        Command::Shell => shell::command(),
+        Command::Shell{ sname, name, setcookie } => {
+            let erlang_node_name = extract_erlang_node_name(&sname, &name)?;
+            shell::command(erlang_node_name, setcookie)
+        }
 
         Command::Run {
             target,
             arguments,
             runtime,
             module,
+            sname,
+            name,
+            setcookie,
             no_print_progress,
-        } => run::command(
-            arguments,
-            target,
-            runtime,
-            module,
-            run::Which::Src,
-            no_print_progress,
-        ),
+        } => {
+            let erlang_node_name = extract_erlang_node_name(&sname, &name)?;
+
+            run::command(
+                arguments,
+                target,
+                runtime,
+                module,
+                run::Which::Src,
+                erlang_node_name,
+                setcookie,
+                no_print_progress,
+            )
+        }
 
         Command::Test {
             target,
+            sname,
+            name,
             arguments,
             runtime,
-        } => run::command(arguments, target, runtime, None, run::Which::Test, false),
+            setcookie,
+        } => {
+            let erlang_node_name = extract_erlang_node_name(&sname, &name)?;
+
+            run::command(
+                arguments,
+                target,
+                runtime,
+                None,
+                run::Which::Test,
+                erlang_node_name,
+                setcookie,
+                false,
+            )
+        }
 
         Command::CompilePackage(opts) => compile_package::command(opts),
 
@@ -535,19 +622,6 @@ fn main() {
         Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
         Command::Export(ExportTarget::PackageInterface { output }) => {
             export::package_interface(output)
-        }
-    };
-
-    match result {
-        Ok(_) => {
-            tracing::info!("Successfully completed");
-        }
-        Err(error) => {
-            tracing::error!(error = ?error, "Failed");
-            let mut buffer = stderr.buffer();
-            error.pretty(&mut buffer);
-            stderr.print(&buffer).expect("Final result error writing");
-            std::process::exit(1);
         }
     }
 }
@@ -630,4 +704,20 @@ fn download_dependencies() -> Result<()> {
     let paths = find_project_paths()?;
     _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
     Ok(())
+}
+
+fn extract_erlang_node_name(
+    sname: &Option<String>,
+    name: &Option<String>,
+) -> Result<Option<ErlangNodeName>> {
+    let erlang_node_name = match (sname, name) {
+        (Some(s), None) => Some(ErlangNodeName::Short(s.to_string())),
+        (None, Some(n)) => Some(ErlangNodeName::Long(n.to_string())),
+        (Some(_), Some(_)) => {
+            return Err(Error::ErlangNodeNameConflict);
+        }
+        (None, None) => None,
+    };
+
+    return Ok(erlang_node_name);
 }
