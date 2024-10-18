@@ -109,6 +109,9 @@
   the Erlang target if any of their arguments were discarded.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Improve error message for using @deprecated with no deprecation message
+  ([Jiangda Wang](https://github.com/frank-iii))
+
 ### Formatter
 
 - The formatter no longer removes the first argument from a function
