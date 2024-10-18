@@ -391,7 +391,7 @@ pub enum ParseErrorType {
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
     UnknownAttributeRecordConstructor, // an attribute was used that is not know for a custom type constructor
-    AllVariantRecordConstructorDeprecated, // a the variants within a custom type are deprecated
+    AllVariantRecordConstructorDeprecated, // all the variants within a custom type are deprecated
 }
 
 impl LexicalError {
