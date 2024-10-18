@@ -10,7 +10,7 @@ use gleam_core::{
     docs::DocContext,
     error::Error,
     hex,
-    io::HttpClient as _,
+    io::{Content, HttpClient as _, OutputFile},
     Result,
 };
 
@@ -119,7 +119,7 @@ pub(crate) fn build_documentation(
     config: &PackageConfig,
     compiled: &mut Package,
     is_hex_publish: DocContext,
-) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
+) -> Result<Vec<OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
     let paths = crate::find_project_paths()?;
@@ -138,6 +138,22 @@ pub(crate) fn build_documentation(
         SystemTime::now(),
         is_hex_publish,
     );
+
+    // add non-Gleam files to docs output
+    for path in crate::fs::non_gleam_files_excluding_gitignore(Utf8Path::new("src")) {
+        if path.exists() {
+            if let Ok(bytes) = crate::fs::read_bytes(&path) {
+                let content = Content::Binary(bytes);
+                if let Ok(output_path) = path.strip_prefix("src") {
+                    let file = OutputFile {
+                        path: output_path.to_path_buf(),
+                        content,
+                    };
+                    outputs.push(file)
+                }
+            }
+        }
+    }
 
     outputs.push(gleam_core::docs::generate_json_package_interface(
         Utf8PathBuf::from("package-interface.json"),
