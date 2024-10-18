@@ -330,6 +330,21 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "Hint: If a type is not generic you should omit the `()`.".into(),
                 ],
             ),
+            ParseErrorType::UnknownAttributeRecordConstructor => (
+                "Type constructor attribute is unknow.",
+                vec!["Try `@deprecated`.".into()],
+            ),
+            ParseErrorType::AllVariantRecordConstructorDeprecated => (
+                "Can't deprecate all variants of a type.",
+                vec![
+                    "Consider deprecating the type as a whole:".into(),
+                    "@deprecated(\"message\")".into(),
+                    "type Wibble {".into(),
+                    "   Wobble1".into(),
+                    "   Wobble2".into(),
+                    "}".into(),
+                ],
+            ),
         }
     }
 }
@@ -398,9 +413,11 @@ pub enum ParseErrorType {
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
-    ConstantRecordConstructorNoArguments, // const x = Record()
-    TypeConstructorNoArguments,           // let a : Int()
-    TypeDefinitionNoArguments,            // pub type Wibble() { ... }
+    ConstantRecordConstructorNoArguments,  // const x = Record()
+    TypeConstructorNoArguments,            // let a : Int()
+    TypeDefinitionNoArguments,             // pub type Wibble() { ... }
+    UnknownAttributeRecordConstructor, // an attribute was used that is not know for a custom type constructor
+    AllVariantRecordConstructorDeprecated, // a the variants within a custom type are deprecated
 }
 
 impl LexicalError {

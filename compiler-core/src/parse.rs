@@ -2202,6 +2202,24 @@ where
             let constructors = Parser::series_of(
                 self,
                 &|p| {
+                    // The only attribute supported on constructors is @deprecated out of `external` and `target`
+                    let mut attributes = Attributes::default();
+                    let attr_loc = Parser::parse_attributes(p, &mut attributes)?;
+
+                    // Expecting all but the deprecated atterbutes to be default
+                    if attr_loc.is_some() // only if attributes are present
+                        && (attributes.external_erlang.is_some()
+                            || attributes.external_javascript.is_some()
+                            || attributes.target.is_some()
+                            || attributes.internal != InternalAttribute::Missing)
+                    {
+                        let attr_span = attr_loc.unwrap();
+                        return parse_error(
+                            ParseErrorType::UnknownAttributeRecordConstructor,
+                            attr_span,
+                        );
+                    }
+
                     if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
                         let documentation = p.take_documentation(c_s);
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
@@ -2215,6 +2233,7 @@ where
                             name: c_n,
                             arguments: args,
                             documentation,
+                            deprecation: attributes.deprecated,
                         }))
                     } else {
                         Ok(None)
@@ -2250,6 +2269,22 @@ where
         } else {
             (vec![], end)
         };
+
+        // check if all constructors are deprecation if so err
+        if constructors.len() > 0 // prevent checking an empty type `type wobble` which will always be true
+            && constructors
+                .iter()
+                .all(|record| record.deprecation.is_deprecated())
+        {
+            return parse_error(
+                ParseErrorType::AllVariantRecordConstructorDeprecated,
+                SrcSpan {
+                    start,
+                    end: end_position,
+                },
+            );
+        }
+
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },

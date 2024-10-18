@@ -233,6 +233,7 @@ pub struct RecordConstructor<T> {
     pub name: EcoString,
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<(u32, EcoString)>,
+    pub deprecation: Deprecation,
 }
 
 impl<A> RecordConstructor<A> {

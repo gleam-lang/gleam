@@ -1590,6 +1590,18 @@ pub fn main() {
     );
 }
 
+fn deprecation_attribute_on_type_variant() {
+    assert_parse_module!(
+        r#"
+type Wibble {
+    @deprecated("1")
+    Wibble1
+    Wibble2
+}
+"#
+    );
+}
+
 #[test]
 fn float_empty_exponent() {
     assert_error!("1.32e");
