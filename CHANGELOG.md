@@ -203,6 +203,10 @@
   would generate invalid TypeScript definitions.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where the compiler would crash when pattern matching on a type
+  which was defined with duplicate fields in one of its variants.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
