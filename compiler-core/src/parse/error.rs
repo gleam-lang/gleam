@@ -417,7 +417,7 @@ pub enum ParseErrorType {
     TypeConstructorNoArguments,            // let a : Int()
     TypeDefinitionNoArguments,             // pub type Wibble() { ... }
     UnknownAttributeRecordConstructor, // an attribute was used that is not know for a custom type constructor
-    AllVariantRecordConstructorDeprecated, // a the variants within a custom type are deprecated
+    AllVariantRecordConstructorDeprecated, // all the variants within a custom type are deprecated
 }
 
 impl LexicalError {
