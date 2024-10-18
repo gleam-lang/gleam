@@ -1107,12 +1107,23 @@ impl<'a> AddAnnotations<'a> {
     }
 }
 
+#[derive(Debug)]
 pub struct QualifiedConstructor<'a> {
     import: &'a ast::Import<EcoString>,
     module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
     is_type: bool,
+}
+
+impl<'a> QualifiedConstructor<'a> {
+    fn constructor_import(&self) -> String {
+        if self.is_type {
+            format!("type {}", self.constructor)
+        } else {
+            self.constructor.to_string()
+        }
+    }
 }
 
 pub struct QualifiedToUnqualifiedImportFirstPass<'a> {
@@ -1431,19 +1442,9 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     }
 
     fn determine_insert_position_and_text(&self) -> (u32, String) {
-        let QualifiedConstructor {
-            module_aliased,
-            constructor,
-            is_type,
-            ..
-        } = &self.qualified_constructor;
+        let QualifiedConstructor { module_aliased, .. } = &self.qualified_constructor;
 
-        let name = if *is_type {
-            format!("type {}", constructor)
-        } else {
-            constructor.to_string()
-        };
-
+        let name = self.qualified_constructor.constructor_import();
         let import_code = self.get_import_code();
         let has_brace = import_code.contains('}');
 
@@ -1649,6 +1650,475 @@ pub fn code_action_convert_qualified_constructor_to_unqualified(
         params,
         line_numbers,
         qualified_constructor,
+    );
+    let new_actions = second_pass.code_actions();
+    actions.extend(new_actions);
+}
+
+struct UnqualifiedConstructor<'a> {
+    import: &'a ast::Import<EcoString>,
+    module_name: EcoString,
+    constructor_name: EcoString,
+    constructor_used_name: EcoString,
+    is_type: bool,
+}
+
+impl UnqualifiedConstructor<'_> {
+    fn constructor_import(&self) -> String {
+        let prefix = if self.is_type { "type " } else { "" };
+        let base = format!("{}{}", prefix, self.constructor_name);
+
+        if self.constructor_name == self.constructor_used_name {
+            base
+        } else {
+            format!("{} as {}", base, self.constructor_used_name)
+        }
+    }
+}
+
+struct UnqualifiedToQualifiedImportFirstPass<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    unqualified_constructor: Option<UnqualifiedConstructor<'a>>,
+}
+
+impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
+    fn new(module: &'a Module, params: &'a CodeActionParams, line_numbers: LineNumbers) -> Self {
+        Self {
+            module,
+            params,
+            line_numbers,
+            unqualified_constructor: None,
+        }
+    }
+
+    fn get_module_import(&mut self, module_name: &EcoString) -> Option<&'a ast::Import<EcoString>> {
+        self.module
+            .ast
+            .definitions
+            .iter()
+            .find_map(|def| match def {
+                ast::Definition::Import(import) if import.module == *module_name => Some(import),
+                _ => None,
+            })
+    }
+    fn get_constructor_name(
+        &self,
+        import: &ast::Import<EcoString>,
+        name: &EcoString,
+        is_type: bool,
+    ) -> (EcoString, EcoString) {
+        let items = if is_type {
+            &import.unqualified_types
+        } else {
+            &import.unqualified_values
+        };
+
+        items
+            .iter()
+            .find(|item| item.used_name() == name)
+            .map(|item| (item.name.clone(), name.clone()))
+            .expect("Constructor not found in import")
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        for arg in args {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+        if let Some(return_) = return_annotation {
+            self.visit_type_ast(return_);
+        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+
+        if let Some(return_annotation) = &fun.return_annotation {
+            self.visit_type_ast(return_annotation);
+        }
+        ast::visit::visit_typed_function(self, fun);
+    }
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::TypeAst>,
+    ) {
+        if module.is_none()
+            && overlaps(
+                self.params.range,
+                src_span_to_lsp_range(*location, &self.line_numbers),
+            )
+        {
+            if let Some(import) = self
+                .module
+                .ast
+                .definitions
+                .iter()
+                .find_map(|def| match def {
+                    ast::Definition::Import(import) => {
+                        if import
+                            .unqualified_types
+                            .iter()
+                            .any(|ty| ty.used_name() == name)
+                        {
+                            return Some(import);
+                        }
+                        None
+                    }
+                    _ => None,
+                })
+            {
+                let (constructor_name, constructor_used_name) =
+                    self.get_constructor_name(import, name, true);
+
+                let module_alias = import.used_name();
+                self.unqualified_constructor = Some(UnqualifiedConstructor {
+                    import,
+                    module_name: module_alias.unwrap_or(import.module.clone()),
+                    constructor_name,
+                    constructor_used_name,
+                    is_type: true,
+                });
+            }
+        }
+
+        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor: &'ast type_::ValueConstructor,
+        name: &'ast EcoString,
+    ) {
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        if overlaps(self.params.range, range) {
+            if let Some(module_name) = match &constructor.variant {
+                type_::ValueConstructorVariant::ModuleConstant { module, .. }
+                | type_::ValueConstructorVariant::ModuleFn { module, .. }
+                | type_::ValueConstructorVariant::Record { module, .. } => Some(module),
+
+                type_::ValueConstructorVariant::LocalVariable { .. }
+                | type_::ValueConstructorVariant::LocalConstant { .. } => None,
+            } {
+                if let Some(import) = self.get_module_import(module_name) {
+                    let (constructor_name, constructor_used_name) =
+                        self.get_constructor_name(import, name, false);
+
+                    let module_alias = import.used_name();
+                    self.unqualified_constructor = Some(UnqualifiedConstructor {
+                        import,
+                        module_name: module_alias.unwrap_or(import.module.clone()),
+                        constructor_name,
+                        constructor_used_name,
+                        is_type: false,
+                    });
+                }
+            }
+        }
+        ast::visit::visit_typed_expr_var(self, location, constructor, name);
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if module.is_none()
+            && overlaps(
+                self.params.range,
+                src_span_to_lsp_range(*location, &self.line_numbers),
+            )
+        {
+            if let crate::analyse::Inferred::Known(constructor) = constructor {
+                if let Some(import) = self.get_module_import(&constructor.module) {
+                    let module_alias = import.used_name();
+                    let (constructor_name, constructor_used_name) =
+                        self.get_constructor_name(import, name, false);
+
+                    self.unqualified_constructor = Some(UnqualifiedConstructor {
+                        import,
+                        module_name: module_alias.unwrap_or(import.module.clone()),
+                        constructor_name,
+                        constructor_used_name,
+                        is_type: false,
+                    });
+                }
+            }
+        }
+
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
+    }
+}
+
+struct UnqualifiedToQualifiedImportSecondPass<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    unqualified_constructor: UnqualifiedConstructor<'a>,
+    edits: Vec<TextEdit>,
+}
+
+impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
+    pub fn new(
+        module: &'a Module,
+        params: &'a CodeActionParams,
+        line_numbers: LineNumbers,
+        unqualified_constructor: UnqualifiedConstructor<'a>,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            line_numbers,
+            unqualified_constructor,
+            edits: vec![],
+        }
+    }
+
+    fn add_module_qualifier(&mut self, location: SrcSpan) {
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(
+                SrcSpan::new(
+                    location.start,
+                    location.start
+                        + self.unqualified_constructor.constructor_used_name.len() as u32,
+                ),
+                &self.line_numbers,
+            ),
+            new_text: format!(
+                "{}.{}",
+                self.unqualified_constructor.module_name,
+                self.unqualified_constructor.constructor_name
+            ),
+        });
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.edits.is_empty() {
+            return vec![];
+        }
+        self.edit_import();
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(&format!(
+            "Qualify {} as {}",
+            self.unqualified_constructor.constructor_used_name,
+            format!(
+                "{}.{}",
+                self.unqualified_constructor.module_name,
+                self.unqualified_constructor.constructor_name
+            )
+        ))
+        .kind(CodeActionKind::REFACTOR)
+        .changes(self.params.text_document.uri.clone(), self.edits)
+        .preferred(false)
+        .push_to(&mut action);
+        action
+    }
+
+    fn edit_import(&mut self) {
+        let UnqualifiedConstructor {
+            import: ast::Import { location, .. },
+            ..
+        } = self.unqualified_constructor;
+        let import_code = self
+            .module
+            .code
+            .get(location.start as usize..location.end as usize)
+            .expect("Failed to get import code");
+        let constructor_import = self.unqualified_constructor.constructor_import();
+        let Some(first_char_pos) = import_code
+            .find(&constructor_import)
+            .map(|pos| location.start as usize + pos)
+        else {
+            return;
+        };
+        let mut last_char_pos = first_char_pos + constructor_import.len();
+        if self.module.code.get(last_char_pos..last_char_pos + 1) == Some(",") {
+            last_char_pos += 1;
+        }
+
+        self.edits.push(TextEdit {
+            range: src_span_to_lsp_range(
+                SrcSpan::new(first_char_pos as u32, last_char_pos as u32),
+                &self.line_numbers,
+            ),
+            new_text: "".to_string(),
+        });
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        for arg in args {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+        if let Some(return_) = return_annotation {
+            self.visit_type_ast(return_);
+        }
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        for arg in &fun.arguments {
+            if let Some(annotation) = &arg.annotation {
+                self.visit_type_ast(annotation);
+            }
+        }
+
+        if let Some(return_annotation) = &fun.return_annotation {
+            self.visit_type_ast(return_annotation);
+        }
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<ast::TypeAst>,
+    ) {
+        if module.is_none() {
+            let UnqualifiedConstructor {
+                constructor_used_name,
+                is_type,
+                ..
+            } = &self.unqualified_constructor;
+            if *is_type && constructor_used_name == name {
+                self.add_module_qualifier(*location);
+            }
+        }
+        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor: &'ast type_::ValueConstructor,
+        name: &'ast EcoString,
+    ) {
+        let UnqualifiedConstructor {
+            constructor_used_name,
+            is_type,
+            ..
+        } = &self.unqualified_constructor;
+        if !*is_type && constructor_used_name == name {
+            self.add_module_qualifier(*location);
+        }
+        ast::visit::visit_typed_expr_var(self, location, constructor, name);
+    }
+
+    fn visit_typed_pattern_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<CallArg<TypedPattern>>,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        constructor: &'ast crate::analyse::Inferred<type_::PatternConstructor>,
+        spread: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+    ) {
+        if module.is_none() {
+            let UnqualifiedConstructor {
+                constructor_used_name,
+                is_type,
+                ..
+            } = &self.unqualified_constructor;
+            if !*is_type && constructor_used_name == name {
+                self.add_module_qualifier(*location);
+            }
+        }
+        ast::visit::visit_typed_pattern_constructor(
+            self,
+            location,
+            name,
+            arguments,
+            module,
+            constructor,
+            spread,
+            type_,
+        );
+    }
+}
+
+pub fn code_action_convert_unqualified_constructor_to_qualified(
+    module: &Module,
+    params: &CodeActionParams,
+    actions: &mut Vec<CodeAction>,
+) {
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut first_pass =
+        UnqualifiedToQualifiedImportFirstPass::new(module, params, line_numbers.clone());
+    first_pass.visit_typed_module(&module.ast);
+    let Some(unqualified_constructor) = first_pass.unqualified_constructor else {
+        return;
+    };
+    let second_pass = UnqualifiedToQualifiedImportSecondPass::new(
+        module,
+        params,
+        line_numbers,
+        unqualified_constructor,
     );
     let new_actions = second_pass.code_actions();
     actions.extend(new_actions);
