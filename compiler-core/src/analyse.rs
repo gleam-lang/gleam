@@ -972,12 +972,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
                 // Register the label for this parameter, if there is one
                 if let Some((_, label)) = label {
-                    field_map.insert(label.clone(), i as u32).map_err(|_| {
-                        Error::DuplicateField {
+                    if field_map.insert(label.clone(), i as u32).is_err() {
+                        self.problems.error(Error::DuplicateField {
                             label: label.clone(),
                             location: *location,
-                        }
-                    })?;
+                        });
+                    };
                 }
             }
             let field_map = field_map.into_option();
