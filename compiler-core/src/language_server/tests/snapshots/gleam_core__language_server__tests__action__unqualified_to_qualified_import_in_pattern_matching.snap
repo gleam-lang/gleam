@@ -17,7 +17,7 @@ pub fn process_result(res: Result(Int, String)) -> Int {
 
 ----- AFTER ACTION
 
-import result.{type Result,  Error}
+import result.{type Result, Error}
 
 pub fn process_result(res: Result(Int, String)) -> Int {
     case res {

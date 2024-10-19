@@ -16,7 +16,7 @@ pub fn process_list(items: List(Int)) -> List(Int) {
 
 ----- AFTER ACTION
 
-import list.{ filter}
+import list.{filter}
 
 pub fn process_list(items: List(Int)) -> List(Int) {
     items
