@@ -1,0 +1,14 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 1589
+expression: "\ntype Wibble {\n    @external(erlang, \"one\", \"two\")\n    @target(erlang)\n    @internal\n    Wibble1\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:5
+  │  
+3 │ ╭     @external(erlang, "one", "two")
+4 │ │     @target(erlang)
+5 │ │     @internal
+  │ ╰─────────────^ Variant attribute(s) are unknow.
+
+Try `@deprecated`.

@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 1553
+expression: "\ntype Wibble {\n    @target(erlang)\n    Wibble2\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:5
+  │
+3 │     @target(erlang)
+  │     ^^^^^^^^^^^^^^^ Variant attribute(s) are unknow.
+
+Try `@deprecated`.
