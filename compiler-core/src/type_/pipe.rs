@@ -356,12 +356,16 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         {
             if let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first() {
                 match arguments.as_slice() {
-                    [first] | [first, ..] if first.is_capture_hole() => self
-                        .expr_typer
-                        .problems
-                        .warning(Warning::RedundantPipeFunctionCapture {
-                            location: first.location,
-                        }),
+                    // If the first argument is labelled, we don't warn the user
+                    // as they might be intentionally adding it to provide more
+                    // information about exactly which argument is being piped into.
+                    [first] | [first, ..] if first.is_capture_hole() && first.label.is_none() => {
+                        self.expr_typer
+                            .problems
+                            .warning(Warning::RedundantPipeFunctionCapture {
+                                location: first.location,
+                            })
+                    }
                     _ => (),
                 }
             }

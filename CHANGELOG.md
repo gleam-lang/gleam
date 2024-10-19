@@ -111,6 +111,34 @@
 
 ### Formatter
 
+- The formatter no longer removes the first argument from a function
+  which is part of a pipeline if the first argument is a capture
+  and it has a label. This snippet of code is left as is by the formatter:
+
+  ```gleam
+  pub fn divide(dividend a: Int, divisor b: Int) -> Int {
+    a / b
+  }
+
+  pub fn main() {
+    10 |> divide(dividend: _, divisor: 2)
+  }
+  ```
+
+  Whereas previously, the label of the capture variable would be lost:
+
+  ```gleam
+  pub fn divide(dividend a: Int, divisor b: Int) -> Int {
+    a / b
+  }
+
+  pub fn main() {
+    10 |> divide(divisor: 2)
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language Server
 
 - The Language Server now displays correctly qualified or aliased type names
