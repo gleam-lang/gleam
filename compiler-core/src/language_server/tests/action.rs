@@ -2806,7 +2806,9 @@ pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
         "Qualify Option as option.Option",
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
-        find_position_of("Option(").select_until(find_position_of("Int)")),
+        find_position_of("Opt")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ion(")),
     );
 }
 
@@ -2890,6 +2892,28 @@ pub fn double_list(items: List(Int)) -> List(Int) {
             "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
         ),
         find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_bad_formatted_type_constructor() {
+    let src = r#"
+import option.{type    Option, Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Option as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("Opt")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ion(")),
     );
 }
 

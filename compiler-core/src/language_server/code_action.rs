@@ -1107,7 +1107,6 @@ impl<'a> AddAnnotations<'a> {
     }
 }
 
-#[derive(Debug)]
 pub struct QualifiedConstructor<'a> {
     import: &'a ast::Import<EcoString>,
     module_aliased: bool,
@@ -1655,32 +1654,17 @@ pub fn code_action_convert_qualified_constructor_to_unqualified(
     actions.extend(new_actions);
 }
 
-struct UnqualifiedConstructor<'a> {
-    import: &'a ast::Import<EcoString>,
+struct UnqualifiedConstructor {
     module_name: EcoString,
-    constructor_name: EcoString,
-    constructor_used_name: EcoString,
+    constructor: ast::UnqualifiedImport,
     is_type: bool,
-}
-
-impl UnqualifiedConstructor<'_> {
-    fn constructor_import(&self) -> String {
-        let prefix = if self.is_type { "type " } else { "" };
-        let base = format!("{}{}", prefix, self.constructor_name);
-
-        if self.constructor_name == self.constructor_used_name {
-            base
-        } else {
-            format!("{} as {}", base, self.constructor_used_name)
-        }
-    }
 }
 
 struct UnqualifiedToQualifiedImportFirstPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
-    unqualified_constructor: Option<UnqualifiedConstructor<'a>>,
+    unqualified_constructor: Option<UnqualifiedConstructor>,
 }
 
 impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
@@ -1697,20 +1681,25 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
         &mut self,
         module_name: &EcoString,
         constructor_name: &EcoString,
-    ) -> Option<(&'a ast::Import<EcoString>, EcoString, EcoString)> {
+    ) -> Option<UnqualifiedConstructor> {
         self.module
             .ast
             .definitions
             .iter()
             .find_map(|def| match def {
-                ast::Definition::Import(import)
-                    if import.module == *module_name && import.used_name().is_some() =>
-                {
+                ast::Definition::Import(import) if import.module == *module_name => {
+                    let Some(module_name) = import.used_name() else {
+                        return None;
+                    };
                     import
                         .unqualified_values
                         .iter()
                         .find(|value| value.used_name() == constructor_name)
-                        .map(|value| (import, value.name.clone(), value.used_name().clone()))
+                        .map(|value| UnqualifiedConstructor {
+                            constructor: value.clone(),
+                            module_name,
+                            is_type: false,
+                        })
                 }
                 _ => None,
             })
@@ -1719,7 +1708,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
     fn get_module_import_from_type_constructor(
         &self,
         constructor_name: &EcoString,
-    ) -> Option<(&'a ast::Import<EcoString>, EcoString, EcoString)> {
+    ) -> Option<UnqualifiedConstructor> {
         self.module
             .ast
             .definitions
@@ -1731,8 +1720,12 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                         .iter()
                         .find(|ty| ty.used_name() == constructor_name)
                     {
-                        if import.used_name().is_some() {
-                            return Some((import, ty.name.clone(), ty.used_name().clone()));
+                        if let Some(module_name) = import.used_name() {
+                            return Some(UnqualifiedConstructor {
+                                constructor: ty.clone(),
+                                module_name,
+                                is_type: true,
+                            });
                         }
                     }
                     None
@@ -1796,17 +1789,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 src_span_to_lsp_range(*location, &self.line_numbers),
             )
         {
-            if let Some((import, constructor_name, constructor_used_name)) =
-                self.get_module_import_from_type_constructor(name)
-            {
-                self.unqualified_constructor = Some(UnqualifiedConstructor {
-                    import,
-                    module_name: import.used_name().expect("Import should not be discarded"),
-                    constructor_name,
-                    constructor_used_name,
-                    is_type: true,
-                });
-            }
+            self.unqualified_constructor = self.get_module_import_from_type_constructor(name);
         }
 
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
@@ -1828,17 +1811,8 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 type_::ValueConstructorVariant::LocalVariable { .. }
                 | type_::ValueConstructorVariant::LocalConstant { .. } => None,
             } {
-                if let Some((import, constructor_name, constructor_used_name)) =
-                    self.get_module_import_from_value_constructor(module_name, name)
-                {
-                    self.unqualified_constructor = Some(UnqualifiedConstructor {
-                        import,
-                        module_name: import.used_name().expect("Import should not be discarded"),
-                        constructor_name,
-                        constructor_used_name,
-                        is_type: false,
-                    });
-                }
+                self.unqualified_constructor =
+                    self.get_module_import_from_value_constructor(module_name, name);
             }
         }
         ast::visit::visit_typed_expr_var(self, location, constructor, name);
@@ -1861,17 +1835,8 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             )
         {
             if let crate::analyse::Inferred::Known(constructor) = constructor {
-                if let Some((import, constructor_name, constructor_used_name)) =
-                    self.get_module_import_from_value_constructor(&constructor.module, name)
-                {
-                    self.unqualified_constructor = Some(UnqualifiedConstructor {
-                        import,
-                        module_name: import.used_name().expect("Import should not be discarded"),
-                        constructor_name,
-                        constructor_used_name,
-                        is_type: false,
-                    });
-                }
+                self.unqualified_constructor =
+                    self.get_module_import_from_value_constructor(&constructor.module, name);
             }
         }
 
@@ -1892,7 +1857,7 @@ struct UnqualifiedToQualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
-    unqualified_constructor: UnqualifiedConstructor<'a>,
+    unqualified_constructor: UnqualifiedConstructor,
     edits: Vec<TextEdit>,
 }
 
@@ -1901,7 +1866,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
         module: &'a Module,
         params: &'a CodeActionParams,
         line_numbers: LineNumbers,
-        unqualified_constructor: UnqualifiedConstructor<'a>,
+        unqualified_constructor: UnqualifiedConstructor,
     ) -> Self {
         Self {
             module,
@@ -1918,14 +1883,14 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
                 SrcSpan::new(
                     location.start,
                     location.start
-                        + self.unqualified_constructor.constructor_used_name.len() as u32,
+                        + self.unqualified_constructor.constructor.used_name().len() as u32,
                 ),
                 &self.line_numbers,
             ),
             new_text: format!(
                 "{}.{}",
                 self.unqualified_constructor.module_name,
-                self.unqualified_constructor.constructor_name
+                self.unqualified_constructor.constructor.name
             ),
         });
     }
@@ -1937,14 +1902,15 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
         }
         self.edit_import();
         let mut action = Vec::with_capacity(1);
+        let UnqualifiedConstructor {
+            module_name,
+            constructor,
+            ..
+        } = self.unqualified_constructor;
         CodeActionBuilder::new(&format!(
-            "Qualify {} as {}",
-            self.unqualified_constructor.constructor_used_name,
-            format!(
-                "{}.{}",
-                self.unqualified_constructor.module_name,
-                self.unqualified_constructor.constructor_name
-            )
+            "Qualify {} as {module_name}.{}",
+            constructor.used_name(),
+            constructor.name,
         ))
         .kind(CodeActionKind::REFACTOR)
         .changes(self.params.text_document.uri.clone(), self.edits)
@@ -1955,31 +1921,16 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
 
     fn edit_import(&mut self) {
         let UnqualifiedConstructor {
-            import: ast::Import { location, .. },
-            is_type,
+            constructor:
+                ast::UnqualifiedImport {
+                    location: constructor_import_span,
+                    ..
+                },
             ..
         } = self.unqualified_constructor;
-        let import_code = self
-            .module
-            .code
-            .get(location.start as usize..location.end as usize)
-            .expect("Failed to get import code");
-        let constructor_import = self.unqualified_constructor.constructor_import();
 
-        // TODO: handle import module.{Constructor, type Constructor} (as alias)
-        let Some(first_char_pos) = (if is_type {
-            import_code
-                .find(&constructor_import)
-                .map(|pos| location.start as usize + pos)
-        } else {
-            import_code
-                .rfind(&constructor_import)
-                .map(|pos| location.start as usize + pos)
-        }) else {
-            return;
-        };
-
-        let mut last_char_pos = first_char_pos + constructor_import.len();
+        let mut last_char_pos = constructor_import_span.end as usize;
+        // TODO: handle cases like import module.{Constructor   , type Constructor}
         if self.module.code.get(last_char_pos..last_char_pos + 1) == Some(",") {
             last_char_pos += 1;
         }
@@ -1989,7 +1940,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
 
         self.edits.push(TextEdit {
             range: src_span_to_lsp_range(
-                SrcSpan::new(first_char_pos as u32, last_char_pos as u32),
+                SrcSpan::new(constructor_import_span.start, last_char_pos as u32),
                 &self.line_numbers,
             ),
             new_text: "".to_string(),
@@ -2048,11 +1999,11 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     ) {
         if module.is_none() {
             let UnqualifiedConstructor {
-                constructor_used_name,
+                constructor,
                 is_type,
                 ..
             } = &self.unqualified_constructor;
-            if *is_type && constructor_used_name == name {
+            if *is_type && constructor.used_name() == name {
                 self.add_module_qualifier(*location);
             }
         }
@@ -2066,11 +2017,11 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         name: &'ast EcoString,
     ) {
         let UnqualifiedConstructor {
-            constructor_used_name,
+            constructor: wanted_constructor,
             is_type,
             ..
         } = &self.unqualified_constructor;
-        if !*is_type && constructor_used_name == name {
+        if !*is_type && wanted_constructor.used_name() == name {
             self.add_module_qualifier(*location);
         }
         ast::visit::visit_typed_expr_var(self, location, constructor, name);
@@ -2088,11 +2039,11 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     ) {
         if module.is_none() {
             let UnqualifiedConstructor {
-                constructor_used_name,
+                constructor: wanted_constructor,
                 is_type,
                 ..
             } = &self.unqualified_constructor;
-            if !*is_type && constructor_used_name == name {
+            if !*is_type && wanted_constructor.used_name() == name {
                 self.add_module_qualifier(*location);
             }
         }
