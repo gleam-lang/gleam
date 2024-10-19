@@ -1483,12 +1483,15 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) if name == CAPTURE_VARIABLE
         );
+        let first_argument_is_labelled = args.first().is_some_and(|arg| arg.label.is_some());
         let arity = args.len();
 
-        if hole_in_first_position && args.len() == 1 {
+        // If the first argument is labelled, we don't remove it as the label adds
+        // extra information and could be used to make code more readable.
+        if hole_in_first_position && args.len() == 1 && !first_argument_is_labelled {
             // x |> fun(_)
             self.expr(fun)
-        } else if hole_in_first_position {
+        } else if hole_in_first_position && !first_argument_is_labelled {
             // x |> fun(_, 2, 3)
             let args = args
                 .iter()

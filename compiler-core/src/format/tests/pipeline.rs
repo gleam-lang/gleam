@@ -104,3 +104,31 @@ pub fn multiline_function_inside_pipeline_in_tuple_is_indented_properly() {
 "#,
     );
 }
+
+#[test]
+fn pipe_with_labelled_first_argument_capture() {
+    assert_format!(
+        "fn wibble(label1 a, label2 b, lots c, of d, labels e) {
+  a + b * c - d / e
+}
+
+fn main() {
+  1 |> wibble(label1: _, label2: 2, lots: 3, of: 4, labels: 5)
+}
+"
+    );
+}
+
+#[test]
+fn pipe_with_labelled_only_argument_capture() {
+    assert_format!(
+        "fn wibble(descriptive_label value) {
+  value
+}
+
+fn main() {
+  42 |> wibble(descriptive_label: _)
+}
+"
+    );
+}
