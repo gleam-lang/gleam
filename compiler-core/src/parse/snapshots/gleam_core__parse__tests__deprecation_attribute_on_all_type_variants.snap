@@ -5,14 +5,9 @@ expression: "\ntype Wibble {\n    @deprecated(\"1\")\n    Wibble1\n    @deprecat
 ---
 error: Syntax error
   ┌─ /src/parse/error.gleam:2:1
-  │  
-2 │ ╭ type Wibble {
-3 │ │     @deprecated("1")
-4 │ │     Wibble1
-5 │ │     @deprecated("2")
-6 │ │     Wibble2
-7 │ │ }
-  │ ╰─^ Can't deprecate all variants of a type.
+  │
+2 │ type Wibble {
+  │ ^^^^^^^^^^^ Can't deprecate all variants of a type.
 
 Consider deprecating the type as a whole:
 @deprecated("message")
