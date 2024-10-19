@@ -126,8 +126,8 @@
 - Optimised creation of bit arrays on the JavaScript target.
   ([Richard Viney](https://github.com/richard-viney))
 
-- The compiler now narrows the variant of custom types when pattern matching,
-  allowing for safe record updates if the variant is known:
+- The compiler can now allow you to perform safe record updates for
+  specific variants of a type after pattern matching on it:
 
   ```gleam
   pub type Pet {
