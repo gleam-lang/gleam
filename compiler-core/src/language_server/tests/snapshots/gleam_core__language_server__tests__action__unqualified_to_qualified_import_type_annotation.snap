@@ -17,7 +17,7 @@ pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
 
 ----- AFTER ACTION
 
-import option.{ Some}
+import option.{Some}
 
 pub fn maybe_increment(x: option.Option(Int)) -> option.Option(Int) {
     case x {

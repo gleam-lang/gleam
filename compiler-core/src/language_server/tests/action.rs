@@ -2710,6 +2710,46 @@ pub fn create_user(name: String) -> User {
 }
 
 #[test]
+fn test_unqualified_to_qualified_import_after_constructor() {
+    let src = r#"
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+}
+
+import user.{type User, User}
+"#;
+    assert_code_action!(
+        "Qualify User as user.User",
+        TestProject::for_source(src)
+            .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
+        find_position_of("User(").select_until(find_position_of("name: name")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_between_constructors() {
+    let src = r#"
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+}
+
+import user.{type User, User}
+
+pub fn user_list(users: List(User)) -> List(String) {
+    User(name: "John", id: 1)
+    User(name: "Jane", id: 2)
+}
+
+"#;
+    assert_code_action!(
+        "Qualify User as user.User",
+        TestProject::for_source(src)
+            .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
+        find_position_of("User(").select_until(find_position_of("name: name")),
+    );
+}
+
+#[test]
 fn test_unqualified_to_qualified_import_multiple_occurrences() {
     let src = r#"
 import list.{map, filter}
@@ -2832,6 +2872,27 @@ pub fn double_list(items: List(Int)) -> List(Int) {
         find_position_of("transform(").select_until(find_position_of("items,")),
     );
 }
+
+#[test]
+fn test_unqualified_to_qualified_import_import_discarded() {
+    let src = r#"
+import list.{map as transform} as _
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+}
+"#;
+    let title = "Qualify transform as list.map";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
+
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

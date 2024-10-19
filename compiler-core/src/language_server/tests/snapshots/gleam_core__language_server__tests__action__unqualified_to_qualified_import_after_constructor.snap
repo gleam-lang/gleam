@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn create_user(name: String) -> User {\n    User(name: name, id: 1)\n}\n\nimport user.{type User, User}\n"
+---
+----- BEFORE ACTION
+
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+    ▔▔▔▔▔↑                 
+}
+
+import user.{type User, User}
+
+
+----- AFTER ACTION
+
+pub fn create_user(name: String) -> User {
+    user.User(name: name, id: 1)
+}
+
+import user.{type User, }
