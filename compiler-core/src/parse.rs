@@ -2270,7 +2270,7 @@ where
             (vec![], end)
         };
 
-        // check if all constructors are deprecation if so err
+        // check if all constructors are deprecated if so error
         if constructors.len() > 0 // prevent checking an empty type `type wobble` which will always be true
             && constructors
                 .iter()
