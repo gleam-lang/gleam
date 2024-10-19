@@ -331,7 +331,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::UnknownAttributeRecordConstructor => (
-                "Type constructor attribute is unknow.",
+                "Variant attribute(s) are unknow.",
                 vec!["Try `@deprecated`.".into()],
             ),
             ParseErrorType::AllVariantRecordConstructorDeprecated => (
