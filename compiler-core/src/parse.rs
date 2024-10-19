@@ -2202,7 +2202,7 @@ where
             let constructors = Parser::series_of(
                 self,
                 &|p| {
-                    // The only attribute supported on constructors is @deprecated out of `external` and `target`
+                    // The only attribute supported on constructors is @deprecated
                     let mut attributes = Attributes::default();
                     let attr_loc = Parser::parse_attributes(p, &mut attributes)?;
 
