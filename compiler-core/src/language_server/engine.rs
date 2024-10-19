@@ -30,7 +30,10 @@ use std::sync::Arc;
 
 use super::{
     code_action::{
-        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified, code_action_convert_unqualified_constructor_to_qualified, code_action_import_module, AddAnnotations, CodeActionBuilder, FillInMissingLabelledArgs, LabelShorthandSyntax, LetAssertToCase, RedundantTupleInCaseSubject
+        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
+        code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
+        AddAnnotations, CodeActionBuilder, FillInMissingLabelledArgs, LabelShorthandSyntax,
+        LetAssertToCase, RedundantTupleInCaseSubject,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
