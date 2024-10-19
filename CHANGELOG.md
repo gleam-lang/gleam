@@ -108,8 +108,8 @@
 - Improved the error message for using `@deprecated` with no deprecation message
   ([Jiangda Wang](https://github.com/frank-iii))
 
-- The compiler now narrows the variant of custom types when pattern matching,
-  allowing for safe record updates if the variant is known:
+- The compiler can now allow you to perform safe record updates for
+  specific variants of a type after pattern matching on it:
 
   ```gleam
   pub type Pet {
