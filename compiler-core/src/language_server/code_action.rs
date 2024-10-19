@@ -1681,57 +1681,51 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
         &mut self,
         module_name: &EcoString,
         constructor_name: &EcoString,
-    ) -> Option<UnqualifiedConstructor> {
-        self.module
-            .ast
-            .definitions
-            .iter()
-            .find_map(|def| match def {
-                ast::Definition::Import(import) if import.module == *module_name => {
-                    let Some(module_name) = import.used_name() else {
-                        return None;
-                    };
-                    import
+    ) {
+        self.unqualified_constructor =
+            self.module
+                .ast
+                .definitions
+                .iter()
+                .find_map(|def| match def {
+                    ast::Definition::Import(import) if import.module == *module_name => import
                         .unqualified_values
                         .iter()
                         .find(|value| value.used_name() == constructor_name)
-                        .map(|value| UnqualifiedConstructor {
-                            constructor: value.clone(),
-                            module_name,
-                            is_type: false,
-                        })
-                }
-                _ => None,
-            })
+                        .and_then(|value| {
+                            Some(UnqualifiedConstructor {
+                                constructor: value.clone(),
+                                module_name: import.used_name()?,
+                                is_type: false,
+                            })
+                        }),
+                    _ => None,
+                })
     }
 
-    fn get_module_import_from_type_constructor(
-        &self,
-        constructor_name: &EcoString,
-    ) -> Option<UnqualifiedConstructor> {
-        self.module
-            .ast
-            .definitions
-            .iter()
-            .find_map(|def| match def {
-                ast::Definition::Import(import) => {
-                    if let Some(ty) = import
-                        .unqualified_types
-                        .iter()
-                        .find(|ty| ty.used_name() == constructor_name)
-                    {
-                        if let Some(module_name) = import.used_name() {
+    fn get_module_import_from_type_constructor(&mut self, constructor_name: &EcoString) {
+        self.unqualified_constructor =
+            self.module
+                .ast
+                .definitions
+                .iter()
+                .find_map(|def| match def {
+                    ast::Definition::Import(import) => {
+                        if let Some(ty) = import
+                            .unqualified_types
+                            .iter()
+                            .find(|ty| ty.used_name() == constructor_name)
+                        {
                             return Some(UnqualifiedConstructor {
                                 constructor: ty.clone(),
-                                module_name,
+                                module_name: import.used_name()?,
                                 is_type: true,
                             });
                         }
+                        None
                     }
-                    None
-                }
-                _ => None,
-            })
+                    _ => None,
+                })
     }
 }
 
@@ -1789,7 +1783,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 src_span_to_lsp_range(*location, &self.line_numbers),
             )
         {
-            self.unqualified_constructor = self.get_module_import_from_type_constructor(name);
+            self.get_module_import_from_type_constructor(name);
         }
 
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
@@ -1811,8 +1805,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
                 type_::ValueConstructorVariant::LocalVariable { .. }
                 | type_::ValueConstructorVariant::LocalConstant { .. } => None,
             } {
-                self.unqualified_constructor =
-                    self.get_module_import_from_value_constructor(module_name, name);
+                self.get_module_import_from_value_constructor(module_name, name);
             }
         }
         ast::visit::visit_typed_expr_var(self, location, constructor, name);
@@ -1835,8 +1828,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             )
         {
             if let crate::analyse::Inferred::Known(constructor) = constructor {
-                self.unqualified_constructor =
-                    self.get_module_import_from_value_constructor(&constructor.module, name);
+                self.get_module_import_from_value_constructor(&constructor.module, name);
             }
         }
 
@@ -1930,7 +1922,9 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
         } = self.unqualified_constructor;
 
         let mut last_char_pos = constructor_import_span.end as usize;
-        // TODO: handle cases like import module.{Constructor   , type Constructor}
+        while self.module.code.get(last_char_pos..last_char_pos + 1) == Some(" ") {
+            last_char_pos += 1;
+        }
         if self.module.code.get(last_char_pos..last_char_pos + 1) == Some(",") {
             last_char_pos += 1;
         }
