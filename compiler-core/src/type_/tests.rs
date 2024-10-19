@@ -2707,3 +2707,54 @@ pub fn main() {
         vec![("main", "fn() -> Nil")]
     );
 }
+
+#[test]
+fn type_narrowing_allows_inference() {
+    // https://github.com/gleam-lang/gleam/pull/3647#issuecomment-2423146977
+    assert_module_infer!(
+        "
+pub type Wibble {
+  Wibble(a: Int)
+  Wobble(b: Int)
+}
+
+pub fn do_a_thing(wibble) {
+  case wibble {
+    Wibble(..) -> wibble.a
+    _ -> todo
+  }
+  wibble
+}
+",
+        vec![
+            ("Wibble", "fn(Int) -> Wibble"),
+            ("Wobble", "fn(Int) -> Wibble"),
+            ("do_a_thing", "fn(Wibble) -> Wibble")
+        ]
+    );
+}
+
+#[test]
+fn type_narrowing_allows_inference2() {
+    // https://github.com/gleam-lang/gleam/pull/3647#issuecomment-2423146977
+    assert_module_infer!(
+        "
+pub type Box(a) {
+  Box(inner: a)
+  UnBox
+}
+
+pub fn rebox(box) {
+  case box {
+    Box(..) -> Box(box.inner + 1)
+    UnBox -> UnBox
+  }
+}
+",
+        vec![
+            ("Box", "fn(a) -> Box(a)"),
+            ("UnBox", "Box(a)"),
+            ("rebox", "fn(Box(Int)) -> Box(Int)")
+        ]
+    );
+}
