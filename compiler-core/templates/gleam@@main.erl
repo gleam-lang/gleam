@@ -31,7 +31,7 @@ run_module(Module) ->
 
 print_error(Class, Error, Stacktrace) ->
     Printed = [
-        ?red, "runtime error: ", ?reset_color, error_class(Class, Error), ?reset_all,
+        ?red, "runtime error", ?reset_color, ": ", error_class(Class, Error), ?reset_all,
         "\n\n",
         error_message(Error),
         "\n\n",
