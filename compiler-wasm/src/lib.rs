@@ -5,6 +5,7 @@ mod wasm_filesystem;
 
 use camino::Utf8PathBuf;
 use gleam_core::{
+    analyse::TargetSupport,
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
@@ -203,6 +204,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     compiler.write_entrypoint = false;
     compiler.write_metadata = false;
     compiler.compile_beam_bytecode = true;
+    compiler.target_support = TargetSupport::Enforced;
     compiler
         .compile(
             &warning_emitter,
