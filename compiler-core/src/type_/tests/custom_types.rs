@@ -31,6 +31,20 @@ pub fn name() -> String {
 }
 
 #[test]
+fn deprecated_all_varients_type() {
+    assert_module_error!(
+        r#"
+pub type Numbers {
+  @deprecated("1")
+  One
+  @deprecated("2")
+  Two
+}
+"#
+    );
+}
+
+#[test]
 fn fault_tolerance() {
     // An error in a custom type does not stop analysis
     assert_module_error!(

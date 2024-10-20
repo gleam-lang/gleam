@@ -308,21 +308,9 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
-            ParseErrorType::UnknownAttributeRecordConstructor => (
-                "Variant attribute(s) are unknow.",
-                vec!["Try `@deprecated`.".into()],
-            ),
-            ParseErrorType::AllVariantRecordConstructorDeprecated => (
-                "Can't deprecate all variants of a type.",
-                vec![
-                    "Consider deprecating the type as a whole:".into(),
-                    "@deprecated(\"message\")".into(),
-                    "type Wibble {".into(),
-                    "   Wobble1".into(),
-                    "   Wobble2".into(),
-                    "}".into(),
-                ],
-            ),
+            ParseErrorType::UnknownAttributeRecordConstructor => {
+                ("This attribute cannot be used on a type variant.", vec![])
+            }
         }
     }
 }
@@ -391,7 +379,6 @@ pub enum ParseErrorType {
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
     UnknownAttributeRecordConstructor, // an attribute was used that is not know for a custom type constructor
-    AllVariantRecordConstructorDeprecated, // all the variants within a custom type are deprecated
 }
 
 impl LexicalError {
