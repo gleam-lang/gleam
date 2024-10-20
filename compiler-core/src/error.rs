@@ -3212,6 +3212,31 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                         }),
                     }
                 },
+                        TypeError::AllVariantsConstructorDeprecated { location } => {
+                            let text = format!("Consider deprecating the type as a whole.
+
+    @deprecated(\"message\")
+    type Wibble {{
+        Wobble1
+        Wobble2
+    }}
+");
+                            Diagnostic {
+                                title: "Can't deprecate all variants of a type.".into(),
+                                text,
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: None,
+                                        span: *location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                })
+                            }
+                        }
             }
         }).collect_vec(),
 
