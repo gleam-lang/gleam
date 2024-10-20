@@ -561,6 +561,20 @@ pub enum Error {
         kind: Named,
         name: EcoString,
     },
+
+    /// Occers when all the variant type of a custom type are deprecated
+    ///
+    /// ```gleam
+    /// type Wibble {
+    ///     @deprecated("1")
+    ///     Wobble1
+    ///     @deprecated("1")
+    ///     Wobble1
+    /// }
+    /// ```
+    AllVariantsConstructorDeprecated {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -974,7 +988,8 @@ impl Error {
             }
             | Error::UseFnDoesntTakeCallback { location, .. }
             | Error::UseFnIncorrectArity { location, .. }
-            | Error::BadName { location, .. } => location.start,
+            | Error::BadName { location, .. }
+            | Error::AllVariantsConstructorDeprecated { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

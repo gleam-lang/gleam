@@ -2270,18 +2270,6 @@ where
             (vec![], end)
         };
 
-        // check if all constructors are deprecated if so error
-        if constructors.len() > 0 // prevent checking an empty type `type wobble` which will always be true
-            && constructors
-                .iter()
-                .all(|record| record.deprecation.is_deprecated())
-        {
-            return parse_error(
-                ParseErrorType::AllVariantRecordConstructorDeprecated,
-                SrcSpan { start, end },
-            );
-        }
-
         Ok(Some(Definition::CustomType(CustomType {
             documentation,
             location: SrcSpan { start, end },

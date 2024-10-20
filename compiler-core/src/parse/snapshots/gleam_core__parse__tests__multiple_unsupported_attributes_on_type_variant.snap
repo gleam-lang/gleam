@@ -9,6 +9,4 @@ error: Syntax error
 3 │ ╭     @external(erlang, "one", "two")
 4 │ │     @target(erlang)
 5 │ │     @internal
-  │ ╰─────────────^ Variant attribute(s) are unknow.
-
-Try `@deprecated`.
+  │ ╰─────────────^ This attribute cannot be used on a type variant.

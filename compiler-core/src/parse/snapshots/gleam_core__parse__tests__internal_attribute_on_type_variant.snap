@@ -7,6 +7,4 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │
 3 │     @internal
-  │     ^^^^^^^^^ Variant attribute(s) are unknow.
-
-Try `@deprecated`.
+  │     ^^^^^^^^^ This attribute cannot be used on a type variant.

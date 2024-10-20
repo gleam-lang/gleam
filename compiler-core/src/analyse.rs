@@ -823,7 +823,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             } => self.track_feature_usage(FeatureKind::InternalAnnotation, location),
         }
 
-        let constructors = constructors
+        let constructors: Vec<RecordConstructor<Arc<Type>>> = constructors
             .into_iter()
             .map(
                 |RecordConstructor {
@@ -879,6 +879,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("Could not find preregistered type constructor ")
             .parameters
             .clone();
+
+        // check if all constructors are deprecated if so error
+        if constructors.len() > 0 // prevent checking an empty type `type wobble` which will always be true
+            && constructors
+                .iter()
+                .all(|record| record.deprecation.is_deprecated())
+        {
+            self.problems
+                .error(Error::AllVariantsConstructorDeprecated { location });
+        }
 
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
