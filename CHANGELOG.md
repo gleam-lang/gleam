@@ -247,6 +247,10 @@
   which was defined with duplicate fields in one of its variants.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the WASM compiler would return incomplete JavaScript when
+  unsupported features were used. It now returns a compilation error.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
