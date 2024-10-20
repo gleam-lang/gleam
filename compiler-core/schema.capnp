@@ -21,17 +21,17 @@ struct Option(Value) {
 
 struct Module {
   name @0 :Text;
-  documentation @1 :List(Text);
-  types @2 :List(Property(TypeConstructor));
-  typeAliases @3 :List(Property(TypeAliasConstructor));
-  values @4 :List(Property(ValueConstructor));
-  accessors @5 :List(Property(AccessorsMap));
-  package @6 :Text;
-  typesConstructors @7 :List(Property(TypesVariantConstructors)); 
-  lineNumbers @8 :LineNumbers;
-  srcPath @9 :Text;
-  isInternal @10 :Bool;
-  requiredVersion @11 :Version;
+  documentation @10 :List(Text);
+  types @1 :List(Property(TypeConstructor));
+  typeAliases @11 :List(Property(TypeAliasConstructor));
+  values @2 :List(Property(ValueConstructor));
+  accessors @3 :List(Property(AccessorsMap));
+  package @4 :Text;
+  typesConstructors @5 :List(Property(TypesVariantConstructors)); 
+  lineNumbers @6 :LineNumbers;
+  srcPath @7 :Text;
+  isInternal @8 :Bool;
+  requiredVersion @9 :Version;
 }
 
 struct Version {
@@ -51,8 +51,8 @@ struct TypeValueConstructor {
 }
 
 struct TypeValueConstructorParameter {
-  label @0 :Text;
-  type @1 :Type;
+  type @0 :Type;
+  label @1 :Text;
 }
 
 struct TypeConstructor {
