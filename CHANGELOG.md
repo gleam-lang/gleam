@@ -203,6 +203,7 @@
     Some(1)
   }
   ```
+
   ([Jiangda Wang](https://github.com/Frank-III))
 
 ### Bug Fixes
@@ -233,6 +234,10 @@
 - Fixed a bug where importing type aliases that reference unimported modules
   would generate invalid TypeScript definitions.
   ([Richard Viney](https://github.com/richard-viney))
+
+- When splitting a constant list made of records, the formatter will keep each
+  item on its own line to make things easier to read.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.5.1 - 2024-09-26
 
