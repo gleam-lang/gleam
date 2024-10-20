@@ -545,7 +545,29 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let comma = flex_break(",", ", ");
+        let comma = match elements.first() {
+            // If the list is made of records and it gets too long we want to
+            // have each record on its own line instead of trying to fit as much
+            // as possible in each line. For example:
+            //
+            //    [
+            //       Some("wibble wobble"),
+            //       None,
+            //       Some("wobble wibble"),
+            //    ]
+            //
+            Some(Constant::Record { .. }) => break_(",", ", "),
+            // For all other items, if we have to break the list we still try to
+            // fit as much as possible into a single line instead of putting
+            // each item on its own separate line. For example:
+            //
+            //   [
+            //     1, 2, 3, 4,
+            //     5, 6, 7,
+            //   ]
+            //
+            Some(_) | None => flex_break(",", ", "),
+        };
         let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
 
         let doc = break_("[", "[").append(elements).nest(INDENT);
