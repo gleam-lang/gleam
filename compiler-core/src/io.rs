@@ -237,7 +237,7 @@ pub trait BeamCompiler {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<(), Error>;
+    ) -> Result<Vec<String>, Error>;
 }
 
 /// A trait used to write files.
