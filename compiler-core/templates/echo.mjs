@@ -93,7 +93,7 @@ function $inspect(v) {
 
 function $isDict(value) {
   try {
-    return value instanceof Dict;
+    return value instanceof $stdlib$dict.default;
   } catch {
     return false;
   }
