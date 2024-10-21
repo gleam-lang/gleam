@@ -49,10 +49,10 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, SrcSpan, Statement, TodoKind,
-    TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
-    TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
+    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
+    TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant,
+    TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'ast> {
@@ -133,20 +133,12 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<TypeAst>,
     ) {
-        visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_expr_list(
@@ -640,11 +632,11 @@ where
         TypedExpr::Fn {
             location,
             type_,
-            is_capture,
+            kind,
             args,
             body,
             return_annotation,
-        } => v.visit_typed_expr_fn(location, type_, is_capture, args, body, return_annotation),
+        } => v.visit_typed_expr_fn(location, type_, kind, args, body, return_annotation),
         TypedExpr::List {
             location,
             type_,
@@ -805,7 +797,7 @@ pub fn visit_typed_expr_fn<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _typ: &'a Arc<Type>,
-    _is_capture: &'a bool,
+    _kind: &'a FunctionLiteralKind,
     _args: &'a [TypedArg],
     body: &'a [TypedStatement],
     _return_annotation: &'a Option<TypeAst>,

@@ -7,8 +7,8 @@ use crate::{
             visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg,
             visit_typed_record_update_arg, Visit as _,
         },
-        AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedRecordUpdateArg,
+        AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
+        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern, TypedRecordUpdateArg,
     },
     build::{Located, Module},
     line_numbers::LineNumbers,
@@ -927,7 +927,12 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
         self.visit_typed_expr(&assignment.value);
 
-        let code_action_range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
+        // We only offer this code action between `let` and `=`, because
+        // otherwise it could lead to confusing behaviour if inside a block
+        // which is part of a let binding.
+        let pattern_location = assignment.pattern.location();
+        let location = SrcSpan::new(assignment.location.start, pattern_location.end);
+        let code_action_range = src_span_to_lsp_range(location, &self.line_numbers);
 
         // Only offer the code action if the cursor is over the statement
         if !overlaps(code_action_range, self.params.range) {
@@ -939,7 +944,6 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             return;
         }
 
-        let pattern_location = assignment.pattern.location();
         let insert_location = SrcSpan::new(pattern_location.end, pattern_location.end);
         let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
 
@@ -1005,6 +1009,65 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             self.edits.push(TextEdit {
                 range,
                 new_text: format!(" -> {}", self.printer.print_type(&fun.return_type)),
+            });
+        }
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+
+        // If the function doesn't have a head, we can't annotate it
+        let location = match kind {
+            // Function captures don't need any type annotations
+            FunctionLiteralKind::Capture => return,
+            FunctionLiteralKind::Anonymous { head } => head,
+            FunctionLiteralKind::Use { location } => location,
+        };
+
+        let code_action_range = src_span_to_lsp_range(*location, &self.line_numbers);
+
+        // Only offer the code action if the cursor is over the expression
+        if !overlaps(code_action_range, self.params.range) {
+            return;
+        }
+
+        // Annotate each argument separately
+        for argument in args.iter() {
+            // Don't annotate the argument if it's already annotated
+            if argument.annotation.is_some() {
+                continue;
+            }
+
+            let insert_location = SrcSpan::new(argument.location.end, argument.location.end);
+            let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+            self.edits.push(TextEdit {
+                range,
+                new_text: format!(": {}", self.printer.print_type(&argument.type_)),
+            });
+        }
+
+        // Annotate the return type if it isn't already annotated, and this is
+        // an anonymous function.
+        if return_annotation.is_none() && matches!(kind, FunctionLiteralKind::Anonymous { .. }) {
+            let insert_location = SrcSpan::new(location.end, location.end);
+            let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+            self.edits.push(TextEdit {
+                range,
+                new_text: format!(
+                    " -> {}",
+                    self.printer
+                        .print_type(&type_.return_type().expect("Type must be a function"))
+                ),
             });
         }
     }
@@ -1085,7 +1148,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
@@ -1098,15 +1161,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -1454,7 +1509,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
@@ -1467,15 +1522,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {

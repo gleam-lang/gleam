@@ -10,7 +10,10 @@ use lsp_types::{
 use strum::IntoEnumIterator;
 
 use crate::{
-    ast::{self, Arg, CallArg, Definition, Function, Pattern, Publicity, TypedExpr},
+    ast::{
+        self, Arg, CallArg, Definition, Function, FunctionLiteralKind, Pattern, Publicity,
+        TypedExpr,
+    },
     build::Module,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
@@ -1046,7 +1049,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
         &mut self,
         _: &'ast ast::SrcSpan,
         _: &'ast Arc<Type>,
-        _: &'ast bool,
+        _: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         _: &'ast Option<ast::TypeAst>,

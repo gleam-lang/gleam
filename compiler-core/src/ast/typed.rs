@@ -48,7 +48,7 @@ pub enum TypedExpr {
     Fn {
         location: SrcSpan,
         type_: Arc<Type>,
-        is_capture: bool,
+        kind: FunctionLiteralKind,
         args: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,

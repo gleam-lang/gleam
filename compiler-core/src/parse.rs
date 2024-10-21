@@ -57,13 +57,13 @@ mod token;
 use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
-    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
-    Module, ModuleConstant, Pattern, Publicity, RecordConstructor, RecordConstructorArg,
-    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
-    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
-    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
-    CAPTURE_VARIABLE,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, FunctionLiteralKind,
+    HasLocation, Import, Module, ModuleConstant, Pattern, Publicity, RecordConstructor,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
+    TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
+    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -674,7 +674,7 @@ where
                     })) => UntypedExpr::Fn {
                         location: SrcSpan::new(location.start, end_position),
                         end_of_head_byte_index: location.end,
-                        is_capture: false,
+                        kind: FunctionLiteralKind::Anonymous { head: location },
                         arguments: args,
                         body,
                         return_annotation,
@@ -4013,7 +4013,7 @@ pub fn make_call(
         1 => Ok(UntypedExpr::Fn {
             location: call.location(),
             end_of_head_byte_index: call.location().end,
-            is_capture: true,
+            kind: FunctionLiteralKind::Capture,
             arguments: vec![Arg {
                 location: hole_location.expect("At least a capture hole"),
                 annotation: None,

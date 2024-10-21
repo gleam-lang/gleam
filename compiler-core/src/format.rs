@@ -957,11 +957,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
-            UntypedExpr::Fn {
-                is_capture: true,
-                body,
-                ..
-            } => self.fn_capture(body),
+            UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => self.fn_capture(body),
 
             UntypedExpr::Fn {
                 return_annotation,
@@ -1453,11 +1449,7 @@ impl<'comments> Formatter<'comments> {
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
             let doc = match expr {
-                UntypedExpr::Fn {
-                    is_capture: true,
-                    body,
-                    ..
-                } => {
+                UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
                     let body = match body.first() {
                         Statement::Expression(expression) => expression,
                         Statement::Assignment(_) | Statement::Use(_) => {

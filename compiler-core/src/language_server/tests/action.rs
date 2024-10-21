@@ -1615,6 +1615,112 @@ pub fn do_a_thing(a: Int, b: Float) -> String {
 }
 
 #[test]
+fn annotate_anonymous_function() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn add_curry(a) {
+  fn(b) { a + b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
+fn annotate_anonymous_function_with_annotated_return_type() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn add_curry(a) {
+  fn(b) -> Int { a + b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
+fn annotate_anonymous_function_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  fn(a, b: Int, c) { a + b + c }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("c)"))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_anonymous_function() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  fn(a: Int, b: Int) -> Int { a - b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("Int)"))
+    );
+}
+
+#[test]
+fn annotate_use() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a, b <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn annotate_use_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_use() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b: Int <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
 fn annotate_constant() {
     assert_code_action!(
         ADD_ANNOTATION,
@@ -1693,6 +1799,22 @@ pub fn main() {
 }
 "#,
         find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_nested_local_variable() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn main() {
+  let a = {
+    let b = 10
+    b + 1
+  }
+}
+"#,
+        find_position_of("let b").select_until(find_position_of("b ="))
     );
 }
 
