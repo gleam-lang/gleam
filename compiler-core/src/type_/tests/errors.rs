@@ -2492,6 +2492,7 @@ fn compiler_crash(x: X) {
     );
 }
 
+#[test]
 fn echo_followed_by_no_expression() {
     assert_error!("echo");
 }
