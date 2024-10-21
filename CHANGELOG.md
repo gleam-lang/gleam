@@ -112,6 +112,9 @@
 - Improve error message for using @deprecated with no deprecation message
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- Optimised creation of bit arrays on the JavaScript target.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Formatter
 
 - The formatter no longer removes the first argument from a function
