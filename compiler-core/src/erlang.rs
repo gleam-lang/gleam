@@ -662,7 +662,7 @@ fn const_bin_op<'a>(
     }
 }
 
-fn fold_constants<'a>(value: &'a TypedConstant) -> FoldedConstant<'a> {
+fn fold_constants(value: &TypedConstant) -> FoldedConstant<'_> {
     match value {
         Constant::Var {
             constructor: Some(constructor),
