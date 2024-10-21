@@ -7,8 +7,8 @@ use crate::{
             visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg,
             visit_typed_record_update_arg, Visit as _,
         },
-        AssignName, AssignmentKind, CallArg, ImplicitCallArgOrigin, Pattern, SrcSpan, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedRecordUpdateArg,
+        AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
+        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern, TypedRecordUpdateArg,
     },
     build::{Located, Module},
     line_numbers::LineNumbers,
@@ -1016,35 +1016,23 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
-        head_location: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            head_location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
-
-        // Function captures don't need any type annotations
-        if *is_capture {
-            return;
-        }
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
 
         // If the function doesn't have a head, we can't annotate it
-        let Some(head_location) = head_location else {
-            return;
+        let location = match kind {
+            // Function captures don't need any type annotations
+            FunctionLiteralKind::Capture => return,
+            FunctionLiteralKind::Anonymous { head } => head,
+            FunctionLiteralKind::Use { location } => location,
         };
 
-        let code_action_range = src_span_to_lsp_range(*head_location, &self.line_numbers);
+        let code_action_range = src_span_to_lsp_range(*location, &self.line_numbers);
 
         // Only offer the code action if the cursor is over the expression
         if !overlaps(code_action_range, self.params.range) {
@@ -1067,9 +1055,10 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             });
         }
 
-        // Annotate the return type if it isn't already annotated
-        if return_annotation.is_none() {
-            let insert_location = SrcSpan::new(head_location.end, head_location.end);
+        // Annotate the return type if it isn't already annotated, and this is
+        // an anonymous function.
+        if return_annotation.is_none() && matches!(kind, FunctionLiteralKind::Anonymous { .. }) {
+            let insert_location = SrcSpan::new(location.end, location.end);
             let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
 
             self.edits.push(TextEdit {
@@ -1158,9 +1147,8 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
-        head_location: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
@@ -1173,16 +1161,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            head_location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -1529,9 +1508,8 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
-        head_location: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
@@ -1544,16 +1522,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            head_location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {

@@ -47,11 +47,8 @@ pub enum TypedExpr {
 
     Fn {
         location: SrcSpan,
-        /// The location of the function head, if this function was defined
-        /// using anonymous function syntax, as opposed to a capture.
-        head_location: Option<SrcSpan>,
         type_: Arc<Type>,
-        is_capture: bool,
+        kind: FunctionLiteralKind,
         args: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,

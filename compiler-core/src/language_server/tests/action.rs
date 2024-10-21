@@ -1667,6 +1667,60 @@ pub fn main() {
 }
 
 #[test]
+fn annotate_use() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a, b <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn annotate_use_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_use() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b: Int <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
 fn annotate_constant() {
     assert_code_action!(
         ADD_ANNOTATION,

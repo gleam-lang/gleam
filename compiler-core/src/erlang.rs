@@ -1616,11 +1616,7 @@ fn docs_args_call<'a>(
                 .append(args)
         }
 
-        TypedExpr::Fn {
-            is_capture: true,
-            body,
-            ..
-        } => {
+        TypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
             if let Statement::Expression(TypedExpr::Call {
                 fun,
                 args: inner_args,

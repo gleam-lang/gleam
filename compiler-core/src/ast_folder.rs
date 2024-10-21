@@ -4,13 +4,14 @@ use vec1::Vec1;
 use crate::{
     analyse::Inferred,
     ast::{
-        AssignName, Assignment, BinOp, CallArg, Constant, Definition, Pattern, RecordUpdateSpread,
-        SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
-        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
-        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
-        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use, UseAssignment,
+        AssignName, Assignment, BinOp, CallArg, Constant, Definition, FunctionLiteralKind, Pattern,
+        RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
+        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
+        UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
+        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedPattern,
+        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias,
+        Use, UseAssignment,
     },
     build::Target,
 };
@@ -250,17 +251,15 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::Fn {
                 location,
-                head_location,
                 end_of_head_byte_index,
-                is_capture,
+                kind,
                 arguments,
                 body,
                 return_annotation,
             } => self.fold_fn(
                 location,
-                head_location,
                 end_of_head_byte_index,
-                is_capture,
+                kind,
                 arguments,
                 body,
                 return_annotation,
@@ -372,9 +371,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::Fn {
                 location,
-                head_location,
+                kind,
                 end_of_head_byte_index,
-                is_capture,
                 arguments,
                 body,
                 return_annotation,
@@ -384,9 +382,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 let body = body.mapped(|s| self.fold_statement(s));
                 UntypedExpr::Fn {
                     location,
-                    head_location,
                     end_of_head_byte_index,
-                    is_capture,
+                    kind,
                     arguments,
                     body,
                     return_annotation,
@@ -665,22 +662,19 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         UntypedExpr::Var { location, name }
     }
 
-    #[allow(clippy::too_many_arguments)]
     fn fold_fn(
         &mut self,
         location: SrcSpan,
-        head_location: Option<SrcSpan>,
         end_of_head_byte_index: u32,
-        is_capture: bool,
+        kind: FunctionLiteralKind,
         arguments: Vec<UntypedArg>,
         body: Vec1<UntypedStatement>,
         return_annotation: Option<TypeAst>,
     ) -> UntypedExpr {
         UntypedExpr::Fn {
             location,
-            head_location,
             end_of_head_byte_index,
-            is_capture,
+            kind,
             arguments,
             body,
             return_annotation,
