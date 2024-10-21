@@ -200,16 +200,20 @@ where
         Outcome::Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(
+        &mut self,
+        modules: &HashSet<Utf8PathBuf>,
+    ) -> Result<Vec<EcoString>, Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
-            return Ok(());
+            return Ok(Vec::new());
         }
 
         tracing::debug!("compiling_erlang");
 
         self.io
             .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
+            .map(|modules| modules.iter().map(|str| EcoString::from(str)).collect())
     }
 
     fn copy_project_native_files(
@@ -320,6 +324,7 @@ where
         app_file_config: Option<&ErlangAppCodegenConfiguration>,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
+        let native_modules: Vec<EcoString>;
         let build_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let include_dir = self.out.join("include");
         let io = self.io.clone();
@@ -332,11 +337,21 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
+        if self.compile_beam_bytecode {
+            written.extend(modules.iter().map(Module::compiled_erlang_path));
+            native_modules = self.compile_erlang_to_beam(&written)?;
+            println!("{:?}", native_modules);
+        } else {
+            tracing::debug!("skipping_erlang_bytecode_compilation");
+            native_modules = Vec::new();
+        }
+
         if let Some(config) = app_file_config {
             ErlangApp::new(&self.out.join("ebin"), config).render(
                 io.clone(),
                 &self.config,
                 modules,
+                native_modules,
             )?;
         }
 
@@ -352,12 +367,6 @@ where
         // version and not the newly compiled version.
         Erlang::new(&build_dir, &include_dir).render(io, modules)?;
 
-        if self.compile_beam_bytecode {
-            written.extend(modules.iter().map(Module::compiled_erlang_path));
-            self.compile_erlang_to_beam(&written)?;
-        } else {
-            tracing::debug!("skipping_erlang_bytecode_compilation");
-        }
         Ok(())
     }
 

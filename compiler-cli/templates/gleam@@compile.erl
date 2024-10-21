@@ -13,8 +13,14 @@ compile_package_loop() ->
             {ok, Tokens, _} = erl_scan:string(Line),
             {ok, {Lib, Out, Modules}} = erl_parse:parse_term(Tokens),
             case compile_package(Lib, Out, Modules) of
-                ok -> io:put_chars("gleam-compile-result-ok\n");
-                err -> io:put_chars("gleam-compile-result-error\n")
+                {ok, ModuleNames} ->
+                    PrintModuleName = fun(ModuleName) ->
+                        io:put_chars("module:" ++ atom_to_list(ModuleName) ++ "\n")
+                    end,
+                    list:map(PrintModuleName, ModuleNames),
+                    io:put_chars("gleam-compile-result-ok\n");
+                err ->
+                    io:put_chars("gleam-compile-result-error\n")
             end,
             compile_package_loop()
     end.
@@ -27,15 +33,18 @@ compile_package(Lib, Out, Modules) ->
     ok = configure_logging(),
     ok = add_lib_to_erlang_path(Lib),
     ok = filelib:ensure_dir([Out, $/]),
-    {ErlangOk, _ErlangBeams} = compile_erlang(ErlangModules, Out),
-    {ElixirOk, _ElixirBeams} = case ErlangOk of
+    {ErlangOk, ErlangBeams} = compile_erlang(ErlangModules, Out),
+    {ElixirOk, ElixirBeams} = case ErlangOk of
         true -> compile_elixir(ElixirModules, Out);
         false -> {false, []}
     end,
     ok = del_lib_from_erlang_path(Lib),
-    case ErlangOk and ElixirOk of
-        true -> ok;
-        false -> err
+    case ErlangOk andalso ElixirOk of
+        true ->
+            ModuleNames = proplists:get_keys(ErlangBeams ++ ElixirBeams),
+            {ok, ModuleNames};
+        false ->
+            err
     end.
 
 compile_erlang(Modules, Out) ->
@@ -45,7 +54,7 @@ compile_erlang(Modules, Out) ->
 
 collect_results(Acc = {Result, Beams}) ->
     receive
-        {compiled, Beam} -> collect_results({Result, [Beam | Beams]});
+        {compiled, ModuleName, Beam} -> collect_results({Result, [{ModuleName, Beam} | Beams]});
         failed -> collect_results({false, Beams})
         after 0 -> Acc
     end.
@@ -81,7 +90,7 @@ worker_loop(Parent, Out) ->
             case compile:file(Module, Options) of
                 {ok, ModuleName} ->
                     Beam = filename:join(Out, ModuleName) ++ ".beam",
-                    Message = {compiled, Beam},
+                    Message = {compiled, ModuleName, Beam},
                     log(Message),
                     erlang:send(Parent, Message);
                 error ->
@@ -129,8 +138,8 @@ do_compile_elixir(Modules, Out) ->
         {ok, ModuleAtoms, _} ->
             ToBeam = fun(ModuleAtom) ->
                 Beam = filename:join(Out, atom_to_list(ModuleAtom)) ++ ".beam",
-                log({compiled, Beam}),
-                Beam
+                log({compiled, ModuleAtom, Beam}),
+                {ModuleAtom, Beam}
             end,
             {true, lists:map(ToBeam, ModuleAtoms)};
         {error, Errors, _} ->
