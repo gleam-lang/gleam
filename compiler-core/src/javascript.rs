@@ -185,9 +185,18 @@ impl<'a> Generator<'a> {
         };
 
         let echo = if self.tracker.echo_used {
-            // TODO: The code is using instanceof Dict but that only
-            // works if I can import it from stdlib
-            // How do I deal with it?
+            // TODO! Check stdlib is among the dependencies or this will fail at
+            // runtime with an exception.
+            self.register_import(
+                &mut imports,
+                "gleam_stdlib",
+                "dict",
+                &Some((
+                    AssignName::Variable("stdlib$dict".into()),
+                    SrcSpan::default(),
+                )),
+                &vec![],
+            );
             self.register_prelude_usage(&mut imports, "BitArray", None);
             self.register_prelude_usage(&mut imports, "List", None);
             self.register_prelude_usage(&mut imports, "UtfCodepoint", None);
@@ -430,8 +439,8 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<(AssignName, SrcSpan)>,
-        unqualified: &'a [UnqualifiedImport],
+        as_name: &Option<(AssignName, SrcSpan)>,
+        unqualified: &Vec<UnqualifiedImport>,
     ) {
         let get_name = |module: &'a str| {
             module
