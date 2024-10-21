@@ -20,6 +20,4 @@ export function main() {
   );
 }
 
-
-
-...omitted code from `templates/echo.mjs`...
+// ...omitted code from `templates/echo.mjs`...
