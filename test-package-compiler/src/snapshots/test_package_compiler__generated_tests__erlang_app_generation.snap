@@ -23,6 +23,7 @@ expression: "./cases/erlang_app_generation"
                     simple_json,
                     ssl]},
     {description, "It's very cool"},
-    {modules, [main]},
+    {modules, [main,
+               erlffi]},
     {registered, []}
 ]}.
