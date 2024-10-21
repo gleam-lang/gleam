@@ -138,21 +138,53 @@ export class UtfCodepoint {
 
 // @internal
 export function toBitArray(segments) {
-  let size = (segment) =>
-    segment instanceof Uint8Array ? segment.byteLength : 1;
-  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let view = new DataView(new ArrayBuffer(bytes));
+  if (segments.length === 0) {
+    return new BitArray(new Uint8Array());
+  }
+
+  if (segments.length === 1) {
+    // When there is a single Uint8Array segment, pass it directly to the bit
+    // array constructor to avoid a copy
+    if (segments[0] instanceof Uint8Array) {
+      return new BitArray(segments[0]);
+    }
+
+    return new BitArray(new Uint8Array(segments));
+  }
+
+  // Count the total number of bytes, and check if there are any Uint8Array
+  // segments
+  let bytes = 0;
+  let hasUint8ArraySegment = false;
+  for (const segment of segments) {
+    if (segment instanceof Uint8Array) {
+      bytes += segment.byteLength;
+      hasUint8ArraySegment = true;
+    } else {
+      bytes++;
+    }
+  }
+
+  // If there aren't any Uint8Array segments then pass the segments array
+  // directly to the Uint8Array constructor
+  if (!hasUint8ArraySegment) {
+    return new BitArray(new Uint8Array(segments));
+  }
+
+  // Copy the segments into a Uint8Array
+  let u8Array = new Uint8Array(bytes);
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(view.buffer).set(segment, cursor);
+      u8Array.set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      view.setInt8(cursor, segment);
+      u8Array[cursor] = segment;
       cursor++;
     }
   }
-  return new BitArray(new Uint8Array(view.buffer));
+
+  return new BitArray(u8Array);
 }
 
 // @internal
