@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  let a = {\n    let b = 10\n    b + 1\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  let a = {
+    let b = 10
+    ▔▔▔▔↑     
+    b + 1
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let a = {
+    let b: Int = 10
+    b + 1
+  }
+}

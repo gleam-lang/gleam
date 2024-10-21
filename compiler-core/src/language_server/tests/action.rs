@@ -1749,6 +1749,22 @@ pub fn main() {
 }
 
 #[test]
+fn annotate_nested_local_variable() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn main() {
+  let a = {
+    let b = 10
+    b + 1
+  }
+}
+"#,
+        find_position_of("let b").select_until(find_position_of("b ="))
+    );
+}
+
+#[test]
 fn no_code_action_for_annotated_local_variable() {
     assert_no_code_actions!(
         ADD_ANNOTATION | ADD_ANNOTATIONS,
