@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn wibble(wobble: fn(Int, Int) -> Int) {\n  wobble(1, 2)\n}\n\npub fn main() {\n  use a: Int, b <- wibble\n  a + b\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b <- wibble
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑        
+  a + b
+}
+
+
+----- AFTER ACTION
+
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b: Int <- wibble
+  a + b
+}

@@ -7,7 +7,7 @@ mod tests;
 pub mod visit;
 
 pub use self::typed::TypedExpr;
-pub use self::untyped::{UntypedExpr, Use};
+pub use self::untyped::{FunctionLiteralKind, UntypedExpr, Use};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
