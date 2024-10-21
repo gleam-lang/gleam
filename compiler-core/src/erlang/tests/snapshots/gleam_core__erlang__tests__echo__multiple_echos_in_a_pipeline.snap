@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
-assertion_line: 110
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n  |> echo\n  |> wibble\n  |> echo\n}\n\npub fn wibble(n) { n }\n"
 ---
 -module(my@mod).
