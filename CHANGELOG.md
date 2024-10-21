@@ -112,6 +112,10 @@
 - Improve error message for using @deprecated with no deprecation message
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- Fixed a bug in the error message when using wrong values in a pipe where the
+  message would swap the "Expected" and "Found" types.
+  ([Markus Pettersson](https://github.com/MarkusPettersson98/))
+
 ### Formatter
 
 - The formatter no longer removes the first argument from a function
