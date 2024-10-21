@@ -180,7 +180,7 @@ impl<'a> Generator<'a> {
                     AssignName::Variable("stdlib$dict".into()),
                     SrcSpan::default(),
                 )),
-                &vec![],
+                &[],
             );
             self.register_prelude_usage(&mut imports, "BitArray", None);
             self.register_prelude_usage(&mut imports, "List", None);
@@ -423,7 +423,7 @@ impl<'a> Generator<'a> {
         package: &'a str,
         module: &'a str,
         as_name: &Option<(AssignName, SrcSpan)>,
-        unqualified: &Vec<UnqualifiedImport>,
+        unqualified: &[UnqualifiedImport],
     ) {
         let get_name = |module: &'a str| {
             module

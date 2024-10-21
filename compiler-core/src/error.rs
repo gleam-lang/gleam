@@ -3111,7 +3111,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                 },
 
                 TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
-                    title: format!("Invalid echo use"),
+                    title: "Invalid echo use".to_string(),
                     text: wrap("The `echo` keyword should be followed by a value to print."),
                     hint: None,
                     level: Level::Error,
