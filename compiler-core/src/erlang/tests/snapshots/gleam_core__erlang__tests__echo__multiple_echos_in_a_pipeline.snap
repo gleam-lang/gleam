@@ -26,11 +26,11 @@ main() ->
 -define(is_underscore_char(X), (X == 95)).
 -define(is_digit_char(X), (X > 47 andalso X < 58)).
 -define(could_be_record(Tuple),
-    is_tuple(Tuple) andalso
-        is_atom(element(1, Tuple)) andalso
-        element(1, Tuple) =/= false andalso
-        element(1, Tuple) =/= true andalso
-        element(1, Tuple) =/= nil
+    erlang:is_tuple(Tuple) andalso
+        erlang:is_atom(erlang:element(1, Tuple)) andalso
+        erlang:element(1, Tuple) =/= false andalso
+        erlang:element(1, Tuple) =/= true andalso
+        erlang:element(1, Tuple) =/= nil
 ).
 -define(is_atom_char(C),
     (?is_lowercase_char(C) orelse
@@ -48,36 +48,36 @@ echo@inspect(Value) ->
         nil -> "Nil";
         true -> "True";
         false -> "False";
-        Int when is_integer(Int) -> erlang:integer_to_list(Int);
-        Float when is_float(Float) -> io_lib_format:fwrite_g(Float);
-        Bits when is_bitstring(Bits) -> inspect@bit_array(Bits);
-        Binary when is_binary(Binary) -> inspect@binary(Binary);
-        Atom when is_atom(Atom) -> inspect@atom(Atom);
-        List when is_list(List) -> inspect@list(List);
-        Map when is_map(Map) -> inspect@map(Map);
+        Int when erlang:is_integer(Int) -> erlang:integer_to_list(Int);
+        Float when erlang:is_float(Float) -> io_lib_format:fwrite_g(Float);
+        Binary when erlang:is_binary(Binary) -> inspect@binary(Binary);
+        Bits when erlang:is_bitstring(Bits) -> inspect@bit_array(Bits);
+        Atom when erlang:is_atom(Atom) -> inspect@atom(Atom);
+        List when erlang:is_list(List) -> inspect@list(List);
+        Map when erlang:is_map(Map) -> inspect@map(Map);
         Record when ?could_be_record(Record) -> inspect@record(Record);
-        Tuple when is_tuple(Tuple) -> inspect@tuple(Tuple);
-        Function when is_function(Function) -> inspect@function(Function);
+        Tuple when erlang:is_tuple(Tuple) -> inspect@tuple(Tuple);
+        Function when erlang:is_function(Function) -> inspect@function(Function);
         Any -> ["//erl(", io_lib:format("~p", [Any]), ")"]
     end.
 
 inspect@bit_array(Bits) ->
     Pieces = inspect@bit_array_pieces(Bits, []),
-    Inner = string:join(lists:reverse(Pieces), <<", ">>),
-    <<"<<", Inner/binary, ">>">>.
+    Inner = lists:join(", ", lists:reverse(Pieces)),
+    ["<<", Inner, ">>"].
 
 inspect@bit_array_pieces(Bits, Acc) ->
     case Bits of
         <<>> ->
             Acc;
         <<Byte, Rest/bitstring>> ->
-            inspect@bit_array_pieces(Rest, [integer_to_binary(Byte) | Acc]);
+            inspect@bit_array_pieces(Rest, [erlang:integer_to_binary(Byte) | Acc]);
         _ ->
-            Size = bit_size(Bits),
+            Size = erlang:bit_size(Bits),
             <<RemainingBits:Size>> = Bits,
-            SizeString = <<":size(", (integer_to_binary(Size)), ")">>,
-            Piece = <<(integer_to_binary(RemainingBits)), SizeString>>,
-            inspect@bit_array_pieces(<<>>, [Piece | Acc])
+            SizeString = [":size(", erlang:integer_to_binary(Size), ")"],
+            Piece = [erlang:integer_to_binary(RemainingBits), SizeString],
+            [Piece | Acc]
     end.
 
 inspect@binary(Binary) ->
@@ -85,7 +85,7 @@ inspect@binary(Binary) ->
         {ok, InspectedUtf8String} ->
             InspectedUtf8String;
         {error, not_a_utf8_string} ->
-            Segments = [integer_to_list(X) || <<X>> <= Binary],
+            Segments = [erlang:integer_to_list(X) || <<X>> <= Binary],
             ["<<", lists:join(", ", Segments), ">>"]
     end.
 
@@ -149,7 +149,7 @@ inspect@escape_grapheme(Char) ->
     end.
 
 inspect@convert_to_u(Code) ->
-    list_to_binary(io_lib:format("\\u{~4.16.0B}", [Code])).
+    erlang:list_to_binary(io_lib:format("\\u{~4.16.0B}", [Code])).
 
 inspect@proper_or_improper_list(List) ->
     case List of
@@ -157,8 +157,8 @@ inspect@proper_or_improper_list(List) ->
             {proper, []};
         [First] ->
             {proper, [echo@inspect(First)]};
-        [First | Rest] when is_list(Rest) ->
-            {Kind, Inspected} = inspect@list(Rest),
+        [First | Rest] when erlang:is_list(Rest) ->
+            {Kind, Inspected} = inspect@proper_or_improper_list(Rest),
             {Kind, [echo@inspect(First), ", " | Inspected]};
         [First | ImproperRest] ->
             {improper, [echo@inspect(First), " | ", echo@inspect(ImproperRest)]}
@@ -179,17 +179,17 @@ inspect@maybe_gleam_atom(Atom, PrevChar, Acc) ->
         {<<First, _/binary>>, _} when not ?is_atom_char(First) ->
             {error, nil};
         {<<First, Rest/binary>>, none} ->
-            inspect@maybe_gleam_atom(Rest, First, <<Acc, (inspect@uppercase(First))>>);
+            inspect@maybe_gleam_atom(Rest, First, <<Acc/binary, (inspect@uppercase(First))>>);
         {<<"_", Rest/binary>>, _} ->
             inspect@maybe_gleam_atom(Rest, $_, Acc);
         {<<First, Rest/binary>>, $_} ->
-            inspect@maybe_gleam_atom(Rest, First, <<Acc, (inspect@uppercase(First))>>);
+            inspect@maybe_gleam_atom(Rest, First, <<Acc/binary, (inspect@uppercase(First))>>);
         {<<First, Rest/binary>>, _} ->
-            inspect@maybe_gleam_atom(Rest, First, <<Acc, First>>);
+            inspect@maybe_gleam_atom(Rest, First, <<Acc/binary, First>>);
         {<<>>, _} ->
             {ok, Acc};
         _ ->
-            throw({gleam_error, echo, Atom, PrevChar, Acc})
+            erlang:throw({gleam_error, echo, Atom, PrevChar, Acc})
     end.
 
 inspect@uppercase(X) -> X - 32.
