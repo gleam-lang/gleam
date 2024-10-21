@@ -2,6 +2,7 @@
 source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  echo 1\n  echo 2\n}\n"
 ---
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import { BitArray, List, UtfCodepoint, CustomType } from "../gleam.mjs";
 
 export function main() {
@@ -104,7 +105,7 @@ function $inspect(v) {
 
 function $isDict(value) {
   try {
-    return value instanceof Dict;
+    return value instanceof $stdlib$dict.default;
   } catch {
     return false;
   }
