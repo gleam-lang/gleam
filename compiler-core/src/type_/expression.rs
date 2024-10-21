@@ -333,12 +333,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Fn {
                 location,
+                head_location,
                 is_capture,
                 arguments: args,
                 body,
                 return_annotation,
                 ..
-            } => self.infer_fn(args, &[], body, is_capture, return_annotation, location),
+            } => self.infer_fn(
+                args,
+                &[],
+                body,
+                is_capture,
+                return_annotation,
+                location,
+                head_location,
+            ),
 
             UntypedExpr::Case {
                 location,
@@ -645,6 +654,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let callback = UntypedExpr::Fn {
             arguments: assignments.function_arguments,
             location: SrcSpan::new(first.start, sequence_location.end),
+            head_location: None,
             end_of_head_byte_index: sequence_location.end,
             return_annotation: None,
             is_capture: false,
@@ -735,6 +745,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         is_capture: bool,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
+        head_location: Option<SrcSpan>,
     ) -> Result<TypedExpr, Error> {
         for Arg { names, .. } in args.iter() {
             check_argument_names(names, self.problems);
@@ -754,6 +765,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(TypedExpr::Fn {
             location,
+            head_location,
             type_,
             is_capture,
             args,
@@ -2933,6 +2945,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Fn {
                 location,
+                head_location,
                 is_capture,
                 arguments,
                 body,
@@ -2945,6 +2958,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 is_capture,
                 return_annotation,
                 location,
+                head_location,
             ),
 
             fun => self.infer(fun),
@@ -2970,6 +2984,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         is_capture: bool,
         return_annotation: Option<TypeAst>,
         location: SrcSpan,
+        head_location: Option<SrcSpan>,
     ) -> Result<TypedExpr, Error> {
         let typed_call_args: Vec<Arc<Type>> = call_args
             .iter()
@@ -2988,6 +3003,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             is_capture,
             return_annotation,
             location,
+            head_location,
         )
     }
 
@@ -3238,6 +3254,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     body,
                     return_annotation,
                     location,
+                    head_location,
                     is_capture: false,
                     ..
                 },
@@ -3248,6 +3265,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 false,
                 return_annotation,
                 location,
+                head_location,
             ),
 
             // Otherwise just perform normal type inference.

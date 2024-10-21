@@ -132,6 +132,7 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
+        head_location: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
         is_capture: &'ast bool,
         args: &'ast [TypedArg],
@@ -141,6 +142,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_fn(
             self,
             location,
+            head_location,
             type_,
             is_capture,
             args,
@@ -639,12 +641,21 @@ where
         } => v.visit_typed_expr_var(location, constructor, name),
         TypedExpr::Fn {
             location,
+            head_location,
             type_,
             is_capture,
             args,
             body,
             return_annotation,
-        } => v.visit_typed_expr_fn(location, type_, is_capture, args, body, return_annotation),
+        } => v.visit_typed_expr_fn(
+            location,
+            head_location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        ),
         TypedExpr::List {
             location,
             type_,
@@ -804,6 +815,7 @@ pub fn visit_typed_expr_var<'a, V>(
 pub fn visit_typed_expr_fn<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
+    _head_location: &'a Option<SrcSpan>,
     _typ: &'a Arc<Type>,
     _is_capture: &'a bool,
     _args: &'a [TypedArg],

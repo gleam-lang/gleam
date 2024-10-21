@@ -1045,6 +1045,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
     fn visit_typed_expr_fn(
         &mut self,
         _: &'ast ast::SrcSpan,
+        _: &'ast Option<ast::SrcSpan>,
         _: &'ast Arc<Type>,
         _: &'ast bool,
         args: &'ast [ast::TypedArg],
