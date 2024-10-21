@@ -46,6 +46,7 @@ struct Env<'a> {
     module: &'a str,
     function: &'a str,
     line_numbers: &'a LineNumbers,
+    echo_used: bool,
     current_scope_vars: im::HashMap<String, usize>,
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
@@ -56,6 +57,7 @@ impl<'env> Env<'env> {
         Self {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
+            echo_used: false,
             line_numbers,
             function,
             module,
@@ -217,21 +219,35 @@ fn module_document<'a>(
 
     let src_path = EcoString::from(module.type_info.src_path.as_str());
 
-    let statements = join(
-        module
-            .definitions
-            .iter()
-            .flat_map(|s| module_statement(s, &module.name, line_numbers, &src_path)),
-        lines(2),
-    );
+    let mut echo_used = false;
+    let mut statements = Vec::with_capacity(module.definitions.len());
+    for definition in module.definitions.iter() {
+        if let Some((statement_document, env)) =
+            module_statement(definition, &module.name, line_numbers, &src_path)
+        {
+            echo_used = echo_used || env.echo_used;
+            statements.push(statement_document);
+        }
+    }
 
-    Ok(header
-        .append("-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).")
-        .append(lines(2))
-        .append(exports)
-        .append(type_defs)
-        .append(statements)
-        .append(line()))
+    let module = docvec![
+        header,
+        "-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).",
+        lines(2),
+        exports,
+        type_defs,
+        join(statements, lines(2)),
+    ];
+
+    let module = if echo_used {
+        module
+            .append(lines(2))
+            .append(std::include_str!("../templates/echo.erl").to_doc())
+    } else {
+        module
+    };
+
+    Ok(module.append(line()))
 }
 
 fn register_imports(
@@ -354,7 +370,7 @@ fn module_statement<'a>(
     module: &'a str,
     line_numbers: &'a LineNumbers,
     src_path: &EcoString,
-) -> Option<Document<'a>> {
+) -> Option<(Document<'a>, Env<'a>)> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
@@ -372,7 +388,7 @@ fn module_function<'a>(
     module: &'a str,
     line_numbers: &'a LineNumbers,
     src_path: EcoString,
-) -> Option<Document<'a>> {
+) -> Option<(Document<'a>, Env<'a>)> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
     if function.external_erlang.is_some() && function.publicity.is_private() {
@@ -424,16 +440,19 @@ fn module_function<'a>(
         })
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
-    Some(docvec![
-        file_attribute,
-        line(),
-        spec,
-        atom_string(escape_erlang_existing_name(function_name).to_string()),
-        arguments,
-        " ->",
-        line().append(body).nest(INDENT).group(),
-        ".",
-    ])
+    Some((
+        docvec![
+            file_attribute,
+            line(),
+            spec,
+            atom_string(escape_erlang_existing_name(function_name).to_string()),
+            arguments,
+            " ->",
+            line().append(body).nest(INDENT).group(),
+            ".",
+        ],
+        env,
+    ))
 }
 
 fn file_attribute<'a>(
@@ -1738,7 +1757,8 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
 }
 
 fn echo<'a>(body: Document<'a>, env: &mut Env<'a>) -> Document<'a> {
-    module_fn_with_args("mmmh", "echo", vec![body], env)
+    env.echo_used = true;
+    "echo".to_doc().append(wrap_args(vec![body]))
 }
 
 fn erlang_error<'a>(
