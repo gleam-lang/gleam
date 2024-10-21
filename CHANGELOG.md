@@ -105,16 +105,8 @@
   unless explicitly specified.
   ([Gustavo Inacio](https://github.com/gusinacio))
 
-- Fixes a bug where incorrect code would be generated for external function on
-  the Erlang target if any of their arguments were discarded.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
-- Improve error message for using @deprecated with no deprecation message
+- Improved the error message for using `@deprecated` with no deprecation message
   ([Jiangda Wang](https://github.com/frank-iii))
-
-- Fixed a bug in the error message when using wrong values in a pipe where the
-  message would swap the "Expected" and "Found" types.
-  ([Markus Pettersson](https://github.com/MarkusPettersson98/))
 
 ### Formatter
 
@@ -250,6 +242,14 @@
 - Fixed a bug where the WASM compiler would return incomplete JavaScript when
   unsupported features were used. It now returns a compilation error.
   ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where incorrect code would be generated for external function on
+  the Erlang target if any of their arguments were discarded.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug in the error message when using wrong values in a pipe where the
+  message would swap the "Expected" and "Found" types.
+  ([Markus Pettersson](https://github.com/MarkusPettersson98/))
 
 ## v1.5.1 - 2024-09-26
 
