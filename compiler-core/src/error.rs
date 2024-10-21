@@ -3321,7 +3321,7 @@ Consider removing the deprecation attribute on the variant.");
                         }
 
                 TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
-                    title: format!("Invalid echo use"),
+                    title: "Invalid echo use".to_string(),
                     text: wrap("The `echo` keyword should be followed by a value to print."),
                     hint: None,
                     level: Level::Error,
