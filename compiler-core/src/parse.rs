@@ -1626,7 +1626,7 @@ where
             }
             t0 => {
                 self.tok0 = t0;
-                if let Some(const_val) = self.parse_const_value()? {
+                if let Some(const_val) = self.parse_const_value_unit()? {
                     // Constant
                     Ok(Some(ClauseGuard::Constant(const_val)))
                 } else {
@@ -2688,6 +2688,11 @@ where
             }
 
             if let Some((op_s, t, op_e)) = self.tok0.take() {
+                // Pipes are not allowed in constants
+                if t == Token::Pipe {
+                    self.tok0 = Some((op_s, t, op_e));
+                    break;
+                }
                 if let Some(p) = precedence(&t) {
                     // Is Op
                     self.advance();
@@ -3890,6 +3895,12 @@ fn clause_guard_reduction(
         },
 
         Token::MinusDot => ClauseGuard::SubFloat {
+            location,
+            left,
+            right,
+        },
+
+        Token::LtGt => ClauseGuard::Concatenate {
             location,
             left,
             right,

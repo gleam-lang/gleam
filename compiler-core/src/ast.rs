@@ -1501,6 +1501,12 @@ pub enum ClauseGuard<Type, RecordTag> {
         right: Box<Self>,
     },
 
+    Concatenate {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     MultInt {
         location: SrcSpan,
         left: Box<Self>,
@@ -1603,6 +1609,7 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::AddFloat { location, .. }
             | ClauseGuard::SubInt { location, .. }
             | ClauseGuard::SubFloat { location, .. }
+            | ClauseGuard::Concatenate { location, .. }
             | ClauseGuard::MultInt { location, .. }
             | ClauseGuard::MultFloat { location, .. }
             | ClauseGuard::DivInt { location, .. }
@@ -1640,6 +1647,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::AddFloat { .. } => Some(BinOp::AddFloat),
             ClauseGuard::SubInt { .. } => Some(BinOp::SubInt),
             ClauseGuard::SubFloat { .. } => Some(BinOp::SubFloat),
+            ClauseGuard::Concatenate { .. } => Some(BinOp::Concatenate),
             ClauseGuard::MultInt { .. } => Some(BinOp::MultInt),
             ClauseGuard::MultFloat { .. } => Some(BinOp::MultFloat),
             ClauseGuard::DivInt { .. } => Some(BinOp::DivInt),
@@ -1689,6 +1697,8 @@ impl TypedClauseGuard {
             | ClauseGuard::GtEqFloat { .. }
             | ClauseGuard::LtFloat { .. }
             | ClauseGuard::LtEqFloat { .. } => bool(),
+
+            ClauseGuard::Concatenate { .. } => string(),
         }
     }
 }

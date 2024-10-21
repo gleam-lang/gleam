@@ -1949,6 +1949,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
+            ClauseGuard::Concatenate {
+                location,
+                left,
+                right,
+                ..
+            } => {
+                self.track_feature_usage(FeatureKind::ConstantStringConcatenation, location);
+                let left = self.infer_clause_guard(*left)?;
+                unify(string(), left.type_())
+                    .map_err(|e| convert_unify_error(e, left.location()))?;
+                let right = self.infer_clause_guard(*right)?;
+                unify(string(), right.type_())
+                    .map_err(|e| convert_unify_error(e, right.location()))?;
+                Ok(ClauseGuard::Concatenate {
+                    location,
+                    left: Box::new(left),
+                    right: Box::new(right),
+                })
+            }
+
             ClauseGuard::MultInt {
                 location,
                 left,

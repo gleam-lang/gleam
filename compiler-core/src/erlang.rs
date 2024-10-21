@@ -542,7 +542,7 @@ fn unicode_escape_sequence_pattern() -> &'static Regex {
     })
 }
 
-fn string_inner(value: &str) -> Document<'_> {
+fn string_inner(value: &str) -> Document<'static> {
     let content = unicode_escape_sequence_pattern()
         // `\\u`-s should not be affected, so that "\\u..." is not converted to
         // "\\x...". That's why capturing groups is used to exclude cases that
@@ -559,7 +559,7 @@ fn string_inner(value: &str) -> Document<'_> {
     EcoString::from(content).to_doc()
 }
 
-fn string(value: &str) -> Document<'_> {
+fn string(value: &str) -> Document<'static> {
     string_inner(value).surround("<<\"", "\"/utf8>>")
 }
 
@@ -571,15 +571,6 @@ fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     join(elems, break_(",", ", "))
         .nest(INDENT)
         .surround("{", "}")
-        .group()
-}
-
-fn const_string_concatenate_bit_array<'a>(
-    elems: impl IntoIterator<Item = Document<'a>>,
-) -> Document<'a> {
-    join(elems, break_(",", ", "))
-        .nest(INDENT)
-        .surround("<<", ">>")
         .group()
 }
 
@@ -1283,9 +1274,9 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         } => {
             let folded = const_bin_op(left, right, name);
             match folded {
-                FoldedConstant::Int(value) => eco_format!("{value}").to_doc(),
-                FoldedConstant::Float(value) => eco_format!("{value}").to_doc(),
-                FoldedConstant::String(value) => value.to_doc(),
+                FoldedConstant::Int(value) => int(&value.to_string()),
+                FoldedConstant::Float(value) => float(&value.to_string()),
+                FoldedConstant::String(value) => string(&value),
                 FoldedConstant::Bool(value) => if value { "true" } else { "false" }.to_doc(),
                 FoldedConstant::Complex(inner) => const_inline(inner, env),
             }
@@ -1391,6 +1382,15 @@ fn optional_clause_guard<'a>(
     }
 }
 
+fn const_string_concatenate_bit_array<'a>(
+    elems: impl IntoIterator<Item = Document<'a>>,
+) -> Document<'a> {
+    join(elems, break_(",", ", "))
+        .nest(INDENT)
+        .surround("<<", ">>")
+        .group()
+}
+
 fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<'a> {
     match guard {
         ClauseGuard::Not { expression, .. } => docvec!["not ", bare_clause_guard(expression, env)],
@@ -1459,6 +1459,12 @@ fn bare_clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Docu
             .append(" - ")
             .append(clause_guard(right, env)),
 
+        ClauseGuard::Concatenate { left, right, .. } => {
+            let left = clause_guard(left, env);
+            let right = clause_guard(right, env);
+            const_string_concatenate_bit_array([left, right])
+        }
+
         ClauseGuard::MultInt { left, right, .. } => clause_guard(left, env)
             .append(" * ")
             .append(clause_guard(right, env)),
@@ -1526,6 +1532,7 @@ fn clause_guard<'a>(guard: &'a TypedClauseGuard, env: &mut Env<'a>) -> Document<
         | ClauseGuard::AddFloat { .. }
         | ClauseGuard::SubInt { .. }
         | ClauseGuard::SubFloat { .. }
+        | ClauseGuard::Concatenate { .. }
         | ClauseGuard::MultInt { .. }
         | ClauseGuard::MultFloat { .. }
         | ClauseGuard::DivInt { .. }

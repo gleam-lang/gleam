@@ -246,6 +246,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             | ClauseGuard::AddFloat { .. }
             | ClauseGuard::SubInt { .. }
             | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::Concatenate { .. }
             | ClauseGuard::MultInt { .. }
             | ClauseGuard::MultFloat { .. }
             | ClauseGuard::DivInt { .. }
@@ -316,7 +317,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 docvec!(left, " <= ", right)
             }
 
-            ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
+            ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::Concatenate { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
                 docvec!(left, " + ", right)
