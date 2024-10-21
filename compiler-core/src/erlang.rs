@@ -497,11 +497,11 @@ fn doc_attribute<'a>(documentation: &EcoString) -> Document<'a> {
         .split('\n')
         .map(|line| {
             let line = EcoString::from(line.replace("\\", "\\\\").replace("\"", "\\\""));
-            "\"".to_doc().append(line.to_doc()).append("\"")
+            "\"".to_doc().append(line.to_doc()).append("\\n\"")
         })
         .collect_vec();
 
-    if lines.len() > 1 {
+    if lines.len() <= 1 {
         docvec!["?DOC(", join(lines, line()), ")"]
     } else {
         docvec![
