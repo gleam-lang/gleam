@@ -495,6 +495,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.environment.echo_found = true;
         if let Some(expression) = expression {
             let expression = self.infer(*expression)?;
+            if self.previous_panics {
+                self.warn_for_unreachable_code(location, PanicPosition::EchoExpression);
+            }
             Ok(TypedExpr::Echo {
                 location,
                 type_: expression.type_(),
