@@ -2,6 +2,7 @@
 source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n  |> echo\n  |> wibble\n  |> echo\n}\n\npub fn wibble(n) { n }\n"
 ---
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import { toList, BitArray, List, UtfCodepoint, CustomType } from "../gleam.mjs";
 
 export function wibble(n) {
@@ -112,7 +113,7 @@ function $inspect(v) {
 
 function $isDict(value) {
   try {
-    return value instanceof Dict;
+    return value instanceof $stdlib$dict.default;
   } catch {
     return false;
   }
