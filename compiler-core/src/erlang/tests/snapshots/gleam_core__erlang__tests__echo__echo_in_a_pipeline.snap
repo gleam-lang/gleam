@@ -19,6 +19,4 @@ main() ->
     echo(_pipe),
     wibble(_pipe).
 
-
-
-...omitted code from `templates/echo.erl`...
+% ...omitted code from `templates/echo.erl`...

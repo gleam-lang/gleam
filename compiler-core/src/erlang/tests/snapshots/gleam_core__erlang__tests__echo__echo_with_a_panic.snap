@@ -16,6 +16,4 @@ main() ->
                 function => <<"main"/utf8>>,
                 line => 3})).
 
-
-
-...omitted code from `templates/echo.erl`...
+% ...omitted code from `templates/echo.erl`...

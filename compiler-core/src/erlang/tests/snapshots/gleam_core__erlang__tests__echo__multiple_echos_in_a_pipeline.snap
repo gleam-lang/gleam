@@ -22,6 +22,4 @@ main() ->
     _pipe@2 = wibble(_pipe@1),
     echo(_pipe@2).
 
-
-
-...omitted code from `templates/echo.erl`...
+% ...omitted code from `templates/echo.erl`...

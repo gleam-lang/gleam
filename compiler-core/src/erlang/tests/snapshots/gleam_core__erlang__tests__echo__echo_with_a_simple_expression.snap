@@ -12,6 +12,4 @@ expression: "\npub fn main() {\n  echo 1\n}\n"
 main() ->
     echo(1).
 
-
-
-...omitted code from `templates/echo.erl`...
+% ...omitted code from `templates/echo.erl`...
