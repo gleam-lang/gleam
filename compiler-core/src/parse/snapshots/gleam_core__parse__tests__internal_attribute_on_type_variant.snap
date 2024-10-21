@@ -1,0 +1,10 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 1565
+expression: "\ntype Wibble {\n    @internal\n    Wibble1\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:5
+  │
+3 │     @internal
+  │     ^^^^^^^^^ This attribute cannot be used on a type variant.

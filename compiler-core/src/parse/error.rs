@@ -312,6 +312,9 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::UnknownAttributeRecordConstructor => {
+                ("This attribute cannot be used on a type variant.", vec![])
+            }
         }
     }
 }
@@ -380,6 +383,7 @@ pub enum ParseErrorType {
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
+    UnknownAttributeRecordConstructor, // an attribute was used that is not know for a custom type constructor
 }
 
 impl LexicalError {

@@ -1518,3 +1518,80 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn deprecation_attribute_on_type_variant() {
+    assert_parse_module!(
+        r#"
+type Wibble {
+    @deprecated("1")
+    Wibble1
+    Wibble2
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_deprecation_attribute_on_type_variant() {
+    assert_module_error!(
+        r#"
+type Wibble {
+    @deprecated("1")
+    @deprecated("2")
+    Wibble1
+    Wibble2
+}
+"#
+    );
+}
+
+#[test]
+fn target_attribute_on_type_variant() {
+    assert_module_error!(
+        r#"
+type Wibble {
+    @target(erlang)
+    Wibble2
+}
+"#
+    );
+}
+
+#[test]
+fn internal_attribute_on_type_variant() {
+    assert_module_error!(
+        r#"
+type Wibble {
+    @internal
+    Wibble1
+}
+"#
+    );
+}
+
+#[test]
+fn external_attribute_on_type_variant() {
+    assert_module_error!(
+        r#"
+type Wibble {
+    @external(erlang, "one", "two")
+    Wibble1
+}
+"#
+    );
+}
+
+#[test]
+fn multiple_unsupported_attributes_on_type_variant() {
+    assert_module_error!(
+        r#"
+type Wibble {
+    @external(erlang, "one", "two")
+    @target(erlang)
+    @internal
+    Wibble1
+}
+"#
+    );
+}
