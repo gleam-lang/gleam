@@ -13,8 +13,9 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
-        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     Result,
@@ -64,10 +65,14 @@ impl ModuleDecoder {
         let message_reader =
             capnp::serialize_packed::read_message(reader, capnp::message::ReaderOptions::new())?;
         let reader = message_reader.get_root::<module::Reader<'_>>()?;
-
         Ok(ModuleInterface {
             name: reader.get_name()?.into(),
             package: reader.get_package()?.into(),
+            documentation: reader
+                .get_documentation()?
+                .iter()
+                .filter_map(|s| s.ok().map(|s| s.into()))
+                .collect(),
             is_internal: reader.get_is_internal(),
             origin: Origin::Src,
             values: read_hashmap!(reader.get_values()?, self, value_constructor),
@@ -77,6 +82,7 @@ impl ModuleDecoder {
                 self,
                 type_variants_constructors
             ),
+            type_aliases: read_hashmap!(reader.get_type_aliases()?, self, type_alias_constructor),
             accessors: read_hashmap!(reader.get_accessors()?, self, accessors_map),
             line_numbers: self.line_numbers(&reader.get_line_numbers()?)?,
             src_path: reader.get_src_path()?.into(),
@@ -202,7 +208,31 @@ impl ModuleDecoder {
         reader: &type_value_constructor_parameter::Reader<'_>,
     ) -> Result<TypeValueConstructorField> {
         Ok(TypeValueConstructorField {
+            label: self.optional_string(reader.get_label()?),
             type_: self.type_(&reader.get_type()?)?,
+        })
+        // unimplemented!()
+    }
+
+    fn type_alias_constructor(
+        &mut self,
+        reader: &type_alias_constructor::Reader<'_>,
+    ) -> Result<TypeAliasConstructor> {
+        let type_ = self.type_(&reader.get_type()?)?.as_ref().clone();
+        let deprecation = match reader.get_deprecated()? {
+            "" => Deprecation::NotDeprecated,
+            message => Deprecation::Deprecated {
+                message: message.into(),
+            },
+        };
+        Ok(TypeAliasConstructor {
+            publicity: self.publicity(reader.get_publicity()?)?,
+            module: reader.get_module()?.into(),
+            origin: self.src_span(&reader.get_origin()?)?,
+            type_,
+            arity: reader.get_arity().into(),
+            deprecation,
+            documentation: self.optional_string(reader.get_documentation()?),
         })
     }
 

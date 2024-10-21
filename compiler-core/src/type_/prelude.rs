@@ -206,8 +206,10 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         name: PRELUDE_MODULE_NAME.into(),
         package: "".into(),
         origin: Origin::Src,
+        documentation: vec![],
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         is_internal: false,
@@ -409,12 +411,14 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             TypeValueConstructor {
                                 name: "Ok".into(),
                                 parameters: vec![TypeValueConstructorField {
+                                    label: None,
                                     type_: result_value,
                                 }],
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
                                 parameters: vec![TypeValueConstructorField {
+                                    label: None,
                                     type_: result_error,
                                 }],
                             },

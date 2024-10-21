@@ -447,6 +447,7 @@ pub fn generate_html<IO: FileSystemReader>(
 }
 
 pub fn generate_json_package_interface(path: Utf8PathBuf, package: &Package) -> OutputFile {
+    // println!("Generating Package Interface");
     OutputFile {
         path,
         content: Content::Text(
