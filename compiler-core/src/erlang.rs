@@ -47,6 +47,7 @@ struct Env<'a> {
     function: &'a str,
     line_numbers: &'a LineNumbers,
     needs_function_docs: bool,
+    echo_used: bool,
     current_scope_vars: im::HashMap<String, usize>,
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
@@ -58,6 +59,7 @@ impl<'env> Env<'env> {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
             needs_function_docs: false,
+            echo_used: false,
             line_numbers,
             function,
             module,
@@ -220,6 +222,7 @@ fn module_document<'a>(
     let src_path = EcoString::from(module.type_info.src_path.as_str());
 
     let mut needs_function_docs = false;
+    let mut echo_used = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
     for definition in module.definitions.iter() {
         if let Some((statement_document, env)) = module_statement(
@@ -230,6 +233,7 @@ fn module_document<'a>(
             &src_path,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
+            echo_used = echo_used || env.echo_used;
             statements.push(statement_document);
         }
     }
@@ -270,6 +274,14 @@ fn module_document<'a>(
         type_defs,
         join(statements, lines(2)),
     ];
+
+    let module = if echo_used {
+        module
+            .append(lines(2))
+            .append(std::include_str!("../templates/echo.erl").to_doc())
+    } else {
+        module
+    };
 
     Ok(module.append(line()))
 }
@@ -1867,7 +1879,8 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
 }
 
 fn echo<'a>(body: Document<'a>, env: &mut Env<'a>) -> Document<'a> {
-    module_fn_with_args("mmmh", "echo", vec![body], env)
+    env.echo_used = true;
+    "echo".to_doc().append(wrap_args(vec![body]))
 }
 
 fn erlang_error<'a>(
