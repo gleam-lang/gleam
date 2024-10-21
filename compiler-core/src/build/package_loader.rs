@@ -175,12 +175,6 @@ where
         let bytes = self.io.read_bytes(&path)?;
         let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
 
-        // println!(
-        //     "Loaded cached module {} has {} types",
-        //     module.name,
-        //     module.types.len()
-        // );
-
         // Load warnings
         if self.cached_warnings.should_use() {
             let path = dir.join(name.as_ref()).with_extension("cache_warnings");

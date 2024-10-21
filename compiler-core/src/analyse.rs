@@ -318,11 +318,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.warnings.emit(warning.clone());
         }
 
-        // println!(
-        //     "Generated module {} has documentation size {}",
-        //     self.module_name,
-        //     documentation.len()
-        // );
         let module = ast::Module {
             documentation: documentation.clone(),
             name: self.module_name.clone(),

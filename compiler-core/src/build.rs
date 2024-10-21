@@ -264,11 +264,6 @@ impl Module {
             .collect();
 
         self.ast.type_info.documentation = self.ast.documentation.clone();
-        // println!(
-        //     "Module {} has documentation of length {}",
-        //     self.name,
-        //     self.ast.documentation.len()
-        // );
 
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.

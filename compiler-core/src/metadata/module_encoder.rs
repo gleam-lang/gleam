@@ -39,12 +39,6 @@ impl<'a> ModuleEncoder<'a> {
 
         let mut module = message.init_root::<module::Builder<'_>>();
 
-        // println!("Encoding module {}", self.data.name);
-        // println!(
-        //     "Module {} has documentation size {}",
-        //     self.data.name,
-        //     self.data.documentation.len()
-        // );
         module.set_name(&self.data.name);
         module.set_package(&self.data.package);
         module.set_src_path(self.data.src_path.as_str());
@@ -144,21 +138,7 @@ impl<'a> ModuleEncoder<'a> {
         let mut type_aliases = module
             .reborrow()
             .init_type_aliases(self.data.type_aliases.len() as u32);
-        for (i, (name, data)) in self
-            .data
-            .type_aliases
-            .iter()
-            // .map(|(type_alias_name, type_alias)| {
-            //     println!(
-            //         "Type Alias {}/{} has documentation {}",
-            //         self.data.name,
-            //         type_alias_name,
-            //         type_alias.documentation.clone().unwrap_or_default().len(),
-            //     );
-            //     (type_alias_name, type_alias)
-            // })
-            .enumerate()
-        {
+        for (i, (name, data)) in self.data.type_aliases.iter().enumerate() {
             let mut property = type_aliases.reborrow().get(i as u32);
             property.set_key(name);
             self.build_type_aliases(property.init_value(), data)
