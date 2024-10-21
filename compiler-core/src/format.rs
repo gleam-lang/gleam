@@ -2302,6 +2302,9 @@ impl<'comments> Formatter<'comments> {
             ClauseGuard::SubFloat { left, right, .. } => {
                 self.clause_guard_bin_op(&BinOp::SubFloat, left, right)
             }
+            ClauseGuard::Concatenate { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::Concatenate, left, right)
+            }
             ClauseGuard::MultInt { left, right, .. } => {
                 self.clause_guard_bin_op(&BinOp::MultInt, left, right)
             }
