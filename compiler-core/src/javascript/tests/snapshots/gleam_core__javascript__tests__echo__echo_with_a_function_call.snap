@@ -13,6 +13,4 @@ export function main() {
   return echo(wibble(1, 2));
 }
 
-
-
-...omitted code from `templates/echo.mjs`...
+// ...omitted code from `templates/echo.mjs`...

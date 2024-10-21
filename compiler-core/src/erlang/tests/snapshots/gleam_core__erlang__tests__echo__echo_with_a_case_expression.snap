@@ -15,6 +15,4 @@ main() ->
                 2
         end).
 
-
-
-...omitted code from `templates/echo.erl`...
+% ...omitted code from `templates/echo.erl`...

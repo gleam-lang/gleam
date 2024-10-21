@@ -18,6 +18,4 @@ export function main() {
   return echo(_pipe$2);
 }
 
-
-
-...omitted code from `templates/echo.mjs`...
+// ...omitted code from `templates/echo.mjs`...
