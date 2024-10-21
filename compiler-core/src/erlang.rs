@@ -493,17 +493,25 @@ fn file_attribute<'a>(
 }
 
 fn doc_attribute<'a>(documentation: &EcoString) -> Document<'a> {
-    let lines = documentation.split('\n').map(|line| {
-        let line = EcoString::from(line.replace("\\", "\\\\").replace("\"", "\\\""));
-        "\"".to_doc().append(line.to_doc()).append("\"")
-    });
-    docvec![
-        "?DOC(",
-        line().nest(INDENT),
-        join(lines, line()).nest(INDENT),
-        line(),
-        ")"
-    ]
+    let lines = documentation
+        .split('\n')
+        .map(|line| {
+            let line = EcoString::from(line.replace("\\", "\\\\").replace("\"", "\\\""));
+            "\"".to_doc().append(line.to_doc()).append("\"")
+        })
+        .collect_vec();
+
+    if lines.len() > 1 {
+        docvec!["?DOC(", join(lines, line()), ")"]
+    } else {
+        docvec![
+            "?DOC(",
+            line().nest(INDENT),
+            join(lines, line()).nest(INDENT),
+            line(),
+            ")"
+        ]
+    }
 }
 
 fn external_fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
