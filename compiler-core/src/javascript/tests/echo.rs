@@ -8,7 +8,7 @@ macro_rules! assert_generic_echo {
                 std::include_str!("../../../templates/echo.mjs")
             ))
             .expect("contain generic echo code from `echo.mjs`");
-        let output = format!("{output}\n\n...omitted code from `templates/echo.mjs`...");
+        let output = format!("{output}// ...omitted code from `templates/echo.mjs`...");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }

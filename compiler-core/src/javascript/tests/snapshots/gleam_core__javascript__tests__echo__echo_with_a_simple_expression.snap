@@ -9,6 +9,4 @@ export function main() {
   return echo(1);
 }
 
-
-
-...omitted code from `templates/echo.mjs`...
+// ...omitted code from `templates/echo.mjs`...
