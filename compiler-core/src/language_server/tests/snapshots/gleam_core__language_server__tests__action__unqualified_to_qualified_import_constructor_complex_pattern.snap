@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option.{None, Some}\n\npub fn main() {\n    case [Some(1), None] {\n        [None, ..] -> todo\n        [Some(_), ..] -> todo\n        _ -> todo\n    }\n    case Some(1), Some(2) {\n        None, Some(_) -> todo\n        Some(_), Some(val) -> todo\n        _ -> todo\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+import option.{None, Some}
+
+pub fn main() {
+    case [Some(1), None] {
+          ▔▔▔▔▔↑          
+        [None, ..] -> todo
+        [Some(_), ..] -> todo
+        _ -> todo
+    }
+    case Some(1), Some(2) {
+        None, Some(_) -> todo
+        Some(_), Some(val) -> todo
+        _ -> todo
+    }
+}
+
+
+----- AFTER ACTION
+
+import option.{None, }
+
+pub fn main() {
+    case [option.Some(1), None] {
+        [None, ..] -> todo
+        [option.Some(_), ..] -> todo
+        _ -> todo
+    }
+    case option.Some(1), option.Some(2) {
+        None, option.Some(_) -> todo
+        option.Some(_), option.Some(val) -> todo
+        _ -> todo
+    }
+}
