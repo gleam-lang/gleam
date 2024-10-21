@@ -2948,3 +2948,27 @@ fn each(list, _fun) { list }
 "#
     );
 }
+
+#[test]
+fn echo_followed_by_panic() {
+    assert_warning!(
+        "
+pub fn main() {
+  echo panic
+}
+"
+    );
+}
+#[test]
+fn echo_followed_by_panicking_expression() {
+    assert_warning!(
+        "
+pub fn main(a) {
+  echo case a {
+    1 -> panic
+    _ -> [1, panic]
+  }
+}
+"
+    );
+}
