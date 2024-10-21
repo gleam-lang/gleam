@@ -8,6 +8,7 @@ use crate::{
     line_numbers::LineNumbers,
     Result,
 };
+use ecow::EcoString;
 use itertools::Itertools;
 use std::fmt::Debug;
 
@@ -93,6 +94,7 @@ impl<'a> ErlangApp<'a> {
         writer: Writer,
         config: &PackageConfig,
         modules: &[Module],
+        native_modules: Vec<EcoString>,
     ) -> Result<()> {
         fn tuple(key: &str, value: &str) -> String {
             format!("    {{{key}, {value}}},\n")
@@ -110,6 +112,7 @@ impl<'a> ErlangApp<'a> {
         let modules = modules
             .iter()
             .map(|m| m.name.replace("/", "@"))
+            .chain(native_modules)
             .sorted()
             .join(",\n               ");
 

@@ -228,7 +228,7 @@ impl BeamCompiler for LanguageServerTestIO {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: crate::io::Stdio,
-    ) -> Result<()> {
+    ) -> Result<Vec<String>> {
         panic!(
             "compile_beam({:?}, {:?}, {:?}, {:?}) is not implemented",
             out, lib, modules, stdio
