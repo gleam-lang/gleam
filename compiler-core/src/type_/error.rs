@@ -979,6 +979,9 @@ pub enum PanicPosition {
     /// argument must be a panic.
     LastFunctionArgument,
 
+    /// When the expression to be printed by echo panics.
+    EchoExpression,
+
     /// Any expression that doesn't fall in the previous two categories
     PreviousExpression,
 }
