@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main(a) {\n  echo case a {\n    1 -> panic\n    _ -> [1, panic]\n  }\n}\n"
+---
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:3:3
+  │  
+3 │ ╭   echo case a {
+4 │ │     1 -> panic
+5 │ │     _ -> [1, panic]
+6 │ │   }
+  │ ╰───^
+
+This `echo` won't print anything because the expression it should be
+printing always panics.
