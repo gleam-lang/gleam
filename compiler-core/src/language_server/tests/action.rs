@@ -2736,8 +2736,8 @@ pub fn create_user(name: String) -> User {
 import user.{type User, User}
 
 pub fn user_list(users: List(User)) -> List(String) {
-    User(name: "John", id: 1)
-    User(name: "Jane", id: 2)
+    [User(name: "John", id: 1),
+    User(name: "Jane", id: 2)]
 }
 
 "#;
@@ -2917,6 +2917,137 @@ pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
     );
 }
 
+#[test]
+fn test_unqualified_to_qualified_import_bad_formatted_type_constructor_with_alias() {
+    let src = r#"
+import option.{type    Option    as Maybe, Some}
+
+pub fn maybe_increment(x: Maybe(Int)) -> Maybe(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Maybe as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("May")
+            .nth_occurrence(2)
+            .select_until(find_position_of("be(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_bad_formatted_comma() {
+    let src = r#"
+import option.{type    Option    , Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Option as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("Opt")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ion(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_list_and_tuple() {
+    let src = r#"
+import option.{Some}
+
+pub fn main() {
+    let list = [Some(1), option.None]
+    let tuple = #(Some(2), option.None)
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some(").select_until(find_position_of("1)")),
+    );
+}
+#[test]
+fn test_unqualified_to_qualified_import_constructor_complex_pattern() {
+    let src = r#"
+import option.{None, Some}
+
+pub fn main() {
+    case [Some(1), None] {
+        [None, ..] -> todo
+        [Some(_), ..] -> todo
+        _ -> todo
+    }
+    case Some(1), Some(2) {
+        None, Some(_) -> todo
+        Some(_), Some(val) -> todo
+        _ -> todo
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some(").select_until(find_position_of("1)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_multiple_line_aliased() {
+    let src = r#"
+import option.{
+    type Option,
+    None,
+    Some
+} as opt
+
+pub fn main() {
+  Some(1)
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some")
+            .nth_occurrence(2)
+            .select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_multiple_line_bad_format_without_trailing_comma() {
+    let src = r#"
+import option.{type Option,
+    Some
+
+}
+
+pub fn main() {
+  Some(1)
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some")
+            .nth_occurrence(2)
+            .select_until(find_position_of("(1)")),
+    );
+}
 /* TODO: implement qualified unused location
 #[test]
 fn test_remove_unused_qualified_action() {

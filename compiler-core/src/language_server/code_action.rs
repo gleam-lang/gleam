@@ -1900,8 +1900,9 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             ..
         } = self.unqualified_constructor;
         CodeActionBuilder::new(&format!(
-            "Qualify {} as {module_name}.{}",
+            "Qualify {} as {}.{}",
             constructor.used_name(),
+            module_name,
             constructor.name,
         ))
         .kind(CodeActionKind::REFACTOR)
