@@ -21,7 +21,7 @@ expression: "\n/// Function doc!\n/// Hello!!\n///\npub fn documented() { 1 }"
     " Hello!!\n"
     "\n"
     "\n"
-)
+).
 -spec documented() -> integer().
 documented() ->
     1.

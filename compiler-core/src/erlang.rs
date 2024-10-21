@@ -502,14 +502,14 @@ fn doc_attribute<'a>(documentation: &EcoString) -> Document<'a> {
         .collect_vec();
 
     if lines.len() <= 1 {
-        docvec!["?DOC(", join(lines, line()), ")"]
+        docvec!["?DOC(", join(lines, line()), ")."]
     } else {
         docvec![
             "?DOC(",
             line().nest(INDENT),
             join(lines, line()).nest(INDENT),
             line(),
-            ")"
+            ")."
         ]
     }
 }

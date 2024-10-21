@@ -19,7 +19,7 @@ expression: "\n/// \"hello\"\npub fn documented() { 1 }"
 ?DOC(
     " \"hello\"\n"
     "\n"
-)
+).
 -spec documented() -> integer().
 documented() ->
     1.
