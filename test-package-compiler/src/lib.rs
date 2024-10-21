@@ -62,7 +62,7 @@ pub fn prepare(path: &str) -> String {
     );
     compiler.write_entrypoint = false;
     compiler.write_metadata = true;
-    compiler.compile_beam_bytecode = false;
+    compiler.compile_beam_bytecode = true;
     compiler.copy_native_files = false;
     let result = compiler.compile(
         &warning_emitter,
@@ -78,6 +78,7 @@ pub fn prepare(path: &str) -> String {
                 filesystem.delete_file(&path).unwrap();
             }
             let files = filesystem.into_contents();
+            println!("{:?}", files);
             let warnings = warnings.take();
             TestCompileOutput { files, warnings }.as_overview_text()
         }
