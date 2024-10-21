@@ -64,6 +64,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     }
 }
 
@@ -97,6 +98,7 @@ fn empty_module() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -120,6 +122,7 @@ fn with_line_numbers() {
         ),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -151,6 +154,7 @@ fn module_with_private_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -182,6 +186,7 @@ fn module_with_app_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -213,6 +218,7 @@ fn module_with_fn_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -244,6 +250,7 @@ fn module_with_tuple_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -281,6 +288,7 @@ fn module_with_generic_type() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            contains_echo: false,
         }
     }
 
@@ -318,6 +326,7 @@ fn module_with_type_links() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            contains_echo: false,
         }
     }
 
@@ -355,6 +364,7 @@ fn module_with_type_constructor_documentation() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            contains_echo: false,
         }
     }
 
@@ -395,6 +405,7 @@ fn module_with_type_constructor_origin() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            contains_echo: false,
         }
     }
 
@@ -426,6 +437,7 @@ fn module_type_to_constructors_mapping() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -474,6 +486,7 @@ fn module_fn_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -523,6 +536,7 @@ fn deprecated_module_fn_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -570,6 +584,7 @@ fn private_module_fn_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -619,6 +634,7 @@ fn module_fn_value_regression() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -667,6 +683,7 @@ fn module_fn_value_with_field_map() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -710,6 +727,7 @@ fn record_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -756,6 +774,7 @@ fn record_value_with_field_map() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -820,6 +839,7 @@ fn accessors() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1034,6 +1054,7 @@ fn constant_var() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1224,6 +1245,7 @@ fn deprecated_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1271,6 +1293,28 @@ fn module_fn_value_with_external_implementations() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_containing_echo() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b/c".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        accessors: HashMap::new(),
+        values: [].into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: true,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1321,6 +1365,7 @@ fn internal_module_fn() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1374,6 +1419,7 @@ fn internal_annotated_module_fn() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1414,6 +1460,7 @@ fn type_variable_ids_in_constructors_are_shared() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        contains_echo: false,
     };
 
     let expected = HashMap::from([(

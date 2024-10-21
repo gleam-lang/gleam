@@ -35,7 +35,7 @@ pub enum TypedExpr {
     /// locations when showing it in error messages, etc.
     Pipeline {
         location: SrcSpan,
-        assignments: Vec<TypedAssignment>,
+        assignments: Vec<TypedPipelineAssignment>,
         finally: Box<Self>,
     },
 
@@ -126,6 +126,12 @@ pub enum TypedExpr {
         type_: Arc<Type>,
     },
 
+    Echo {
+        location: SrcSpan,
+        type_: Arc<Type>,
+        expression: Option<Box<Self>>,
+    },
+
     BitArray {
         location: SrcSpan,
         type_: Arc<Type>,
@@ -181,6 +187,11 @@ impl TypedExpr {
             | Self::String { .. }
             | Self::ModuleSelect { .. }
             | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+
+            Self::Echo { expression, .. } => expression
+                .as_ref()
+                .and_then(|e| e.find_node(byte_index))
+                .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::Todo { kind, .. } => match kind {
                 TodoKind::Keyword => self.self_if_contains_location(byte_index),
@@ -316,6 +327,7 @@ impl TypedExpr {
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
@@ -343,6 +355,7 @@ impl TypedExpr {
             | Self::Int { location, .. }
             | Self::Var { location, .. }
             | Self::Todo { location, .. }
+            | Self::Echo { location, .. }
             | Self::Case { location, .. }
             | Self::Call { location, .. }
             | Self::List { location, .. }
@@ -372,6 +385,7 @@ impl TypedExpr {
             | TypedExpr::Call { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::BinOp { .. }
             | TypedExpr::Float { .. }
@@ -413,6 +427,7 @@ impl TypedExpr {
             Self::Fn { type_, .. }
             | Self::Int { type_, .. }
             | Self::Todo { type_, .. }
+            | Self::Echo { type_, .. }
             | Self::Case { type_, .. }
             | Self::List { type_, .. }
             | Self::Call { type_, .. }
@@ -473,6 +488,7 @@ impl TypedExpr {
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
@@ -552,7 +568,10 @@ impl TypedExpr {
             // `panic`, `todo`, and placeholders are never considered pure value constructors,
             // we don't want to raise a warning for an unused value if it's one
             // of those.
-            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } | TypedExpr::Invalid { .. } => false,
+            TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 

@@ -497,6 +497,10 @@ pub mod module {
     pub fn has_required_version(&self) -> bool {
       !self.reader.get_pointer_field(8).is_null()
     }
+    #[inline]
+    pub fn get_contains_echo(self) -> bool {
+      self.reader.get_bool_field(1)
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
@@ -698,6 +702,14 @@ pub mod module {
     #[inline]
     pub fn has_required_version(&self) -> bool {
       !self.builder.get_pointer_field(8).is_null()
+    }
+    #[inline]
+    pub fn get_contains_echo(self) -> bool {
+      self.builder.get_bool_field(1)
+    }
+    #[inline]
+    pub fn set_contains_echo(&mut self, value: bool)  {
+      self.builder.set_bool_field(1, value);
     }
   }
 

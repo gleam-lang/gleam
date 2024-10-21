@@ -17,6 +17,8 @@ mod case;
 mod conditional_compilation;
 mod consts;
 mod custom_types;
+mod documentation;
+mod echo;
 mod external_fn;
 mod functions;
 mod guards;
