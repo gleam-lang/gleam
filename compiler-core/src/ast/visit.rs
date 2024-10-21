@@ -129,6 +129,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_var(self, location, constructor, name);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
@@ -812,6 +813,7 @@ pub fn visit_typed_expr_var<'a, V>(
     /* TODO */
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn visit_typed_expr_fn<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,

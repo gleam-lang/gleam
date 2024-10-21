@@ -665,6 +665,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         UntypedExpr::Var { location, name }
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn fold_fn(
         &mut self,
         location: SrcSpan,
