@@ -565,17 +565,13 @@ impl TypedExpr {
             // pure value constructor and raise a warning for those as well.
             TypedExpr::Block { .. } | TypedExpr::Case { .. } => false,
 
-            // `echo` just returns the thing its printing, so it's pure as long as
-            // the printed thing is. If it's being used as a step of a pipeline then
-            // we always consider it pure
-            TypedExpr::Echo { expression, .. } => expression
-                .as_ref()
-                .map_or(true, |e| e.is_pure_value_constructor()),
-
             // `panic`, `todo`, and placeholders are never considered pure value constructors,
             // we don't want to raise a warning for an unused value if it's one
             // of those.
-            TypedExpr::Todo { .. } | TypedExpr::Panic { .. } | TypedExpr::Invalid { .. } => false,
+            TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
+            | TypedExpr::Invalid { .. } => false,
         }
     }
 
