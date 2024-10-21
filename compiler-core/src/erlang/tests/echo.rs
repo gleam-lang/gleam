@@ -11,7 +11,7 @@ macro_rules! assert_generic_echo {
                 std::include_str!("../../../templates/echo.erl")
             ))
             .expect("contain generic echo code from `echo.erl`");
-        let output = format!("{output}\n\n...omitted code from `templates/echo.erl`...");
+        let output = format!("{output}% ...omitted code from `templates/echo.erl`...");
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }
