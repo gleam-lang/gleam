@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/echo.rs
+assertion_line: 44
 expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
 ---
 -module(my@mod).
