@@ -33,8 +33,9 @@ use std::{
 };
 
 use super::{
-    elixir_libraries::ElixirLibraries, package_compiler::CachedWarnings, Codegen, Compile,
-    ErlangAppCodegenConfiguration, Outcome,
+    elixir_libraries::ElixirLibraries,
+    package_compiler::{CachedWarnings, Compiled},
+    Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -208,11 +209,16 @@ where
     pub fn compile_root_package(&mut self) -> Outcome<Package, Error> {
         let config = self.config.clone();
         self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())
-            .map(|(modules, cachedModules)| Package {
-                config,
-                modules,
-                cached_modules: cachedModules,
-            })
+            .map(
+                |Compiled {
+                     modules,
+                     cached_modules,
+                 }| Package {
+                    config,
+                    modules,
+                    cached_modules,
+                },
+            )
     }
 
     /// Checks that version file found in the build directory matches the
@@ -252,7 +258,10 @@ where
         let mut modules = vec![];
 
         for name in sequence {
-            let compiled = self.load_cache_or_compile_package(&name)?;
+            let mut compiled = self.load_cache_or_compile_package(&name)?;
+            compiled.iter_mut().for_each(|module| {
+                module.ast.type_info.remove_duplicated_type_aliases();
+            });
             modules.extend(compiled);
         }
 
@@ -292,7 +301,12 @@ where
         // longer need to have the package borrowed from self.packages.
         let package = self.packages.get(name).expect("Missing package").clone();
         let result = match usable_build_tools(&package)?.as_slice() {
-            &[BuildTool::Gleam] => self.compile_gleam_dep_package(&package).map(|_| vec![]),
+            &[BuildTool::Gleam] => self.compile_gleam_dep_package(&package).map(
+                |Compiled {
+                     modules,
+                     cached_modules: _,
+                 }| modules,
+            ),
             &[BuildTool::Rebar3] => self.compile_rebar3_dep_package(&package).map(|_| vec![]),
             &[BuildTool::Mix] => self.compile_mix_dep_package(&package).map(|_| vec![]),
             &[BuildTool::Mix, BuildTool::Rebar3] => self
@@ -490,10 +504,7 @@ where
         }
     }
 
-    fn compile_gleam_dep_package(
-        &mut self,
-        package: &ManifestPackage,
-    ) -> Result<(Vec<Module>, Vec<type_::ModuleInterface>), Error> {
+    fn compile_gleam_dep_package(&mut self, package: &ManifestPackage) -> Result<Compiled, Error> {
         // TODO: Test
         let package_root = match &package.source {
             // If the path is relative it is relative to the root of the
@@ -524,7 +535,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-    ) -> Outcome<(Vec<Module>, Vec<type_::ModuleInterface>), Error> {
+    ) -> Outcome<Compiled, Error> {
         let out_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &config.name);

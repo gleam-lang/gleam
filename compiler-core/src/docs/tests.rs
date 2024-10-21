@@ -61,9 +61,10 @@ fn compile_with_markdown_pages(
             &mut HashSet::new(),
             &NullTelemetry,
         )
-        .unwrap();
+        .unwrap()
+        .modules;
 
-    for module in &mut modules.0 {
+    for module in &mut modules {
         module.attach_doc_and_module_comments();
     }
 
@@ -79,7 +80,7 @@ fn compile_with_markdown_pages(
     super::generate_html(
         &paths,
         &config,
-        &modules.0,
+        &modules,
         &docs_pages,
         pages_fs,
         SystemTime::UNIX_EPOCH,

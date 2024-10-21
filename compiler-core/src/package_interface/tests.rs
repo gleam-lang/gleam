@@ -133,6 +133,7 @@ pub fn compile_package(
         extra: parsed.extra,
         dependencies: vec![],
     };
+    module.ast.type_info.remove_duplicated_type_aliases();
     module.attach_doc_and_module_comments();
     let package: Package = package_from_module(module);
     serde_json::to_string_pretty(&PackageInterface::from_package(&package)).expect("to json")

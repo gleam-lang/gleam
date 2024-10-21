@@ -119,23 +119,8 @@ impl<'a> ModuleEncoder<'a> {
 
     fn set_module_types(&mut self, module: &mut module::Builder<'_>) {
         tracing::trace!("Writing module metadata types");
-        let filtered_types: Vec<_> = self
-            .data
-            .types
-            .iter()
-            .filter(|(name, _)| !self.data.type_aliases.contains_key(*name))
-            // .map(|(type_name, type_)| {
-            //     println!(
-            //         "Type {}/{} has documentation {}",
-            //         self.data.name,
-            //         type_name,
-            //         type_.documentation.clone().unwrap_or_default().len(),
-            //     );
-            //     (type_name, type_)
-            // })
-            .collect();
-        let mut types = module.reborrow().init_types(filtered_types.len() as u32);
-        for (i, (name, type_)) in filtered_types.iter().enumerate() {
+        let mut types = module.reborrow().init_types(self.data.types.len() as u32);
+        for (i, (name, type_)) in self.data.types.iter().enumerate() {
             let mut property = types.reborrow().get(i as u32);
             property.set_key(name);
             self.build_type_constructor(property.init_value(), type_)
@@ -228,6 +213,7 @@ impl<'a> ModuleEncoder<'a> {
             Deprecation::Deprecated { message } => message,
         });
         self.build_publicity(builder.reborrow().init_publicity(), constructor.publicity);
+        builder.set_opaque(constructor.opaque);
         let type_builder = builder.reborrow().init_type();
         self.build_type(type_builder, &constructor.type_);
         self.build_types(

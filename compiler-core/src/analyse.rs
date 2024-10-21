@@ -974,7 +974,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 };
 
                 fields.push(TypeValueConstructorField {
-                    label: label.clone().map_or(None, |(_, label)| Some(label.clone())),
+                    label: label
+                        .as_ref()
+                        .map_or(None, |(_, label)| Some(label.clone())),
                     type_: t.clone(),
                 });
 
@@ -1132,6 +1134,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     deprecation: deprecation.clone(),
                     parameters,
                     publicity,
+                    opaque: *opaque,
                     type_,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
@@ -1190,11 +1193,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let parameters = self.make_type_vars(args, &mut hydrator, environment);
         let mut tryblock = || {
             hydrator.disallow_new_type_variables();
-            let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
+            let type_ref =
+                hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
+            let type_ = type_ref.as_ref().clone();
+            let arity = parameters.len();
 
             environment
                 .names
-                .type_in_scope(name.clone(), type_.as_ref());
+                .type_in_scope(name.clone(), type_ref.as_ref());
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
@@ -1202,10 +1208,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 TypeConstructor {
                     origin: *location,
                     module: self.module_name.clone(),
-                    parameters: parameters.clone(),
-                    type_: type_.clone(),
+                    parameters,
+                    type_: type_ref,
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
+                    // TODO: Find if the type is opaque
+                    opaque: false,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
                 },
             )?;
@@ -1215,8 +1223,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 TypeAliasConstructor {
                     origin: *location,
                     module: self.module_name.clone(),
-                    type_: type_.as_ref().clone(),
-                    arity: parameters.len(),
+                    type_,
+                    arity,
                     publicity: *publicity,
                     deprecation: deprecation.clone(),
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),

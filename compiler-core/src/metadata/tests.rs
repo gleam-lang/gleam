@@ -144,6 +144,7 @@ fn module_with_private_type() {
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Private,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -177,6 +178,7 @@ fn module_with_app_type() {
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -210,6 +212,7 @@ fn module_with_fn_type() {
             TypeConstructor {
                 type_: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -243,6 +246,7 @@ fn module_with_tuple_type() {
             TypeConstructor {
                 type_: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -282,6 +286,7 @@ fn module_with_generic_type() {
                 TypeConstructor {
                     type_: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: Default::default(),
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
@@ -321,6 +326,7 @@ fn module_with_type_links() {
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
@@ -360,6 +366,7 @@ fn module_with_type_constructor_documentation() {
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
@@ -399,6 +406,7 @@ fn module_with_type_constructor_origin() {
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: SrcSpan {
                         start: 535,
                         end: 543,
@@ -1251,6 +1259,7 @@ fn deprecated_type() {
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],

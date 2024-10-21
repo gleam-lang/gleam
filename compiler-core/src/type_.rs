@@ -643,6 +643,11 @@ impl ModuleInterface {
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
+
+    pub fn remove_duplicated_type_aliases(&mut self) {
+        self.types
+            .retain(|name, _| !self.type_aliases.contains_key(name));
+    }
 }
 
 /// Information on the constructors of a custom type.
@@ -918,6 +923,7 @@ impl TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
     pub publicity: Publicity,
+    pub opaque: bool,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,

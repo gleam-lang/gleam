@@ -16,7 +16,8 @@ use crate::{
     line_numbers::LineNumbers,
     type_::{
         self, collapse_links, pretty::Printer, AccessorsMap, FieldMap, ModuleInterface,
-        PreludeType, Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
+        PreludeType, Type, TypeAliasConstructor, TypeConstructor, ValueConstructorVariant,
+        PRELUDE_MODULE_NAME,
     },
     Result,
 };
@@ -397,12 +398,29 @@ where
             });
         }
 
-        // Module types
+        // Module types and type aliases
         // Do not complete direct module types if the user has already started typing a module select.
         // e.x. when the user has typed mymodule.| we know local module types are no longer relevant
         if module_select.is_none() {
-            for (name, type_) in &self.module.ast.type_info.types {
+            for (name, type_) in self
+                .module
+                .ast
+                .type_info
+                .types
+                .iter()
+                .filter(|(name, _)| !self.module.ast.type_info.type_aliases.contains_key(*name))
+            {
                 completions.push(type_completion(
+                    None,
+                    name,
+                    type_,
+                    insert_range,
+                    TypeCompletionForm::Default,
+                    CompletionKind::LocallyDefined,
+                ));
+            }
+            for (name, type_) in &self.module.ast.type_info.type_aliases {
+                completions.push(type_alias_completion(
                     None,
                     name,
                     type_,
@@ -422,7 +440,11 @@ where
             };
 
             // Qualified types
-            for (name, type_) in &module.types {
+            for (name, type_) in module
+                .types
+                .iter()
+                .filter(|(name, _)| !module.type_aliases.contains_key(*name))
+            {
                 if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
                     continue;
                 }
@@ -446,7 +468,32 @@ where
                 }
             }
 
-            // Unqualified types
+            // Qualified type aliases
+            for (name, type_) in &module.type_aliases {
+                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                    continue;
+                }
+
+                if let Some(module) = import.used_name() {
+                    // If the user has already started a module select then don't show irrelevant modules.
+                    // e.x. when the user has typed mymodule.| we should only show items from mymodule.
+                    if let Some(input_mod_name) = &module_select {
+                        if &module != input_mod_name {
+                            continue;
+                        }
+                    }
+                    completions.push(type_alias_completion(
+                        Some(&module),
+                        name,
+                        type_,
+                        insert_range,
+                        TypeCompletionForm::Default,
+                        CompletionKind::ImportedModule,
+                    ));
+                }
+            }
+
+            // Unqualified types and type aliases
             // Do not complete unqualified types if the user has already started typing a module select.
             // e.x. when the user has typed mymodule.| we know unqualified module types are no longer relevant.
             if module_select.is_none() {
@@ -498,12 +545,39 @@ where
             }
 
             // Qualified types
-            for (name, type_) in &module.types {
+            for (name, type_) in module
+                .types
+                .iter()
+                .filter(|(name, _)| !module.type_aliases.contains_key(*name))
+            {
                 if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
                     continue;
                 }
 
                 let mut completion = type_completion(
+                    Some(qualifier),
+                    name,
+                    type_,
+                    insert_range,
+                    TypeCompletionForm::Default,
+                    CompletionKind::ImportableModule,
+                );
+                add_import_to_completion(
+                    &mut completion,
+                    import_location,
+                    module_full_name,
+                    &after_import_newlines,
+                );
+                completions.push(completion);
+            }
+
+            // Qualified type aliases
+            for (name, type_) in &module.type_aliases {
+                if !self.is_suggestable_import(&type_.publicity, module.package.as_str()) {
+                    continue;
+                }
+
+                let mut completion = type_alias_completion(
                     Some(qualifier),
                     name,
                     type_,
@@ -841,6 +915,41 @@ fn type_completion(
     module: Option<&str>,
     name: &str,
     type_: &TypeConstructor,
+    insert_range: Range,
+    include_type_in_completion: TypeCompletionForm,
+    priority: CompletionKind,
+) -> CompletionItem {
+    let label = match module {
+        Some(module) => format!("{module}.{name}"),
+        None => name.to_string(),
+    };
+
+    let kind = Some(if type_.type_.is_variable() {
+        CompletionItemKind::VARIABLE
+    } else {
+        CompletionItemKind::CLASS
+    });
+
+    CompletionItem {
+        label: label.clone(),
+        kind,
+        detail: Some("Type".into()),
+        sort_text: Some(sort_text(priority, &label)),
+        text_edit: Some(CompletionTextEdit::Edit(TextEdit {
+            range: insert_range,
+            new_text: match include_type_in_completion {
+                TypeCompletionForm::UnqualifiedImport => format!("type {label}"),
+                TypeCompletionForm::Default => label.clone(),
+            },
+        })),
+        ..Default::default()
+    }
+}
+
+fn type_alias_completion(
+    module: Option<&str>,
+    name: &str,
+    type_: &TypeAliasConstructor,
     insert_range: Range,
     include_type_in_completion: TypeCompletionForm,
     priority: CompletionKind,

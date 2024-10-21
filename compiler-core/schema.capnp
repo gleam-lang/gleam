@@ -63,6 +63,7 @@ struct TypeConstructor {
   parameters @1 :List(Type);
   module @2 :Text;
   publicity @3 :Publicity;
+  opaque @7 :Bool;
   deprecated @4 :Text;
   origin @5 :SrcSpan;
   documentation @6 :Text;

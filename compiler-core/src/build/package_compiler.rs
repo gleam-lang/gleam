@@ -32,6 +32,11 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
+pub struct Compiled {
+    pub modules: Vec<Module>,
+    pub cached_modules: Vec<type_::ModuleInterface>,
+}
+
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
@@ -106,7 +111,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<(Vec<Module>, Vec<type_::ModuleInterface>), Error> {
+    ) -> Outcome<Compiled, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -187,7 +192,13 @@ where
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
             Outcome::PartialFailure(modules, err) => {
-                return Outcome::PartialFailure((modules, loaded.cached), err)
+                return Outcome::PartialFailure(
+                    Compiled {
+                        modules,
+                        cached_modules: loaded.cached,
+                    },
+                    err,
+                )
             }
             Outcome::TotalFailure(err) => return Outcome::TotalFailure(err),
         };
@@ -198,10 +209,18 @@ where
             return error.into();
         }
 
+        for mut module in modules.iter_mut() {
+            module.ast.type_info.remove_duplicated_type_aliases();
+            module.attach_doc_and_module_comments();
+        }
+
         if let Err(error) = self.encode_and_write_metadata(&modules) {
             return error.into();
         }
-        Outcome::Ok((modules, loaded.cached))
+        Outcome::Ok(Compiled {
+            modules,
+            cached_modules: loaded.cached,
+        })
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
@@ -295,8 +314,7 @@ where
         let artefact_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
 
         tracing::debug!("writing_module_caches");
-        for mut module in modules.clone() {
-            module.attach_doc_and_module_comments();
+        for module in modules {
             let module_name = module.name.replace("/", "@");
 
             // Write metadata file
@@ -518,12 +536,15 @@ fn analyse(
         .infer_module(ast, line_numbers, path.clone());
 
         match analysis {
-            Outcome::Ok(ast) => {
+            Outcome::Ok(mut ast) => {
                 // Module has compiled successfully. Make sure it isn't marked as incomplete.
                 let _ = incomplete_modules.remove(&name.clone());
                 // Register the types from this module so they can be imported into
                 // other modules.
                 let _ = module_types.insert(name.clone(), ast.type_info.clone());
+
+                ast.type_info.remove_duplicated_type_aliases();
+
                 // Register the successfully type checked module data so that it can be
                 // used for code generation and in the language server.
                 modules.push(Module {
@@ -538,7 +559,7 @@ fn analyse(
                 });
             }
 
-            Outcome::PartialFailure(ast, errors) => {
+            Outcome::PartialFailure(mut ast, errors) => {
                 let error = Error::Type {
                     names: ast.names.clone(),
                     path: path.clone(),
@@ -547,6 +568,9 @@ fn analyse(
                 };
                 // Mark as incomplete so that this module isn't reloaded from cache.
                 let _ = incomplete_modules.insert(name.clone());
+
+                ast.type_info.remove_duplicated_type_aliases();
+
                 // Register the partially type checked module data so that it can be
                 // used in the language server.
                 modules.push(Module {
@@ -651,7 +675,7 @@ pub(crate) struct CachedModule {
 }
 
 #[derive(Debug, serde::Serialize, serde::Deserialize)]
-pub struct CacheMetadata {
+pub(crate) struct CacheMetadata {
     pub mtime: SystemTime,
     pub codegen_performed: bool,
     pub dependencies: Vec<(EcoString, SrcSpan)>,
