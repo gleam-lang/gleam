@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  echo panic\n}\n"
+---
+warning: Unreachable code
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   echo panic
+  │   ^^^^^^^^^^
+
+This `echo` won't print anything because the expression it should be
+printing always panics.
