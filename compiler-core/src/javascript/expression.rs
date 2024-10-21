@@ -225,7 +225,7 @@ impl<'module> Generator<'module> {
                     .as_ref()
                     .expect("echo with no expression outside of pipe");
                 let expresion_doc =
-                    self.not_in_tail_position(|this| this.wrap_expression(&expression))?;
+                    self.not_in_tail_position(|this| this.wrap_expression(expression))?;
                 self.echo(expresion_doc)
             }
 
