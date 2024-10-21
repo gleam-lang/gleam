@@ -34,6 +34,8 @@ pub enum UntypedExpr {
         /// For anonymous functions, this is the location of the entire function including the end of the body.
         /// For named functions, this is the location of the function head.
         location: SrcSpan,
+        /// The location of the function head for anonymous functions
+        head_location: Option<SrcSpan>,
         /// The byte location of the end of the function head before the opening bracket
         end_of_head_byte_index: u32,
         is_capture: bool,

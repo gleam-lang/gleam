@@ -927,7 +927,12 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
     fn visit_typed_assignment(&mut self, assignment: &'ast ast::TypedAssignment) {
         self.visit_typed_expr(&assignment.value);
 
-        let code_action_range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
+        // We only offer this code action between `let` and `=`, because
+        // otherwise it could lead to confusing behaviour if inside a block
+        // which is part of a let binding.
+        let pattern_location = assignment.pattern.location();
+        let location = SrcSpan::new(assignment.location.start, pattern_location.end);
+        let code_action_range = src_span_to_lsp_range(location, &self.line_numbers);
 
         // Only offer the code action if the cursor is over the statement
         if !overlaps(code_action_range, self.params.range) {
@@ -939,7 +944,6 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             return;
         }
 
-        let pattern_location = assignment.pattern.location();
         let insert_location = SrcSpan::new(pattern_location.end, pattern_location.end);
         let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
 
@@ -1005,6 +1009,76 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             self.edits.push(TextEdit {
                 range,
                 new_text: format!(" -> {}", self.printer.print_type(&fun.return_type)),
+            });
+        }
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        head_location: &'ast Option<SrcSpan>,
+        type_: &'ast Arc<Type>,
+        is_capture: &'ast bool,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        ast::visit::visit_typed_expr_fn(
+            self,
+            location,
+            head_location,
+            type_,
+            is_capture,
+            args,
+            body,
+            return_annotation,
+        );
+
+        // Function captures don't need any type annotations
+        if *is_capture {
+            return;
+        }
+
+        // If the function doesn't have a head, we can't annotate it
+        let Some(head_location) = head_location else {
+            return;
+        };
+
+        let code_action_range = src_span_to_lsp_range(*head_location, &self.line_numbers);
+
+        // Only offer the code action if the cursor is over the expression
+        if !overlaps(code_action_range, self.params.range) {
+            return;
+        }
+
+        // Annotate each argument separately
+        for argument in args.iter() {
+            // Don't annotate the argument if it's already annotated
+            if argument.annotation.is_some() {
+                continue;
+            }
+
+            let insert_location = SrcSpan::new(argument.location.end, argument.location.end);
+            let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+            self.edits.push(TextEdit {
+                range,
+                new_text: format!(": {}", self.printer.print_type(&argument.type_)),
+            });
+        }
+
+        // Annotate the return type if it isn't already annotated
+        if return_annotation.is_none() {
+            let insert_location = SrcSpan::new(head_location.end, head_location.end);
+            let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
+
+            self.edits.push(TextEdit {
+                range,
+                new_text: format!(
+                    " -> {}",
+                    self.printer
+                        .print_type(&type_.return_type().expect("Type must be a function"))
+                ),
             });
         }
     }
@@ -1084,6 +1158,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
+        head_location: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
         is_capture: &'ast bool,
         args: &'ast [ast::TypedArg],
@@ -1101,6 +1176,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         ast::visit::visit_typed_expr_fn(
             self,
             location,
+            head_location,
             type_,
             is_capture,
             args,
@@ -1453,6 +1529,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
     fn visit_typed_expr_fn(
         &mut self,
         location: &'ast SrcSpan,
+        head_location: &'ast Option<SrcSpan>,
         type_: &'ast Arc<Type>,
         is_capture: &'ast bool,
         args: &'ast [ast::TypedArg],
@@ -1470,6 +1547,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         ast::visit::visit_typed_expr_fn(
             self,
             location,
+            head_location,
             type_,
             is_capture,
             args,

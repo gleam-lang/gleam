@@ -1615,6 +1615,58 @@ pub fn do_a_thing(a: Int, b: Float) -> String {
 }
 
 #[test]
+fn annotate_anonymous_function() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn add_curry(a) {
+  fn(b) { a + b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
+fn annotate_anonymous_function_with_annotated_return_type() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn add_curry(a) {
+  fn(b) -> Int { a + b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
+fn annotate_anonymous_function_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  fn(a, b: Int, c) { a + b + c }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("c)"))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_anonymous_function() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  fn(a: Int, b: Int) -> Int { a - b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("Int)"))
+    );
+}
+
+#[test]
 fn annotate_constant() {
     assert_code_action!(
         ADD_ANNOTATION,
