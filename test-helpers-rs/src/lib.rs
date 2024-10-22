@@ -1,0 +1,94 @@
+use camino::{Utf8Path, Utf8PathBuf};
+use gleam_core::io::{memory::InMemoryFileSystem, Content, FileSystemWriter};
+use itertools::Itertools;
+use regex::Regex;
+use std::{collections::HashMap, fmt::Write, sync::OnceLock};
+
+#[derive(Debug)]
+pub struct TestCompileOutput {
+    pub files: HashMap<Utf8PathBuf, Content>,
+    pub warnings: Vec<gleam_core::Warning>,
+}
+
+impl TestCompileOutput {
+    pub fn as_overview_text(&self) -> String {
+        let mut buffer = String::new();
+        for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
+            let normalised_path = path.as_str().replace('\\', "/");
+            buffer.push_str("//// ");
+            buffer.push_str(&normalised_path);
+            buffer.push('\n');
+
+            let extension = path.extension();
+            match content {
+                _ if extension == Some("cache") => buffer.push_str("<.cache binary>"),
+                Content::Binary(data) => write!(buffer, "<{} byte binary>", data.len()).unwrap(),
+
+                Content::Text(_) if normalised_path.ends_with("@@main.erl") => {
+                    write!(buffer, "<erlang entrypoint>").unwrap()
+                }
+
+                Content::Text(text) => {
+                    let text = FILE_LINE_REGEX
+                        .get_or_init(|| {
+                            Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
+                        })
+                        .replace_all(text, |caps: &regex::Captures| {
+                            let path = caps
+                                .get(1)
+                                .expect("file path")
+                                .as_str()
+                                .replace("\\\\", "/");
+                            let line_number = caps.get(2).expect("line number").as_str();
+                            format!("-file(\"{path}\", {line_number}).")
+                        });
+                    buffer.push_str(&text)
+                }
+            };
+            buffer.push('\n');
+            buffer.push('\n');
+        }
+
+        for warning in self.warnings.iter().map(|w| w.to_pretty_string()).sorted() {
+            write!(buffer, "//// Warning\n{}", normalise_diagnostic(&warning)).unwrap();
+            buffer.push('\n');
+            buffer.push('\n');
+        }
+
+        buffer
+    }
+}
+
+pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
+    let fs = InMemoryFileSystem::new();
+
+    let files = walkdir::WalkDir::new(path)
+        .follow_links(true)
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().is_file())
+        .map(|d| d.into_path());
+
+    for fullpath in files {
+        let content = std::fs::read(&fullpath).unwrap();
+        let path = fullpath.strip_prefix(path).unwrap();
+        fs.write_bytes(Utf8Path::from_path(path).unwrap(), &content)
+            .unwrap();
+    }
+
+    fs
+}
+
+static FILE_LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+
+pub fn normalise_diagnostic(text: &str) -> String {
+    // There is an extra ^ on Windows in some error messages' code
+    // snippets.
+    // I've not managed to determine why this is yet (it is especially
+    // tricky without a Windows computer) so for now we just squash them
+    // in these cross-platform tests.
+    Regex::new(r"\^+")
+        .expect("^ sequence regex")
+        .replace_all(text, "^")
+        .replace('\\', "/")
+}

@@ -1,5 +1,5 @@
 [package]
-name = "test-package-compiler"
+name = "test-project-compiler"
 version = "1.5.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"

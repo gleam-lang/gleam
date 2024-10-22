@@ -195,6 +195,13 @@ impl Mode {
             Self::Prod => false,
         }
     }
+
+    pub fn includes_dev_dependencies(&self) -> bool {
+        match self {
+            Mode::Dev | Mode::Lsp => true,
+            Mode::Prod => false,
+        }
+    }
 }
 
 #[test]
