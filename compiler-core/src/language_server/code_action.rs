@@ -1607,9 +1607,9 @@ pub fn code_action_convert_qualified_constructor_to_unqualified(
     actions.extend(new_actions);
 }
 
-struct UnqualifiedConstructor {
+struct UnqualifiedConstructor<'a> {
     module_name: EcoString,
-    constructor: ast::UnqualifiedImport,
+    constructor: &'a ast::UnqualifiedImport,
     is_type: bool,
 }
 
@@ -1617,7 +1617,7 @@ struct UnqualifiedToQualifiedImportFirstPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
-    unqualified_constructor: Option<UnqualifiedConstructor>,
+    unqualified_constructor: Option<UnqualifiedConstructor<'a>>,
 }
 
 impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
@@ -1647,7 +1647,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                         .find(|value| value.used_name() == constructor_name)
                         .and_then(|value| {
                             Some(UnqualifiedConstructor {
-                                constructor: value.clone(),
+                                constructor: value,
                                 module_name: import.used_name()?,
                                 is_type: false,
                             })
@@ -1670,7 +1670,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                             .find(|ty| ty.used_name() == constructor_name)
                         {
                             return Some(UnqualifiedConstructor {
-                                constructor: ty.clone(),
+                                constructor: ty,
                                 module_name: import.used_name()?,
                                 is_type: true,
                             });
@@ -1802,7 +1802,7 @@ struct UnqualifiedToQualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     line_numbers: LineNumbers,
-    unqualified_constructor: UnqualifiedConstructor,
+    unqualified_constructor: UnqualifiedConstructor<'a>,
     edits: Vec<TextEdit>,
 }
 
@@ -1811,7 +1811,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
         module: &'a Module,
         params: &'a CodeActionParams,
         line_numbers: LineNumbers,
-        unqualified_constructor: UnqualifiedConstructor,
+        unqualified_constructor: UnqualifiedConstructor<'a>,
     ) -> Self {
         Self {
             module,
