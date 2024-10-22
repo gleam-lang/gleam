@@ -3,10 +3,10 @@ source: test-project-compiler/src/generated_tests.rs
 assertion_line: 32
 expression: "./cases/with_dep"
 ---
-//// /Users/louis/src/gleam/gleam/test-project-compiler/cases/with_dep/build/lsp/erlang/example/_gleam_artefacts/example@@main.erl
+//// cases/with_dep/build/lsp/erlang/example/_gleam_artefacts/example@@main.erl
 <erlang entrypoint>
 
-//// /Users/louis/src/gleam/gleam/test-project-compiler/cases/with_dep/build/lsp/erlang/example/ebin/example.app
+//// cases/with_dep/build/lsp/erlang/example/ebin/example.app
 {application, example, [
     {vsn, "1.0.0"},
     {applications, [package_a]},
@@ -16,5 +16,5 @@ expression: "./cases/with_dep"
 ]}.
 
 
-//// /Users/louis/src/gleam/gleam/test-project-compiler/cases/with_dep/build/lsp/erlang/gleam_version
+//// cases/with_dep/build/lsp/erlang/gleam_version
 1.5.0
