@@ -1886,7 +1886,7 @@ assigned variables to all of them."
 so it cannot be safely updated. If this value was one of the other variants \
 then the update would be produce incorrect results.
 
-Consider pattern matching on it with a case expression and then\
+Consider pattern matching on it with a case expression and then \
 constructing a new record with its values."
                 );
 
