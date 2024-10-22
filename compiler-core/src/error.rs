@@ -1886,8 +1886,8 @@ assigned variables to all of them."
                     match reason {
                         UnsafeRecordUpdateReason::UnknownVariant {constructed_variant} => {
                             let text = wrap_format!("
-I cannot use this value to build an updated `{constructed_variant}` as it could be
-some other variant.
+I cannot use this value to build an updated `{constructed_variant}` \
+as it could be some other variant.
 
 Consider pattern matching on it with a case expression and then \
 constructing a new record with its values.");

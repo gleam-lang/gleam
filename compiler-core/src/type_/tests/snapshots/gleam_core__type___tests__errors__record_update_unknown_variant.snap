@@ -9,8 +9,8 @@ error: Unsafe record update
   │            ^^^^^ I'm not sure this is always a `Wibble`
 
 
-I cannot use this value to build an updated `Wibble` as it could be
-some other variant.
+I cannot use this value to build an updated `Wibble` as it could be some
+other variant.
 
 Consider pattern matching on it with a case expression and then
 constructing a new record with its values.
