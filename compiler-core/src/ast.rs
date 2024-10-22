@@ -2473,6 +2473,29 @@ pub struct UseAssignment {
     pub annotation: Option<TypeAst>,
 }
 
+/// A pipeline is desugared to a series of assignments:
+///
+/// ```gleam
+/// wibble |> wobble |> woo
+/// ```
+///
+/// Becomes:
+///
+/// ```erl
+/// Pipe1 = wibble
+/// Pipe2 = wobble(Pipe1)
+/// woo(Pipe2)
+/// ```
+///
+/// This represents one of such assignments once the pipeline has been desugared
+/// and each step has been typed.
+///
+/// > We're not using a more general `TypedAssignment` node since that has much
+/// > more informations to carry around. This one is limited since we know it
+/// > will always be in the form `VarName = <Expr>`, with no patterns on the
+/// > left hand side of the assignment.
+/// > Being more constrained simplifies code generation for pipelines!
+///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypedPipelineAssignment {
     pub location: SrcSpan,
