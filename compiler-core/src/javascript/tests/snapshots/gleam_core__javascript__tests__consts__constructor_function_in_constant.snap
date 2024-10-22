@@ -1,8 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/consts.rs
-assertion_line: 127
 expression: pub const a = Ok
 ---
+----- SOURCE CODE
+pub const a = Ok
+
+----- COMPILED JAVASCRIPT
 import { Ok } from "../gleam.mjs";
 
 export const a = (var0) => { return new Ok(var0); };

@@ -2,6 +2,20 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Mine {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n\nfn go() {\n    This\n    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant\n}\n"
 ---
+----- SOURCE CODE
+
+type Mine {
+    This
+    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
+}
+
+fn go() {
+    This
+    ThatOneIsAMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchMuchLongerVariant
+}
+
+
+----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class This extends $CustomType {}

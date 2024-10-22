@@ -2,6 +2,20 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\npub fn go(x) {\n  case x {\n    \"\\u{0032} \" as greeting <> name -> greeting\n    \"\\u{0007ff} \" as greeting <> name -> greeting\n    \"\\u{00ffff} \" as greeting <> name -> greeting\n    \"\\u{10ffff} \" as greeting <> name -> greeting\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    "\u{0032} " as greeting <> name -> greeting
+    "\u{0007ff} " as greeting <> name -> greeting
+    "\u{00ffff} " as greeting <> name -> greeting
+    "\u{10ffff} " as greeting <> name -> greeting
+    _ -> "Unknown"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function go(x) {
   if (x.startsWith("\u{0032} ")) {
     let name = x.slice(2);

@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\nconst cute = \"cute\"\nconst cute_bee = cute <> \"bee\"\n\npub fn main() {\n  cute_bee\n}\n"
 ---
+----- SOURCE CODE
+
+const cute = "cute"
+const cute_bee = cute <> "bee"
+
+pub fn main() {
+  cute_bee
+}
+
+
+----- COMPILED JAVASCRIPT
 const cute = "cute";
 
 const cute_bee = cute + "bee";

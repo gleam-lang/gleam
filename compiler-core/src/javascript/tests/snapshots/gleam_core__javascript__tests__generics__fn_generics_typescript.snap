@@ -2,4 +2,11 @@
 source: compiler-core/src/javascript/tests/generics.rs
 expression: "pub fn identity(a) -> a {\n  a\n}\n"
 ---
+----- SOURCE CODE
+pub fn identity(a) -> a {
+  a
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 export function identity<J>(a: J): J;

@@ -1,8 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 16
 expression: "fn go(x) { let assert 1 = x }"
 ---
+----- SOURCE CODE
+fn go(x) { let assert 1 = x }
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {

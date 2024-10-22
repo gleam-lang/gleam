@@ -2,6 +2,23 @@
 source: compiler-core/src/javascript/tests/use_.rs
 expression: "\npub fn main() {\n  use Box(x) <- apply(Box(1))\n  x\n}\n\ntype Box(a) {\n  Box(a)\n}\n\nfn apply(arg, fun) {\n  fun(arg)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  use Box(x) <- apply(Box(1))
+  x
+}
+
+type Box(a) {
+  Box(a)
+}
+
+fn apply(arg, fun) {
+  fun(arg)
+}
+
+
+----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class Box extends $CustomType {

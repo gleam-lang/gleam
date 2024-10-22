@@ -2,6 +2,19 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\n\npub fn main(x) {\n  case x {\n    Two(a: 1, ..) -> 1\n    other.Two(b: 2, c: c, ..) -> c\n    _ -> 3\n  }\n}\n"
 ---
+----- SOURCE CODE
+import other.{Two}
+
+pub fn main(x) {
+  case x {
+    Two(a: 1, ..) -> 1
+    other.Two(b: 2, c: c, ..) -> c
+    _ -> 3
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 

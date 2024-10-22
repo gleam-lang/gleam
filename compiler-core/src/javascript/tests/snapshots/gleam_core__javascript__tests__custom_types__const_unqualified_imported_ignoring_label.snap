@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\npub const main = Two(1)\n"
 ---
+----- SOURCE CODE
+import other.{Two}
+pub const main = Two(1)
+
+
+----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 

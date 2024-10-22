@@ -1,8 +1,30 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 37
 expression: "\n\nfn go(x, wibble) {\n  let a = 1\n  wibble(a)\n  let a = 2\n  wibble(a)\n  let assert #(a, 3) = x\n  let b = a\n  wibble(b)\n  let c = {\n    let a = a\n    #(a, b)\n  }\n  wibble(a)\n  // make sure arguments are counted in initial state\n  let x = c\n  x\n}\n"
 ---
+----- SOURCE CODE
+
+
+fn go(x, wibble) {
+  let a = 1
+  wibble(a)
+  let a = 2
+  wibble(a)
+  let assert #(a, 3) = x
+  let b = a
+  wibble(b)
+  let c = {
+    let a = a
+    #(a, b)
+  }
+  wibble(a)
+  // make sure arguments are counted in initial state
+  let x = c
+  x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x, wibble) {

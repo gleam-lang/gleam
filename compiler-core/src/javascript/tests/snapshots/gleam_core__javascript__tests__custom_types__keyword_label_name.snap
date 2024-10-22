@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "pub type Thing {\n  Thing(in: Int, class: Nil)\n}\n"
 ---
+----- SOURCE CODE
+pub type Thing {
+  Thing(in: Int, class: Nil)
+}
+
+
+----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class Thing extends $CustomType {

@@ -2,6 +2,18 @@
 source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x, y) {\n  case x, y {\n    True, _ -> 1\n    _, True -> 2\n    False, False -> 0\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x, y) {
+  case x, y {
+    True, _ -> 1
+    _, True -> 2
+    False, False -> 0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(x, y) {
   if (x) {
     return 1;

@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "\npub type True { True False Nil }\npub fn go(x, y) {\n  let assert True = x\n  let assert False = x\n  let assert Nil = y\n}\n"
 ---
+----- SOURCE CODE
+
+pub type True { True False Nil }
+pub fn go(x, y) {
+  let assert True = x
+  let assert False = x
+  let assert Nil = y
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 import type * as _ from "../gleam.d.mts";
 
 export class True extends _.CustomType {}

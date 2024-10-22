@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/todo.rs
 expression: "\nfn go() {\n  todo as \"I should do this\"\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  todo as "I should do this"
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go() {

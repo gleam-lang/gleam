@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "pub fn main(f, x) {\n  f(case x {\n    1 -> 2\n    _ -> 0\n  })\n}\n"
 ---
+----- SOURCE CODE
+pub fn main(f, x) {
+  f(case x {
+    1 -> 2
+    _ -> 0
+  })
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main(f, x) {
   return f(
     (() => {

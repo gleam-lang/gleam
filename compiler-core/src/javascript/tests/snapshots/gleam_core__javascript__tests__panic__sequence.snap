@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/javascript/tests/panic.rs
-assertion_line: 62
 expression: "\nfn go(at_the_disco) {\n  panic\n  at_the_disco\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(at_the_disco) {
+  panic
+  at_the_disco
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(at_the_disco) {

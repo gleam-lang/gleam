@@ -2,6 +2,18 @@
 source: compiler-core/src/javascript/tests/case.rs
 expression: "\npub fn main() {\n  case \"12345\" {\n    \"0\" <> rest -> rest\n    \"123\" <> rest -> rest\n    _ -> \"\"\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  case "12345" {
+    "0" <> rest -> rest
+    "123" <> rest -> rest
+    _ -> ""
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main() {
   let $ = "12345";
   if ($.startsWith("0")) {

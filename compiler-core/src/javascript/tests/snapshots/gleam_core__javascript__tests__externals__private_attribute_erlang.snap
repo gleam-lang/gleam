@@ -1,8 +1,20 @@
 ---
 source: compiler-core/src/javascript/tests/externals.rs
-assertion_line: 190
 expression: "\n@external(erlang, \"one\", \"one_erl\")\nfn one(x: Int) -> Int {\n  todo\n}\n\npub fn main() {\n  one(1)\n}\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "one", "one_erl")
+fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function one(x) {

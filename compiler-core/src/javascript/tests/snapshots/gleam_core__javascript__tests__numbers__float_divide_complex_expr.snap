@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/numbers.rs
 expression: "\nfn go() {\n  case 1.0 >=. 0.0 {\n    True -> 2.0\n    False -> 4.0\n  } /. 2.0\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  case 1.0 >=. 0.0 {
+    True -> 2.0
+    False -> 4.0
+  } /. 2.0
+}
+
+
+----- COMPILED JAVASCRIPT
 import { divideFloat } from "../gleam.mjs";
 
 function go() {

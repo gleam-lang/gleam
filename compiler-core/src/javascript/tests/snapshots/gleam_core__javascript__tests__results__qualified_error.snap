@@ -2,6 +2,11 @@
 source: compiler-core/src/javascript/tests/results.rs
 expression: "import gleam\npub fn main() { gleam.Error(1) }"
 ---
+----- SOURCE CODE
+import gleam
+pub fn main() { gleam.Error(1) }
+
+----- COMPILED JAVASCRIPT
 import * as $gleam from "../gleam.mjs";
 
 export function main() {

@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn main() {\n  <<\"hello\", \" \", \"world\">>\n}"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  <<"hello", " ", "world">>
+}
+
+----- COMPILED JAVASCRIPT
 import { toBitArray, stringBits } from "../gleam.mjs";
 
 export function main() {

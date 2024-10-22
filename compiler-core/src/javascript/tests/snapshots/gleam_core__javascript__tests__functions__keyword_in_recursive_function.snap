@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "pub fn main(with: Int) -> Nil {\n  main(with - 1)\n}\n"
 ---
+----- SOURCE CODE
+pub fn main(with: Int) -> Nil {
+  main(with - 1)
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main(loop$with) {
   while (true) {
     let with$ = loop$with;

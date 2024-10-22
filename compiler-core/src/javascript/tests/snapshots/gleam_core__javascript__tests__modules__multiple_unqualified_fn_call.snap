@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/modules.rs
 expression: "import rocket_ship.{a,b as bb}\npub fn go() { a() + bb() }\n"
 ---
+----- SOURCE CODE
+import rocket_ship.{a,b as bb}
+pub fn go() { a() + bb() }
+
+
+----- COMPILED JAVASCRIPT
 import * as $rocket_ship from "../rocket_ship.mjs";
 import { a, b as bb } from "../rocket_ship.mjs";
 

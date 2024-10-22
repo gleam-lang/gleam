@@ -2,4 +2,12 @@
 source: compiler-core/src/javascript/tests/panic.rs
 expression: "\npub fn go() {\n  panic\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go() {
+  panic
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 export function go(): any;

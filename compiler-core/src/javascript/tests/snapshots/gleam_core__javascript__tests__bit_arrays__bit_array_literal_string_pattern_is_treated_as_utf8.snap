@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\npub fn main() {\n  case <<>> {\n    <<\"a\", \"b\", _:bytes>> -> 1\n    _ -> 2\n  }\n}"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  case <<>> {
+    <<"a", "b", _:bytes>> -> 1
+    _ -> 2
+  }
+}
+
+----- COMPILED JAVASCRIPT
 import { toBitArray } from "../gleam.mjs";
 
 export function main() {

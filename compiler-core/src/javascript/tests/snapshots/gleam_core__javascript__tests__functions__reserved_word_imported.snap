@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "import for.{class}\n\npub fn export() {\n  class()\n}\n"
 ---
+----- SOURCE CODE
+import for.{class}
+
+pub fn export() {
+  class()
+}
+
+
+----- COMPILED JAVASCRIPT
 import * as $for from "../for.mjs";
 import { class$ } from "../for.mjs";
 

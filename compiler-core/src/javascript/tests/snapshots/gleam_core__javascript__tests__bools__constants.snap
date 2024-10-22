@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "\nconst a = True\nconst b = False\nconst c = Nil\n"
 ---
+----- SOURCE CODE
+
+const a = True
+const b = False
+const c = Nil
+
+
+----- COMPILED JAVASCRIPT
 const a = true;
 
 const b = false;

@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "\nfn go(a) {\n  case a {\n    True -> 1\n    False -> 0\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(a) {
+  case a {
+    True -> 1
+    False -> 0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(a) {
   if (a) {
     return 1;

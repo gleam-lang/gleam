@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/assignments.rs
 expression: "\npub const class = 5\npub const something = class\n"
 ---
+----- SOURCE CODE
+
+pub const class = 5
+pub const something = class
+
+
+----- COMPILED JAVASCRIPT
 export const class$ = 5;
 
 export const something = class$;
