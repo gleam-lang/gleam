@@ -2,6 +2,21 @@
 source: compiler-core/src/erlang/tests/external_fn.rs
 expression: "\n// This will error for having no support on this platform\n@external(erlang, \"one\", \"two\")\npub fn no_impl() -> Int\n\npub fn main() {\n  // This will due to no_impl not having an appropriate implementation for the\n  // target, NOT because it doesn't exist. The analyser should still know about\n  // it, even though it is invalid.\n  no_impl()\n}\n"
 ---
+----- SOURCE CODE
+
+// This will error for having no support on this platform
+@external(erlang, "one", "two")
+pub fn no_impl() -> Int
+
+pub fn main() {
+  // This will due to no_impl not having an appropriate implementation for the
+  // target, NOT because it doesn't exist. The analyser should still know about
+  // it, even though it is invalid.
+  no_impl()
+}
+
+
+----- ERROR
 error: Unsupported target
   ┌─ /src/one/two.gleam:4:1
   │

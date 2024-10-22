@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 960
 expression: "\npub fn main(x: something) {\n  case x {\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x: something) {
+  case x {
+  }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:3
   │  

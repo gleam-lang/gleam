@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "!\"Hello Gleam\""
 ---
+----- SOURCE CODE
+!"Hello Gleam"
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:2
   │

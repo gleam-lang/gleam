@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n   let z = \"not a tuple\"\n   fn(x) { x.2 }(z)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+   let z = "not a tuple"
+   fn(x) { x.2 }(z)
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:12
   │

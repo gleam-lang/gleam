@@ -2,6 +2,12 @@
 source: compiler-core/src/type_/tests/type_alias.rs
 expression: "\ntype A = #(A, A)\n"
 ---
+----- SOURCE CODE
+
+type A = #(A, A)
+
+
+----- ERROR
 error: Type cycle
   ┌─ /src/one/two.gleam:2:1
   │

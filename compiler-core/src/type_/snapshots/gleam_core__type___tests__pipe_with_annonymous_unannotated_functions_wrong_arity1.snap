@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/type_/tests.rs
-assertion_line: 2332
 expression: "\npub fn main() {\n  let a = 1\n     |> fn (x) { #(x, x + 1) }\n     |> fn (x, y) { x.0 }\n     |> fn (x) { x }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x, y) { x.0 }
+     |> fn (x) { x }
+}
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:5:9
   │

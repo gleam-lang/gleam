@@ -2,6 +2,26 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Wibble {\n  Wibble\n  Wobble\n  Wobble\n  Wubble\n}\n\npub fn main() {\n  let wibble = Wobble\n  case wibble {\n    Wibble -> Nil\n    Wobble -> Nil\n    Wubble -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble
+  Wobble
+  Wubble
+}
+
+pub fn main() {
+  let wibble = Wobble
+  case wibble {
+    Wibble -> Nil
+    Wobble -> Nil
+    Wubble -> Nil
+  }
+}
+
+
+----- ERROR
 error: Duplicate definition
   ┌─ /src/one/two.gleam:4:3
   │

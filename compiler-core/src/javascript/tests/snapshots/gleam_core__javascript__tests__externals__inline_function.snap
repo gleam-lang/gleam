@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"blah\", \"(x => x)\")\npub fn one(x: Int) -> Int {\n  1\n}\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "blah", "(x => x)")
+pub fn one(x: Int) -> Int {
+  1
+}
+
+
+----- ERROR
 error: Invalid JavaScript function
   ┌─ /src/one/two.gleam:3:1
   │

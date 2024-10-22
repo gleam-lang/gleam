@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 2004
 expression: "\npub type Point {\n  Point2(a: Int, b: Int)\n  Point3(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  Point3(..Point2(a: 1, b: 2))\n}"
 ---
+----- SOURCE CODE
+
+pub type Point {
+  Point2(a: Int, b: Int)
+  Point3(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  Point3(..Point2(a: 1, b: 2))
+}
+
+----- ERROR
 error: Unsafe record update
   ┌─ /src/one/two.gleam:8:3
   │

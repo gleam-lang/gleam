@@ -2,6 +2,12 @@
 source: compiler-core/src/erlang/tests/external_fn.rs
 expression: "\npub fn one(x: Int) -> Float\n"
 ---
+----- SOURCE CODE
+
+pub fn one(x: Int) -> Float
+
+
+----- ERROR
 error: Function without an implementation
   ┌─ /src/one/two.gleam:2:1
   │

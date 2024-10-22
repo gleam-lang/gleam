@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n@external(erlang, \"a\", \"b\")\nfn main(x: List(_)) -> Nil\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "a", "b")
+fn main(x: List(_)) -> Nil
+
+
+----- ERROR
 error: Unexpected type hole
   ┌─ /src/one/two.gleam:3:17
   │

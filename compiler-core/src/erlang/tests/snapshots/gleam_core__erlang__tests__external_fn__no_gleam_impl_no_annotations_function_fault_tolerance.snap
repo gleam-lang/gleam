@@ -2,6 +2,15 @@
 source: compiler-core/src/erlang/tests/external_fn.rs
 expression: "\n@external(erlang, \"one\", \"two\")\npub fn no_impl()\n\npub type X = UnknownType\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "one", "two")
+pub fn no_impl()
+
+pub type X = UnknownType
+
+
+----- ERROR
 error: Missing type annotation
   ┌─ /src/one/two.gleam:3:1
   │

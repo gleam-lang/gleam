@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n  1 + 2.0\n  3 + 4.0\n  let c = 1 + 2\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  1 + 2.0
+  3 + 4.0
+  let c = 1 + 2
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:7
   │

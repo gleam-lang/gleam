@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport mod.{type Pair as Duo}\npub fn first(pair: Duo(a, b)) {\n  pair.0\n}\n"
 ---
+----- SOURCE CODE
+
+import mod.{type Pair as Duo}
+pub fn first(pair: Duo(a, b)) {
+  pair.0
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:3
   │

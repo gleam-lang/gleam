@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        import one\n        import two as one\n        "
 ---
+----- SOURCE CODE
+
+        import one
+        import two as one
+        
+
+----- ERROR
 error: Duplicate import
   ┌─ /src/one/two.gleam:2:9
   │

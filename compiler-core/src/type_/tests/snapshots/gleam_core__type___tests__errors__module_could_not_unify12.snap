@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        }\n\n        pub fn create_person(age: Float) {\n            let x: Person = Person(name: \"Quinn\", age: age)\n            x\n        }"
 ---
+----- SOURCE CODE
+
+        pub type Person {
+            Person(name: String, age: Int)
+        }
+
+        pub fn create_person(age: Float) {
+            let x: Person = Person(name: "Quinn", age: age)
+            x
+        }
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:7:56
   │

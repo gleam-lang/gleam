@@ -2,6 +2,20 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n  let wibble = True\n  case wibble {\n    True -> 0\n    Wibble -> 1\n    Wibble2 -> 2\n    _ -> 3\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True -> 0
+    Wibble -> 1
+    Wibble2 -> 2
+    _ -> 3
+  }
+}
+
+
+----- ERROR
 error: Unknown variable
   ┌─ /src/one/two.gleam:6:5
   │

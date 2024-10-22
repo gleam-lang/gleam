@@ -97,7 +97,8 @@ macro_rules! assert_js_module_infer {
 #[macro_export]
 macro_rules! assert_module_error {
     ($src:expr) => {
-        let output = $crate::type_::tests::module_error($src, vec![]);
+        let error = $crate::type_::tests::module_error($src, vec![]);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -105,7 +106,8 @@ macro_rules! assert_module_error {
 #[macro_export]
 macro_rules! assert_internal_module_error {
     ($src:expr) => {
-        let output = $crate::type_::tests::internal_module_error($src, vec![]);
+        let error = $crate::type_::tests::internal_module_error($src, vec![]);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -113,11 +115,12 @@ macro_rules! assert_internal_module_error {
 #[macro_export]
 macro_rules! assert_js_module_error {
     ($src:expr) => {
-        let output = $crate::type_::tests::module_error_with_target(
+        let error = $crate::type_::tests::module_error_with_target(
             $src,
             vec![],
             $crate::build::Target::JavaScript,
         );
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -125,7 +128,8 @@ macro_rules! assert_js_module_error {
 #[macro_export]
 macro_rules! assert_module_syntax_error {
     ($src:expr) => {
-        let output = $crate::type_::tests::syntax_error($src);
+        let error = $crate::type_::tests::syntax_error($src);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -147,7 +151,11 @@ macro_rules! assert_error {
             path: camino::Utf8PathBuf::from("/src/one/two.gleam"),
             errors: error,
         };
-        let output = error.pretty_string();
+        let error_string = error.pretty_string();
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- ERROR\n{}",
+            $src, error_string
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -155,8 +163,9 @@ macro_rules! assert_error {
 #[macro_export]
 macro_rules! assert_with_module_error {
     (($name:expr, $module_src:literal), $src:expr $(,)?) => {
-        let output =
+        let error =
             $crate::type_::tests::module_error($src, vec![("thepackage", $name, $module_src)]);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -165,13 +174,14 @@ macro_rules! assert_with_module_error {
         ($name2:expr, $module_src2:literal),
         $src:expr $(,)?
     ) => {
-        let output = $crate::type_::tests::module_error(
+        let error = $crate::type_::tests::module_error(
             $src,
             vec![
                 ("thepackage", $name, $module_src),
                 ("thepackage", $name2, $module_src2),
             ],
         );
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

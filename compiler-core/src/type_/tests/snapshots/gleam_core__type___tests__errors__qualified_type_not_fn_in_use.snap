@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport some_mod as sm\npub fn main(func: sm.Function(Int, String, Float)) {\n  use <- func()\n}\n"
 ---
+----- SOURCE CODE
+
+import some_mod as sm
+pub fn main(func: sm.Function(Int, String, Float)) {
+  use <- func()
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:10
   │

@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nfn() {\n  let a = 3.0\n  let b = -a\n}\n"
 ---
+----- SOURCE CODE
+
+fn() {
+  let a = 3.0
+  let b = -a
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:12
   │

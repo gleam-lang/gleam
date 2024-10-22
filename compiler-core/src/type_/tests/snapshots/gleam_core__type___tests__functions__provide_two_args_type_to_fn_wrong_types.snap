@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n   let a = 1\n   let b = \"not an int\"\n   fn(x, y) { x + y }(a, b)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+   let a = 1
+   let b = "not an int"
+   fn(x, y) { x + y }(a, b)
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:5:19
   │

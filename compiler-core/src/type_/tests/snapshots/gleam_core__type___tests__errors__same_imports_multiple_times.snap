@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        import gleam/wibble.{wobble}\n        import gleam/wibble.{zoo}\n        pub fn go() { wobble() + zoo() }\n        "
 ---
+----- SOURCE CODE
+
+        import gleam/wibble.{wobble}
+        import gleam/wibble.{zoo}
+        pub fn go() { wobble() + zoo() }
+        
+
+----- ERROR
 error: Duplicate import
   ┌─ /src/one/two.gleam:2:9
   │

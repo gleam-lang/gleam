@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/type_/tests/use_.rs
-assertion_line: 126
 expression: "\nlet f = fn() { 1 }\nuse <- f\n123\n"
 ---
+----- SOURCE CODE
+
+let f = fn() { 1 }
+use <- f
+123
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:3:8
   │

@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nlet age = 10.6\ncase age {}\n"
 ---
+----- SOURCE CODE
+
+let age = 10.6
+case age {}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:1
   │

@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/imports.rs
 expression: "import unknown_module\n\npub fn main() {\n  1 + Nil\n}"
 ---
+----- SOURCE CODE
+import unknown_module
+
+pub fn main() {
+  1 + Nil
+}
+
+----- ERROR
 error: Unknown module
   ┌─ /src/one/two.gleam:1:1
   │

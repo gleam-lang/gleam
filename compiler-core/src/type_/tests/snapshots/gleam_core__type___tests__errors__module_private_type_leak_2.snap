@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type PrivateType\n\n@external(erlang, \"a\", \"b\")\nfn go() -> PrivateType\n\npub fn leak_type() { go() }"
 ---
+----- SOURCE CODE
+type PrivateType
+
+@external(erlang, "a", "b")
+fn go() -> PrivateType
+
+pub fn leak_type() { go() }
+
+----- ERROR
 error: Private type used in public interface
   ┌─ /src/one/two.gleam:6:1
   │

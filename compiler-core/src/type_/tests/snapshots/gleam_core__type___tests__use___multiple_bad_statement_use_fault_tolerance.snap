@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nlet x = fn(f) { f() + 1 }\nuse <- x()\n\n1 + 2.0\n3.0 + 4\n5\n"
 ---
+----- SOURCE CODE
+
+let x = fn(f) { f() + 1 }
+use <- x()
+
+1 + 2.0
+3.0 + 4
+5
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:5:5
   │

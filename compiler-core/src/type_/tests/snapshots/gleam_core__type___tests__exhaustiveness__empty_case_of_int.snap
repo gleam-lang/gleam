@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nlet num = 24\ncase num {}\n"
 ---
+----- SOURCE CODE
+
+let num = 24
+case num {}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:1
   │
