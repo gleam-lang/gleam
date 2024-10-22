@@ -484,13 +484,18 @@ fn echo_with_block() {
 }
 
 #[test]
-fn echo_has_greater_precedence_than_binop() {
+fn echo_has_lower_precedence_than_binop() {
     assert_parse!("echo 1 + 1");
 }
 
 #[test]
 fn echo_in_a_pipeline() {
     assert_parse!("[] |> echo |> wibble");
+}
+
+#[test]
+fn echo_has_lower_precedence_than_pipeline() {
+    assert_parse!("echo wibble |> wobble |> woo");
 }
 
 #[test]
