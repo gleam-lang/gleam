@@ -1,8 +1,21 @@
 ---
 source: compiler-core/src/erlang/tests/consts.rs
-assertion_line: 134
 expression: "\n              fn identity(a) {\n                a\n              }\n\n              pub type Mapper(b) {\n                Mapper(fn(b) -> b)\n              }\n\n              pub const id_mapper = Mapper(identity)\n        "
 ---
+----- SOURCE CODE
+
+              fn identity(a) {
+                a
+              }
+
+              pub type Mapper(b) {
+                Mapper(fn(b) -> b)
+              }
+
+              pub const id_mapper = Mapper(identity)
+        
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

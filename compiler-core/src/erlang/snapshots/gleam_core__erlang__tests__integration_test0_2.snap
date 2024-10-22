@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 140
 expression: "pub fn go() {\n    let fifteen = 0xF\n    let nine = 0o11\n    let ten = 0b1010\n  fifteen\n}"
 ---
+----- SOURCE CODE
+pub fn go() {
+    let fifteen = 0xF
+    let nine = 0o11
+    let ten = 0b1010
+  fifteen
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

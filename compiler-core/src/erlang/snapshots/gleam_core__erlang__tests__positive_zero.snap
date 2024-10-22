@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 625
 expression: "\npub fn main() {\n  0.0\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  0.0
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

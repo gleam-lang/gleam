@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 146
 expression: "\n    pub fn main() {\n        let emoji = \"\\u{1F600}\"\n        let arr = <<emoji:utf8>>\n}"
 ---
+----- SOURCE CODE
+
+    pub fn main() {
+        let emoji = "\u{1F600}"
+        let arr = <<emoji:utf8>>
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

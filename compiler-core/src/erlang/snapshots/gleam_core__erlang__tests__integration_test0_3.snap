@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 152
 expression: "pub fn go() {\n  let y = 1\n  let y = 2\n  y\n}"
 ---
+----- SOURCE CODE
+pub fn go() {
+  let y = 1
+  let y = 2
+  y
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

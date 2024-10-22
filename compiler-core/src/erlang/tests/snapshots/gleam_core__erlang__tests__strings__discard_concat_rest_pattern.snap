@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 335
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> _ -> Nil\n    _ -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    "Hello, " <> _ -> Nil
+    _ -> Nil
+  }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

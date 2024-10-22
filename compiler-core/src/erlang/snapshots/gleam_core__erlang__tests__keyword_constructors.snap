@@ -2,6 +2,10 @@
 source: compiler-core/src/erlang/tests.rs
 expression: "pub type X { Div }"
 ---
+----- SOURCE CODE
+pub type X { Div }
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

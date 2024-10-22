@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 84
 expression: "import atom.{make}\npub fn main() {\n  make(\"ok\")\n}\n"
 ---
+----- SOURCE CODE
+import atom.{make}
+pub fn main() {
+  make("ok")
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

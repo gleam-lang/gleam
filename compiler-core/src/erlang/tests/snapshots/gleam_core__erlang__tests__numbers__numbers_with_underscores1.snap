@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
-assertion_line: 17
 expression: "\nconst i = 100_000\nconst f = 100_000.00101\npub fn main() {\n  i\n  f\n}\n"
 ---
+----- SOURCE CODE
+
+const i = 100_000
+const f = 100_000.00101
+pub fn main() {
+  i
+  f
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

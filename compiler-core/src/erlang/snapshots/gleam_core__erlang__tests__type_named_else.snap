@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 650
 expression: "\npub type Else {\n  Else\n}\n\npub fn main() {\n  Else\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Else {
+  Else
+}
+
+pub fn main() {
+  Else
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
