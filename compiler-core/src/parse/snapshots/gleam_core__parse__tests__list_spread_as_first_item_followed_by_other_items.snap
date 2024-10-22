@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 796
 expression: "\npub fn main() -> Nil {\n  let xs = [1, 2, 3]\n  [..xs, 3 + 3, 4]\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  [..xs, 3 + 3, 4]
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:4:4
   │

@@ -2,6 +2,12 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\nconst no_cute_bee = \"cute\" <>\n"
 ---
+----- SOURCE CODE
+
+const no_cute_bee = "cute" <>
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:2:28
   │

@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\npub fn should_not_be_generated(x) {\n  case x {\n    <<_, rest:bits>> -> rest\n    _ -> x\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn should_not_be_generated(x) {
+  case x {
+    <<_, rest:bits>> -> rest
+    _ -> x
+  }
+}
+
+
+----- ERROR
 error: Unsupported feature for compilation target
   ┌─ /src/javascript/error.gleam:4:10
   │

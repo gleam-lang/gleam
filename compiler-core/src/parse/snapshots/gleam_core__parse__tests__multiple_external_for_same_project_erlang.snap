@@ -2,6 +2,16 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n@external(erlang, \"one\", \"two\")\n@external(erlang, \"three\", \"four\")\npub fn one(x: Int) -> Int {\n  todo\n}\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "one", "two")
+@external(erlang, "three", "four")
+pub fn one(x: Int) -> Int {
+  todo
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:1
   │

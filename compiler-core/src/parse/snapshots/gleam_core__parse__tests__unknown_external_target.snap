@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n@external(erl, \"one\", \"two\")\npub fn one(x: Int) -> Int {\n  todo\n}"
 ---
+----- SOURCE CODE
+
+@external(erl, "one", "two")
+pub fn one(x: Int) -> Int {
+  todo
+}
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:2:1
   │

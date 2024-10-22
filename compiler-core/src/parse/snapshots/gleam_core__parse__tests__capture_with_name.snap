@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 765
 expression: "\npub fn main() {\n  add(_name, 1)\n}\n\nfn add(x, y) {\n  x + y\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  add(_name, 1)
+}
+
+fn add(x, y) {
+  x + y
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:7
   │

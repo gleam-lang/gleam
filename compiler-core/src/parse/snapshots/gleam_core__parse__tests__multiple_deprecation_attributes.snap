@@ -2,6 +2,16 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n@deprecated(\"1\")\n@deprecated(\"2\")\npub fn main() -> Nil {\n  Nil\n}\n"
 ---
+----- SOURCE CODE
+
+@deprecated("1")
+@deprecated("2")
+pub fn main() -> Nil {
+  Nil
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:1
   │
