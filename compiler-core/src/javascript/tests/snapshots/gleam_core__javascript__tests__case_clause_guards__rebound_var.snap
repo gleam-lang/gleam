@@ -2,6 +2,18 @@
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
 expression: "pub fn main() {\n  let x = False\n  let x = True\n  case x {\n    _ if x -> 1\n    _ -> 0\n  }\n}\n"
 ---
+----- SOURCE CODE
+pub fn main() {
+  let x = False
+  let x = True
+  case x {
+    _ if x -> 1
+    _ -> 0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main() {
   let x = false;
   let x$1 = true;

@@ -2,6 +2,19 @@
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
 expression: "\n          import hero\n          pub fn main() {\n            let name = \"Tony Stark\"\n            case name {\n              n if n == hero.ironman.name -> True\n              _ -> False\n            }\n          }\n        "
 ---
+----- SOURCE CODE
+
+          import hero
+          pub fn main() {
+            let name = "Tony Stark"
+            case name {
+              n if n == hero.ironman.name -> True
+              _ -> False
+            }
+          }
+        
+
+----- COMPILED JAVASCRIPT
 import * as $hero from "../../package/hero.mjs";
 
 export function main() {

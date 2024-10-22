@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "fn id(x) { x }\npub fn main() {\n  1\n  |> id\n}\n"
 ---
+----- SOURCE CODE
+fn id(x) { x }
+pub fn main() {
+  1
+  |> id
+}
+
+
+----- COMPILED JAVASCRIPT
 function id(x) {
   return x;
 }

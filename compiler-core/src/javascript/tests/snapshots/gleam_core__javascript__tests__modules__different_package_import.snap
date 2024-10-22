@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/modules.rs
 expression: "import one\npub fn go() { one.go() }\n"
 ---
+----- SOURCE CODE
+import one
+pub fn go() { one.go() }
+
+
+----- COMPILED JAVASCRIPT
 import * as $one from "../../other_package/one.mjs";
 
 export function go() {

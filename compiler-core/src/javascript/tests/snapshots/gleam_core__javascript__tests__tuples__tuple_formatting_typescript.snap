@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/tuples.rs
 expression: "\npub const e = #(\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n  \"a\", \"a\", \"a\", \"a\", \"a\", \"a\", \"a\",\n)\n"
 ---
+----- SOURCE CODE
+
+pub const e = #(
+  "a", "a", "a", "a", "a", "a", "a",
+  "a", "a", "a", "a", "a", "a", "a",
+  "a", "a", "a", "a", "a", "a", "a",
+)
+
+
+----- TYPESCRIPT DEFINITIONS
 export const e: [
   string,
   string,

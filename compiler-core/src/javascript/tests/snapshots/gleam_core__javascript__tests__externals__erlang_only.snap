@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\npub fn should_be_generated(x: Int) -> Int {\n  x\n}\n\n@external(erlang, \"one\", \"one\")\npub fn should_not_be_generated(x: Int) -> Int\n"
 ---
+----- SOURCE CODE
+
+pub fn should_be_generated(x: Int) -> Int {
+  x
+}
+
+@external(erlang, "one", "one")
+pub fn should_not_be_generated(x: Int) -> Int
+
+
+----- COMPILED JAVASCRIPT
 export function should_be_generated(x) {
   return x;
 }

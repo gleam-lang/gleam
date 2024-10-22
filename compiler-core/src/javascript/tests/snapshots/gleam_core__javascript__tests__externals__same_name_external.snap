@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"thingy\", \"fetch\")\npub fn fetch(request: Nil) -> Nil"
 ---
+----- SOURCE CODE
+
+@external(javascript, "thingy", "fetch")
+pub fn fetch(request: Nil) -> Nil
+
+----- COMPILED JAVASCRIPT
 import { fetch } from "thingy";
 
 export { fetch };

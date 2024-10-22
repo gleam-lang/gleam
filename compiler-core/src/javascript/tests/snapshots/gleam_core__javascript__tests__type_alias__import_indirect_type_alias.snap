@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/type_alias.rs
 expression: "\nimport wobble\n\npub fn main(x: wobble.Wobble) {\n  Nil\n}\n"
 ---
+----- SOURCE CODE
+
+import wobble
+
+pub fn main(x: wobble.Wobble) {
+  Nil
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 import type * as $wibble from "../../wibble/wibble.d.mts";
 
 export function main(x: $wibble.Wibble$): undefined;

@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\nconst a = Two\n"
 ---
+----- SOURCE CODE
+import other.{Two}
+const a = Two
+
+
+----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 

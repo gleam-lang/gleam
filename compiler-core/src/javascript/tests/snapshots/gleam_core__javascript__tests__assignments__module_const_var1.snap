@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-expression: "\npub const int = 42\npub const int_alias = int \npub const compound: #(Int, Int) = #(int, int_alias)\n"
+expression: "\npub const int = 42\npub const int_alias = int\npub const compound: #(Int, Int) = #(int, int_alias)\n"
 ---
+----- SOURCE CODE
+
+pub const int = 42
+pub const int_alias = int
+pub const compound: #(Int, Int) = #(int, int_alias)
+
+
+----- TYPESCRIPT DEFINITIONS
 export const int: number;
 
 export const int_alias: number;

@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\nfn go() {\n  <<1.1:float>>\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  <<1.1:float>>
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toBitArray, sizedFloat } from "../gleam.mjs";
 
 function go() {

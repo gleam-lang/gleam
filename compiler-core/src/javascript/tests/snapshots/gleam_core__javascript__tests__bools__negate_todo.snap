@@ -1,8 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 207
 expression: "pub fn negate(x) {\n  !todo\n}"
 ---
+----- SOURCE CODE
+pub fn negate(x) {
+  !todo
+}
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 export function negate(x) {

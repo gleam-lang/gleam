@@ -2,6 +2,11 @@
 source: compiler-core/src/javascript/tests/results.rs
 expression: "import gleam.{Ok as Thing}\npub fn main() { Thing }"
 ---
+----- SOURCE CODE
+import gleam.{Ok as Thing}
+pub fn main() { Thing }
+
+----- COMPILED JAVASCRIPT
 import * as $gleam from "../gleam.mjs";
 import { Ok as Thing } from "../gleam.mjs";
 

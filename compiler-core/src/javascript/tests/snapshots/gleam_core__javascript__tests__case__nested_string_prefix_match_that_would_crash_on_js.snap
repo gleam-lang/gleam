@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn main() {\n  case Ok([\"b c\", \"d\"]) {\n    Ok([\"b \" <> _, \"d\"]) -> 1\n    _ -> 1\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn main() {
+  case Ok(["b c", "d"]) {
+    Ok(["b " <> _, "d"]) -> 1
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 import { Ok, toList } from "../gleam.mjs";
 
 function main() {

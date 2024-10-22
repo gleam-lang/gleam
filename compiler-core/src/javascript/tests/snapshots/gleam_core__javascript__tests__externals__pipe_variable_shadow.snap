@@ -2,6 +2,18 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"module\", \"string\")\nfn name() -> String\n\npub fn main() {\n  let name = name()\n  name\n}\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "module", "string")
+fn name() -> String
+
+pub fn main() {
+  let name = name()
+  name
+}
+
+
+----- COMPILED JAVASCRIPT
 import { string as name } from "module";
 
 export function main() {

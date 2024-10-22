@@ -38,8 +38,9 @@ pub static CURRENT_PACKAGE: &str = "thepackage";
 #[macro_export]
 macro_rules! assert_js_with_multiple_imports {
     ($(($name:literal, $module_src:literal)),+; $src:literal) => {
-        let output =
+        let compiled =
             $crate::javascript::tests::compile_js($src, vec![$((CURRENT_PACKAGE, $name, $module_src)),*]).expect("compilation failed");
+        let output = format!("----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}", $src, compiled);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -47,9 +48,13 @@ macro_rules! assert_js_with_multiple_imports {
 #[macro_export]
 macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        let output =
+        let compiled =
             $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)])
                 .expect("compilation failed");
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
+            $src, compiled
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -61,8 +66,12 @@ macro_rules! assert_js {
     }};
 
     ($src:expr $(,)?) => {{
-        let output =
+        let compiled =
             $crate::javascript::tests::compile_js($src, vec![]).expect("compilation failed");
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}",
+            $src, compiled
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
@@ -84,7 +93,7 @@ macro_rules! assert_js_error {
 #[macro_export]
 macro_rules! assert_ts_def {
     (($dep_1_package:expr, $dep_1_name:expr, $dep_1_src:expr), ($dep_2_package:expr, $dep_2_name:expr, $dep_2_src:expr), $src:expr $(,)?) => {{
-        let output = $crate::javascript::tests::compile_ts(
+        let compiled = $crate::javascript::tests::compile_ts(
             $src,
             vec![
                 ($dep_1_package, $dep_1_name, $dep_1_src),
@@ -92,19 +101,31 @@ macro_rules! assert_ts_def {
             ],
         )
         .expect("compilation failed");
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- TYPESCRIPT DEFINITIONS\n{}",
+            $src, compiled
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        let output =
+        let compiled =
             $crate::javascript::tests::compile_ts($src, vec![($dep_package, $dep_name, $dep_src)])
                 .expect("compilation failed");
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- TYPESCRIPT DEFINITIONS\n{}",
+            $src, compiled
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr $(,)?) => {{
-        let output =
+        let compiled =
             $crate::javascript::tests::compile_ts($src, vec![]).expect("compilation failed");
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- TYPESCRIPT DEFINITIONS\n{}",
+            $src, compiled
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }

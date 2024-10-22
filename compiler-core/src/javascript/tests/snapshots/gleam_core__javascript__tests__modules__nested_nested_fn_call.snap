@@ -2,6 +2,11 @@
 source: compiler-core/src/javascript/tests/modules.rs
 expression: "import one/two/three\npub fn go() { three.go() }"
 ---
+----- SOURCE CODE
+import one/two/three
+pub fn go() { three.go() }
+
+----- COMPILED JAVASCRIPT
 import * as $three from "../one/two/three.mjs";
 
 export function go() {

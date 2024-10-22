@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "pub fn main(with) {\n  with\n}\n"
 ---
+----- SOURCE CODE
+pub fn main(with) {
+  with
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main(with$) {
   return with$;
 }

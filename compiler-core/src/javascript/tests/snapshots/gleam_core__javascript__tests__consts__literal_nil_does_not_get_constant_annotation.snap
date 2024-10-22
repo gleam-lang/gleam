@@ -2,4 +2,8 @@
 source: compiler-core/src/javascript/tests/consts.rs
 expression: pub const a = Nil
 ---
+----- SOURCE CODE
+pub const a = Nil
+
+----- COMPILED JAVASCRIPT
 export const a = undefined;

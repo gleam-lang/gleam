@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\nfn go(x) {\n  <<x:utf8_codepoint, \"Gleam\":utf8>>\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  <<x:utf8_codepoint, "Gleam":utf8>>
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toBitArray, stringBits, codepointBits } from "../gleam.mjs";
 
 function go(x) {

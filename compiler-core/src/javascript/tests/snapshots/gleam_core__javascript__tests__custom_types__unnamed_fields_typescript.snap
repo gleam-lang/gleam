@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\npub type Ip{\n    Ip(String)\n}\n\npub const local = Ip(\"0.0.0.0\")\n\n"
 ---
+----- SOURCE CODE
+
+pub type Ip{
+    Ip(String)
+}
+
+pub const local = Ip("0.0.0.0")
+
+
+
+----- TYPESCRIPT DEFINITIONS
 import type * as _ from "../gleam.d.mts";
 
 export class Ip extends _.CustomType {

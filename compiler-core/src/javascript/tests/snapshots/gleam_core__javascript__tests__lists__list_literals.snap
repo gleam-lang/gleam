@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go(x) {\n    []\n    [1]\n    [1, 2]\n    [1, 2, ..x]\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+    []
+    [1]
+    [1, 2]
+    [1, 2, ..x]
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toList, prepend as listPrepend } from "../gleam.mjs";
 
 function go(x) {

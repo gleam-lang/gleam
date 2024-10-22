@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "\npub fn count(xs, n) {\n  case xs {\n    [] -> n\n    [_, ..xs] -> count(xs, n + 1)\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn count(xs, n) {
+  case xs {
+    [] -> n
+    [_, ..xs] -> count(xs, n + 1)
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function count(loop$xs, loop$n) {
   while (true) {
     let xs = loop$xs;

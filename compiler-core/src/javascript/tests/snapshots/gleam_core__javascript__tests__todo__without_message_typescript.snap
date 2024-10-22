@@ -2,4 +2,12 @@
 source: compiler-core/src/javascript/tests/todo.rs
 expression: "\npub fn go() {\n    todo\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go() {
+    todo
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 export function go(): any;

@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "pub fn negate(x) {\n    !x\n}"
 ---
+----- SOURCE CODE
+pub fn negate(x) {
+    !x
+}
+
+----- COMPILED JAVASCRIPT
 export function negate(x) {
   return !x;
 }

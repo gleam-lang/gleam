@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\npub type TESTitem\n\n@external(javascript, \"it\", \"one\")\npub fn one(a: TESTitem) -> TESTitem\n"
 ---
+----- SOURCE CODE
+
+pub type TESTitem
+
+@external(javascript, "it", "one")
+pub fn one(a: TESTitem) -> TESTitem
+
+
+----- TYPESCRIPT DEFINITIONS
 export type TESTitem$ = any;
 
 export function one(a: TESTitem$): TESTitem$;

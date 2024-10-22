@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\nfn go() {\n  \"Hello, Gleam!\"\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  "Hello, Gleam!"
+}
+
+
+----- COMPILED JAVASCRIPT
 function go() {
   return "Hello, Gleam!";
 }
