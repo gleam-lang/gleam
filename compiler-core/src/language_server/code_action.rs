@@ -1734,7 +1734,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
@@ -1747,15 +1747,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
@@ -1948,7 +1940,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
@@ -1961,15 +1953,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         if let Some(return_) = return_annotation {
             self.visit_type_ast(return_);
         }
-        ast::visit::visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
