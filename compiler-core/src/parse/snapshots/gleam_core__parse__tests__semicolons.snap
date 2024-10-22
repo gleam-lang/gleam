@@ -2,6 +2,10 @@
 source: compiler-core/src/parse/tests.rs
 expression: "{ 2 + 3; - -5; }"
 ---
+----- SOURCE CODE
+{ 2 + 3; - -5; }
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:1:8
   │

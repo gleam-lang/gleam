@@ -2,6 +2,10 @@
 source: compiler-core/src/parse/tests.rs
 expression: fn()
 ---
+----- SOURCE CODE
+fn()
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:1:1
   │
