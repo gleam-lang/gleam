@@ -1011,7 +1011,8 @@ Your code will crash before reaching this point.",
                             "This function call is unreachable because its last argument always panics. \
 Your code will crash before reaching this point.",
                         PanicPosition::EchoExpression =>
-                            "This `echo` won't print anything because the expression it should be printing always panics.",
+                            "This `echo` won't print anything because the expression it \
+should be printing always panics.",
                     };
 
                     Diagnostic {
