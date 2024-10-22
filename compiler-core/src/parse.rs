@@ -563,7 +563,7 @@ where
                     // the analysis phase so that a wrong usage of echo won't
                     // stop analysis from happening everywhere and be fault
                     // tolerant like everything else.
-                    let expression = self.parse_expression_unit(false)?;
+                    let expression = self.parse_expression()?;
                     let end = expression.as_ref().map_or(end, |e| e.location().end);
                     UntypedExpr::Echo {
                         location: SrcSpan { start, end },
