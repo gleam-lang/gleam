@@ -405,6 +405,7 @@ impl<'a> CallGraphBuilder<'a> {
             | ClauseGuard::AddFloat { left, right, .. }
             | ClauseGuard::SubInt { left, right, .. }
             | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::Concatenate { left, right, .. }
             | ClauseGuard::MultInt { left, right, .. }
             | ClauseGuard::MultFloat { left, right, .. }
             | ClauseGuard::DivInt { left, right, .. }
@@ -465,7 +466,7 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Constant::StringConcatenation { left, right, .. } => {
+            Constant::BinaryOperation { left, right, .. } => {
                 self.constant(left);
                 self.constant(right);
             }

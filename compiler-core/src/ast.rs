@@ -17,7 +17,9 @@ use crate::parse::SpannedString;
 use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
+    self,
+    prelude::{bool, float, int, string},
+    Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
 use std::sync::Arc;
 
@@ -1108,6 +1110,18 @@ pub enum OperatorKind {
     StringConcatenation,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct BinOpTypeInformation {
+    pub input_type: BinOpInput,
+    pub output_type: Arc<Type>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum BinOpInput {
+    BothMatching,
+    OfType(Arc<Type>),
+}
+
 impl BinOp {
     pub fn precedence(&self) -> u8 {
         // Ensure that this matches the other precedence function for guards
@@ -1189,6 +1203,37 @@ impl BinOp {
 
     pub fn can_be_grouped_with(&self, other: &BinOp) -> bool {
         self.operator_kind() == other.operator_kind()
+    }
+
+    pub fn type_information(&self) -> BinOpTypeInformation {
+        let (input_type, output_type) = match self {
+            BinOp::Eq | BinOp::NotEq => (BinOpInput::BothMatching, bool()),
+            BinOp::And => (BinOpInput::OfType(bool()), bool()),
+            BinOp::Or => (BinOpInput::OfType(bool()), bool()),
+            BinOp::LtInt => (BinOpInput::OfType(int()), bool()),
+            BinOp::LtEqInt => (BinOpInput::OfType(int()), bool()),
+            BinOp::LtFloat => (BinOpInput::OfType(float()), bool()),
+            BinOp::LtEqFloat => (BinOpInput::OfType(float()), bool()),
+            BinOp::GtEqInt => (BinOpInput::OfType(int()), bool()),
+            BinOp::GtInt => (BinOpInput::OfType(int()), bool()),
+            BinOp::GtEqFloat => (BinOpInput::OfType(float()), bool()),
+            BinOp::GtFloat => (BinOpInput::OfType(float()), bool()),
+            BinOp::AddInt => (BinOpInput::OfType(int()), int()),
+            BinOp::AddFloat => (BinOpInput::OfType(float()), float()),
+            BinOp::SubInt => (BinOpInput::OfType(int()), int()),
+            BinOp::SubFloat => (BinOpInput::OfType(float()), float()),
+            BinOp::MultInt => (BinOpInput::OfType(int()), int()),
+            BinOp::MultFloat => (BinOpInput::OfType(float()), float()),
+            BinOp::DivInt => (BinOpInput::OfType(int()), int()),
+            BinOp::DivFloat => (BinOpInput::OfType(float()), float()),
+            BinOp::RemainderInt => (BinOpInput::OfType(int()), int()),
+            BinOp::Concatenate => (BinOpInput::OfType(string()), string()),
+        };
+
+        BinOpTypeInformation {
+            input_type,
+            output_type,
+        }
     }
 }
 
@@ -1457,6 +1502,12 @@ pub enum ClauseGuard<Type, RecordTag> {
         right: Box<Self>,
     },
 
+    Concatenate {
+        location: SrcSpan,
+        left: Box<Self>,
+        right: Box<Self>,
+    },
+
     MultInt {
         location: SrcSpan,
         left: Box<Self>,
@@ -1559,6 +1610,7 @@ impl<A, B> ClauseGuard<A, B> {
             | ClauseGuard::AddFloat { location, .. }
             | ClauseGuard::SubInt { location, .. }
             | ClauseGuard::SubFloat { location, .. }
+            | ClauseGuard::Concatenate { location, .. }
             | ClauseGuard::MultInt { location, .. }
             | ClauseGuard::MultFloat { location, .. }
             | ClauseGuard::DivInt { location, .. }
@@ -1596,6 +1648,7 @@ impl<A, B> ClauseGuard<A, B> {
             ClauseGuard::AddFloat { .. } => Some(BinOp::AddFloat),
             ClauseGuard::SubInt { .. } => Some(BinOp::SubInt),
             ClauseGuard::SubFloat { .. } => Some(BinOp::SubFloat),
+            ClauseGuard::Concatenate { .. } => Some(BinOp::Concatenate),
             ClauseGuard::MultInt { .. } => Some(BinOp::MultInt),
             ClauseGuard::MultFloat { .. } => Some(BinOp::MultFloat),
             ClauseGuard::DivInt { .. } => Some(BinOp::DivInt),
@@ -1625,12 +1678,12 @@ impl TypedClauseGuard {
             | ClauseGuard::SubInt { .. }
             | ClauseGuard::MultInt { .. }
             | ClauseGuard::DivInt { .. }
-            | ClauseGuard::RemainderInt { .. } => type_::int(),
+            | ClauseGuard::RemainderInt { .. } => int(),
 
             ClauseGuard::AddFloat { .. }
             | ClauseGuard::SubFloat { .. }
             | ClauseGuard::MultFloat { .. }
-            | ClauseGuard::DivFloat { .. } => type_::float(),
+            | ClauseGuard::DivFloat { .. } => float(),
 
             ClauseGuard::Or { .. }
             | ClauseGuard::Not { .. }
@@ -1644,7 +1697,9 @@ impl TypedClauseGuard {
             | ClauseGuard::GtFloat { .. }
             | ClauseGuard::GtEqFloat { .. }
             | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. } => type_::bool(),
+            | ClauseGuard::LtEqFloat { .. } => bool(),
+
+            ClauseGuard::Concatenate { .. } => string(),
         }
     }
 }
@@ -1876,11 +1931,11 @@ impl TypedPattern {
 
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            Pattern::Int { .. } => type_::int(),
-            Pattern::Float { .. } => type_::float(),
-            Pattern::String { .. } => type_::string(),
+            Pattern::Int { .. } => int(),
+            Pattern::Float { .. } => float(),
+            Pattern::String { .. } => string(),
             Pattern::BitArray { .. } => type_::bits(),
-            Pattern::StringPrefix { .. } => type_::string(),
+            Pattern::StringPrefix { .. } => string(),
 
             Pattern::Variable { type_, .. }
             | Pattern::List { type_, .. }

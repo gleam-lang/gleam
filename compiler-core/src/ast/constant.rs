@@ -55,10 +55,12 @@ pub enum Constant<T, RecordTag> {
         type_: T,
     },
 
-    StringConcatenation {
+    BinaryOperation {
         location: SrcSpan,
         left: Box<Self>,
         right: Box<Self>,
+        name: BinOp,
+        type_: T,
     },
 
     /// A placeholder constant used to allow module analysis to continue
@@ -72,9 +74,9 @@ pub enum Constant<T, RecordTag> {
 impl TypedConstant {
     pub fn type_(&self) -> Arc<Type> {
         match self {
-            Constant::Int { .. } => type_::int(),
-            Constant::Float { .. } => type_::float(),
-            Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
+            Constant::Int { .. } => int(),
+            Constant::Float { .. } => float(),
+            Constant::String { .. } => string(),
             Constant::BitArray { .. } => type_::bits(),
             Constant::Tuple { elements, .. } => {
                 type_::tuple(elements.iter().map(|e| e.type_()).collect())
@@ -82,7 +84,8 @@ impl TypedConstant {
             Constant::List { type_, .. }
             | Constant::Record { type_, .. }
             | Constant::Var { type_, .. }
-            | Constant::Invalid { type_, .. } => type_.clone(),
+            | Constant::Invalid { type_, .. }
+            | Constant::BinaryOperation { type_, .. } => type_.clone(),
         }
     }
 }
@@ -105,7 +108,7 @@ impl<A, B> Constant<A, B> {
             | Constant::BitArray { location, .. }
             | Constant::Var { location, .. }
             | Constant::Invalid { location, .. }
-            | Constant::StringConcatenation { location, .. } => *location,
+            | Constant::BinaryOperation { location, .. } => *location,
         }
     }
 

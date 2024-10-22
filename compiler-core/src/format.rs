@@ -507,9 +507,11 @@ impl<'comments> Formatter<'comments> {
                 ..
             } => docvec![module, ".", name],
 
-            Constant::StringConcatenation { left, right, .. } => self
+            Constant::BinaryOperation {
+                left, right, name, ..
+            } => self
                 .const_expr(left)
-                .append(break_("", " ").append("<>".to_doc()))
+                .append(break_("", " ").append(name.to_doc()))
                 .nest(INDENT)
                 .append(" ")
                 .append(self.const_expr(right)),
@@ -2299,6 +2301,9 @@ impl<'comments> Formatter<'comments> {
             }
             ClauseGuard::SubFloat { left, right, .. } => {
                 self.clause_guard_bin_op(&BinOp::SubFloat, left, right)
+            }
+            ClauseGuard::Concatenate { left, right, .. } => {
+                self.clause_guard_bin_op(&BinOp::Concatenate, left, right)
             }
             ClauseGuard::MultInt { left, right, .. } => {
                 self.clause_guard_bin_op(&BinOp::MultInt, left, right)
