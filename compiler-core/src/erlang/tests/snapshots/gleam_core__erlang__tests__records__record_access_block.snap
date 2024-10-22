@@ -1,8 +1,20 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 341
 expression: "pub type Thing {\n  Thing(a: Int, b: Int)\n}\n\npub fn main() {\n  {\n    let thing = Thing(1, 2)\n    thing\n  }.a\n}"
 ---
+----- SOURCE CODE
+pub type Thing {
+  Thing(a: Int, b: Int)
+}
+
+pub fn main() {
+  {
+    let thing = Thing(1, 2)
+    thing
+  }.a
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

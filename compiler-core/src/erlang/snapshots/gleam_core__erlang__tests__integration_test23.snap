@@ -1,8 +1,22 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 363
 expression: "\npub fn main(args) {\n  case args {\n    _ -> {\n      let a = 1\n      a\n    }\n  }\n  let a = 2\n  a\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(args) {
+  case args {
+    _ -> {
+      let a = 1
+      a
+    }
+  }
+  let a = 2
+  a
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

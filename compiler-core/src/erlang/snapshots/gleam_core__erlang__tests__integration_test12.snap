@@ -1,8 +1,11 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 269
 expression: "type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }"
 ---
+----- SOURCE CODE
+type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

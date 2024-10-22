@@ -1,8 +1,21 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 22
 expression: "\npub fn main() {\n  use <- pair(1.0)\n  123\n}\n\nfn pair(x, f) {\n  let y = f()\n  #(x, y)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  use <- pair(1.0)
+  123
+}
+
+fn pair(x, f) {
+  let y = f()
+  #(x, y)
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

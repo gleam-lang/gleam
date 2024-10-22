@@ -1,8 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests/bit_arrays.rs
-assertion_line: 177
 expression: "\npub fn main() {\n  <<\"hello\", \" \", \"world\">>\n}"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  <<"hello", " ", "world">>
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
