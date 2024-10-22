@@ -2,6 +2,10 @@
 source: compiler-core/src/parse/tests.rs
 expression: "wibble:Int = 4"
 ---
+----- SOURCE CODE
+wibble:Int = 4
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:1:7
   │

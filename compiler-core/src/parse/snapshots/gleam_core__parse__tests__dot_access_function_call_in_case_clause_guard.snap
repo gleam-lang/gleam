@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\nlet my_string = \"hello\"\ncase my_string {\n    _ if string.length(my_string) > 2 -> io.debug(\"doesn't work')\n}"
 ---
+----- SOURCE CODE
+
+let my_string = "hello"
+case my_string {
+    _ if string.length(my_string) > 2 -> io.debug("doesn't work')
+}
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:4:10
   │

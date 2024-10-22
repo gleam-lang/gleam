@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n        case \"\" {\n          first <> rest -> rest\n        }\n        "
 ---
+----- SOURCE CODE
+
+        case "" {
+          first <> rest -> rest
+        }
+        
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:11
   │

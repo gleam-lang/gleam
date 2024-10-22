@@ -2,6 +2,11 @@
 source: compiler-core/src/parse/tests.rs
 expression: "let wibble\n        wibble = 4"
 ---
+----- SOURCE CODE
+let wibble
+        wibble = 4
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:1:5
   │
