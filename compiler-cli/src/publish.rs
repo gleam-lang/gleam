@@ -344,7 +344,9 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         return Err(Error::CannotPublishTodo {
             unfinished: modules_containing_todo,
         });
-    } else if !modules_containing_echo.is_empty() {
+    }
+
+    if !modules_containing_echo.is_empty() {
         return Err(Error::CannotPublishEcho {
             unfinished: modules_containing_echo,
         });
