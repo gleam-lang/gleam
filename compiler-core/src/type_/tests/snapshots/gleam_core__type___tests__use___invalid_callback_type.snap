@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nlet x = fn(f) { f() + 1 }\nuse <- x()\nNil\n"
 ---
+----- SOURCE CODE
+
+let x = fn(f) { f() + 1 }
+use <- x()
+Nil
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:1
   │

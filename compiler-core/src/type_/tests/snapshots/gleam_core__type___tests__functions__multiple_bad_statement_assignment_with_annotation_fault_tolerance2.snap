@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n  // Since the value is invalid the type is the annotation\n  let a: Int = Junk\n  let b: String = 1\n  let c = a + 2\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  // Since the value is invalid the type is the annotation
+  let a: Int = Junk
+  let b: String = 1
+  let c = a + 2
+}
+
+
+----- ERROR
 error: Unknown variable
   ┌─ /src/one/two.gleam:4:16
   │

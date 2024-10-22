@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type X { X }\nconst x = unknown.X"
 ---
+----- SOURCE CODE
+type X { X }
+const x = unknown.X
+
+----- ERROR
 error: Unknown module
   ┌─ /src/one/two.gleam:2:11
   │

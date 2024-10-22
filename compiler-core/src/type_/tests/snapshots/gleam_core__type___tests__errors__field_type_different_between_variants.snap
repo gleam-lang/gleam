@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Shape {\n    Square(x: Int, y: Int)\n    Rectangle(x: String, y: String)\n}\npub fn get_x(shape: Shape) { shape.x }\n"
 ---
+----- SOURCE CODE
+
+pub type Shape {
+    Square(x: Int, y: Int)
+    Rectangle(x: String, y: String)
+}
+pub fn get_x(shape: Shape) { shape.x }
+
+
+----- ERROR
 error: Unknown record field
   ┌─ /src/one/two.gleam:6:35
   │

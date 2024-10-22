@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport mod\npub fn main() {\n  Nil |> mod.takes_wibble\n}\n"
 ---
+----- SOURCE CODE
+
+import mod
+pub fn main() {
+  Nil |> mod.takes_wibble
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:13
   │

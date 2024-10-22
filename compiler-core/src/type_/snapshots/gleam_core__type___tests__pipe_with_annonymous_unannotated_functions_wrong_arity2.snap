@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests.rs
 expression: "\npub fn main() {\n  let a = 1\n     |> fn (x) { #(x, x + 1) }\n     |> fn (x) { x.0 }\n     |> fn (x, y) { x }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = 1
+     |> fn (x) { #(x, x + 1) }
+     |> fn (x) { x.0 }
+     |> fn (x, y) { x }
+}
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:6:9
   │

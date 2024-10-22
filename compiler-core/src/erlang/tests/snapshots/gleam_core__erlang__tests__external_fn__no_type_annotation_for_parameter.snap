@@ -2,6 +2,15 @@
 source: compiler-core/src/erlang/tests/external_fn.rs
 expression: "\n@external(erlang, \"one\", \"one\")\npub fn one(x: Int, y) -> Int {\n  todo\n}\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "one", "one")
+pub fn one(x: Int, y) -> Int {
+  todo
+}
+
+
+----- ERROR
 error: Missing type annotation
   ┌─ /src/one/two.gleam:3:20
   │

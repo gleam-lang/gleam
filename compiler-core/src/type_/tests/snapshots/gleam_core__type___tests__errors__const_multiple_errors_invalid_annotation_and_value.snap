@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const invalid_everything: MyInvalidType = MyInvalidValue\nconst mismatched_types: String = 7"
 ---
+----- SOURCE CODE
+const invalid_everything: MyInvalidType = MyInvalidValue
+const mismatched_types: String = 7
+
+----- ERROR
 error: Unknown type
   ┌─ /src/one/two.gleam:1:27
   │

@@ -1,8 +1,21 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 685
 expression: "\npub type Thing {\n  Thing(a: Bool, b: Bool)\n}\n\npub fn main(x) {\n  case x {\n    Thing(a: True, ..) -> 1\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Thing {
+  Thing(a: Bool, b: Bool)
+}
+
+pub fn main(x) {
+  case x {
+    Thing(a: True, ..) -> 1
+  }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:7:3
   │  

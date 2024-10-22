@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\ntype Wibble { Wibble Wobble Wubble }\npub fn main() {\n  let wibble = Wobble\n  case wibble {}\n}\n"
 ---
+----- SOURCE CODE
+
+type Wibble { Wibble Wobble Wubble }
+pub fn main() {
+  let wibble = Wobble
+  case wibble {}
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:5:3
   │

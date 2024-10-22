@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const num: String = 7\nconst tpl: String = #(Ok(1), MyInvalidType, 3)\nconst assignment1: String = num\nconst assignment2: String = tpl"
 ---
+----- SOURCE CODE
+const num: String = 7
+const tpl: String = #(Ok(1), MyInvalidType, 3)
+const assignment1: String = num
+const assignment2: String = tpl
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:21
   │

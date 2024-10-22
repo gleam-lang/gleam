@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const first = list.at([1], 0)"
 ---
+----- SOURCE CODE
+const first = list.at([1], 0)
+
+----- ERROR
 error: Syntax error
   ┌─ /src/one/two.gleam:1:15
   │

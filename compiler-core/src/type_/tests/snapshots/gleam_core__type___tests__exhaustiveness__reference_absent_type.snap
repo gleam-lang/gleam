@@ -1,8 +1,22 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 974
 expression: "\ntype Wibble {\n    One(Int)\n    Two(Absent)\n}\n\npub fn main(wibble) {\n    case wibble {\n        One(x) -> x\n    }\n}\n"
 ---
+----- SOURCE CODE
+
+type Wibble {
+    One(Int)
+    Two(Absent)
+}
+
+pub fn main(wibble) {
+    case wibble {
+        One(x) -> x
+    }
+}
+
+
+----- ERROR
 error: Unknown type
   ┌─ /src/one/two.gleam:4:9
   │

@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nlet a = 12\nlet b = 3.14\nlet c = False\ncase a, b, c {\n  12, _, False -> Nil\n}\n"
 ---
+----- SOURCE CODE
+
+let a = 12
+let b = 3.14
+let c = False
+case a, b, c {
+  12, _, False -> Nil
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:5:1
   │  

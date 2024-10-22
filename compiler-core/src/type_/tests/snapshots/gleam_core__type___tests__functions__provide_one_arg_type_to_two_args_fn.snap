@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/type_/tests/functions.rs
-assertion_line: 553
 expression: "\npub fn main() {\n   let a = #(1,2)\n   fn(x, y) { x.0 + y.1 }(a)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+   let a = #(1,2)
+   fn(x, y) { x.0 + y.1 }(a)
+}
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:4:4
   │

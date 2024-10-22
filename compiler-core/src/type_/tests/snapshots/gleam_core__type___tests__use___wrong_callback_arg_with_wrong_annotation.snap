@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nlet x = fn(f) { \"Hello, \" <> f(1) }\nuse n: String <- x()\nn <> \"Giacomo!\"\n"
 ---
+----- SOURCE CODE
+
+let x = fn(f) { "Hello, " <> f(1) }
+use n: String <- x()
+n <> "Giacomo!"
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:5
   │

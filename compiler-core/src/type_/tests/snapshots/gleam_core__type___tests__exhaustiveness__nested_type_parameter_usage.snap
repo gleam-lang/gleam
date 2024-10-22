@@ -1,8 +1,20 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 926
 expression: "\npub type Returned(a) {\n  Returned(List(a))\n}\n\nfn wibble(user: Returned(#())) -> Int {\n  let Returned([#()]) = user\n  1\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Returned(a) {
+  Returned(List(a))
+}
+
+fn wibble(user: Returned(#())) -> Int {
+  let Returned([#()]) = user
+  1
+}
+
+
+----- ERROR
 error: Inexhaustive pattern
   ┌─ /src/one/two.gleam:7:3
   │

@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nlet x = fn(f) { \"Hello, \" <> f() }\nuse _ <- x()\n\"Giacomo!\"\n"
 ---
+----- SOURCE CODE
+
+let x = fn(f) { "Hello, " <> f() }
+use _ <- x()
+"Giacomo!"
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:3:5
   │
