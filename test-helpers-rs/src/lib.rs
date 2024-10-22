@@ -13,10 +13,17 @@ pub struct TestCompileOutput {
 impl TestCompileOutput {
     pub fn as_overview_text(&self) -> String {
         let mut buffer = String::new();
-        let cwd = std::env::current_dir().unwrap();
         for (path, content) in self.files.iter().sorted_by(|a, b| a.0.cmp(b.0)) {
-            let relative_path = path.strip_prefix(&cwd).unwrap_or(path);
-            let normalised_path = relative_path.as_str().replace('\\', "/");
+            let normalised_path = path
+                .as_str()
+                .split("cases")
+                .skip(1)
+                .collect::<String>()
+                .as_str()
+                .replace('\\', "/")
+                .split('/')
+                .skip(1)
+                .join("/");
             buffer.push_str("//// ");
             buffer.push_str(&normalised_path);
             buffer.push('\n');
