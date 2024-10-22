@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n    pub fn main() {\n      let letters = [\"b\", \"c\"]\n      [\"a\"..letters]\n    }\n        "
 ---
+----- SOURCE CODE
+
+    pub fn main() {
+      let letters = ["b", "c"]
+      ["a"..letters]
+    }
+        
+
+----- WARNING
 warning: Deprecated prepend syntax
   ┌─ test/path:4:11
   │

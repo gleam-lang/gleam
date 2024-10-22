@@ -2,6 +2,12 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n          panic(1)\n        }"
 ---
+----- SOURCE CODE
+pub fn main() {
+          panic(1)
+        }
+
+----- WARNING
 warning: Panic used as a function
   ┌─ /src/warning/wrn.gleam:2:17
   │

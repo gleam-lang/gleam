@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble(a) { Wibble(a) }\npub fn wibble(a) { a }\n\npub fn main() {\n  1 |> wibble |> Wibble\n  1\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble(a) { Wibble(a) }
+pub fn wibble(a) { a }
+
+pub fn main() {
+  1 |> wibble |> Wibble
+  1
+}
+
+
+----- WARNING
 warning: Unused value
   ┌─ /src/warning/wrn.gleam:6:3
   │

@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport some_module\npub const x = some_module.x\n        "
 ---
+----- SOURCE CODE
+
+import some_module
+pub const x = some_module.x
+        
+
+----- WARNING
 warning: Transitive dependency imported
   ┌─ /src/warning/wrn.gleam:2:1
   │

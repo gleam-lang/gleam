@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "fn main() { 5 }"
 ---
+----- SOURCE CODE
+fn main() { 5 }
+
+----- WARNING
 warning: Unused private function
   ┌─ /src/warning/wrn.gleam:1:1
   │

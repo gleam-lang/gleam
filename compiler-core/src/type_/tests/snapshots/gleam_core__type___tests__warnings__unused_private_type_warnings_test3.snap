@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: type X = Int
 ---
+----- SOURCE CODE
+type X = Int
+
+----- WARNING
 warning: Unused private type
   ┌─ /src/warning/wrn.gleam:1:1
   │

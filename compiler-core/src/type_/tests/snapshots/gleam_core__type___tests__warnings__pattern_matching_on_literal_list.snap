@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n        case [1, 2] {\n            _ -> Nil\n        }\n      }"
 ---
+----- SOURCE CODE
+pub fn main() {
+        case [1, 2] {
+            _ -> Nil
+        }
+      }
+
+----- WARNING
 warning: Redundant list
   ┌─ /src/warning/wrn.gleam:2:14
   │

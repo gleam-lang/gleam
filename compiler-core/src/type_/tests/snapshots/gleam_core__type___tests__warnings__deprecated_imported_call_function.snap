@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport module\n\npub fn a() {\n  module.a()\n}\n"
 ---
+----- SOURCE CODE
+
+import module
+
+pub fn a() {
+  module.a()
+}
+
+
+----- WARNING
 warning: Deprecated value used
   ┌─ /src/warning/wrn.gleam:5:9
   │

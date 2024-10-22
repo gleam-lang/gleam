@@ -2,6 +2,20 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n          let n = 1\n          case n {\n            0 -> {\n              panic\n              2\n            }\n            _ -> panic\n          }\n          1\n        }"
 ---
+----- SOURCE CODE
+pub fn main() {
+          let n = 1
+          case n {
+            0 -> {
+              panic
+              2
+            }
+            _ -> panic
+          }
+          1
+        }
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:6:15
   │

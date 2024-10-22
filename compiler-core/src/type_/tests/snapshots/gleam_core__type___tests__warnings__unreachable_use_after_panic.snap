@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        pub fn wibble(_) { 1 }\n        pub fn main() {\n            panic\n            use <- wibble\n            1\n        }\n        "
 ---
+----- SOURCE CODE
+
+        pub fn wibble(_) { 1 }
+        pub fn main() {
+            panic
+            use <- wibble
+            1
+        }
+        
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:5:20
   │

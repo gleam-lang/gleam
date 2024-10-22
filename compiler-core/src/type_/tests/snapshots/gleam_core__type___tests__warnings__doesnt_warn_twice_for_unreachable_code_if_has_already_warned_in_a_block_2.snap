@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        pub fn main() {\n            let _ = {\n              panic\n              1 // warning here\n            }\n            \"no warning here!\"\n        }\n        "
 ---
+----- SOURCE CODE
+
+        pub fn main() {
+            let _ = {
+              panic
+              1 // warning here
+            }
+            "no warning here!"
+        }
+        
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:5:15
   │

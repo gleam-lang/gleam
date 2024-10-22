@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        pub fn main(a, b) {\n            case a, panic, b {\n                _, _, _ -> \"no warning here!\"\n            }\n        }\n        "
 ---
+----- SOURCE CODE
+
+        pub fn main(a, b) {
+            case a, panic, b {
+                _, _, _ -> "no warning here!"
+            }
+        }
+        
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:3:28
   │

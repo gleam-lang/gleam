@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: import gleam/wibble
 ---
+----- SOURCE CODE
+import gleam/wibble
+
+----- WARNING
 warning: Unused imported module
   ┌─ /src/warning/wrn.gleam:1:1
   │

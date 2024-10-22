@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\npub fn main(x) {\n  case x {\n    _ -> 1\n    _ -> 2\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    _ -> 1
+    _ -> 2
+  }
+}
+
+
+----- WARNING
 warning: Unreachable case clause
   ┌─ /src/warning/wrn.gleam:5:5
   │

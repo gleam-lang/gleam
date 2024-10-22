@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: type X
 ---
+----- SOURCE CODE
+type X
+
+----- WARNING
 warning: Unused private type
   ┌─ /src/warning/wrn.gleam:1:1
   │

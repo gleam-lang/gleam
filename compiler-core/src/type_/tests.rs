@@ -213,13 +213,14 @@ fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
 #[macro_export]
 macro_rules! assert_warnings_with_imports {
     ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
-        let output = $crate::type_::tests::get_printed_warnings(
+        let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![
                 $(("thepackage", $name, $module_src)),*
             ],
             None
         );
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -227,28 +228,31 @@ macro_rules! assert_warnings_with_imports {
 #[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let output = $crate::type_::tests::get_printed_warnings($src, vec![], None);
-        assert!(!output.is_empty());
+        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], None);
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($name:expr, $module_src:literal)),+, $src:expr) => {
-        let output = $crate::type_::tests::get_printed_warnings(
+        let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(("thepackage", $name, $module_src)),*],
             None
         );
-        assert!(!output.is_empty());
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
-        let output = $crate::type_::tests::get_printed_warnings(
+        let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
             None
         );
-        assert!(!output.is_empty());
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -256,8 +260,10 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_warnings_with_gleam_version {
     ($gleam_version:expr, $src:expr$(,)?) => {
-        let output = $crate::type_::tests::get_printed_warnings($src, vec![], Some($gleam_version));
-        assert!(!output.is_empty());
+        let warning =
+            $crate::type_::tests::get_printed_warnings($src, vec![], Some($gleam_version));
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

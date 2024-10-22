@@ -2,6 +2,12 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn wibble() { Ok(5) }\npub fn main() { let five = wibble() }"
 ---
+----- SOURCE CODE
+
+pub fn wibble() { Ok(5) }
+pub fn main() { let five = wibble() }
+
+----- WARNING
 warning: Unused variable
   ┌─ /src/warning/wrn.gleam:3:21
   │
