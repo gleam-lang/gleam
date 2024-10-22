@@ -2,6 +2,16 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\npub fn main() {\n  let a = if wibble {\n    wobble\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = if wibble {
+    wobble
+  }
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:11
   │

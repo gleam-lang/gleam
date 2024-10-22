@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\npub fn main() {\n  let Wibble(:arg) = todo\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let Wibble(:arg) = todo
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:14
   │

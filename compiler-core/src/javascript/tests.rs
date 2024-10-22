@@ -85,7 +85,8 @@ macro_rules! assert_js {
 #[macro_export]
 macro_rules! assert_js_error {
     ($src:expr $(,)?) => {{
-        let output = $crate::javascript::tests::expect_js_error($src, vec![]);
+        let error = $crate::javascript::tests::expect_js_error($src, vec![]);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 }

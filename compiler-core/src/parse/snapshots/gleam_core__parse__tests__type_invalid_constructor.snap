@@ -2,6 +2,15 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\ntype A {\n    A(String)\n    type\n}\n"
 ---
+----- SOURCE CODE
+
+type A {
+    A(String)
+    type
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:4:5
   │

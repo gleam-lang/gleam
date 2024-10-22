@@ -2,6 +2,16 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n@internal\n@internal\npub fn main() -> Nil {\n  Nil\n}\n"
 ---
+----- SOURCE CODE
+
+@internal
+@internal
+pub fn main() -> Nil {
+  Nil
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:1
   │
