@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble { Wibble(wibble: Int) }\n\npub fn main(wibble) {\n  case wibble {\n    Wibble(wibble:) -> wibble\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(wibble: Int) }
+
+pub fn main(wibble) {
+  case wibble {
+    Wibble(wibble:) -> wibble
+  }
+}
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:6:12
   │

@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n          let n = {\n            panic\n            1\n          }\n          n\n        }"
 ---
+----- SOURCE CODE
+pub fn main() {
+          let n = {
+            panic
+            1
+          }
+          n
+        }
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:4:13
   │

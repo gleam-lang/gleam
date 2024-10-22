@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        import gleam/list\n\n        pub fn main() {\n            let a_list = []\n            let _ = -0 == list.length(a_list)\n        }\n        "
 ---
+----- SOURCE CODE
+
+        import gleam/list
+
+        pub fn main() {
+            let a_list = []
+            let _ = -0 == list.length(a_list)
+        }
+        
+
+----- WARNING
 warning: Inefficient use of `list.length`
   ┌─ /src/warning/wrn.gleam:6:21
   │

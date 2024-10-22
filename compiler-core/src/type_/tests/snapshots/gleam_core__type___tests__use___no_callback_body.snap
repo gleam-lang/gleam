@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\npub fn main() {\n  let thingy = fn(f) { f() }\n  use <- thingy()\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let thingy = fn(f) { f() }
+  use <- thingy()
+}
+
+
+----- WARNING
 warning: Incomplete use expression
   ┌─ /src/warning/wrn.gleam:4:3
   │

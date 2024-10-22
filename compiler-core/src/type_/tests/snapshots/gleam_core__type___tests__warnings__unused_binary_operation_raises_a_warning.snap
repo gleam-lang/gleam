@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main() {\n  let string = \"a\" <> \"b\" \"c\" <> \"d\"\n  string\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let string = "a" <> "b" "c" <> "d"
+  string
+}
+
+
+----- WARNING
 warning: Unused value
   ┌─ /src/warning/wrn.gleam:3:27
   │

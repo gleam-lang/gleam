@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main(x) {\n  case x {\n    _ -> Error(Nil)\n  }\n  Nil\n}"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    _ -> Error(Nil)
+  }
+  Nil
+}
+
+----- WARNING
 warning: Unused result value
   ┌─ /src/warning/wrn.gleam:3:3
   │  

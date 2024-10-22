@@ -2,6 +2,20 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Thing {\n  Thing(value: Int, other: Int)\n}\n\npub fn main() {\n  let thing = Thing(1, 2)\n  Thing(..thing, value: 1)\n  1\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Thing {
+  Thing(value: Int, other: Int)
+}
+
+pub fn main() {
+  let thing = Thing(1, 2)
+  Thing(..thing, value: 1)
+  1
+}
+
+
+----- WARNING
 warning: Unused value
   ┌─ /src/warning/wrn.gleam:8:3
   │

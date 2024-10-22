@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main() {\n  case Nil {\n  _ if 1 % 1 == 0 -> Nil\n  _ -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  case Nil {
+  _ if 1 % 1 == 0 -> Nil
+  _ -> Nil
+  }
+}
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:4:8
   │

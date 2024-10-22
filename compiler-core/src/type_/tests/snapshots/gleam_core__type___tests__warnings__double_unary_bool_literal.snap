@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() { let _ = !!True }"
 ---
+----- SOURCE CODE
+pub fn main() { let _ = !!True }
+
+----- WARNING
 warning: Unnecessary double negation (!!) on bool
   ┌─ /src/warning/wrn.gleam:1:25
   │

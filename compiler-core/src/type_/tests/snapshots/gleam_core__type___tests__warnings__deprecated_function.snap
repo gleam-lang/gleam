@@ -2,6 +2,19 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n@deprecated(\"Don't use this!\")\npub fn a() {\n  Nil\n}\n\npub fn b() {\n  a\n}\n        "
 ---
+----- SOURCE CODE
+
+@deprecated("Don't use this!")
+pub fn a() {
+  Nil
+}
+
+pub fn b() {
+  a
+}
+        
+
+----- WARNING
 warning: Deprecated value used
   ┌─ /src/warning/wrn.gleam:8:3
   │

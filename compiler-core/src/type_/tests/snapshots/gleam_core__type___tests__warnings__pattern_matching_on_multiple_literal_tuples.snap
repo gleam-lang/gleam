@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n        let wibble = 1\n        case #(1, 2), #(wibble, wibble) {\n            _, _ -> Nil\n        }\n      }"
 ---
+----- SOURCE CODE
+pub fn main() {
+        let wibble = 1
+        case #(1, 2), #(wibble, wibble) {
+            _, _ -> Nil
+        }
+      }
+
+----- WARNING
 warning: Redundant tuple
   ┌─ /src/warning/wrn.gleam:3:14
   │
