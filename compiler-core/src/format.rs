@@ -1574,17 +1574,18 @@ impl<'comments> Formatter<'comments> {
     ) -> Document<'a> {
         let comments = self.pop_comments(constructor.location.start);
         let doc_comments = self.doc_comments(constructor.location.start);
+        let attributes = AttributesPrinter::new()
+            .set_deprecation(&constructor.deprecation)
+            .to_doc();
 
         let doc = if constructor.arguments.is_empty() {
             if self.any_comments(constructor.location.end) {
-                constructor
-                    .name
-                    .as_str()
-                    .to_doc()
+                attributes
+                    .append(constructor.name.as_str().to_doc())
                     .append(self.wrap_args(vec![], constructor.location.end))
                     .group()
             } else {
-                constructor.name.as_str().to_doc()
+                attributes.append(constructor.name.as_str().to_doc())
             }
         } else {
             let args = constructor
@@ -1610,10 +1611,9 @@ impl<'comments> Formatter<'comments> {
                     },
                 )
                 .collect_vec();
-            constructor
-                .name
-                .as_str()
-                .to_doc()
+
+            attributes
+                .append(constructor.name.as_str().to_doc())
                 .append(self.wrap_args(args, constructor.location.end))
                 .group()
         };
