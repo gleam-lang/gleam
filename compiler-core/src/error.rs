@@ -3213,7 +3213,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                     }
                 },
                         TypeError::AllVariantsConstructorDeprecated { location } => {
-                            let text = format!("Consider deprecating the type as a whole.
+                            let text = String::from("Consider deprecating the type as a whole.
 
     @deprecated(\"message\")
     type Wibble {{

@@ -881,7 +881,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .clone();
 
         // check if all constructors are deprecated if so error
-        if constructors.len() > 0 // prevent checking an empty type `type wobble` which will always be true
+        if !constructors.is_empty()
             && constructors
                 .iter()
                 .all(|record| record.deprecation.is_deprecated())
@@ -1026,11 +1026,19 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 *publicity
             };
 
+            // If the whole custom type is deprecated all of its varints are too.
+            // Otherwise just the varint(s) attributed as deprecated are.
+            let deprecate_constructor = if deprecation.is_deprecated() {
+                deprecation
+            } else {
+                &constructor.deprecation
+            };
+
             environment.insert_module_value(
                 constructor.name.clone(),
                 ValueConstructor {
                     publicity: value_constructor_publicity,
-                    deprecation: deprecation.clone(),
+                    deprecation: deprecate_constructor.clone(),
                     type_: type_.clone(),
                     variant: constructor_info.clone(),
                 },
@@ -1054,7 +1062,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor_info,
                 type_,
                 value_constructor_publicity,
-                deprecation.clone(),
+                deprecate_constructor.clone(),
             );
 
             environment.names.named_constructor_in_scope(
