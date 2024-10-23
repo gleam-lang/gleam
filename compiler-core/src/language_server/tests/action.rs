@@ -2661,7 +2661,7 @@ fn test_qualified_to_unqualified_import_constructor_constructor_name_exists() {
 import option.{Some}
 import opt
 
-pub fn main() {
+pub fn main() -> option.Option(opt.Option(Int)) {
     Some(opt.Some(1))
 }
 "#;
@@ -2680,7 +2680,7 @@ fn test_qualified_to_unqualified_import_constructor_constructor_name_exists_belo
     let src = r#"
 import opt
 
-pub fn main() {
+pub fn main() -> option.Option(opt.Option(Int)) {
     Some(opt.Some(1))
 }
 import option.{Some}
@@ -2701,8 +2701,8 @@ fn test_qualified_to_unqualified_import_type_constructor_constructor_name_exists
 import option.{type Option}
 import opt
 
-pub fn main() -> opt.Option(Int) {
-    opt.Some(opt.Some(1))
+pub fn main() -> Option(opt.Option(Int)) {
+    option.Some(opt.Some(1))
 }
 "#;
     let title = "Unqualify opt.Option";
@@ -2720,8 +2720,8 @@ fn test_qualified_to_unqualified_import_type_constructor_constructor_name_exists
     let src = r#"
 import opt
 
-pub fn main() -> opt.Option(Int) {
-    opt.Some(opt.Some(1))
+pub fn main() -> Option(opt.Option(Int)) {
+    option.Some(opt.Some(1))
 }
 import option.{type Option}
 "#;
