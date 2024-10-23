@@ -19,6 +19,30 @@
 
 ### Compiler
 
+- The compiler now allows the `@deprecated` attribute on custom type constructor records/variants.
+
+  For example:
+
+  ```gleam
+  /// NOTE: Updated `Number` to `RealNumber`s only
+  pub type RealNumber {
+    @deprecated("`I` am not a real number")
+    I
+    One
+    // ..
+  }
+
+  pub fn to_num(n: RealNumber) -> Int {
+    case n {
+      I -> calc_i(n) // Warning: This value has been deprecated.
+      One -> 1
+      // ..
+    }
+  }
+  ```
+
+  ([Iesha](https://github.com/wilbert-mad))
+
 - The compiler now prints correctly qualified or aliased type names when
   printing type errors.
 
@@ -172,6 +196,7 @@
     Some(1)
   }
   ```
+
   ([Jiangda Wang](https://github.com/Frank-III))
 
 ### Bug Fixes
