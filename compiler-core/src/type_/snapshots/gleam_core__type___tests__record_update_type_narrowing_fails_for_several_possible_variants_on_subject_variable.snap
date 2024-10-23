@@ -2,6 +2,21 @@
 source: compiler-core/src/type_/tests.rs
 expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int)\n  Wobble(a: Int, c: String)\n}\n\npub fn update(wibble: Wibble) -> Wibble {\n  case wibble {\n    Wibble(..) | Wobble(..) -> Wibble(..wibble, a: 1)\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn update(wibble: Wibble) -> Wibble {
+  case wibble {
+    Wibble(..) | Wobble(..) -> Wibble(..wibble, a: 1)
+  }
+}
+
+
+----- ERROR
 error: Unsafe record update
   ┌─ /src/one/two.gleam:9:41
   │

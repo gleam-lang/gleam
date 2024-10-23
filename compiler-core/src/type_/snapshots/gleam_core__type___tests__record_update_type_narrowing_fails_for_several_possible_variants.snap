@@ -2,6 +2,22 @@
 source: compiler-core/src/type_/tests.rs
 expression: "\npub type Vector {\n  Vector2(x: Float, y: Float)\n  Vector3(x: Float, y: Float, z: Float)\n}\n\npub fn increase_y(vector, by increase) {\n  case vector {\n    Vector2(y:, ..) as vector | Vector3(y:, ..) as vector ->\n      Vector2(..vector, y: y +. increase)\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Vector {
+  Vector2(x: Float, y: Float)
+  Vector3(x: Float, y: Float, z: Float)
+}
+
+pub fn increase_y(vector, by increase) {
+  case vector {
+    Vector2(y:, ..) as vector | Vector3(y:, ..) as vector ->
+      Vector2(..vector, y: y +. increase)
+  }
+}
+
+
+----- ERROR
 error: Unsafe record update
    ┌─ /src/one/two.gleam:10:17
    │
