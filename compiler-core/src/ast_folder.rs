@@ -5,7 +5,7 @@ use crate::{
     analyse::Inferred,
     ast::{
         AssignName, Assignment, BinOp, CallArg, Constant, Definition, FunctionLiteralKind, Pattern,
-        RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
+        RecordBeingUpdated, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
         TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
         UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
         UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
@@ -320,9 +320,9 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::RecordUpdate {
                 location,
                 constructor,
-                spread,
+                record,
                 arguments,
-            } => self.fold_record_update(location, constructor, spread, arguments),
+            } => self.fold_record_update(location, constructor, record, arguments),
 
             UntypedExpr::NegateBool { location, value } => self.fold_negate_bool(location, value),
 
@@ -522,7 +522,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::RecordUpdate {
                 location,
                 constructor,
-                spread,
+                record,
                 arguments,
             } => {
                 let constructor = Box::new(self.fold_expr(*constructor));
@@ -536,7 +536,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 UntypedExpr::RecordUpdate {
                     location,
                     constructor,
-                    spread,
+                    record,
                     arguments,
                 }
             }
@@ -800,13 +800,13 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         constructor: Box<UntypedExpr>,
-        spread: RecordUpdateSpread,
+        record: RecordBeingUpdated,
         arguments: Vec<UntypedRecordUpdateArg>,
     ) -> UntypedExpr {
         UntypedExpr::RecordUpdate {
             location,
             constructor,
-            spread,
+            record,
             arguments,
         }
     }

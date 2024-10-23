@@ -4,7 +4,7 @@ use crate::{
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, FunctionLiteralKind, HasLocation, ImplicitCallArgOrigin, Layer,
-        RecordUpdateSpread, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment,
+        RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment,
         TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
         UntypedArg, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
@@ -394,9 +394,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::RecordUpdate {
                 location,
                 constructor,
-                spread,
+                record,
                 arguments: args,
-            } => self.infer_record_update(*constructor, spread, args, location),
+            } => self.infer_record_update(*constructor, record, args, location),
 
             UntypedExpr::NegateBool { location, value } => self.infer_negate_bool(location, *value),
 
@@ -2295,7 +2295,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_record_update(
         &mut self,
         constructor: UntypedExpr,
-        spread: RecordUpdateSpread,
+        record: RecordBeingUpdated,
         args: Vec<UntypedRecordUpdateArg>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
@@ -2361,12 +2361,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
-        let spread = self.infer(*spread.base)?;
+        let record = self.infer(*record.base)?;
         let return_type = self.instantiate(retrn.clone(), &mut hashmap![]);
 
-        // Check that the spread variable unifies with the return type of the constructor
-        unify(return_type, spread.type_())
-            .map_err(|e| convert_unify_error(e, spread.location()))?;
+        // Check that the record variable unifies with the return type of the constructor
+        unify(return_type, record.type_())
+            .map_err(|e| convert_unify_error(e, record.location()))?;
 
         let args: Vec<TypedRecordUpdateArg> = args
             .iter()
@@ -2377,18 +2377,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                      location,
                  }| {
                     let value = self.infer(value.clone())?;
-                    let spread_field = self.infer_known_record_expression_access(
-                        spread.clone(),
+                    let record_field = self.infer_known_record_expression_access(
+                        record.clone(),
                         label.clone(),
                         *location,
                         FieldAccessUsage::Other,
                     )?;
 
                     // Check that the update argument unifies with the corresponding
-                    // field in the record contained within the spread variable. We
-                    // need to check the spread, and not the constructor, in order
+                    // field in the record contained within the record variable. We
+                    // need to check the record, and not the constructor, in order
                     // to handle polymorphic types.
-                    unify(spread_field.type_(), value.type_())
+                    unify(record_field.type_(), value.type_())
                         .map_err(|e| convert_unify_error(e, value.location()))?;
 
                     match field_map.fields.get(label) {
@@ -2418,8 +2418,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         Ok(TypedExpr::RecordUpdate {
             location,
-            type_: spread.type_(),
-            spread: Box::new(spread),
+            type_: record.type_(),
+            record: Box::new(record),
             args,
         })
     }
