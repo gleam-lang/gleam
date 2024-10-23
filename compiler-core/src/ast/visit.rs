@@ -264,10 +264,10 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        spread: &'ast TypedExpr,
+        record: &'ast TypedExpr,
         args: &'ast [TypedRecordUpdateArg],
     ) {
-        visit_typed_expr_record_update(self, location, type_, spread, args);
+        visit_typed_expr_record_update(self, location, type_, record, args);
     }
 
     fn visit_typed_expr_negate_bool(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
@@ -714,9 +714,9 @@ where
         TypedExpr::RecordUpdate {
             location,
             type_,
-            spread,
+            record,
             args,
-        } => v.visit_typed_expr_record_update(location, type_, spread, args),
+        } => v.visit_typed_expr_record_update(location, type_, record, args),
         TypedExpr::NegateBool { location, value } => {
             v.visit_typed_expr_negate_bool(location, value)
         }
@@ -970,12 +970,12 @@ pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _typ: &'a Arc<Type>,
-    spread: &'a TypedExpr,
+    record: &'a TypedExpr,
     args: &'a [TypedRecordUpdateArg],
 ) where
     V: Visit<'a> + ?Sized,
 {
-    v.visit_typed_expr(spread);
+    v.visit_typed_expr(record);
     for arg in args {
         v.visit_typed_record_update_arg(arg);
     }

@@ -58,8 +58,8 @@ use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
     CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, FunctionLiteralKind,
-    HasLocation, Import, Module, ModuleConstant, Pattern, Publicity, RecordConstructor,
-    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
+    HasLocation, Import, Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated,
+    RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TargetedDefinition, TodoKind,
     TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
     UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
     UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
@@ -845,7 +845,7 @@ where
                     // Record update
                     let base = self.expect_expression()?;
                     let base_e = base.location().end;
-                    let spread = RecordUpdateSpread {
+                    let record = RecordBeingUpdated {
                         base: Box::new(base),
                         location: SrcSpan {
                             start: dot_s,
@@ -865,7 +865,7 @@ where
                     expr = UntypedExpr::RecordUpdate {
                         location: SrcSpan { start, end },
                         constructor: Box::new(expr),
-                        spread,
+                        record,
                         arguments: args,
                     };
                 } else {

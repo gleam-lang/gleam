@@ -1656,11 +1656,11 @@ fn docs_args_call<'a>(
 }
 
 fn record_update<'a>(
-    spread: &'a TypedExpr,
+    record: &'a TypedExpr,
     args: &'a [TypedRecordUpdateArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let expr_doc = maybe_block_expr(spread, env);
+    let expr_doc = maybe_block_expr(record, env);
 
     args.iter().fold(expr_doc, |tuple_doc, arg| {
         // Increment the index by 2, because the first element
@@ -1844,7 +1844,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
-        TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
+        TypedExpr::RecordUpdate { record, args, .. } => record_update(record, args, env),
 
         TypedExpr::Case {
             subjects, clauses, ..
