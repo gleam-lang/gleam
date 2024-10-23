@@ -20,7 +20,7 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{gleam_source_files, CommandExecutor, FileSystemReader, FileSystemWriter},
     metadata, type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
@@ -233,7 +233,7 @@ where
         };
 
         // Src
-        for path in self.io.gleam_source_files(&src) {
+        for path in gleam_source_files(&self.io, &src) {
             // If the there is a .gleam file with a path that would be an
             // invalid module name it does not get loaded. For example, if it
             // has a uppercase letter in it.
@@ -254,7 +254,7 @@ where
             loader.origin = Origin::Test;
             loader.source_directory = &test;
 
-            for path in self.io.gleam_source_files(&test) {
+            for path in gleam_source_files(&self.io, &test) {
                 if !self.is_gleam_path(&path, &test) {
                     self.warnings.emit(crate::Warning::InvalidSource { path });
                     continue;
