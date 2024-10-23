@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/type_/tests/custom_types.rs
+assertion_line: 49
+expression: "\npub type Numbers {\n  @deprecated(\"1\")\n  One\n  Two\n}\n\npub fn num() {\n  let _one = One\n  let _two = Two\n  Nil\n}\n"
+---
+warning: Deprecated value used
+  ┌─ /src/warning/wrn.gleam:9:14
+  │
+9 │   let _one = One
+  │              ^^^ This value has been deprecated
+
+It was deprecated with this message: 1
