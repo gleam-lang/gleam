@@ -6,7 +6,7 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, NullTelemetry, Options, ProjectCompiler, Telemetry},
     config::PackageConfig,
-    io::FileSystemWriter,
+    io::{FileSystemReader, FileSystemWriter},
     paths::ProjectPaths,
     warning::VectorWarningEmitterIO,
 };
@@ -45,7 +45,11 @@ pub fn prepare(path: &str, mode: Mode) -> String {
     compiler.compile().unwrap();
 
     for path in initial_files {
-        filesystem.delete_file(&path).unwrap();
+        if filesystem.is_directory(&path) {
+            filesystem.delete_directory(&path).unwrap();
+        } else {
+            filesystem.delete_file(&path).unwrap();
+        }
     }
     let files = filesystem.into_contents();
     let warnings = warnings.take();
