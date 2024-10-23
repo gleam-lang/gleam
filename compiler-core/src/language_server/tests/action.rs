@@ -2656,6 +2656,46 @@ pub fn main() {
 }
 
 #[test]
+fn test_qualified_to_unqualified_import_constructor_constructor_name_exists() {
+    let src = r#"
+import option.{Some}
+import opt
+
+pub fn main() {
+    Some(opt.Some(1))
+}
+"#;
+    let title = "Unqualify opt.Some";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.").select_until(find_position_of(".Some(")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_constructor_constructor_name_exists_below() {
+    let src = r#"
+import opt
+
+pub fn main() {
+    Some(opt.Some(1))
+}
+import option.{Some}
+"#;
+    let title = "Unqualify opt.Some";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.").select_until(find_position_of(".Some(")),
+    );
+}
+
+#[test]
 fn test_unqualified_to_qualified_import_function() {
     let src = r#"
 import list.{map}
