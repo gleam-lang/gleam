@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport wibble\nconst my_wobble: wibble.Wobble = Nil\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub type Wobble
+
+-- main.gleam
 
 import wibble
 const my_wobble: wibble.Wobble = Nil

@@ -3,6 +3,17 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        import one.{fn1} as x\n        import two.{fn2} as x\n        "
 ---
 ----- SOURCE CODE
+-- one.gleam
+
+            pub fn fn1() { 1 }
+            
+
+-- two.gleam
+
+            pub fn fn2() { 1 }
+            
+
+-- main.gleam
 
         import one.{fn1} as x
         import two.{fn2} as x

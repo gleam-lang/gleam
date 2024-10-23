@@ -165,7 +165,18 @@ macro_rules! assert_with_module_error {
     (($name:expr, $module_src:literal), $src:expr $(,)?) => {
         let error =
             $crate::type_::tests::module_error($src, vec![("thepackage", $name, $module_src)]);
-        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        let output = format!(
+            "----- SOURCE CODE
+-- {}.gleam
+{}
+
+-- main.gleam
+{}
+
+----- ERROR
+{}",
+            $name, $module_src, $src, error
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -181,7 +192,21 @@ macro_rules! assert_with_module_error {
                 ("thepackage", $name2, $module_src2),
             ],
         );
-        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        let output = format!(
+            "----- SOURCE CODE
+-- {}.gleam
+{}
+
+-- {}.gleam
+{}
+
+-- main.gleam
+{}
+
+----- ERROR
+{}",
+            $name, $module_src, $name2, $module_src2, $src, error
+        );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -230,7 +255,12 @@ macro_rules! assert_warnings_with_imports {
             ],
             None
         );
-        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

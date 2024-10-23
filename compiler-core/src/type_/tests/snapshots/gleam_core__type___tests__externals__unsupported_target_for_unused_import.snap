@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/externals.rs
 expression: "import mod.{wobble}"
 ---
 ----- SOURCE CODE
+-- mod.gleam
+@external(javascript, "wibble", "wobble") pub fn wobble()
+
+-- main.gleam
 import mod.{wobble}
 
 ----- ERROR

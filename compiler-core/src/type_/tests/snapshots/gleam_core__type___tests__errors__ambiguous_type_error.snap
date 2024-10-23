@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "import wibble pub type Thing { Thing }\n        pub fn main() {\n            [Thing] == [wibble.Thing]\n        }"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub type Thing { Thing }
+
+-- main.gleam
 import wibble pub type Thing { Thing }
         pub fn main() {
             [Thing] == [wibble.Thing]

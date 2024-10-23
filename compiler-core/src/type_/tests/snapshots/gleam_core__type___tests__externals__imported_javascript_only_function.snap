@@ -3,6 +3,11 @@ source: compiler-core/src/type_/tests/externals.rs
 expression: "import module\npub fn main() {\n  module.javascript_only()\n}"
 ---
 ----- SOURCE CODE
+-- module.gleam
+@external(javascript, "one", "two")
+pub fn javascript_only() -> Int
+
+-- main.gleam
 import module
 pub fn main() {
   module.javascript_only()

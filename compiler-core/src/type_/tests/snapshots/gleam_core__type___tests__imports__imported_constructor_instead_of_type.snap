@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/imports.rs
 expression: "import module.{Wibble}\n\npub fn main(x: Wibble) {\n  todo\n}"
 ---
 ----- SOURCE CODE
+-- module.gleam
+pub type Wibble { Wibble }
+
+-- main.gleam
 import module.{Wibble}
 
 pub fn main(x: Wibble) {

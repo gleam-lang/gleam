@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport some_mod\npub fn main() {\n  use value <- some_mod.do_a_thing(10)\n}\n"
 ---
 ----- SOURCE CODE
+-- some_mod.gleam
+pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }
+
+-- main.gleam
 
 import some_mod
 pub fn main() {

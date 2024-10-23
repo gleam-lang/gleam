@@ -3,6 +3,13 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        import gleam/wibble.{wobble}\n        import gleam/wibble.{zoo}\n        pub fn go() { wobble() + zoo() }\n        "
 ---
 ----- SOURCE CODE
+-- gleam/wibble.gleam
+
+            pub fn wobble() { 1 }
+            pub fn zoo() { 1 }
+            
+
+-- main.gleam
 
         import gleam/wibble.{wobble}
         import gleam/wibble.{zoo}

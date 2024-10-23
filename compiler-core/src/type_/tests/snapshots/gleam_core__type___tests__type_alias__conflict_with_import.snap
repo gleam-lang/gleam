@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/type_alias.rs
 expression: "import wibble.{type Wobble} type Wobble = Int"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub type Wobble = String
+
+-- main.gleam
 import wibble.{type Wobble} type Wobble = Int
 
 ----- ERROR
