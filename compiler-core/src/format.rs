@@ -1614,8 +1614,7 @@ impl<'comments> Formatter<'comments> {
 
             attributes
                 .append(constructor.name.as_str().to_doc())
-                .append(self.wrap_args(args, constructor.location.end))
-                .group()
+                .append(self.wrap_args(args, constructor.location.end).group())
         };
 
         commented(doc_comments.append(doc).group(), comments)
