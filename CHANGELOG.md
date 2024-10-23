@@ -123,6 +123,25 @@
 - Improved the error message for using `@deprecated` with no deprecation message
   ([Jiangda Wang](https://github.com/frank-iii))
 
+- The compiler can now allow you to perform safe record updates for
+  specific variants of a type after pattern matching on it:
+
+  ```gleam
+  pub type Pet {
+    Dog(name: String, cuteness: Int)
+    Turtle(name: String, speed: Int)
+  }
+
+  pub fn rename(pet: Pet, to name: String) -> Pet {
+    case pet {
+      Dog(..) as dog -> Dog(..dog, name:)
+      Turtle(..) as turtle -> Turtle(..turtle, name:)
+    }
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter no longer removes the first argument from a function

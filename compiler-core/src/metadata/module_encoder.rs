@@ -81,8 +81,29 @@ impl<'a> ModuleEncoder<'a> {
         accessors: &AccessorsMap,
     ) {
         self.build_type(builder.reborrow().init_type(), &accessors.type_);
-        let mut builder = builder.init_accessors(accessors.accessors.len() as u32);
-        for (i, (name, accessor)) in accessors.accessors.iter().enumerate() {
+        let mut accessors_builder = builder
+            .reborrow()
+            .init_shared_accessors(accessors.shared_accessors.len() as u32);
+        for (i, (name, accessor)) in accessors.shared_accessors.iter().enumerate() {
+            let mut property = accessors_builder.reborrow().get(i as u32);
+            property.set_key(name);
+            self.build_record_accessor(property.init_value(), accessor)
+        }
+
+        let mut builder = builder
+            .init_variant_specific_accessors(accessors.variant_specific_accessors.len() as u32);
+        for (i, map) in accessors.variant_specific_accessors.iter().enumerate() {
+            self.build_constructor_accessors(builder.reborrow().get(i as u32), map);
+        }
+    }
+
+    fn build_constructor_accessors(
+        &mut self,
+        builder: variant_specific_accessors::Builder<'_>,
+        accessors: &HashMap<EcoString, RecordAccessor>,
+    ) {
+        let mut builder = builder.init_accessors(accessors.len() as u32);
+        for (i, (name, accessor)) in accessors.iter().enumerate() {
             let mut property = builder.reborrow().get(i as u32);
             property.set_key(name);
             self.build_record_accessor(property.init_value(), accessor)
@@ -285,8 +306,8 @@ impl<'a> ModuleEncoder<'a> {
                 arity,
                 location,
                 module,
-                constructors_count,
-                constructor_index,
+                variants_count: constructors_count,
+                variant_index: constructor_index,
                 documentation: doc,
             } => {
                 let mut builder = builder.init_record();
