@@ -3216,10 +3216,10 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                             let text = String::from("Consider deprecating the type as a whole.
 
     @deprecated(\"message\")
-    type Wibble {{
+    type Wibble {
         Wobble1
         Wobble2
-    }}
+    }
 ");
                             Diagnostic {
                                 title: "Can't deprecate all variants of a type.".into(),
