@@ -1,4 +1,4 @@
-.phony: build
+.PHONY: build
 build:
 	rm -rf out1 out2
 	cargo run -- compile-package --package app1 --target erlang --out out2 --lib .
