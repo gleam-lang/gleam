@@ -1141,15 +1141,35 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
             qualified_constructor: None,
         }
     }
-    fn get_module_import(&mut self, module_name: &EcoString) -> Option<&'a ast::Import<EcoString>> {
-        self.module
-            .ast
-            .definitions
-            .iter()
-            .find_map(|def| match def {
-                ast::Definition::Import(import) if import.module == *module_name => Some(import),
-                _ => None,
-            })
+    fn get_module_import(
+        &self,
+        module_name: &EcoString,
+        constructor: &EcoString,
+        is_type: bool,
+    ) -> Option<&'a ast::Import<EcoString>> {
+        let mut matching_import = None;
+
+        for def in &self.module.ast.definitions {
+            if let ast::Definition::Import(import) = def {
+                let imported = if is_type {
+                    &import.unqualified_types
+                } else {
+                    &import.unqualified_values
+                };
+
+                if import.module != *module_name
+                    && imported.iter().any(|imp| imp.used_name() == constructor)
+                {
+                    return None;
+                }
+
+                if import.module == *module_name {
+                    matching_import = Some(import);
+                }
+            }
+        }
+
+        matching_import
     }
 }
 
@@ -1203,7 +1223,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                         .and_then(|node| {
                             if let Located::Annotation(_, ty) = node {
                                 if let Some((module, _)) = ty.named_type_name() {
-                                    return self.get_module_import(&module);
+                                    return self.get_module_import(&module, name, true);
                                 }
                             }
                             None
@@ -1238,7 +1258,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                 ..
             } = constructor
             {
-                if let Some(import) = self.get_module_import(module_name) {
+                if let Some(import) = self.get_module_import(module_name, constructor_name, false) {
                     self.qualified_constructor = Some(QualifiedConstructor {
                         import,
                         module_aliased: import.as_name.is_some(),
@@ -1274,7 +1294,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
                 if let crate::analyse::Inferred::Known(constructor) = constructor {
-                    if let Some(import) = self.get_module_import(&constructor.module) {
+                    if let Some(import) = self.get_module_import(&constructor.module, name, false) {
                         self.qualified_constructor = Some(QualifiedConstructor {
                             import,
                             module_aliased: import.as_name.is_some(),
