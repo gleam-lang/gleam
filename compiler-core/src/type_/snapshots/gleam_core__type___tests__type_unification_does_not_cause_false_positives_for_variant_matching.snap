@@ -2,6 +2,26 @@
 source: compiler-core/src/type_/tests.rs
 expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int)\n  Wobble(a: Int, c: String)\n}\n\npub fn wibbler() { todo }\n\npub fn main() {\n  let c = wibbler()\n\n  case todo {\n    Wibble(..) -> Wibble(..c, b: 1)\n    _ -> todo\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn wibbler() { todo }
+
+pub fn main() {
+  let c = wibbler()
+
+  case todo {
+    Wibble(..) -> Wibble(..c, b: 1)
+    _ -> todo
+  }
+}
+
+
+----- ERROR
 error: Unsafe record update
    ┌─ /src/one/two.gleam:13:28
    │

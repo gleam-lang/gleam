@@ -9,8 +9,8 @@ pub type Wibble {
   Wobble(not_field: String, field: Int)
 }
 
-pub fn main() {
-  Wibble(1).field
+pub fn main(wibble: Wibble) {
+  wibble.field
 }
 
 

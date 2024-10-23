@@ -2,6 +2,19 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Wibble {\n  Wibble(wibble: Int, wubble: Bool)\n  Wobble(wobble: Int, wubble: Bool)\n}\n\npub fn wibble(value: Wibble) {\n  Wibble(..value, wubble: True)\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(wibble: Int, wubble: Bool)
+  Wobble(wobble: Int, wubble: Bool)
+}
+
+pub fn wibble(value: Wibble) {
+  Wibble(..value, wubble: True)
+}
+
+
+----- ERROR
 error: Unsafe record update
   ┌─ /src/one/two.gleam:8:12
   │
