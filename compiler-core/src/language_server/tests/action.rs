@@ -2696,6 +2696,45 @@ import option.{Some}
 }
 
 #[test]
+fn test_qualified_to_unqualified_import_type_constructor_constructor_name_exists() {
+    let src = r#"
+import option.{type Option}
+import opt
+
+pub fn main() -> opt.Option(Int) {
+    opt.Some(opt.Some(1))
+}
+"#;
+    let title = "Unqualify opt.Option";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.").select_until(find_position_of(".Option(")),
+    );
+}
+
+#[test]
+fn test_qualified_to_unqualified_import_type_constructor_constructor_name_exists_below() {
+    let src = r#"
+import opt
+
+pub fn main() -> opt.Option(Int) {
+    opt.Some(opt.Some(1))
+}
+import option.{type Option}
+"#;
+    let title = "Unqualify opt.Option";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }")
+            .add_hex_module("opt", "pub type Option(v) { Some(v) None }"),
+        find_position_of("opt.").select_until(find_position_of(".Option(")),
+    );
+}
+#[test]
 fn test_unqualified_to_qualified_import_function() {
     let src = r#"
 import list.{map}
