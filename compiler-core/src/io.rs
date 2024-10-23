@@ -205,6 +205,17 @@ impl DirWalker {
         }
     }
 
+    /// Convert this walker to an iterator over file paths.
+    ///
+    /// This iterator calls [`Self::next_file`]. Errors are returned if certain
+    /// directories cannot be read.
+    pub fn into_file_iter(
+        mut self,
+        io: &impl FileSystemReader,
+    ) -> impl Iterator<Item = Result<Utf8PathBuf>> + '_ {
+        std::iter::from_fn(move || self.next_file(io).transpose())
+    }
+
     /// Advance the directory walker to the next file.
     pub fn next_file(&mut self, io: &impl FileSystemReader) -> Result<Option<Utf8PathBuf>> {
         while let Some(next_path) = self.walk_queue.pop_front() {
@@ -241,9 +252,6 @@ impl DirWalker {
 /// Typically we use an implementation that reads from the file system,
 /// but in tests and in other places other implementations may be used.
 pub trait FileSystemReader {
-    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
-    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
-    fn gleam_source_and_native_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf>;
     fn read_dir(&self, path: &Utf8Path) -> Result<ReadDir>;
     fn read(&self, path: &Utf8Path) -> Result<String, Error>;
     fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>, Error>;
@@ -252,6 +260,16 @@ pub trait FileSystemReader {
     fn is_directory(&self, path: &Utf8Path) -> bool;
     fn modification_time(&self, path: &Utf8Path) -> Result<SystemTime, Error>;
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error>;
+}
+
+/// Iterates over Gleam source files (`.gleam`) in a certain directory.
+/// Symlinks are followed.
+pub fn gleam_source_files(io: &impl FileSystemReader, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+    DirWalker::new(dir.to_path_buf())
+        .into_file_iter(io)
+        .filter_map(Result::ok)
+        .filter(|path| path.extension() == Some("gleam"))
+        .collect()
 }
 
 /// A trait used to run other programs.
