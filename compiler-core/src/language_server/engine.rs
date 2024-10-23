@@ -756,7 +756,7 @@ fn custom_type_symbol(
                 } else {
                     SymbolKind::CONSTRUCTOR
                 },
-                tags: None,
+                tags: make_deprecated_symbol_tag(&constructor.deprecation),
                 deprecated: None,
                 range: src_span_to_lsp_range(full_constructor_span, line_numbers),
                 selection_range: src_span_to_lsp_range(constructor.name_location, line_numbers),
