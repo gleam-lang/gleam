@@ -1,4 +1,4 @@
-.phony: build
+.PHONY: build
 build:
 	# Remove any previously compiled code
 	rm -rf out
