@@ -2,6 +2,24 @@
 source: compiler-core/src/type_/tests.rs
 expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int)\n  Wobble(a: Int, c: String)\n}\n\npub fn main() {\n  let a = case todo {\n    Wibble(..) as b -> Wibble(..b, b: 1)\n    Wobble(..) as b -> Wobble(..b, c: \"a\")\n  }\n\n  a.b\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: String)
+}
+
+pub fn main() {
+  let a = case todo {
+    Wibble(..) as b -> Wibble(..b, b: 1)
+    Wobble(..) as b -> Wobble(..b, c: "a")
+  }
+
+  a.b
+}
+
+
+----- ERROR
 error: Unknown record field
    ┌─ /src/one/two.gleam:13:4
    │

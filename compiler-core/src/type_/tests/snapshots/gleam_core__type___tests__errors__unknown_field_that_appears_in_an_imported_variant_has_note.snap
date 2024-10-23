@@ -12,8 +12,8 @@ pub type Wibble {
 -- main.gleam
 
 import some_mod
-pub fn main() {
-  some_mod.Wibble(1).field
+pub fn main(wibble: some_mod.Wibble) {
+  wibble.field
 }
 
 
