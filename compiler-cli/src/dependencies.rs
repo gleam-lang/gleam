@@ -115,27 +115,20 @@ pub enum UseManifest {
 
 pub fn update(packages: Vec<String>) -> Result<()> {
     let paths = crate::find_project_paths()?;
-
-    if packages.is_empty() {
-        // Update all packages
-        _ = download(
-            &paths,
-            cli::Reporter::new(),
-            None,
-            Vec::new(),
-            UseManifest::No,
-        )?;
+    let use_manifest = if packages.is_empty() {
+        UseManifest::Yes
     } else {
-        // Update specific packages
-        let packages_to_update = packages.into_iter().map(EcoString::from).collect();
-        _ = download(
-            &paths,
-            cli::Reporter::new(),
-            None,
-            packages_to_update,
-            UseManifest::Yes,
-        )?;
-    }
+        UseManifest::No
+    };
+
+    // Update specific packages
+    _ = download(
+        &paths,
+        cli::Reporter::new(),
+        None,
+        packages.into_iter().map(EcoString::from).collect(),
+        use_manifest,
+    )?;
 
     Ok(())
 }
