@@ -211,11 +211,11 @@ impl DirWalker {
             let real_path = io.canonicalise(&next_path)?;
 
             if io.is_file(&real_path) {
-                return Ok(Some(real_path));
+                return Ok(Some(next_path));
             } else if io.is_directory(&real_path)
                 && self.dirs_walked.insert(real_path.clone()).is_none()
             {
-                let dir_entries = io.read_dir(&real_path)?;
+                let dir_entries = io.read_dir(&next_path)?;
 
                 for entry in dir_entries {
                     match entry {
