@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n            import gleam/wibble.{one} as wobble\n            const one = one\n        "
 ---
 ----- SOURCE CODE
+-- gleam/wibble.gleam
+pub const one = 1
+
+-- main.gleam
 
             import gleam/wibble.{one} as wobble
             const one = one

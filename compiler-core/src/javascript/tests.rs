@@ -40,7 +40,11 @@ macro_rules! assert_js_with_multiple_imports {
     ($(($name:literal, $module_src:literal)),+; $src:literal) => {
         let compiled =
             $crate::javascript::tests::compile_js($src, vec![$((CURRENT_PACKAGE, $name, $module_src)),*]).expect("compilation failed");
-        let output = format!("----- SOURCE CODE\n{}\n\n----- COMPILED JAVASCRIPT\n{}", $src, compiled);
+            let mut output = String::from("----- SOURCE CODE\n");
+            for (name, src) in [$(($name, $module_src)),*] {
+                output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+            }
+            output.push_str(&format!("-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }

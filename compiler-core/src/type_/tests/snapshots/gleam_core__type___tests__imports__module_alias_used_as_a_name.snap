@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/imports.rs
 expression: "\nimport one/two\n\npub fn main() {\n  two\n}\n"
 ---
 ----- SOURCE CODE
+-- one/two.gleam
+
+
+-- main.gleam
 
 import one/two
 

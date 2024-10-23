@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/imports.rs
 expression: "import one.{One, type One}\n\npub fn main() -> One {\n  todo\n}\n"
 ---
 ----- SOURCE CODE
+-- one.gleam
+pub type One = Int
+
+-- main.gleam
 import one.{One, type One}
 
 pub fn main() -> One {

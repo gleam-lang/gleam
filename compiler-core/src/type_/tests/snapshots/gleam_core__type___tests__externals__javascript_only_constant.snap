@@ -3,6 +3,14 @@ source: compiler-core/src/type_/tests/externals.rs
 expression: "import module\npub fn main() {\n  module.javascript_only_constant()\n}"
 ---
 ----- SOURCE CODE
+-- module.gleam
+@external(javascript, "one", "two")
+fn javascript_only() -> Int
+const constant = javascript_only
+pub const javascript_only_constant = constant
+
+
+-- main.gleam
 import module
 pub fn main() {
   module.javascript_only_constant()

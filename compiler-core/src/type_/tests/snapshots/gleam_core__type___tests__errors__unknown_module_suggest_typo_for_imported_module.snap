@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport wibble\npub fn main() {\n  wible.wobble()\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub fn wobble() {}
+
+-- main.gleam
 
 import wibble
 pub fn main() {

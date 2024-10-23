@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nimport wibble.{Wibble, Wobble as Wubble}\npub fn main() {\n    case Wibble {\n        Wibble -> Nil\n    }\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- main.gleam
 
 import wibble.{Wibble, Wobble as Wubble}
 pub fn main() {

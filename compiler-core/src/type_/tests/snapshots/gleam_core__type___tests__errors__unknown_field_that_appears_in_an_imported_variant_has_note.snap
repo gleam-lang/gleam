@@ -3,6 +3,13 @@ source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport some_mod\npub fn main() {\n  some_mod.Wibble(1).field\n}\n"
 ---
 ----- SOURCE CODE
+-- some_mod.gleam
+pub type Wibble {
+              Wibble(field: Int)
+              Wobble(not_field: String, field: Int)
+            }
+
+-- main.gleam
 
 import some_mod
 pub fn main() {
