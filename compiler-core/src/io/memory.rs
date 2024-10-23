@@ -216,23 +216,6 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(path.to_path_buf())
     }
 
-    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.search_files_recursively(dir, |file_path| file_path.extension() == Some("gleam"))
-    }
-
-    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.search_files_recursively(dir, |file_path| file_path.extension() == Some("cache"))
-    }
-
-    fn gleam_source_and_native_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.search_files_recursively(dir, |file_path| {
-            matches!(
-                file_path.extension(),
-                Some("gleam" | "mjs" | "js" | "ts" | "hrl" | "erl" | "ex")
-            )
-        })
-    }
-
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {
         let path = path.to_path_buf();
         let files = self.files.deref().borrow();
