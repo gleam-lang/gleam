@@ -70,7 +70,7 @@ fn pipe_in_case_subject() {
 
 // https://github.com/gleam-lang/gleam/issues/1379
 #[test]
-fn pipe_in_spread() {
+fn pipe_in_record_update() {
     assert_erl!(
         "pub type X {
   X(a: Int, b: Int)

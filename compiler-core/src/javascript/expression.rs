@@ -165,7 +165,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
-            TypedExpr::RecordUpdate { spread, args, .. } => self.record_update(spread, args),
+            TypedExpr::RecordUpdate { record, args, .. } => self.record_update(record, args),
 
             TypedExpr::Var {
                 name, constructor, ..

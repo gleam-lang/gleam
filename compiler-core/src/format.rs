@@ -1025,11 +1025,11 @@ impl<'comments> Formatter<'comments> {
             }
             UntypedExpr::RecordUpdate {
                 constructor,
-                spread,
+                record,
                 arguments: args,
                 location,
                 ..
-            } => self.record_update(constructor, spread, args, location),
+            } => self.record_update(constructor, record, args, location),
         };
         commented(document, comments)
     }
@@ -1334,14 +1334,14 @@ impl<'comments> Formatter<'comments> {
     pub fn record_update<'a>(
         &mut self,
         constructor: &'a UntypedExpr,
-        spread: &'a RecordUpdateSpread,
+        record: &'a RecordBeingUpdated,
         args: &'a [UntypedRecordUpdateArg],
         location: &SrcSpan,
     ) -> Document<'a> {
         use std::iter::once;
         let constructor_doc = self.expr(constructor);
-        let comments = self.pop_comments(spread.base.location().start);
-        let spread_doc = commented("..".to_doc().append(self.expr(&spread.base)), comments);
+        let comments = self.pop_comments(record.base.location().start);
+        let spread_doc = commented("..".to_doc().append(self.expr(&record.base)), comments);
         let arg_docs = args
             .iter()
             .map(|a| self.record_update_arg(a).group())
