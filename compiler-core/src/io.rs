@@ -1,6 +1,9 @@
 pub mod memory;
 
-use crate::error::{Error, FileIoAction, FileKind, Result};
+use crate::{
+    error::{Error, FileIoAction, FileKind, Result},
+    line_numbers::LineNumbers,
+};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
@@ -109,11 +112,14 @@ impl<'a, W: Utf8Writer + std::fmt::Write> Utf8Writer for CursorPositionWriter<'a
         if str.is_empty() {
             return Ok(());
         }
-        let newline_count = str.rmatches('\n').count();
-        self.line += newline_count;
-        if newline_count > 0 {
-            let lastline = str.lines().last().expect("Should have at least one line");
-            self.column = lastline.len();
+        let line_numbers = LineNumbers::new(str);
+        if line_numbers.line_starts.len() >= 2 {
+            self.line += line_numbers.line_starts.len() - 1;
+            self.column = *line_numbers
+                .line_starts
+                .last()
+                .expect("Should have at least one line") as usize
+                - 1;
         } else {
             self.column += str.len();
         }
