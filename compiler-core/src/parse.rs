@@ -2850,11 +2850,17 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {
-        if self.maybe_one(&Token::LeftParen).is_some() {
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let args =
                 Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
             let (_, par_e) =
                 self.expect_one_following_series(&Token::RightParen, "a constant record argument")?;
+            if args.is_empty() {
+                return parse_error(
+                    ParseErrorType::ConstantRecordConstructorNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
+            }
             Ok(Some(Constant::Record {
                 location: SrcSpan { start, end: par_e },
                 module,

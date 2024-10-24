@@ -1520,3 +1520,17 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3730
+#[test]
+fn missing_constructor_arguments() {
+    assert_module_error!(
+        "
+pub type A {
+  A(Int)
+}
+
+const a = A()
+"
+    );
+}
