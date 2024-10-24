@@ -1,26 +1,26 @@
-.phony: build
+.PHONY: build
 build: clean erlang nodejs deno bun
 
-.phony: clean
+.PHONY: clean
 clean:
 	rm -rf build
 
-.phony: erlang
+.PHONY: erlang
 erlang:
 	@echo test/subdir_ffi on Erlang
 	cargo run --quiet -- test --target erlang
 
-.phony: nodejs
+.PHONY: nodejs
 nodejs:
 	@echo test/subdir_ffi on JavaScript with Node
 	cargo run --quiet -- test --target javascript --runtime nodejs
 
-.phony: deno
+.PHONY: deno
 deno:
 	@echo test/subdir_ffi on JavaScript with Deno
 	cargo run --quiet -- test --target javascript --runtime deno
 
-.phony: bun
+.PHONY: bun
 bun:
 	@echo test/subdir_ffi on JavaScript with Bun
 	cargo run --quiet -- test --target javascript --runtime bun
