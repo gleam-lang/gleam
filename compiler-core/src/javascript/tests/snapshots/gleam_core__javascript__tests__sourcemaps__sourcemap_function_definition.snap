@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/javascript/tests/sourcemaps.rs
+expression: sourcemap_viz
+---
+note: 
+  ┌─ original.gleam:1:1
+  │
+1 │ fn add_2(x) {
+  │ ^ This code
+  │
+  ┌─ generated.js:2:1
+  │
+2 │ function add_2(x) {
+  │ ^ Gets mapped to this
+
+---
+note: 
+  ┌─ original.gleam:2:3
+  │
+2 │   x + 2
+  │   ^ This code
+  │
+  ┌─ generated.js:3:3
+  │
+3 │   return x + 2;
+  │   ^ Gets mapped to this
+
+---
+note: 
+  ┌─ original.gleam:2:3
+  │
+2 │   x + 2
+  │   ^ This code
+  │
+  ┌─ generated.js:3:10
+  │
+3 │   return x + 2;
+  │          ^ Gets mapped to this
+
+---
+note: 
+  ┌─ original.gleam:2:7
+  │
+2 │   x + 2
+  │       ^ This code
+  │
+  ┌─ generated.js:3:14
+  │
+3 │   return x + 2;
+  │              ^ Gets mapped to this
