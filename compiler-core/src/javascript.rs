@@ -198,28 +198,28 @@ impl<'a> Generator<'a> {
 
         if imports.is_empty() && statements.is_empty() {
             Ok(docvec![
+                sourcemap_reference,
                 type_reference,
                 "export {}",
                 line(),
-                sourcemap_reference,
             ])
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(docvec![type_reference, statements, sourcemap_reference])
+            Ok(docvec![sourcemap_reference, type_reference, statements])
         } else if statements.is_empty() {
             Ok(docvec![
+                sourcemap_reference,
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript, self.line_numbers),
-                sourcemap_reference,
             ])
         } else {
             Ok(docvec![
+                sourcemap_reference,
                 type_reference,
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript, self.line_numbers),
                 line(),
                 statements,
                 line(),
-                sourcemap_reference,
             ])
         }
     }
