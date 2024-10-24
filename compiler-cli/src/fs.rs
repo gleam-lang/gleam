@@ -13,7 +13,6 @@ use gleam_core::{
 };
 use std::{
     collections::HashSet,
-    ffi::OsStr,
     fmt::Debug,
     fs::File,
     io::{self, BufRead, BufReader, Write},
@@ -74,38 +73,6 @@ impl ProjectIO {
 }
 
 impl FileSystemReader for ProjectIO {
-    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        if !dir.is_dir() {
-            return vec![];
-        }
-        let dir = dir.to_path_buf();
-        walkdir::WalkDir::new(dir)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-            .map(|d| d.into_path())
-            .filter(move |d| d.extension() == Some(OsStr::new("gleam")))
-            .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
-            .collect()
-    }
-
-    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        if !dir.is_dir() {
-            return vec![];
-        }
-        let dir = dir.to_path_buf();
-        walkdir::WalkDir::new(dir)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-            .filter(|e| e.file_type().is_file())
-            .map(|d| d.into_path())
-            .filter(|p| p.extension().and_then(OsStr::to_str) == Some("cache"))
-            .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
-            .collect()
-    }
-
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {
         read(path)
     }

@@ -57,8 +57,9 @@ impl FileSystemWriter for WasmFileSystem {
         Ok(())
     }
 
-    fn mkdir(&self, _: &Utf8Path) -> Result<(), Error> {
-        Ok(())
+    fn mkdir(&self, path: &Utf8Path) -> Result<(), Error> {
+        tracing::trace!("mkdir {:?}", path);
+        self.imfs.mkdir(path)
     }
 
     fn hardlink(&self, _: &Utf8Path, _: &Utf8Path) -> Result<(), Error> {
@@ -90,16 +91,6 @@ impl FileSystemWriter for WasmFileSystem {
 }
 
 impl FileSystemReader for WasmFileSystem {
-    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        tracing::trace!("gleam_source_files   {:?}", dir);
-        self.imfs.gleam_source_files(dir)
-    }
-
-    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        tracing::trace!("gleam_metadata_files {:?}", dir);
-        self.imfs.gleam_cache_files(dir)
-    }
-
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {
         tracing::trace!("read {:?}", path);
         self.imfs.read(path)
@@ -112,7 +103,7 @@ impl FileSystemReader for WasmFileSystem {
 
     fn is_directory(&self, path: &Utf8Path) -> bool {
         tracing::trace!("is_directory {:?}", path);
-        false
+        self.imfs.is_directory(path)
     }
 
     fn reader(&self, path: &Utf8Path) -> Result<WrappedReader, Error> {

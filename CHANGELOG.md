@@ -32,6 +32,10 @@
 
   ([Jason Sipula](https://github.com/SnakeDoc))
 
+- FFI files (such as `.mjs` and `.erl`) are now permitted in
+subdirectories of `src/` and `test/`.
+([PgBiel](https://github.com/PgBiel))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when
@@ -268,6 +272,10 @@
 - Fixed a bug in the error message when using wrong values in a pipe where the
   message would swap the "Expected" and "Found" types.
   ([Markus Pettersson](https://github.com/MarkusPettersson98/))
+
+- Fixed a bug where a `module.gleam` file would be overwritten by
+a `module.mjs` file of same name without warning. It now produces an error.
+([PgBiel](https://github.com/PgBiel))
 
 ## v1.5.1 - 2024-09-26
 

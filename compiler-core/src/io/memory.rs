@@ -1,5 +1,6 @@
 use super::*;
 use std::ops::Deref;
+use std::path::Path;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -9,18 +10,18 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-// An in memory sharable collection of pretend files that can be used in place
-// of a real file system. It is a shared reference to a set of buffer than can
-// be cheaply cloned, all resulting copies pointing to the same internal
-// buffers.
-//
-// Useful in tests and in environments like the browser where there is no file
-// system.
-//
-// Not thread safe. The compiler is single threaded, so that's OK.
-//
-// Only supports absolute paths.
-//
+/// An in memory sharable collection of pretend files that can be used in place
+/// of a real file system. It is a shared reference to a set of buffer than can
+/// be cheaply cloned, all resulting copies pointing to the same internal
+/// buffers.
+///
+/// Useful in tests and in environments like the browser where there is no file
+/// system.
+///
+/// Not thread safe. The compiler is single threaded, so that's OK.
+///
+/// Only supports absolute paths.
+///
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
     files: Rc<RefCell<HashMap<Utf8PathBuf, InMemoryFile>>>,
@@ -35,6 +36,8 @@ impl InMemoryFileSystem {
         self.files.deref().borrow_mut().clear();
     }
 
+    /// Returns the contents of each file, excluding directories.
+    ///
     /// # Panics
     ///
     /// Panics if this is not the only reference to the underlying files.
@@ -44,7 +47,7 @@ impl InMemoryFileSystem {
             .expect("InMemoryFileSystem::into_files called on a clone")
             .into_inner()
             .into_iter()
-            .map(|(path, file)| (path, file.into_content()))
+            .filter_map(|(path, file)| file.into_content().map(|content| (path, content)))
             .collect()
     }
 
@@ -84,12 +87,47 @@ impl InMemoryFileSystem {
             .modification_time = time;
         Ok(())
     }
+
+    /// Search for files inside a directory and its subdirectories using a
+    /// certain path filter.
+    pub fn search_files_recursively(
+        &self,
+        dir: impl AsRef<Path>,
+        path_filter: impl Fn(&Utf8PathBuf) -> bool,
+    ) -> Vec<Utf8PathBuf> {
+        self.files
+            .deref()
+            .borrow()
+            .iter()
+            .filter(|(_, file)| !file.is_directory())
+            .map(|(file_path, _)| file_path.to_path_buf())
+            .filter(|file_path| file_path.starts_with(&dir))
+            .filter(path_filter)
+            .collect()
+    }
 }
 
 impl FileSystemWriter for InMemoryFileSystem {
     fn delete_directory(&self, path: &Utf8Path) -> Result<(), Error> {
         let mut files = self.files.deref().borrow_mut();
+
+        if files.get(path).is_some_and(|f| !f.is_directory()) {
+            return Err(Error::FileIo {
+                kind: FileKind::Directory,
+                action: FileIoAction::Delete,
+                path: path.to_path_buf(),
+                err: None,
+            });
+        }
+
         let _ = files.remove(path);
+
+        // Remove any files in the directory
+        while let Some(file) = files.keys().find(|file| file.starts_with(path)) {
+            let file = file.clone();
+            let _ = files.remove(&file);
+        }
+
         Ok(())
     }
 
@@ -101,7 +139,28 @@ impl FileSystemWriter for InMemoryFileSystem {
         panic!("unimplemented") // TODO
     }
 
-    fn mkdir(&self, _: &Utf8Path) -> Result<(), Error> {
+    fn mkdir(&self, path: &Utf8Path) -> Result<(), Error> {
+        // Traverse ancestors from parent to root
+        // Create each missing ancestor
+        for ancestor in path.ancestors() {
+            if ancestor == "" {
+                continue;
+            }
+            // Ensure we don't overwrite an existing file.
+            // We can ignore existing directories though.
+            let mut files = self.files.deref().borrow_mut();
+            if files.get(ancestor).is_some_and(|f| !f.is_directory()) {
+                return Err(Error::FileIo {
+                    kind: FileKind::Directory,
+                    action: FileIoAction::Create,
+                    path: ancestor.to_path_buf(),
+                    err: None,
+                });
+            }
+            let dir = InMemoryFile::directory();
+            _ = files.insert(ancestor.to_path_buf(), dir);
+        }
+
         Ok(())
     }
 
@@ -114,7 +173,16 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn delete_file(&self, path: &Utf8Path) -> Result<(), Error> {
-        let _ = self.files.deref().borrow_mut().remove(path);
+        let mut files = self.files.deref().borrow_mut();
+        if files.get(path).is_some_and(|f| f.is_directory()) {
+            return Err(Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::Delete,
+                path: path.to_path_buf(),
+                err: None,
+            });
+        }
+        let _ = files.remove(path);
         Ok(())
     }
 
@@ -123,6 +191,11 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn write_bytes(&self, path: &Utf8Path, content: &[u8]) -> Result<(), Error> {
+        // Ensure directories exist
+        if let Some(parent) = path.parent() {
+            self.mkdir(parent)?;
+        }
+
         let mut file = InMemoryFile::default();
         _ = io::Write::write(&mut file, content).expect("channel buffer write");
         _ = self
@@ -143,38 +216,19 @@ impl FileSystemReader for InMemoryFileSystem {
         Ok(path.to_path_buf())
     }
 
-    fn gleam_source_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.files
-            .deref()
-            .borrow()
-            .iter()
-            .map(|(file_path, _)| file_path.to_path_buf())
-            .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some("gleam"))
-            .collect()
-    }
-
-    fn gleam_cache_files(&self, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
-        self.files
-            .deref()
-            .borrow()
-            .iter()
-            .map(|(file_path, _)| file_path.to_path_buf())
-            .filter(|file_path| file_path.starts_with(dir))
-            .filter(|file_path| file_path.extension() == Some("cache"))
-            .collect()
-    }
-
     fn read(&self, path: &Utf8Path) -> Result<String, Error> {
         let path = path.to_path_buf();
         let files = self.files.deref().borrow();
-        let file = files.get(&path).ok_or_else(|| Error::FileIo {
-            kind: FileKind::File,
-            action: FileIoAction::Open,
-            path: path.clone(),
-            err: None,
-        })?;
-        let bytes = file.buffer.borrow();
+        let buffer = files
+            .get(&path)
+            .and_then(|file| file.node.as_file_buffer())
+            .ok_or_else(|| Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::Open,
+                path: path.clone(),
+                err: None,
+            })?;
+        let bytes = buffer.borrow();
         let unicode = String::from_utf8(bytes.clone()).map_err(|err| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Read,
@@ -187,26 +241,33 @@ impl FileSystemReader for InMemoryFileSystem {
     fn read_bytes(&self, path: &Utf8Path) -> Result<Vec<u8>, Error> {
         let path = path.to_path_buf();
         let files = self.files.deref().borrow();
-        let file = files.get(&path).ok_or_else(|| Error::FileIo {
-            kind: FileKind::File,
-            action: FileIoAction::Open,
-            path: path.clone(),
-            err: None,
-        })?;
-        let bytes = file.buffer.borrow().clone();
+        let buffer = files
+            .get(&path)
+            .and_then(|file| file.node.as_file_buffer())
+            .ok_or_else(|| Error::FileIo {
+                kind: FileKind::File,
+                action: FileIoAction::Open,
+                path: path.clone(),
+                err: None,
+            })?;
+        let bytes = buffer.borrow().clone();
         Ok(bytes)
     }
 
     fn is_file(&self, path: &Utf8Path) -> bool {
-        self.files.deref().borrow().contains_key(path)
+        self.files
+            .deref()
+            .borrow()
+            .get(path)
+            .is_some_and(|file| !file.is_directory())
     }
 
     fn is_directory(&self, path: &Utf8Path) -> bool {
         self.files
             .deref()
             .borrow()
-            .keys()
-            .any(|file_path| file_path.starts_with(path))
+            .get(path)
+            .is_some_and(|file| file.is_directory())
     }
 
     fn reader(&self, _path: &Utf8Path) -> Result<WrappedReader, Error> {
@@ -221,7 +282,7 @@ impl FileSystemReader for InMemoryFileSystem {
                 .borrow()
                 .iter()
                 .map(|(file_path, _)| file_path.to_path_buf())
-                .filter(|file_path| file_path.starts_with(path))
+                .filter(|file_path| file_path.parent().is_some_and(|parent| path == parent))
                 .map(DirEntry::from_pathbuf)
                 .map(Ok),
         );
@@ -241,33 +302,81 @@ impl FileSystemReader for InMemoryFileSystem {
     }
 }
 
-// An in memory sharable that can be used in place of a real file. It is a
-// shared reference to a buffer than can be cheaply cloned, all resulting copies
-// pointing to the same internal buffer.
-//
-// Useful in tests and in environments like the browser where there is no file
-// system.
-//
-// Not thread safe. The compiler is single threaded, so that's OK.
-//
+/// The representation of a file or directory in the in-memory filesystem.
+///
+/// Stores a file's buffer of contents.
+///
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum InMemoryFileNode {
+    File(Rc<RefCell<Vec<u8>>>),
+    Directory,
+}
+
+impl InMemoryFileNode {
+    /// Returns this file's file buffer if this isn't a directory.
+    fn as_file_buffer(&self) -> Option<&Rc<RefCell<Vec<u8>>>> {
+        match self {
+            Self::File(buffer) => Some(buffer),
+            Self::Directory => None,
+        }
+    }
+
+    /// Returns this file's file buffer if this isn't a directory.
+    fn into_file_buffer(self) -> Option<Rc<RefCell<Vec<u8>>>> {
+        match self {
+            Self::File(buffer) => Some(buffer),
+            Self::Directory => None,
+        }
+    }
+}
+
+/// An in memory sharable that can be used in place of a real file. It is a
+/// shared reference to a buffer than can be cheaply cloned, all resulting copies
+/// pointing to the same internal buffer.
+///
+/// Useful in tests and in environments like the browser where there is no file
+/// system.
+///
+/// This struct holds common properties of different types of filesystem nodes
+/// (files and directories). The `node` field contains the file's content
+/// buffer, if this is not a directory.
+///
+/// Not thread safe. The compiler is single threaded, so that's OK.
+///
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct InMemoryFile {
-    buffer: Rc<RefCell<Vec<u8>>>,
+    node: InMemoryFileNode,
     modification_time: SystemTime,
 }
 
 impl InMemoryFile {
+    /// Creates a directory.
+    pub fn directory() -> Self {
+        Self {
+            node: InMemoryFileNode::Directory,
+            ..Default::default()
+        }
+    }
+
+    /// Checks whether this is a directory's entry.
+    pub fn is_directory(&self) -> bool {
+        matches!(self.node, InMemoryFileNode::Directory)
+    }
+
+    /// Returns this file's contents if this is not a directory.
+    ///
     /// # Panics
     ///
     /// Panics if this is not the only reference to the underlying files.
     ///
-    pub fn into_content(self) -> Content {
-        let contents = Rc::try_unwrap(self.buffer)
+    pub fn into_content(self) -> Option<Content> {
+        let buffer = self.node.into_file_buffer()?;
+        let contents = Rc::try_unwrap(buffer)
             .expect("InMemoryFile::into_content called with multiple references")
             .into_inner();
         match String::from_utf8(contents) {
-            Ok(s) => Content::Text(s),
-            Err(e) => Content::Binary(e.into_bytes()),
+            Ok(s) => Some(Content::Text(s)),
+            Err(e) => Some(Content::Binary(e.into_bytes())),
         }
     }
 }
@@ -275,7 +384,7 @@ impl InMemoryFile {
 impl Default for InMemoryFile {
     fn default() -> Self {
         Self {
-            buffer: Default::default(),
+            node: InMemoryFileNode::File(Default::default()),
             // We use a fixed time here so that the tests are deterministic. In
             // future we may want to inject this in some fashion.
             modification_time: SystemTime::UNIX_EPOCH + Duration::from_secs(663112800),
@@ -285,12 +394,20 @@ impl Default for InMemoryFile {
 
 impl io::Write for InMemoryFile {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        let mut reference = (*self.buffer).borrow_mut();
+        let Some(buffer) = self.node.as_file_buffer() else {
+            // Not a file
+            return Err(io::Error::from(io::ErrorKind::NotFound));
+        };
+        let mut reference = (*buffer).borrow_mut();
         reference.write(buf)
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        let mut reference = (*self.buffer).borrow_mut();
+        let Some(buffer) = self.node.as_file_buffer() else {
+            // Not a file
+            return Err(io::Error::from(io::ErrorKind::NotFound));
+        };
+        let mut reference = (*buffer).borrow_mut();
         reference.flush()
     }
 }
@@ -318,4 +435,41 @@ impl BeamCompiler for InMemoryFileSystem {
     ) -> Result<(), Error> {
         Ok(()) // Always succeed.
     }
+}
+
+#[test]
+fn test_in_memory_dir_walking() -> Result<(), Error> {
+    use itertools::Itertools;
+    let imfs = InMemoryFileSystem::new();
+    imfs.write(&Utf8PathBuf::from("/a/b/a.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/b/b.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/b/c.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/b/d.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/c/e.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/c/d/f.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/g.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/h.txt"), "a")?;
+    imfs.mkdir(&Utf8PathBuf::from("/a/e"))?;
+
+    let mut walked_entries: Vec<String> = DirWalker::new(Utf8PathBuf::from("/a/"))
+        .into_file_iter(&imfs)
+        .map_ok(Utf8PathBuf::into_string)
+        .try_collect()?;
+
+    // Keep test deterministic due to hash map usage
+    walked_entries.sort();
+
+    assert_eq!(
+        vec![
+            "/a/b/a.txt".to_owned(),
+            "/a/b/b.txt".to_owned(),
+            "/a/b/c.txt".to_owned(),
+            "/a/c/d/f.txt".to_owned(),
+            "/a/c/e.txt".to_owned(),
+            "/a/g.txt".to_owned(),
+        ],
+        walked_entries,
+    );
+
+    Ok(())
 }
