@@ -20,4 +20,4 @@ error: Unknown module value
 4 │   one.Two
   │      ^^^^
 
-The module `one` does not have a `Two` value.
+one.Two is a type/type constructor, it cannot be used as a value
