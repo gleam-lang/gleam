@@ -629,8 +629,10 @@ pub struct ModuleInterface {
     pub name: EcoString,
     pub origin: Origin,
     pub package: EcoString,
+    pub documentation: Vec<EcoString>,
     pub types: HashMap<EcoString, TypeConstructor>,
     pub types_value_constructors: HashMap<EcoString, TypeVariantConstructors>,
+    pub type_aliases: HashMap<EcoString, TypeAliasConstructor>,
     pub values: HashMap<EcoString, ValueConstructor>,
     pub accessors: HashMap<EcoString, AccessorsMap>,
     /// Used for mapping to original source locations on disk
@@ -650,6 +652,11 @@ pub struct ModuleInterface {
 impl ModuleInterface {
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
+    }
+
+    pub fn remove_duplicated_type_aliases(&mut self) {
+        self.types
+            .retain(|name, _| !self.type_aliases.contains_key(name));
     }
 }
 
@@ -711,6 +718,7 @@ pub struct TypeValueConstructor {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeValueConstructorField {
+    pub label: Option<EcoString>,
     /// This type of this parameter
     pub type_: Arc<Type>,
 }
@@ -925,6 +933,7 @@ impl TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
     pub publicity: Publicity,
+    pub opaque: bool,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,
@@ -1019,8 +1028,11 @@ impl ValueConstructor {
 pub struct TypeAliasConstructor {
     pub publicity: Publicity,
     pub module: EcoString,
+    pub origin: SrcSpan,
     pub type_: Type,
     pub arity: usize,
+    pub deprecation: Deprecation,
+    pub documentation: Option<EcoString>,
 }
 
 impl ValueConstructor {

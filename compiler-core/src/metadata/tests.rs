@@ -35,9 +35,11 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         is_internal: true,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -89,9 +91,11 @@ fn empty_module() {
         is_internal: true,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "one/two".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -108,9 +112,11 @@ fn with_line_numbers() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "one/two".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(
@@ -131,12 +137,14 @@ fn module_with_private_type() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b".into(),
         types: [(
             "ListIntType".into(),
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Private,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -146,6 +154,7 @@ fn module_with_private_type() {
         )]
         .into(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -162,12 +171,14 @@ fn module_with_app_type() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b".into(),
         types: [(
             "ListIntType".into(),
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -177,6 +188,7 @@ fn module_with_app_type() {
         )]
         .into(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -193,12 +205,14 @@ fn module_with_fn_type() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b".into(),
         types: [(
             "FnType".into(),
             TypeConstructor {
                 type_: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -208,6 +222,7 @@ fn module_with_fn_type() {
         )]
         .into(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -224,12 +239,14 @@ fn module_with_tuple_type() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b".into(),
         types: [(
             "TupleType".into(),
             TypeConstructor {
                 type_: type_::tuple(vec![type_::nil(), type_::float(), type_::int()]),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -239,6 +256,7 @@ fn module_with_tuple_type() {
         )]
         .into(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -261,12 +279,14 @@ fn module_with_generic_type() {
             is_internal: false,
             package: "some_package".into(),
             origin: Origin::Src,
+            documentation: vec![],
             name: "a/b".into(),
             types: [(
                 "TupleType".into(),
                 TypeConstructor {
                     type_: type_::tuple(vec![t1.clone(), t1.clone(), t2.clone()]),
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: Default::default(),
                     module: "the/module".into(),
                     parameters: vec![t1, t2],
@@ -276,6 +296,7 @@ fn module_with_generic_type() {
             )]
             .into(),
             types_value_constructors: HashMap::new(),
+            type_aliases: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
@@ -298,12 +319,14 @@ fn module_with_type_links() {
             is_internal: false,
             package: "some_package".into(),
             origin: Origin::Src,
+            documentation: vec![],
             name: "a".into(),
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
@@ -313,6 +336,7 @@ fn module_with_type_links() {
             )]
             .into(),
             types_value_constructors: HashMap::new(),
+            type_aliases: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
@@ -335,12 +359,14 @@ fn module_with_type_constructor_documentation() {
             is_internal: false,
             package: "some_package".into(),
             origin: Origin::Src,
+            documentation: vec![],
             name: "a".into(),
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: Default::default(),
                     module: "a".into(),
                     parameters: vec![],
@@ -350,6 +376,7 @@ fn module_with_type_constructor_documentation() {
             )]
             .into(),
             types_value_constructors: HashMap::new(),
+            type_aliases: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
@@ -372,12 +399,14 @@ fn module_with_type_constructor_origin() {
             is_internal: false,
             package: "some_package".into(),
             origin: Origin::Src,
+            documentation: vec![],
             name: "a".into(),
             types: [(
                 "SomeType".into(),
                 TypeConstructor {
                     type_,
                     publicity: Publicity::Public,
+                    opaque: false,
                     origin: SrcSpan {
                         start: 535,
                         end: 543,
@@ -390,6 +419,7 @@ fn module_with_type_constructor_origin() {
             )]
             .into(),
             types_value_constructors: HashMap::new(),
+            type_aliases: HashMap::new(),
             values: HashMap::new(),
             accessors: HashMap::new(),
             line_numbers: LineNumbers::new(""),
@@ -408,6 +438,7 @@ fn module_type_to_constructors_mapping() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: [(
@@ -421,6 +452,7 @@ fn module_type_to_constructors_mapping() {
             },
         )]
         .into(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -438,9 +470,11 @@ fn module_fn_value() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -485,9 +519,11 @@ fn deprecated_module_fn_value() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -534,9 +570,11 @@ fn private_module_fn_value() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -583,9 +621,11 @@ fn module_fn_value_regression() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -631,9 +671,11 @@ fn module_fn_value_with_field_map() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -681,9 +723,11 @@ fn record_value() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -724,9 +768,11 @@ fn record_value_with_field_map() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -768,9 +814,11 @@ fn accessors() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: [
             (
@@ -982,9 +1030,11 @@ fn constant_var() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [
             (
@@ -1202,12 +1252,14 @@ fn deprecated_type() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b".into(),
         types: [(
             "ListIntType".into(),
             TypeConstructor {
                 type_: type_::list(type_::int()),
                 publicity: Publicity::Public,
+                opaque: false,
                 origin: Default::default(),
                 module: "the/module".into(),
                 parameters: vec![],
@@ -1219,6 +1271,7 @@ fn deprecated_type() {
         )]
         .into(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         values: HashMap::new(),
         accessors: HashMap::new(),
         line_numbers: LineNumbers::new(""),
@@ -1235,9 +1288,11 @@ fn module_fn_value_with_external_implementations() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -1283,9 +1338,11 @@ fn internal_module_fn() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -1333,9 +1390,11 @@ fn internal_annotated_module_fn() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [(
             "one".into(),
@@ -1387,6 +1446,7 @@ fn type_variable_ids_in_constructors_are_shared() {
         is_internal: false,
         package: "some_package".into(),
         origin: Origin::Src,
+        documentation: vec![],
         name: "a/b/c".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::from([(
@@ -1397,18 +1457,22 @@ fn type_variable_ids_in_constructors_are_shared() {
                     name: "One".into(),
                     parameters: vec![
                         TypeValueConstructorField {
+                            label: None,
                             type_: type_::generic_var(6),
                         },
                         TypeValueConstructorField {
+                            label: None,
                             type_: type_::int(),
                         },
                         TypeValueConstructorField {
+                            label: None,
                             type_: type_::tuple(vec![type_::generic_var(4), type_::generic_var(5)]),
                         },
                     ],
                 }],
             },
         )]),
+        type_aliases: HashMap::new(),
         accessors: HashMap::new(),
         values: [].into(),
         line_numbers: LineNumbers::new(""),
@@ -1424,12 +1488,15 @@ fn type_variable_ids_in_constructors_are_shared() {
                 name: "One".into(),
                 parameters: vec![
                     TypeValueConstructorField {
+                        label: None,
                         type_: type_::generic_var(0),
                     },
                     TypeValueConstructorField {
+                        label: None,
                         type_: type_::int(),
                     },
                     TypeValueConstructorField {
+                        label: None,
                         type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
                     },
                 ],
