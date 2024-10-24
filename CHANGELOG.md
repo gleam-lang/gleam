@@ -19,7 +19,7 @@
 
 ### Compiler
 
-- The compiler now allows the `@deprecated` attribute on custom type constructor records/variants.
+- The compiler now allows deprecating specific constructors of a custom type using the `@deprecated` attribute:
 
   For example:
 
