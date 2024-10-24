@@ -190,7 +190,7 @@ pub enum Error {
         name: EcoString,
         module_name: EcoString,
         value_constructors: Vec<EcoString>,
-        type_with_same_name: bool,
+        context: ModuleValueErrorContext,
     },
 
     ModuleAliasUsedAsName {
@@ -550,6 +550,12 @@ pub enum Error {
         kind: Named,
         name: EcoString,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModuleValueErrorContext {
+    Import { type_with_same_name: bool },
+    Usage { type_with_same_name: bool },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1065,7 +1071,9 @@ pub fn convert_get_value_constructor_error(
             name,
             module_name,
             value_constructors,
-            type_with_same_name: imported_value_as_type,
+            context: ModuleValueErrorContext::Usage {
+                type_with_same_name: imported_value_as_type,
+            },
         },
     }
 }

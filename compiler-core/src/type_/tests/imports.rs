@@ -27,7 +27,7 @@ pub const a = two.Thing(1)
 }
 
 #[test]
-fn using_private_constructo() {
+fn using_private_constructor() {
     assert_with_module_error!(
         ("one", "type Two { Two }"),
         "import one
@@ -51,7 +51,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn using_opaque_constructo() {
+fn using_opaque_constructor() {
     assert_with_module_error!(
         ("one", "pub opaque type Two { Two }"),
         "import one
@@ -147,7 +147,7 @@ pub fn main() {
 }
 
 #[test]
-fn unqualified_using_private_constructo() {
+fn unqualified_using_private_constructor() {
     assert_with_module_error!(
         ("one", "type Two { Two }"),
         "import one.{Two}
@@ -171,7 +171,7 @@ pub fn main(x) {
 }
 
 #[test]
-fn unqualified_using_opaque_constructo() {
+fn unqualified_using_opaque_constructor() {
     assert_with_module_error!(
         ("one", "pub opaque type Two { Two }"),
         "import one.{Two}
