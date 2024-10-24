@@ -265,6 +265,8 @@ pub trait FileSystemReader {
 /// Iterates over Gleam source files (`.gleam`) in a certain directory.
 /// Symlinks are followed.
 pub fn gleam_source_files(io: &impl FileSystemReader, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+    tracing::trace!("gleam_source_files {:?}", dir);
+
     DirWalker::new(dir.to_path_buf())
         .into_file_iter(io)
         .filter_map(Result::ok)
