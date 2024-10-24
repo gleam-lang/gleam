@@ -312,6 +312,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::ConstantRecordConstructorNoArguments => (
+                "I was expecting arguments here",
+                vec!["A record must be passed arguments when constructed.".into()],
+            ),
         }
     }
 }
@@ -380,6 +384,7 @@ pub enum ParseErrorType {
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
+    ConstantRecordConstructorNoArguments, // const x = Record()
 }
 
 impl LexicalError {

@@ -269,6 +269,10 @@
   message would swap the "Expected" and "Found" types.
   ([Markus Pettersson](https://github.com/MarkusPettersson98/))
 
+- Fixed a bug where the parser would incorrectly parse a record constructor with
+  no arguments.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
