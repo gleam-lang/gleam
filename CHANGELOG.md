@@ -126,19 +126,20 @@
 - Optimised creation of bit arrays on the JavaScript target.
   ([Richard Viney](https://github.com/richard-viney))
 
-- The compiler can now allow you to perform safe record updates for
-  specific variants of a type after pattern matching on it:
+- The compiler can now narrow the variant of custom types when pattern matching,
+  allowing for safe record updates if the variant is known, or access fields
+  which are only present on one variant:
 
   ```gleam
   pub type Pet {
     Dog(name: String, cuteness: Int)
-    Turtle(name: String, speed: Int)
+    Turtle(name: String, speed: Int, times_renamed: Int)
   }
 
   pub fn rename(pet: Pet, to name: String) -> Pet {
     case pet {
       Dog(..) as dog -> Dog(..dog, name:)
-      Turtle(..) as turtle -> Turtle(..turtle, name:)
+      Turtle(..) -> Turtle(..pet, name:, times_renamed: pet.times_renamed + 1)
     }
   }
   ```
