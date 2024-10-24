@@ -436,3 +436,40 @@ impl BeamCompiler for InMemoryFileSystem {
         Ok(()) // Always succeed.
     }
 }
+
+#[test]
+fn test_in_memory_dir_walking() -> Result<(), Error> {
+    use itertools::Itertools;
+    let imfs = InMemoryFileSystem::new();
+    imfs.write(&Utf8PathBuf::from("/a/b/a.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/b/b.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/b/c.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/b/d.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/c/e.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/c/d/f.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/a/g.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/h.txt"), "a")?;
+    imfs.mkdir(&Utf8PathBuf::from("/a/e"))?;
+
+    let mut walked_entries: Vec<String> = DirWalker::new(Utf8PathBuf::from("/a/"))
+        .into_file_iter(&imfs)
+        .map_ok(Utf8PathBuf::into_string)
+        .try_collect()?;
+
+    // Keep test deterministic due to hash map usage
+    walked_entries.sort();
+
+    assert_eq!(
+        vec![
+            "/a/b/a.txt".to_owned(),
+            "/a/b/b.txt".to_owned(),
+            "/a/b/c.txt".to_owned(),
+            "/a/c/d/f.txt".to_owned(),
+            "/a/c/e.txt".to_owned(),
+            "/a/g.txt".to_owned(),
+        ],
+        walked_entries,
+    );
+
+    Ok(())
+}
