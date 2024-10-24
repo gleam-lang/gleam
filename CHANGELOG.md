@@ -220,6 +220,30 @@
 
   ([Jiangda Wang](https://github.com/Frank-III))
 
+- The Language Server now suggests a code action to convert unqualified imports to
+  qualified imports, which updates all occurrences of the unqualified name
+  throughout the module:
+
+  ```gleam
+  import list.{map}
+
+  pub fn main() {
+    map([1, 2, 3], fn(x) { x * 2 })
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  import list.{}
+
+  pub fn main() {
+    list.map([1, 2, 3], fn(x) { x * 2 })
+  }
+  ```
+
+  ([Jiangda Wang](https://github.com/Frank-III))
+
 ### Bug Fixes
 
 - Fixed a bug in the compiler where shadowing a sized value in a bit pattern
