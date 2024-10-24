@@ -8,9 +8,9 @@ note:
 1 │ fn add_2(x) {
   │ ^ This code
   │
-  ┌─ generated.js:1:1
+  ┌─ generated.js:2:1
   │
-1 │ function add_2(x) {
+2 │ function add_2(x) {
   │ ^ Gets mapped to this
 
 ---
@@ -20,9 +20,9 @@ note:
 2 │   x + 2
   │   ^ This code
   │
-  ┌─ generated.js:2:3
+  ┌─ generated.js:3:3
   │
-2 │   return x + 2;
+3 │   return x + 2;
   │   ^ Gets mapped to this
 
 ---
@@ -32,9 +32,9 @@ note:
 2 │   x + 2
   │   ^ This code
   │
-  ┌─ generated.js:2:10
+  ┌─ generated.js:3:10
   │
-2 │   return x + 2;
+3 │   return x + 2;
   │          ^ Gets mapped to this
 
 ---
@@ -44,7 +44,7 @@ note:
 2 │   x + 2
   │       ^ This code
   │
-  ┌─ generated.js:2:14
+  ┌─ generated.js:3:14
   │
-2 │   return x + 2;
+3 │   return x + 2;
   │              ^ Gets mapped to this
