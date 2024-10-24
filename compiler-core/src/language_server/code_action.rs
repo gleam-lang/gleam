@@ -1112,15 +1112,15 @@ pub struct QualifiedConstructor<'a> {
     module_aliased: bool,
     used_name: EcoString,
     constructor: EcoString,
-    is_type: bool,
+    layer: ast::Layer,
 }
 
 impl<'a> QualifiedConstructor<'a> {
     fn constructor_import(&self) -> String {
-        if self.is_type {
-            format!("type {}", self.constructor)
-        } else {
+        if self.layer.is_value() {
             self.constructor.to_string()
+        } else {
+            format!("type {}", self.constructor)
         }
     }
 }
@@ -1145,16 +1145,16 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
         &self,
         module_name: &EcoString,
         constructor: &EcoString,
-        is_type: bool,
+        layer: ast::Layer,
     ) -> Option<&'a ast::Import<EcoString>> {
         let mut matching_import = None;
 
         for def in &self.module.ast.definitions {
             if let ast::Definition::Import(import) = def {
-                let imported = if is_type {
-                    &import.unqualified_types
-                } else {
+                let imported = if layer.is_value() {
                     &import.unqualified_values
+                } else {
+                    &import.unqualified_types
                 };
 
                 if import.module != *module_name
@@ -1223,7 +1223,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                         .and_then(|node| {
                             if let Located::Annotation(_, ty) = node {
                                 if let Some((module, _)) = ty.named_type_name() {
-                                    return self.get_module_import(&module, name, true);
+                                    return self.get_module_import(&module, name, ast::Layer::Type);
                                 }
                             }
                             None
@@ -1234,7 +1234,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                         module_aliased: import.as_name.is_some(),
                         used_name: module_alias.clone(),
                         constructor: name.clone(),
-                        is_type: true,
+                        layer: ast::Layer::Type,
                     });
                 }
             }
@@ -1258,13 +1258,15 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                 ..
             } = constructor
             {
-                if let Some(import) = self.get_module_import(module_name, constructor_name, false) {
+                if let Some(import) =
+                    self.get_module_import(module_name, constructor_name, ast::Layer::Value)
+                {
                     self.qualified_constructor = Some(QualifiedConstructor {
                         import,
                         module_aliased: import.as_name.is_some(),
                         used_name: module_alias.clone(),
                         constructor: constructor_name.clone(),
-                        is_type: false,
+                        layer: ast::Layer::Value,
                     });
                 }
             }
@@ -1294,13 +1296,15 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
                 if let crate::analyse::Inferred::Known(constructor) = constructor {
-                    if let Some(import) = self.get_module_import(&constructor.module, name, false) {
+                    if let Some(import) =
+                        self.get_module_import(&constructor.module, name, ast::Layer::Value)
+                    {
                         self.qualified_constructor = Some(QualifiedConstructor {
                             import,
                             module_aliased: import.as_name.is_some(),
                             used_name: module_alias.clone(),
                             constructor: name.clone(),
-                            is_type: false,
+                            layer: ast::Layer::Value,
                         });
                     }
                 }
@@ -1398,20 +1402,20 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     fn edit_import(&mut self) {
         let QualifiedConstructor {
             constructor,
-            is_type,
+            layer,
             import,
             ..
         } = &self.qualified_constructor;
-        let is_imported = if *is_type {
-            import
-                .unqualified_types
-                .iter()
-                .any(|type_| type_.used_name() == constructor)
-        } else {
+        let is_imported = if layer.is_value() {
             import
                 .unqualified_values
                 .iter()
                 .any(|value| value.used_name() == constructor)
+        } else {
+            import
+                .unqualified_values
+                .iter()
+                .any(|type_| type_.used_name() == constructor)
         };
         if is_imported {
             return;
@@ -1569,11 +1573,11 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             let QualifiedConstructor {
                 used_name,
                 constructor,
-                is_type,
+                layer,
                 ..
             } = &self.qualified_constructor;
 
-            if *is_type && used_name == module_name && name == constructor {
+            if !layer.is_value() && used_name == module_name && name == constructor {
                 self.remove_module_qualifier(*location, QualifiedConstructorType::Type);
             }
         }
@@ -1593,11 +1597,11 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             let QualifiedConstructor {
                 used_name,
                 constructor,
-                is_type,
+                layer,
                 ..
             } = &self.qualified_constructor;
 
-            if !*is_type && used_name == module_alias && name == constructor {
+            if layer.is_value() && used_name == module_alias && name == constructor {
                 self.remove_module_qualifier(*location, QualifiedConstructorType::RecordValue);
             }
         }
@@ -1627,11 +1631,11 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
                 let QualifiedConstructor {
                     used_name,
                     constructor,
-                    is_type,
+                    layer,
                     ..
                 } = &self.qualified_constructor;
 
-                if !*is_type && used_name == module_alias && name == constructor {
+                if layer.is_value() && used_name == module_alias && name == constructor {
                     self.remove_module_qualifier(
                         *location,
                         QualifiedConstructorType::PatternRecord,
@@ -1677,7 +1681,7 @@ pub fn code_action_convert_qualified_constructor_to_unqualified(
 struct UnqualifiedConstructor<'a> {
     module_name: EcoString,
     constructor: &'a ast::UnqualifiedImport,
-    is_type: bool,
+    layer: ast::Layer,
 }
 
 struct UnqualifiedToQualifiedImportFirstPass<'a> {
@@ -1716,7 +1720,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                             Some(UnqualifiedConstructor {
                                 constructor: value,
                                 module_name: import.used_name()?,
-                                is_type: false,
+                                layer: ast::Layer::Value,
                             })
                         }),
                     _ => None,
@@ -1739,7 +1743,7 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
                             return Some(UnqualifiedConstructor {
                                 constructor: ty,
                                 module_name: import.used_name()?,
-                                is_type: true,
+                                layer: ast::Layer::Type,
                             });
                         }
                         None
@@ -1998,11 +2002,9 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     ) {
         if module.is_none() {
             let UnqualifiedConstructor {
-                constructor,
-                is_type,
-                ..
+                constructor, layer, ..
             } = &self.unqualified_constructor;
-            if *is_type && constructor.used_name() == name {
+            if !layer.is_value() && constructor.used_name() == name {
                 self.add_module_qualifier(*location);
             }
         }
@@ -2017,10 +2019,10 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     ) {
         let UnqualifiedConstructor {
             constructor: wanted_constructor,
-            is_type,
+            layer,
             ..
         } = &self.unqualified_constructor;
-        if !*is_type && wanted_constructor.used_name() == name {
+        if layer.is_value() && wanted_constructor.used_name() == name {
             self.add_module_qualifier(*location);
         }
         ast::visit::visit_typed_expr_var(self, location, constructor, name);
@@ -2039,10 +2041,10 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         if module.is_none() {
             let UnqualifiedConstructor {
                 constructor: wanted_constructor,
-                is_type,
+                layer,
                 ..
             } = &self.unqualified_constructor;
-            if !*is_type && wanted_constructor.used_name() == name {
+            if layer.is_value() && wanted_constructor.used_name() == name {
                 self.add_module_qualifier(*location);
             }
         }
