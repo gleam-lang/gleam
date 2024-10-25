@@ -3,6 +3,7 @@ use crate::{
     build::SourceFingerprint,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     line_numbers::LineNumbers,
+    package_interface,
 };
 use std::time::Duration;
 

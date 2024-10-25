@@ -166,7 +166,9 @@ where
             .collect_vec();
 
         // Store the compiled module information
-        for module in modules {
+        for mut module in modules {
+            module.ast.type_info.remove_duplicated_type_aliases();
+
             let path = module.input_path.as_os_str().to_string_lossy().to_string();
             let line_numbers = LineNumbers::new(&module.code);
             let source = ModuleSourceInformation { path, line_numbers };

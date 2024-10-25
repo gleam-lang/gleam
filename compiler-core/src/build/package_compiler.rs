@@ -1,5 +1,6 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
+use crate::package_interface::{self, ModuleInterface};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{SrcSpan, TypedModule, UntypedModule},
@@ -22,6 +23,7 @@ use crate::{
 };
 use askama::Template;
 use ecow::EcoString;
+use std::borrow::BorrowMut;
 use std::collections::HashSet;
 use std::{collections::HashMap, fmt::write, time::SystemTime};
 use vec1::Vec1;
@@ -29,6 +31,11 @@ use vec1::Vec1;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
+
+pub struct Compiled {
+    pub modules: Vec<Module>,
+    pub cached_modules: Vec<type_::ModuleInterface>,
+}
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -104,7 +111,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<Compiled, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -146,7 +153,7 @@ where
         };
 
         // Load the cached modules that have previously been compiled
-        for module in loaded.cached.into_iter() {
+        for module in loaded.cached.clone().into_iter() {
             // Emit any cached warnings.
             // Note that `self.cached_warnings` is set to `Ignore` (such as for
             // dependency packages) then this field will not be populated.
@@ -182,9 +189,18 @@ where
             incomplete_modules,
         );
 
-        let modules = match outcome {
+        let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
+            Outcome::PartialFailure(modules, err) => {
+                return Outcome::PartialFailure(
+                    Compiled {
+                        modules,
+                        cached_modules: loaded.cached,
+                    },
+                    err,
+                )
+            }
+            Outcome::TotalFailure(err) => return Outcome::TotalFailure(err),
         };
 
         tracing::debug!("performing_code_generation");
@@ -193,11 +209,18 @@ where
             return error.into();
         }
 
+        for mut module in modules.iter_mut() {
+            module.ast.type_info.remove_duplicated_type_aliases();
+            module.attach_doc_and_module_comments();
+        }
+
         if let Err(error) = self.encode_and_write_metadata(&modules) {
             return error.into();
         }
-
-        Outcome::Ok(modules)
+        Outcome::Ok(Compiled {
+            modules,
+            cached_modules: loaded.cached,
+        })
     }
 
     fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
@@ -245,7 +268,7 @@ where
         Ok(())
     }
 
-    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
+    fn encode_and_write_metadata(&mut self, modules: &Vec<Module>) -> Result<()> {
         if !self.write_metadata {
             tracing::debug!("package_metadata_writing_disabled");
             return Ok(());
@@ -479,12 +502,15 @@ fn analyse(
         .infer_module(ast, line_numbers, path.clone());
 
         match analysis {
-            Outcome::Ok(ast) => {
+            Outcome::Ok(mut ast) => {
                 // Module has compiled successfully. Make sure it isn't marked as incomplete.
                 let _ = incomplete_modules.remove(&name.clone());
                 // Register the types from this module so they can be imported into
                 // other modules.
                 let _ = module_types.insert(name.clone(), ast.type_info.clone());
+
+                ast.type_info.remove_duplicated_type_aliases();
+
                 // Register the successfully type checked module data so that it can be
                 // used for code generation and in the language server.
                 modules.push(Module {
@@ -499,7 +525,7 @@ fn analyse(
                 });
             }
 
-            Outcome::PartialFailure(ast, errors) => {
+            Outcome::PartialFailure(mut ast, errors) => {
                 let error = Error::Type {
                     names: ast.names.clone(),
                     path: path.clone(),
@@ -508,6 +534,9 @@ fn analyse(
                 };
                 // Mark as incomplete so that this module isn't reloaded from cache.
                 let _ = incomplete_modules.insert(name.clone());
+
+                ast.type_info.remove_duplicated_type_aliases();
+
                 // Register the partially type checked module data so that it can be
                 // used in the language server.
                 modules.push(Module {
