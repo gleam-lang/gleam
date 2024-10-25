@@ -374,8 +374,11 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript, prelude_location, self.target_support)
-            .render(&self.io, modules)?;
+        JavaScript::new(&self.out, typescript, prelude_location, self.target_support).render(
+            &self.io,
+            modules,
+            self.stdlib_is_a_dependency(),
+        )?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
@@ -426,6 +429,10 @@ where
         }
 
         Ok(())
+    }
+
+    fn stdlib_is_a_dependency(&self) -> bool {
+        self.config.dependencies.contains_key("gleam_stdlib")
     }
 }
 
