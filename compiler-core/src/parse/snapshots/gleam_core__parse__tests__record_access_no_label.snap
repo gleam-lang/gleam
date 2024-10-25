@@ -64,6 +64,7 @@ Parsed {
                                     },
                                 ],
                                 documentation: None,
+                                deprecation: NotDeprecated,
                             },
                         ],
                         documentation: None,

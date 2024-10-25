@@ -1,0 +1,12 @@
+---
+source: compiler-core/src/parse/tests.rs
+assertion_line: 1539
+expression: "\ntype Wibble {\n    @deprecated(\"1\")\n    @deprecated(\"2\")\n    Wibble1\n    Wibble2\n}\n"
+---
+error: Syntax error
+  ┌─ /src/parse/error.gleam:4:5
+  │
+4 │     @deprecated("2")
+  │     ^^^^^^^^^^^ Duplicate attribute
+
+This attribute has already been given.

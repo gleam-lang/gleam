@@ -31,6 +31,58 @@ pub fn name() -> String {
 }
 
 #[test]
+fn deprecated_all_varients_type() {
+    assert_module_error!(
+        r#"
+pub type Numbers {
+  @deprecated("1")
+  One
+  @deprecated("2")
+  Two
+}
+"#
+    );
+}
+
+#[test]
+fn deprecated_varients_type() {
+    assert_warning!(
+        r#"
+pub type Numbers {
+  @deprecated("1")
+  One
+  Two
+}
+
+pub fn num() {
+  let _one = One
+  let _two = Two
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn depreacted_constructor_deprecate_all_varients() {
+    assert_warning!(
+        r#"
+@deprecated("2")
+pub type Numbers {
+  @deprecated("1")
+  One
+  Two
+}
+
+pub fn num() {
+  let _two = Two
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn fault_tolerance() {
     // An error in a custom type does not stop analysis
     assert_module_error!(

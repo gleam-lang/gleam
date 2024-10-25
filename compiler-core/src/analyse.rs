@@ -822,7 +822,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             } => self.track_feature_usage(FeatureKind::InternalAnnotation, location),
         }
 
-        let constructors = constructors
+        let constructors: Vec<RecordConstructor<Arc<Type>>> = constructors
             .into_iter()
             .map(
                 |RecordConstructor {
@@ -831,6 +831,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      name,
                      arguments: args,
                      documentation,
+                     deprecation: constructor_deprecation,
                  }| {
                     self.check_name_case(name_location, &name, Named::CustomTypeVariant);
 
@@ -867,6 +868,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         name,
                         arguments: args,
                         documentation,
+                        deprecation: constructor_deprecation,
                     }
                 },
             )
@@ -876,6 +878,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("Could not find preregistered type constructor ")
             .parameters
             .clone();
+
+        // check if all constructors are deprecated if so error
+        if !constructors.is_empty()
+            && constructors
+                .iter()
+                .all(|record| record.deprecation.is_deprecated())
+        {
+            self.problems
+                .error(Error::AllVariantsConstructorDeprecated { location });
+        }
 
         Ok(Definition::CustomType(CustomType {
             documentation: doc,
@@ -1008,11 +1020,19 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 *publicity
             };
 
+            // If the whole custom type is deprecated all of its varints are too.
+            // Otherwise just the varint(s) attributed as deprecated are.
+            let deprecate_constructor = if deprecation.is_deprecated() {
+                deprecation
+            } else {
+                &constructor.deprecation
+            };
+
             environment.insert_module_value(
                 constructor.name.clone(),
                 ValueConstructor {
                     publicity: value_constructor_publicity,
-                    deprecation: deprecation.clone(),
+                    deprecation: deprecate_constructor.clone(),
                     type_: type_.clone(),
                     variant: constructor_info.clone(),
                 },
@@ -1036,7 +1056,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor_info,
                 type_,
                 value_constructor_publicity,
-                deprecation.clone(),
+                deprecate_constructor.clone(),
             );
 
             environment.names.named_constructor_in_scope(
