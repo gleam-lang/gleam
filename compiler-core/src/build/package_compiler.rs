@@ -406,7 +406,7 @@ where
         JavaScript::new(&self.out, typescript, prelude_location, self.target_support).render(
             &self.io,
             modules,
-            self.stdlib_is_a_dependency(),
+            self.stdlib_package(),
         )?;
 
         if self.copy_native_files {
@@ -460,9 +460,19 @@ where
         Ok(())
     }
 
-    fn stdlib_is_a_dependency(&self) -> bool {
-        self.config.dependencies.contains_key("gleam_stdlib")
+    fn stdlib_package(&self) -> StdlibPackage {
+        if self.config.dependencies.contains_key("gleam_stdlib") {
+            StdlibPackage::Present
+        } else {
+            StdlibPackage::Missing
+        }
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum StdlibPackage {
+    Present,
+    Missing,
 }
 
 fn analyse(

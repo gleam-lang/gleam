@@ -1,7 +1,7 @@
 use crate::{
     Result,
     analyse::TargetSupport,
-    build::{ErlangAppCodegenConfiguration, Module},
+    build::{package_compiler::StdlibPackage, ErlangAppCodegenConfiguration, Module},
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
@@ -190,14 +190,14 @@ impl<'a> JavaScript<'a> {
         &self,
         writer: &impl FileSystemWriter,
         modules: &[Module],
-        stdlib_is_a_dependency: bool,
+        stdlib_package: StdlibPackage,
     ) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
             if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
-            self.js_module(writer, module, &js_name, stdlib_is_a_dependency)?
+            self.js_module(writer, module, &js_name, stdlib_package)?
         }
         self.write_prelude(writer)?;
         Ok(())
@@ -248,7 +248,7 @@ impl<'a> JavaScript<'a> {
         writer: &impl FileSystemWriter,
         module: &Module,
         js_name: &str,
-        stdblib_is_a_dependency: bool,
+        stdlib_package: StdlibPackage,
     ) -> Result<()> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
@@ -260,7 +260,7 @@ impl<'a> JavaScript<'a> {
             &module.code,
             self.target_support,
             self.typescript,
-            stdblib_is_a_dependency,
+            stdlib_package,
         );
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
