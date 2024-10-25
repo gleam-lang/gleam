@@ -197,10 +197,10 @@ impl<'a> Generator<'a> {
                 )),
                 &[],
             );
-            self.register_prelude_usage(&mut imports, "BitArray", None);
-            self.register_prelude_usage(&mut imports, "List", None);
-            self.register_prelude_usage(&mut imports, "UtfCodepoint", None);
-            self.register_prelude_usage(&mut imports, "CustomType", None);
+            self.register_prelude_usage(&mut imports, "BitArray", Some("$BitArray"));
+            self.register_prelude_usage(&mut imports, "List", Some("$List"));
+            self.register_prelude_usage(&mut imports, "UtfCodepoint", Some("$UtfCodepoint"));
+            self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
             docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
         } else {
             nil()

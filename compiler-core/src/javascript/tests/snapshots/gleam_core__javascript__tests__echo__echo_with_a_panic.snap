@@ -3,7 +3,13 @@ source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  echo panic\n}\n"
 ---
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
-import { makeError, BitArray, List, UtfCodepoint, CustomType } from "../gleam.mjs";
+import {
+  makeError,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+  CustomType as $CustomType,
+} from "../gleam.mjs";
 
 export function main() {
   return echo(
