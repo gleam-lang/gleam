@@ -186,13 +186,18 @@ impl<'a> JavaScript<'a> {
         }
     }
 
-    pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
+    pub fn render(
+        &self,
+        writer: &impl FileSystemWriter,
+        modules: &[Module],
+        stdlib_is_a_dependency: bool,
+    ) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
             if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
-            self.js_module(writer, module, &js_name)?
+            self.js_module(writer, module, &js_name, stdlib_is_a_dependency)?
         }
         self.write_prelude(writer)?;
         Ok(())
@@ -243,6 +248,7 @@ impl<'a> JavaScript<'a> {
         writer: &impl FileSystemWriter,
         module: &Module,
         js_name: &str,
+        stdblib_is_a_dependency: bool,
     ) -> Result<()> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
@@ -254,6 +260,7 @@ impl<'a> JavaScript<'a> {
             &module.code,
             self.target_support,
             self.typescript,
+            stdblib_is_a_dependency,
         );
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
