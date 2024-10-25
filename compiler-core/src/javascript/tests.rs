@@ -204,14 +204,19 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    module(
+    let output = module(
         &ast,
         &line_numbers,
         Utf8Path::new(""),
         &"".into(),
         TargetSupport::Enforced,
         TypeScriptDeclarations::None,
-    )
+    )?;
+
+    Ok(output.replace(
+        std::include_str!("../../templates/echo.mjs"),
+        "// ...omitted code from `templates/echo.mjs`...",
+    ))
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
