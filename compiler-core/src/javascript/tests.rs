@@ -204,7 +204,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    let stdlib_is_a_dependency = true;
+    let stdlib_package = StdlibPackage::Present;
     let output = module(
         &ast,
         &line_numbers,
@@ -212,7 +212,7 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
         &"".into(),
         TargetSupport::Enforced,
         TypeScriptDeclarations::None,
-        stdlib_is_a_dependency,
+        stdlib_package,
     )?;
 
     Ok(output.replace(
