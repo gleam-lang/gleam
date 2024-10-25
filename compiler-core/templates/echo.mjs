@@ -75,10 +75,10 @@ function $inspect(v) {
   if (t === "string") return $inspectString(v);
   if (t === "bigint" || t === "number") return v.toString();
   if (Array.isArray(v)) return `#(${v.map($inspect).join(", ")})`;
-  if (v instanceof List) return `[${v.toArray().map($inspect).join(", ")}]`;
-  if (v instanceof UtfCodepoint) return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
-  if (v instanceof BitArray) return `<<${Array.from(v.buffer).join(", ")}>>`;
-  if (v instanceof CustomType) return $inspectCustomType(v);
+  if (v instanceof $List) return `[${v.toArray().map($inspect).join(", ")}]`;
+  if (v instanceof $UtfCodepoint) return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
+  if (v instanceof $BitArray) return `<<${Array.from(v.buffer).join(", ")}>>`;
+  if (v instanceof $CustomType) return $inspectCustomType(v);
   if ($isDict(v)) return $inspectDict(v);
   if (v instanceof Set) return `//js(Set(${[...v].map($inspect).join(", ")}))`;
   if (v instanceof RegExp) return `//js(${v})`;

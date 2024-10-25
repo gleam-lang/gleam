@@ -3,7 +3,12 @@ source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  echo 1\n  echo 2\n}\n"
 ---
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
-import { BitArray, List, UtfCodepoint, CustomType } from "../gleam.mjs";
+import {
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+  CustomType as $CustomType,
+} from "../gleam.mjs";
 
 export function main() {
   echo(1);
