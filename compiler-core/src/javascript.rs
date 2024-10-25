@@ -48,6 +48,7 @@ pub struct Generator<'a> {
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
+    stdlib_is_a_dependency: bool,
 }
 
 impl<'a> Generator<'a> {
@@ -56,6 +57,7 @@ impl<'a> Generator<'a> {
         module: &'a TypedModule,
         target_support: TargetSupport,
         typescript: TypeScriptDeclarations,
+        stdlib_is_a_dependency: bool,
     ) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
 
@@ -67,6 +69,7 @@ impl<'a> Generator<'a> {
             module_scope: Default::default(),
             target_support,
             typescript,
+            stdlib_is_a_dependency,
         }
     }
 
@@ -185,18 +188,18 @@ impl<'a> Generator<'a> {
         };
 
         let echo = if self.tracker.echo_used {
-            // TODO! Check stdlib is among the dependencies or this will fail at
-            // runtime with an exception.
-            self.register_import(
-                &mut imports,
-                "gleam_stdlib",
-                "dict",
-                &Some((
-                    AssignName::Variable("stdlib$dict".into()),
-                    SrcSpan::default(),
-                )),
-                &[],
-            );
+            if self.stdlib_is_a_dependency {
+                self.register_import(
+                    &mut imports,
+                    "gleam_stdlib",
+                    "dict",
+                    &Some((
+                        AssignName::Variable("stdlib$dict".into()),
+                        SrcSpan::default(),
+                    )),
+                    &[],
+                );
+            }
             self.register_prelude_usage(&mut imports, "BitArray", Some("$BitArray"));
             self.register_prelude_usage(&mut imports, "List", Some("$List"));
             self.register_prelude_usage(&mut imports, "UtfCodepoint", Some("$UtfCodepoint"));
@@ -611,14 +614,21 @@ pub fn module(
     src: &EcoString,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
+    stdlib_is_a_dependency: bool,
 ) -> Result<String, crate::Error> {
-    let document = Generator::new(line_numbers, module, target_support, typescript)
-        .compile()
-        .map_err(|error| crate::Error::JavaScript {
-            path: path.to_path_buf(),
-            src: src.clone(),
-            error,
-        })?;
+    let document = Generator::new(
+        line_numbers,
+        module,
+        target_support,
+        typescript,
+        stdlib_is_a_dependency,
+    )
+    .compile()
+    .map_err(|error| crate::Error::JavaScript {
+        path: path.to_path_buf(),
+        src: src.clone(),
+        error,
+    })?;
     Ok(document.to_pretty_string(80))
 }
 
