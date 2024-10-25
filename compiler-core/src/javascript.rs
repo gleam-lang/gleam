@@ -10,6 +10,7 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::analyse::TargetSupport;
+use crate::build::package_compiler::StdlibPackage;
 use crate::build::Target;
 use crate::codegen::TypeScriptDeclarations;
 use crate::type_::PRELUDE_MODULE_NAME;
@@ -48,7 +49,7 @@ pub struct Generator<'a> {
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
-    stdlib_is_a_dependency: bool,
+    stdlib_package: StdlibPackage,
 }
 
 impl<'a> Generator<'a> {
@@ -57,7 +58,7 @@ impl<'a> Generator<'a> {
         module: &'a TypedModule,
         target_support: TargetSupport,
         typescript: TypeScriptDeclarations,
-        stdlib_is_a_dependency: bool,
+        stdlib_package: StdlibPackage,
     ) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
 
@@ -69,7 +70,7 @@ impl<'a> Generator<'a> {
             module_scope: Default::default(),
             target_support,
             typescript,
-            stdlib_is_a_dependency,
+            stdlib_package,
         }
     }
 
@@ -188,7 +189,7 @@ impl<'a> Generator<'a> {
         };
 
         let echo = if self.tracker.echo_used {
-            if self.stdlib_is_a_dependency {
+            if StdlibPackage::Present == self.stdlib_package {
                 self.register_import(
                     &mut imports,
                     "gleam_stdlib",
@@ -614,14 +615,14 @@ pub fn module(
     src: &EcoString,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
-    stdlib_is_a_dependency: bool,
+    stdlib_package: StdlibPackage,
 ) -> Result<String, crate::Error> {
     let document = Generator::new(
         line_numbers,
         module,
         target_support,
         typescript,
-        stdlib_is_a_dependency,
+        stdlib_package,
     )
     .compile()
     .map_err(|error| crate::Error::JavaScript {
