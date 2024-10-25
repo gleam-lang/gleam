@@ -2,6 +2,19 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Wibble {\n  Wibble(field: Int)\n  Wobble(not_field: String, field: Int)\n}\n\npub fn main() {\n  Wibble(1).field\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(field: Int)
+  Wobble(not_field: String, field: Int)
+}
+
+pub fn main() {
+  Wibble(1).field
+}
+
+
+----- ERROR
 error: Unknown record field
   ┌─ /src/one/two.gleam:8:12
   │

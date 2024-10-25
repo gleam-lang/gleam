@@ -541,7 +541,7 @@ where
                     .collect();
                 super::TargetCodegenConfiguration::Erlang {
                     app_file: Some(ErlangAppCodegenConfiguration {
-                        include_dev_deps: is_root,
+                        include_dev_deps: is_root && self.mode().includes_dev_dependencies(),
                         package_name_overrides,
                     }),
                 }

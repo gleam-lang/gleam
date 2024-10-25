@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport list.{map}\n\npub fn main() {\n    let identity = map([1, 2, 3], fn(x) { x })\n    let double = map([1, 2, 3], fn(x) { x * 2 })\n}\n"
+---
+----- BEFORE ACTION
+
+import list.{map}
+
+pub fn main() {
+    let identity = map([1, 2, 3], fn(x) { x })
+                   ▔▔▔▔↑                      
+    let double = map([1, 2, 3], fn(x) { x * 2 })
+}
+
+
+----- AFTER ACTION
+
+import list.{}
+
+pub fn main() {
+    let identity = list.map([1, 2, 3], fn(x) { x })
+    let double = list.map([1, 2, 3], fn(x) { x * 2 })
+}

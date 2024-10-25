@@ -2,6 +2,28 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n@deprecated(\"The type Animal has been deprecated.\")\npub type Animal {\n    Cat\n    Dog\n}\n\npub fn sound(animal) -> String {\n  case animal {\n    Dog -> \"Woof\"\n    Cat -> \"Meow\"\n  }\n}\n\npub fn main(){\n    let cat = Cat\n    sound(cat)\n}\n        "
 ---
+----- SOURCE CODE
+
+@deprecated("The type Animal has been deprecated.")
+pub type Animal {
+    Cat
+    Dog
+}
+
+pub fn sound(animal) -> String {
+  case animal {
+    Dog -> "Woof"
+    Cat -> "Meow"
+  }
+}
+
+pub fn main(){
+    let cat = Cat
+    sound(cat)
+}
+        
+
+----- WARNING
 warning: Deprecated value used
    ┌─ /src/warning/wrn.gleam:10:5
    │

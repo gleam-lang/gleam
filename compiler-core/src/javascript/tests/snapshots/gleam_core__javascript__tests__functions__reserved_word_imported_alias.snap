@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "import for.{class as while} as function\n\npub fn export() {\n  let delete = function.class\n  while()\n}\n"
 ---
+----- SOURCE CODE
+import for.{class as while} as function
+
+pub fn export() {
+  let delete = function.class
+  while()
+}
+
+
+----- COMPILED JAVASCRIPT
 import * as $function from "../for.mjs";
 import { class$ as while$ } from "../for.mjs";
 

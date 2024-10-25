@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "import gleam/wibble.{Wibble}"
 ---
+----- SOURCE CODE
+-- gleam/wibble.gleam
+pub type Wibble {
+               Wobble
+             }
+
+-- main.gleam
+import gleam/wibble.{Wibble}
+
+----- ERROR
 error: Unknown module value
   ┌─ /src/one/two.gleam:1:22
   │

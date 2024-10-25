@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type Box { Box(x: Int) }\ntype Boxy { Box(Int) }"
 ---
+----- SOURCE CODE
+type Box { Box(x: Int) }
+type Boxy { Box(Int) }
+
+----- ERROR
 error: Duplicate definition
   ┌─ /src/one/two.gleam:1:12
   │

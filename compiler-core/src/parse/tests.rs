@@ -17,15 +17,17 @@ macro_rules! assert_error {
         assert_eq!(($src, $error), ($src, result),);
     };
     ($src:expr) => {
-        let result = $crate::parse::tests::expect_error($src);
-        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
+        let error = $crate::parse::tests::expect_error($src);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
 macro_rules! assert_module_error {
     ($src:expr) => {
-        let result = $crate::parse::tests::expect_module_error($src);
-        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
+        let error = $crate::parse::tests::expect_module_error($src);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
@@ -620,6 +622,18 @@ fn multiple_deprecation_attributes() {
         r#"
 @deprecated("1")
 @deprecated("2")
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn deprecation_without_message() {
+    assert_module_error!(
+        r#"
+@deprecated()
 pub fn main() -> Nil {
   Nil
 }
@@ -1581,5 +1595,19 @@ type Wibble {
     Wibble1
 }
 "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3730
+#[test]
+fn missing_constructor_arguments() {
+    assert_module_error!(
+        "
+pub type A {
+  A(Int)
+}
+
+const a = A()
+"
     );
 }

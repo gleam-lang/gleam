@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 586
 expression: "pub fn main(a) {\n  Box\n}\n\npub type Box {\n  Box(Int)\n}\n"
 ---
+----- SOURCE CODE
+pub fn main(a) {
+  Box
+}
+
+pub type Box {
+  Box(Int)
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

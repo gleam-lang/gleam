@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 137
 expression: "\nfn go() {\n  <<256:16-little>>\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  <<256:16-little>>
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go() {

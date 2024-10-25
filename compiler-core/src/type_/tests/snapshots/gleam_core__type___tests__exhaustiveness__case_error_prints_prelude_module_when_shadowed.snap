@@ -1,8 +1,20 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 1068
 expression: "\nimport gleam\ntype MyResult { Ok Error }\npub fn main() {\n  let res = gleam.Ok(10)\n  case res {\n    gleam.Ok(n) -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+import gleam
+type MyResult { Ok Error }
+pub fn main() {
+  let res = gleam.Ok(10)
+  case res {
+    gleam.Ok(n) -> Nil
+  }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:6:3
   │  

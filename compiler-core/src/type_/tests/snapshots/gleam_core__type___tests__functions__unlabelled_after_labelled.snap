@@ -2,6 +2,12 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "fn main(wibble wibber, wobber) {\n  Nil\n}"
 ---
+----- SOURCE CODE
+fn main(wibble wibber, wobber) {
+  Nil
+}
+
+----- ERROR
 error: Unlabelled argument after labelled argument
   ┌─ /src/one/two.gleam:1:24
   │

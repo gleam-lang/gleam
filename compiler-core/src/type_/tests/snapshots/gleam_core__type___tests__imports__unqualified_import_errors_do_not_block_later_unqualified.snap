@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/imports.rs
 expression: "import gleam.{Unknown, type Int as Integer}\n\npub fn main() -> Integer {\n  Nil\n}"
 ---
+----- SOURCE CODE
+import gleam.{Unknown, type Int as Integer}
+
+pub fn main() -> Integer {
+  Nil
+}
+
+----- ERROR
 error: Unknown module value
   ┌─ /src/one/two.gleam:1:15
   │

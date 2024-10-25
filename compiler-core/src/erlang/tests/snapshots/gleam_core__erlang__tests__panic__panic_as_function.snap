@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests/panic.rs
-assertion_line: 27
 expression: "\npub fn retstring() {\n  \"wibble\"\n}\npub fn main() {\n  panic as { retstring() <> \"wobble\" }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn retstring() {
+  "wibble"
+}
+pub fn main() {
+  panic as { retstring() <> "wobble" }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

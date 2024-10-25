@@ -10,7 +10,8 @@ compile_package_loop() ->
     case file:read_line(standard_io) of
         eof -> ok;
         {ok, Line} ->
-            {ok, Tokens, _} = erl_scan:string(Line),
+            Chars = unicode:characters_to_list(Line),
+            {ok, Tokens, _} = erl_scan:string(Chars),
             {ok, {Lib, Out, Modules}} = erl_parse:parse_term(Tokens),
             case compile_package(Lib, Out, Modules) of
                 ok -> io:put_chars("gleam-compile-result-ok\n");

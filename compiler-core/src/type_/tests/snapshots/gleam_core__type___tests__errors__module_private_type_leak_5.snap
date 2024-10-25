@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type PrivateType\npub type LeakType { Variant(PrivateType) }"
 ---
+----- SOURCE CODE
+type PrivateType
+pub type LeakType { Variant(PrivateType) }
+
+----- ERROR
 error: Private type used in public interface
   ┌─ /src/one/two.gleam:2:21
   │

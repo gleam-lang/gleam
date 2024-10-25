@@ -1,8 +1,22 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 1009
 expression: "\nimport wibble as wobble\npub fn main() {\n    case wobble.Wobble {\n        wobble.Wibble -> Nil\n    }\n}\n"
 ---
+----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble Wobble }
+
+-- main.gleam
+
+import wibble as wobble
+pub fn main() {
+    case wobble.Wobble {
+        wobble.Wibble -> Nil
+    }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:4:5
   │  

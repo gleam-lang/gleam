@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/custom_types.rs
 expression: "\npub type Cat {\n  Cat(UnknownType)\n}\n\npub type Kitten = AnotherUnknownType\n        "
 ---
+----- SOURCE CODE
+
+pub type Cat {
+  Cat(UnknownType)
+}
+
+pub type Kitten = AnotherUnknownType
+        
+
+----- ERROR
 error: Unknown type
   ┌─ /src/one/two.gleam:3:7
   │

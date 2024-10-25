@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n    pub fn main() {\n      let letters = [\"b\", \"c\"]\n      case letters {\n        [] -> []\n        [..] -> []\n      }\n    }\n        "
 ---
+----- SOURCE CODE
+
+    pub fn main() {
+      let letters = ["b", "c"]
+      case letters {
+        [] -> []
+        [..] -> []
+      }
+    }
+        
+
+----- WARNING
 warning: Deprecated list pattern matching syntax
   ┌─ test/path:6:9
   │

@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type User {\n  User(name: String)\n}\n\npub fn main() {\n  User(\"Jak\").nam\n}\n"
 ---
+----- SOURCE CODE
+
+pub type User {
+  User(name: String)
+}
+
+pub fn main() {
+  User("Jak").nam
+}
+
+
+----- ERROR
 error: Unknown record field
   ┌─ /src/one/two.gleam:7:14
   │

@@ -1615,6 +1615,112 @@ pub fn do_a_thing(a: Int, b: Float) -> String {
 }
 
 #[test]
+fn annotate_anonymous_function() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn add_curry(a) {
+  fn(b) { a + b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
+fn annotate_anonymous_function_with_annotated_return_type() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn add_curry(a) {
+  fn(b) -> Int { a + b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
+fn annotate_anonymous_function_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  fn(a, b: Int, c) { a + b + c }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("c)"))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_anonymous_function() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn main() {
+  fn(a: Int, b: Int) -> Int { a - b }
+}
+"#,
+        find_position_of("fn(").select_until(find_position_of("Int)"))
+    );
+}
+
+#[test]
+fn annotate_use() {
+    assert_code_action!(
+        ADD_ANNOTATIONS,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a, b <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn annotate_use_with_partially_annotated_parameters() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
+fn no_code_action_for_fully_annotated_use() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+pub fn wibble(wobble: fn(Int, Int) -> Int) {
+  wobble(1, 2)
+}
+
+pub fn main() {
+  use a: Int, b: Int <- wibble
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("<-"))
+    );
+}
+
+#[test]
 fn annotate_constant() {
     assert_code_action!(
         ADD_ANNOTATION,
@@ -1693,6 +1799,22 @@ pub fn main() {
 }
 "#,
         find_position_of("let").select_until(find_position_of("="))
+    );
+}
+
+#[test]
+fn annotate_nested_local_variable() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+pub fn main() {
+  let a = {
+    let b = 10
+    b + 1
+  }
+}
+"#,
+        find_position_of("let b").select_until(find_position_of("b ="))
     );
 }
 
@@ -2530,6 +2652,400 @@ pub fn main() {
         TestProject::for_source(src)
             .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
         find_position_of("option.").select_until(find_position_of("Some(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_function() {
+    let src = r#"
+import list.{map}
+
+pub fn main() {
+    let identity = map([1, 2, 3], fn(x) { x })
+    let double = map([1, 2, 3], fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify map as list.map",
+        TestProject::for_source(src).add_hex_module("list", "pub fn map(list, f) { todo }"),
+        find_position_of("map(").select_until(find_position_of("[1, 2, 3]")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_constant() {
+    let src = r#"
+import mymath.{pi}
+
+pub fn circle_area(radius: Float) -> Float {
+    pi *. radius *. radius
+}
+
+pub fn circle_circumference(radius: Float) -> Float {
+    2. *. pi *. radius
+}
+"#;
+    assert_code_action!(
+        "Qualify pi as mymath.pi",
+        TestProject::for_source(src).add_hex_module("mymath", "pub const pi = 3.14159"),
+        find_position_of("pi *.").select_until(find_position_of(" radius")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_record_constructor() {
+    let src = r#"
+import user.{type User, User}
+
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+}
+"#;
+    assert_code_action!(
+        "Qualify User as user.User",
+        TestProject::for_source(src)
+            .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
+        find_position_of("User(").select_until(find_position_of("name: name")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_after_constructor() {
+    let src = r#"
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+}
+
+import user.{type User, User}
+"#;
+    assert_code_action!(
+        "Qualify User as user.User",
+        TestProject::for_source(src)
+            .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
+        find_position_of("User(").select_until(find_position_of("name: name")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_between_constructors() {
+    let src = r#"
+pub fn create_user(name: String) -> User {
+    User(name: name, id: 1)
+}
+
+import user.{type User, User}
+
+pub fn user_list(users: List(User)) -> List(String) {
+    [User(name: "John", id: 1),
+    User(name: "Jane", id: 2)]
+}
+
+"#;
+    assert_code_action!(
+        "Qualify User as user.User",
+        TestProject::for_source(src)
+            .add_hex_module("user", "pub type User { User(name: String, id: Int) }"),
+        find_position_of("User(").select_until(find_position_of("name: name")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_multiple_occurrences() {
+    let src = r#"
+import list.{map, filter}
+
+pub fn process_list(items: List(Int)) -> List(Int) {
+    items
+    |> map(fn(x) { x + 1 })
+    |> map(fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify map as list.map",
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("|> map").select_until(find_position_of("(fn(x)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_pattern_matching() {
+    let src = r#"
+import result.{type Result, Ok, Error}
+
+pub fn process_result(res: Result(Int, String)) -> Int {
+    case res {
+        Ok(value) -> value
+        Error(_) -> 0
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Ok as result.Ok",
+        TestProject::for_source(src)
+            .add_hex_module("result", "pub type Result(a, e) { Ok(a) Error(e) }"),
+        find_position_of("Ok(").select_until(find_position_of("value)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_type_annotation() {
+    let src = r#"
+import option.{type Option, Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Option as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("Opt")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ion(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_nested_function_call() {
+    let src = r#"
+import list.{map, flatten}
+import operation.{double}
+
+pub fn process_names(names: List(List(Int))) -> List(Int) {
+    names
+    |> flatten
+    |> map(double)
+}
+"#;
+    assert_code_action!(
+        "Qualify double as operation.double",
+        TestProject::for_source(src)
+            .add_hex_module(
+                "list",
+                "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }
+pub fn flatten(lists: List(List(a))) -> List(a) { todo }"
+            )
+            .add_hex_module("operation", "pub fn double(s: Int) -> Int { todo }"),
+        find_position_of("(dou").select_until(find_position_of("ble)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_with_alias() {
+    let src = r#"
+import list.{map as transform}
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify transform as list.map",
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_with_alias_and_module_alias() {
+    let src = r#"
+import list.{map as transform} as lst
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+}
+"#;
+    assert_code_action!(
+        "Qualify transform as lst.map",
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_import_discarded() {
+    let src = r#"
+import list.{map as transform} as _
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+}
+"#;
+    let title = "Qualify transform as list.map";
+    assert_no_code_actions!(
+        title,
+        TestProject::for_source(src).add_hex_module(
+            "list",
+            "pub fn map(list: List(a), with fun: fn(a) -> b) -> List(b) { todo }"
+        ),
+        find_position_of("transform(").select_until(find_position_of("items,")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_bad_formatted_type_constructor() {
+    let src = r#"
+import option.{type    Option, Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Option as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("Opt")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ion(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_bad_formatted_type_constructor_with_alias() {
+    let src = r#"
+import option.{type    Option    as Maybe, Some}
+
+pub fn maybe_increment(x: Maybe(Int)) -> Maybe(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Maybe as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("May")
+            .nth_occurrence(2)
+            .select_until(find_position_of("be(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_bad_formatted_comma() {
+    let src = r#"
+import option.{type    Option    , Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Option as option.Option",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("Opt")
+            .nth_occurrence(2)
+            .select_until(find_position_of("ion(")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_in_list_and_tuple() {
+    let src = r#"
+import option.{Some}
+
+pub fn main() {
+    let list = [Some(1), option.None]
+    let tuple = #(Some(2), option.None)
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some(").select_until(find_position_of("1)")),
+    );
+}
+#[test]
+fn test_unqualified_to_qualified_import_constructor_complex_pattern() {
+    let src = r#"
+import option.{None, Some}
+
+pub fn main() {
+    case [Some(1), None] {
+        [None, ..] -> todo
+        [Some(_), ..] -> todo
+        _ -> todo
+    }
+    case Some(1), Some(2) {
+        None, Some(_) -> todo
+        Some(_), Some(val) -> todo
+        _ -> todo
+    }
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some(").select_until(find_position_of("1)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_multiple_line_aliased() {
+    let src = r#"
+import option.{
+    type Option,
+    None,
+    Some
+} as opt
+
+pub fn main() {
+  Some(1)
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as opt.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some")
+            .nth_occurrence(2)
+            .select_until(find_position_of("(1)")),
+    );
+}
+
+#[test]
+fn test_unqualified_to_qualified_import_multiple_line_bad_format_without_trailing_comma() {
+    let src = r#"
+import option.{type Option,
+    Some
+
+}
+
+pub fn main() {
+  Some(1)
+}
+"#;
+    assert_code_action!(
+        "Qualify Some as option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("Some")
+            .nth_occurrence(2)
+            .select_until(find_position_of("(1)")),
     );
 }
 /* TODO: implement qualified unused location

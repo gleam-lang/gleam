@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/imports.rs
 expression: "import one\n\npub fn main() {\n  one.X\n}"
 ---
+----- SOURCE CODE
+-- one.gleam
+type X
+
+-- main.gleam
+import one
+
+pub fn main() {
+  one.X
+}
+
+----- ERROR
 error: Unknown module value
   ┌─ /src/one/two.gleam:4:6
   │

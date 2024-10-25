@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" <> _ -> Nil\n    _ -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    "Hello, " <> _ -> Nil
+    _ -> Nil
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function go(x) {
   if (x.startsWith("Hello, ")) {
     return undefined;

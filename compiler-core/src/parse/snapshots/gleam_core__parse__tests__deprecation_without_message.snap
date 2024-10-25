@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@deprecated()\npub fn main() -> Nil {\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+@deprecated()
+pub fn main() -> Nil {
+  Nil
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:1
+  │
+2 │ @deprecated()
+  │ ^^^^^^^^^^^ A deprecation attribute must have a string message.

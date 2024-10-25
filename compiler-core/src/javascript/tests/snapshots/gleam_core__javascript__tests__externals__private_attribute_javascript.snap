@@ -2,6 +2,19 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"./one.mjs\", \"oneJs\")\nfn one(x: Int) -> Int {\n  todo\n}\n\npub fn main() {\n  one(1)\n}\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "./one.mjs", "oneJs")
+fn one(x: Int) -> Int {
+  todo
+}
+
+pub fn main() {
+  one(1)
+}
+
+
+----- COMPILED JAVASCRIPT
 import { oneJs as one } from "./one.mjs";
 
 export function main() {

@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1125
 expression: "\ntype A {\n    A(String, Int)\n}\nconst a = A(\"a\", let)\n"
 ---
+----- SOURCE CODE
+
+type A {
+    A(String, Int)
+}
+const a = A("a", let)
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:5:18
   │

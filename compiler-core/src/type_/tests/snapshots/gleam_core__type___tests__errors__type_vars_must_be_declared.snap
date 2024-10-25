@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type A(a) { A }\ntype B = a"
 ---
+----- SOURCE CODE
+type A(a) { A }
+type B = a
+
+----- ERROR
 error: Unknown type
   ┌─ /src/one/two.gleam:2:10
   │

@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "\n        import wibble.{println}\n        pub fn main() {\n          let println =\n            \"oh dear\"\n            |> println\n          println\n        }"
 ---
+----- SOURCE CODE
+
+        import wibble.{println}
+        pub fn main() {
+          let println =
+            "oh dear"
+            |> println
+          println
+        }
+
+----- COMPILED JAVASCRIPT
 import * as $wibble from "../wibble.mjs";
 import { println } from "../wibble.mjs";
 

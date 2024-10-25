@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/bit_arrays.rs
 expression: "\nfn go() {\n  <<256:64>>\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  <<256:64>>
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toBitArray, sizedInt } from "../gleam.mjs";
 
 function go() {

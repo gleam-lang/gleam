@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nlet a = Ok(1)\nlet b = True\ncase a, b {}\n"
 ---
+----- SOURCE CODE
+
+let a = Ok(1)
+let b = True
+case a, b {}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:4:1
   │

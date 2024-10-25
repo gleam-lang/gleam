@@ -1,8 +1,11 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 574
 expression: "fn(a) { a.field }"
 ---
+----- SOURCE CODE
+fn(a) { a.field }
+
+----- ERROR
 error: Unknown type for record access
   ┌─ /src/one/two.gleam:1:9
   │

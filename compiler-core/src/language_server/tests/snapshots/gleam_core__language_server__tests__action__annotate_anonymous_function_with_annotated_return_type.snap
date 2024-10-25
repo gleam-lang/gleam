@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn add_curry(a) {\n  fn(b) -> Int { a + b }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn add_curry(a) {
+  fn(b) -> Int { a + b }
+  ▔▔▔↑                  
+}
+
+
+----- AFTER ACTION
+
+pub fn add_curry(a) {
+  fn(b: Int) -> Int { a + b }
+}

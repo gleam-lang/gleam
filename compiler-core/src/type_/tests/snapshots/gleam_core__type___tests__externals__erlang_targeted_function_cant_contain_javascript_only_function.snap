@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/externals.rs
 expression: "@target(erlang)\npub fn erlang_only() -> Int {\n  javascript_only()\n}\n\n@external(javascript, \"one\", \"two\")\nfn javascript_only() -> Int\n    "
 ---
+----- SOURCE CODE
+@target(erlang)
+pub fn erlang_only() -> Int {
+  javascript_only()
+}
+
+@external(javascript, "one", "two")
+fn javascript_only() -> Int
+    
+
+----- ERROR
 error: Unsupported target
   ┌─ /src/one/two.gleam:3:3
   │

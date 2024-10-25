@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/erlang/tests/guards.rs
-assertion_line: 177
 expression: "\npub fn main(x) {\n  case x {\n    _ if x == [1, 2, 3] -> 1\n    _ -> 0\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    _ if x == [1, 2, 3] -> 1
+    _ -> 0
+  }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Box(a) {\n  Box(value: a)\n}\npub fn go(box1: Box(a), box2: Box(b)) {\n  let _: Box(a) = box2\n  let _: Box(b) = box1\n  5\n}"
 ---
+----- SOURCE CODE
+
+pub type Box(a) {
+  Box(value: a)
+}
+pub fn go(box1: Box(a), box2: Box(b)) {
+  let _: Box(a) = box2
+  let _: Box(b) = box1
+  5
+}
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:6:19
   │

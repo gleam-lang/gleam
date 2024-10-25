@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1477
 expression: "\ntype Wibble {\n  pub fn wobble() {}\n}\n"
 ---
+----- SOURCE CODE
+
+type Wibble {
+  pub fn wobble() {}
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:3
   │

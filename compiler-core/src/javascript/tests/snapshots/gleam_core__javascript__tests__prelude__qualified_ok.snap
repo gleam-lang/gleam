@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/prelude.rs
 expression: "import gleam\npub fn go() { gleam.Ok(1) }\n"
 ---
+----- SOURCE CODE
+import gleam
+pub fn go() { gleam.Ok(1) }
+
+
+----- COMPILED JAVASCRIPT
 import * as $gleam from "../gleam.mjs";
 
 export function go() {

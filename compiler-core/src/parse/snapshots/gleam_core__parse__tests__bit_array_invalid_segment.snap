@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 945
 expression: "\nfn main() {\n    <<72, 101, 108, 108, 111, 44, 32, 74, 111, 101, const>>\n}\n"
 ---
+----- SOURCE CODE
+
+fn main() {
+    <<72, 101, 108, 108, 111, 44, 32, 74, 111, 101, const>>
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:53
   │

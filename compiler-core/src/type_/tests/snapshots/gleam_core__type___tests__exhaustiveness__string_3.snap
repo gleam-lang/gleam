@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 436
 expression: "\npub fn main(x) {\n  case x {\n    \"a\" -> 1\n    \"b\" -> 1\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    "a" -> 1
+    "b" -> 1
+  }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:3
   │  

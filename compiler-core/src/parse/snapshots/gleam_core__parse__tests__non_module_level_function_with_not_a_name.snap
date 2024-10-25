@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\npub fn main() {\n  fn @() { 1 }  // wrong token and not a name\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  fn @() { 1 }  // wrong token and not a name
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:6
   │

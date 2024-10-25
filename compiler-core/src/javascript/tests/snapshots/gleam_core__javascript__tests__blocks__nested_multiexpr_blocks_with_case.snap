@@ -1,8 +1,24 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 94
 expression: "\nfn go() {\n  let x = {\n    1\n    {\n      2\n      case True {\n        _ -> 3\n      }\n    }\n  }\n  x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  let x = {
+    1
+    {
+      2
+      case True {
+        _ -> 3
+      }
+    }
+  }
+  x
+}
+
+
+----- COMPILED JAVASCRIPT
 function go() {
   let x = (() => {
     1;

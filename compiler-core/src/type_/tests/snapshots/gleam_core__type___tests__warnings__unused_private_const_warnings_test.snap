@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: const a = 1
 ---
+----- SOURCE CODE
+const a = 1
+
+----- WARNING
 warning: Unused private constant
   ┌─ /src/warning/wrn.gleam:1:1
   │

@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 82
 expression: "pub fn a(x) {\n  case x, x {\n    _, \"a\" as a <> _  -> a\n    _, _ -> \"a\"\n  }\n}"
 ---
+----- SOURCE CODE
+pub fn a(x) {
+  case x, x {
+    _, "a" as a <> _  -> a
+    _, _ -> "a"
+  }
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

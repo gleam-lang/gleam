@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport list.{map, filter}\n\npub fn process_list(items: List(Int)) -> List(Int) {\n    items\n    |> map(fn(x) { x + 1 })\n    |> map(fn(x) { x * 2 })\n}\n"
+---
+----- BEFORE ACTION
+
+import list.{map, filter}
+
+pub fn process_list(items: List(Int)) -> List(Int) {
+    items
+    |> map(fn(x) { x + 1 })
+    ▔▔▔▔▔▔↑                
+    |> map(fn(x) { x * 2 })
+}
+
+
+----- AFTER ACTION
+
+import list.{filter}
+
+pub fn process_list(items: List(Int)) -> List(Int) {
+    items
+    |> list.map(fn(x) { x + 1 })
+    |> list.map(fn(x) { x * 2 })
+}

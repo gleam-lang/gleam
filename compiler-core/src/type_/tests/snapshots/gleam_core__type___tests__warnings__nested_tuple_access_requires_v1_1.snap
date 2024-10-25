@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main() {\n  let tuple = #(1, #(1, 1))\n  tuple.1.0\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let tuple = #(1, #(1, 1))
+  tuple.1.0
+}
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:4:3
   │

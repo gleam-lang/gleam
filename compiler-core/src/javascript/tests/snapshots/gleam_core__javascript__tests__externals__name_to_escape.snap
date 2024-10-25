@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"./the/module.mjs\", \"one\")\npub fn class() -> Nil\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "./the/module.mjs", "one")
+pub fn class() -> Nil
+
+
+----- COMPILED JAVASCRIPT
 import { one as class$ } from "./the/module.mjs";
 
 export { class$ };

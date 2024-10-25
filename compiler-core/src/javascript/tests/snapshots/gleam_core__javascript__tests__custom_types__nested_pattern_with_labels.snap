@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "pub type Box(x) { Box(a: Int, b: x) }\nfn go(x) {\n  case x {\n    Box(a: _, b: Box(a: a, b: b)) -> a + b\n    _ -> 1\n  }\n}\n"
 ---
+----- SOURCE CODE
+pub type Box(x) { Box(a: Int, b: x) }
+fn go(x) {
+  case x {
+    Box(a: _, b: Box(a: a, b: b)) -> a + b
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 export class Box extends $CustomType {

@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub fn main() {\n  utils.helpful()\n}\n"
 ---
+----- SOURCE CODE
+-- utils.gleam
+pub fn helpful() {}
+
+-- main.gleam
+
+pub fn main() {
+  utils.helpful()
+}
+
+
+----- ERROR
 error: Unknown module
   ┌─ /src/one/two.gleam:3:3
   │

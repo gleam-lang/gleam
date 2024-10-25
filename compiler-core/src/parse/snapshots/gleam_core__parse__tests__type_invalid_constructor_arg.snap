@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1052
 expression: "\ntype A {\n    A(type: String)\n}\n"
 ---
+----- SOURCE CODE
+
+type A {
+    A(type: String)
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:7
   │

@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n        case #() {\n            _ -> Nil\n        }\n      }"
 ---
+----- SOURCE CODE
+pub fn main() {
+        case #() {
+            _ -> Nil
+        }
+      }
+
+----- WARNING
 warning: Match on a literal value
   ┌─ /src/warning/wrn.gleam:2:14
   │

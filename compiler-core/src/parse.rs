@@ -57,13 +57,13 @@ mod token;
 use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
-    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, HasLocation, Import,
-    Module, ModuleConstant, Pattern, Publicity, RecordConstructor, RecordConstructorArg,
-    RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst,
-    TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport,
-    UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr,
-    UntypedModule, UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, Use, UseAssignment,
-    CAPTURE_VARIABLE,
+    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, FunctionLiteralKind,
+    HasLocation, Import, Module, ModuleConstant, Pattern, Publicity, RecordConstructor,
+    RecordConstructorArg, RecordUpdateSpread, SrcSpan, Statement, TargetedDefinition, TodoKind,
+    TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
+    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
+    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
+    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -674,7 +674,7 @@ where
                     })) => UntypedExpr::Fn {
                         location: SrcSpan::new(location.start, end_position),
                         end_of_head_byte_index: location.end,
-                        is_capture: false,
+                        kind: FunctionLiteralKind::Anonymous { head: location },
                         arguments: args,
                         body,
                         return_annotation,
@@ -2871,11 +2871,17 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {
-        if self.maybe_one(&Token::LeftParen).is_some() {
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let args =
                 Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
             let (_, par_e) =
                 self.expect_one_following_series(&Token::RightParen, "a constant record argument")?;
+            if args.is_empty() {
+                return parse_error(
+                    ParseErrorType::ConstantRecordConstructorNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
+            }
             Ok(Some(Constant::Record {
                 location: SrcSpan { start, end: par_e },
                 module,
@@ -3592,7 +3598,10 @@ functions are declared separately from types.";
         if attributes.deprecated.is_deprecated() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan::new(start, end));
         }
-        let (_, message, _) = self.expect_string()?;
+        let (_, message, _) = self.expect_string().map_err(|_| ParseError {
+            error: ParseErrorType::ExpectedDeprecationMessage,
+            location: SrcSpan { start, end },
+        })?;
         let (_, end) = self.expect_one(&Token::RightParen)?;
         attributes.deprecated = Deprecation::Deprecated { message };
         Ok(end)
@@ -4031,7 +4040,7 @@ pub fn make_call(
         1 => Ok(UntypedExpr::Fn {
             location: call.location(),
             end_of_head_byte_index: call.location().end,
-            is_capture: true,
+            kind: FunctionLiteralKind::Capture,
             arguments: vec![Arg {
                 location: hole_location.expect("At least a capture hole"),
                 annotation: None,

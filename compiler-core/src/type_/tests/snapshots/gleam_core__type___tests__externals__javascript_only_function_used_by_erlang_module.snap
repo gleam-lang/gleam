@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/externals.rs
 expression: "@external(javascript, \"one\", \"two\")\nfn js_only() -> Int\n\npub fn main() {\n  js_only()\n}\n"
 ---
+----- SOURCE CODE
+@external(javascript, "one", "two")
+fn js_only() -> Int
+
+pub fn main() {
+  js_only()
+}
+
+
+----- ERROR
 error: Unsupported target
   ┌─ /src/one/two.gleam:5:3
   │

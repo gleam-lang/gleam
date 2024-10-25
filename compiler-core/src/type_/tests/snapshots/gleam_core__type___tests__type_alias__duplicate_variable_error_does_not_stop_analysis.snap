@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/type_alias.rs
 expression: "\ntype Two(a, a) =\n  #(a, a)\n\ntype UnknownType =\n  Dunno\n"
 ---
+----- SOURCE CODE
+
+type Two(a, a) =
+  #(a, a)
+
+type UnknownType =
+  Dunno
+
+
+----- ERROR
 error: Duplicate type parameter
   ┌─ /src/one/two.gleam:2:13
   │

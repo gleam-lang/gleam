@@ -1,8 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 374
 expression: "\n@external(erlang, \"wibble\", \"wobble\")\npub fn woo(__: a, _two: b) -> Nil\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "wibble", "wobble")
+pub fn woo(__: a, _two: b) -> Nil
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

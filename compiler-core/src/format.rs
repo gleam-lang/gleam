@@ -545,7 +545,29 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let comma = flex_break(",", ", ");
+        let comma = match elements.first() {
+            // If the list is made of records and it gets too long we want to
+            // have each record on its own line instead of trying to fit as much
+            // as possible in each line. For example:
+            //
+            //    [
+            //       Some("wibble wobble"),
+            //       None,
+            //       Some("wobble wibble"),
+            //    ]
+            //
+            Some(Constant::Record { .. }) => break_(",", ", "),
+            // For all other items, if we have to break the list we still try to
+            // fit as much as possible into a single line instead of putting
+            // each item on its own separate line. For example:
+            //
+            //   [
+            //     1, 2, 3, 4,
+            //     5, 6, 7,
+            //   ]
+            //
+            Some(_) | None => flex_break(",", ", "),
+        };
         let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
 
         let doc = break_("[", "[").append(elements).nest(INDENT);
@@ -935,11 +957,7 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
-            UntypedExpr::Fn {
-                is_capture: true,
-                body,
-                ..
-            } => self.fn_capture(body),
+            UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => self.fn_capture(body),
 
             UntypedExpr::Fn {
                 return_annotation,
@@ -1431,11 +1449,7 @@ impl<'comments> Formatter<'comments> {
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
             let doc = match expr {
-                UntypedExpr::Fn {
-                    is_capture: true,
-                    body,
-                    ..
-                } => {
+                UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
                     let body = match body.first() {
                         Statement::Expression(expression) => expression,
                         Statement::Assignment(_) | Statement::Use(_) => {
@@ -1483,12 +1497,15 @@ impl<'comments> Formatter<'comments> {
                 ..
             }) if name == CAPTURE_VARIABLE
         );
+        let first_argument_is_labelled = args.first().is_some_and(|arg| arg.label.is_some());
         let arity = args.len();
 
-        if hole_in_first_position && args.len() == 1 {
+        // If the first argument is labelled, we don't remove it as the label adds
+        // extra information and could be used to make code more readable.
+        if hole_in_first_position && args.len() == 1 && !first_argument_is_labelled {
             // x |> fun(_)
             self.expr(fun)
-        } else if hole_in_first_position {
+        } else if hole_in_first_position && !first_argument_is_labelled {
             // x |> fun(_, 2, 3)
             let args = args
                 .iter()

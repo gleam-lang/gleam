@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const invalid_annotation: MyInvalidType = \"str\"\nconst invalid_value: String = MyInvalidValue"
 ---
+----- SOURCE CODE
+const invalid_annotation: MyInvalidType = "str"
+const invalid_value: String = MyInvalidValue
+
+----- ERROR
 error: Unknown type
   ┌─ /src/one/two.gleam:1:27
   │

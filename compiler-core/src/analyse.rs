@@ -911,7 +911,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         type_parameters: &[&EcoString],
     ) -> Result<(), Error> {
         let CustomType {
-            location,
             publicity,
             opaque,
             name,
@@ -983,13 +982,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 args_types.push(t);
 
                 // Register the label for this parameter, if there is one
-                if let Some((_, label)) = label {
-                    field_map.insert(label.clone(), i as u32).map_err(|_| {
-                        Error::DuplicateField {
+                if let Some((location, label)) = label {
+                    if field_map.insert(label.clone(), i as u32).is_err() {
+                        self.problems.error(Error::DuplicateField {
                             label: label.clone(),
                             location: *location,
-                        }
-                    })?;
+                        });
+                    };
                 }
             }
             let field_map = field_map.into_option();

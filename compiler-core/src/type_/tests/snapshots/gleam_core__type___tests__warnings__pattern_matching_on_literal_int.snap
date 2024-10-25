@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble { Wibble }\npub fn main() {\n  case 1 {\n    _ -> Nil\n  }\n}"
 ---
+----- SOURCE CODE
+
+pub type Wibble { Wibble }
+pub fn main() {
+  case 1 {
+    _ -> Nil
+  }
+}
+
+----- WARNING
 warning: Match on a literal value
   ┌─ /src/warning/wrn.gleam:4:8
   │

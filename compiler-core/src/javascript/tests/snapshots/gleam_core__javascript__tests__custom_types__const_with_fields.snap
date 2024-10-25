@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Mine {\n  Mine(a: Int, b: Int)\n}\n\nconst labels = Mine(b: 2, a: 1)\nconst no_labels = Mine(3, 4)\n"
 ---
+----- SOURCE CODE
+
+type Mine {
+  Mine(a: Int, b: Int)
+}
+
+const labels = Mine(b: 2, a: 1)
+const no_labels = Mine(3, 4)
+
+
+----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class Mine extends $CustomType {

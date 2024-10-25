@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n   let z = #(1,2)\n   fn(x) { x.2 }(z)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+   let z = #(1,2)
+   fn(x) { x.2 }(z)
+}
+
+
+----- ERROR
 error: Out of bounds tuple index
   ┌─ /src/one/two.gleam:4:13
   │

@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/externals.rs
 expression: "@external(erlang, \"one\", \"two\")\nfn erlang_only() -> Int\n\n@external(erlang, \"one\", \"two\")\npub fn uh_oh() -> Int {\n  erlang_only()\n}\n"
 ---
+----- SOURCE CODE
+@external(erlang, "one", "two")
+fn erlang_only() -> Int
+
+@external(erlang, "one", "two")
+pub fn uh_oh() -> Int {
+  erlang_only()
+}
+
+
+----- ERROR
 error: Unsupported target
   ┌─ /src/one/two.gleam:6:3
   │

@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/type_alias.rs
 expression: "\npub type Headers = List(#(String, String))\n"
 ---
+----- SOURCE CODE
+
+pub type Headers = List(#(String, String))
+
+
+----- TYPESCRIPT DEFINITIONS
 import type * as _ from "../gleam.d.mts";
 
 export type Headers = _.List<[string, string]>;

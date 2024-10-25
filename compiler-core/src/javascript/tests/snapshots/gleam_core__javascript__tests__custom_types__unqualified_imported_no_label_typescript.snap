@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two}\npub fn main() {\n  Two(1)\n}"
 ---
+----- SOURCE CODE
+import other.{Two}
+pub fn main() {
+  Two(1)
+}
+
+----- TYPESCRIPT DEFINITIONS
 import type * as $other from "../other.d.mts";
 
 export function main(): $other.One$;

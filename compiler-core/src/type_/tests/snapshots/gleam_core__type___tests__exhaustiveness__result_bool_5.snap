@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 227
 expression: "\npub fn main(x) {\n  case x {\n    Ok(True) -> 1\n    Ok(False) -> 2\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+  case x {
+    Ok(True) -> 1
+    Ok(False) -> 2
+  }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:3
   │  

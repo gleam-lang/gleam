@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub fn main() {\n  let value = Ok(1)\n  add_1(value)\n}\n\nfn add_1(to x) { x + 1 }\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let value = Ok(1)
+  add_1(value)
+}
+
+fn add_1(to x) { x + 1 }
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:9
   │

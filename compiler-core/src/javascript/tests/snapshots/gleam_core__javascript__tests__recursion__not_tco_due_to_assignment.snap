@@ -2,6 +2,18 @@
 source: compiler-core/src/javascript/tests/recursion.rs
 expression: "\npub fn main(x) {\n  let z = {\n    let y = x\n    main(y - 1)\n  }\n  z\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+  let z = {
+    let y = x
+    main(y - 1)
+  }
+  z
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main(x) {
   let z = (() => {
     let y = x;

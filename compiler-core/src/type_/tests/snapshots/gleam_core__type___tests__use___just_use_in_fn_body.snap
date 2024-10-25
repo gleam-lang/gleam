@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\npub fn main() {\n  use <- wibble()\n}\n\nfn wibble(f) {\n  f()\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  use <- wibble()
+}
+
+fn wibble(f) {
+  f()
+}
+
+
+----- WARNING
 warning: Incomplete use expression
   ┌─ /src/warning/wrn.gleam:3:3
   │

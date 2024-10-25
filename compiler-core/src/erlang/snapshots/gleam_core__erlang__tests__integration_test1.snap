@@ -1,8 +1,11 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 163
 expression: "pub fn t() { True }"
 ---
+----- SOURCE CODE
+pub fn t() { True }
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

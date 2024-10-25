@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n  // Since the pattern is invalid no variable is created\n  let Junk(a) = 7\n  // Pattern is valid but does not type check\n  let Ok(b) = 1\n  let c = a + b\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  // Since the pattern is invalid no variable is created
+  let Junk(a) = 7
+  // Pattern is valid but does not type check
+  let Ok(b) = 1
+  let c = a + b
+}
+
+
+----- ERROR
 error: Unknown variable
   ┌─ /src/one/two.gleam:4:7
   │

@@ -2,6 +2,21 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble {\n  Wibble(one: Int, two: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(one: 1, two: 2)\n  case wibble {\n    Wibble(one ..) -> one\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(one: Int, two: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(one: 1, two: 2)
+  case wibble {
+    Wibble(one ..) -> one
+  }
+}
+
+
+----- WARNING
 warning: Deprecated record pattern matching syntax
   ┌─ test/path:9:16
   │

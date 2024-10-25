@@ -2,6 +2,22 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\npub fn main(x) {\ncase x {\n59 -> \"gleew\"\n14 -> \"glabber\"\n1 -> \"\"\n_ -> \"glooper\"\n2 -> \"\"\n3 -> \"glen\"\n4 -> \"glew\"\n}\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+case x {
+59 -> "gleew"
+14 -> "glabber"
+1 -> ""
+_ -> "glooper"
+2 -> ""
+3 -> "glen"
+4 -> "glew"
+}
+}
+
+
+----- WARNING
 warning: Unreachable case clause
   ┌─ /src/warning/wrn.gleam:8:1
   │

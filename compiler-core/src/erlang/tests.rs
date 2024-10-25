@@ -100,19 +100,27 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
 #[macro_export]
 macro_rules! assert_erl {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
-        let output = $crate::erlang::tests::compile_test_project(
+        let compiled = $crate::erlang::tests::compile_test_project(
             $src,
             "/root/project/test/my/mod.gleam",
             Some(($dep_package, $dep_name, $dep_src)),
+        );
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED ERLANG\n{}",
+            $src, compiled
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
     ($src:expr $(,)?) => {{
-        let output = $crate::erlang::tests::compile_test_project(
+        let compiled = $crate::erlang::tests::compile_test_project(
             $src,
             "/root/project/test/my/mod.gleam",
             None,
+        );
+        let output = format!(
+            "----- SOURCE CODE\n{}\n\n----- COMPILED ERLANG\n{}",
+            $src, compiled
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};

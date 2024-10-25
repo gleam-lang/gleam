@@ -17,6 +17,21 @@
   symlinks.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The cli can now update individual dependencies.
+
+  `gleam update` and `gleam deps update` now take an optional list of package names to update:
+
+  ```shell
+  gleam update package_a
+  gleam deps update package_b package_c
+  ```
+
+  This allows for selective updating of dependencies.
+  When package names are provided, only those packages and their unique dependencies are unlocked and updated.
+  If no package names are specified, the command behaves as before, updating all dependencies.
+
+  ([Jason Sipula](https://github.com/SnakeDoc))
+
 ### Compiler
 
 - The compiler now allows deprecating specific constructors of a custom type using the `@deprecated` attribute:
@@ -129,11 +144,41 @@
   unless explicitly specified.
   ([Gustavo Inacio](https://github.com/gusinacio))
 
-- Fixes a bug where incorrect code would be generated for external function on
-  the Erlang target if any of their arguments were discarded.
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+- Improved the error message for using `@deprecated` with no deprecation message
+  ([Jiangda Wang](https://github.com/frank-iii))
+
+- Optimised creation of bit arrays on the JavaScript target.
+  ([Richard Viney](https://github.com/richard-viney))
 
 ### Formatter
+
+- The formatter no longer removes the first argument from a function
+  which is part of a pipeline if the first argument is a capture
+  and it has a label. This snippet of code is left as is by the formatter:
+
+  ```gleam
+  pub fn divide(dividend a: Int, divisor b: Int) -> Int {
+    a / b
+  }
+
+  pub fn main() {
+    10 |> divide(dividend: _, divisor: 2)
+  }
+  ```
+
+  Whereas previously, the label of the capture variable would be lost:
+
+  ```gleam
+  pub fn divide(dividend a: Int, divisor b: Int) -> Int {
+    a / b
+  }
+
+  pub fn main() {
+    10 |> divide(divisor: 2)
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Language Server
 
@@ -227,6 +272,30 @@
 - Fixed a bug where importing type aliases that reference unimported modules
   would generate invalid TypeScript definitions.
   ([Richard Viney](https://github.com/richard-viney))
+
+- When splitting a constant list made of records, the formatter will keep each
+  item on its own line to make things easier to read.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the compiler would crash when pattern matching on a type
+  which was defined with duplicate fields in one of its variants.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where the WASM compiler would return incomplete JavaScript when
+  unsupported features were used. It now returns a compilation error.
+  ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where incorrect code would be generated for external function on
+  the Erlang target if any of their arguments were discarded.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug in the error message when using wrong values in a pipe where the
+  message would swap the "Expected" and "Found" types.
+  ([Markus Pettersson](https://github.com/MarkusPettersson98/))
+
+- Fixed a bug where the parser would incorrectly parse a record constructor with
+  no arguments.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ## v1.5.1 - 2024-09-26
 

@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nlet f = fn(a, b) { 1 }\nuse <- f(1, 2, 3)\n123\n"
 ---
+----- SOURCE CODE
+
+let f = fn(a, b) { 1 }
+use <- f(1, 2, 3)
+123
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:3:8
   │

@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const invalid_unannotated_value = [1, 2.0]\nconst invalid_everything: MyInvalidType = MyInvalidValue"
 ---
+----- SOURCE CODE
+const invalid_unannotated_value = [1, 2.0]
+const invalid_everything: MyInvalidType = MyInvalidValue
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:39
   │

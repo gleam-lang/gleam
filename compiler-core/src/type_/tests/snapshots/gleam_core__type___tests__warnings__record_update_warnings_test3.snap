@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        pub type Person {\n            Person(name: String, age: Int)\n        }\n        pub fn update_person() {\n            let past = Person(\"Quinn\", 27)\n            let present = Person(..past, name: \"Quinn\", age: 28)\n            present\n        }"
 ---
+----- SOURCE CODE
+
+        pub type Person {
+            Person(name: String, age: Int)
+        }
+        pub fn update_person() {
+            let past = Person("Quinn", 27)
+            let present = Person(..past, name: "Quinn", age: 28)
+            present
+        }
+
+----- WARNING
 warning: Redundant record update
   ┌─ /src/warning/wrn.gleam:7:27
   │

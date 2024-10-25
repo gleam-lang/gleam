@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub const string = \"wibble\" <> \"wobble\""
 ---
+----- SOURCE CODE
+pub const string = "wibble" <> "wobble"
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:1:20
   │

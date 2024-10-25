@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 308
 expression: "\nfn main(x) {\n  let assert 09_179.1 = x\n}\n"
 ---
+----- SOURCE CODE
+
+fn main(x) {
+  let assert 09_179.1 = x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function main(x) {

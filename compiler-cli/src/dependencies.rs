@@ -43,6 +43,7 @@ pub fn list() -> Result<()> {
         &config,
         &cli::Reporter::new(),
         UseManifest::Yes,
+        Vec::new(),
     )?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
@@ -112,9 +113,23 @@ pub enum UseManifest {
     No,
 }
 
-pub fn update() -> Result<()> {
+pub fn update(packages: Vec<String>) -> Result<()> {
     let paths = crate::find_project_paths()?;
-    _ = download(&paths, cli::Reporter::new(), None, UseManifest::No)?;
+    let use_manifest = if packages.is_empty() {
+        UseManifest::Yes
+    } else {
+        UseManifest::No
+    };
+
+    // Update specific packages
+    _ = download(
+        &paths,
+        cli::Reporter::new(),
+        None,
+        packages.into_iter().map(EcoString::from).collect(),
+        use_manifest,
+    )?;
+
     Ok(())
 }
 
@@ -243,6 +258,7 @@ pub fn download<Telem: Telemetry>(
     paths: &ProjectPaths,
     telemetry: Telem,
     new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
+    packages_to_update: Vec<EcoString>,
     // If true we read the manifest from disc. If not set then we ignore any
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
@@ -288,6 +304,7 @@ pub fn download<Telem: Telemetry>(
         &config,
         &telemetry,
         use_manifest,
+        packages_to_update,
     )?;
     let local = LocalPackages::read_from_disc(paths)?;
 
@@ -603,6 +620,7 @@ fn get_manifest<Telem: Telemetry>(
     config: &PackageConfig,
     telemetry: &Telem,
     use_manifest: UseManifest,
+    packages_to_update: Vec<EcoString>,
 ) -> Result<(bool, Manifest)> {
     // If there's no manifest (or we have been asked not to use it) then resolve
     // the versions anew
@@ -619,24 +637,34 @@ fn get_manifest<Telem: Telemetry>(
     };
 
     if should_resolve {
-        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry)?;
+        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry, Vec::new())?;
         return Ok((true, manifest));
     }
 
     let manifest = read_manifest_from_disc(paths)?;
 
-    // If the config has unchanged since the manifest was written then it is up
-    // to date so we can return it unmodified.
-    if is_same_requirements(
-        &manifest.requirements,
-        &config.all_drect_dependencies()?,
-        paths.root(),
-    )? {
+    // If there are no requested updates, and the config is unchanged
+    // since the manifest was written then it is up to date so we can return it unmodified.
+    if packages_to_update.is_empty()
+        && is_same_requirements(
+            &manifest.requirements,
+            &config.all_drect_dependencies()?,
+            paths.root(),
+        )?
+    {
         tracing::debug!("manifest_up_to_date");
         Ok((false, manifest))
     } else {
         tracing::debug!("manifest_outdated");
-        let manifest = resolve_versions(runtime, mode, paths, config, Some(&manifest), telemetry)?;
+        let manifest = resolve_versions(
+            runtime,
+            mode,
+            paths,
+            config,
+            Some(&manifest),
+            telemetry,
+            packages_to_update,
+        )?;
         Ok((true, manifest))
     }
 }
@@ -790,10 +818,15 @@ fn resolve_versions<Telem: Telemetry>(
     config: &PackageConfig,
     manifest: Option<&Manifest>,
     telemetry: &Telem,
+    packages_to_update: Vec<EcoString>,
 ) -> Result<Manifest, Error> {
     telemetry.resolving_package_versions();
     let dependencies = config.dependencies_for(mode)?;
-    let locked = config.locked(manifest)?;
+    let mut locked = config.locked(manifest)?;
+
+    if !packages_to_update.is_empty() {
+        unlock_packages(&mut locked, &packages_to_update, manifest)?;
+    }
 
     // Packages which are provided directly instead of downloaded from hex
     let mut provided_packages = HashMap::new();
@@ -973,6 +1006,59 @@ fn provide_package(
     );
     // Return the version
     Ok(version)
+}
+
+/// Unlocks specified packages and their unique dependencies.
+///
+/// If a manifest is provided, it also unlocks indirect dependencies that are
+/// not required by any other package or the root project.
+pub fn unlock_packages(
+    locked: &mut HashMap<EcoString, Version>,
+    packages_to_unlock: &[EcoString],
+    manifest: Option<&Manifest>,
+) -> Result<()> {
+    if let Some(manifest) = manifest {
+        let mut packages_to_unlock: Vec<EcoString> = packages_to_unlock.to_vec();
+
+        while let Some(package_name) = packages_to_unlock.pop() {
+            if locked.remove(&package_name).is_some() {
+                if let Some(package) = manifest.packages.iter().find(|p| p.name == package_name) {
+                    let deps_to_unlock = find_deps_to_unlock(package, locked, manifest);
+                    packages_to_unlock.extend(deps_to_unlock);
+                }
+            }
+        }
+    } else {
+        for package_name in packages_to_unlock {
+            let _ = locked.remove(package_name);
+        }
+    }
+
+    Ok(())
+}
+
+/// Identifies which dependencies of a package should be unlocked.
+///
+/// A dependency is eligible for unlocking if it is currently locked,
+/// is not a root dependency, and is not required by any locked package.
+fn find_deps_to_unlock(
+    package: &ManifestPackage,
+    locked: &HashMap<EcoString, Version>,
+    manifest: &Manifest,
+) -> Vec<EcoString> {
+    package
+        .requirements
+        .iter()
+        .filter(|&dep| {
+            locked.contains_key(dep)
+                && !manifest.requirements.contains_key(dep)
+                && manifest
+                    .packages
+                    .iter()
+                    .all(|p| !locked.contains_key(&p.name) || !p.requirements.contains(dep))
+        })
+        .cloned()
+        .collect()
 }
 
 #[test]
@@ -1414,4 +1500,316 @@ fn verified_requirements_equality_with_canonicalized_paths() {
         is_same_requirements(&requirements1, &requirements2, &temp_path)
             .expect("Requirements should be the same")
     );
+}
+
+#[cfg(test)]
+fn create_testable_unlock_manifest(
+    packages: Vec<(EcoString, Version, Vec<EcoString>)>,
+    requirements: Vec<(EcoString, EcoString)>,
+) -> Manifest {
+    let manifest_packages = packages
+        .into_iter()
+        .map(|(name, version, requirements)| ManifestPackage {
+            name,
+            version,
+            build_tools: vec!["gleam".into()],
+            otp_app: None,
+            requirements,
+            source: ManifestPackageSource::Hex {
+                outer_checksum: Base16Checksum(vec![]),
+            },
+        })
+        .collect();
+
+    let root_requirements = requirements
+        .into_iter()
+        .map(|(name, range)| {
+            (
+                name,
+                Requirement::Hex {
+                    version: hexpm::version::Range::new(range.into()),
+                },
+            )
+        })
+        .collect();
+
+    Manifest {
+        packages: manifest_packages,
+        requirements: root_requirements,
+    }
+}
+
+#[test]
+fn test_unlock_package() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+        ("package_d".into(), Version::new(4, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+        ("package_d".into(), Version::new(4, 0, 0), vec![]),
+    ];
+
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
+
+    let packages_to_unlock = vec!["package_a".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(!locked.contains_key("package_b"));
+    assert!(!locked.contains_key("package_c"));
+    assert!(locked.contains_key("package_d"));
+}
+
+#[test]
+fn test_unlock_package_without_manifest() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+    ]);
+
+    let packages_to_unlock = vec!["package_a".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, None).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(locked.contains_key("package_b"));
+    assert!(locked.contains_key("package_c"));
+}
+
+#[test]
+fn test_unlock_nonexistent_package() {
+    let initial_locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
+    ];
+
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
+
+    let packages_to_unlock = vec!["nonexistent_package".into()];
+    let mut locked = initial_locked.clone();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert_eq!(
+        initial_locked, locked,
+        "Locked packages should remain unchanged"
+    );
+}
+
+#[test]
+fn test_unlock_multiple_packages() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+        ("package_d".into(), Version::new(4, 0, 0)),
+        ("package_e".into(), Version::new(5, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+        (
+            "package_d".into(),
+            Version::new(4, 0, 0),
+            vec!["package_e".into()],
+        ),
+        ("package_e".into(), Version::new(5, 0, 0), vec![]),
+    ];
+
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
+
+    let packages_to_unlock = vec!["package_a".into(), "package_d".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(!locked.contains_key("package_b"));
+    assert!(!locked.contains_key("package_c"));
+    assert!(!locked.contains_key("package_d"));
+    assert!(!locked.contains_key("package_e"));
+}
+
+#[test]
+fn test_unlock_packages_empty_input() {
+    let initial_locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
+    ];
+
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
+
+    let packages_to_unlock: Vec<EcoString> = vec![];
+    let mut locked = initial_locked.clone();
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert_eq!(
+        initial_locked, locked,
+        "Locked packages should remain unchanged when no packages are specified to unlock"
+    );
+}
+
+#[test]
+fn test_unlock_package_preserve_shared_deps() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_c".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+    ];
+
+    let manifest = create_testable_unlock_manifest(packages, Vec::new());
+
+    let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(locked.contains_key("package_b"));
+    assert!(locked.contains_key("package_c"));
+}
+
+#[test]
+fn test_unlock_package_with_root_dep() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        (
+            "package_b".into(),
+            Version::new(2, 0, 0),
+            vec!["package_c".into()],
+        ),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+    ];
+
+    let requirements = vec![("package_b".into(), ">= 2.0.0".into())];
+
+    let manifest = create_testable_unlock_manifest(packages, requirements);
+
+    let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(locked.contains_key("package_b"));
+    assert!(locked.contains_key("package_c"));
+}
+
+#[test]
+fn test_unlock_root_dep_package() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into()],
+        ),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+    ];
+
+    let requirements = vec![("package_a".into(), ">= 1.0.0".into())];
+
+    let manifest = create_testable_unlock_manifest(packages, requirements);
+
+    let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(!locked.contains_key("package_b"));
+    assert!(locked.contains_key("package_c"));
+}
+
+#[test]
+fn test_unlock_package_with_and_without_root_dep() {
+    let mut locked = HashMap::from([
+        ("package_a".into(), Version::new(1, 0, 0)),
+        ("package_b".into(), Version::new(2, 0, 0)),
+        ("package_c".into(), Version::new(3, 0, 0)),
+    ]);
+
+    let packages = vec![
+        (
+            "package_a".into(),
+            Version::new(1, 0, 0),
+            vec!["package_b".into(), "package_c".into()],
+        ),
+        ("package_b".into(), Version::new(2, 0, 0), vec![]),
+        ("package_c".into(), Version::new(3, 0, 0), vec![]),
+    ];
+
+    let requirements = vec![("package_b".into(), ">= 2.0.0".into())];
+
+    let manifest = create_testable_unlock_manifest(packages, requirements);
+
+    let packages_to_unlock: Vec<EcoString> = vec!["package_a".into()];
+    unlock_packages(&mut locked, &packages_to_unlock, Some(&manifest)).unwrap();
+
+    assert!(!locked.contains_key("package_a"));
+    assert!(locked.contains_key("package_b"));
+    assert!(!locked.contains_key("package_c"));
 }

@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\npub type Mine {\n  Mine(a: Int, b: Int)\n}\n\npub const labels = Mine(b: 2, a: 1)\npub const no_labels = Mine(3, 4)\n"
 ---
+----- SOURCE CODE
+
+pub type Mine {
+  Mine(a: Int, b: Int)
+}
+
+pub const labels = Mine(b: 2, a: 1)
+pub const no_labels = Mine(3, 4)
+
+
+----- TYPESCRIPT DEFINITIONS
 import type * as _ from "../gleam.d.mts";
 
 export class Mine extends _.CustomType {

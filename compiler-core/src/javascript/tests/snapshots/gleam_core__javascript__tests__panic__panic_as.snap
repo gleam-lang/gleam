@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/panic.rs
 expression: "\nfn go() {\n  let x = \"wibble\"\n  panic as x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  let x = "wibble"
+  panic as x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go() {

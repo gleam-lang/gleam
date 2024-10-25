@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "pub fn main() -> String {\n            1\n            |> add_two\n         }\n\n         fn add_two(i: Int) -> Int {\n            i + 2\n         }"
 ---
+----- SOURCE CODE
+pub fn main() -> String {
+            1
+            |> add_two
+         }
+
+         fn add_two(i: Int) -> Int {
+            i + 2
+         }
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:2:13
   │  

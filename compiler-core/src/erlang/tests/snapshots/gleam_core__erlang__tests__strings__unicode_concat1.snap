@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 27
 expression: "\npub fn main(x) -> String {\n  x <> \"\\u{0308}\"\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) -> String {
+  x <> "\u{0308}"
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

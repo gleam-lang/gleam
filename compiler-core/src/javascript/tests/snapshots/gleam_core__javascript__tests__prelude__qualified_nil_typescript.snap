@@ -2,4 +2,10 @@
 source: compiler-core/src/javascript/tests/prelude.rs
 expression: "import gleam\npub fn go() { gleam.Nil }\n"
 ---
+----- SOURCE CODE
+import gleam
+pub fn go() { gleam.Nil }
+
+
+----- TYPESCRIPT DEFINITIONS
 export function go(): undefined;

@@ -2,6 +2,19 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble {\n    Wibble(Int, Bool)\n}\n\npub fn main() {\n  let assert Wibble(_, bool) = Wibble(1, True)\n  bool\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble {
+    Wibble(Int, Bool)
+}
+
+pub fn main() {
+  let assert Wibble(_, bool) = Wibble(1, True)
+  bool
+}
+
+
+----- WARNING
 warning: Redundant assertion
   ┌─ /src/warning/wrn.gleam:7:7
   │

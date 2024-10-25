@@ -339,6 +339,23 @@ fn pipe_mismatch_error() {
 }
 
 #[test]
+fn pipe_value_type_mismatch_error() {
+    assert_module_error!(
+        "pub fn main() -> String {
+            eat_veggie
+            |> Orange
+         }
+
+         type Fruit{ Orange }
+         type Veg{ Lettuce }
+
+         fn eat_veggie(v: Veg) -> String {
+            \"Ok\"
+         }"
+    );
+}
+
+#[test]
 fn case_tuple_guard() {
     assert_error!("case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }");
 }
@@ -2469,5 +2486,25 @@ pub fn main() {
   User(\"Jak\").nam
 }
 "
+    );
+}
+
+#[test]
+fn no_crash_on_duplicate_record_fields() {
+    // https://github.com/gleam-lang/gleam/issues/3713
+    assert_module_error!(
+        "
+pub type X {
+  A
+  B(e0: Int, e0: Int)
+}
+
+fn compiler_crash(x: X) {
+  case x {
+    A -> todo
+    _ -> todo
+  }
+}
+  "
     );
 }

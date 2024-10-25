@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\nfn go(a) {\n  a == \"ok\"\n  a != \"ok\"\n  a == a\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(a) {
+  a == "ok"
+  a != "ok"
+  a == a
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(a) {
   a === "ok";
   a !== "ok";

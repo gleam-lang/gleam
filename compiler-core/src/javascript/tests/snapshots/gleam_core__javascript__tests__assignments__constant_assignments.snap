@@ -2,6 +2,23 @@
 source: compiler-core/src/javascript/tests/assignments.rs
 expression: "\nconst a = True\n\nfn go() {\n  a\n  let a = 10\n  a + 20\n}\n\nfn second() {\n  let a = 10\n  a + 20\n}\n"
 ---
+----- SOURCE CODE
+
+const a = True
+
+fn go() {
+  a
+  let a = 10
+  a + 20
+}
+
+fn second() {
+  let a = 10
+  a + 20
+}
+
+
+----- COMPILED JAVASCRIPT
 function second() {
   let a$1 = 10;
   return a$1 + 20;

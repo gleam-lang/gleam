@@ -1,8 +1,17 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 471
 expression: "\nconst big_concat_list = [\"a\" <> \"b\" <> \"c\" <> \"d\" <> \"e\" <> \"f\" <> \"g\" <> \"h\" <> \"i\" <> \"j\" <> \"k\" <> \"l\" <> \"m\" <> \"n\" <> \"o\" <> \"p\" <> \"q\" <> \"r\" <> \"s\" <> \"t\" <> \"u\" <> \"v\" <> \"w\" <> \"x\" <> \"y\" <> \"z\"]\n\npub fn main() {\n  big_concat_list\n}\n"
 ---
+----- SOURCE CODE
+
+const big_concat_list = ["a" <> "b" <> "c" <> "d" <> "e" <> "f" <> "g" <> "h" <> "i" <> "j" <> "k" <> "l" <> "m" <> "n" <> "o" <> "p" <> "q" <> "r" <> "s" <> "t" <> "u" <> "v" <> "w" <> "x" <> "y" <> "z"]
+
+pub fn main() {
+  big_concat_list
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option.{type    Option, Some}\n\npub fn maybe_increment(x: Option(Int)) -> Option(Int) {\n    case x {\n        Some(value) -> Some(value + 1)\n        _ -> x\n    }\n}\n"
+---
+----- BEFORE ACTION
+
+import option.{type    Option, Some}
+
+pub fn maybe_increment(x: Option(Int)) -> Option(Int) {
+                          ▔▔▔↑                         
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}
+
+
+----- AFTER ACTION
+
+import option.{Some}
+
+pub fn maybe_increment(x: option.Option(Int)) -> option.Option(Int) {
+    case x {
+        Some(value) -> Some(value + 1)
+        _ -> x
+    }
+}

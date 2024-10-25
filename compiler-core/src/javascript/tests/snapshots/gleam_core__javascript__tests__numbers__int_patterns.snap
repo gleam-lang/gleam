@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/numbers.rs
-assertion_line: 146
 expression: "\nfn go(x) {\n  let assert 4 = x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert 4 = x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {

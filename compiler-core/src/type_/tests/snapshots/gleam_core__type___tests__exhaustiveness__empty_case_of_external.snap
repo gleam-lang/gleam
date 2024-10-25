@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-assertion_line: 944
 expression: "\npub type Thingy\n\npub fn main(x: Thingy) {\n  case x {\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Thingy
+
+pub fn main(x: Thingy) {
+  case x {
+  }
+}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:5:3
   │  

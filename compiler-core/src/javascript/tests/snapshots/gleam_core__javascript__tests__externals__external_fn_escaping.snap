@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"./ffi.js\", \"then\")\npub fn then(a: a) -> b"
 ---
+----- SOURCE CODE
+
+@external(javascript, "./ffi.js", "then")
+pub fn then(a: a) -> b
+
+----- COMPILED JAVASCRIPT
 import { then as then$ } from "./ffi.js";
 
 export { then$ };

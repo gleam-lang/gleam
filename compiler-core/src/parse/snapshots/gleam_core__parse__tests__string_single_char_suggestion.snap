@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n    pub fn main() {\n        let a = 'example'\n      }\n    "
 ---
+----- SOURCE CODE
+
+    pub fn main() {
+        let a = 'example'
+      }
+    
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:17
   │

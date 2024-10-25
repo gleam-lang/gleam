@@ -1,8 +1,13 @@
 ---
 source: compiler-core/src/javascript/tests/bools.rs
-assertion_line: 171
 expression: "pub fn negate(x) {\n    panic && x\n}"
 ---
+----- SOURCE CODE
+pub fn negate(x) {
+    panic && x
+}
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 export function negate(x) {

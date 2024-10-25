@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nfn wibble(x: List(Int)) { x }\nfn main(y: List(something)) {\n  wibble(y)\n}"
 ---
+----- SOURCE CODE
+
+fn wibble(x: List(Int)) { x }
+fn main(y: List(something)) {
+  wibble(y)
+}
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:10
   │

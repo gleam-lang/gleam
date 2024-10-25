@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\npub type User {\n    name: String,\n}\n"
 ---
+----- SOURCE CODE
+
+pub type User {
+    name: String,
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │

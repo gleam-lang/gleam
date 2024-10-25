@@ -1,8 +1,22 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-assertion_line: 212
 expression: "\ntype Triple {\n  Triple(a: Int, b: Int, c: Int)\n}\n\nfn main() {\n  let triple = Triple(1,2,3)\n  case triple {\n    Triple(b: the_b, ..) -> the_b\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+type Triple {
+  Triple(a: Int, b: Int, c: Int)
+}
+
+fn main() {
+  let triple = Triple(1,2,3)
+  case triple {
+    Triple(b: the_b, ..) -> the_b
+  }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

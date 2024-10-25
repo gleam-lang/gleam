@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1987
 expression: "\npub type Point {\n  Point2(a: Int, b: Int)\n  Point3(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  Point3(..Point2(a: 1, b: 2))\n}"
 ---
+----- SOURCE CODE
+
+pub type Point {
+  Point2(a: Int, b: Int)
+  Point3(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  Point3(..Point2(a: 1, b: 2))
+}
+
+----- ERROR
 error: Unsafe record update
   ┌─ /src/one/two.gleam:8:3
   │
@@ -13,5 +24,5 @@ This type has multiple constructors so it cannot be safely updated. If
 this value was one of the other variants then the update would be produce
 incorrect results.
 
-Consider pattern matching on it with a case expression and thenconstructing
-a new record with its values.
+Consider pattern matching on it with a case expression and then
+constructing a new record with its values.

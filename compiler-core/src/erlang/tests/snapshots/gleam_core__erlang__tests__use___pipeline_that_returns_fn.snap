@@ -1,8 +1,20 @@
 ---
 source: compiler-core/src/erlang/tests/use_.rs
-assertion_line: 69
 expression: "\npub fn main() {\n  use <- 1 |> add\n  1\n}\n\npub fn add(x) {\n  fn(f) { f() + x }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  use <- 1 |> add
+  1
+}
+
+pub fn add(x) {
+  fn(f) { f() + x }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

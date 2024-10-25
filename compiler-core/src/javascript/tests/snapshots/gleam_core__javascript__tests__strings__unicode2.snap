@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\npub fn y_with_dieresis() -> String {\n  \"\\u{0308}y\"\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn y_with_dieresis() -> String {
+  "\u{0308}y"
+}
+
+
+----- COMPILED JAVASCRIPT
 export function y_with_dieresis() {
   return "\u{0308}y";
 }

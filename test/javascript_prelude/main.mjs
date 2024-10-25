@@ -150,6 +150,56 @@ assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
 
 assertEqual(new BitArray(new Uint8Array([])), toBitArray([]));
 
+const testValues = [
+  { input: 0, u8: 0 },
+  { input: 1, u8: 1 },
+  { input: 127, u8: 127 },
+  { input: 128, u8: 128 },
+  { input: 129, u8: 129 },
+  { input: 255, u8: 255 },
+  { input: 256, u8: 0 },
+  { input: 257, u8: 1 },
+  { input: 2000, u8: 208 },
+  { input: 0, u8: 0 },
+  { input: -1, u8: 255 },
+  { input: -127, u8: 129 },
+  { input: -128, u8: 128 },
+  { input: -129, u8: 127 },
+  { input: -255, u8: 1 },
+  { input: -256, u8: 0 },
+  { input: -257, u8: 255 },
+  { input: -2000, u8: 48 },
+];
+
+for (const { input, u8 } of testValues) {
+  assertEqual(new BitArray(new Uint8Array([u8])), toBitArray([input]));
+}
+
+assertEqual(new BitArray(new Uint8Array([])), toBitArray([new Uint8Array([])]));
+assertEqual(
+  new BitArray(new Uint8Array([1, 2, 4, 8])),
+  toBitArray([new Uint8Array([1, 2, 4, 8])])
+);
+
+assertEqual(
+  new BitArray(new Uint8Array(testValues.map((t) => t.u8))),
+  toBitArray(testValues.map((t) => t.input))
+);
+
+assertEqual(
+  new BitArray(
+    new Uint8Array([1, 2, 4, 8, ...testValues.map((t) => t.u8), 80, 90, 100])
+  ),
+  toBitArray([
+    new Uint8Array([]),
+    new Uint8Array([1, 2, 4, 8]),
+    ...testValues.map((t) => t.input),
+    new Uint8Array([80, 90]),
+    new Uint8Array([]),
+    new Uint8Array([100]),
+  ])
+);
+
 assertEqual(
   new BitArray(new Uint8Array([97, 98, 99])),
   toBitArray([stringBits("abc")]),

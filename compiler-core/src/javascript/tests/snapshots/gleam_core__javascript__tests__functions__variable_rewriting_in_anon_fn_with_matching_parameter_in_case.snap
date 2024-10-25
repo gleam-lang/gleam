@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/functions.rs
-assertion_line: 341
 expression: "pub fn bad() {\n  fn(state) {\n    let state = case Nil {\n      _ -> state\n    }\n    state\n  }\n}\n"
 ---
+----- SOURCE CODE
+pub fn bad() {
+  fn(state) {
+    let state = case Nil {
+      _ -> state
+    }
+    state
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function bad() {
   return (state) => {
     let state$1 = (() => {

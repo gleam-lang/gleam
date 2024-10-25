@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"wibble\", \"wobble\")\npub fn woo(_ignored: a) -> Nil\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "wibble", "wobble")
+pub fn woo(_ignored: a) -> Nil
+
+
+----- COMPILED JAVASCRIPT
 import { wobble as woo } from "wibble";
 
 export { woo };

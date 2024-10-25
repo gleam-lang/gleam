@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"./the/module.mjs\", \"dup\")\npub fn one() -> Nil\n\n@external(javascript, \"./the/module.mjs\", \"dup\")\npub fn two() -> Nil\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "./the/module.mjs", "dup")
+pub fn one() -> Nil
+
+@external(javascript, "./the/module.mjs", "dup")
+pub fn two() -> Nil
+
+
+----- COMPILED JAVASCRIPT
 import { dup as one, dup as two } from "./the/module.mjs";
 
 export { one, two };
