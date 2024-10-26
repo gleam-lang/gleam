@@ -1,0 +1,21 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_string"
+---
+--- CODE
+pub fn main() {
+  echo "hello world"
+  echo "multiline
+string"
+  echo "string with\t\r\nescaped chars"
+}
+
+--- OUTPUT ON ERLANG TARGET
+"hello world"
+"multiline\nstring"
+"string with\t\r\nescaped chars"
+
+--- OUTPUT ON JAVASCRIPT TARGET
+"hello world"
+"multiline\nstring"
+"string with\t\r\nescaped chars"
