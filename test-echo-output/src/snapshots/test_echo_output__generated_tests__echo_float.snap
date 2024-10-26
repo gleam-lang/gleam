@@ -1,0 +1,20 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_float"
+---
+--- CODE
+pub fn main() {
+  echo 1.0
+  echo 2.1
+  echo 11.11
+}
+
+--- OUTPUT ON ERLANG TARGET
+1.0
+2.1
+11.11
+
+--- OUTPUT ON JAVASCRIPT TARGET
+1
+2.1
+11.11
