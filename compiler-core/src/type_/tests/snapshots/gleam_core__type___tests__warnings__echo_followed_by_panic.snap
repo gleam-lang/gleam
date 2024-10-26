@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main() {\n  echo panic\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  echo panic
+}
+
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:3:3
   │
