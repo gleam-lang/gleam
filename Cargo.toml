@@ -1,12 +1,13 @@
 [workspace]
 resolver = "2"
 members = [
-  "compiler-cli",
-  "compiler-core",
-  "compiler-wasm",
-  "test-helpers-rs",
-  "test-package-compiler",
-  "test-project-compiler",
+    "compiler-cli",
+    "compiler-core",
+    "compiler-wasm",
+    "test-helpers-rs",
+    "test-package-compiler",
+    "test-project-compiler",
+    "test-echo-output",
 ]
 
 # common dependencies
@@ -59,7 +60,7 @@ thiserror = "1"
 # Test assertion errors with diffs
 pretty_assertions = "1"
 # Snapshot testing to make test maintenance easier
-insta = {version = "1", features = ["glob"]}
+insta = { version = "1", features = ["glob"] }
 # A transitive dependency needed to compile into wasm32-unknown-unknown
 # See https://docs.rs/getrandom/latest/getrandom/index.html#webassembly-support
 getrandom = { version = "0", features = ["js"] }
