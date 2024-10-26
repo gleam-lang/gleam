@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub fn main() {\n  todo\n  |> { echo }\n  |> todo\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  todo
+  |> { echo }
+  |> todo
+}
+
+
+----- ERROR
 error: Invalid echo use
   ┌─ /src/one/two.gleam:4:8
   │

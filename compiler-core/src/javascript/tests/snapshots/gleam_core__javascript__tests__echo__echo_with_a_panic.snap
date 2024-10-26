@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  echo panic\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  echo panic
+}
+
+
+----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
   makeError,

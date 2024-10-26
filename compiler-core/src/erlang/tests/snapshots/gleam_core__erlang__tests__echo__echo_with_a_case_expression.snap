@@ -2,6 +2,16 @@
 source: compiler-core/src/erlang/tests/echo.rs
 expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  echo case 1 {
+    _ -> 2
+  }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
