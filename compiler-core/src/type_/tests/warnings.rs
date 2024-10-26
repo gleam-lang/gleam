@@ -2419,3 +2419,43 @@ pub fn main(a) {
 ",
     );
 }
+
+#[test]
+fn record_update_narrowing_requires_v1_6() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+
+pub fn main(wibble) {
+  case wibble {
+    Wibble(..) -> Wibble(..wibble, b: 10)
+    Wobble(..) -> panic
+  }
+}
+",
+    );
+}
+
+#[test]
+fn record_access_narrowing_requires_v1_6() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+
+pub fn main(wibble) {
+  case wibble {
+    Wibble(..) -> wibble.b
+    Wobble(..) -> wibble.c
+  }
+}
+",
+    );
+}
