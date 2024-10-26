@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub fn main() {\n  panic as echo\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  panic as echo
+}
+
+
+----- ERROR
 error: Invalid echo use
   ┌─ /src/one/two.gleam:3:12
   │
