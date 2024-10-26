@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main(a) {\n  echo case a {\n    1 -> panic\n    _ -> [1, panic]\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(a) {
+  echo case a {
+    1 -> panic
+    _ -> [1, panic]
+  }
+}
+
+
+----- WARNING
 warning: Unreachable code
   ┌─ /src/warning/wrn.gleam:3:3
   │  
