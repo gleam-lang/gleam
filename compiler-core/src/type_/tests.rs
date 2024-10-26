@@ -225,7 +225,8 @@ fn get_warnings(
         Target::Erlang,
         TargetSupport::NotEnforced,
         gleam_version,
-    );
+    )
+    .expect("Compilation should succeed");
     warnings.take().into_iter().collect_vec()
 }
 
@@ -1845,6 +1846,52 @@ pub fn grow(shape) {
 }
 
 #[test]
+fn record_access_type_narrowing() {
+    assert_module_infer!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+
+pub fn get(wibble) {
+  case wibble {
+    Wibble(..) as w -> w.b
+    Wobble(..) as w -> w.c
+  }
+}
+",
+        vec![
+            ("Wibble", "fn(Int, Int) -> Wibble"),
+            ("Wobble", "fn(Int, Int) -> Wibble"),
+            ("get", "fn(Wibble) -> Int")
+        ]
+    );
+}
+
+#[test]
+fn local_variable_type_narrowing() {
+    assert_module_infer!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+
+pub fn main() {
+  let always_wibble = Wibble(1, 2)
+  always_wibble.b
+}
+",
+        vec![
+            ("Wibble", "fn(Int, Int) -> Wibble"),
+            ("Wobble", "fn(Int, Int) -> Wibble"),
+            ("main", "fn() -> Int")
+        ]
+    );
+}
+
+#[test]
 fn record_update_type_narrowing_for_original_variable() {
     assert_module_infer!(
         r#"
@@ -1865,6 +1912,80 @@ pub fn update(wibble: Wibble) -> Wibble {
             ("Wobble", "fn(Int, String) -> Wibble"),
             ("update", "fn(Wibble) -> Wibble")
         ]
+    );
+}
+
+#[test]
+fn record_access_type_narrowing_for_original_variable() {
+    assert_module_infer!(
+        "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+
+pub fn get(wibble) {
+  case wibble {
+    Wibble(..) -> wibble.b
+    Wobble(..) -> wibble.c
+  }
+}
+",
+        vec![
+            ("Wibble", "fn(Int, Int) -> Wibble"),
+            ("Wobble", "fn(Int, Int) -> Wibble"),
+            ("get", "fn(Wibble) -> Int")
+        ]
+    );
+}
+
+#[test]
+fn type_narrowing_for_imported_type() {
+    assert_infer_with_module!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+"
+        ),
+        "
+import wibble.{Wibble, Wobble}
+
+pub fn main(wibble) {
+  case wibble {
+    Wibble(..) -> Wibble(a: 1, b: wibble.b + 1)
+    Wobble(..) -> Wobble(..wibble, c: wibble.c - 4)
+  }
+}
+",
+        vec![("main", "fn(Wibble) -> Wibble")]
+    );
+}
+
+#[test]
+fn local_variable_type_narrowing_for_imported_type() {
+    assert_infer_with_module!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+"
+        ),
+        "
+import wibble.{Wibble}
+
+pub fn main() {
+  let wibble = Wibble(4, 9)
+  Wibble(..wibble, b: wibble.b)
+}
+",
+        vec![("main", "fn() -> Wibble")]
     );
 }
 
