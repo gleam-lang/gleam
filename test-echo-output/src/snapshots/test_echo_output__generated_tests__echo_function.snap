@@ -1,0 +1,21 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_function"
+---
+--- CODE
+pub fn main() {
+  echo fn(n) { n + 1 }
+  echo private
+}
+
+fn private() {
+  1
+}
+
+--- OUTPUT ON ERLANG TARGET
+//fn(a) { ... }
+//fn() { ... }
+
+--- OUTPUT ON JAVASCRIPT TARGET
+//fn(a) { ... }
+//fn() { ... }
