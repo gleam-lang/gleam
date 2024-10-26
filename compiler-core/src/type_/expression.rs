@@ -11,7 +11,7 @@ use crate::{
         UntypedMultiPattern, UntypedStatement, Use, UseAssignment, USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
-    exhaustiveness,
+    exhaustiveness::{self, Reachability},
 };
 use hexpm::version::Version;
 use id_arena::Arena;
@@ -3524,10 +3524,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Emit warnings for unreachable clauses
         for (clause_index, clause) in clauses.iter().enumerate() {
-            if !output.is_reachable(clause_index) {
-                self.problems.warning(Warning::UnreachableCaseClause {
-                    location: clause.location,
-                })
+            match output.is_reachable(clause_index) {
+                Reachability::Reachable => {}
+                Reachability::Unreachable(reason) => {
+                    self.problems.warning(Warning::UnreachableCaseClause {
+                        location: clause.location,
+                        reason,
+                    })
+                }
             }
         }
 

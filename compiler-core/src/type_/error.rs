@@ -708,6 +708,7 @@ pub enum Warning {
 
     UnreachableCaseClause {
         location: SrcSpan,
+        reason: UnreachableCaseClauseReason,
     },
 
     /// This happens when someone tries to write a case expression where one of
@@ -874,6 +875,17 @@ pub enum PanicPosition {
 pub enum TodoOrPanic {
     Todo,
     Panic,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum UnreachableCaseClauseReason {
+    /// The clause is unreachable because a previous pattern
+    /// matches the same case.
+    DuplicatePattern,
+    /// The clause is unreachable because we have narrowed the variant
+    /// of the custom type that we are matching on, and this matches
+    /// against one of the variants we know it isn't.
+    NarrowedVariant,
 }
 
 impl Error {
