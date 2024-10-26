@@ -2389,22 +2389,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // one being constructed, we can tell the user that it's always wrong
             if record_index.is_some_and(|index| index != variant_index) {
                 let Type::Named {
-                    module: spread_module,
-                    name: spread_name,
-                    narrowed_variant: Some(spread_index),
+                    module: record_module,
+                    name: record_name,
+                    narrowed_variant: Some(record_index),
                     ..
-                } = spread_type.deref()
+                } = record_type.deref()
                 else {
                     panic!("Spread type must be named and with an index")
                 };
 
                 return Err(Error::UnsafeRecordUpdate {
-                    location: spread.location(),
+                    location: record.location(),
                     reason: UnsafeRecordUpdateReason::WrongVariant {
                         constructed_variant: name,
                         spread_variant: self
                             .environment
-                            .type_variant_name(spread_module, spread_name, *spread_index)
+                            .type_variant_name(record_module, record_name, *record_index)
                             .expect("Spread type must exist and variant must be valid")
                             .clone(),
                     },
@@ -2414,7 +2414,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // that it's not safe to update it as it could be any variant
             else if record_index.is_none() {
                 return Err(Error::UnsafeRecordUpdate {
-                    location: spread.location(),
+                    location: record.location(),
                     reason: UnsafeRecordUpdateReason::UnknownVariant {
                         constructed_variant: name,
                     },
