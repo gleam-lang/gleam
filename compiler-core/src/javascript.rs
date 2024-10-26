@@ -204,7 +204,13 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "BitArray", Some("$BitArray"));
             self.register_prelude_usage(&mut imports, "List", Some("$List"));
             self.register_prelude_usage(&mut imports, "UtfCodepoint", Some("$UtfCodepoint"));
-            self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
+
+            // If a custom type was used then this prelude usage will have
+            // already been registered. So we have to add it only when no custom
+            // type was used.
+            if !self.tracker.custom_type_used {
+                self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
+            }
             docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
         } else {
             nil()
