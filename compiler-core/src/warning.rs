@@ -4,7 +4,10 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic},
+        error::{
+            FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic,
+            UnreachableCaseClauseReason,
+        },
         pretty::Printer,
     },
 };
@@ -727,11 +730,17 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::UnreachableCaseClause { location } => {
+                type_::Warning::UnreachableCaseClause { location, reason } => {
                     let text: String =
-                        "This case clause cannot be reached as a previous clause matches
-the same values.\n"
-                            .into();
+                        match reason {
+                            UnreachableCaseClauseReason::DuplicatePattern => {
+                                "This case clause cannot be reached as a previous clause matches
+the same values.\n".into()
+                            }
+                            UnreachableCaseClauseReason::NarrowedVariant => {
+                                "This case clause cannot be reached as it matches on a variant of a type which is never present.\n".into()
+                        }
+                        };
                     Diagnostic {
                         title: "Unreachable case clause".into(),
                         text,

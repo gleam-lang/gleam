@@ -38,8 +38,10 @@ use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
     ast::AssignName,
     type_::{
-        collapse_links, error::UnknownTypeConstructorError, is_prelude_module, Environment, Type,
-        TypeValueConstructor, TypeValueConstructorField, TypeVar,
+        collapse_links,
+        error::{UnknownTypeConstructorError, UnreachableCaseClauseReason},
+        is_prelude_module, Environment, Type, TypeValueConstructor, TypeValueConstructorField,
+        TypeVar,
     },
 };
 use ecow::EcoString;
@@ -215,6 +217,10 @@ pub struct Diagnostics {
     /// If a right-hand side isn't in this list it means its pattern is
     /// redundant.
     pub reachable: Vec<u16>,
+
+    /// Clauses which match on variants of a type which the compiler
+    /// can tell will never be present.
+    pub match_narrowed_variants: Vec<u16>,
 }
 
 /// The result of compiling a pattern match expression.
@@ -224,9 +230,23 @@ pub struct Match {
     pub subject_variables: Vec<Variable>,
 }
 
+/// Whether a clause is reachable, or why it is unreachable.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reachability {
+    Reachable,
+    Unreachable(UnreachableCaseClauseReason),
+}
+
 impl Match {
-    pub fn is_reachable(&self, clause: usize) -> bool {
-        self.diagnostics.reachable.contains(&(clause as u16))
+    pub fn is_reachable(&self, clause: usize) -> Reachability {
+        let clause = clause as u16;
+        if self.diagnostics.reachable.contains(&clause) {
+            Reachability::Reachable
+        } else if self.diagnostics.match_narrowed_variants.contains(&clause) {
+            Reachability::Unreachable(UnreachableCaseClauseReason::NarrowedVariant)
+        } else {
+            Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern)
+        }
     }
 
     pub fn missing_patterns(&self, environment: &Environment<'_>) -> Vec<EcoString> {
@@ -254,6 +274,7 @@ impl<'a> Compiler<'a> {
             diagnostics: Diagnostics {
                 missing: false,
                 reachable: Vec::new(),
+                match_narrowed_variants: Vec::new(),
             },
         }
     }
@@ -390,14 +411,13 @@ impl<'a> Compiler<'a> {
             BranchMode::NamedType {
                 variable,
                 constructors,
+                narrowed_variant,
             } => {
-                let cases = constructors
-                    .iter()
-                    .enumerate()
-                    .map(|(idx, constructor)| {
+                let mut prepare_case_for_constructor =
+                    |constructor: &TypeValueConstructor, index| {
                         let variant = Constructor::Variant {
                             type_: variable.type_.clone(),
-                            index: idx as u16,
+                            index: index as u16,
                         };
                         // Make new variables for each of the fields of the variant,
                         // so they can be used in the sub tree.
@@ -407,9 +427,31 @@ impl<'a> Compiler<'a> {
                             .map(|p| self.new_variable(p.type_.clone()))
                             .collect_vec();
                         (variant, new_variables, Vec::new())
-                    })
-                    .collect();
-                let cases = self.compile_constructor_cases(rows, variable.clone(), cases);
+                    };
+
+                let cases = if let Some(variant) = narrowed_variant {
+                    let case = prepare_case_for_constructor(
+                        constructors
+                            .get(variant as usize)
+                            .expect("Constructor must exist"),
+                        variant as usize,
+                    );
+                    vec![self.compile_narrowed_constructor_cases(
+                        rows,
+                        variable.clone(),
+                        case,
+                        variant,
+                    )]
+                } else {
+                    let cases = constructors
+                        .iter()
+                        .enumerate()
+                        .map(|(index, constructor)| {
+                            prepare_case_for_constructor(constructor, index)
+                        })
+                        .collect();
+                    self.compile_constructor_cases(rows, variable.clone(), cases)
+                };
                 Decision::Switch(variable, cases, None)
             }
         }
@@ -606,6 +648,73 @@ impl<'a> Compiler<'a> {
             .collect()
     }
 
+    /// The same logic as `compile_constructor_cases`, but for when matching on a type
+    /// whose variant we've narrowed. This means we only need to prepare one case,
+    /// the one that we've narrowed, and we can mark any other variants in the pattern
+    /// as unreachable due to narrowing.
+    ///
+    fn compile_narrowed_constructor_cases(
+        &mut self,
+        rows: Vec<Row>,
+        branch_var: Variable,
+        mut case: (Constructor, Vec<Variable>, Vec<Row>),
+        variant: u16,
+    ) -> Case {
+        for mut row in rows {
+            let column = match row.remove_column(branch_var.id) {
+                Some(column) => column,
+
+                None => {
+                    case.2.push(row);
+                    continue;
+                }
+            };
+
+            for (pattern, row) in self.flatten_or(column.pattern, row) {
+                // We should only be able to reach constructors here for well
+                // typed code. Invalid patterns should have been caught by
+                // earlier analysis.
+                let (index, args) = match self.pattern(pattern) {
+                    Pattern::Constructor {
+                        constructor,
+                        arguments,
+                    } => (constructor.index(), arguments.clone()),
+
+                    pattern @ (Pattern::Or { .. }
+                    | Pattern::Int { .. }
+                    | Pattern::List { .. }
+                    | Pattern::Float { .. }
+                    | Pattern::String { .. }
+                    | Pattern::Assign { .. }
+                    | Pattern::Discard
+                    | Pattern::Variable { .. }
+                    | Pattern::BitArray { .. }
+                    | Pattern::EmptyList
+                    | Pattern::StringPrefix { .. }
+                    | Pattern::Tuple { .. }) => panic!("Unexpected pattern {pattern:?}"),
+                };
+
+                // If the constructor we are matching on is not the one that we have
+                // narrowed, it's safe to just skip it and mark it as unreachable.
+                if variant != index {
+                    self.diagnostics
+                        .match_narrowed_variants
+                        .push(row.body.clause_index);
+                    continue;
+                }
+
+                let mut columns = row.columns;
+                for (var, pattern) in case.1.iter().zip(args.into_iter()) {
+                    columns.push(Column::new(var.clone(), pattern));
+                }
+                case.2.push(Row::new(columns, row.guard, row.body));
+            }
+        }
+
+        let (cons, vars, rows) = case;
+        Case::new(cons, vars, self.compile_rows(rows))
+    }
+
     fn compile_list_cases(
         &mut self,
         rows: Vec<Row>,
@@ -773,15 +882,20 @@ impl<'a> Compiler<'a> {
             },
 
             Type::Named {
-                module, name, args, ..
+                module,
+                name,
+                args,
+                narrowed_variant,
+                ..
             } => {
                 let constructors = self
                     .instantiated_custom_type_info(module, name, args.as_slice())
-                    .expect("Custom type variants must exist")
-                    .to_vec();
+                    .expect("Custom type variants must exist");
+
                 BranchMode::NamedType {
                     variable,
                     constructors,
+                    narrowed_variant: *narrowed_variant,
                 }
             }
 
@@ -856,6 +970,7 @@ enum BranchMode {
         variable: Variable,
         /// The constructors for this type. For example, `Result` has `Ok` and `Error`.
         constructors: Vec<TypeValueConstructor>,
+        narrowed_variant: Option<u16>,
     },
 }
 

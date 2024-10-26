@@ -1449,8 +1449,7 @@ type Wibble {
   Wubble
 }
 
-pub fn main() {
-  let wibble = Wobble
+pub fn main(wibble: Wibble) {
   case wibble {
     Wobble -> Nil
   }
