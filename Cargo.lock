@@ -2953,6 +2953,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "test-echo-output"
+version = "1.5.0"
+dependencies = [
+ "camino",
+ "gleam-core",
+ "im",
+ "insta",
+ "itertools",
+ "regex",
+ "test-helpers-rs",
+ "toml",
+ "walkdir",
+]
+
+[[package]]
 name = "test-helpers-rs"
 version = "0.1.0"
 dependencies = [

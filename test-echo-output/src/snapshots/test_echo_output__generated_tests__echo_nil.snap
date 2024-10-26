@@ -1,0 +1,14 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_nil"
+---
+--- CODE
+pub fn main() {
+  echo Nil
+}
+
+--- OUTPUT ON ERLANG TARGET
+Nil
+
+--- OUTPUT ON JAVASCRIPT TARGET
+Nil
