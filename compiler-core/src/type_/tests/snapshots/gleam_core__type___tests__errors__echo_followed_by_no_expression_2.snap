@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n  pub fn wibble(a) { a }\n\n  pub fn main() {\n    wibble(echo)\n  }\n"
 ---
+----- SOURCE CODE
+
+  pub fn wibble(a) { a }
+
+  pub fn main() {
+    wibble(echo)
+  }
+
+
+----- ERROR
 error: Invalid echo use
   ┌─ /src/one/two.gleam:5:12
   │

@@ -2,6 +2,15 @@
 source: compiler-core/src/erlang/tests/echo.rs
 expression: "\npub fn main() {\n  echo 1\n  echo 2\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  echo 1
+  echo 2
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
