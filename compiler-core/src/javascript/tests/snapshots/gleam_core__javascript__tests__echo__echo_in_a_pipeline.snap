@@ -2,6 +2,18 @@
 source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  [1, 2, 3]\n  |> echo\n  |> wibble\n}\n\npub fn wibble(n) { n }\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  [1, 2, 3]
+  |> echo
+  |> wibble
+}
+
+pub fn wibble(n) { n }
+
+
+----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
   toList,

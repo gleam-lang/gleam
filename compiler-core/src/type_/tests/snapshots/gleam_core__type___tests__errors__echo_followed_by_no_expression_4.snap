@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n  pub fn main() {\n    \"wibble\" <> echo\n  }\n"
 ---
+----- SOURCE CODE
+
+  pub fn main() {
+    "wibble" <> echo
+  }
+
+
+----- ERROR
 error: Invalid echo use
   ┌─ /src/one/two.gleam:3:17
   │

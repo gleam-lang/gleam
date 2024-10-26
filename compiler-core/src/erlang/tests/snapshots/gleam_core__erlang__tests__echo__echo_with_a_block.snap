@@ -2,6 +2,17 @@
 source: compiler-core/src/erlang/tests/echo.rs
 expression: "\npub fn main() {\n  echo {\n    Nil\n    1\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  echo {
+    Nil
+    1
+  }
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 
