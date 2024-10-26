@@ -2255,55 +2255,71 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 UnknownField::TrulyUnknown
             },
         };
-        let (accessors, accessor_record_type) =
-            match collapse_links(record_type.clone()).as_ref() {
-                // A type in the current module which may have fields
-                Type::Named {
-                    module,
-                    name,
-                    narrowed_variant,
-                    ..
-                } if module == &self.environment.current_module => {
-                    self.environment.accessors.get(name).map(|accessors_map| {
-                        (
-                            accessors_map.accessors_for_variant(*narrowed_variant),
-                            accessors_map.type_.clone(),
-                        )
-                    })
-                }
-
-                // A type in another module which may have fields
-                Type::Named {
-                    module,
-                    name,
-                    narrowed_variant,
-                    ..
-                } => self
-                    .environment
-                    .importable_modules
-                    .get(module)
-                    .and_then(|module| module.accessors.get(name))
-                    .filter(|a| {
-                        a.publicity.is_importable() || module == &self.environment.current_module
-                    })
-                    .map(|accessors_map| {
-                        (
-                            accessors_map.accessors_for_variant(*narrowed_variant),
-                            accessors_map.type_.clone(),
-                        )
-                    }),
-
-                _something_without_fields => return Err(unknown_field(vec![])),
+        let (accessors_map, variant_accessors) = match collapse_links(record_type.clone()).as_ref()
+        {
+            // A type in the current module which may have fields
+            Type::Named {
+                module,
+                name,
+                narrowed_variant,
+                ..
+            } if module == &self.environment.current_module => {
+                self.environment.accessors.get(name).map(|accessors_map| {
+                    (
+                        accessors_map,
+                        accessors_map.accessors_for_variant(*narrowed_variant),
+                    )
+                })
             }
-            .ok_or_else(|| unknown_field(vec![]))?;
+
+            // A type in another module which may have fields
+            Type::Named {
+                module,
+                name,
+                narrowed_variant,
+                ..
+            } => self
+                .environment
+                .importable_modules
+                .get(module)
+                .and_then(|module| module.accessors.get(name))
+                .filter(|a| {
+                    a.publicity.is_importable() || module == &self.environment.current_module
+                })
+                .map(|accessors_map| {
+                    (
+                        accessors_map,
+                        accessors_map.accessors_for_variant(*narrowed_variant),
+                    )
+                }),
+
+            _something_without_fields => return Err(unknown_field(vec![])),
+        }
+        .ok_or_else(|| unknown_field(vec![]))?;
+
         let RecordAccessor {
             index,
             label,
             type_,
-        } = accessors
+        } = variant_accessors
             .get(&label)
-            .ok_or_else(|| unknown_field(accessors.keys().cloned().collect()))?
+            .ok_or_else(|| unknown_field(variant_accessors.keys().cloned().collect()))?
             .clone();
+
+        let accessor_record_type = accessors_map.type_.clone();
+
+        // If the accessor isn't shared across variants, this requires type narrowing
+        if !accessors_map.shared_accessors.contains_key(&label) {
+            match usage {
+                FieldAccessUsage::MethodCall | FieldAccessUsage::Other => {
+                    self.track_feature_usage(FeatureKind::TypeNarrowing, location);
+                }
+                // This feature for record updates should be tracked in
+                // `infer_record_update`, so we avoid duplicating that here.
+                FieldAccessUsage::RecordUpdate => {}
+            }
+        }
+
         let mut type_vars = hashmap![];
         let accessor_record_type = self.instantiate(accessor_record_type, &mut type_vars);
         let type_ = self.instantiate(type_, &mut type_vars);
@@ -2420,6 +2436,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     },
                 });
             }
+            // This means we can perform a safe record update due to type narrowing.
+            else {
+                self.track_feature_usage(FeatureKind::TypeNarrowing, location);
+            }
         }
 
         let args: Vec<TypedRecordUpdateArg> = args
@@ -2435,7 +2455,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         record.clone(),
                         label.clone(),
                         *location,
-                        FieldAccessUsage::Other,
+                        FieldAccessUsage::RecordUpdate,
                     )?;
 
                     // Check that the update argument unifies with the corresponding

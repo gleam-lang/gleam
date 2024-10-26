@@ -1027,6 +1027,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::AtInJavascriptModules => {
                             "The ability to have `@` in a Javascript module's name was"
                         }
+                        FeatureKind::TypeNarrowing => "Variant narrowing for custom types was",
                     };
 
                     Diagnostic {
