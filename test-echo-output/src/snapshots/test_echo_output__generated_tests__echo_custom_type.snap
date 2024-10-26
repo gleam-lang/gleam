@@ -1,0 +1,26 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_custom_type"
+---
+--- CODE
+pub type Wibble {
+  Wibble(a: Int, b: String)
+  Wobble(a: List(Float))
+  Woo
+}
+
+pub fn main() {
+  echo Wibble(1, "hello")
+  echo Wobble([1.0, 1.1])
+  echo Woo
+}
+
+--- OUTPUT ON ERLANG TARGET
+Wibble(1, "hello")
+Wobble([1.0, 1.1])
+Woo
+
+--- OUTPUT ON JAVASCRIPT TARGET
+Wibble(a: 1, b: "hello")
+Wobble(a: [1, 1.1])
+Woo
