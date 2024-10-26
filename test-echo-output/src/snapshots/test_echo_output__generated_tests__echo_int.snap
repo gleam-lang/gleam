@@ -1,0 +1,20 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_int"
+---
+--- CODE
+pub fn main() {
+  echo 1
+  echo 2
+  echo 100_000
+}
+
+--- OUTPUT ON ERLANG TARGET
+1
+2
+100000
+
+--- OUTPUT ON JAVASCRIPT TARGET
+1
+2
+100000

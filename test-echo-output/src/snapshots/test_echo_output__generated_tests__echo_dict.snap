@@ -1,0 +1,19 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_dict"
+---
+--- CODE
+import gleam/dict
+
+pub fn main() {
+  echo dict.new()
+  echo dict.from_list([#(1, "hello"), #(2, "world!")])
+}
+
+--- OUTPUT ON ERLANG TARGET
+dict.from_list([])
+dict.from_list([#(1, "hello"), #(2, "world!")])
+
+--- OUTPUT ON JAVASCRIPT TARGET
+dict.from_list([])
+dict.from_list([#(2, "world!"), #(1, "hello")])

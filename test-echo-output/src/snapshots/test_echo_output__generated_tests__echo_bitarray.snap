@@ -1,0 +1,30 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_bitarray"
+---
+--- CODE
+pub fn main() {
+  echo <<>>
+  echo <<1, 2, 3>>
+  target_specific()
+}
+
+@target(erlang)
+pub fn target_specific() {
+  // On erlang we also check non byte aligned bit arrays
+  echo <<1, 2, 3:2>>
+}
+
+@target(javascript)
+pub fn target_specific() {
+  Nil
+}
+
+--- OUTPUT ON ERLANG TARGET
+""
+"\u{0001}\u{0002}\u{0003}"
+<<1, 2, 3:size(2)>>
+
+--- OUTPUT ON JAVASCRIPT TARGET
+<<>>
+<<1, 2, 3>>
