@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/echo.rs
 expression: "\npub fn main() {\n  echo {\n    Nil\n    1\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  echo {
+    Nil
+    1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
   BitArray as $BitArray,
