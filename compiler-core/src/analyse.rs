@@ -833,8 +833,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                      arguments: args,
                      documentation,
                      deprecation: constructor_deprecation,
+                     attributes_location,
                  }| {
                     self.check_name_case(name_location, &name, Named::CustomTypeVariant);
+                    if constructor_deprecation.is_deprecated() {
+                        self.track_feature_usage(
+                            FeatureKind::ConstructorWithDeprecatedAnnotation,
+                            attributes_location.expect("Check value must exist and be deprecated"),
+                        );
+                    }
 
                     let preregistered_fn = environment
                         .get_variable(&name)
@@ -870,6 +877,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         arguments: args,
                         documentation,
                         deprecation: constructor_deprecation,
+                        attributes_location,
                     }
                 },
             )

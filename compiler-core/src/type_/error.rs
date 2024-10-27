@@ -875,6 +875,7 @@ pub enum FeatureKind {
     RecordUpdateVariantInference,
     RecordAccessVariantInference,
     LetAssertWithMessage,
+    ConstructorWithDeprecatedAnnotation,
 }
 
 impl FeatureKind {
@@ -890,6 +891,7 @@ impl FeatureKind {
             FeatureKind::RecordUpdateVariantInference
             | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
             FeatureKind::LetAssertWithMessage => Version::new(1, 7, 0),
+            FeatureKind::ConstructorWithDeprecatedAnnotation => Version::new(1, 6, 0),
         }
     }
 }

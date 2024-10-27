@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1526
+assertion_line: 1512
 expression: "\ntype Wibble {\n    @deprecated(\"1\")\n    Wibble1\n    Wibble2\n}\n"
 ---
 Parsed {
@@ -39,6 +39,12 @@ Parsed {
                                 deprecation: Deprecated {
                                     message: "1",
                                 },
+                                attributes_location: Some(
+                                    SrcSpan {
+                                        start: 19,
+                                        end: 35,
+                                    },
+                                ),
                             },
                             RecordConstructor {
                                 location: SrcSpan {
@@ -53,6 +59,7 @@ Parsed {
                                 arguments: [],
                                 documentation: None,
                                 deprecation: NotDeprecated,
+                                attributes_location: None,
                             },
                         ],
                         documentation: None,
@@ -87,3 +94,4 @@ Parsed {
         ],
     },
 }
+
