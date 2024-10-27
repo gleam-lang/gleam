@@ -1279,8 +1279,11 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
 pub enum FieldAccessUsage {
     /// Used as `thing.field()`
     MethodCall,
-    /// Used internally when trying to access a field when
-    /// performing record updates
+    /// Used internally when trying to access a field when performing record updates.
+    /// The `infer_record_update` function uses this to determine which fields exist
+    /// on a certain record to know whether a certain record update updates correct fields.
+    /// Without this distinction, we get confusing error messages in certain cases.
+    ///
     RecordUpdate,
     /// Used as `thing.field`
     Other,

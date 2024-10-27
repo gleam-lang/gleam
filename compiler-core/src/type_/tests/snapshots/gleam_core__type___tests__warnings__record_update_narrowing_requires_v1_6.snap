@@ -24,10 +24,10 @@ warning: Incompatible gleam version range
 9 │     Wibble(..) -> Wibble(..wibble, b: 10)
   │                   ^^^^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.6.0
 
-Variant narrowing for custom types was introduced in version v1.6.0. But
-the Gleam version range specified in your `gleam.toml` would allow this
-code to run on an earlier version like v1.0.0, resulting in compilation
-errors!
+Safe record updates for custom types when the variant is known was
+introduced in version v1.6.0. But the Gleam version range specified in
+your `gleam.toml` would allow this code to run on an earlier version like
+v1.0.0, resulting in compilation errors!
 Hint: Remove the version constraint from your `gleam.toml` or update it to be:
 
     gleam = ">= 1.6.0"
