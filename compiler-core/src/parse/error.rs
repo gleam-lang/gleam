@@ -330,21 +330,6 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "Hint: If a type is not generic you should omit the `()`.".into(),
                 ],
             ),
-            ParseErrorType::UnknownAttributeRecordConstructor => (
-                "Variant attribute(s) are unknow.",
-                vec!["Try `@deprecated`.".into()],
-            ),
-            ParseErrorType::AllVariantRecordConstructorDeprecated => (
-                "Can't deprecate all variants of a type.",
-                vec![
-                    "Consider deprecating the type as a whole:".into(),
-                    "@deprecated(\"message\")".into(),
-                    "type Wibble {".into(),
-                    "   Wobble1".into(),
-                    "   Wobble2".into(),
-                    "}".into(),
-                ],
-            ),
             ParseErrorType::UnknownAttributeRecordConstructor => {
                 ("This attribute cannot be used on a type variant.", vec![])
             }

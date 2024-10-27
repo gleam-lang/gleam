@@ -3222,7 +3222,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
     }
 ");
                             Diagnostic {
-                                title: "Can't deprecate all variants of a type.".into(),
+                                title: "Deprecating all variants of a type is not allowed.".into(),
                                 text,
                                 hint: None,
                                 level: Level::Error,

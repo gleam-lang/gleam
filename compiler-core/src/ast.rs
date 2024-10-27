@@ -234,6 +234,7 @@ pub struct RecordConstructor<T> {
     pub arguments: Vec<RecordConstructorArg<T>>,
     pub documentation: Option<(u32, EcoString)>,
     pub deprecation: Deprecation,
+    pub attributes_location: Option<SrcSpan>,
 }
 
 impl<A> RecordConstructor<A> {
