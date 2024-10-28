@@ -1182,7 +1182,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             environment
                 .names
-                .type_in_scope(name.clone(), type_.as_ref());
+                .type_in_scope(name.clone(), type_.as_ref(), &parameters);
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
