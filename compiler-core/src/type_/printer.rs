@@ -3,7 +3,7 @@ use ecow::EcoString;
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{Type, TypeVar};
+use crate::type_::{collapse_links, Type, TypeVar};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -116,6 +116,23 @@ pub struct Names {
     local_value_constructors: BiMap<(EcoString, EcoString), EcoString>,
 }
 
+/// The `PartialEq` implementation for `Type` doesn't account for `TypeVar::Link`,
+/// so we implement an equality check that does account for it here.
+fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool {
+    dbg!(arguments, parameters);
+
+    if arguments.len() != parameters.len() {
+        return false;
+    }
+
+    arguments
+        .into_iter()
+        .zip(parameters)
+        .all(|(argument, parameter)| {
+            collapse_links(argument.clone()) == collapse_links(parameter.clone())
+        })
+}
+
 impl Names {
     pub fn new() -> Self {
         Self {
@@ -139,12 +156,19 @@ impl Names {
             .insert((module_name, type_name), local_alias);
     }
 
-    pub fn type_in_scope(&mut self, local_alias: EcoString, type_: &Type) {
+    pub fn type_in_scope(
+        &mut self,
+        local_alias: EcoString,
+        type_: &Type,
+        parameters: &[Arc<Type>],
+    ) {
         match type_ {
-            Type::Named { module, name, .. } => {
+            Type::Named {
+                module, name, args, ..
+            } if compare_arguments(args, parameters) => {
                 self.named_type_in_scope(module.clone(), name.clone(), local_alias);
             }
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+            Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                 _ = self.local_types.remove_by_right(&local_alias);
             }
         }

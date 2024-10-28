@@ -1,0 +1,16 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport gleam/option.{type Option as Maybe}\n\nconst none: Maybe(Int) = option.None\n"
+---
+import gleam/option.{type Option as Maybe}
+
+const none: Maybe(Int) = option.None
+▔▔▔▔▔▔▔▔▔↑▔▔▔▔▔▔▔▔▔▔▔▔              
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nMaybe(Int)\n```\n",
+    ),
+)
