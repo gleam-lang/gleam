@@ -119,14 +119,12 @@ pub struct Names {
 /// The `PartialEq` implementation for `Type` doesn't account for `TypeVar::Link`,
 /// so we implement an equality check that does account for it here.
 fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool {
-    dbg!(arguments, parameters);
-
     if arguments.len() != parameters.len() {
         return false;
     }
 
     arguments
-        .into_iter()
+        .iter()
         .zip(parameters)
         .all(|(argument, parameter)| {
             collapse_links(argument.clone()) == collapse_links(parameter.clone())
