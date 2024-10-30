@@ -126,7 +126,7 @@
 - Optimised creation of bit arrays on the JavaScript target.
   ([Richard Viney](https://github.com/richard-viney))
 
-- The compiler can now narrow the variant of custom types when pattern matching,
+- The compiler can now infer the variant of custom types when pattern matching,
   allowing for safe record updates if the variant is known, or access fields
   which are only present on one variant:
 
