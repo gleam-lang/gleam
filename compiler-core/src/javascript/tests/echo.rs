@@ -106,3 +106,17 @@ pub fn wibble(n) { n }
 "#
     )
 }
+
+#[test]
+pub fn module_named_inspect() {
+    assert_js!(
+        ("other", "other/inspect", "pub const x = Nil"),
+        r#"
+import other/inspect
+
+pub fn main() {
+  echo inspect.x
+}
+"#
+    )
+}
