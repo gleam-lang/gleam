@@ -63,6 +63,7 @@ pub mod bit_array;
 pub mod build;
 pub mod codegen;
 pub mod config;
+pub mod constant;
 pub mod dependency;
 pub mod diagnostic;
 pub mod docs;

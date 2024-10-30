@@ -16,9 +16,9 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 const cute = "cute";
 
-const cute_bee = cute + "bee";
+const cute_bee = "cutebee";
 
-const cute_cute_bee_buzz = cute + cute_bee + "buzz";
+const cute_cute_bee_buzz = "cutecutebeebuzz";
 
 export function main() {
   return cute_cute_bee_buzz;

@@ -21,4 +21,4 @@ pub fn main() {
 -file("/root/project/test/my/mod.gleam", 5).
 -spec main() -> binary().
 main() ->
-    <<"cute"/utf8, "bee"/utf8>>.
+    <<"cutebee"/utf8>>.
