@@ -69,6 +69,17 @@ fn echo_function() {
 
 #[rustfmt::skip]
 #[test]
+fn echo_importing_module_named_inspect() {
+    let output = crate::prepare("./cases/echo_importing_module_named_inspect");
+    insta::assert_snapshot!(
+        "echo_importing_module_named_inspect",
+        output,
+        "./cases/echo_importing_module_named_inspect",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn echo_int() {
     let output = crate::prepare("./cases/echo_int");
     insta::assert_snapshot!(
