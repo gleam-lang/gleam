@@ -341,24 +341,6 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if self.compile_beam_bytecode {
-            written.extend(modules.iter().map(Module::compiled_erlang_path));
-            native_modules = self.compile_erlang_to_beam(&written)?;
-            println!("{:?}", native_modules);
-        } else {
-            tracing::debug!("skipping_erlang_bytecode_compilation");
-            native_modules = Vec::new();
-        }
-
-        if let Some(config) = app_file_config {
-            ErlangApp::new(&self.out.join("ebin"), config).render(
-                io.clone(),
-                &self.config,
-                modules,
-                native_modules,
-            )?;
-        }
-
         if self.compile_beam_bytecode && self.write_entrypoint {
             self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
@@ -369,8 +351,24 @@ where
         // we overwrite any precompiled Erlang that was included in the Hex
         // package. Otherwise we will build the potentially outdated precompiled
         // version and not the newly compiled version.
-        Erlang::new(&build_dir, &include_dir).render(io, modules, self.root)?;
+        Erlang::new(&build_dir, &include_dir).render(io.clone(), modules, self.root)?;
 
+        if self.compile_beam_bytecode {
+            written.extend(modules.iter().map(Module::compiled_erlang_path));
+            native_modules = self.compile_erlang_to_beam(&written)?;
+        } else {
+            tracing::debug!("skipping_erlang_bytecode_compilation");
+            native_modules = Vec::new();
+        }
+
+        if let Some(config) = app_file_config {
+            ErlangApp::new(&self.out.join("ebin"), config).render(
+                io,
+                &self.config,
+                modules,
+                native_modules,
+            )?;
+        }
         Ok(())
     }
 

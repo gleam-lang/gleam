@@ -444,10 +444,8 @@ impl BeamCompiler for InMemoryFileSystem {
         _modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
-        // What to do here
-        let mut l: Vec<String> = Vec::new();
-        l.push(String::from("erlffi"));
-        Ok(l) // Always succeed.
+        // What to do here?
+        Ok(Vec::new()) // Always succeed.
     }
 }
 

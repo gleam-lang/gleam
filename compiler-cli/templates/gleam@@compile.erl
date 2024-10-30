@@ -21,7 +21,7 @@ compile_package_loop() ->
                     PrintModuleName = fun(ModuleName) ->
                         io:put_chars("module:" ++ atom_to_list(ModuleName) ++ "\n")
                     end,
-                    list:map(PrintModuleName, ModuleNames),
+                    lists:map(PrintModuleName, ModuleNames),
                     io:put_chars("gleam-compile-result-ok\n");
                 err ->
                     io:put_chars("gleam-compile-result-error\n")

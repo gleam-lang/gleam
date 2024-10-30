@@ -113,6 +113,7 @@ impl<'a> ErlangApp<'a> {
             .iter()
             .map(|m| m.name.replace("/", "@"))
             .chain(native_modules)
+            .unique()
             .sorted()
             .join(",\n               ");
 
