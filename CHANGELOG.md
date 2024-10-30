@@ -301,6 +301,10 @@
   the tail of a list.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where attempting to jump to the definition of a type from the
+  annotation of a parameter of an anonymous function would do nothing.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes

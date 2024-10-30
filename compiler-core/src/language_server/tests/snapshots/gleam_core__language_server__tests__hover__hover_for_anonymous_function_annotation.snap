@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\n/// An example type.\npub type Wibble\n\npub fn main() {\n  fn(w: Wibble) { todo }\n}\n"
+---
+/// An example type.
+pub type Wibble
+
+pub fn main() {
+  fn(w: Wibble) { todo }
+        ▔▔↑▔▔▔          
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\napp.Wibble\n```\n An example type.\n",
+    ),
+)

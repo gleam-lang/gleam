@@ -609,3 +609,20 @@ fn main() {
             .under_char('l')
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3758
+#[test]
+fn goto_definition_from_anonymous_function() {
+    let code = "
+pub type Wibble
+
+pub fn main() {
+  fn(w: Wibble) { todo }
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code),
+        find_position_of("w: Wibble").under_char('i')
+    );
+}
