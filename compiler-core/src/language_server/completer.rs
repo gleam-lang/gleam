@@ -729,13 +729,13 @@ where
             Type::Named {
                 name,
                 module,
-                narrowed_variant,
+                inferred_variant,
                 ..
             } => importable_modules
                 .get(module)
                 .and_then(|i| i.accessors.get(name))
                 .filter(|a| a.publicity.is_importable() || module == &self.module.name)
-                .map(|a| a.accessors_for_variant(*narrowed_variant)),
+                .map(|a| a.accessors_for_variant(*inferred_variant)),
             _ => None,
         }
     }

@@ -53,7 +53,7 @@ fn module_types() {
                 module: module_name,
                 name: "my_type".into(),
                 args: vec![],
-                narrowed_variant: None,
+                inferred_variant: None,
             })
         )]
     ));

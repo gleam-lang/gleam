@@ -91,7 +91,7 @@ fn compile_expression(src: &str) -> TypedStatement {
         module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],
-        narrowed_variant: None,
+        inferred_variant: None,
     });
     let variant = ValueConstructorVariant::Record {
         documentation: Some("wibble".into()),

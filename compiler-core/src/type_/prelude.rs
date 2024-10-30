@@ -68,7 +68,7 @@ pub fn int() -> Arc<Type> {
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![],
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -79,7 +79,7 @@ pub fn float() -> Arc<Type> {
         name: FLOAT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -90,7 +90,7 @@ pub fn bool() -> Arc<Type> {
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -101,7 +101,7 @@ pub fn string() -> Arc<Type> {
         name: STRING.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -112,7 +112,7 @@ pub fn nil() -> Arc<Type> {
         name: NIL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -123,7 +123,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![t],
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -134,7 +134,7 @@ pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![a, e],
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -159,7 +159,7 @@ pub fn named(
         module: module.into(),
         name: name.into(),
         args,
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -170,7 +170,7 @@ pub fn bits() -> Arc<Type> {
         name: BIT_ARRAY.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 
@@ -181,7 +181,7 @@ pub fn utf_codepoint() -> Arc<Type> {
         name: UTF_CODEPOINT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        narrowed_variant: None,
+        inferred_variant: None,
     })
 }
 

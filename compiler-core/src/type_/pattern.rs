@@ -19,9 +19,9 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
-    /// Variables which have been narrowed to a specific variant of their type
-    /// from this pattern-matching. Key is the variable name, Value is the narrowed variant index.
-    narrowed_variables: HashMap<EcoString, u16>,
+    /// Variables which have been inferred to a specific variant of their type
+    /// from this pattern-matching. Key is the variable name, Value is the inferred variant index.
+    inferred_variant_variables: HashMap<EcoString, u16>,
     problems: &'a mut Problems,
 
     /// The minimum Gleam version required to compile the typed pattern.
@@ -44,7 +44,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
-            narrowed_variables: HashMap::new(),
+            inferred_variant_variables: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
@@ -74,8 +74,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
                 }
                 // We no longer have access to the variable from the subject of the pattern
-                // so it doesn't need to be narrowed any more.
-                let _ = self.narrowed_variables.remove(name);
+                // so it doesn't need to be inferred any more.
+                let _ = self.inferred_variant_variables.remove(name);
                 // Record that this variable originated in this pattern so any
                 // following alternative patterns can be checked to ensure they
                 // have the same variables.
@@ -105,10 +105,10 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
-    fn narrow_subject_variable(&mut self, name: EcoString, variant_index: u16) {
+    fn set_subject_variable_variant(&mut self, name: EcoString, variant_index: u16) {
         match &self.mode {
             PatternMode::Initial => {
-                // If this name is reassigned in the pattern itself, we don't need to narrow
+                // If this name is reassigned in the pattern itself, we don't need to infer
                 // it, since it isn't accessible in this scope anymore.
                 if self.initial_pattern_vars.contains(&name) {
                     return;
@@ -122,12 +122,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 // The type in this scope is now separate from the parent scope, so we
                 // remove any links to ensure that they aren't linked in any way and that
-                // we don't accidentally narrow the variable outside of this scope
+                // we don't accidentally set the variant of the variable outside of this scope
                 let mut type_ = collapse_links(variable.type_.clone());
-                Arc::make_mut(&mut type_).narrow_custom_type_variant(variant_index);
-                // Mark this variable as having been narrowed
-                let _ = self.narrowed_variables.insert(name.clone(), variant_index);
-                // This variable is only narrowed in this branch of the case expression
+                Arc::make_mut(&mut type_).set_custom_type_variant(variant_index);
+                // Mark this variable as having been inferred
+                let _ = self
+                    .inferred_variant_variables
+                    .insert(name.clone(), variant_index);
+                // This variable is only inferred in this branch of the case expression
                 self.environment.insert_local_variable(
                     name,
                     variable.definition_location().span,
@@ -136,17 +138,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             PatternMode::Alternative(_) => {
-                // If we haven't narrowed this variable in all alternative patterns so far,
-                // we can't narrow it here
-                let Some(narrowed_variant) = self.narrowed_variables.get(&name) else {
+                // If we haven't inferred this variable in all alternative patterns so far,
+                // we can't set its variant here
+                let Some(inferred_variant) = self.inferred_variant_variables.get(&name) else {
                     return;
                 };
 
-                // If multiple variants are possible in this pattern, we can't narrow it at all
-                // and we have to remove the narrowed_index
-                if *narrowed_variant != variant_index {
-                    // This variable is no longer narrowed
-                    let _ = self.narrowed_variables.remove(&name);
+                // If multiple variants are possible in this pattern, we can't infer it at all
+                // and we have to remove the variant index
+                if *inferred_variant != variant_index {
+                    // This variable's variant is no longer known
+                    let _ = self.inferred_variant_variables.remove(&name);
                     let variable = self
                         .environment
                         .scope
@@ -308,7 +310,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         pattern: UntypedPattern,
         type_: Arc<Type>,
-        // The name of the variable this pattern matches on, if any. Used for type narrowing.
+        // The name of the variable this pattern matches on, if any. Used for variant inference.
         //
         // Example:
         // ```gleam
@@ -321,7 +323,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         // ```
         //
         // Here, the pattern `Wibble(..)` has the subject variable `some_wibble`, meaning that
-        // in the inner scope, we can narrow the `some_wibble` variable to the `Wibble` variant
+        // in the inner scope, we can infer that the `some_wibble` variable is the `Wibble` variant
         //
         subject_variable: Option<EcoString>,
     ) -> Result<TypedPattern, Error> {
@@ -744,10 +746,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             unify(type_.clone(), retrn.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
 
-                            if let Some((variable_to_narrow, narrowed_variant)) =
-                                subject_variable.zip(retrn.custom_type_narrowed_variant())
+                            if let Some((variable_to_infer, inferred_variant)) =
+                                subject_variable.zip(retrn.custom_type_inferred_variant())
                             {
-                                self.narrow_subject_variable(variable_to_narrow, narrowed_variant);
+                                self.set_subject_variable_variant(
+                                    variable_to_infer,
+                                    inferred_variant,
+                                );
                             }
 
                             Ok(Pattern::Constructor {
@@ -770,16 +775,19 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
 
                     Type::Named {
-                        narrowed_variant, ..
+                        inferred_variant, ..
                     } => {
                         if pattern_args.is_empty() {
                             unify(type_, instantiated_constructor_type.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
 
-                            if let Some((variable_to_narrow, narrowed_variant)) =
-                                subject_variable.zip(*narrowed_variant)
+                            if let Some((variable_to_infer, inferred_variant)) =
+                                subject_variable.zip(*inferred_variant)
                             {
-                                self.narrow_subject_variable(variable_to_narrow, narrowed_variant);
+                                self.set_subject_variable_variant(
+                                    variable_to_infer,
+                                    inferred_variant,
+                                );
                             }
 
                             Ok(Pattern::Constructor {
@@ -866,11 +874,11 @@ fn unify_constructor_variants(into: &mut Type, from: &Type) {
     match (into, from) {
         (
             Type::Named {
-                narrowed_variant: into_index,
+                inferred_variant: into_index,
                 ..
             },
             Type::Named {
-                narrowed_variant: from_index,
+                inferred_variant: from_index,
                 ..
             },
         ) if from_index != into_index => *into_index = None,

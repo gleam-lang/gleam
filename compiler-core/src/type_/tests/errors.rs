@@ -2569,7 +2569,7 @@ pub fn main(wibble: wibble.Wibble) {
 }
 
 #[test]
-fn narrowed_record_update_change_type_parameter() {
+fn inferred_variant_record_update_change_type_parameter() {
     assert_module_error!(
         r#"
 pub type Box(a) {
@@ -2589,7 +2589,7 @@ pub fn main() {
 }
 
 #[test]
-fn narrowed_record_update_change_type_parameter_different_branches() {
+fn inferred_variant_record_update_change_type_parameter_different_branches() {
     assert_module_error!(
         r#"
 pub type Box(a) {

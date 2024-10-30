@@ -1274,7 +1274,7 @@ case a, b, c {
 }
 
 #[test]
-fn narrowed_variant() {
+fn inferred_variant() {
     assert_no_warnings!(
         "
 pub type Wibble {
@@ -1294,7 +1294,7 @@ pub fn main() {
 }
 
 #[test]
-fn narrowed_variant2() {
+fn inferred_variant2() {
     assert_no_warnings!(
         "
 pub type Wibble {
@@ -1314,7 +1314,7 @@ pub fn main(b: Bool) {
 }
 
 #[test]
-fn narrowed_variant3() {
+fn inferred_variant3() {
     assert_no_warnings!(
         "
 pub type Wibble {
@@ -1331,7 +1331,7 @@ pub fn main() {
 }
 
 #[test]
-fn other_variant_unreachable_when_narrowed() {
+fn other_variant_unreachable_when_inferred() {
     assert_warning!(
         "
 pub type Wibble {
@@ -1351,7 +1351,7 @@ pub fn main() {
 }
 
 #[test]
-fn other_variant_unreachable_when_narrowed2() {
+fn other_variant_unreachable_when_inferred2() {
     assert_warning!(
         "
 pub type Wibble {

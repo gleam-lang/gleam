@@ -737,7 +737,7 @@ Run this command to add it to your dependencies:
                                 "This case clause cannot be reached as a previous clause matches
 the same values.\n".into()
                             }
-                            UnreachableCaseClauseReason::NarrowedVariant => {
+                            UnreachableCaseClauseReason::ImpossibleVariant => {
                                 "This case clause cannot be reached as it matches on a variant of a type which is never present.\n".into()
                         }
                         };
@@ -1027,10 +1027,10 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::AtInJavascriptModules => {
                             "The ability to have `@` in a Javascript module's name was"
                         }
-                        FeatureKind::RecordUpdateNarrowing => {
+                        FeatureKind::RecordUpdateVariantInference => {
                             "Safe record updates for custom types when the variant is known was"
                         }
-                        FeatureKind::RecordAccessNarrowing => {
+                        FeatureKind::RecordAccessVariantInference => {
                             "Field access on custom types when the variant is known was"
                         }
                     };
