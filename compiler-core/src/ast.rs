@@ -170,6 +170,11 @@ impl<A> Arg<A> {
 impl TypedArg {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         if self.location.contains(byte_index) {
+            if let Some(annotation) = &self.annotation {
+                return annotation
+                    .find_node(byte_index, self.type_.clone())
+                    .or(Some(Located::Arg(self)));
+            }
             Some(Located::Arg(self))
         } else {
             None
@@ -829,15 +834,9 @@ impl TypedDefinition {
                 if let Some(found_arg) = function
                     .arguments
                     .iter()
-                    .find(|arg| arg.location.contains(byte_index))
+                    .find_map(|arg| arg.find_node(byte_index))
                 {
-                    // Check if location is within the arg annotation.
-                    if let Some(a) = &found_arg.annotation {
-                        return a
-                            .find_node(byte_index, found_arg.type_.clone())
-                            .or(Some(Located::Arg(found_arg)));
-                    }
-                    return Some(Located::Arg(found_arg));
+                    return Some(found_arg);
                 };
 
                 if let Some(found_statement) = function
