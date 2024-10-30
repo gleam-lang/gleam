@@ -986,7 +986,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             let field_map = field_map.into_option();
             // Insert constructor function into module scope
             let mut type_ = type_.deref().clone();
-            type_.narrow_custom_type_variant(index as u16);
+            type_.set_custom_type_variant(index as u16);
             let type_ = match constructor.arguments.len() {
                 0 => Arc::new(type_),
                 _ => fn_(args_types.clone(), Arc::new(type_)),
@@ -1115,7 +1115,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module: self.module_name.to_owned(),
             name: name.clone(),
             args: parameters.clone(),
-            narrowed_variant: None,
+            inferred_variant: None,
         });
         let _ = self.hydrators.insert(name.clone(), hydrator);
         environment

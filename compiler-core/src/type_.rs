@@ -64,7 +64,7 @@ pub enum Type {
         name: EcoString,
         args: Vec<Arc<Type>>,
 
-        /// Which variant of the types this value is, if it is known from type narrowing.
+        /// Which variant of the types this value is, if it is known from variant inference.
         /// This allows us to permit certain operations when we know this,
         /// such as record updates for multi-constructor types, or field access
         /// for fields not shared between type variants. For example:
@@ -83,14 +83,14 @@ pub enum Type {
         /// }
         /// ```
         ///
-        /// Here, the `wibble` variable has a narrowed variant of `0`, since we know it's
+        /// Here, the `wibble` variable has an inferred variant of `0`, since we know it's
         /// of the `Wibble` variant. This means we can safely update it using the `Wibble`
         /// constructor, and access the `other` field, which is only present in that variant.
         ///
         /// However, the parameter `some_wibble` has no known variant; it could be either of the variants,
         /// so we can't allow any of that until we pattern match on it.
         ///
-        narrowed_variant: Option<u16>,
+        inferred_variant: Option<u16>,
     },
 
     /// The type of a function. It takes arguments and returns a value.
@@ -264,12 +264,12 @@ impl Type {
         }
     }
 
-    pub fn narrow_custom_type_variant(&mut self, index: u16) {
+    pub fn set_custom_type_variant(&mut self, index: u16) {
         match self {
             Type::Named {
-                narrowed_variant, ..
-            } => *narrowed_variant = Some(index),
-            Type::Var { type_ } => type_.borrow_mut().narrow_custom_type_variant(index),
+                inferred_variant, ..
+            } => *inferred_variant = Some(index),
+            Type::Var { type_ } => type_.borrow_mut().set_custom_type_variant(index),
             Type::Fn { .. } | Type::Tuple { .. } => {}
         }
     }
@@ -277,19 +277,19 @@ impl Type {
     pub fn generalise_custom_type_variant(&mut self) {
         match self {
             Type::Named {
-                narrowed_variant, ..
-            } => *narrowed_variant = None,
+                inferred_variant, ..
+            } => *inferred_variant = None,
             Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
             Type::Fn { .. } | Type::Tuple { .. } => {}
         }
     }
 
-    pub fn custom_type_narrowed_variant(&self) -> Option<u16> {
+    pub fn custom_type_inferred_variant(&self) -> Option<u16> {
         match self {
             Type::Named {
-                narrowed_variant, ..
-            } => *narrowed_variant,
-            Type::Var { type_ } => type_.borrow().custom_type_narrowed_variant(),
+                inferred_variant, ..
+            } => *inferred_variant,
+            Type::Var { type_ } => type_.borrow().custom_type_inferred_variant(),
             Type::Fn { .. } | Type::Tuple { .. } => None,
         }
     }
@@ -352,7 +352,7 @@ impl Type {
                         module: module.into(),
                         args: args.clone(),
                         publicity,
-                        narrowed_variant: None,
+                        inferred_variant: None,
                     }),
                 };
                 Some(args)
@@ -434,9 +434,9 @@ pub struct AccessorsMap {
 impl AccessorsMap {
     pub fn accessors_for_variant(
         &self,
-        narrowed_variant: Option<u16>,
+        inferred_variant: Option<u16>,
     ) -> &HashMap<EcoString, RecordAccessor> {
-        narrowed_variant
+        inferred_variant
             .and_then(|index| self.variant_specific_accessors.get(index as usize))
             .unwrap_or(&self.shared_accessors)
     }
@@ -921,9 +921,9 @@ impl TypeVar {
         }
     }
 
-    pub fn custom_type_narrowed_variant(&self) -> Option<u16> {
+    pub fn custom_type_inferred_variant(&self) -> Option<u16> {
         match self {
-            Self::Link { type_ } => type_.custom_type_narrowed_variant(),
+            Self::Link { type_ } => type_.custom_type_inferred_variant(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }
@@ -999,9 +999,9 @@ impl TypeVar {
         }
     }
 
-    pub fn narrow_custom_type_variant(&mut self, index: u16) {
+    pub fn set_custom_type_variant(&mut self, index: u16) {
         match self {
-            Self::Link { type_ } => Arc::make_mut(type_).narrow_custom_type_variant(index),
+            Self::Link { type_ } => Arc::make_mut(type_).set_custom_type_variant(index),
             Self::Unbound { .. } | Self::Generic { .. } => {}
         }
     }
@@ -1253,7 +1253,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             package,
             name,
             args,
-            narrowed_variant: _,
+            inferred_variant: _,
         } => {
             let args = args.iter().map(|t| generalise(t.clone())).collect();
             Arc::new(Type::Named {
@@ -1262,7 +1262,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
                 package: package.clone(),
                 name: name.clone(),
                 args,
-                narrowed_variant: None,
+                inferred_variant: None,
             })
         }
 

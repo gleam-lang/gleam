@@ -2421,7 +2421,7 @@ pub fn main(a) {
 }
 
 #[test]
-fn record_update_narrowing_requires_v1_6() {
+fn record_update_variant_inference_requires_v1_6() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),
         "
@@ -2441,7 +2441,7 @@ pub fn main(wibble) {
 }
 
 #[test]
-fn record_access_narrowing_requires_v1_6() {
+fn record_access_variant_inference_requires_v1_6() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),
         "

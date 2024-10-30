@@ -219,8 +219,8 @@ pub struct Diagnostics {
     pub reachable: Vec<u16>,
 
     /// Clauses which match on variants of a type which the compiler
-    /// can tell will never be present.
-    pub match_narrowed_variants: Vec<u16>,
+    /// can tell will never be present, due to variant inference.
+    pub match_impossible_variants: Vec<u16>,
 }
 
 /// The result of compiling a pattern match expression.
@@ -242,8 +242,8 @@ impl Match {
         let clause = clause as u16;
         if self.diagnostics.reachable.contains(&clause) {
             Reachability::Reachable
-        } else if self.diagnostics.match_narrowed_variants.contains(&clause) {
-            Reachability::Unreachable(UnreachableCaseClauseReason::NarrowedVariant)
+        } else if self.diagnostics.match_impossible_variants.contains(&clause) {
+            Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant)
         } else {
             Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern)
         }
@@ -274,7 +274,7 @@ impl<'a> Compiler<'a> {
             diagnostics: Diagnostics {
                 missing: false,
                 reachable: Vec::new(),
-                match_narrowed_variants: Vec::new(),
+                match_impossible_variants: Vec::new(),
             },
         }
     }
@@ -411,7 +411,7 @@ impl<'a> Compiler<'a> {
             BranchMode::NamedType {
                 variable,
                 constructors,
-                narrowed_variant,
+                inferred_variant,
             } => {
                 let mut prepare_case_for_constructor =
                     |constructor: &TypeValueConstructor, index| {
@@ -429,14 +429,14 @@ impl<'a> Compiler<'a> {
                         (variant, new_variables, Vec::new())
                     };
 
-                let cases = if let Some(variant) = narrowed_variant {
+                let cases = if let Some(variant) = inferred_variant {
                     let case = prepare_case_for_constructor(
                         constructors
                             .get(variant as usize)
                             .expect("Constructor must exist"),
                         variant as usize,
                     );
-                    vec![self.compile_narrowed_constructor_cases(
+                    vec![self.compile_constructor_case_for_known_variant(
                         rows,
                         variable.clone(),
                         case,
@@ -649,11 +649,11 @@ impl<'a> Compiler<'a> {
     }
 
     /// The same logic as `compile_constructor_cases`, but for when matching on a type
-    /// whose variant we've narrowed. This means we only need to prepare one case,
-    /// the one that we've narrowed, and we can mark any other variants in the pattern
-    /// as unreachable due to narrowing.
+    /// whose variant we've inferred. This means we only need to prepare one case,
+    /// the one that we've inferred, and we can mark any other variants in the pattern
+    /// as unreachable due to variant inference.
     ///
-    fn compile_narrowed_constructor_cases(
+    fn compile_constructor_case_for_known_variant(
         &mut self,
         rows: Vec<Row>,
         branch_var: Variable,
@@ -695,10 +695,10 @@ impl<'a> Compiler<'a> {
                 };
 
                 // If the constructor we are matching on is not the one that we have
-                // narrowed, it's safe to just skip it and mark it as unreachable.
+                // inferred, it's safe to just skip it and mark it as unreachable.
                 if variant != index {
                     self.diagnostics
-                        .match_narrowed_variants
+                        .match_impossible_variants
                         .push(row.body.clause_index);
                     continue;
                 }
@@ -885,7 +885,7 @@ impl<'a> Compiler<'a> {
                 module,
                 name,
                 args,
-                narrowed_variant,
+                inferred_variant,
                 ..
             } => {
                 let constructors = self
@@ -895,7 +895,7 @@ impl<'a> Compiler<'a> {
                 BranchMode::NamedType {
                     variable,
                     constructors,
-                    narrowed_variant: *narrowed_variant,
+                    inferred_variant: *inferred_variant,
                 }
             }
 
@@ -970,7 +970,7 @@ enum BranchMode {
         variable: Variable,
         /// The constructors for this type. For example, `Result` has `Ok` and `Error`.
         constructors: Vec<TypeValueConstructor>,
-        narrowed_variant: Option<u16>,
+        inferred_variant: Option<u16>,
     },
 }
 
@@ -1010,14 +1010,14 @@ impl ConstructorSpecialiser {
                 module,
                 name,
                 args,
-                narrowed_variant,
+                inferred_variant,
             } => Type::Named {
                 publicity: *publicity,
                 package: package.clone(),
                 module: module.clone(),
                 name: name.clone(),
                 args: args.iter().map(|a| self.specialise_type(a)).collect(),
-                narrowed_variant: *narrowed_variant,
+                inferred_variant: *inferred_variant,
             },
 
             Type::Fn { args, retrn } => Type::Fn {

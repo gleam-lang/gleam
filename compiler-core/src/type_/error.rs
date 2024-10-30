@@ -841,8 +841,8 @@ pub enum FeatureKind {
     NestedTupleAccess,
     InternalAnnotation,
     AtInJavascriptModules,
-    RecordUpdateNarrowing,
-    RecordAccessNarrowing,
+    RecordUpdateVariantInference,
+    RecordAccessVariantInference,
 }
 
 impl FeatureKind {
@@ -855,9 +855,8 @@ impl FeatureKind {
             FeatureKind::LabelShorthandSyntax => Version::new(1, 4, 0),
             FeatureKind::ConstantStringConcatenation => Version::new(1, 4, 0),
             FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
-            FeatureKind::RecordUpdateNarrowing | FeatureKind::RecordAccessNarrowing => {
-                Version::new(1, 6, 0)
-            }
+            FeatureKind::RecordUpdateVariantInference
+            | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
         }
     }
 }
@@ -887,10 +886,10 @@ pub enum UnreachableCaseClauseReason {
     /// The clause is unreachable because a previous pattern
     /// matches the same case.
     DuplicatePattern,
-    /// The clause is unreachable because we have narrowed the variant
+    /// The clause is unreachable because we have inferred the variant
     /// of the custom type that we are matching on, and this matches
     /// against one of the variants we know it isn't.
-    NarrowedVariant,
+    ImpossibleVariant,
 }
 
 impl Error {
