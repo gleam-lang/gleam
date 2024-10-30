@@ -2688,12 +2688,7 @@ where
             }
 
             if let Some((op_s, t, op_e)) = self.tok0.take() {
-                // Pipes are not allowed in constants
-                if t == Token::Pipe {
-                    self.tok0 = Some((op_s, t, op_e));
-                    break;
-                }
-                if let Some(p) = precedence(&t) {
+                if let Some(p) = t.const_precedence() {
                     // Is Op
                     self.advance();
                     last_op_start = op_s;

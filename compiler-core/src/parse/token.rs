@@ -115,6 +115,32 @@ impl Token {
         }
     }
 
+    pub fn const_precedence(&self) -> Option<u8> {
+        match self {
+            Self::VbarVbar => Some(1),
+
+            Self::AmperAmper => Some(2),
+
+            // Comparison operators are not (yet) implemented in constants
+            Self::EqualEqual
+            | Self::NotEqual
+            | Self::Less
+            | Self::LessEqual
+            | Self::LessDot
+            | Self::LessEqualDot
+            | Self::GreaterEqual
+            | Self::Greater
+            | Self::GreaterEqualDot
+            | Self::GreaterDot => None,
+
+            Self::Plus | Self::PlusDot | Self::Minus | Self::MinusDot | Self::LtGt => Some(5),
+
+            Self::Star | Self::StarDot | Self::Slash | Self::SlashDot | Self::Percent => Some(6),
+
+            _ => None,
+        }
+    }
+
     pub fn is_reserved_word(&self) -> bool {
         match self {
             Token::As

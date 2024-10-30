@@ -33,32 +33,6 @@ pub fn fold_constant_bin_op<'a>(
         (BinOp::Or, FoldedConstant::Bool(left), FoldedConstant::Bool(right)) => {
             FoldedConstant::Bool(left || right)
         }
-        (BinOp::Eq, left, right) => FoldedConstant::Bool(left == right),
-        (BinOp::NotEq, left, right) => FoldedConstant::Bool(left != right),
-        (BinOp::LtInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
-            FoldedConstant::Bool(left < right)
-        }
-        (BinOp::LtEqInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
-            FoldedConstant::Bool(left <= right)
-        }
-        (BinOp::LtFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
-            FoldedConstant::Bool(left < right)
-        }
-        (BinOp::LtEqFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
-            FoldedConstant::Bool(left <= right)
-        }
-        (BinOp::GtEqInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
-            FoldedConstant::Bool(left >= right)
-        }
-        (BinOp::GtInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
-            FoldedConstant::Bool(left > right)
-        }
-        (BinOp::GtEqFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
-            FoldedConstant::Bool(left >= right)
-        }
-        (BinOp::GtFloat, FoldedConstant::Float(left), FoldedConstant::Float(right)) => {
-            FoldedConstant::Bool(left > right)
-        }
         (BinOp::AddInt, FoldedConstant::Int(left), FoldedConstant::Int(right)) => {
             FoldedConstant::Int(left + right)
         }
