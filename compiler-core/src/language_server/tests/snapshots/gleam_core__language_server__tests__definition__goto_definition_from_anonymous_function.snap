@@ -7,8 +7,8 @@ expression: output
 pub type Wibble
 
 pub fn main() {
-  let anonymous = fn(w: Wibble) { todo }
-                         ↑              
+  fn(w: Wibble) { todo }
+         ↑              
 }
 
 ----- Jumped to `src/app.gleam`
@@ -17,5 +17,5 @@ pub type Wibble
 ↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔
 
 pub fn main() {
-  let anonymous = fn(w: Wibble) { todo }
+  fn(w: Wibble) { todo }
 }
