@@ -1,9 +1,9 @@
 [package]
-name = "test-echo-output"
+name = "test-output"
 version = "1.5.0"
 authors = [
-    "Louis Pilfold <louis@lpil.uk>",
-    "Giacomo Cavalieri <giacomo.cavalieri@icloud.com>",
+  "Louis Pilfold <louis@lpil.uk>",
+  "Giacomo Cavalieri <giacomo.cavalieri@icloud.com>",
 ]
 edition = "2021"
 license = "Apache-2.0"
