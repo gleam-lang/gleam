@@ -1,5 +1,5 @@
 function echo(value) {
-  const string = $inspect(value);
+  const string = echo$inspect(value);
   if (typeof process === "object" && process.stderr?.write) {
     // If we're in Node.js, use `stderr`
     process.stderr.write(string + "\n");
@@ -14,7 +14,7 @@ function echo(value) {
   return value;
 }
 
-function $inspectString(str) {
+function echo$inspectString(str) {
   let new_str = '"';
   for (let i = 0; i < str.length; i++) {
     let char = str[i];
@@ -34,53 +34,53 @@ function $inspectString(str) {
   return new_str;
 }
 
-function $inspectDict(map) {
+function echo$inspectDict(map) {
   let body = "dict.from_list([";
   let first = true;
   map.forEach((value, key) => {
     if (!first) body = body + ", ";
-    body = body + "#(" + $inspect(key) + ", " + $inspect(value) + ")";
+    body = body + "#(" + echo$inspect(key) + ", " + echo$inspect(value) + ")";
     first = false;
   });
   return body + "])";
 }
 
-function $inspectCustomType(record) {
+function echo$inspectCustomType(record) {
   const props = Object.keys(record)
     .map((label) => {
-      const value = $inspect(record[label]);
+      const value = echo$inspect(record[label]);
       return isNaN(parseInt(label)) ? `${label}: ${value}` : value;
     })
     .join(", ");
   return props ? `${record.constructor.name}(${props})` : record.constructor.name;
 }
 
-function $inspectObject(v) {
+function echo$inspectObject(v) {
   const name = Object.getPrototypeOf(v)?.constructor?.name || "Object";
   const props = [];
   for (const k of Object.keys(v)) {
-    props.push(`${$inspect(k)}: ${$inspect(v[k])}`);
+    props.push(`${echo$inspect(k)}: ${echo$inspect(v[k])}`);
   }
   const body = props.length ? " " + props.join(", ") + " " : "";
   const head = name === "Object" ? "" : name + " ";
   return `//js(${head}{${body}})`;
 }
 
-function $inspect(v) {
+function echo$inspect(v) {
   const t = typeof v;
   if (v === true) return "True";
   if (v === false) return "False";
   if (v === null) return "//js(null)";
   if (v === undefined) return "Nil";
-  if (t === "string") return $inspectString(v);
+  if (t === "string") return echo$inspectString(v);
   if (t === "bigint" || t === "number") return v.toString();
-  if (Array.isArray(v)) return `#(${v.map($inspect).join(", ")})`;
-  if (v instanceof $List) return `[${v.toArray().map($inspect).join(", ")}]`;
+  if (Array.isArray(v)) return `#(${v.map(echo$inspect).join(", ")})`;
+  if (v instanceof $List) return `[${v.toArray().map(echo$inspect).join(", ")}]`;
   if (v instanceof $UtfCodepoint) return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
   if (v instanceof $BitArray) return `<<${Array.from(v.buffer).join(", ")}>>`;
-  if (v instanceof $CustomType) return $inspectCustomType(v);
-  if ($isDict(v)) return $inspectDict(v);
-  if (v instanceof Set) return `//js(Set(${[...v].map($inspect).join(", ")}))`;
+  if (v instanceof $CustomType) return echo$inspectCustomType(v);
+  if (echo$isDict(v)) return echo$inspectDict(v);
+  if (v instanceof Set) return `//js(Set(${[...v].map(echo$inspect).join(", ")}))`;
   if (v instanceof RegExp) return `//js(${v})`;
   if (v instanceof Date) return `//js(Date("${v.toISOString()}"))`;
   if (v instanceof Function) {
@@ -88,10 +88,10 @@ function $inspect(v) {
     for (const i of Array(v.length).keys()) args.push(String.fromCharCode(i + 97));
     return `//fn(${args.join(", ")}) { ... }`;
   }
-  return $inspectObject(v);
+  return echo$inspectObject(v);
 }
 
-function $isDict(value) {
+function echo$isDict(value) {
   try {
     // We can only check if an object is a stdlib Dict if it is one of the
     // project's dependencies.
