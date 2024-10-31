@@ -354,6 +354,12 @@ where
     }
 }
 
+#[cfg(feature = "disable-erlang")]
+fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) -> Result<()> {
+    Ok(())
+}
+
+#[cfg(not(feature = "disable-erlang"))]
 fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) -> Result<()> {
     // We only need to check uncached modules as it's not possible for these
     // to have compiled successfully.

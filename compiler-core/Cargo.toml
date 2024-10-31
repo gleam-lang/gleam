@@ -5,6 +5,9 @@ authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license-file = "LICENCE"
 
+[features]
+disable-erlang = []
+
 [dependencies]
 # Error message and warning formatting
 codespan-reporting = "0"
