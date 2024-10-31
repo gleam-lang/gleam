@@ -25,4 +25,4 @@ The value being accessed has this type:
 
     Wibble
 
-It does not have any fields.
+It does not have any fields shared by all variants.

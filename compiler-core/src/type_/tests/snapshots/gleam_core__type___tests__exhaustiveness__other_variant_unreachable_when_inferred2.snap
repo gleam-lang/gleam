@@ -26,6 +26,7 @@ warning: Unreachable case clause
 11 │     Wibble | Wubble -> panic
    │     ^^^^^^^^^^^^^^^^^^^^^^^^
 
-This case clause cannot be reached as it matches on a variant of a type which is never present.
+This case clause cannot be reached as it matches on a variant of a type
+which is never present.
 
 Hint: It can be safely removed.

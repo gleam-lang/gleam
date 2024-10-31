@@ -29,7 +29,7 @@ error: Incorrect record update
 6 │     wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
   │                                               ^ This is a `Wibble`
 
-This value is a `Wibble` so I cannot use it to build a `Wobble`, even if
+This value is a `Wibble` so it cannot be used to build a `Wobble`, even if
 they share some fields.
 
 Note: If you want to change one variant of a type into another, you should
