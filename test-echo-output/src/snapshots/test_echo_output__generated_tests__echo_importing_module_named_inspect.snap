@@ -1,0 +1,16 @@
+---
+source: test-echo-output/src/generated_tests.rs
+expression: "./cases/echo_importing_module_named_inspect"
+---
+--- CODE
+import inspect
+
+pub fn main() {
+  echo inspect.x
+}
+
+--- OUTPUT ON ERLANG TARGET
+Nil
+
+--- OUTPUT ON JAVASCRIPT TARGET
+Nil
