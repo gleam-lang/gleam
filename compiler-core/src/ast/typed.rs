@@ -221,9 +221,23 @@ impl TypedExpr {
             // beyond the index under search.
             Self::Tuple {
                 elems: expressions, ..
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                self.self_if_contains_location(byte_index)
             }
-            | Self::List {
+
+            Self::List {
                 elements: expressions,
+                tail,
                 ..
             } => {
                 for expression in expressions {
@@ -236,6 +250,11 @@ impl TypedExpr {
                     }
                 }
 
+                if let Some(tail) = tail {
+                    if let Some(node) = tail.find_node(byte_index) {
+                        return Some(node);
+                    }
+                }
                 self.self_if_contains_location(byte_index)
             }
 
