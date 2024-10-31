@@ -86,16 +86,25 @@ pub struct UnknownType {
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
 pub enum UnknownField {
     /// The field we're trying to access appears in at least a variant, so it
-    /// can be useulf to explain why it cannot be accessed and how to fix it
+    /// can be useful to explain why it cannot be accessed and how to fix it
     /// (adding it to all variants/making sure it has the same type/making sure
     /// it's in the same position).
     ///
     AppearsInAVariant,
 
+    /// The field we are trying to access appears in a variant, but we can
+    /// infer that the value we are accessing on is never the one that this
+    /// value is, so we can give information accordingly.
+    AppearsInAnImpossibleVariant,
+
     /// The field is not in any of the variants, this might truly be a typo and
     /// there's no need to add further explanations.
     ///
     TrulyUnknown,
+
+    /// The type that the user is trying to access has no fields whatsoever,
+    /// such as Int or fn(..) -> _
+    NoFields,
 }
 
 /// A suggestion for an unknown module

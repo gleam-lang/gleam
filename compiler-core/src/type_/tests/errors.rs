@@ -662,6 +662,23 @@ pub fn get_age(person: Person) { person.age }"
 }
 
 #[test]
+fn record_access_on_inferred_variant_when_field_is_in_other_variants() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(wibble: Int)
+  Wobble(wobble: Int)
+}
+
+pub fn main() {
+  let always_wibble = Wibble(10)
+  always_wibble.wobble
+}
+"
+    );
+}
+
+#[test]
 fn module_could_not_unify() {
     assert_module_error!("fn go() { 1 + 2.0 }");
 }

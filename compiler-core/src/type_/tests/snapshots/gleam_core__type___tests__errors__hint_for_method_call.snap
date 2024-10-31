@@ -24,7 +24,7 @@ The value being accessed has this type:
 
     User
 
-It has these fields:
+It has these accessible fields:
 
     .id
     .name

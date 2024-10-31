@@ -20,7 +20,7 @@ error: Incorrect record update
 8 │   Point3(..Point2(a: 1, b: 2))
   │            ^^^^^^^^^^^^^^^^^^ This is a `Point2`
 
-This value is a `Point2` so I cannot use it to build a `Point3`, even if
+This value is a `Point2` so it cannot be used to build a `Point3`, even if
 they share some fields.
 
 Note: If you want to change one variant of a type into another, you should

@@ -24,7 +24,7 @@ error: Incorrect record update
 10 │     B(..) as b -> A(..b, other: "Hi")
    │                       ^ This is a `B`
 
-This value is a `B` so I cannot use it to build a `A`, even if they share
+This value is a `B` so it cannot be used to build a `A`, even if they share
 some fields.
 
 Note: If you want to change one variant of a type into another, you should

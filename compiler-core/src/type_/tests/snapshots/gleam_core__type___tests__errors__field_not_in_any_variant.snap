@@ -21,7 +21,7 @@ The value being accessed has this type:
 
     Person
 
-It has these fields:
+It has these accessible fields:
 
     .age
     .name

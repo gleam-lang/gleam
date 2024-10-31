@@ -1601,15 +1601,18 @@ Hint: Add some type annotations and try again.")
 
                     // Give a hint about what record fields this value has, if any.
                     if fields.is_empty() {
-                        text.push_str("\nIt does not have any fields.");
+                        if variants == &UnknownField::NoFields {
+                            text.push_str("\nIt does not have any fields.");
+                        } else {
+                            text.push_str("\nIt does not have any fields shared by all variants.");
+                        }
                     } else {
-                        text.push_str("\nIt has these fields:\n");
+                        text.push_str("\nIt has these accessible fields:\n");
                     }
                     for field in fields.iter().sorted() {
                         text.push_str("\n    .");
                         text.push_str(field);
                     }
-
 
                     match variants {
                         UnknownField::AppearsInAVariant => {
@@ -1617,12 +1620,24 @@ Hint: Add some type annotations and try again.")
                                 "Note: The field you are trying to \
 access might not be consistently present or positioned across the custom \
 type's variants, preventing reliable access. Ensure the field exists in the \
-same position and has the same type in all variants to enable direct accessor syntax.",
+same position and has the same type in all variants, or pattern matching on it \
+to enable direct accessor syntax.",
+                            );
+                            text.push_str("\n\n");
+                            text.push_str(&msg);
+                        }
+                        UnknownField::AppearsInAnImpossibleVariant => {
+                            let msg = wrap(
+                                "Note: The field you are trying to \
+access exists but not on the variant which is this value always is. \
+A field that is not present in all variants can only be accessed when \
+the value is inferred to be one variant.",
                             );
                             text.push_str("\n\n");
                             text.push_str(&msg);
                         }
                         UnknownField::TrulyUnknown => (),
+                        UnknownField::NoFields => (),
                     }
 
                     // Give a hint about Gleam not having OOP methods if it
@@ -1886,7 +1901,7 @@ assigned variables to all of them."
                     match reason {
                         UnsafeRecordUpdateReason::UnknownVariant {constructed_variant} => {
                             let text = wrap_format!("
-I cannot use this value to build an updated `{constructed_variant}` \
+This value cannot be used to build an updated `{constructed_variant}` \
 as it could be some other variant.
 
 Consider pattern matching on it with a case expression and then \
@@ -1910,7 +1925,7 @@ constructing a new record with its values.");
                         },
                         UnsafeRecordUpdateReason::WrongVariant {constructed_variant, spread_variant} => {
                             let text = wrap_format!("This value is a `{spread_variant}` so \
-I cannot use it to build a `{constructed_variant}`, even if they share some fields.
+it cannot be used to build a `{constructed_variant}`, even if they share some fields.
 
 Note: If you want to change one variant of a type into another, you should \
 specify all fields explicitly instead of using the record update syntax.");

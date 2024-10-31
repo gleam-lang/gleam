@@ -2234,26 +2234,41 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             });
         }
 
-        let appears_in_a_variant = match &*record_type {
-            Type::Named { module, name, .. } => self
-                .environment
-                .get_type_variants_fields(module, name)
-                .iter()
-                .contains(&&label),
-            _ => false,
-        };
+        let unknown_field = |fields| {
+            let unknown_field = match &*record_type {
+                Type::Named {
+                    module,
+                    name,
+                    inferred_variant,
+                    ..
+                } => {
+                    let all_fields = self.environment.get_type_variants_fields(module, name);
 
-        let unknown_field = |fields| Error::UnknownRecordField {
-            usage,
-            type_: record_type.clone(),
-            location,
-            label: label.clone(),
-            fields,
-            unknown_field: if appears_in_a_variant {
-                UnknownField::AppearsInAVariant
-            } else {
-                UnknownField::TrulyUnknown
-            },
+                    if all_fields.is_empty() {
+                        UnknownField::NoFields
+                    } else if all_fields.iter().contains(&&label) {
+                        // If we know the variant, the field must exist on a different
+                        // variant from the one we have inferred.
+                        if inferred_variant.is_some() {
+                            UnknownField::AppearsInAnImpossibleVariant
+                        } else {
+                            UnknownField::AppearsInAVariant
+                        }
+                    } else {
+                        UnknownField::TrulyUnknown
+                    }
+                }
+                _ => UnknownField::NoFields,
+            };
+
+            Error::UnknownRecordField {
+                usage,
+                type_: record_type.clone(),
+                location,
+                label: label.clone(),
+                fields,
+                unknown_field,
+            }
         };
         let (accessors_map, variant_accessors) = match collapse_links(record_type.clone()).as_ref()
         {

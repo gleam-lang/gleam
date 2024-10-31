@@ -731,16 +731,16 @@ Run this command to add it to your dependencies:
                 }
 
                 type_::Warning::UnreachableCaseClause { location, reason } => {
-                    let text: String =
-                        match reason {
-                            UnreachableCaseClauseReason::DuplicatePattern => {
-                                "This case clause cannot be reached as a previous clause matches
-the same values.\n".into()
-                            }
-                            UnreachableCaseClauseReason::ImpossibleVariant => {
-                                "This case clause cannot be reached as it matches on a variant of a type which is never present.\n".into()
-                        }
-                        };
+                    let text: String = match reason {
+                        UnreachableCaseClauseReason::DuplicatePattern => wrap(
+                            "This case clause cannot be reached as a previous clause matches \
+the same values.\n",
+                        ),
+                        UnreachableCaseClauseReason::ImpossibleVariant => wrap(
+                            "This case clause cannot be reached as it matches \
+on a variant of a type which is never present.\n",
+                        ),
+                    };
                     Diagnostic {
                         title: "Unreachable case clause".into(),
                         text,
@@ -1028,7 +1028,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                             "The ability to have `@` in a Javascript module's name was"
                         }
                         FeatureKind::RecordUpdateVariantInference => {
-                            "Safe record updates for custom types when the variant is known was"
+                            "Record updates for custom types when the variant is known was"
                         }
                         FeatureKind::RecordAccessVariantInference => {
                             "Field access on custom types when the variant is known was"
