@@ -17,6 +17,7 @@ use hexpm::version::Version;
 use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
+use num_bigint::BigInt;
 use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
@@ -309,8 +310,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
 
             UntypedExpr::Int {
-                location, value, ..
-            } => Ok(self.infer_int(value, location)),
+                location,
+                value,
+                int_value,
+                ..
+            } => {
+                self.check_javascript_int_safety(&int_value, location);
+                Ok(self.infer_int(value, int_value, location))
+            }
 
             UntypedExpr::Block {
                 statements,
@@ -490,10 +497,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_int(&mut self, value: EcoString, location: SrcSpan) -> TypedExpr {
+    fn infer_int(&mut self, value: EcoString, int_value: BigInt, location: SrcSpan) -> TypedExpr {
         TypedExpr::Int {
             location,
             value,
+            int_value,
             type_: int(),
         }
     }
@@ -2620,8 +2628,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_const_value(&mut self, value: UntypedConstant) -> Result<TypedConstant, Error> {
         match value {
             Constant::Int {
-                location, value, ..
-            } => Ok(Constant::Int { location, value }),
+                location,
+                value,
+                int_value,
+            } => {
+                self.check_javascript_int_safety(&int_value, location);
+                Ok(Constant::Int {
+                    location,
+                    value,
+                    int_value,
+                })
+            }
 
             Constant::Float {
                 location, value, ..
@@ -3601,6 +3618,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
+        }
+    }
+
+    /// When targeting JavaScript, adds a warning if the given Int value is outside the range of
+    /// safe integers as defined by Number.MIN_SAFE_INTEGER and Number.MAX_SAFE_INTEGER.
+    ///
+    fn check_javascript_int_safety(&mut self, int_value: &BigInt, location: SrcSpan) {
+        if self.environment.target != Target::JavaScript {
+            return;
+        }
+
+        let js_min_safe_integer = -9007199254740991i64;
+        let js_max_safe_integer = 9007199254740991i64;
+
+        if *int_value < js_min_safe_integer.into() || *int_value > js_max_safe_integer.into() {
+            self.problems
+                .warning(Warning::JavaScriptIntUnsafe { location });
         }
     }
 }

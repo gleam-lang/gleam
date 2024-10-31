@@ -214,6 +214,7 @@ macro_rules! assert_with_module_error {
 fn get_warnings(
     src: &str,
     deps: Vec<DependencyModule<'_>>,
+    target: Target,
     gleam_version: Option<Range<Version>>,
 ) -> Vec<crate::warning::Warning> {
     let warnings = VectorWarningEmitterIO::default();
@@ -222,7 +223,7 @@ fn get_warnings(
         src,
         Some(Rc::new(warnings.clone())),
         deps,
-        Target::Erlang,
+        target,
         TargetSupport::NotEnforced,
         gleam_version,
     )
@@ -233,9 +234,10 @@ fn get_warnings(
 fn get_printed_warnings(
     src: &str,
     deps: Vec<DependencyModule<'_>>,
+    target: Target,
     gleam_version: Option<Range<Version>>,
 ) -> String {
-    print_warnings(get_warnings(src, deps, gleam_version))
+    print_warnings(get_warnings(src, deps, target, gleam_version))
 }
 
 fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
@@ -254,6 +256,7 @@ macro_rules! assert_warnings_with_imports {
             vec![
                 $(("thepackage", $name, $module_src)),*
             ],
+            crate::build::Target::Erlang,
             None
         );
 
@@ -269,7 +272,7 @@ macro_rules! assert_warnings_with_imports {
 #[macro_export]
 macro_rules! assert_warning {
     ($src:expr) => {
-        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], None);
+        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert!(!warning.is_empty());
         let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -279,6 +282,7 @@ macro_rules! assert_warning {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(("thepackage", $name, $module_src)),*],
+            crate::build::Target::Erlang,
             None
         );
         assert!(!warning.is_empty());
@@ -290,7 +294,23 @@ macro_rules! assert_warning {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
+            crate::build::Target::Erlang,
             None
+        );
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_js_warning {
+    ($src:expr) => {
+        let warning = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![],
+            crate::build::Target::JavaScript,
+            None,
         );
         assert!(!warning.is_empty());
         let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
@@ -301,8 +321,12 @@ macro_rules! assert_warning {
 #[macro_export]
 macro_rules! assert_warnings_with_gleam_version {
     ($gleam_version:expr, $src:expr$(,)?) => {
-        let warning =
-            $crate::type_::tests::get_printed_warnings($src, vec![], Some($gleam_version));
+        let warning = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![],
+            crate::build::Target::Erlang,
+            Some($gleam_version),
+        );
         assert!(!warning.is_empty());
         let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -312,13 +336,14 @@ macro_rules! assert_warnings_with_gleam_version {
 #[macro_export]
 macro_rules! assert_no_warnings {
     ($src:expr $(,)?) => {
-        let warnings = $crate::type_::tests::get_warnings($src, vec![], None);
+        let warnings = $crate::type_::tests::get_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert_eq!(warnings, vec![]);
     };
     ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
+            crate::build::Target::Erlang,
             None,
         );
         assert_eq!(warnings, vec![]);
@@ -582,6 +607,7 @@ pub fn syntax_error(src: &str) -> String {
 fn field_map_reorder_test() {
     let int = |value: &str| UntypedExpr::Int {
         value: value.into(),
+        int_value: crate::parse::parse_int_value(value).unwrap(),
         location: SrcSpan { start: 0, end: 0 },
     };
 
@@ -2582,6 +2608,7 @@ fn assert_suitable_main_function_not_module_function() {
             literal: Constant::Int {
                 location: Default::default(),
                 value: "1".into(),
+                int_value: 1.into(),
             },
             implementations: Implementations {
                 gleam: true,

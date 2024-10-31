@@ -9,6 +9,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         value: EcoString,
+        int_value: BigInt,
     },
 
     Float {

@@ -262,6 +262,7 @@ impl ModuleDecoder {
         Constant::Int {
             location: Default::default(),
             value: value.into(),
+            int_value: crate::parse::parse_int_value(value).expect("int value to parse as bigint"),
         }
     }
 

@@ -11,6 +11,7 @@ fn register_int() {
     let input = TypedPattern::Int {
         location: SrcSpan::default(),
         value: "123".into(),
+        int_value: 123.into(),
     };
     let id = patterns.register(&input);
     assert_eq!(
@@ -94,6 +95,7 @@ fn register_assign() {
         location: SrcSpan::default(),
         pattern: Box::new(TypedPattern::Int {
             value: "123".into(),
+            int_value: 123.into(),
             location: SrcSpan::default(),
         }),
     };
@@ -124,6 +126,7 @@ fn register_tuple() {
         elems: vec![
             TypedPattern::Int {
                 value: "123".into(),
+                int_value: 123.into(),
                 location: SrcSpan::default(),
             },
             TypedPattern::Float {

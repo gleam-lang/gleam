@@ -27,6 +27,7 @@ expression: "\nlet tup = #(#(5, 6))\ntup.0.1\n"
                                     end: 16,
                                 },
                                 value: "5",
+                                int_value: 5,
                             },
                             Int {
                                 location: SrcSpan {
@@ -34,6 +35,7 @@ expression: "\nlet tup = #(#(5, 6))\ntup.0.1\n"
                                     end: 19,
                                 },
                                 value: "6",
+                                int_value: 6,
                             },
                         ],
                     },

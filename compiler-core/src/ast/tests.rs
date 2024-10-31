@@ -223,6 +223,7 @@ wibble}"#,
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 14, end: 15 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
@@ -267,16 +268,19 @@ fn find_node_list() {
         location: SrcSpan { start: 1, end: 2 },
         type_: type_::int(),
         value: "1".into(),
+        int_value: 1.into(),
     };
     let int2 = TypedExpr::Int {
         location: SrcSpan { start: 4, end: 5 },
         type_: type_::int(),
         value: "2".into(),
+        int_value: 2.into(),
     };
     let int3 = TypedExpr::Int {
         location: SrcSpan { start: 7, end: 8 },
         type_: type_::int(),
         value: "3".into(),
+        int_value: 3.into(),
     };
 
     assert_eq!(list.find_node(0), Some(Located::Expression(list)));
@@ -300,16 +304,19 @@ fn find_node_tuple() {
         location: SrcSpan { start: 2, end: 3 },
         type_: type_::int(),
         value: "1".into(),
+        int_value: 1.into(),
     };
     let int2 = TypedExpr::Int {
         location: SrcSpan { start: 5, end: 6 },
         type_: type_::int(),
         value: "2".into(),
+        int_value: 2.into(),
     };
     let int3 = TypedExpr::Int {
         location: SrcSpan { start: 8, end: 9 },
         type_: type_::int(),
         value: "3".into(),
+        int_value: 3.into(),
     };
 
     assert_eq!(tuple.find_node(0), Some(Located::Expression(tuple)));
@@ -345,6 +352,7 @@ fn find_node_tuple_index() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 2, end: 3 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
@@ -386,6 +394,7 @@ fn find_node_fn() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 7, end: 8 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
@@ -405,18 +414,21 @@ fn find_node_call() {
     let retrn = TypedExpr::Int {
         location: SrcSpan { start: 11, end: 12 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
     let arg1 = TypedExpr::Int {
         location: SrcSpan { start: 15, end: 16 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
     let arg2 = TypedExpr::Int {
         location: SrcSpan { start: 18, end: 19 },
         value: "2".into(),
+        int_value: 2.into(),
         type_: type_::int(),
     };
 
@@ -443,6 +455,7 @@ fn find_node_record_access() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 12, end: 13 },
         value: "3".into(),
+        int_value: 3.into(),
         type_: type_::int(),
     };
 
@@ -462,6 +475,7 @@ fn find_node_record_update() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 27, end: 28 },
         value: "4".into(),
+        int_value: 4.into(),
         type_: type_::int(),
     };
 
@@ -486,18 +500,21 @@ case 1, 2 {
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 6, end: 7 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
     let int2 = TypedExpr::Int {
         location: SrcSpan { start: 9, end: 10 },
         value: "2".into(),
+        int_value: 2.into(),
         type_: type_::int(),
     };
 
     let int3 = TypedExpr::Int {
         location: SrcSpan { start: 23, end: 24 },
         value: "3".into(),
+        int_value: 3.into(),
         type_: type_::int(),
     };
 
