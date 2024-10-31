@@ -7,7 +7,7 @@ members = [
     "test-helpers-rs",
     "test-package-compiler",
     "test-project-compiler",
-    "test-echo-output",
+    "test-output",
 ]
 
 # common dependencies
