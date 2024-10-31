@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn go() {\n  [\n    9_007_199_254_740_990,\n    9_007_199_254_740_991,\n    9_007_199_254_740_992,\n    -9_007_199_254_740_990,\n    -9_007_199_254_740_991,\n    -9_007_199_254_740_992,\n  ]\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  [
+    9_007_199_254_740_990,
+    9_007_199_254_740_991,
+    9_007_199_254_740_992,
+    -9_007_199_254_740_990,
+    -9_007_199_254_740_991,
+    -9_007_199_254_740_992,
+  ]
+}
+
+
+----- WARNING
+warning: Int is outside JavaScript's safe integer range
+  ┌─ /src/warning/wrn.gleam:6:5
+  │
+6 │     9_007_199_254_740_992,
+  │     ^^^^^^^^^^^^^^^^^^^^^ This is not a safe integer value on JavaScript
+
+This integer value is too large to be represented accurately by
+JavaScript's number type. To avoid this warning integer values must be in
+the range -(2^53 - 1) - (2^53 - 1).
+
+See JavaScript's Number.MAX_SAFE_INTEGER and Number.MIN_SAFE_INTEGER
+properties for more information.
+
+warning: Int is outside JavaScript's safe integer range
+  ┌─ /src/warning/wrn.gleam:9:5
+  │
+9 │     -9_007_199_254_740_992,
+  │     ^^^^^^^^^^^^^^^^^^^^^^ This is not a safe integer value on JavaScript
+
+This integer value is too large to be represented accurately by
+JavaScript's number type. To avoid this warning integer values must be in
+the range -(2^53 - 1) - (2^53 - 1).
+
+See JavaScript's Number.MAX_SAFE_INTEGER and Number.MIN_SAFE_INTEGER
+properties for more information.

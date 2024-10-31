@@ -1,6 +1,6 @@
 use super::*;
 use crate::{
-    assert_no_warnings, assert_warning, assert_warnings_with_gleam_version,
+    assert_js_warning, assert_no_warnings, assert_warning, assert_warnings_with_gleam_version,
     assert_warnings_with_imports,
 };
 
@@ -2457,5 +2457,135 @@ pub fn main(wibble) {
   }
 }
 ",
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_decimal() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  [
+    9_007_199_254_740_990,
+    9_007_199_254_740_991,
+    9_007_199_254_740_992,
+    -9_007_199_254_740_990,
+    -9_007_199_254_740_991,
+    -9_007_199_254_740_992,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_binary() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  [
+    0b11111111111111111111111111111111111111111111111111110,
+    0b11111111111111111111111111111111111111111111111111111,
+    0b100000000000000000000000000000000000000000000000000000,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_octal() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  [
+    0o377777777777777776,
+    0o377777777777777777,
+    0o400000000000000000,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_hex() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  [
+    0x1FFFFFFFFFFFFE,
+    0x1FFFFFFFFFFFFF,
+    0x20000000000000,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_in_tuple() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  #(9_007_199_254_740_992)
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_segment_in_bit_array() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  <<9_007_199_254_740_992:64>>
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_segment_size_in_bit_array() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  [
+    <<0:9_007_199_254_740_992>>,
+    <<0:size(9_007_199_254_740_992)>>,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_in_const() {
+    assert_js_warning!(r#"pub const i = 9_007_199_254_740_992"#);
+}
+
+#[test]
+fn javascript_unsafe_int_in_const_tuple() {
+    assert_js_warning!(r#"pub const i = #(9_007_199_254_740_992)"#);
+}
+
+#[test]
+fn javascript_unsafe_int_segment_in_const_bit_array() {
+    assert_js_warning!(
+        r#"
+pub const i = <<9_007_199_254_740_992:64>>
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_segment_size_in_const_bit_array() {
+    assert_js_warning!(
+        r#"
+pub const ints = [
+  <<0:9_007_199_254_740_992>>,
+  <<0:size(9_007_199_254_740_992)>>,
+]
+"#
     );
 }

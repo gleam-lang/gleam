@@ -10,6 +10,7 @@ pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,
         value: EcoString,
+        int_value: BigInt,
     },
 
     Float {

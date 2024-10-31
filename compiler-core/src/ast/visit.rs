@@ -604,6 +604,7 @@ where
             location,
             type_,
             value,
+            int_value: _,
         } => v.visit_typed_expr_int(location, type_, value),
         TypedExpr::Float {
             location,
@@ -1099,7 +1100,11 @@ where
     V: Visit<'a> + ?Sized,
 {
     match pattern {
-        Pattern::Int { location, value } => v.visit_typed_pattern_int(location, value),
+        Pattern::Int {
+            location,
+            value,
+            int_value: _,
+        } => v.visit_typed_pattern_int(location, value),
         Pattern::Float { location, value } => v.visit_typed_pattern_float(location, value),
         Pattern::String { location, value } => v.visit_typed_pattern_string(location, value),
         Pattern::Variable {

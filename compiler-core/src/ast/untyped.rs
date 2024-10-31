@@ -7,6 +7,7 @@ pub enum UntypedExpr {
     Int {
         location: SrcSpan,
         value: EcoString,
+        int_value: BigInt,
     },
 
     Float {

@@ -44,6 +44,8 @@ id-arena = "2"
 unicode-segmentation = "1.12.0"
 # Bijective (bi-directional) hashmap
 bimap = "0.6.3"
+# Parsing of arbitrary width int values
+num-bigint = "0.4.6"
 async-trait.workspace = true
 base16.workspace = true
 bytes.workspace = true

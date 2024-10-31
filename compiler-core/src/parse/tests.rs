@@ -1179,10 +1179,24 @@ fn newline_tokens() {
     assert_eq!(
         make_tokenizer("1\n\n2\n").collect_vec(),
         [
-            Ok((0, Token::Int { value: "1".into() }, 1)),
+            Ok((
+                0,
+                Token::Int {
+                    value: "1".into(),
+                    int_value: 1.into()
+                },
+                1
+            )),
             Ok((1, Token::NewLine, 2)),
             Ok((2, Token::NewLine, 3)),
-            Ok((3, Token::Int { value: "2".into() }, 4)),
+            Ok((
+                3,
+                Token::Int {
+                    value: "2".into(),
+                    int_value: 2.into()
+                },
+                4
+            )),
             Ok((4, Token::NewLine, 5))
         ]
     );

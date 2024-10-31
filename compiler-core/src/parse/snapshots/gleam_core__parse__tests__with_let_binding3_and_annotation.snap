@@ -21,6 +21,7 @@ expression: "let assert [x]: List(Int) = [2]"
                             end: 30,
                         },
                         value: "2",
+                        int_value: 2,
                     },
                 ],
                 tail: None,

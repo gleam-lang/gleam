@@ -328,6 +328,7 @@ impl<'module> Generator<'module> {
                         location: _,
                         type_: _,
                         value,
+                        int_value: _,
                     } => value.parse().unwrap_or(0),
                     _ => 0,
                 };
@@ -1510,7 +1511,11 @@ fn sized_bit_array_segment_details<'a>(
     let size = match size {
         Some(Opt::Size { value: size, .. }) => {
             let size_int = match *size.clone() {
-                Constant::Int { location: _, value } => value.parse().unwrap_or(0),
+                Constant::Int {
+                    location: _,
+                    value,
+                    int_value: _,
+                } => value.parse().unwrap_or(0),
                 _ => 0,
             };
             if size_int > 0 && size_int % 8 != 0 {

@@ -565,11 +565,13 @@ where
             })
         } else {
             let value = format!("{prefix}{num}");
+            let int_value = super::parse_int_value(&value).expect("int value to parse as bigint");
             let end_pos = self.get_pos();
             Ok((
                 start_pos,
                 Token::Int {
                     value: value.into(),
+                    int_value,
                 },
                 end_pos,
             ))
@@ -621,11 +623,13 @@ where
                 end_pos,
             )
         } else {
+            let int_value = super::parse_int_value(&value).expect("int value to parse as bigint");
             let end_pos = self.get_pos();
             (
                 start_pos,
                 Token::Int {
                     value: value.into(),
+                    int_value,
                 },
                 end_pos,
             )
