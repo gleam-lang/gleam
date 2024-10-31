@@ -1,5 +1,5 @@
 ---
-source: test-echo-output/src/generated_tests.rs
+source: test-output/src/generated_tests.rs
 expression: "./cases/echo_tuple"
 ---
 --- CODE
