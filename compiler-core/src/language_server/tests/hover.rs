@@ -1241,3 +1241,18 @@ const value = True
         find_position_of("value").under_char('v')
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3761
+#[test]
+fn hover_over_block_in_list_spread() {
+    let code = "
+pub fn main() {
+  [1, 2, ..{
+    let x = 1
+    [x]
+  }]
+}
+";
+
+    assert_hover!(TestProject::for_source(code), find_position_of("x"));
+}
