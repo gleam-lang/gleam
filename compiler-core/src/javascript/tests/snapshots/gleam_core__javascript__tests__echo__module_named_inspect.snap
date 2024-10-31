@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\nimport other/inspect\n\npub fn main() {\n  echo inspect.x\n}\n"
+---
+----- SOURCE CODE
+
+import other/inspect
+
+pub fn main() {
+  echo inspect.x
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import * as $inspect from "../../other/other/inspect.mjs";
+import {
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+  CustomType as $CustomType,
+} from "../gleam.mjs";
+
+export function main() {
+  return echo($inspect.x);
+}
+
+// ...omitted code from `templates/echo.mjs`...
