@@ -297,6 +297,10 @@
   no arguments.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the language server wouldn't show hints when hovering over
+  the tail of a list.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
