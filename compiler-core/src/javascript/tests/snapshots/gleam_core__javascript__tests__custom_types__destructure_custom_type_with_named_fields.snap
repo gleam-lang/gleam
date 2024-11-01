@@ -26,6 +26,13 @@ class Cat extends $CustomType {
     this.name = name;
     this.cuteness = cuteness;
   }
+  
+  withFields(fields) {
+    return new this.constructor(
+      'name' in fields ? fields.name : this.name,
+      'cuteness' in fields ? fields.cuteness : this.cuteness,
+    );
+  }
 }
 
 function go(cat) {
