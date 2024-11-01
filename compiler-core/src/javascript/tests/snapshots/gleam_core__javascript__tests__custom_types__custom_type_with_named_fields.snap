@@ -49,7 +49,7 @@ class Cat extends $CustomType {
   }
   
   withFields(fields) {
-    return new this.constructor(
+    return new Cat(
       'name' in fields ? fields.name : this.name,
       'cuteness' in fields ? fields.cuteness : this.cuteness
     );

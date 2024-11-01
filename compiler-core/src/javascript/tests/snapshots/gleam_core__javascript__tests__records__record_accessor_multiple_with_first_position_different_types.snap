@@ -21,7 +21,7 @@ export class Teacher extends $CustomType {
   }
   
   withFields(fields) {
-    return new this.constructor(
+    return new Teacher(
       'name' in fields ? fields.name : this.name,
       'age' in fields ? fields.age : this.age
     );
@@ -36,7 +36,7 @@ export class Student extends $CustomType {
   }
   
   withFields(fields) {
-    return new this.constructor(
+    return new Student(
       'name' in fields ? fields.name : this.name,
       'age' in fields ? fields.age : this.age
     );

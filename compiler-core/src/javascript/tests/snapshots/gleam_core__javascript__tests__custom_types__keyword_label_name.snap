@@ -19,7 +19,7 @@ export class Thing extends $CustomType {
   }
   
   withFields(fields) {
-    return new this.constructor(
+    return new Thing(
       'in' in fields ? fields.in : this.in,
       'class' in fields ? fields.class : this.class
     );
