@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::SystemTime};
 
 use crate::{
     build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
-    config::{DocsPage, PackageConfig},
+    config::{DocsPage, PackageConfig, Repository},
     docs::DocContext,
     io::{memory::InMemoryFileSystem, FileSystemWriter},
     paths::ProjectPaths,
@@ -336,4 +336,33 @@ pub type Wibble = Int
 ",
     )];
     assert!(!compile(config, modules).contains("Not included!"));
+}
+
+#[test]
+fn source_link_for_github_repository() {
+    let mut config = PackageConfig::default();
+    config.repository = Repository::GitHub {
+        user: "wibble".to_string(),
+        repo: "wobble".to_string(),
+        path: None,
+    };
+
+    let modules = vec![("app.gleam", "pub type Wibble = Int")];
+    assert!(compile(config, modules)
+        .contains("https://github.com/wibble/wobble/blob/v0.1.0/src/app.gleam#L1-L1"));
+}
+
+#[test]
+fn source_link_for_github_repository_with_path() {
+    let mut config = PackageConfig::default();
+    config.repository = Repository::GitHub {
+        user: "wibble".to_string(),
+        repo: "wobble".to_string(),
+        path: Some("path/to/package".to_string()),
+    };
+
+    let modules = vec![("app.gleam", "pub type Wibble = Int")];
+    assert!(compile(config, modules).contains(
+        "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1-L1"
+    ));
 }

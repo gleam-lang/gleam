@@ -34,6 +34,16 @@
 
   ([Jason Sipula](https://github.com/SnakeDoc))
 
+- The `repository` config in `gleam.toml` can now optionally include a `path`
+  so that source links in generated documentation are correct for packages that
+  aren't located at the root of their repository:
+
+  ```toml
+  repository = { type = "github", user = "gleam-lang", repo = "gleam", path = "packages/my_package" }
+  ```
+
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Compiler
 
 - The compiler now prints correctly qualified or aliased type names when

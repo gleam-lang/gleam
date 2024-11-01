@@ -6,7 +6,7 @@ use crate::{
     paths::ProjectPaths,
 };
 
-use camino::{Utf8Component, Utf8Path};
+use camino::{Utf8Component, Utf8Path, Utf8PathBuf};
 
 pub struct SourceLinker {
     line_numbers: LineNumbers,
@@ -25,45 +25,53 @@ impl SourceLinker {
             .strip_prefix(paths.root())
             .expect("path is not in root")
             .with_extension("gleam");
-        let path_in_repo = to_url_path(&path).unwrap_or_default();
+
+        let path_in_repo = if let Some(repo_path) = project_config.repository.path() {
+            to_url_path(&Utf8PathBuf::from(repo_path).join(path))
+        } else {
+            to_url_path(&path)
+        }
+        .unwrap_or_default();
 
         let url_pattern = match &project_config.repository {
-            Repository::GitHub { user, repo } => Some((
+            Repository::GitHub { user, repo, .. } => Some((
                 format!(
                     "https://github.com/{}/{}/blob/v{}/{}#L",
                     user, repo, project_config.version, path_in_repo
                 ),
                 "-L".into(),
             )),
-            Repository::GitLab { user, repo } => Some((
+            Repository::GitLab { user, repo, .. } => Some((
                 format!(
                     "https://gitlab.com/{}/{}/-/blob/v{}/{}#L",
                     user, repo, project_config.version, path_in_repo
                 ),
                 "-".into(),
             )),
-            Repository::BitBucket { user, repo } => Some((
+            Repository::BitBucket { user, repo, .. } => Some((
                 format!(
                     "https://bitbucket.com/{}/{}/src/v{}/{}#lines-",
                     user, repo, project_config.version, path_in_repo
                 ),
                 ":".into(),
             )),
-            Repository::Codeberg { user, repo } => Some((
+            Repository::Codeberg { user, repo, .. } => Some((
                 format!(
                     "https://codeberg.org/{}/{}/src/tag/v{}/{}#L",
                     user, repo, project_config.version, path_in_repo
                 ),
                 "-".into(),
             )),
-            Repository::SourceHut { user, repo } => Some((
+            Repository::SourceHut { user, repo, .. } => Some((
                 format!(
                     "https://git.sr.ht/~{}/{}/tree/v{}/item/{}#L",
                     user, repo, project_config.version, path_in_repo
                 ),
                 "-".into(),
             )),
-            Repository::Gitea { user, repo, host } => Some((
+            Repository::Gitea {
+                user, repo, host, ..
+            } => Some((
                 format!(
                     "{host}/{user}/{repo}/src/tag/v{}/{}#L",
                     project_config.version, path_in_repo
