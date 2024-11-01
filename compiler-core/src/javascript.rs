@@ -330,7 +330,9 @@ impl<'a> Generator<'a> {
                     "withFields(fields) {",
                     docvec![
                         line(),
-                        "return new this.constructor(",
+                        "return new ",
+                        &constructor.name,
+                        "(",
                         docvec![line(), join(args, docvec![",", line()])].nest(INDENT),
                         line(),
                         ");"

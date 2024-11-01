@@ -23,7 +23,7 @@ class Mine extends $CustomType {
   }
   
   withFields(fields) {
-    return new this.constructor(
+    return new Mine(
       'a' in fields ? fields.a : this.a,
       'b' in fields ? fields.b : this.b
     );
