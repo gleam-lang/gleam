@@ -32,12 +32,6 @@ export class A extends $CustomType {
     super();
     this.b = b;
   }
-  
-  withFields(fields) {
-    return new this.constructor(
-      'b' in fields ? fields.b : this.b,
-    );
-  }
 }
 
 export class B extends $CustomType {
@@ -45,24 +39,12 @@ export class B extends $CustomType {
     super();
     this.c = c;
   }
-  
-  withFields(fields) {
-    return new this.constructor(
-      'c' in fields ? fields.c : this.c,
-    );
-  }
 }
 
 export class C extends $CustomType {
   constructor(d) {
     super();
     this.d = d;
-  }
-  
-  withFields(fields) {
-    return new this.constructor(
-      'd' in fields ? fields.d : this.d,
-    );
   }
 }
 

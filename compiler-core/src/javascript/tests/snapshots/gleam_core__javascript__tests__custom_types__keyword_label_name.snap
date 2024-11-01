@@ -21,7 +21,7 @@ export class Thing extends $CustomType {
   withFields(fields) {
     return new this.constructor(
       'in' in fields ? fields.in : this.in,
-      'class' in fields ? fields.class : this.class,
+      'class' in fields ? fields.class : this.class
     );
   }
 }
