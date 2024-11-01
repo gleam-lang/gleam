@@ -283,6 +283,8 @@ impl<'a> Generator<'a> {
             return head.append("}");
         };
 
+        let mut definitions = Vec::new();
+
         let parameters = join(
             constructor.arguments.iter().enumerate().map(parameter),
             break_(",", ", "),
@@ -301,18 +303,54 @@ impl<'a> Generator<'a> {
             line(),
         );
 
-        let class_body = docvec![
-            line(),
+        definitions.push(docvec![
             "constructor(",
             parameters,
             ") {",
             docvec![line(), "super();", line(), constructor_body].nest(INDENT),
             line(),
-            "}",
-        ]
-        .nest(INDENT);
+            "}"
+        ]);
 
-        docvec![head, class_body, line(), "}"]
+        // if a constructor contains unlabeled arguments, using the record update syntax produces
+        // a type error, so we don't need to generate withFields for those.
+        let with_fields_constructor_args = constructor
+            .arguments
+            .iter()
+            .map(|arg| {
+                arg.label.as_ref().map(|(_, name)| {
+                    docvec![
+                        "'",
+                        name,
+                        "' in fields ? fields.",
+                        name,
+                        " : this.",
+                        name,
+                        ","
+                    ]
+                })
+            })
+            .collect::<Option<Vec<_>>>();
+
+        if let Some(with_fields_constructor_args) = with_fields_constructor_args {
+            definitions.push(docvec![
+                "withFields(fields) {",
+                docvec![
+                    line(),
+                    "return new this.constructor(",
+                    docvec![line(), join(with_fields_constructor_args, line())].nest(INDENT),
+                    line(),
+                    ");"
+                ]
+                .nest(INDENT),
+                line(),
+                "}"
+            ]);
+        }
+
+        let body = docvec![line(), join(definitions, docvec![line(), line()])];
+
+        docvec![head, body.nest(INDENT), line(), "}"]
     }
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
