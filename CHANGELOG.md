@@ -4,6 +4,9 @@
 
 ### Compiler
 
+- Optimised code generated for record updates on the JavaScript target.
+  ([yoshi](https://github.com/joshi-monster))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
