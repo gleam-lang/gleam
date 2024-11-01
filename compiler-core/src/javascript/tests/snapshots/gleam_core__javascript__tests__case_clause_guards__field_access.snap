@@ -32,7 +32,7 @@ export class Person extends $CustomType {
     return new this.constructor(
       'username' in fields ? fields.username : this.username,
       'name' in fields ? fields.name : this.name,
-      'age' in fields ? fields.age : this.age,
+      'age' in fields ? fields.age : this.age
     );
   }
 }

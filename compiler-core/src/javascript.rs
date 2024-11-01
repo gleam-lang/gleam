@@ -319,33 +319,27 @@ impl<'a> Generator<'a> {
             .iter()
             .map(|arg| {
                 arg.label.as_ref().map(|(_, name)| {
-                    docvec![
-                        "'",
-                        name,
-                        "' in fields ? fields.",
-                        name,
-                        " : this.",
-                        name,
-                        ","
-                    ]
+                    docvec!["'", name, "' in fields ? fields.", name, " : this.", name,]
                 })
             })
             .collect::<Option<Vec<_>>>();
 
-        if let Some(with_fields_constructor_args) = with_fields_constructor_args {
-            definitions.push(docvec![
-                "withFields(fields) {",
-                docvec![
+        if let Some(args) = with_fields_constructor_args {
+            if args.len() > 1 {
+                definitions.push(docvec![
+                    "withFields(fields) {",
+                    docvec![
+                        line(),
+                        "return new this.constructor(",
+                        docvec![line(), join(args, docvec![",", line()])].nest(INDENT),
+                        line(),
+                        ");"
+                    ]
+                    .nest(INDENT),
                     line(),
-                    "return new this.constructor(",
-                    docvec![line(), join(with_fields_constructor_args, line())].nest(INDENT),
-                    line(),
-                    ");"
-                ]
-                .nest(INDENT),
-                line(),
-                "}"
-            ]);
+                    "}"
+                ]);
+            }
         }
 
         let body = docvec![line(), join(definitions, docvec![line(), line()])];
