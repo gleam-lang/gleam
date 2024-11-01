@@ -19,6 +19,13 @@ export class Teacher extends $CustomType {
     this.name = name;
     this.title = title;
   }
+  
+  withFields(fields) {
+    return new this.constructor(
+      'name' in fields ? fields.name : this.name,
+      'title' in fields ? fields.title : this.title,
+    );
+  }
 }
 
 export class Student extends $CustomType {
@@ -26,6 +33,13 @@ export class Student extends $CustomType {
     super();
     this.name = name;
     this.age = age;
+  }
+  
+  withFields(fields) {
+    return new this.constructor(
+      'name' in fields ? fields.name : this.name,
+      'age' in fields ? fields.age : this.age,
+    );
   }
 }
 
