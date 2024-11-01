@@ -1,7 +1,4 @@
-use std::sync::OnceLock;
-
 use ecow::{eco_format, EcoString};
-use regex::Regex;
 
 use crate::{
     ast::{ArgNames, SrcSpan},
@@ -11,30 +8,34 @@ use crate::{
 use super::{Error, Named};
 use heck::{ToSnakeCase, ToUpperCamelCase};
 
-static VALID_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
-
 fn valid_name(name: &EcoString) -> bool {
-    // Some of the internally generated variables (such as `_capture` and `_use0`)
-    // start with underscores, so we allow underscores here.
-    let valid_name_pattern = VALID_NAME_PATTERN
-        .get_or_init(|| Regex::new("^_?[a-z][a-z0-9_]*$").expect("Regex is correct"));
-    valid_name_pattern.is_match(name)
+    // ^_?[a-z][a-z0-9_]*$
+    let mut chars = name.chars();
+    if chars.clone().next() == Some('_') {
+        let _ = chars.next();
+    }
+    if chars.next().map(|ch| ch.is_ascii_lowercase()) != Some(true) {
+        return false;
+    }
+    chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_')
 }
-
-static VALID_DISCARD_PATTERN: OnceLock<Regex> = OnceLock::new();
 
 fn valid_discard_name(name: &EcoString) -> bool {
-    let valid_discard_pattern = VALID_DISCARD_PATTERN
-        .get_or_init(|| Regex::new("^_[a-z0-9_]*$").expect("Regex is correct"));
-    valid_discard_pattern.is_match(name)
+    // ^_[a-z0-9_]*$
+    let mut chars = name.chars();
+    if chars.next() != Some('_') {
+        return false;
+    }
+    chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_')
 }
 
-static VALID_UPNAME_PATTERN: OnceLock<Regex> = OnceLock::new();
-
 fn valid_upname(name: &EcoString) -> bool {
-    let valid_upname_pattern = VALID_UPNAME_PATTERN
-        .get_or_init(|| Regex::new("^[A-Z][A-Za-z0-9]*$").expect("Regex is correct"));
-    valid_upname_pattern.is_match(name)
+    // ^[A-Z][A-Za-z0-9]*$
+    let mut chars = name.chars();
+    if chars.next().map(|ch| ch.is_ascii_uppercase()) != Some(true) {
+        return false;
+    }
+    chars.all(|c| c.is_ascii_alphanumeric())
 }
 
 pub fn check_name_case(location: SrcSpan, name: &EcoString, kind: Named) -> Result<(), Error> {

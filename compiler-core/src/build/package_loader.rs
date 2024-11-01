@@ -193,23 +193,45 @@ where
     }
 
     pub fn is_gleam_path(&self, path: &Utf8Path, dir: &Utf8Path) -> bool {
-        use regex::Regex;
-        use std::cell::OnceCell;
-        const RE: OnceCell<Regex> = OnceCell::new();
+        let mut chars = path
+            .strip_prefix(dir)
+            .expect("is_gleam_path(): strip_prefix")
+            .as_str()
+            .chars();
 
-        RE.get_or_init(|| {
-            Regex::new(&format!(
-                "^({module}{slash})*{module}\\.gleam$",
-                module = "[a-z][_a-z0-9]*",
-                slash = "(/|\\\\)",
-            ))
-            .expect("is_gleam_path() RE regex")
-        })
-        .is_match(
-            path.strip_prefix(dir)
-                .expect("is_gleam_path(): strip_prefix")
-                .as_str(),
-        )
+        // ^({module}{slash})*{module}\\.gleam$
+        loop {
+            // module = "[a-z][_a-z0-9]*"
+            // [a-z]
+            if chars.next().map(|ch| ch.is_ascii_lowercase()) != Some(true) {
+                return false;
+            }
+
+            // [_a-z0-9]*
+            while chars
+                .clone()
+                .next()
+                .map(|ch| ch == '_' || ch.is_ascii_lowercase() || ch.is_ascii_digit())
+                == Some(true)
+            {
+                let _ = chars.next();
+            }
+
+            if chars.as_str() == ".gleam" {
+                return true;
+            }
+
+            // slash = "(/|\\\\)"
+            if let Some(s) = chars
+                .as_str()
+                .strip_prefix("/")
+                .or(chars.as_str().strip_prefix("\\\\"))
+            {
+                chars = s.chars();
+            } else {
+                return false;
+            }
+        }
     }
 
     fn read_sources_and_caches(&self) -> Result<HashMap<EcoString, Input>> {

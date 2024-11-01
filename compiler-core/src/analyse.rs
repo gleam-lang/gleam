@@ -40,11 +40,7 @@ use ecow::EcoString;
 use hexpm::version::Version;
 use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
-use std::{
-    collections::HashMap,
-    ops::Deref,
-    sync::{Arc, OnceLock},
-};
+use std::{collections::HashMap, ops::Deref, sync::Arc};
 use vec1::Vec1;
 
 use self::imports::Importer;
@@ -654,29 +650,32 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         external_javascript: Option<&(EcoString, EcoString, SrcSpan)>,
         location: SrcSpan,
     ) {
-        use regex::Regex;
+        fn is_module(s: &str) -> bool {
+            // ^[@a-zA-Z0-9\\./:_-]+$
+            !s.is_empty()
+                && s.chars()
+                    .all(|ch| "@\\./:_-".contains(ch) || ch.is_ascii_alphanumeric())
+        }
 
-        static MODULE: OnceLock<Regex> = OnceLock::new();
-        static FUNCTION: OnceLock<Regex> = OnceLock::new();
+        fn is_function(s: &str) -> bool {
+            // ^[a-zA-Z_][a-zA-Z0-9_]*$
+            let mut chars = s.chars();
+            chars.next().map(|ch| ch == '_' || ch.is_ascii_alphabetic()) == Some(true)
+                && chars.all(|ch| ch == '_' || ch.is_ascii_alphanumeric())
+        }
 
         let (module, function) = match external_javascript {
             None => return,
             Some((module, function, _location)) => (module, function),
         };
-        if !MODULE
-            .get_or_init(|| Regex::new("^[@a-zA-Z0-9\\./:_-]+$").expect("regex"))
-            .is_match(module)
-        {
+        if !is_module(module) {
             self.problems.error(Error::InvalidExternalJavascriptModule {
                 location,
                 module: module.clone(),
                 name: function_name.clone(),
             });
         }
-        if !FUNCTION
-            .get_or_init(|| Regex::new("^[a-zA-Z_][a-zA-Z0-9_]*$").expect("regex"))
-            .is_match(function)
-        {
+        if !is_function(function) {
             self.problems
                 .error(Error::InvalidExternalJavascriptFunction {
                     location,

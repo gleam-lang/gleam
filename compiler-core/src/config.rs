@@ -914,20 +914,17 @@ mod uri_serde_default_https {
 
 mod package_name {
     use ecow::EcoString;
-    use regex::Regex;
     use serde::Deserializer;
-    use std::sync::OnceLock;
-
-    static PACKAGE_NAME_PATTERN: OnceLock<Regex> = OnceLock::new();
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<EcoString, D::Error>
     where
         D: Deserializer<'de>,
     {
         let name: &str = serde::de::Deserialize::deserialize(deserializer)?;
-        if PACKAGE_NAME_PATTERN
-            .get_or_init(|| Regex::new("^[a-z][a-z0-9_]*$").expect("Package name regex"))
-            .is_match(name)
+        // ^[a-z][a-z0-9_]*$
+        let mut chars = name.chars();
+        if chars.next().map(|ch| ch.is_ascii_lowercase()) == Some(true)
+            && chars.all(|ch| ch.is_ascii_lowercase() || ch.is_ascii_digit() || ch == '_')
         {
             Ok(name.into())
         } else {
