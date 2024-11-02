@@ -9,6 +9,9 @@ license-file = "LICENCE"
 # This package compiles to wasm
 crate-type = ["cdylib", "rlib"]
 
+[features]
+reduce-bin-size = ["gleam-core/disable-erlang", "gleam-core/disable-hide-internal"]
+
 [dependencies]
 gleam-core = { path = "../compiler-core" }
 console_error_panic_hook = "0"
