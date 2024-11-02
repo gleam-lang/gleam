@@ -6,7 +6,7 @@ use crate::version::COMPILER_VERSION;
 use crate::{Error, Result};
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
-use globset::{Glob, GlobSetBuilder};
+use globset::Glob;
 use hexpm::version::{self, Version};
 use http::Uri;
 use serde::Deserialize;
@@ -193,11 +193,12 @@ impl PackageConfig {
     ///
     /// The developer can specify a list of glob patterns in the gleam.toml file
     /// to determine modules that should not be shown in the package's documentation
+    #[cfg(not(feature = "disable-hide-internal"))]
     pub fn is_internal_module(&self, module: &str) -> bool {
         let package = &self.name;
         match &self.internal_modules {
             Some(globs) => {
-                let mut builder = GlobSetBuilder::new();
+                let mut builder = globset::GlobSetBuilder::new();
                 for glob in globs {
                     _ = builder.add(glob.clone());
                 }
@@ -205,13 +206,18 @@ impl PackageConfig {
             }
 
             // If no patterns were specified in the config then we use a default value
-            None => GlobSetBuilder::new()
+            None => globset::GlobSetBuilder::new()
                 .add(Glob::new(&format!("{package}/internal")).expect("internal module glob"))
                 .add(Glob::new(&format!("{package}/internal/*")).expect("internal module glob"))
                 .build(),
         }
         .expect("internal module globs")
         .is_match(module)
+    }
+
+    #[cfg(feature = "disable-hide-internal")]
+    pub fn is_internal_module(&self, _module: &str) -> bool {
+        false
     }
 
     // Checks to see if the gleam version specified in the config is compatible
