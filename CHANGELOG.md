@@ -19,16 +19,18 @@
 
 - The cli can now update individual dependencies.
 
-  `gleam update` and `gleam deps update` now take an optional list of package names to update:
+  `gleam update` and `gleam deps update` now take an optional list of package
+  names to update:
 
   ```shell
   gleam update package_a
   gleam deps update package_b package_c
   ```
 
-  This allows for selective updating of dependencies.
-  When package names are provided, only those packages and their unique dependencies are unlocked and updated.
-  If no package names are specified, the command behaves as before, updating all dependencies.
+  This allows for selective updating of dependencies. When package names are
+  provided, only those packages and their unique dependencies are unlocked and
+  updated. If no package names are specified, the command behaves as before,
+  updating all dependencies.
 
   ([Jason Sipula](https://github.com/SnakeDoc))
 
@@ -126,9 +128,11 @@
 - Optimised creation of bit arrays on the JavaScript target.
   ([Richard Viney](https://github.com/richard-viney))
 
-- The compiler can now infer the variant of custom types when pattern matching,
-  allowing for safe record updates if the variant is known, or access fields
-  which are only present on one variant:
+- The compiler can now infer the variant of custom types within expressions that
+  construct or pattern match on them.
+
+  Using this information it can now be more precise with exhaustiveness
+  checking, identifying patterns for the other variants as unnecessary.
 
   ```gleam
   pub type Pet {
@@ -136,10 +140,37 @@
     Turtle(name: String, speed: Int, times_renamed: Int)
   }
 
+  pub fn main() {
+    // We know `charlie` is a `Dog`...
+    let charlie = Doc("Charles", 1000)
+
+    // ...so you do not need to match on the `Turtle` variant
+    case charlie {
+      Dog(..) -> todo
+    }
+  }
+  ```
+
+  This also means that the record update syntax can be used on multi-variant
+  custom types, so long as the variant can be inferred from the surrounding
+  code.
+
+  ```gleam
   pub fn rename(pet: Pet, to name: String) -> Pet {
     case pet {
-      Dog(..) as dog -> Dog(..dog, name:)
+      Dog(..) -> Dog(..dog, name:)
       Turtle(..) -> Turtle(..pet, name:, times_renamed: pet.times_renamed + 1)
+    }
+  }
+  ```
+
+  Variant specific fields can also be used with the accessor syntax.
+
+  ```gleam
+  pub fn speed(pet: Pet) -> Int {
+    case pet {
+      Dog(..) -> 500
+      Turtle(..) -> pet.speed
     }
   }
   ```
