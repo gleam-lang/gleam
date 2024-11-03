@@ -68,3 +68,65 @@ fn conflict_with_import() {
         "import wibble.{type A} type A { C }",
     );
 }
+
+#[test]
+fn generic_record_update1() {
+    // A record update on polymorphic types with a field of different type
+    assert_module_infer!(
+        "
+pub type Box(a) {
+  Box(value: a, i: Int)
+}
+
+pub fn update_box(box: Box(Int), value: String) {
+  Box(..box, value: value)
+}",
+        vec![
+            ("Box", "fn(a, Int) -> Box(a)"),
+            ("update_box", "fn(Box(Int), String) -> Box(String)")
+        ]
+    );
+}
+
+#[test]
+fn generic_record_update2() {
+    // A record update on polymorphic types with generic fields of a different type
+    assert_module_infer!(
+        "
+pub type Box(a) {
+  Box(value: a, i: Int)
+}
+pub fn update_box(box: Box(a), value: b) {
+  Box(..box, value: value)
+}",
+        vec![
+            ("Box", "fn(a, Int) -> Box(a)"),
+            ("update_box", "fn(Box(a), b) -> Box(b)")
+        ]
+    );
+}
+
+#[test]
+fn inferred_variant_record_update_change_type_parameter() {
+    assert_module_infer!(
+        r#"
+pub type Box(a) {
+  Locked(password: String, value: a)
+  Unlocked(password: String, value: a)
+}
+
+pub fn main() {
+  let box = Locked("ungu€$$4bLe", 11)
+  case box {
+    Locked(..) as box -> Locked(..box, value: True)
+    Unlocked(..) as box -> Unlocked(..box, value: False)
+  }
+}
+"#,
+        vec![
+            ("Locked", "fn(String, a) -> Box(a)"),
+            ("Unlocked", "fn(String, a) -> Box(a)"),
+            ("main", "fn() -> Box(Bool)")
+        ]
+    );
+}

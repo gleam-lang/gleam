@@ -1675,34 +1675,6 @@ pub fn update_person(person: Person) {
 }
 
 #[test]
-fn generic_record_update1() {
-    // A record update on polymorphic types with a field of the wrong type
-    assert_module_error!(
-        "
-pub type Box(a) {
-  Box(value: a, i: Int)
-}
-pub fn update_box(box: Box(Int), value: String) {
-  Box(..box, value: value)
-}"
-    );
-}
-
-#[test]
-fn generic_record_update2() {
-    // A record update on polymorphic types with generic fields of the wrong type
-    assert_module_error!(
-        "
-pub type Box(a) {
-  Box(value: a, i: Int)
-}
-pub fn update_box(box: Box(a), value: b) {
-  Box(..box, value: value)
-}"
-    );
-}
-
-#[test]
 fn type_vars_must_be_declared() {
     // https://github.com/gleam-lang/gleam/issues/734
     assert_module_error!(
@@ -2582,26 +2554,6 @@ pub fn main(wibble: wibble.Wibble) {
   }
 }
 "
-    );
-}
-
-#[test]
-fn inferred_variant_record_update_change_type_parameter() {
-    assert_module_error!(
-        r#"
-pub type Box(a) {
-  Locked(password: String, value: a)
-  Unlocked(password: String, value: a)
-}
-
-pub fn main() {
-  let box = Locked("ungu€$$4bLe", 11)
-  case box {
-    Locked(..) as box -> Locked(..box, value: True)
-    Unlocked(..) as box -> Unlocked(..box, value: False)
-  }
-}
-"#
     );
 }
 
