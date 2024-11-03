@@ -246,7 +246,7 @@ pub fn main() {
 }
 
 #[test]
-fn labael_shorthand_in_record_update_requires_v1_4() {
+fn label_shorthand_in_record_update_requires_v1_4() {
     let version = infer_version(
         "
 pub type Vec2 { Vec2(x: Int, y: Int) }
