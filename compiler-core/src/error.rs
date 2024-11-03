@@ -1629,7 +1629,7 @@ to enable direct accessor syntax.",
                         UnknownField::AppearsInAnImpossibleVariant => {
                             let msg = wrap(
                                 "Note: The field you are trying to \
-access exists but not on the variant which is this value always is. \
+access exists, but not on the variant which this value always is. \
 A field that is not present in all variants can only be accessed when \
 the value is inferred to be one variant.",
                             );
