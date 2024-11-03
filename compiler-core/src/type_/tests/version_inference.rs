@@ -246,6 +246,21 @@ pub fn main() {
 }
 
 #[test]
+fn labael_shorthand_in_record_update_requires_v1_4() {
+    let version = infer_version(
+        "
+pub type Vec2 { Vec2(x: Int, y: Int) }
+
+pub fn main() {
+  let x = 1
+  Vec2(..Vec2(0, 0), x:)
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 4, 0));
+}
+
+#[test]
 fn constant_string_concatenation_requires_v1_4() {
     let version = infer_version("pub const string = \"wibble\" <> \"wobble\"");
     assert_eq!(version, Version::new(1, 4, 0));
