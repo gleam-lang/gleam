@@ -20,15 +20,18 @@ pub fn main() {
 
 ----- ERROR
 error: Type mismatch
-   ┌─ /src/one/two.gleam:10:47
+   ┌─ /src/one/two.gleam:11:5
    │
-10 │     Locked(..) as box -> Locked(..box, value: True)
-   │                                               ^^^^
+11 │     Unlocked(..) as box -> Unlocked(..box, password: "pwd")
+   │     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+This case clause was found to return a different type than the previous
+one, but all case clauses must return the same type.
 
 Expected type:
 
-    Int
+    Box(Bool)
 
 Found type:
 
-    Bool
+    Box(Int)
