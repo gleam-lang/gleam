@@ -390,6 +390,10 @@
   not calling them could produce invalid code.
   ([PgBiel](https://github.com/PgBiel))
 
+- Fixed a bug where using the label shorthand syntax inside of a record update
+  wouldn't emit a warning when the minimum specified Gleam version was < 1.4.0.
+  ([yoshi](https://github.com/joshi-monster))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
