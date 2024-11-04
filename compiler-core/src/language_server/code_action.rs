@@ -944,6 +944,12 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             return;
         }
 
+        // Various expressions such as pipelines and `use` expressions generate assignments
+        // internally. However, these cannot be annotated and so we don't offer a code action here.
+        if assignment.pattern.is_pipe_variable() || assignment.value.is_use_variable() {
+            return;
+        }
+
         let insert_location = SrcSpan::new(pattern_location.end, pattern_location.end);
         let range = src_span_to_lsp_range(insert_location, &self.line_numbers);
 

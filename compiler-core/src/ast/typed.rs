@@ -613,6 +613,10 @@ impl TypedExpr {
             _ => false,
         }
     }
+
+    pub fn is_use_variable(&self) -> bool {
+        matches!(self, TypedExpr::Var { name, .. } if name.starts_with(USE_ASSIGNMENT_VARIABLE))
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {
