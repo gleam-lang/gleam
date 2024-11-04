@@ -1974,6 +1974,41 @@ pub fn main() {
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/3789
+fn no_code_actions_to_add_annotations_for_pipe() {
+    assert_no_code_actions!(
+        ADD_ANNOTATION | ADD_ANNOTATIONS,
+        r#"
+fn do_something(a: Int) { a }
+
+pub fn main() {
+  10 |> do_something
+}
+"#,
+        find_position_of("10").select_until(find_position_of("|>"))
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3789#issuecomment-2455805734
+fn add_correct_type_annotation_for_non_variable_use() {
+    assert_code_action!(
+        ADD_ANNOTATION,
+        r#"
+fn usable(f) {
+  f(#(1, 2))
+}
+
+pub fn main() {
+  use #(a, b) <- usable
+  a + b
+}
+"#,
+        find_position_of("use").select_until(find_position_of("b)"))
+    );
+}
+
+#[test]
 fn test_qualified_to_unqualified_import_basic_with_argument() {
     let src = r#"
 import option

@@ -27,7 +27,6 @@ use num_bigint::BigInt;
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
 
-pub const TRY_VARIABLE: &str = "_try";
 pub const PIPE_VARIABLE: &str = "_pipe";
 pub const USE_ASSIGNMENT_VARIABLE: &str = "_use";
 pub const ASSERT_FAIL_VARIABLE: &str = "_assert_fail";
@@ -1833,6 +1832,12 @@ impl<A> Pattern<A> {
     /// [`Discard`]: Pattern::Discard
     pub fn is_discard(&self) -> bool {
         matches!(self, Self::Discard { .. })
+    }
+
+    /// Returns true if the pattern is a generated variable
+    /// from a pipeline.
+    pub fn is_pipe_variable(&self) -> bool {
+        matches!(self, Pattern::Variable { name,.. } if name == PIPE_VARIABLE)
     }
 }
 
