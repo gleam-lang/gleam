@@ -25,5 +25,5 @@ fn main() {
 -spec main() -> person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},
-    New_p = erlang:setelement(2, erlang:setelement(3, P, 28), <<"Riley"/utf8>>),
+    New_p = {person, <<"Riley"/utf8>>, 28},
     New_p.

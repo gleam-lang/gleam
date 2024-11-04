@@ -78,11 +78,14 @@ function new_cat() {
 }
 
 function update(cat) {
-  cat.withFields({ name: "Sid" });
-  cat.withFields({ name: "Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!" });
-  new_cat().withFields({ name: "Molly" });
+  new Cat("Sid", cat.cuteness);
+  new Cat("Bartholemew Wonder Puss the Fourth !!!!!!!!!!!!!!!!", cat.cuteness);
+  (() => {
+    let _record = new_cat();
+    return new Cat("Molly", _record.cuteness);
+  })();
   let box = new Box(cat);
-  return box.occupant.withFields({ cuteness: box.occupant.cuteness + 1 });
+  return new Cat(box.occupant.name, box.occupant.cuteness + 1);
 }
 
 const felix = /* @__PURE__ */ new Cat("Felix", 12);

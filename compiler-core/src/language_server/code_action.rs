@@ -569,7 +569,11 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                     Some(ImplicitCallArgOrigin::Pipe) => _ = missing_labels.remove(&0),
                     // We do not support this action for functions that have
                     // already been explicitly supplied an argument!
-                    Some(ImplicitCallArgOrigin::PatternFieldSpread) | None => return vec![],
+                    Some(
+                        ImplicitCallArgOrigin::PatternFieldSpread
+                        | ImplicitCallArgOrigin::RecordUpdate,
+                    )
+                    | None => return vec![],
                 }
             }
 

@@ -32,11 +32,10 @@ identity(X) ->
 -spec main() -> thing().
 main() ->
     Thing = {thing, 1, 2},
-    erlang:setelement(
-        3,
-        begin
+    begin
+        _record = begin
             _pipe = Thing,
             identity(_pipe)
         end,
-        1000
-    ).
+        {thing, erlang:element(2, _record), 1000}
+    end.
