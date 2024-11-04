@@ -398,6 +398,16 @@
   arguments were supplied in a record update.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where an incorrect bit array would be generated on JavaScript for
+  negative `Int` values when the segment's `size` was wider than 48 bits or when
+  the `Int` value was less than the minimum representable value for the segment
+  size.
+  ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where an incorrect `Int` would be returned when pattern matching
+  to a negative value wider than 48 bits in a bit array.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes
