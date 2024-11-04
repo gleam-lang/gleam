@@ -8,7 +8,8 @@ use crate::{
         TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
         UntypedArg, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
-        UntypedMultiPattern, UntypedStatement, Use, UseAssignment, USE_ASSIGNMENT_VARIABLE,
+        UntypedMultiPattern, UntypedStatement, Use, UseAssignment, RECORD_UPDATE_VARIABLE,
+        USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
     exhaustiveness::{self, Reachability},
@@ -18,7 +19,7 @@ use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
-use vec1::Vec1;
+use vec1::{vec1, Vec1};
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
 pub struct Implementations {
@@ -2105,7 +2106,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: EcoString,
         label: EcoString,
         location: SrcSpan,
-        record_access_erorr: Error,
+        record_access_error: Error,
     ) -> Result<TypedClauseGuard, Error> {
         let module_access = self
             .infer_module_access(&name, label, &location, location)
@@ -2139,7 +2140,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // inferring the record access, so that we can suggest possible
         // misspellings of field names
         if self.environment.scope.contains_key(&name) {
-            module_access.map_err(|_| record_access_erorr)
+            module_access.map_err(|_| record_access_error)
         } else {
             module_access
         }
@@ -2400,8 +2401,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let record_type = record.type_();
 
         // Check that the record variable unifies with the return type of the constructor.
-        // This should not affect our returned type, so we instantiate a new copy of the generic
-        // return type for our value constructor.
+        // This should not affect our returned type, so we instantiate a new copy
+        // of the generic return type for our value constructor.
         let return_type_copy = match value_constructor.type_.as_ref() {
             Type::Fn { retrn, .. } => self.instantiate(retrn.clone(), &mut hashmap![]),
             _ => {
@@ -2461,7 +2462,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // we clone the fields to remove all explicitely mentioned fields in the record update.
         let mut fields = field_map.fields.clone();
 
-        // replace arguments given explicitely in the record update
+        // collect explicit arguments given in the record update
         let explicit_args = args
             .iter()
             .map(|arg @ UntypedRecordUpdateArg {
@@ -2481,12 +2482,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     unify(arg_type.clone(), value.type_())
                         .map_err(|e| convert_unify_error(e, *location))?;
 
-                    Ok(TypedRecordUpdateArg {
-                        label: label.clone(),
+                    Ok((index, CallArg {
+                        label: Some(label.clone()),
                         location: *location,
                         value,
-                        index,
-                    })
+                        implicit: None
+                    }))
                 } else {
                     panic!("Failed to get record argument type after successfully inferring that field");
                 }
@@ -2505,44 +2506,113 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ))
             }
         })
-        .try_collect()?;
+        .collect::<Result<Vec<_>, _>>()?;
 
-        // make sure the remaining copied fields unify with the arguments.
-        for (label, index) in fields {
-            let (_, _, type_) = self.infer_known_record_access(
-                record_type.clone(),
-                record.location(),
-                FieldAccessUsage::RecordUpdate,
+        // we can skip generating an addtional variable if we already have a
+        // simple variable or record access.
+        let needs_tmp_record_variable = match record {
+            TypedExpr::Var { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::TupleIndex { .. } => false,
+            _ => true,
+        };
+
+        // bound_record is the expression used to access the old record during the update.
+        let bound_record = if needs_tmp_record_variable {
+            TypedExpr::Var {
                 location,
-                label.clone(),
-            )?;
-
-            if let Some(arg_type) = args_types.get(index as usize) {
-                unify(arg_type.clone(), type_.clone())
-                    .map_err(|e| convert_unify_error(e, location))?;
-            } else {
-                panic!(
-                    "Failed to get record argument type after successfully inferring that field"
-                );
+                constructor: ValueConstructor {
+                    publicity: Publicity::Private,
+                    deprecation: Deprecation::NotDeprecated,
+                    type_: record_type.clone(),
+                    variant: ValueConstructorVariant::LocalVariable { location },
+                },
+                name: RECORD_UPDATE_VARIABLE.into(),
             }
-        }
+        } else {
+            record.clone()
+        };
 
-        if args.is_empty() {
+        // generate the remaining copied arguments, making sure they unify with
+        // our inferred record type.
+        let implicit_args = fields
+            .into_iter()
+            .map(|(label, index)| {
+                let record_access = self.infer_known_record_expression_access(
+                    bound_record.clone(),
+                    label.clone(),
+                    location,
+                    FieldAccessUsage::RecordUpdate,
+                )?;
+
+                if let Some(arg_type) = args_types.get(index as usize) {
+                    unify(arg_type.clone(), record_access.type_().clone())
+                        .map_err(|e| convert_unify_error(e, location))?;
+
+                    Ok((
+                        index,
+                        CallArg {
+                            location,
+                            label: Some(label),
+                            value: record_access,
+                            implicit: Some(ImplicitCallArgOrigin::RecordUpdate),
+                        },
+                    ))
+                } else {
+                    panic!(
+                        "Failed to get record argument type after successfully inferring that field"
+                    );
+                }
+            })
+            .collect::<Result<Vec<_>, _>>()?;
+
+        if explicit_args.is_empty() {
             self.problems
                 .warning(Warning::NoFieldsRecordUpdate { location });
         }
 
-        if args.len() == field_map.arity as usize {
+        if implicit_args.is_empty() {
             self.problems
                 .warning(Warning::AllFieldsRecordUpdate { location });
         }
 
-        Ok(TypedExpr::RecordUpdate {
+        let args = explicit_args
+            .into_iter()
+            .chain(implicit_args)
+            .sorted_by_key(|(index, _)| *index)
+            .map(|(_, value)| value)
+            .collect();
+
+        let constructor_call = TypedExpr::Call {
             location,
             type_: return_type,
-            record: Box::new(record),
-            args: explicit_args,
-        })
+            fun: Box::new(typed_constructor),
+            args,
+        };
+
+        if needs_tmp_record_variable {
+            // if we bind need to bind the record expression to a local variable,
+            // we wrap the assignment in the constructor call in a block expression.
+            Ok(TypedExpr::Block {
+                location,
+                statements: vec1![
+                    Statement::Assignment(Assignment {
+                        location,
+                        pattern: Pattern::Variable {
+                            location,
+                            name: RECORD_UPDATE_VARIABLE.into(),
+                            type_: record_type.clone(),
+                        },
+                        annotation: None,
+                        kind: AssignmentKind::Let,
+                        value: Box::new(record),
+                    }),
+                    Statement::Expression(constructor_call)
+                ],
+            })
+        } else {
+            Ok(constructor_call)
+        }
     }
 
     fn unknown_field_error(

@@ -32,5 +32,8 @@ return_person() ->
 -file("/root/project/test/my/mod.gleam", 4).
 -spec main() -> person().
 main() ->
-    New_p = erlang:setelement(3, return_person(), 28),
+    New_p = begin
+        _record = return_person(),
+        {person, erlang:element(2, _record), 28}
+    end,
     New_p.

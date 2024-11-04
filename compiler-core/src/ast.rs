@@ -29,6 +29,7 @@ use vec1::Vec1;
 
 pub const PIPE_VARIABLE: &str = "_pipe";
 pub const USE_ASSIGNMENT_VARIABLE: &str = "_use";
+pub const RECORD_UPDATE_VARIABLE: &str = "_record";
 pub const ASSERT_FAIL_VARIABLE: &str = "_assert_fail";
 pub const ASSERT_SUBJECT_VARIABLE: &str = "_assert_subject";
 pub const CAPTURE_VARIABLE: &str = "_capture";
@@ -1216,6 +1217,10 @@ pub enum ImplicitCallArgOrigin {
     /// right hand side of `use` is being called with the wrong arity.
     ///
     IncorrectArityUse,
+    /// An argument adde by the compiler to fill in the missing args when using
+    /// the record update synax.
+    ///
+    RecordUpdate,
 }
 
 impl<A> CallArg<A> {

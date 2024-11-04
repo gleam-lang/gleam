@@ -26,7 +26,7 @@ use crate::{
     ast::{
         ArgNames, BitArraySegment, CallArg, Constant, DefinitionLocation, Pattern, Publicity,
         SrcSpan, TypedConstant, TypedExpr, TypedPattern, TypedPatternBitArraySegment,
-        TypedRecordUpdateArg, UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
+        UntypedMultiPattern, UntypedPattern, UntypedRecordUpdateArg,
     },
     bit_array,
     build::{Origin, Target},
