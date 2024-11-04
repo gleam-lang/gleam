@@ -208,7 +208,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let assignment = Assignment {
             location,
             annotation: None,
-            kind: AssignmentKind::Let,
+            kind: AssignmentKind::Generated,
             pattern: Pattern::Variable {
                 location,
                 name: PIPE_VARIABLE.into(),
