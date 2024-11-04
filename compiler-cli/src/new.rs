@@ -308,7 +308,8 @@ fn validate_root_folder(creator: &Creator) -> Result<(), Error> {
 
     for t in FileToCreate::iter() {
         let full_path = t.location(creator);
-        if full_path.exists() {
+        let content = t.contents(creator);
+        if full_path.exists() && content.is_some() {
             duplicate_files.push(full_path);
         }
     }
