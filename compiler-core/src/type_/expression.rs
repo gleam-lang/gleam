@@ -1344,6 +1344,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
         match (kind, exhaustiveness_check) {
+            // Generated assignments should be checked before they are generated
+            (AssignmentKind::Generated, _) => {}
             (AssignmentKind::Let, Ok(_)) => {}
             (AssignmentKind::Let, Err(e)) => {
                 self.problems.error(e);
@@ -3835,7 +3837,7 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        kind: AssignmentKind::Let,
+                        kind: AssignmentKind::Generated,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

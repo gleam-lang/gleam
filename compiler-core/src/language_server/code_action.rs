@@ -946,7 +946,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
 
         // Various expressions such as pipelines and `use` expressions generate assignments
         // internally. However, these cannot be annotated and so we don't offer a code action here.
-        if assignment.pattern.is_pipe_variable() || assignment.value.is_use_variable() {
+        if assignment.kind.is_generated() {
             return;
         }
 
