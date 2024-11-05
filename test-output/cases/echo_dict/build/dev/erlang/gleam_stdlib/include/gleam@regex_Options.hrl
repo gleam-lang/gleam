@@ -1,1 +1,0 @@
--record(options, {case_insensitive :: boolean(), multi_line :: boolean()}).

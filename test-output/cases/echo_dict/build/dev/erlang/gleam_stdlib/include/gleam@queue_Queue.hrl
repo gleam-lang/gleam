@@ -1,1 +1,0 @@
--record(queue, {in :: list(any()), out :: list(any())}).

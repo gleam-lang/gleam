@@ -1,1 +1,0 @@
--record(iterator, {continuation :: fun(() -> gleam@iterator:action(any()))}).
