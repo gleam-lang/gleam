@@ -16,17 +16,17 @@ pub fn main() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_custom_type/src/main.gleam:8[39m
+[90msrc/main.gleam:8[39m
 Wibble(1, "hello")
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_custom_type/src/main.gleam:9[39m
+[90msrc/main.gleam:9[39m
 Wobble([1.0, 1.1])
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_custom_type/src/main.gleam:10[39m
+[90msrc/main.gleam:10[39m
 Woo
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_custom_type/src/main.gleam:8[39m
+[90msrc/main.gleam:8[39m
 Wibble(a: 1, b: "hello")
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_custom_type/src/main.gleam:9[39m
+[90msrc/main.gleam:9[39m
 Wobble(a: [1, 1.1])
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_custom_type/src/main.gleam:10[39m
+[90msrc/main.gleam:10[39m
 Woo
