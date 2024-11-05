@@ -19,13 +19,19 @@ use camino::Utf8Path;
 pub struct Erlang<'a> {
     build_directory: &'a Utf8Path,
     include_directory: &'a Utf8Path,
+    project_root: &'a Utf8Path,
 }
 
 impl<'a> Erlang<'a> {
-    pub fn new(build_directory: &'a Utf8Path, include_directory: &'a Utf8Path) -> Self {
+    pub fn new(
+        build_directory: &'a Utf8Path,
+        include_directory: &'a Utf8Path,
+        project_root: &'a Utf8Path,
+    ) -> Self {
         Self {
             build_directory,
             include_directory,
+            project_root,
         }
     }
 
@@ -51,7 +57,7 @@ impl<'a> Erlang<'a> {
         let name = format!("{erl_name}.erl");
         let path = self.build_directory.join(&name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = erlang::module(&module.ast, &line_numbers);
+        let output = erlang::module(&module.ast, &line_numbers, &self.project_root);
         tracing::debug!(name = ?name, "Generated Erlang module");
         writer.write(&path, &output?)
     }
@@ -159,6 +165,7 @@ pub enum TypeScriptDeclarations {
 pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
     prelude_location: &'a Utf8Path,
+    project_root: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
     target_support: TargetSupport,
 }
@@ -168,12 +175,14 @@ impl<'a> JavaScript<'a> {
         output_directory: &'a Utf8Path,
         typescript: TypeScriptDeclarations,
         prelude_location: &'a Utf8Path,
+        project_root: &'a Utf8Path,
         target_support: TargetSupport,
     ) -> Self {
         Self {
             prelude_location,
             output_directory,
             target_support,
+            project_root,
             typescript,
         }
     }
@@ -249,6 +258,7 @@ impl<'a> JavaScript<'a> {
             &module.ast,
             &line_numbers,
             &module.input_path,
+            &self.project_root,
             &module.code,
             self.target_support,
             self.typescript,
