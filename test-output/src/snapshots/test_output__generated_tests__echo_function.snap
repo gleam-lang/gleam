@@ -13,9 +13,13 @@ fn private() {
 }
 
 --- OUTPUT ON ERLANG TARGET
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_function/src/main.gleam:2[39m
 //fn(a) { ... }
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_function/src/main.gleam:3[39m
 //fn() { ... }
 
 --- OUTPUT ON JAVASCRIPT TARGET
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_function/src/main.gleam:2[39m
 //fn(a) { ... }
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_function/src/main.gleam:3[39m
 //fn() { ... }

@@ -11,11 +11,17 @@ string"
 }
 
 --- OUTPUT ON ERLANG TARGET
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_string/src/main.gleam:2[39m
 "hello world"
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_string/src/main.gleam:3[39m
 "multiline\nstring"
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_string/src/main.gleam:5[39m
 "string with\t\r\nescaped chars"
 
 --- OUTPUT ON JAVASCRIPT TARGET
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_string/src/main.gleam:2[39m
 "hello world"
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_string/src/main.gleam:3[39m
 "multiline\nstring"
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_string/src/main.gleam:5[39m
 "string with\t\r\nescaped chars"

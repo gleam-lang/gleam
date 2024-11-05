@@ -35,6 +35,7 @@ impl Position {
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
     module_name: EcoString,
+    src_path: EcoString,
     line_numbers: &'module LineNumbers,
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
@@ -56,6 +57,7 @@ impl<'module> Generator<'module> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
         module_name: EcoString,
+        src_path: EcoString,
         line_numbers: &'module LineNumbers,
         function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
@@ -76,6 +78,7 @@ impl<'module> Generator<'module> {
         Self {
             tracker,
             module_name,
+            src_path,
             line_numbers,
             function_name,
             function_arguments,
@@ -220,13 +223,17 @@ impl<'module> Generator<'module> {
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
 
-            TypedExpr::Echo { expression, .. } => {
+            TypedExpr::Echo {
+                expression,
+                location,
+                ..
+            } => {
                 let expression = expression
                     .as_ref()
                     .expect("echo with no expression outside of pipe");
                 let expresion_doc =
                     self.not_in_tail_position(|this| this.wrap_expression(expression))?;
-                self.echo(expresion_doc)
+                self.echo(expresion_doc, location)
             }
 
             TypedExpr::Invalid { .. } => {
@@ -539,13 +546,15 @@ impl<'module> Generator<'module> {
                 // An echo in a pipeline won't result in an assignment, instead it
                 // just prints the previous variable assigned in the pipeline.
                 TypedExpr::Echo {
-                    expression: None, ..
+                    expression: None,
+                    location,
+                    ..
                 } => documents.push(self.not_in_tail_position(|this| {
                     let var = this
                         .latest_local_var
                         .as_ref()
                         .expect("echo with no previous step in a pipe");
-                    this.echo(var.to_doc())
+                    this.echo(var.to_doc(), location)
                 })?),
 
                 // Otherwise we assign the intermediate pipe value to a variable.
@@ -559,13 +568,15 @@ impl<'module> Generator<'module> {
 
         match finally {
             TypedExpr::Echo {
-                expression: None, ..
+                expression: None,
+                location,
+                ..
             } => {
                 let var = self
                     .latest_local_var
                     .as_ref()
                     .expect("echo with no previous step in a pipe");
-                documents.push(self.echo(var.to_doc())?);
+                documents.push(self.echo(var.to_doc(), location)?);
             }
             _ => documents.push(self.expression(finally)?),
         }
@@ -1257,9 +1268,13 @@ impl<'module> Generator<'module> {
         .group()
     }
 
-    fn echo<'a>(&mut self, expression: Document<'a>) -> Output<'a> {
+    fn echo<'a>(&mut self, expression: Document<'a>, location: &'a SrcSpan) -> Output<'a> {
         self.tracker.echo_used = true;
-        let echo_argument = call_arguments(std::iter::once(Ok(expression)))?;
+        let echo_argument = call_arguments(vec![
+            Ok(expression),
+            Ok(self.src_path.clone().to_doc().surround("\"", "\"")),
+            Ok(self.line_numbers.line_number(location.start).to_doc()),
+        ])?;
         Ok(self.wrap_return(docvec!["echo", echo_argument]))
     }
 }
