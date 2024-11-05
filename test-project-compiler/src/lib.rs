@@ -15,7 +15,7 @@ use std::rc::Rc;
 pub fn prepare(path: &str, mode: Mode) -> String {
     let root = Utf8PathBuf::from(path).canonicalize_utf8().unwrap();
     let filesystem = test_helpers_rs::to_in_memory_filesystem(&root);
-    let initial_files = filesystem.paths();
+    let initial_files = filesystem.subpaths();
 
     let toml = std::fs::read_to_string(root.join("gleam.toml")).unwrap();
     let config: PackageConfig = toml::from_str(&toml).unwrap();
