@@ -4,6 +4,47 @@
 
 ### Compiler
 
+- You can now use the `echo` keyword to debug print any value: `echo` can be
+  followed by any expression and it will print it to stderr alongside the module
+  it comes from and its line number. This:
+
+  ```gleam
+  pub fn main() {
+    echo [1, 2, 3]
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:2
+  [1, 2, 3]
+  ```
+
+  `echo` can also be used in the middle of a pipeline. This:
+
+  ```gleam
+  pub fn main() {
+    [1, 2, 3]
+    |> echo
+    |> list.map(fn(x) { x * 2 })
+    |> echo
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:3
+  [1, 2, 3]
+  /src/module.gleam:5
+  [2, 4, 6]
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+> > > > > > > b99013e3b (CHANGELOG!)
+
 - Removed compiler hint about pattern matching a `Result(a, b)` when being used
   where `a` is expected.
   ([Kieran O'Reilly](https://github.com/SoTeKie))
@@ -110,6 +151,12 @@
   API key rather than creating a new one each time. This API key is encrypted
   with a local password, reducing risk of your Hex password being compromised.
   ([Louis Pilfold](https://github.com/lpil))
+
+### Build tool
+
+- The build tool now refuses to publish any incomplete package that has any
+  `echo` debug printing left.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language Server
 
