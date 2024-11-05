@@ -6,6 +6,9 @@ mod pattern;
 mod tests;
 mod typescript;
 
+use num_bigint::BigInt;
+use num_traits::ToPrimitive;
+
 use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::codegen::TypeScriptDeclarations;
@@ -794,4 +797,52 @@ fn bool(bool: bool) -> Document<'static> {
         true => "true".to_doc(),
         false => "false".to_doc(),
     }
+}
+
+/// Int segments <= 48 bits wide in bit arrays are within JavaScript's safe range and are evaluated
+/// at compile time when all inputs are known. This is done for both bit array expressions and
+/// pattern matching.
+///
+/// Int segments of any size could be evaluated at compile time, but currently aren't due to the
+/// potential for causing large generated JS for inputs such as `<<0:8192>>`.
+///
+pub(crate) const SAFE_INT_SEGMENT_MAX_SIZE: usize = 48;
+
+/// Evaluates the value of an Int segment in a bit array into its corresponding bytes. This avoids
+/// needing to do the evaluation at runtime when all inputs are known at compile-time.
+///
+pub(crate) fn bit_array_segment_int_value_to_bytes(
+    mut value: BigInt,
+    size: BigInt,
+    endianness: endianness::Endianness,
+) -> Result<Vec<u8>, Error> {
+    // Clamp negative sizes to zero
+    let size = size.max(BigInt::ZERO);
+
+    // Convert size to u32. This is safe because this function isn't called with a size greater
+    // than `SAFE_INT_SEGMENT_MAX_SIZE`.
+    let size = size
+        .to_u32()
+        .expect("bit array segment size to be a valid u32");
+
+    // Convert negative number to two's complement representation
+    if value < BigInt::ZERO {
+        let value_modulus = BigInt::from(2).pow(size);
+        value = &value_modulus + (value % &value_modulus);
+    }
+
+    // Convert value to the desired number of bytes
+    let mut bytes = vec![0u8; size as usize / 8];
+    for byte in bytes.iter_mut() {
+        *byte = (&value % BigInt::from(256))
+            .to_u8()
+            .expect("modulo result to be a valid u32");
+        value /= BigInt::from(256);
+    }
+
+    if endianness.is_big() {
+        bytes.reverse();
+    }
+
+    Ok(bytes)
 }

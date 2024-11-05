@@ -1,17 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go() {\n  <<1:size(-1)>>\n}\n"
+expression: "\nfn go(x: Int) {\n  <<x:size(-1)>>\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go() {
-  <<1:size(-1)>>
+fn go(x: Int) {
+  <<x:size(-1)>>
 }
 
 
 ----- COMPILED JAVASCRIPT
-import { toBitArray, sizedInt } from "../gleam.mjs";
+import { toBitArray } from "../gleam.mjs";
 
-function go() {
-  return toBitArray([sizedInt(1, -1, true)]);
+function go(x) {
+  return toBitArray([]);
 }

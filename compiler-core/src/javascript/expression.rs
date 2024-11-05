@@ -1,3 +1,4 @@
+use num_bigint::BigInt;
 use vec1::Vec1;
 
 use super::{
@@ -237,19 +238,35 @@ impl<'module> Generator<'module> {
                 let details = self.sized_bit_array_segment_details(segment)?;
 
                 if segment.type_ == crate::type_::int() {
-                    if details.has_explicit_size {
-                        self.tracker.sized_integer_segment_used = true;
-                        Ok(docvec![
-                            "sizedInt(",
-                            value,
-                            ", ",
-                            details.size,
-                            ", ",
-                            bool(details.endianness.is_big()),
-                            ")"
-                        ])
-                    } else {
-                        Ok(value)
+                    match (details.size_value, segment.value.as_ref()) {
+                        (Some(size_value), TypedExpr::Int { int_value, .. })
+                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into() =>
+                        {
+                            let bytes = bit_array_segment_int_value_to_bytes(
+                                int_value.clone(),
+                                size_value,
+                                details.endianness,
+                            )?;
+
+                            Ok(u8_slice(&bytes))
+                        }
+
+                        (Some(size_value), _) if size_value == 8.into() => Ok(value),
+
+                        (Some(size_value), _) if size_value <= 0.into() => Ok(docvec![]),
+
+                        _ => {
+                            self.tracker.sized_integer_segment_used = true;
+                            Ok(docvec![
+                                "sizedInt(",
+                                value,
+                                ", ",
+                                details.size,
+                                ", ",
+                                bool(details.endianness.is_big()),
+                                ")"
+                            ])
+                        }
                     }
                 } else {
                     self.tracker.float_bit_array_segment_used = true;
@@ -324,43 +341,41 @@ impl<'module> Generator<'module> {
             .iter()
             .find(|x| matches!(x, Opt::Size { .. }));
 
-        let has_explicit_size = size.is_some();
-
-        let size = match size {
+        let (size_value, size) = match size {
             Some(Opt::Size { value: size, .. }) => {
-                let size_int = match *size.clone() {
-                    TypedExpr::Int {
-                        location: _,
-                        type_: _,
-                        value,
-                        int_value: _,
-                    } => value.parse().unwrap_or(0),
-                    _ => 0,
+                let size_value = match *size.clone() {
+                    TypedExpr::Int { int_value, .. } => Some(int_value),
+                    _ => None,
                 };
 
-                if size_int > 0 && size_int % 8 != 0 {
-                    return Err(Error::Unsupported {
-                        feature: "Non byte aligned array".into(),
-                        location: segment.location,
-                    });
+                if let Some(size_value) = size_value.as_ref() {
+                    if *size_value > BigInt::ZERO && size_value % 8 != BigInt::ZERO {
+                        return Err(Error::Unsupported {
+                            feature: "Non byte aligned array".into(),
+                            location: segment.location,
+                        });
+                    }
                 }
 
-                self.not_in_tail_position(|gen| gen.wrap_expression(size))?
+                (
+                    size_value,
+                    self.not_in_tail_position(|gen| gen.wrap_expression(size))?,
+                )
             }
             _ => {
-                let default_size = if segment.type_ == crate::type_::int() {
+                let size_value = if segment.type_ == crate::type_::int() {
                     8usize
                 } else {
                     64usize
                 };
 
-                docvec![default_size]
+                (Some(BigInt::from(size_value)), docvec![size_value])
             }
         };
 
         Ok(SizedBitArraySegmentDetails {
-            has_explicit_size,
             size,
+            size_value,
             endianness,
         })
     }
@@ -1428,19 +1443,35 @@ fn bit_array<'a>(
                 sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
 
             if segment.type_ == crate::type_::int() {
-                if details.has_explicit_size {
-                    tracker.sized_integer_segment_used = true;
-                    Ok(docvec![
-                        "sizedInt(",
-                        value,
-                        ", ",
-                        details.size,
-                        ", ",
-                        bool(details.endianness.is_big()),
-                        ")"
-                    ])
-                } else {
-                    Ok(value)
+                match (details.size_value, segment.value.as_ref()) {
+                    (Some(size_value), Constant::Int { int_value, .. })
+                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into() =>
+                    {
+                        let bytes = bit_array_segment_int_value_to_bytes(
+                            int_value.clone(),
+                            size_value,
+                            details.endianness,
+                        )?;
+
+                        Ok(u8_slice(&bytes))
+                    }
+
+                    (Some(size_value), _) if size_value == 8.into() => Ok(value),
+
+                    (Some(size_value), _) if size_value <= 0.into() => Ok(docvec![]),
+
+                    _ => {
+                        tracker.sized_integer_segment_used = true;
+                        Ok(docvec![
+                            "sizedInt(",
+                            value,
+                            ", ",
+                            details.size,
+                            ", ",
+                            bool(details.endianness.is_big()),
+                            ")"
+                        ])
+                    }
                 }
             } else {
                 tracker.float_bit_array_segment_used = true;
@@ -1485,8 +1516,10 @@ fn bit_array<'a>(
 
 #[derive(Debug)]
 struct SizedBitArraySegmentDetails<'a> {
-    has_explicit_size: bool,
     size: Document<'a>,
+    /// The size of the bit array segment stored as a BigInt. This has a value when the segment's
+    /// size is known at compile time.
+    size_value: Option<BigInt>,
     endianness: Endianness,
 }
 
@@ -1523,41 +1556,38 @@ fn sized_bit_array_segment_details<'a>(
         .iter()
         .find(|x| matches!(x, Opt::Size { .. }));
 
-    let has_explicit_size = size.is_some();
-
-    let size = match size {
+    let (size_value, size) = match size {
         Some(Opt::Size { value: size, .. }) => {
-            let size_int = match *size.clone() {
-                Constant::Int {
-                    location: _,
-                    value,
-                    int_value: _,
-                } => value.parse().unwrap_or(0),
-                _ => 0,
+            let size_value = match *size.clone() {
+                Constant::Int { int_value, .. } => Some(int_value),
+                _ => None,
             };
-            if size_int > 0 && size_int % 8 != 0 {
-                return Err(Error::Unsupported {
-                    feature: "Non byte aligned array".into(),
-                    location: segment.location,
-                });
+
+            if let Some(size_value) = size_value.as_ref() {
+                if *size_value > BigInt::ZERO && size_value % 8 != BigInt::ZERO {
+                    return Err(Error::Unsupported {
+                        feature: "Non byte aligned array".into(),
+                        location: segment.location,
+                    });
+                }
             }
 
-            constant_expr_fun(tracker, size)?
+            (size_value, constant_expr_fun(tracker, size)?)
         }
         _ => {
-            let default_size = if segment.type_ == crate::type_::int() {
+            let size_value = if segment.type_ == crate::type_::int() {
                 8usize
             } else {
                 64usize
             };
 
-            docvec![default_size]
+            (Some(BigInt::from(size_value)), docvec![size_value])
         }
     };
 
     Ok(SizedBitArraySegmentDetails {
-        has_explicit_size,
         size,
+        size_value,
         endianness,
     })
 }
@@ -1796,4 +1826,15 @@ fn record_constructor<'a>(
             "}",
         )
     }
+}
+
+fn u8_slice<'a>(bytes: &[u8]) -> Document<'a> {
+    let s: EcoString = bytes
+        .iter()
+        .map(u8::to_string)
+        .collect::<Vec<_>>()
+        .join(", ")
+        .into();
+
+    docvec![s]
 }

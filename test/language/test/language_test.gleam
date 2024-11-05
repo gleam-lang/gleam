@@ -1021,40 +1021,87 @@ fn bit_array_target_tests() -> List(Test) {
 
 fn sized_bit_array_tests() -> List(Test) {
   [
-    "<<1>> == <<257:size(8)>>"
-    |> example(fn() { assert_equal(True, <<1>> == <<257:size(8)>>) }),
-    "<<1, 1>> == <<257:size(16)>>"
-    |> example(fn() { assert_equal(True, <<1, 1>> == <<257:size(16)>>) }),
-    "<<1, 1>> == <<257:size(24)>>"
-    |> example(fn() { assert_equal(True, <<0, 1, 1>> == <<257:size(24)>>) }),
-    "<<1, 0, 0, 0, 1>> == <<4294967297:size(40)>>"
-    |> example(fn() {
-      assert_equal(True, <<1, 0, 0, 0, 1>> == <<4_294_967_297:size(40)>>)
-    }),
+    "<<257:size(8)>> == <<1>>"
+      |> example(fn() { assert_equal(True, <<257:size(8)>> == <<1>>) }),
+    "let i = 257\n<<i:size(8)>> == <<1>>"
+      |> example(fn() {
+        let i = 257
+        assert_equal(True, <<i:size(8)>> == <<1>>)
+      }),
+    "<<257:size(16)>> == <<1, 1>>"
+      |> example(fn() { assert_equal(True, <<257:size(16)>> == <<1, 1>>) }),
+    "let i = 257\n<<i:size(16)>> == <<1, 1>>"
+      |> example(fn() {
+        let i = 257
+        assert_equal(True, <<i:size(16)>> == <<1, 1>>)
+      }),
+    "<<257:size(24)>> == <<1, 1>>"
+      |> example(fn() { assert_equal(True, <<257:size(24)>> == <<0, 1, 1>>) }),
+    "let i = 257\n<<i:size(24)>> == <<1, 1>>"
+      |> example(fn() {
+        let i = 257
+        assert_equal(True, <<i:size(24)>> == <<0, 1, 1>>)
+      }),
+    "<<4294967297:size(40)>> == <<1, 0, 0, 0, 1>>"
+      |> example(fn() {
+        assert_equal(True, <<4_294_967_297:size(40)>> == <<1, 0, 0, 0, 1>>)
+      }),
+    "let i = 4294967297\n<<i:size(40)>> == <<1, 0, 0, 0, 1>>"
+      |> example(fn() {
+        let i = 4_294_967_297
+        assert_equal(True, <<i:size(40)>> == <<1, 0, 0, 0, 1>>)
+      }),
     "<<100_000:24-little>> == <<160, 134, 1>>"
-    |> example(fn() {
-      assert_equal(True, <<100_000:24-little>> == <<160, 134, 1>>)
-    }),
+      |> example(fn() {
+        assert_equal(True, <<100_000:24-little>> == <<160, 134, 1>>)
+      }),
+    "let i = 100_000\n<<i:24-little>> == <<160, 134, 1>>"
+      |> example(fn() {
+        let i = 100_000
+        assert_equal(True, <<i:24-little>> == <<160, 134, 1>>)
+      }),
     "<<-1:32-big>> == <<255, 255, 255, 255>>"
-    |> example(fn() {
-      assert_equal(True, <<-1:32-big>> == <<255, 255, 255, 255>>)
-    }),
+      |> example(fn() {
+        assert_equal(True, <<-1:32-big>> == <<255, 255, 255, 255>>)
+      }),
+    "let i = -1\n<<i:32-big>> == <<255, 255, 255, 255>>"
+      |> example(fn() {
+        let i = -1
+        assert_equal(True, <<i:32-big>> == <<255, 255, 255, 255>>)
+      }),
     "<<100_000_000_000:32-little>> == <<0, 232, 118, 72>>"
-    |> example(fn() {
-      assert_equal(True, <<100_000_000_000:32-little>> == <<0, 232, 118, 72>>)
-    }),
-    "<<>> == <<256:size(-1)>>"
-    |> example(fn() { assert_equal(True, <<>> == <<256:size(-1)>>) }),
+      |> example(fn() {
+        assert_equal(True, <<100_000_000_000:32-little>> == <<0, 232, 118, 72>>)
+      }),
+    "let i = 100_000_000_000\n<<i:32-little>> == <<0, 232, 118, 72>>"
+      |> example(fn() {
+        let i = 100_000_000_000
+        assert_equal(True, <<i:32-little>> == <<0, 232, 118, 72>>)
+      }),
+    "<<256:size(-1)>> == <<>>"
+      |> example(fn() { assert_equal(True, <<>> == <<256:size(-1)>>) }),
+    "let i = 256\n<<i:size(-1)>> == <<>>"
+      |> example(fn() {
+        let i = 256
+        assert_equal(True, <<i:size(-1)>> == <<>>)
+      }),
     // JS Number.MAX_SAFE_INTEGER
-    "<<0, 31, 255, 255, 255, 255, 255, 255>> == <<9007199254740991:size(64)>>"
-    |> example(fn() {
-      assert_equal(
-        True,
-        <<0, 31, 255, 255, 255, 255, 255, 255>> == <<
-          9_007_199_254_740_991:size(64),
-        >>,
-      )
-    }),
+    "<<9_007_199_254_740_991:size(64)>> == <<0, 31, 255, 255, 255, 255, 255, 255>>"
+      |> example(fn() {
+        assert_equal(
+          True,
+          <<9_007_199_254_740_991:size(64)>>
+            == <<0, 31, 255, 255, 255, 255, 255, 255>>,
+        )
+      }),
+    "let i = 9_007_199_254_740_991\n<<i:size(64)>> == <<0, 31, 255, 255, 255, 255, 255, 255>>"
+      |> example(fn() {
+        let i = 9_007_199_254_740_991
+        assert_equal(
+          True,
+          <<i:size(64)>> == <<0, 31, 255, 255, 255, 255, 255, 255>>,
+        )
+      }),
   ]
 }
 

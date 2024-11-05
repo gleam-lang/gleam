@@ -1,3 +1,4 @@
+use num_bigint::BigInt;
 use std::sync::OnceLock;
 
 use super::{expression::is_js_scalar, *};
@@ -580,28 +581,49 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     {
                         let details = Self::sized_bit_array_segment_details(segment)?;
 
-                        let start = offset.bytes;
-                        let increment = details.size / 8;
-                        let end = offset.bytes + increment;
-
-                        if segment.type_ == crate::type_::int() {
-                            if details.size == 8 && !details.is_signed {
-                                self.push_byte_at(offset.bytes);
-                            } else {
-                                self.push_int_from_slice(
-                                    start,
-                                    end,
+                        match segment.value.as_ref() {
+                            Pattern::Int { int_value, .. }
+                                if details.size <= SAFE_INT_SEGMENT_MAX_SIZE =>
+                            {
+                                let bytes = bit_array_segment_int_value_to_bytes(
+                                    (*int_value).clone(),
+                                    BigInt::from(details.size),
                                     details.endianness,
-                                    details.is_signed,
-                                );
-                            }
-                        } else {
-                            self.push_float_from_slice(start, end, details.endianness);
-                        }
+                                )?;
 
-                        self.traverse_pattern(subject, &segment.value)?;
-                        self.pop();
-                        offset.increment(increment);
+                                for byte in bytes {
+                                    self.push_byte_at(offset.bytes);
+                                    self.push_equality_check(subject.clone(), docvec![byte]);
+                                    self.pop();
+                                    offset.increment(1);
+                                }
+                            }
+
+                            _ => {
+                                let start = offset.bytes;
+                                let increment = details.size / 8;
+                                let end = offset.bytes + increment;
+
+                                if segment.type_ == crate::type_::int() {
+                                    if details.size == 8 && !details.is_signed {
+                                        self.push_byte_at(offset.bytes);
+                                    } else {
+                                        self.push_int_from_slice(
+                                            start,
+                                            end,
+                                            details.endianness,
+                                            details.is_signed,
+                                        );
+                                    }
+                                } else {
+                                    self.push_float_from_slice(start, end, details.endianness);
+                                }
+
+                                self.traverse_pattern(subject, &segment.value)?;
+                                self.pop();
+                                offset.increment(increment);
+                            }
+                        }
                     } else {
                         match segment.options.as_slice() {
                             [Opt::Bytes { .. }] => {

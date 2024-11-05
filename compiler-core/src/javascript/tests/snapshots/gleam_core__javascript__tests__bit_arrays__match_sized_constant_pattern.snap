@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<i:16>> = x\n}\n"
+expression: "\nfn go(x) {\n  let assert <<1234:16, 123:8>> = x\n}\n"
 ---
 ----- SOURCE CODE
 
 fn go(x) {
-  let assert <<i:16>> = x
+  let assert <<1234:16, 123:8>> = x
 }
 
 
@@ -13,7 +13,12 @@ fn go(x) {
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
-  if (!(x.length == 2)) {
+  if (
+    x.byteAt(0) !== 4 ||
+    x.byteAt(1) !== 210 ||
+    x.byteAt(2) !== 123 ||
+    !(x.length == 3)
+  ) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -23,6 +28,5 @@ function go(x) {
       { value: x }
     )
   }
-  let i = x.intFromSlice(0, 2, true, false);
   return x;
 }
