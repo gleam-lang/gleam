@@ -52,7 +52,6 @@
   `@deprecated` attribute:
 
   ```gleam
-  /// from hashing dependency ->
   pub type HashAlgor {
     @deprecated("unsafe encription")
     MD5
@@ -61,7 +60,7 @@
   }
 
   pub fn hash_password(input: String) -> String {
-    let results = hashing_dep.hash_input(input:, algo: MD5) // warning: MD5 is depreacated
+    let results = hashing_lib.hash_input(input:, algo: MD5) // warning: MD5 is depreacated
     results.hash
   }
   ```
