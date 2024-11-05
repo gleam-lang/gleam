@@ -1,13 +1,21 @@
-function echo(value) {
-  const string = echo$inspect(value);
+function echo(value, file, line) {
+  const grey = "\u001b[90m";
+  const reset_color = "\u001b[39m";
+  const file_line = `${file}:${line}`;
+  const string_value = echo$inspect(value);
+
   if (typeof process === "object" && process.stderr?.write) {
     // If we're in Node.js, use `stderr`
-    process.stderr.write(string + "\n");
+    const string = `${grey}${file_line}${reset_color}\n${string_value}\n`;
+    process.stderr.write(string);
   } else if (typeof Deno === "object") {
     // If we're in Deno, use `stderr`
-    Deno.stderr.writeSync(new TextEncoder().encode(string + "\n"));
+    const string = `${grey}${file_line}${reset_color}\n${string_value}\n`;
+    Deno.stderr.writeSync(new TextEncoder().encode(string));
   } else {
     // Otherwise, use `console.log`
+    // The browser's console.log doesn't support ansi escape codes
+    const string = `${file_line}\n${string_value}`;
     console.log(string);
   }
 

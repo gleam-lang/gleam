@@ -8,7 +8,9 @@ pub fn main() {
 }
 
 --- OUTPUT ON ERLANG TARGET
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_nil/src/main.gleam:2[39m
 Nil
 
 --- OUTPUT ON JAVASCRIPT TARGET
+[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_nil/src/main.gleam:2[39m
 Nil

@@ -14,9 +14,16 @@
         ?is_digit_char(C))
 ).
 
-echo(Value) ->
-    String = echo@inspect(Value),
-    io:put_chars(standard_error, [String, $\n]),
+-define(grey, "\e[90m").
+-define(reset_color, "\e[39m").
+
+echo(Value, File, Line) ->
+    StringLine = erlang:integer_to_list(Line),
+    StringValue = echo@inspect(Value),
+    io:put_chars(
+      standard_error,
+      [?grey, File, $:, StringLine, ?reset_color, $\n, StringValue, $\n]
+    ),
     Value.
 
 echo@inspect(Value) ->
