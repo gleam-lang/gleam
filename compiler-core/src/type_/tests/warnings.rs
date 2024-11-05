@@ -2589,3 +2589,25 @@ pub const ints = [
 "#
     );
 }
+
+#[test]
+fn javascript_unsafe_int_in_pattern() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  let assert <<9_007_199_254_740_992:64>> = <<>>
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_segment_size_in_pattern() {
+    assert_js_warning!(
+        r#"
+pub fn go() {
+  let assert <<0:9_007_199_254_740_992>> = <<>>
+}
+"#
+    );
+}

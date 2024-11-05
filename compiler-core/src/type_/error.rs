@@ -11,6 +11,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
+use num_bigint::BigInt;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use std::sync::Arc;
@@ -1590,5 +1591,17 @@ pub fn convert_unify_call_error(e: UnifyError, location: SrcSpan, kind: Argument
             location,
         ),
         ArgumentKind::Regular => convert_unify_error(e, location),
+    }
+}
+
+/// When targeting JavaScript, adds a warning if the given Int value is outside the range of
+/// safe integers as defined by Number.MIN_SAFE_INTEGER and Number.MAX_SAFE_INTEGER.
+///
+pub fn check_javascript_int_safety(int_value: &BigInt, location: SrcSpan, problems: &mut Problems) {
+    let js_min_safe_integer = -9007199254740991i64;
+    let js_max_safe_integer = 9007199254740991i64;
+
+    if *int_value < js_min_safe_integer.into() || *int_value > js_max_safe_integer.into() {
+        problems.warning(Warning::JavaScriptIntUnsafe { location });
     }
 }
