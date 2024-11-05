@@ -29,6 +29,7 @@ expression: "echo { 1 + 1 }"
                                         end: 8,
                                     },
                                     value: "1",
+                                    int_value: 1,
                                 },
                                 right: Int {
                                     location: SrcSpan {
@@ -36,6 +37,7 @@ expression: "echo { 1 + 1 }"
                                         end: 12,
                                     },
                                     value: "1",
+                                    int_value: 1,
                                 },
                             },
                         ),
