@@ -209,6 +209,7 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
         &ast,
         &line_numbers,
         Utf8Path::new(""),
+        "project/root".into(),
         &"".into(),
         TargetSupport::Enforced,
         TypeScriptDeclarations::None,
