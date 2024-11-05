@@ -22,6 +22,6 @@ main() ->
                 message => <<"`panic` expression evaluated."/utf8>>,
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
-                line => 3})).
+                line => 3}), "/root/project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...
