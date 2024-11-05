@@ -25,7 +25,7 @@ function wibble(n, m) {
 }
 
 export function main() {
-  return echo(wibble(1, 2));
+  return echo(wibble(1, 2), "", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...
