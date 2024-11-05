@@ -40,7 +40,7 @@ pub fn prepare(path: &str) -> String {
     let warnings = VectorWarningEmitterIO::default();
     let warning_emitter = WarningEmitter::new(Rc::new(warnings.clone()));
     let filesystem = test_helpers_rs::to_in_memory_filesystem(&root);
-    let initial_files = filesystem.paths();
+    let initial_files = filesystem.subpaths();
     let root = Utf8PathBuf::from("");
     let out = Utf8PathBuf::from("/out/lib/the_package");
     let lib = Utf8PathBuf::from("/out/lib");

@@ -1,6 +1,5 @@
 use super::*;
 use std::ops::Deref;
-use std::path::Path;
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
@@ -51,8 +50,15 @@ impl InMemoryFileSystem {
             .collect()
     }
 
-    pub fn paths(&self) -> Vec<Utf8PathBuf> {
-        self.files.borrow().keys().cloned().collect()
+    /// All paths (files and directories) currently in the filesystem,
+    /// excluding the filesystem root ("/").
+    pub fn subpaths(&self) -> Vec<Utf8PathBuf> {
+        self.files
+            .borrow()
+            .keys()
+            .filter(|p| p.as_path() != Utf8Path::new("/"))
+            .cloned()
+            .collect()
     }
 
     #[cfg(test)]
@@ -86,24 +92,6 @@ impl InMemoryFileSystem {
             })?
             .modification_time = time;
         Ok(())
-    }
-
-    /// Search for files inside a directory and its subdirectories using a
-    /// certain path filter.
-    pub fn search_files_recursively(
-        &self,
-        dir: impl AsRef<Path>,
-        path_filter: impl Fn(&Utf8PathBuf) -> bool,
-    ) -> Vec<Utf8PathBuf> {
-        self.files
-            .deref()
-            .borrow()
-            .iter()
-            .filter(|(_, file)| !file.is_directory())
-            .map(|(file_path, _)| file_path.to_path_buf())
-            .filter(|file_path| file_path.starts_with(&dir))
-            .filter(path_filter)
-            .collect()
     }
 }
 
@@ -140,10 +128,11 @@ impl FileSystemWriter for InMemoryFileSystem {
     }
 
     fn mkdir(&self, path: &Utf8Path) -> Result<(), Error> {
-        // Traverse ancestors from parent to root
-        // Create each missing ancestor
+        // Traverse ancestors from parent to root.
+        // Create each missing ancestor.
         for ancestor in path.ancestors() {
             if ancestor == "" {
+                // Ignore the final ancestor of a relative path.
                 continue;
             }
             // Ensure we don't overwrite an existing file.
@@ -438,6 +427,31 @@ impl BeamCompiler for InMemoryFileSystem {
 }
 
 #[test]
+fn test_subpaths_exclude_root() -> Result<(), Error> {
+    let imfs = InMemoryFileSystem::new();
+    imfs.write(&Utf8PathBuf::from("/a/b/c.txt"), "a")?;
+    imfs.write(&Utf8PathBuf::from("/d/e.txt"), "a")?;
+
+    let mut subpaths = imfs.subpaths();
+
+    // Sort for test determinism due to hash map usage.
+    subpaths.sort_unstable();
+
+    assert_eq!(
+        vec![
+            Utf8PathBuf::from("/a"),
+            Utf8PathBuf::from("/a/b"),
+            Utf8PathBuf::from("/a/b/c.txt"),
+            Utf8PathBuf::from("/d"),
+            Utf8PathBuf::from("/d/e.txt"),
+        ],
+        subpaths
+    );
+
+    Ok(())
+}
+
+#[test]
 fn test_in_memory_dir_walking() -> Result<(), Error> {
     use itertools::Itertools;
     let imfs = InMemoryFileSystem::new();
@@ -457,7 +471,7 @@ fn test_in_memory_dir_walking() -> Result<(), Error> {
         .try_collect()?;
 
     // Keep test deterministic due to hash map usage
-    walked_entries.sort();
+    walked_entries.sort_unstable();
 
     assert_eq!(
         vec![
