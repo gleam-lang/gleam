@@ -394,6 +394,10 @@
   wouldn't emit a warning when the minimum specified Gleam version was < 1.4.0.
   ([yoshi](https://github.com/joshi-monster))
 
+- Fixed a bug where no error would be reported when duplicate labelled
+  arguments were supplied in a record update.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes

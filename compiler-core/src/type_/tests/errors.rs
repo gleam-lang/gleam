@@ -2624,3 +2624,18 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3783
+fn duplicate_fields_in_record_update_reports_error() {
+    assert_module_error!(
+        "
+pub type Wibble { Wibble(thing: Int, other: Int) }
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(..wibble, thing: 1, thing: 2)
+}
+"
+    );
+}

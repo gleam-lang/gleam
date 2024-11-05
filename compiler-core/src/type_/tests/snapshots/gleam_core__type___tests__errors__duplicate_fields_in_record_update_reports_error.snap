@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble { Wibble(thing: Int, other: Int) }\n\npub fn main() {\n  let wibble = Wibble(1, 2)\n  let wobble = Wibble(..wibble, thing: 1, thing: 2)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(thing: Int, other: Int) }
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(..wibble, thing: 1, thing: 2)
+}
+
+
+----- ERROR
+error: Duplicate argument
+  ┌─ /src/one/two.gleam:6:43
+  │
+6 │   let wobble = Wibble(..wibble, thing: 1, thing: 2)
+  │                                           ^^^^^^^^
+
+The labelled argument `thing` has already been supplied.
