@@ -48,24 +48,21 @@
 - Qualified records can now be used in clause guards.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The compiler now allows deprecating specific constructors of a custom type
-  using the `@deprecated` attribute:
+- The compiler now allows deprecating specific constructor variants using the
+  `@deprecated` attribute:
 
   ```gleam
-  // Updated `Number` to `RealNumber`s only
-  pub type RealNumber {
-    @deprecated("`I` am not a real number")
-    I
-    One
-    // ...
+  /// from hashing dependency ->
+  pub type HashAlgor {
+    @deprecated("unsafe encription")
+    MD5
+    SHA224
+    SHA512
   }
 
-  pub fn to_num(n: RealNumber) -> Int {
-    case n {
-      I -> calc_i(give: n), // Warning: deprecated value `I`
-      One -> 1
-      // ..
-    }
+  pub fn hash_password(input: String) -> String {
+    let results = hashing_dep.hash_input(input:, algo: MD5) // warning: MD5 is depreacated
+    results.hash
   }
   ```
 

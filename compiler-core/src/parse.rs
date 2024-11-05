@@ -2206,26 +2206,25 @@ where
                     let mut attributes = Attributes::default();
                     let attr_loc = Parser::parse_attributes(p, &mut attributes)?;
 
-                    // Expecting all but the deprecated atterbutes to be default
-                    if attr_loc.is_some() // only if attributes are present
-                        && (attributes.external_erlang.is_some()
+                    if let Some(attr_span) = attr_loc {
+                        // Expecting all but the deprecated atterbutes to be default
+                        if attributes.external_erlang.is_some()
                             || attributes.external_javascript.is_some()
                             || attributes.target.is_some()
-                            || attributes.internal != InternalAttribute::Missing)
-                    {
-                        let attr_span = attr_loc
-                            .expect("RecordConstructor musn't be None already checked if None");
-                        return parse_error(
-                            ParseErrorType::UnknownAttributeRecordConstructor,
-                            attr_span,
-                        );
+                            || attributes.internal != InternalAttribute::Missing
+                        {
+                            return parse_error(
+                                ParseErrorType::UnknownAttributeRecordConstructor,
+                                attr_span,
+                            );
+                        }
                     }
 
                     if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
                         let documentation = p.take_documentation(c_s);
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
                         let end = args_e.max(c_e);
-                        let is_deprecated = attributes.deprecated.is_deprecated();
+                        // let is_deprecated = attributes.deprecated.is_deprecated();
                         Ok(Some(RecordConstructor {
                             location: SrcSpan { start: c_s, end },
                             name_location: SrcSpan {
@@ -2236,7 +2235,6 @@ where
                             arguments: args,
                             documentation,
                             deprecation: attributes.deprecated,
-                            attributes_location: if is_deprecated { attr_loc } else { None },
                         }))
                     } else {
                         Ok(None)

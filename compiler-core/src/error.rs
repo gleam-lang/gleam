@@ -3215,14 +3215,34 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                         TypeError::AllVariantsConstructorDeprecated { location } => {
                             let text = String::from("Consider deprecating the type as a whole.
 
-    @deprecated(\"message\")
-    type Wibble {
-        Wobble1
-        Wobble2
-    }
+  @deprecated(\"message\")
+  type Wibble {
+    Wobble1
+    Wobble2
+  }
 ");
                             Diagnostic {
                                 title: "Deprecating all variants of a type is not allowed.".into(),
+                                text,
+                                hint: None,
+                                level: Level::Error,
+                                location: Some(Location {
+                                    label: Label {
+                                        text: None,
+                                        span: *location,
+                                    },
+                                    path: path.clone(),
+                                    src: src.clone(),
+                                    extra_labels: vec![],
+                                })
+                            }
+                        }
+                        ,
+                        TypeError::VariantDeprecatedOnDeprecatedConstructor{location}=> {
+                            let text = String::from("Consider removing the deprecation attribute on the type's variant.");
+
+                            Diagnostic {
+                                title: "Deprecating variants of a type that is deprecated is not allowed".into(),
                                 text,
                                 hint: None,
                                 level: Level::Error,
