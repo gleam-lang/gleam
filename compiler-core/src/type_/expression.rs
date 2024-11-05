@@ -315,7 +315,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 int_value,
                 ..
             } => {
-                self.check_javascript_int_safety(&int_value, location);
+                if self.environment.target == Target::JavaScript {
+                    check_javascript_int_safety(&int_value, location, self.problems);
+                }
+
                 Ok(self.infer_int(value, int_value, location))
             }
 
@@ -2638,7 +2641,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 value,
                 int_value,
             } => {
-                self.check_javascript_int_safety(&int_value, location);
+                if self.environment.target == Target::JavaScript {
+                    check_javascript_int_safety(&int_value, location, self.problems);
+                }
+
                 Ok(Constant::Int {
                     location,
                     value,
@@ -3624,23 +3630,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
-        }
-    }
-
-    /// When targeting JavaScript, adds a warning if the given Int value is outside the range of
-    /// safe integers as defined by Number.MIN_SAFE_INTEGER and Number.MAX_SAFE_INTEGER.
-    ///
-    fn check_javascript_int_safety(&mut self, int_value: &BigInt, location: SrcSpan) {
-        if self.environment.target != Target::JavaScript {
-            return;
-        }
-
-        let js_min_safe_integer = -9007199254740991i64;
-        let js_max_safe_integer = 9007199254740991i64;
-
-        if *int_value < js_min_safe_integer.into() || *int_value > js_max_safe_integer.into() {
-            self.problems
-                .warning(Warning::JavaScriptIntUnsafe { location });
         }
     }
 }

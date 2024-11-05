@@ -434,6 +434,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 int_value,
             } => {
                 unify(type_, int()).map_err(|e| convert_unify_error(e, location))?;
+
+                if self.environment.target == Target::JavaScript {
+                    check_javascript_int_safety(&int_value, location, self.problems);
+                }
+
                 Ok(Pattern::Int {
                     location,
                     value,
