@@ -96,10 +96,12 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
 
-    module(&ast, &line_numbers).unwrap().replace(
-        std::include_str!("../../templates/echo.erl"),
-        "% ...omitted code from `templates/echo.erl`...",
-    )
+    module(&ast, &line_numbers, "project/root".into())
+        .unwrap()
+        .replace(
+            std::include_str!("../../templates/echo.erl"),
+            "% ...omitted code from `templates/echo.erl`...",
+        )
 }
 
 #[macro_export]
