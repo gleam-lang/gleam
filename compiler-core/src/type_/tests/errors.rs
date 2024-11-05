@@ -2591,3 +2591,56 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn record_update_compatible_fields_wrong_variant() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  A(a: Int, b: Int)
+  B(a: Int, b: Int)
+}
+
+pub fn b_to_a(value: Wibble) {
+  case value {
+    A(..) -> value
+    B(..) as b -> A(..b, b: 3)
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn record_update_compatible_fields_wrong_type() {
+    assert_module_error!(
+        r#"
+pub type A {
+  A(a: Int, b: Int)
+}
+
+pub type B {
+  B(a: Int, b: Int)
+}
+
+pub fn b_to_a(value: B) {
+  A(..value, b: 5)
+}
+"#
+    );
+}
+
+#[test]
+fn record_update_incompatible_but_linked_generics() {
+    assert_module_error!(
+        r#"
+pub type Wibble(a) {
+  Wibble(a: a, b: a)
+}
+
+pub fn b_to_a(value: Wibble(a)) -> Wibble(Int) {
+  Wibble(..value, a: 5)
+}
+"#
+    );
+}

@@ -1114,6 +1114,13 @@ pub enum UnsafeRecordUpdateReason {
         constructed_variant: EcoString,
         spread_variant: EcoString,
     },
+    IncompatibleFieldTypes {
+        constructed_variant: Arc<Type>,
+        spread_variant: Arc<Type>,
+        expected_field_type: Arc<Type>,
+        spread_field_type: Arc<Type>,
+        field_name: EcoString,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

@@ -2530,13 +2530,28 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let record_access = self.infer_known_record_expression_access(
                     record_var.clone(),
                     label.clone(),
-                    location,
+                    record_location,
                     FieldAccessUsage::RecordUpdate,
                 )?;
 
                 if let Some(arg_type) = args_types.get(index as usize) {
-                    unify(arg_type.clone(), record_access.type_().clone())
-                        .map_err(|e| convert_unify_error(e, location))?;
+                    unify(arg_type.clone(), record_access.type_().clone()).map_err(
+                        |e| match e {
+                            UnifyError::CouldNotUnify {
+                                expected, given, ..
+                            } => Error::UnsafeRecordUpdate {
+                                location: record_location,
+                                reason: UnsafeRecordUpdateReason::IncompatibleFieldTypes {
+                                    constructed_variant: return_type.clone(),
+                                    spread_variant: record_type.clone(),
+                                    expected_field_type: expected,
+                                    spread_field_type: given,
+                                    field_name: label.clone(),
+                                },
+                            },
+                            _ => convert_unify_error(e, record_location),
+                        },
+                    )?;
 
                     Ok((
                         index,
