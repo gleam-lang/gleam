@@ -31,10 +31,10 @@ wibble(N) ->
 -spec main() -> list(integer()).
 main() ->
     _pipe = [1, 2, 3],
-    echo(_pipe),
+    echo(_pipe, "/root/project/test/my/mod.gleam", 4),
     _pipe@1 = wibble(_pipe),
-    echo(_pipe@1),
+    echo(_pipe@1, "/root/project/test/my/mod.gleam", 6),
     _pipe@2 = wibble(_pipe@1),
-    echo(_pipe@2).
+    echo(_pipe@2, "/root/project/test/my/mod.gleam", 8).
 
 % ...omitted code from `templates/echo.erl`...
