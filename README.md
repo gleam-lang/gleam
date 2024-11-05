@@ -46,7 +46,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/Acepie">Ameen Radwan</a> -
   <a href="https://github.com/AndreHogberg">AndreHogberg</a> -
   <a href="https://github.com/ajkachnic">andrew</a> -
-  <a href="https://github.com/aaylward">Andy Aylward</a> -
+  <a href="https://github.com/andriishupta">Andrii Shupta</a> -
   <a href="https://github.com/antharuu">Antharuu</a> -
   <a href="https://github.com/anthony-khong">Anthony Khong</a> -
   <a href="https://github.com/Illbjorn">Anthony Maxwell</a> -
@@ -63,6 +63,8 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/bentomas">Benjamin Thomas</a> -
   <a href="https://github.com/bgwdotdev">bgw</a> -
   <a href="https://github.com/bigtallbill">Bill Nunney</a> -
+  <a href="https://github.com/bjartelund">Bjarte Aarmo Lund</a> -
+  <a href="https://github.com/bmehder">Brad Mehder</a> -
   <a href="https://github.com/brettkolodny">brettkolodny</a> -
   <a href="https://github.com/brian-dawn">Brian Dawn</a> -
   <a href="https://github.com/bglusman">Brian Glusman</a> -
@@ -140,8 +142,10 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/nandofarias">Fernando Farias</a> -
   <a href="https://github.com/ffigiel">Filip Figiel</a> -
   <a href="https://github.com/floriank">Florian Kraft</a> -
+  <a href="https://github.com/francishamel">Francis Hamel</a> -
   <a href="https://github.com/Frank-III">frankwang</a> -
   <a href="https://github.com/gvrooyen">G-J van Rooyen</a> -
+  <a href="https://github.com/gabrielvincent">Gabriel Vincent</a> -
   <a href="https://github.com/hagenek">Georg H. Ekeberg</a> -
   <a href="https://github.com/ggobbe">ggobbe</a> -
   <a href="https://github.com/giacomocavalieri">Giacomo Cavalieri</a> -
@@ -188,6 +192,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/jiangplus">jiangplus</a> -
   <a href="https://github.com/hunkyjimpjorps">Jimpjorps™</a> -
   <a href="https://github.com/joeykilpatrick">Joey Kilpatrick</a> -
+  <a href="https://github.com/joeytrapp">Joey Trapp</a> -
   <a href="https://github.com/johan-st">Johan Strand</a> -
   <a href="https://github.com/JohnBjrk">John Björk</a> -
   <a href="https://github.com/johngallagher">John Gallagher</a> -
@@ -242,6 +247,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/KtorZ">Matthias Benkort</a> -
   <a href="https://github.com/maxmcd">Max McDonnell</a> -
   <a href="https://github.com/max-tern">max-tern</a> -
+  <a href="https://github.com/metame">metame</a> -
   <a href="https://github.com/stunthamster">Michael Duffy</a> -
   <a href="https://github.com/michaeljones">Michael Jones</a> -
   <a href="https://github.com/monocursive">Michael Mazurczak</a> -
@@ -252,7 +258,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/MoeDevelops">MoeDev</a> -
   <a href="https://github.com/MoritzBoehme">Moritz Böhme</a> -
   <a href="https://github.com/rykawamu">MzRyuKa</a> -
-  <a href="https://github.com/cheesemans">Måns Östman</a> -
   <a href="https://github.com/n8nio">n8n - Workflow Automation</a> -
   <a href="https://github.com/natanaelsirqueira">Natanael Sirqueira</a> -
   <a href="https://github.com/nathanielknight">Nathaniel Knight</a> -
@@ -269,6 +274,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/oceanlewis">Ocean</a> -
   <a href="https://github.com/OldhamMade">OldhamMade</a> -
   <a href="https://github.com/CanadaHonk">Oliver Medhurst</a> -
+  <a href="https://github.com/otosky">Oliver Tosky</a> -
   <a href="https://github.com/optizio">optizio</a> -
   <a href="https://github.com/daslaf">Osman Cea</a> -
   <a href="https://github.com/PastMoments">PastMoments</a> -
@@ -306,9 +312,9 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/ustitc">Ruslan Ustitc</a> -
   <a href="https://github.com/samaaron">Sam Aaron</a> -
   <a href="https://github.com/metruzanca">Sam Zanca</a> -
+  <a href="https://github.com/soulsam480">sambit</a> -
   <a href="https://github.com/samifouad">Sami Fouad</a> -
   <a href="https://github.com/bkspace">Sammy Isseyegh</a> -
-  <a href="https://github.com/mrgleam">Santi Lertsumran</a> -
   <a href="https://github.com/castletaste">Savva</a> -
   <a href="https://github.com/sasa1977">Saša Jurić</a> -
   <a href="https://github.com/scotttrinh">Scott Trinh</a> -
