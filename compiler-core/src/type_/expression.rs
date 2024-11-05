@@ -2598,7 +2598,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     type_: record_type.clone(),
                 },
                 annotation: None,
-                kind: AssignmentKind::Let,
+                kind: AssignmentKind::Generated,
                 value: Box::new(record),
             },
             constructor: Box::new(typed_constructor),
