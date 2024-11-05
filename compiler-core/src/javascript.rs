@@ -44,6 +44,7 @@ pub enum JavaScriptCodegenTarget {
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
+    project_root: &'a Utf8Path,
     tracker: UsageTracker,
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
@@ -56,6 +57,7 @@ impl<'a> Generator<'a> {
     pub fn new(
         line_numbers: &'a LineNumbers,
         module: &'a TypedModule,
+        project_root: &'a Utf8Path,
         target_support: TargetSupport,
         typescript: TypeScriptDeclarations,
         stdlib_package: StdlibPackage,
@@ -65,6 +67,7 @@ impl<'a> Generator<'a> {
         Self {
             current_module_name_segments_count,
             line_numbers,
+            project_root,
             module,
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
@@ -548,7 +551,8 @@ impl<'a> Generator<'a> {
             .collect();
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
-            EcoString::from(self.module.type_info.src_path.as_str()),
+            &self.module.type_info.src_path,
+            &self.project_root,
             self.line_numbers,
             name.clone(),
             argument_names,
@@ -619,6 +623,7 @@ pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,
     path: &Utf8Path,
+    project_root: &Utf8Path,
     src: &EcoString,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
@@ -627,6 +632,7 @@ pub fn module(
     let document = Generator::new(
         line_numbers,
         module,
+        project_root,
         target_support,
         typescript,
         stdlib_package,
