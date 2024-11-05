@@ -10,9 +10,9 @@ pub fn main() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_importing_module_named_inspect/src/main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 Nil
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_importing_module_named_inspect/src/main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 Nil
