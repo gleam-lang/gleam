@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type A {\n  A(a: Int, b: Int)\n}\n\npub type B {\n  B(a: Int, b: Int)\n}\n\npub fn b_to_a(value: B) {\n  A(..value, b: 5)\n}\n"
+---
+----- SOURCE CODE
+
+pub type A {
+  A(a: Int, b: Int)
+}
+
+pub type B {
+  B(a: Int, b: Int)
+}
+
+pub fn b_to_a(value: B) {
+  A(..value, b: 5)
+}
+
+
+----- ERROR
+error: Type mismatch
+   ┌─ /src/one/two.gleam:11:7
+   │
+11 │   A(..value, b: 5)
+   │       ^^^^^
+
+Expected type:
+
+    A
+
+Found type:
+
+    B

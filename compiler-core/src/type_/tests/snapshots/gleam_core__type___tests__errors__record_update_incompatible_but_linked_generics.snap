@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble(a) {\n  Wibble(a: a, b: a)\n}\n\npub fn b_to_a(value: Wibble(a)) -> Wibble(Int) {\n  Wibble(..value, a: 5)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble(a) {
+  Wibble(a: a, b: a)
+}
+
+pub fn b_to_a(value: Wibble(a)) -> Wibble(Int) {
+  Wibble(..value, a: 5)
+}
+
+
+----- ERROR
+error: Incomplete record update
+  ┌─ /src/one/two.gleam:7:12
+  │
+7 │   Wibble(..value, a: 5)
+  │            ^^^^^ This is a `Wibble(a)`
+
+The `b` field of this value is a `a`, but the arguments given to the record
+update indicate that it should be a `Int`.
+
+Note: If the same type variable is used for multiple fields, all those
+fields need to be updated at the same time.

@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  A(a: Int, b: Int)\n  B(a: Int, b: Int)\n}\n\npub fn b_to_a(value: Wibble) {\n  case value {\n    A(..) -> value\n    B(..) as b -> A(..b, b: 3)\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  A(a: Int, b: Int)
+  B(a: Int, b: Int)
+}
+
+pub fn b_to_a(value: Wibble) {
+  case value {
+    A(..) -> value
+    B(..) as b -> A(..b, b: 3)
+  }
+}
+
+
+----- ERROR
+error: Incorrect record update
+   ┌─ /src/one/two.gleam:10:23
+   │
+10 │     B(..) as b -> A(..b, b: 3)
+   │                       ^ This is a `B`
+
+This value is a `B` so it cannot be used to build a `A`, even if they share
+some fields.
+
+Note: If you want to change one variant of a type into another, you should
+specify all fields explicitly instead of using the record update syntax.
