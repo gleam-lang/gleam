@@ -260,7 +260,7 @@ pub struct Use {
     /// `<-`.
     ///
     /// ```gleam
-    /// use a <- reult.try(result)
+    /// use a <- result.try(result)
     /// ^^^^^^^^^^^^^^^^^^^^^^^^^^
     /// ```
     ///

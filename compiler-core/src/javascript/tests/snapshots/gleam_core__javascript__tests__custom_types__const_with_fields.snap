@@ -21,13 +21,6 @@ class Mine extends $CustomType {
     this.a = a;
     this.b = b;
   }
-  
-  withFields(fields) {
-    return new Mine(
-      'a' in fields ? fields.a : this.a,
-      'b' in fields ? fields.b : this.b
-    );
-  }
 }
 
 const labels = /* @__PURE__ */ new Mine(1, 2);

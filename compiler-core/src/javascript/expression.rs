@@ -9,7 +9,9 @@ use crate::{
     javascript::endianness::Endianness,
     line_numbers::LineNumbers,
     pretty::*,
-    type_::{ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant},
+    type_::{
+        ModuleValueConstructor, Type, TypedCallArg, ValueConstructor, ValueConstructorVariant,
+    },
 };
 use std::sync::Arc;
 
@@ -165,7 +167,12 @@ impl<'module> Generator<'module> {
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
-            TypedExpr::RecordUpdate { record, args, .. } => self.record_update(record, args),
+            TypedExpr::RecordUpdate {
+                record,
+                constructor,
+                args,
+                ..
+            } => self.record_update(record, constructor, args),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -391,8 +398,9 @@ impl<'module> Generator<'module> {
             TypedExpr::Panic { .. }
             | TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
-            | TypedExpr::Pipeline { .. } => self
-                .immediately_involked_function_expression(expression, |gen, expr| {
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::RecordUpdate { .. } => self
+                .immediately_invoked_function_expression(expression, |gen, expr| {
                     gen.expression(expr)
                 }),
             _ => self.expression(expression),
@@ -420,7 +428,7 @@ impl<'module> Generator<'module> {
     }
 
     /// Wrap an expression in an immediately involked function expression
-    fn immediately_involked_function_expression<'a, T, ToDoc>(
+    fn immediately_invoked_function_expression<'a, T, ToDoc>(
         &mut self,
         statements: &'a T,
         to_doc: ToDoc,
@@ -443,7 +451,7 @@ impl<'module> Generator<'module> {
         self.scope_position = scope_position;
 
         // Wrap in iife document
-        let doc = immediately_involked_function_expression_document(result?);
+        let doc = immediately_invoked_function_expression_document(result?);
         Ok(self.wrap_return(doc))
     }
 
@@ -503,7 +511,7 @@ impl<'module> Generator<'module> {
                 }
             }
         } else {
-            self.immediately_involked_function_expression(statements, |gen, statements| {
+            self.immediately_invoked_function_expression(statements, |gen, statements| {
                 gen.statements(statements)
             })
         }
@@ -715,7 +723,7 @@ impl<'module> Generator<'module> {
         })
     }
 
-    fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [CallArg<TypedExpr>]) -> Output<'a> {
+    fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [TypedCallArg]) -> Output<'a> {
         let arguments = arguments
             .iter()
             .map(|element| self.not_in_tail_position(|gen| gen.wrap_expression(&element.value)))
@@ -860,19 +868,15 @@ impl<'module> Generator<'module> {
 
     fn record_update<'a>(
         &mut self,
-        record: &'a TypedExpr,
-        updates: &'a [TypedRecordUpdateArg],
+        record: &'a TypedAssignment,
+        constructor: &'a TypedExpr,
+        args: &'a [TypedCallArg],
     ) -> Output<'a> {
-        self.not_in_tail_position(|gen| {
-            let record = gen.wrap_expression(record)?;
-            let fields = updates
-                .iter()
-                .map(|TypedRecordUpdateArg { label, value, .. }| {
-                    (maybe_escape_property_doc(label), gen.wrap_expression(value))
-                });
-            let object = try_wrap_object(fields)?;
-            Ok(docvec![record, ".withFields(", object, ")"])
-        })
+        Ok(docvec![
+            self.not_in_tail_position(|gen| gen.assignment(record))?,
+            line(),
+            self.call(constructor, args)?,
+        ])
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
@@ -1656,7 +1660,8 @@ impl TypedExpr {
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. } => true,
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::RecordUpdate { .. } => true,
 
             TypedExpr::Int { .. }
             | TypedExpr::Float { .. }
@@ -1670,7 +1675,6 @@ impl TypedExpr {
             | TypedExpr::Tuple { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::BitArray { .. }
-            | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
             | TypedExpr::Invalid { .. } => false,
@@ -1727,7 +1731,6 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::BitArray { .. }
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::NegateBool { .. }
-            | TypedExpr::RecordUpdate { .. }
             | TypedExpr::RecordAccess { .. }
             | TypedExpr::ModuleSelect { .. }
             | TypedExpr::Block { .. },
@@ -1738,6 +1741,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Pipeline { .. }
+            | TypedExpr::RecordUpdate { .. }
             | TypedExpr::Invalid { .. },
         ) => false,
 
@@ -1747,7 +1751,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
 }
 
 /// Wrap a document in an immediately involked function expression
-fn immediately_involked_function_expression_document(document: Document<'_>) -> Document<'_> {
+fn immediately_invoked_function_expression_document(document: Document<'_>) -> Document<'_> {
     docvec!(
         docvec!("(() => {", break_("", " "), document).nest(INDENT),
         break_("", " "),

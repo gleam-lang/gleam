@@ -21,13 +21,6 @@ export class Box extends $CustomType {
     this.a = a;
     this.b = b;
   }
-  
-  withFields(fields) {
-    return new Box(
-      'a' in fields ? fields.a : this.a,
-      'b' in fields ? fields.b : this.b
-    );
-  }
 }
 
 function go(x) {

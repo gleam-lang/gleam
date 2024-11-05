@@ -4,11 +4,10 @@ use crate::{
     ast::{
         self,
         visit::{
-            visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg,
-            visit_typed_record_update_arg, Visit as _,
+            visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg, Visit as _,
         },
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern, TypedRecordUpdateArg,
+        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern,
     },
     build::{Located, Module},
     line_numbers::LineNumbers,
@@ -509,24 +508,6 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
         }
 
         visit_typed_pattern_call_arg(self, arg)
-    }
-
-    fn visit_typed_record_update_arg(&mut self, arg: &'ast TypedRecordUpdateArg) {
-        let arg_range = src_span_to_lsp_range(arg.location, &self.line_numbers);
-        let is_selected = overlaps(arg_range, self.params.range);
-
-        match arg {
-            TypedRecordUpdateArg {
-                label,
-                value: TypedExpr::Var { name, location, .. },
-                ..
-            } if is_selected && !arg.uses_label_shorthand() && label == name => {
-                self.push_delete_edit(location)
-            }
-            _ => (),
-        }
-
-        visit_typed_record_update_arg(self, arg)
     }
 }
 

@@ -18,13 +18,6 @@ export class Person extends $CustomType {
     this.name = name;
     this.age = age;
   }
-  
-  withFields(fields) {
-    return new Person(
-      'name' in fields ? fields.name : this.name,
-      'age' in fields ? fields.age : this.age
-    );
-  }
 }
 
 export function get_age(person) {

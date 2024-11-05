@@ -31,5 +31,8 @@ main() ->
         <<"Amphicar"/utf8>>,
         <<"Model 770"/utf8>>,
         {person, <<"John Doe"/utf8>>, 27}},
-    New_p = {person, erlang:element(2, erlang:element(4, Car)), 28},
+    New_p = begin
+        _record = erlang:element(4, Car),
+        {person, erlang:element(2, _record), 28}
+    end,
     New_p.

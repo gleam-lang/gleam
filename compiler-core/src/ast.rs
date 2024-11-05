@@ -1309,25 +1309,6 @@ impl UntypedRecordUpdateArg {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct TypedRecordUpdateArg {
-    pub label: EcoString,
-    pub location: SrcSpan,
-    pub value: TypedExpr,
-    pub index: u32,
-}
-
-impl TypedRecordUpdateArg {
-    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value.find_node(byte_index)
-    }
-
-    #[must_use]
-    pub fn uses_label_shorthand(&self) -> bool {
-        self.value.location() == self.location
-    }
-}
-
 pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 
 pub type UntypedMultiPattern = MultiPattern<()>;

@@ -15,7 +15,7 @@ use crate::{
     line_numbers::LineNumbers,
     pretty::*,
     type_::{
-        ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
+        ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
     },
     Result,
@@ -1499,7 +1499,7 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
         .group()
 }
 
-fn call<'a>(fun: &'a TypedExpr, args: &'a [CallArg<TypedExpr>], env: &mut Env<'a>) -> Document<'a> {
+fn call<'a>(fun: &'a TypedExpr, args: &'a [TypedCallArg], env: &mut Env<'a>) -> Document<'a> {
     docs_args_call(
         fun,
         args.iter()
@@ -1656,22 +1656,17 @@ fn docs_args_call<'a>(
 }
 
 fn record_update<'a>(
-    record: &'a TypedExpr,
-    args: &'a [TypedRecordUpdateArg],
+    record: &'a TypedAssignment,
+    constructor: &'a TypedExpr,
+    args: &'a [TypedCallArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let expr_doc = maybe_block_expr(record, env);
-
-    args.iter().fold(expr_doc, |tuple_doc, arg| {
-        // Increment the index by 2, because the first element
-        // is the name of the record, so our fields are 2-indexed
-        let index_doc = (arg.index + 2).to_doc();
-        let value_doc = maybe_block_expr(&arg.value, env);
-
-        "erlang:setelement"
-            .to_doc()
-            .append(wrap_args([index_doc, tuple_doc, value_doc]))
-    })
+    docvec![
+        assignment(record, env),
+        ",",
+        line(),
+        call(constructor, args, env)
+    ]
 }
 
 /// Wrap a document in begin end
@@ -1690,7 +1685,7 @@ fn maybe_block_expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Documen
 
 fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
     match expression {
-        TypedExpr::Pipeline { .. } => true,
+        TypedExpr::RecordUpdate { .. } | TypedExpr::Pipeline { .. } => true,
 
         TypedExpr::Int { .. }
         | TypedExpr::Float { .. }
@@ -1709,7 +1704,6 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::Todo { .. }
         | TypedExpr::Panic { .. }
         | TypedExpr::BitArray { .. }
-        | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
         | TypedExpr::NegateInt { .. }
         | TypedExpr::Invalid { .. } => false,
@@ -1844,7 +1838,12 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
-        TypedExpr::RecordUpdate { record, args, .. } => record_update(record, args, env),
+        TypedExpr::RecordUpdate {
+            record,
+            constructor,
+            args,
+            ..
+        } => record_update(record, constructor, args, env),
 
         TypedExpr::Case {
             subjects, clauses, ..
