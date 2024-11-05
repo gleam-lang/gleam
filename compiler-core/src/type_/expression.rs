@@ -2470,6 +2470,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
+        let mut seen_labels = HashSet::new();
+
         let args: Vec<TypedRecordUpdateArg> = args
             .iter()
             .map(
@@ -2489,6 +2491,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     if arg.uses_label_shorthand() {
                         self.track_feature_usage(FeatureKind::LabelShorthandSyntax, *location);
                     }
+
+                    if seen_labels.contains(label) {
+                        return Err(Error::DuplicateArgument {
+                            location: *location,
+                            label: label.clone(),
+                        });
+                    }
+                    _ = seen_labels.insert(label.clone());
 
                     // Check that the update argument unifies with the corresponding
                     // field in the record contained within the record variable. We
