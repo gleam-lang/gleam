@@ -386,6 +386,10 @@
   annotation of a parameter of an anonymous function would do nothing.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where referencing record constructors in JavaScript guards but
+  not calling them could produce invalid code.
+  ([PgBiel](https://github.com/PgBiel))
+
 ## v1.5.1 - 2024-09-26
 
 ### Bug Fixes

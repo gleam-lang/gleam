@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "fn func(x) {\n    case [] {\n        _ if [] == [ Ok ] -> True\n        _ -> False\n    }\n}\n    "
+snapshot_kind: text
+---
+----- SOURCE CODE
+fn func(x) {
+    case [] {
+        _ if [] == [ Ok ] -> True
+        _ -> False
+    }
+}
+    
+
+----- COMPILED JAVASCRIPT
+import { Ok, toList, isEqual } from "../gleam.mjs";
+
+function func(x) {
+  let $ = toList([]);
+  if (isEqual(toList([]), toList([(var0) => { return new Ok(var0); }]))) {
+    return true;
+  } else {
+    return false;
+  }
+}
