@@ -4,6 +4,45 @@
 
 ### Compiler
 
+- You can now use the `echo` keyword to debug print any value: `echo` can be
+  followed by any expression and it will print it to stderr alongside the module
+  it comes from and its line number. This:
+
+  ```gleam
+  pub fn main() {
+    echo [1, 2, 3]
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:2
+  [1, 2, 3]
+  ```
+
+  `echo` can also be used in the middle of a pipeline. This:
+
+  ```gleam
+  pub fn main() {
+    [1, 2, 3]
+    |> echo
+    |> list.map(fn(x) { x * 2 })
+    |> echo
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:3
+  [1, 2, 3]
+  /src/module.gleam:5
+  [2, 4, 6]
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Generated Erlang `.app` files now include external modules written in Elixir
   and Erlang.
   ([LostKobrakai](https://github.com/lostkobrakai))
@@ -43,6 +82,10 @@
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The build tool now refuses to publish any incomplete package that has any
+  `echo` debug printing left.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language server
 
@@ -163,7 +206,124 @@
   import gleam/io
 
   pub fn main() {
-    io.println("Hello!")
+    io.println(to_string(pokemon))
+    //          ^ If you put your cursor over this function that is
+    //            not implemented yet
+  }
+  ```
+
+  Triggering the "generate function" code action, the language server will
+  generate the following function for you:
+
+  ```gleam
+  fn to_string(pokemon: Pokemon) -> String {
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server can now fill in the labels of any function call, even when
+  only some of the arguments are provided. For example:
+
+  ```gleam
+  import gleam/string
+
+  pub fn main() {
+    string.replace("wibble")
+  }
+  ```
+
+  Will be completed to:
+
+  ```gleam
+  import gleam/string
+
+  pub fn main() {
+    string.replace("wibble", each: todo, with: todo)
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now suggests a code action to pattern match on a
+  function's argument. For example:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(pokedex_number: Int, name: String)
+  }
+
+  pub fn to_string(pokemon: Pokemon) {
+    //             ^ If you put your cursor over the argument
+    todo
+  }
+  ```
+
+  Triggering the code action on the `pokemon` argument will generate the
+  following code for you:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(pokedex_number: Int, name: String)
+  }
+
+  pub fn to_string(pokemon: Pokemon) {
+    let Pokemon(pokedex_number:, name:) = pokemon
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now suggests a code action to pattern match on a variable.
+  For example:
+
+  ```gleam
+  pub fn main() {
+    let result = list.first(a_list)
+    //  ^ If you put your cursor over the variable
+    todo
+  }
+  ```
+
+  Triggering the code action on the `result` variable will generate the
+  following code for you:
+
+  ```gleam
+  pub fn main() {
+    let result = list.first(a_list)
+    case result {
+      Ok(value) -> todo
+      Error(value) -> todo
+    }
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- When generating functions or variables, the language server can now pick
+  better names using the type of the code it's generating.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The Language Server now provides the ability to rename local variables.
+  For example:
+
+  ```gleam
+  pub fn main() {
+    let wibble = 10
+    //  ^ If you put your cursor here, and trigger a rename
+    wibble + 1
+  }
+  ```
+
+  Triggering a rename and entering `my_number` results in this code:
+
+  ```gleam
+  pub fn main() {
+    let my_number = 10
+    my_number + 1
   }
   ```
 
