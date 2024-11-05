@@ -11,13 +11,13 @@ pub fn main() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_dict/src/main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 dict.from_list([])
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_dict/src/main.gleam:5[39m
+[90msrc/main.gleam:5[39m
 dict.from_list([#(1, "hello"), #(2, "world!")])
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_dict/src/main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 dict.from_list([])
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_dict/src/main.gleam:5[39m
+[90msrc/main.gleam:5[39m
 dict.from_list([#(2, "world!"), #(1, "hello")])

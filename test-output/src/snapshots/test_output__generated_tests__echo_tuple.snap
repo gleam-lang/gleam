@@ -27,15 +27,15 @@ pub fn target_specific() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_tuple/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 #()
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_tuple/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 #(True, 1, "hello")
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_tuple/src/main.gleam:16[39m
+[90msrc/main.gleam:16[39m
 Wibble(1, "hello")
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_tuple/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 #()
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_tuple/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 #(True, 1, "hello")

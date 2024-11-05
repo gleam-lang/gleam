@@ -21,15 +21,15 @@ pub fn target_specific() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bitarray/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 ""
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bitarray/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 "\u{0001}\u{0002}\u{0003}"
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bitarray/src/main.gleam:10[39m
+[90msrc/main.gleam:10[39m
 <<1, 2, 3:size(2)>>
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bitarray/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 <<>>
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bitarray/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 <<1, 2, 3>>

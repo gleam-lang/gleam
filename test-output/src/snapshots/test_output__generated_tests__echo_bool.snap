@@ -9,13 +9,13 @@ pub fn main() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bool/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 True
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bool/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 False
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bool/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 True
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_bool/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 False

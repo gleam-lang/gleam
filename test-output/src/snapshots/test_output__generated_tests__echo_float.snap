@@ -10,17 +10,17 @@ pub fn main() {
 }
 
 --- OUTPUT ON ERLANG TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_float/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 1.0
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_float/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 2.1
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_float/src/main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 11.11
 
 --- OUTPUT ON JAVASCRIPT TARGET
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_float/src/main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 1
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_float/src/main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 2.1
-[90m/Users/giacomocavalieri/Documents/progetti/gleam/test-output/cases/echo_float/src/main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 11.11
