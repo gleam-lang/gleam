@@ -20,6 +20,7 @@ use crate::{
     },
     Result,
 };
+use camino::Utf8Path;
 use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
 use im::HashSet;
@@ -45,7 +46,8 @@ fn module_name_atom(module: &str) -> Document<'static> {
 struct Env<'a> {
     module: &'a str,
     function: &'a str,
-    src_path: EcoString,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
     line_numbers: &'a LineNumbers,
     needs_function_docs: bool,
     echo_used: bool,
@@ -56,7 +58,8 @@ struct Env<'a> {
 impl<'env> Env<'env> {
     pub fn new(
         module: &'env str,
-        src_path: EcoString,
+        src_path: &'env Utf8Path,
+        project_root: &'env Utf8Path,
         function: &'env str,
         line_numbers: &'env LineNumbers,
     ) -> Self {
@@ -67,6 +70,7 @@ impl<'env> Env<'env> {
             needs_function_docs: false,
             echo_used: false,
             src_path,
+            project_root,
             line_numbers,
             function,
             module,
@@ -159,13 +163,18 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     .to_pretty_string(MAX_COLUMNS)
 }
 
-pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers) -> Result<String> {
-    Ok(module_document(module, line_numbers)?.to_pretty_string(MAX_COLUMNS))
+pub fn module<'a>(
+    module: &'a TypedModule,
+    line_numbers: &'a LineNumbers,
+    project_root: &'a Utf8Path,
+) -> Result<String> {
+    Ok(module_document(module, line_numbers, project_root)?.to_pretty_string(MAX_COLUMNS))
 }
 
 fn module_document<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
+    project_root: &'a Utf8Path,
 ) -> Result<Document<'a>> {
     let mut exports = vec![];
     let mut type_defs = vec![];
@@ -226,8 +235,6 @@ fn module_document<'a>(
         join(type_defs, lines(2)).append(lines(2))
     };
 
-    let src_path = EcoString::from(module.type_info.src_path.as_str());
-
     let mut needs_function_docs = false;
     let mut echo_used = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
@@ -237,7 +244,8 @@ fn module_document<'a>(
             &module.name,
             module.type_info.is_internal,
             line_numbers,
-            &src_path,
+            &module.type_info.src_path,
+            project_root,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
             echo_used = echo_used || env.echo_used;
@@ -413,7 +421,8 @@ fn module_statement<'a>(
     module: &'a str,
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
-    src_path: &EcoString,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
 ) -> Option<(Document<'a>, Env<'a>)> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
@@ -426,7 +435,8 @@ fn module_statement<'a>(
             module,
             is_internal_module,
             line_numbers,
-            src_path.clone(),
+            src_path,
+            project_root,
         ),
     }
 }
@@ -436,7 +446,8 @@ fn module_function<'a>(
     module: &'a str,
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
-    src_path: EcoString,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
 ) -> Option<(Document<'a>, Env<'a>)> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
@@ -455,9 +466,9 @@ fn module_function<'a>(
         .as_ref()
         .expect("A module's function must be named");
     let function_name = escape_erlang_existing_name(function_name);
-    let file_attribute = file_attribute(src_path.clone(), function, line_numbers);
+    let file_attribute = file_attribute(src_path, function, line_numbers);
 
-    let mut env = Env::new(module, src_path, function_name, line_numbers);
+    let mut env = Env::new(module, src_path, project_root, function_name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
@@ -524,12 +535,12 @@ fn module_function<'a>(
 }
 
 fn file_attribute<'a>(
-    path: EcoString,
+    path: &'a Utf8Path,
     function: &'a TypedFunction,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
     let line = line_numbers.line_number(function.location.start);
-    let path = path.replace("\\", "\\\\");
+    let path = EcoString::from(path.as_str()).replace("\\", "\\\\");
     docvec!["-file(\"", path, "\", ", line, ")."]
 }
 
@@ -1887,11 +1898,22 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
 
 fn echo<'a>(body: Document<'a>, location: &SrcSpan, env: &mut Env<'a>) -> Document<'a> {
     env.echo_used = true;
-    let path = docvec!["\"", env.src_path.replace("\\", "\\\\"), "\""];
+
+    let relative_path = env
+        .src_path
+        .strip_prefix(env.project_root)
+        .unwrap_or(env.src_path)
+        .as_str();
+
+    let relative_path_doc = EcoString::from(relative_path)
+        .replace("\\", "\\\\")
+        .to_doc();
+
+    let relative_path_doc = docvec!["\"", relative_path_doc, "\""];
 
     "echo".to_doc().append(wrap_args(vec![
         body,
-        path,
+        relative_path_doc,
         env.line_numbers.line_number(location.start).to_doc(),
     ]))
 }
