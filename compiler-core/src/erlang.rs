@@ -46,6 +46,7 @@ fn module_name_atom(module: &str) -> Document<'static> {
 struct Env<'a> {
     module: &'a str,
     function: &'a str,
+    src_path: EcoString,
     line_numbers: &'a LineNumbers,
     needs_function_docs: bool,
     echo_used: bool,
@@ -54,13 +55,19 @@ struct Env<'a> {
 }
 
 impl<'env> Env<'env> {
-    pub fn new(module: &'env str, function: &'env str, line_numbers: &'env LineNumbers) -> Self {
+    pub fn new(
+        module: &'env str,
+        src_path: EcoString,
+        function: &'env str,
+        line_numbers: &'env LineNumbers,
+    ) -> Self {
         let vars: im::HashMap<_, _> = std::iter::once(("_".into(), 0)).collect();
         Self {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
             needs_function_docs: false,
             echo_used: false,
+            src_path,
             line_numbers,
             function,
             module,
@@ -460,9 +467,9 @@ fn module_function<'a>(
         .as_ref()
         .expect("A module's function must be named");
     let function_name = escape_erlang_existing_name(function_name);
-    let file_attribute = file_attribute(src_path, function, line_numbers);
+    let file_attribute = file_attribute(src_path.clone(), function, line_numbers);
 
-    let mut env = Env::new(module, function_name, line_numbers);
+    let mut env = Env::new(module, src_path, function_name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
@@ -1893,9 +1900,15 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
     erlang_error("panic", &message, location, vec![], env)
 }
 
-fn echo<'a>(body: Document<'a>, env: &mut Env<'a>) -> Document<'a> {
+fn echo<'a>(body: Document<'a>, location: &SrcSpan, env: &mut Env<'a>) -> Document<'a> {
     env.echo_used = true;
-    "echo".to_doc().append(wrap_args(vec![body]))
+    let path = docvec!["\"", env.src_path.replace("\\", "\\\\"), "\""];
+
+    "echo".to_doc().append(wrap_args(vec![
+        body,
+        path,
+        env.line_numbers.line_number(location.start).to_doc(),
+    ]))
 }
 
 fn erlang_error<'a>(
@@ -1954,11 +1967,15 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             location, message, ..
         } => panic(*location, message.as_deref(), env),
 
-        TypedExpr::Echo { expression, .. } => {
+        TypedExpr::Echo {
+            expression,
+            location,
+            ..
+        } => {
             let expression = expression
                 .as_ref()
                 .expect("echo with no expression outside of pipe");
-            echo(expr(expression, env), env)
+            echo(expr(expression, env), location, env)
         }
 
         TypedExpr::Int { value, .. } => int(value),
@@ -2056,21 +2073,23 @@ fn pipeline<'a>(
     let all_assignments = std::iter::once(first_value)
         .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
-    let echo_doc = |var_name: &Option<Document<'a>>, env: &mut Env<'a>| {
+    let echo_doc = |var_name: &Option<Document<'a>>, location: &SrcSpan, env: &mut Env<'a>| {
         let name = var_name
             .to_owned()
             .expect("echo with no previous step in a pipe");
-        echo(name, env)
+        echo(name, location, env)
     };
 
     let mut prev_local_var_name = None;
-    for a in assignments {
+    for a in all_assignments {
         match a.value.as_ref() {
             // An echo in a pipeline won't result in an assignment, instead it
             // just prints the previous variable assigned in the pipeline.
             TypedExpr::Echo {
-                expression: None, ..
-            } => documents.push(echo_doc(&prev_local_var_name, env)),
+                expression: None,
+                location,
+                ..
+            } => documents.push(echo_doc(&prev_local_var_name, location, env)),
 
             // Otherwise we assign the intermediate pipe value to a variable.
             _ => {
@@ -2086,8 +2105,10 @@ fn pipeline<'a>(
 
     match finally {
         TypedExpr::Echo {
-            expression: None, ..
-        } => documents.push(echo_doc(&prev_local_var_name, env)),
+            expression: None,
+            location,
+            ..
+        } => documents.push(echo_doc(&prev_local_var_name, location, env)),
         _ => documents.push(expr(finally, env)),
     }
 

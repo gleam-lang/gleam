@@ -31,6 +31,8 @@ export function main() {
         {}
       )
     })(),
+    "",
+    3,
   );
 }
 

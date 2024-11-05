@@ -25,6 +25,6 @@ wibble(N, M) ->
 -file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(wibble(1, 2)).
+    echo(wibble(1, 2), "/root/project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

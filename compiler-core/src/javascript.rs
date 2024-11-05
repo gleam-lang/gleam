@@ -548,6 +548,7 @@ impl<'a> Generator<'a> {
             .collect();
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
+            EcoString::from(self.module.type_info.src_path.as_str()),
             self.line_numbers,
             name.clone(),
             argument_names,
