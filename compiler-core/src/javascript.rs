@@ -552,7 +552,7 @@ impl<'a> Generator<'a> {
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
             &self.module.type_info.src_path,
-            &self.project_root,
+            self.project_root,
             self.line_numbers,
             name.clone(),
             argument_names,
