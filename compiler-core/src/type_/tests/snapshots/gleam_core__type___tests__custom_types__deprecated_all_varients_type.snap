@@ -11,8 +11,8 @@ error: Deprecating all variants of a type is not allowed.
 
 Consider deprecating the type as a whole.
 
-    @deprecated("message")
-    type Wibble {
-        Wobble1
-        Wobble2
-    }
+  @deprecated("message")
+  type Wibble {
+    Wobble1
+    Wobble2
+  }

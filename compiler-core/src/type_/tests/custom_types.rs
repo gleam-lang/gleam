@@ -64,8 +64,8 @@ pub fn num() {
 }
 
 #[test]
-fn depreacted_constructor_deprecate_all_varients() {
-    assert_warning!(
+fn depreacted_type_deprecate_varient_err() {
+    assert_module_error!(
         r#"
 @deprecated("2")
 pub type Numbers {
