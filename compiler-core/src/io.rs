@@ -188,8 +188,8 @@ impl DirEntry {
 }
 
 /// Structure holding state to walk across a directory's descendant files at
-/// any level. Note that each descendant directory is only visited once, so
-/// each file is only visited once as well.
+/// any level. Note that each descendant directory is only visited once
+/// regardless of symlinks, avoiding infinite symlink loops.
 #[derive(Debug, Clone)]
 pub struct DirWalker {
     walk_queue: VecDeque<Utf8PathBuf>,
@@ -216,12 +216,17 @@ impl DirWalker {
         std::iter::from_fn(move || self.next_file(io).transpose())
     }
 
-    /// Advance the directory walker to the next file.
+    /// Advance the directory walker to the next file. The returned path will
+    /// be relative to the starting directory's path, even with symlinks
+    /// (it is not canonicalised).
     pub fn next_file(&mut self, io: &impl FileSystemReader) -> Result<Option<Utf8PathBuf>> {
         while let Some(next_path) = self.walk_queue.pop_front() {
             let real_path = io.canonicalise(&next_path)?;
 
             if io.is_file(&real_path) {
+                // Return the path relative to the starting directory, not the
+                // canonicalised path (which we only use to check for already
+                // visited directories).
                 return Ok(Some(next_path));
             } else if io.is_directory(&real_path)
                 && self.dirs_walked.insert(real_path.clone()).is_none()
