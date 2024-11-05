@@ -19,7 +19,7 @@ use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
-use vec1::{vec1, Vec1};
+use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]
 pub struct Implementations {
@@ -2398,6 +2398,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // infer the record being updated
         let record = self.infer(*record.base)?;
+        let record_location = record.location();
         let record_type = record.type_();
 
         // Check that the record variable unifies with the return type of the constructor.
@@ -2508,29 +2509,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
         .collect::<Result<Vec<_>, _>>()?;
 
-        // we can skip generating an addtional variable if we already have a
-        // simple variable or record access.
-        let needs_tmp_record_variable = match record {
-            TypedExpr::Var { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::TupleIndex { .. } => false,
-            _ => true,
-        };
-
-        // bound_record is the expression used to access the old record during the update.
-        let bound_record = if needs_tmp_record_variable {
-            TypedExpr::Var {
-                location,
-                constructor: ValueConstructor {
-                    publicity: Publicity::Private,
-                    deprecation: Deprecation::NotDeprecated,
-                    type_: record_type.clone(),
-                    variant: ValueConstructorVariant::LocalVariable { location },
+        let record_var = TypedExpr::Var {
+            location: record_location,
+            constructor: ValueConstructor {
+                publicity: Publicity::Private,
+                deprecation: Deprecation::NotDeprecated,
+                type_: record_type.clone(),
+                variant: ValueConstructorVariant::LocalVariable {
+                    location: record_location,
                 },
-                name: RECORD_UPDATE_VARIABLE.into(),
-            }
-        } else {
-            record.clone()
+            },
+            name: RECORD_UPDATE_VARIABLE.into(),
         };
 
         // generate the remaining copied arguments, making sure they unify with
@@ -2539,7 +2528,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .into_iter()
             .map(|(label, index)| {
                 let record_access = self.infer_known_record_expression_access(
-                    bound_record.clone(),
+                    record_var.clone(),
                     label.clone(),
                     location,
                     FieldAccessUsage::RecordUpdate,
@@ -2552,7 +2541,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     Ok((
                         index,
                         CallArg {
-                            location,
+                            location: record_location,
                             label: Some(label),
                             value: record_access,
                             implicit: Some(ImplicitCallArgOrigin::RecordUpdate),
@@ -2583,36 +2572,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             .map(|(_, value)| value)
             .collect();
 
-        let constructor_call = TypedExpr::Call {
+        Ok(TypedExpr::RecordUpdate {
             location,
             type_: return_type,
-            fun: Box::new(typed_constructor),
+            record: Assignment {
+                location: record_location,
+                pattern: Pattern::Variable {
+                    location: record_location,
+                    name: RECORD_UPDATE_VARIABLE.into(),
+                    type_: record_type.clone(),
+                },
+                annotation: None,
+                kind: AssignmentKind::Let,
+                value: Box::new(record),
+            },
+            constructor: Box::new(typed_constructor),
             args,
-        };
-
-        if needs_tmp_record_variable {
-            // if we bind need to bind the record expression to a local variable,
-            // we wrap the assignment in the constructor call in a block expression.
-            Ok(TypedExpr::Block {
-                location,
-                statements: vec1![
-                    Statement::Assignment(Assignment {
-                        location,
-                        pattern: Pattern::Variable {
-                            location,
-                            name: RECORD_UPDATE_VARIABLE.into(),
-                            type_: record_type.clone(),
-                        },
-                        annotation: None,
-                        kind: AssignmentKind::Let,
-                        value: Box::new(record),
-                    }),
-                    Statement::Expression(constructor_call)
-                ],
-            })
-        } else {
-            Ok(constructor_call)
-        }
+        })
     }
 
     fn unknown_field_error(

@@ -133,11 +133,21 @@ pub enum TypedExpr {
         segments: Vec<TypedExprBitArraySegment>,
     },
 
+    /// A record update gets desugared to a block expression of the form
+    ///
+    /// {
+    ///   let _record = record
+    ///   Constructor(explicit_arg: explicit_value(), implicit_arg: _record.implicit_arg)
+    /// }
+    ///
+    /// We still keep a separate `RecordUpdate` AST node for the same reasons as
+    /// we do for pipelines.
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
-        record: Box<Self>,
-        args: Vec<TypedRecordUpdateArg>,
+        record: TypedAssignment,
+        constructor: Box<Self>,
+        args: Vec<CallArg<Self>>,
     },
 
     NegateBool {
@@ -303,6 +313,7 @@ impl TypedExpr {
 
             Self::RecordUpdate { record, args, .. } => args
                 .iter()
+                .filter(|arg| arg.implicit.is_none())
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| record.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),

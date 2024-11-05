@@ -32,9 +32,10 @@ id(X) ->
 -file("/root/project/test/my/mod.gleam", 9).
 -spec main(x()) -> x().
 main(X) ->
+    _record = X,
     {x,
         begin
             _pipe = 1,
             id(_pipe)
         end,
-        erlang:element(3, X)}.
+        erlang:element(3, _record)}.

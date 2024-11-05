@@ -52,7 +52,7 @@ use super::{
     untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
     SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
     TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant,
-    TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
+    TypedPattern, TypedPatternBitArraySegment, TypedStatement, Use,
 };
 
 pub trait Visit<'ast> {
@@ -264,10 +264,11 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        record: &'ast TypedExpr,
-        args: &'ast [TypedRecordUpdateArg],
+        record: &'ast TypedAssignment,
+        constructor: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
     ) {
-        visit_typed_expr_record_update(self, location, type_, record, args);
+        visit_typed_expr_record_update(self, location, type_, record, constructor, args);
     }
 
     fn visit_typed_expr_negate_bool(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
@@ -304,10 +305,6 @@ pub trait Visit<'ast> {
 
     fn visit_typed_expr_bit_array_segment(&mut self, segment: &'ast TypedExprBitArraySegment) {
         visit_typed_expr_bit_array_segment(self, segment);
-    }
-
-    fn visit_typed_record_update_arg(&mut self, arg: &'ast TypedRecordUpdateArg) {
-        visit_typed_record_update_arg(self, arg);
     }
 
     fn visit_typed_bit_array_option(&mut self, option: &'ast BitArrayOption<TypedExpr>) {
@@ -716,8 +713,9 @@ where
             location,
             type_,
             record,
+            constructor,
             args,
-        } => v.visit_typed_expr_record_update(location, type_, record, args),
+        } => v.visit_typed_expr_record_update(location, type_, record, constructor, args),
         TypedExpr::NegateBool { location, value } => {
             v.visit_typed_expr_negate_bool(location, value)
         }
@@ -970,15 +968,17 @@ pub fn visit_typed_expr_bit_array<'a, V>(
 pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    _typ: &'a Arc<Type>,
-    record: &'a TypedExpr,
-    args: &'a [TypedRecordUpdateArg],
+    _type: &'a Arc<Type>,
+    record: &'a TypedAssignment,
+    constructor: &'a TypedExpr,
+    args: &'a [TypedCallArg],
 ) where
     V: Visit<'a> + ?Sized,
 {
-    v.visit_typed_expr(record);
+    v.visit_typed_expr(constructor);
+    v.visit_typed_assignment(record);
     for arg in args {
-        v.visit_typed_record_update_arg(arg);
+        v.visit_typed_call_arg(arg);
     }
 }
 
@@ -1052,13 +1052,6 @@ where
     for option in &segment.options {
         v.visit_typed_bit_array_option(option);
     }
-}
-
-pub fn visit_typed_record_update_arg<'a, V>(v: &mut V, arg: &'a TypedRecordUpdateArg)
-where
-    V: Visit<'a> + ?Sized,
-{
-    v.visit_typed_expr(&arg.value);
 }
 
 pub fn visit_typed_bit_array_option<'a, V>(v: &mut V, option: &'a BitArrayOption<TypedExpr>)
