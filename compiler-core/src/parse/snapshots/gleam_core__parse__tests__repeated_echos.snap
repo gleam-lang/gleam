@@ -28,6 +28,7 @@ expression: echo echo echo 1
                                         end: 16,
                                     },
                                     value: "1",
+                                    int_value: 1,
                                 },
                             ),
                         },
