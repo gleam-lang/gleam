@@ -1,17 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go() {\n  <<256:16-big>>\n}\n"
+expression: "\nfn go(i: Int) {\n  <<256:16-big>>\n  <<i:16-big>>\n}\n"
 ---
 ----- SOURCE CODE
 
-fn go() {
+fn go(i: Int) {
   <<256:16-big>>
+  <<i:16-big>>
 }
 
 
 ----- COMPILED JAVASCRIPT
 import { toBitArray, sizedInt } from "../gleam.mjs";
 
-function go() {
-  return toBitArray([sizedInt(256, 16, true)]);
+function go(i) {
+  toBitArray([1, 0]);
+  return toBitArray([sizedInt(i, 16, true)]);
 }

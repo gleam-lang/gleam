@@ -111,7 +111,7 @@ fn go() {
 }
 
 #[test]
-fn sized() {
+fn sized_constant_value() {
     assert_js!(
         r#"
 fn go() {
@@ -122,7 +122,51 @@ fn go() {
 }
 
 #[test]
-fn sized_big_endian() {
+fn sized_dynamic_value() {
+    assert_js!(
+        r#"
+fn go(i: Int) {
+  <<i:64>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_constant_value_positive_overflow() {
+    assert_js!(
+        r#"
+fn go() {
+  <<80_000:16>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_constant_value_negative_overflow() {
+    assert_js!(
+        r#"
+fn go() {
+  <<-80_000:16>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_constant_value_max_size_for_compile_time_evaluation() {
+    assert_js!(
+        r#"
+fn go() {
+  <<-1:48>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_big_endian_constant_value() {
     assert_js!(
         r#"
 fn go() {
@@ -133,7 +177,18 @@ fn go() {
 }
 
 #[test]
-fn sized_little_endian() {
+fn sized_big_endian_dynamic_value() {
+    assert_js!(
+        r#"
+fn go(i: Int) {
+  <<i:16-big>>
+}
+"#,
+    );
+}
+
+#[test]
+fn sized_little_endian_constant_value() {
     assert_js!(
         r#"
 fn go() {
@@ -144,11 +199,33 @@ fn go() {
 }
 
 #[test]
-fn explicit_sized() {
+fn sized_little_endian_dynamic_value() {
+    assert_js!(
+        r#"
+fn go(i: Int) {
+  <<i:16-little>>
+}
+"#,
+    );
+}
+
+#[test]
+fn explicit_sized_constant_value() {
     assert_js!(
         r#"
 fn go() {
-  <<256:size(64)>>
+  <<256:size(32)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn explicit_sized_dynamic_value() {
+    assert_js!(
+        r#"
+fn go(i: Int) {
+  <<i:size(32)>>
 }
 "#,
     );
@@ -298,11 +375,33 @@ fn go(x) {
 }
 
 #[test]
+fn match_sized_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16, 123:8>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn match_unsigned() {
     assert_js!(
         r#"
 fn go(x) {
   let assert <<a:unsigned>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_unsigned_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<-2:unsigned>> = x
 }
 "#,
     );
@@ -320,11 +419,33 @@ fn go(x) {
 }
 
 #[test]
+fn match_signed_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<-1:signed>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn match_sized_big_endian() {
     assert_js!(
         r#"
 fn go(x) {
   let assert <<a:16-big>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_big_endian_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16-big>> = x
 }
 "#,
     );
@@ -342,11 +463,33 @@ fn go(x) {
 }
 
 #[test]
+fn match_sized_little_endian_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16-little>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn match_sized_big_endian_unsigned() {
     assert_js!(
         r#"
 fn go(x) {
   let assert <<a:16-big-unsigned>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_big_endian_unsigned_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16-big-unsigned>> = x
 }
 "#,
     );
@@ -364,6 +507,17 @@ fn go(x) {
 }
 
 #[test]
+fn match_sized_big_endian_signed_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16-big-signed>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn match_sized_little_endian_unsigned() {
     assert_js!(
         r#"
@@ -375,11 +529,33 @@ fn go(x) {
 }
 
 #[test]
+fn match_sized_little_endian_unsigned_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16-little-unsigned>> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn match_sized_little_endian_signed() {
     assert_js!(
         r#"
 fn go(x) {
   let assert <<a:16-little-signed>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_little_endian_signed_constant_pattern() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1234:16-little-signed>> = x
 }
 "#,
     );
@@ -422,6 +598,17 @@ fn go(x) {
 
 #[test]
 fn match_sized_value() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<i:16>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn match_sized_value_constant_pattern() {
     assert_js!(
         r#"
 fn go(x) {
@@ -555,6 +742,7 @@ fn as_module_const() {
             "Gleam":utf8,
             4.2:float,
             4.2:32-float,
+            -1:64,
             <<
               <<1, 2, 3>>:bits,
               "Gleam":utf8,
@@ -569,7 +757,18 @@ fn as_module_const() {
 fn negative_size() {
     assert_js!(
         r#"
-fn go() {
+fn go(x: Int) {
+  <<x:size(-1)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn negative_size_constant_value() {
+    assert_js!(
+        r#"
+fn go(x: Int) {
   <<1:size(-1)>>
 }
 "#,

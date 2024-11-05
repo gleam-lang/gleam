@@ -31,6 +31,11 @@
   deprecated in code such as `@target`.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- When targeting JavaScript the compiler now generates faster and smaller code
+  for `Int` values in bit array expressions and patterns by evaluating them at
+  compile time where possible.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't

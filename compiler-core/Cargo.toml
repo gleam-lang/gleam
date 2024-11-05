@@ -46,6 +46,7 @@ unicode-segmentation = "1.12.0"
 bimap = "0.6.3"
 # Parsing of arbitrary width int values
 num-bigint = "0.4.6"
+num-traits = "0.2.19"
 async-trait.workspace = true
 base16.workspace = true
 bytes.workspace = true
