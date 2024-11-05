@@ -19,7 +19,7 @@ pub fn main() {
 -file("/root/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(1),
-    echo(2).
+    echo(1, "/root/project/test/my/mod.gleam", 3),
+    echo(2, "/root/project/test/my/mod.gleam", 4).
 
 % ...omitted code from `templates/echo.erl`...
