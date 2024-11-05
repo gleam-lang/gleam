@@ -48,7 +48,7 @@
 - Qualified records can now be used in clause guards.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The compiler now allows deprecating specific constructor variants using the
+- The compiler now allows deprecating specific custom type variants using the
   `@deprecated` attribute:
 
   ```gleam
