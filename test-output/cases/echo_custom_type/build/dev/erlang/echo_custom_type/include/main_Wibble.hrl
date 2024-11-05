@@ -1,1 +1,0 @@
--record(wibble, {a :: integer(), b :: binary()}).

@@ -1,1 +1,0 @@
--record(set, {dict :: gleam@dict:dict(any(), list(nil))}).
