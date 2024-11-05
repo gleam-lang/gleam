@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
 expression: "import gleam.{Ok as Y}\npub type X {\n  Ok\n}\nfn func() {\n  case Y {\n    y if y == Y -> True\n    _ -> False\n  }\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 import gleam.{Ok as Y}
@@ -23,7 +24,7 @@ export class Ok extends $CustomType {}
 
 function func() {
   let $ = (var0) => { return new Y(var0); };
-  if (isEqual($, new Y())) {
+  if (isEqual($, (var0) => { return new Y(var0); })) {
     let y = $;
     return true;
   } else {

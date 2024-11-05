@@ -517,3 +517,17 @@ fn func(x) {
 "#,
     );
 }
+
+// Variant of https://github.com/lpil/decode/pull/6
+#[test]
+fn constructor_function_in_guard() {
+    assert_js!(
+        r#"fn func(x) {
+    case [] {
+        _ if [] == [ Ok ] -> True
+        _ -> False
+    }
+}
+    "#,
+    );
+}
