@@ -19,10 +19,10 @@ pub fn main(wibble) {
 
 ----- WARNING
 warning: Incompatible gleam version range
-  ┌─ /src/warning/wrn.gleam:9:19
+  ┌─ /src/warning/wrn.gleam:9:28
   │
 9 │     Wibble(..) -> Wibble(..wibble, b: 10)
-  │                   ^^^^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.6.0
+  │                            ^^^^^^ This requires a Gleam version >= 1.6.0
 
 Record updates for custom types when the variant is known was introduced in
 version v1.6.0. But the Gleam version range specified in your `gleam.toml`
