@@ -115,6 +115,7 @@ impl<'a> ErlangApp<'a> {
             .chain(native_modules)
             .unique()
             .sorted()
+            .map(|m| Self::format_atom(&m))
             .join(",\n               ");
 
         // TODO: When precompiling for production (i.e. as a precompiled hex
@@ -152,6 +153,27 @@ impl<'a> ErlangApp<'a> {
         );
 
         writer.write(&path, &text)
+    }
+
+    fn format_atom(s: &EcoString) -> EcoString {
+        match s.chars().next() {
+            Some(first_char) => {
+                // Check if first character is not lowercase
+                let needs_quotes = !first_char.is_ascii_lowercase();
+
+                // Check if string contains any characters other than alphanumeric, underscore, or @
+                let contains_special = s
+                    .chars()
+                    .any(|c| !(c.is_alphanumeric() || c == '_' || c == '@'));
+
+                if needs_quotes || contains_special {
+                    EcoString::from(format!("'{}'", s))
+                } else {
+                    s.clone()
+                }
+            }
+            None => EcoString::from("''"),
+        }
     }
 }
 
