@@ -122,14 +122,18 @@ impl FileSystemWriter for InMemoryFileSystem {
             });
         }
 
-        if path != Utf8Path::new("/") {
+        let root = Utf8Path::new("/");
+        if path != root {
             // Ensure the root path always exists.
             // Deleting other files is fine.
             let _ = files.remove(path);
         }
 
         // Remove any files in the directory
-        while let Some(file) = files.keys().find(|file| file.starts_with(path)) {
+        while let Some(file) = files
+            .keys()
+            .find(|file| file.as_path() != root && file.starts_with(path))
+        {
             let file = file.clone();
             let _ = files.remove(&file);
         }
@@ -449,6 +453,18 @@ fn test_empty_in_memory_fs_has_root() {
     let imfs = InMemoryFileSystem::new();
 
     assert!(imfs.exists(Utf8Path::new("/")));
+}
+
+#[test]
+fn test_cannot_remove_root_from_in_memory_fs() -> Result<(), Error> {
+    let imfs = InMemoryFileSystem::new();
+    imfs.write(&Utf8PathBuf::from("/a/b/c.txt"), "a")?;
+    imfs.delete_directory(Utf8Path::new("/"))?;
+
+    assert!(!imfs.exists(Utf8Path::new("/a/b/c.txt")));
+    assert!(imfs.exists(Utf8Path::new("/")));
+
+    Ok(())
 }
 
 #[test]
