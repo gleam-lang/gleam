@@ -378,6 +378,14 @@
   no arguments.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the parser would incorrectly parse a generic type
+  constructor with no arguments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where the parser would incorrectly parse a generic type definition
+  with no arguments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Fixed a bug where the language server wouldn't show hints when hovering over
   the tail of a list.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
