@@ -280,7 +280,12 @@ impl Type {
                 inferred_variant, ..
             } => *inferred_variant = None,
             Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
-            Type::Fn { .. } | Type::Tuple { .. } => {}
+            Type::Tuple { elems } => {
+                for element in elems {
+                    Arc::make_mut(element).generalise_custom_type_variant();
+                }
+            }
+            Type::Fn { .. } => {}
         }
     }
 
