@@ -153,6 +153,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/obmarg">Graeme Coupar</a> -
   <a href="https://github.com/grottohub">grotto</a> -
   <a href="https://github.com/nirev">Guilherme de Maio</a> -
+  <a href="https://github.com/guillheu">Guillaume Heu</a> -
   <a href="https://github.com/ghivert">Guillaume Hivert</a> -
   <a href="https://github.com/hammad-r-javed">Hammad Javed</a> -
   <a href="https://github.com/kwando">Hannes Nevalainen</a> -
@@ -315,6 +316,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/soulsam480">sambit</a> -
   <a href="https://github.com/samifouad">Sami Fouad</a> -
   <a href="https://github.com/bkspace">Sammy Isseyegh</a> -
+  <a href="https://github.com/mrgleam">Santi Lertsumran</a> -
   <a href="https://github.com/castletaste">Savva</a> -
   <a href="https://github.com/sasa1977">Saša Jurić</a> -
   <a href="https://github.com/scotttrinh">Scott Trinh</a> -
