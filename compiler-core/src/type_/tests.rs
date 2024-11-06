@@ -2143,6 +2143,28 @@ pub fn fun(x) {
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/3797
+fn type_unification_removes_inferred_variant_in_tuples() {
+    assert_module_error!(
+        r#"
+type Either(a, b) {
+  Left(value: a)
+  Right(value: b)
+}
+
+fn a_or_b(_first: value, second: value) -> value {
+  second
+}
+
+pub fn main() {
+  let #(right) = a_or_b(#(Left(5)), #(Right("hello")))
+  Left(..right, inner: 10)
+}
+"#
+    );
+}
+
+#[test]
 fn module_constants() {
     assert_module_infer!(
         "
