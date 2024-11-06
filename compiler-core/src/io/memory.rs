@@ -19,13 +19,25 @@ use camino::{Utf8Path, Utf8PathBuf};
 ///
 /// Not thread safe. The compiler is single threaded, so that's OK.
 ///
-/// Only supports absolute paths. Additionally, the filesystem is fully empty
-/// until the first file is created, so, in particular, the root directory
-/// ("/") is not always guaranteed to exist.
+/// Only supports absolute paths. The root directory ("/") is always guaranteed
+/// to exist.
 ///
-#[derive(Clone, Default, Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
     files: Rc<RefCell<HashMap<Utf8PathBuf, InMemoryFile>>>,
+}
+
+impl Default for InMemoryFileSystem {
+    fn default() -> Self {
+        let mut files = HashMap::new();
+
+        // Ensure root directory always exists.
+        let _ = files.insert(Utf8PathBuf::from("/"), InMemoryFile::directory());
+
+        Self {
+            files: Rc::new(RefCell::new(files)),
+        }
+    }
 }
 
 impl InMemoryFileSystem {
@@ -110,7 +122,11 @@ impl FileSystemWriter for InMemoryFileSystem {
             });
         }
 
-        let _ = files.remove(path);
+        if path != Utf8Path::new("/") {
+            // Ensure the root path always exists.
+            // Deleting other files is fine.
+            let _ = files.remove(path);
+        }
 
         // Remove any files in the directory
         while let Some(file) = files.keys().find(|file| file.starts_with(path)) {
@@ -426,6 +442,13 @@ impl BeamCompiler for InMemoryFileSystem {
     ) -> Result<(), Error> {
         Ok(()) // Always succeed.
     }
+}
+
+#[test]
+fn test_empty_in_memory_fs_has_root() {
+    let imfs = InMemoryFileSystem::new();
+
+    assert!(imfs.exists(Utf8Path::new("/")));
 }
 
 #[test]
