@@ -1946,14 +1946,14 @@ specify all fields explicitly instead of using the record update syntax.");
                                 }),
                             }
                         },
-                        UnsafeRecordUpdateReason::IncompatibleFieldTypes {expected_field_type, spread_field_type, spread_variant, field_name, ..} => {
+                        UnsafeRecordUpdateReason::IncompatibleFieldTypes {expected_field_type, record_field_type, record_variant, field_name, ..} => {
                             let mut printer = Printer::new(names);
                             let expected_field_type = printer.print_type(expected_field_type);
-                            let spread_field_type = printer.print_type(spread_field_type);
-                            let spread_variant = printer.print_type(spread_variant);
-                            let text = wrap_format!("The `{field_name}` field of this value is a `{spread_field_type}`, but the arguments given to the record update indicate that it should be a `{expected_field_type}`.
+                            let record_field_type = printer.print_type(record_field_type);
+                            let record_variant = printer.print_type(record_variant);
+                            let text = wrap_format!("The `{field_name}` field of this value is a `{record_field_type}`, but the arguments given to the record update indicate that it should be a `{expected_field_type}`.
 
-Note: If the same type variable is used for multiple fields, all those fields need to be updated at the same time.");
+Note: If the same type variable is used for multiple fields, all those fields need to be updated at the same time if their type changes.");
 
                             Diagnostic {
                                 title: "Incomplete record update".into(),
@@ -1962,7 +1962,7 @@ Note: If the same type variable is used for multiple fields, all those fields ne
                                 level: Level::Error,
                                 location: Some(Location {
                                     label: Label {
-                                        text: Some(format!("This is a `{spread_variant}`")),
+                                        text: Some(format!("This is a `{record_variant}`")),
                                         span: *location,
                                     },
                                     path: path.clone(),

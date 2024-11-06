@@ -24,4 +24,4 @@ The `b` field of this value is a `a`, but the arguments given to the record
 update indicate that it should be a `Int`.
 
 Note: If the same type variable is used for multiple fields, all those
-fields need to be updated at the same time.
+fields need to be updated at the same time if their type changes.
