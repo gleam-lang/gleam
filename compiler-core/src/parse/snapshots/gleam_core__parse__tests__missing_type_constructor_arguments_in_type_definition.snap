@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub type A() {\n  A(Int)\n}\n"
+---
+----- SOURCE CODE
+
+pub type A() {
+  A(Int)
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:11
+  │
+2 │ pub type A() {
+  │           ^^ I was expecting generic parameters here
+
+A generic type must have at least a generic parameter.
+Hint: If a type is not generic you should omit the `()`.

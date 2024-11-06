@@ -15,7 +15,7 @@ insert_final_newline = true
 indent_style = space
 indent_size = 2
 
-[*.{rs, gleam, erl, hrl, ex, mjs, js, ts, sh}]
+[*.{gleam, erl, hrl, ex, mjs, js, ts, sh}]
 max_line_length = 80
 
 [*.{rs, .erl, .hrl}]

@@ -316,6 +316,17 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 "I was expecting arguments here",
                 vec!["A record must be passed arguments when constructed.".into()],
             ),
+            ParseErrorType::TypeConstructorNoArguments => (
+                "I was expecting arguments here",
+                vec!["A type constructor must be passed arguments.".into()],
+            ),
+            ParseErrorType::TypeDefinitionNoArguments => (
+                "I was expecting generic parameters here",
+                vec![
+                    "A generic type must have at least a generic parameter.".into(),
+                    "Hint: If a type is not generic you should omit the `()`.".into(),
+                ],
+            ),
         }
     }
 }
@@ -385,6 +396,8 @@ pub enum ParseErrorType {
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
     ConstantRecordConstructorNoArguments, // const x = Record()
+    TypeConstructorNoArguments,           // let a : Int()
+    TypeDefinitionNoArguments,            // pub type Wibble() { ... }
 }
 
 impl LexicalError {
