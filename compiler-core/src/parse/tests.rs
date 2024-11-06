@@ -1548,3 +1548,29 @@ const a = A()
 "
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3796
+#[test]
+fn missing_type_constructor_arguments_in_type_definition() {
+    assert_module_error!(
+        "
+pub type A() {
+  A(Int)
+}
+"
+    );
+}
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_1() {
+    assert_module_error!("pub fn main() -> Int() {}");
+}
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_2() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Int() = todo
+}"
+    );
+}

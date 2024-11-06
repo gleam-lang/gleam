@@ -2215,10 +2215,16 @@ where
         &mut self,
     ) -> Result<(u32, EcoString, Vec<SpannedString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
-        if self.maybe_one(&Token::LeftParen).is_some() {
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let args =
                 Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
             let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
+            if args.is_empty() {
+                return parse_error(
+                    ParseErrorType::TypeDefinitionNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
+            }
             let args2 = args
                 .into_iter()
                 .map(|(start, name, end)| (SrcSpan { start, end }, name))
@@ -2408,9 +2414,15 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
-        if self.maybe_one(&Token::LeftParen).is_some() {
+        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
             let args = self.parse_types()?;
             let (_, par_e) = self.expect_one(&Token::RightParen)?;
+            if args.is_empty() {
+                return parse_error(
+                    ParseErrorType::TypeConstructorNoArguments,
+                    SrcSpan::new(par_s, par_e),
+                );
+            }
             Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end: par_e },
                 module,
