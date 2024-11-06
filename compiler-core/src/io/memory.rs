@@ -19,7 +19,9 @@ use camino::{Utf8Path, Utf8PathBuf};
 ///
 /// Not thread safe. The compiler is single threaded, so that's OK.
 ///
-/// Only supports absolute paths.
+/// Only supports absolute paths. Additionally, the filesystem is fully empty
+/// until the first file is created, so, in particular, the root directory
+/// ("/") is not always guaranteed to exist.
 ///
 #[derive(Clone, Default, Debug, PartialEq, Eq)]
 pub struct InMemoryFileSystem {
