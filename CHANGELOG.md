@@ -152,7 +152,7 @@
 
   pub fn main() {
     // We know `charlie` is a `Dog`...
-    let charlie = Doc("Charles", 1000)
+    let charlie = Dog("Charles", 1000)
 
     // ...so you do not need to match on the `Turtle` variant
     case charlie {
@@ -168,7 +168,7 @@
   ```gleam
   pub fn rename(pet: Pet, to name: String) -> Pet {
     case pet {
-      Dog(..) -> Dog(..dog, name:)
+      Dog(..) -> Dog(..pet, name:)
       Turtle(..) -> Turtle(..pet, name:, times_renamed: pet.times_renamed + 1)
     }
   }
