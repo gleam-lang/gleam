@@ -2224,7 +2224,6 @@ where
                         let documentation = p.take_documentation(c_s);
                         let (args, args_e) = Parser::parse_type_constructor_args(p)?;
                         let end = args_e.max(c_e);
-                        // let is_deprecated = attributes.deprecated.is_deprecated();
                         Ok(Some(RecordConstructor {
                             location: SrcSpan { start: c_s, end },
                             name_location: SrcSpan {
