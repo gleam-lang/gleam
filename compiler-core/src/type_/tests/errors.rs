@@ -2736,6 +2736,20 @@ pub fn main() {
 }
 
 #[test]
+fn suggest_wrapping_a_value_into_ok_with_generic_type() {
+    assert_module_error!(
+        "
+pub fn first(list: List(a)) -> Result(a, Nil) {
+  case list {
+    [] -> Error(Nil)
+    [first, ..rest] -> first
+  }
+}
+"
+    );
+}
+
+#[test]
 fn suggest_wrapping_a_value_into_ok_if_types_match_with_multiline_result_in_block() {
     assert_module_error!(
         "
