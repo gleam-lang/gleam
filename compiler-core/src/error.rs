@@ -2009,6 +2009,11 @@ But function expects:
                     text.push_str(&printer.print_type(given));
 
                     let (main_message_location, main_message_text, extra_labels) = match situation {
+                        // When the mismatch error comes from a case clause we want to highlight the
+                        // entire branch (pattern included) when reporting the error; in addition,
+                        // if the error could be resolved just by wrapping the value in an `Ok`
+                        // or `Error` we want to add an additional label with this hint below the
+                        // offending value.
                         Some(UnifyErrorSituation::CaseClauseMismatch { clause_location }) =>
                             match hint_wrap_value_into_result(expected, given) {
                                 None => (clause_location, None, vec![]),
@@ -2026,6 +2031,8 @@ But function expects:
                                     ],
                                 )
                             },
+                        // In all other cases we just highlight the offending expression, optionally
+                        // adding the wrapping hint if it makes sense.
                         Some(_) | None =>
                             (location, hint_wrap_value_into_result(expected, given), vec![]),
                     };
