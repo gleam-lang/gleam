@@ -2795,3 +2795,57 @@ fn wibble(arg: Result(Int, String)) { todo }
 "
     );
 }
+
+#[test]
+fn suggest_wrapping_a_function_return_value_in_ok() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  1
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_function_return_value_in_error() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  True
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_use_returned_value_in_ok() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  1
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_use_returned_value_in_error() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  False
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+"
+    );
+}
