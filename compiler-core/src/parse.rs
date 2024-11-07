@@ -949,10 +949,11 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
-        let kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
+        let mut kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
             _ = self.next_tok();
             AssignmentKind::Assert {
                 location: SrcSpan::new(assert_start, assert_end),
+                message: None,
             }
         } else {
             AssignmentKind::Let
@@ -985,11 +986,22 @@ where
                 },
             },
         })?;
+
+        let mut end = value.location().end;
+
+        match &mut kind {
+            AssignmentKind::Let | AssignmentKind::Generated => {}
+            AssignmentKind::Assert { message, .. } => {
+                if self.maybe_one(&Token::As).is_some() {
+                    let message_expression = self.expect_expression_unit()?;
+                    end = message_expression.location().end;
+                    *message = Some(Box::new(message_expression));
+                }
+            }
+        }
+
         Ok(Statement::Assignment(Assignment {
-            location: SrcSpan {
-                start,
-                end: value.location().end,
-            },
+            location: SrcSpan { start, end },
             value: Box::new(value),
             pattern,
             annotation,
