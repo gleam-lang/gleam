@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() -> Result(Int, Bool) {\n  True\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() -> Result(Int, Bool) {
+  True
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:3
+  │
+3 │   True
+  │   ^^^^ Did you mean to wrap this in an `Error`?
+
+The type of this returned value doesn't match the return type
+annotation of this function.
+
+Expected type:
+
+    Result(Int, Bool)
+
+Found type:
+
+    Bool
