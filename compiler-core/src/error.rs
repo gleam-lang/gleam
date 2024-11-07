@@ -4049,10 +4049,9 @@ fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Optio
     let expected = collapse_links(expected.clone());
     let (expected_ok_type, expected_error_type) = expected.result_types()?;
 
-    let given = collapse_links(given.clone());
-    if collapse_links(expected_ok_type) == given {
+    if given.same_as(expected_ok_type.as_ref()) {
         Some("Did you mean to wrap this in an `Ok`?".into())
-    } else if collapse_links(expected_error_type) == given {
+    } else if given.same_as(expected_error_type.as_ref()) {
         Some("Did you mean to wrap this in an `Error`?".into())
     } else {
         None
@@ -4067,8 +4066,7 @@ fn hint_unwrap_result(
     // If the got type is `Result(a, _)` and the expected one is
     // `a` then we can display the hint.
     let wrapped_type = given.result_ok_type()?;
-    let expected = collapse_links(expected.clone());
-    if collapse_links(wrapped_type) != expected {
+    if !wrapped_type.same_as(&expected) {
         None
     } else {
         Some(wrap_format!(
