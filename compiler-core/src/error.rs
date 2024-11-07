@@ -4047,9 +4047,7 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 
 fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
     let expected = collapse_links(expected.clone());
-    let Some((expected_ok_type, expected_error_type)) = expected.result_types() else {
-        return None;
-    };
+    let (expected_ok_type, expected_error_type) = expected.result_types()?;
 
     let given = collapse_links(given.clone());
     if collapse_links(expected_ok_type) == given {
