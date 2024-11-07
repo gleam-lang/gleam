@@ -338,8 +338,6 @@ impl TypedExpr {
         matches!(
             self,
             Self::Int{ value, .. } | Self::Float { value, .. } if NON_ZERO.get_or_init(||
-
-
                 Regex::new(r"[1-9]").expect("NON_ZERO regex")).is_match(value)
         )
     }

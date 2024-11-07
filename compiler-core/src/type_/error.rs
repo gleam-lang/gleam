@@ -1340,12 +1340,16 @@ fn flip_unify_error_test() {
         UnifyError::CouldNotUnify {
             expected: crate::type_::int(),
             given: crate::type_::float(),
-            situation: Some(UnifyErrorSituation::CaseClauseMismatch),
+            situation: Some(UnifyErrorSituation::CaseClauseMismatch {
+                clause_location: SrcSpan::default()
+            }),
         },
         flip_unify_error(UnifyError::CouldNotUnify {
             expected: crate::type_::float(),
             given: crate::type_::int(),
-            situation: Some(UnifyErrorSituation::CaseClauseMismatch),
+            situation: Some(UnifyErrorSituation::CaseClauseMismatch {
+                clause_location: SrcSpan::default()
+            }),
         })
     );
 }
@@ -1375,7 +1379,9 @@ fn unify_enclosed_type_test() {
         Err(UnifyError::CouldNotUnify {
             expected: crate::type_::int(),
             given: crate::type_::float(),
-            situation: Some(UnifyErrorSituation::CaseClauseMismatch)
+            situation: Some(UnifyErrorSituation::CaseClauseMismatch {
+                clause_location: SrcSpan::default()
+            })
         }),
         unify_enclosed_type(
             crate::type_::int(),
@@ -1383,7 +1389,9 @@ fn unify_enclosed_type_test() {
             Err(UnifyError::CouldNotUnify {
                 expected: crate::type_::string(),
                 given: crate::type_::bits(),
-                situation: Some(UnifyErrorSituation::CaseClauseMismatch)
+                situation: Some(UnifyErrorSituation::CaseClauseMismatch {
+                    clause_location: SrcSpan::default()
+                })
             })
         )
     );
@@ -1448,7 +1456,9 @@ pub fn unify_wrong_returns(
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum UnifyErrorSituation {
     /// Clauses in a case expression were found to return different types.
-    CaseClauseMismatch,
+    CaseClauseMismatch {
+        clause_location: SrcSpan,
+    },
 
     /// A function was found to return a value that did not match its return
     /// annotation.
@@ -1491,7 +1501,7 @@ pub enum FunctionsMismatchReason {
 impl UnifyErrorSituation {
     pub fn description(&self) -> Option<&'static str> {
         match self {
-            Self::CaseClauseMismatch => Some(
+            Self::CaseClauseMismatch { clause_location: _ } => Some(
                 "This case clause was found to return a different type than the previous
 one, but all case clauses must return the same type.",
             ),
@@ -1556,8 +1566,8 @@ impl UnifyError {
         }
     }
 
-    pub fn case_clause_mismatch(self) -> Self {
-        self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch)
+    pub fn case_clause_mismatch(self, clause_location: SrcSpan) -> Self {
+        self.with_unify_error_situation(UnifyErrorSituation::CaseClauseMismatch { clause_location })
     }
 
     pub fn list_element_mismatch(self) -> Self {

@@ -2007,6 +2007,29 @@ But function expects:
                     text.push_str(&printer.print_type(expected));
                     text.push_str("\n\nFound type:\n\n    ");
                     text.push_str(&printer.print_type(given));
+
+                    let (main_message_location, main_message_text, extra_labels) = match situation {
+                        Some(UnifyErrorSituation::CaseClauseMismatch { clause_location }) =>
+                            match hint_wrap_value_into_result(expected, given) {
+                                None => (clause_location, None, vec![]),
+                                Some(hint) => (
+                                    clause_location,
+                                    None,
+                                    vec![
+                                        ExtraLabel {
+                                            src_info: None,
+                                            label: Label {
+                                                text: Some(hint),
+                                                span: *location,
+                                            }
+                                        },
+                                    ],
+                                )
+                            },
+                        Some(_) | None =>
+                            (location, hint_wrap_value_into_result(expected, given), vec![]),
+                    };
+
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
@@ -2014,12 +2037,12 @@ But function expects:
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: hint_wrap_value_into_result(expected, given),
-                                span: *location,
+                                text: main_message_text,
+                                span: *main_message_location,
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![],
+                            extra_labels,
                         }),
                     }
                 }
@@ -4016,15 +4039,15 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
 }
 
 fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
+    let expected = collapse_links(expected.clone());
     let Some((expected_ok_type, expected_error_type)) = expected.result_types() else {
         return None;
     };
 
-    let expected_ok_type = collapse_links(expected_ok_type);
     let given = collapse_links(given.clone());
-    if expected_ok_type == given {
+    if collapse_links(expected_ok_type) == given {
         Some("Did you mean to wrap this in an `Ok`?".into())
-    } else if expected_error_type == given {
+    } else if collapse_links(expected_error_type) == given {
         Some("Did you mean to wrap this in an `Error`?".into())
     } else {
         None
