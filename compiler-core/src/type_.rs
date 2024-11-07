@@ -285,7 +285,12 @@ impl Type {
                     Arc::make_mut(element).generalise_custom_type_variant();
                 }
             }
-            Type::Fn { .. } => {}
+            Type::Fn { args, retrn } => {
+                for argument in args {
+                    Arc::make_mut(argument).generalise_custom_type_variant();
+                }
+                Arc::make_mut(retrn).generalise_custom_type_variant();
+            }
         }
     }
 
