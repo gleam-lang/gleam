@@ -603,7 +603,7 @@ impl<'module> Generator<'module> {
         };
 
         let compiled =
-            self.pattern_into_assignment_doc(compiled, subject, pattern.location(), *kind)?;
+            self.pattern_into_assignment_doc(compiled, subject, pattern.location(), kind)?;
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let doc = match subject_assignment {
@@ -719,13 +719,18 @@ impl<'module> Generator<'module> {
         Ok(docvec![subject_assignments, doc].force_break())
     }
 
-    fn assignment_no_match<'a>(&mut self, location: SrcSpan, subject: Document<'a>) -> Output<'a> {
-        Ok(self.throw_error(
-            "let_assert",
-            &string("Pattern match failed, no pattern matched the value."),
-            location,
-            [("value", subject)],
-        ))
+    fn assignment_no_match<'a>(
+        &mut self,
+        location: SrcSpan,
+        subject: Document<'a>,
+        message: Option<&'a TypedExpr>,
+    ) -> Output<'a> {
+        let message = match message {
+            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
+            None => string("Pattern match failed, no pattern matched the value."),
+        };
+
+        Ok(self.throw_error("let_assert", &message, location, [("value", subject)]))
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
@@ -1069,7 +1074,7 @@ impl<'module> Generator<'module> {
         compiled_pattern: CompiledPattern<'a>,
         subject: Document<'a>,
         location: SrcSpan,
-        kind: AssignmentKind,
+        kind: &'a AssignmentKind<TypedExpr>,
     ) -> Output<'a> {
         let any_assignments = !compiled_pattern.assignments.is_empty();
         let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
@@ -1077,17 +1082,22 @@ impl<'module> Generator<'module> {
         // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
         // provided that does not get matched the code needs to throw an exception, which is done
         // by the pattern_checks_or_throw_doc method.
-        if kind.is_assert() && !compiled_pattern.checks.is_empty() {
-            let checks =
-                self.pattern_checks_or_throw_doc(compiled_pattern.checks, subject, location)?;
+        match kind {
+            AssignmentKind::Assert { message, .. } if !compiled_pattern.checks.is_empty() => {
+                let checks = self.pattern_checks_or_throw_doc(
+                    compiled_pattern.checks,
+                    subject,
+                    location,
+                    message.as_deref(),
+                )?;
 
-            if !any_assignments {
-                Ok(checks)
-            } else {
-                Ok(docvec![checks, line(), assignments])
+                if !any_assignments {
+                    Ok(checks)
+                } else {
+                    Ok(docvec![checks, line(), assignments])
+                }
             }
-        } else {
-            Ok(assignments)
+            _ => Ok(assignments),
         }
     }
 
@@ -1096,6 +1106,7 @@ impl<'module> Generator<'module> {
         checks: Vec<pattern::Check<'a>>,
         subject: Document<'a>,
         location: SrcSpan,
+        message: Option<&'a TypedExpr>,
     ) -> Output<'a> {
         let checks = self.pattern_checks_doc(checks, false);
         Ok(docvec![
@@ -1103,7 +1114,11 @@ impl<'module> Generator<'module> {
             docvec![break_("", ""), checks].nest(INDENT),
             break_("", ""),
             ") {",
-            docvec![line(), self.assignment_no_match(location, subject)?].nest(INDENT),
+            docvec![
+                line(),
+                self.assignment_no_match(location, subject, message)?
+            ]
+            .nest(INDENT),
             line(),
             "}",
         ]
