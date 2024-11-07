@@ -897,7 +897,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         // if any constructor record/varient is deprecated while
-        // the type is deprecated as a whole--is considered an error.
+        // the type is deprecated as a whole that is considered an error.
         if deprecation.is_deprecated()
             && !constructors.is_empty()
             && constructors
