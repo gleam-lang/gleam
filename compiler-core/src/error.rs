@@ -4066,7 +4066,7 @@ fn hint_unwrap_result(
     // If the got type is `Result(a, _)` and the expected one is
     // `a` then we can display the hint.
     let wrapped_type = given.result_ok_type()?;
-    if !wrapped_type.same_as(&expected) {
+    if !wrapped_type.same_as(expected) {
         None
     } else {
         Some(wrap_format!(
@@ -4076,7 +4076,7 @@ fn hint_unwrap_result(
       Ok(value) -> todo
       Error(error) -> todo
     }}",
-            printer.print_type(&expected),
+            printer.print_type(expected),
             printer.print_type(given),
         ))
     }
