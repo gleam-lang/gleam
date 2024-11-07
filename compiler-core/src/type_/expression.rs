@@ -1485,9 +1485,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let typed_clause = self.infer_clause(clause, &typed_subjects);
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
-            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
-                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))
-            {
+            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_()).map_err(|e| {
+                e.case_clause_mismatch(typed_clause.location)
+                    .into_error(typed_clause.then.type_defining_location())
+            }) {
                 self.problems.error(e);
             }
             typed_clauses.push(typed_clause);

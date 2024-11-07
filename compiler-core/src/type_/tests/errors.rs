@@ -2551,8 +2551,7 @@ pub fn main(wibble: wibble.Wibble) {
   case wibble {
     wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
     _ -> panic
-
-    }
+  }
 }
 "
     );
@@ -2700,7 +2699,6 @@ pub fn main() {
   case todo {
     1 -> Ok(2)
     _ -> 1
-
   }
 }
 "
@@ -2716,6 +2714,43 @@ pub fn main() {
 }
 
 fn wibble(arg: Result(Int, String)) { todo }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_with_block() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> {
+      todo
+      1
+    }
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_with_multiline_result_in_block() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> {
+      todo
+      1
+      |> add_1
+    }
+  }
+}
+
+fn add_1(n: Int) { n + 1 }
 "
     );
 }
