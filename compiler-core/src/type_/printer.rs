@@ -3,7 +3,7 @@ use ecow::EcoString;
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{collapse_links, Type, TypeVar};
+use crate::type_::{Type, TypeVar};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -126,9 +126,7 @@ fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool 
     arguments
         .iter()
         .zip(parameters)
-        .all(|(argument, parameter)| {
-            collapse_links(argument.clone()) == collapse_links(parameter.clone())
-        })
+        .all(|(argument, parameter)| argument.same_as(parameter))
 }
 
 impl Names {
