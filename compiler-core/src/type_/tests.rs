@@ -2147,7 +2147,7 @@ pub fn fun(x) {
 fn type_unification_removes_inferred_variant_in_tuples() {
     assert_module_error!(
         r#"
-type Either(a, b) {
+pub type Either(a, b) {
   Left(value: a)
   Right(value: b)
 }
@@ -2158,7 +2158,55 @@ fn a_or_b(_first: value, second: value) -> value {
 
 pub fn main() {
   let #(right) = a_or_b(#(Left(5)), #(Right("hello")))
-  Left(..right, inner: 10)
+  Left(..right, value: 10)
+}
+"#
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3797
+fn type_unification_removes_inferred_variant_in_functions() {
+    assert_module_error!(
+        r#"
+pub type Either(a, b) {
+  Left(value: a)
+  Right(value: b)
+}
+
+fn a_or_b(_first: value, second: value) -> value {
+  second
+}
+
+pub fn main() {
+  let func = a_or_b(fn() { Left(1) }, fn() { Right("hello") })
+  Left(..func(), value: 10)
+}
+"#
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3797
+fn type_unification_removes_inferred_variant_in_nested_type() {
+    assert_module_error!(
+        r#"
+pub type Box(a) {
+  Box(inner: a)
+}
+
+pub type Either(a, b) {
+  Left(value: a)
+  Right(value: b)
+}
+
+fn a_or_b(_first: value, second: value) -> value {
+  second
+}
+
+pub fn main() {
+  let Box(inner) = a_or_b(Box(Left(1)), Box(Right("hello")))
+  Left(..inner, value: 10)
 }
 "#
     );
