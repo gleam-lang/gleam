@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() -> Result(Int, Bool) {\n  use <- want_result\n  1\n}\n\npub fn want_result(wibble: fn() -> Result(Int, Bool)) {\n  todo\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  1
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   1
+  │   ^ Did you mean to wrap this in an `Ok`?
+
+Expected type:
+
+    Result(Int, Bool)
+
+Found type:
+
+    Int
