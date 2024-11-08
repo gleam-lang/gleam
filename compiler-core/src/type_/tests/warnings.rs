@@ -1429,8 +1429,8 @@ pub fn main() {
 
 #[test]
 fn calling_function_from_other_module_is_not_marked_unused() {
-    assert_warning!(
-        ("wibble", "pub fn println(a) { Nil }"),
+    assert_no_warnings!(
+        ("wibble", "wibble", "pub fn println(a) { Nil }"),
         r#"
 import wibble
 
