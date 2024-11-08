@@ -544,16 +544,10 @@ impl TypedExpr {
                 value.is_pure_value_constructor()
             }
 
-            // A module select is a pure value constructor only if it is a
-            // record, in all other cases it could be a side-effecting function.
-            // For example `option.Some(1)` is pure but `io.println("a")` is
-            // not.
-            TypedExpr::ModuleSelect { constructor, .. } => match constructor {
-                ModuleValueConstructor::Record { .. } => true,
-                ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
-                    false
-                }
-            },
+            // Just selecting a value from a module never has any effects. The
+            // selected thing might be a function but it has no side effects as
+            // long as it's not called!
+            TypedExpr::ModuleSelect { .. } => true,
 
             // A pipeline is a pure value constructor if its last step is a record builder.
             // For example `wibble() |> wobble() |> Ok`
