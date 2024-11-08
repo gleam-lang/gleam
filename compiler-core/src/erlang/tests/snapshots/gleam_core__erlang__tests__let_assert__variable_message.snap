@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/erlang/tests/let_assert.rs
+expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as message\n  inner\n}\n"
+---
+----- SOURCE CODE
+
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as message
+  inner
+}
+
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([expect/2]).
+
+-file("/root/project/test/my/mod.gleam", 2).
+-spec expect({ok, L} | {error, any()}, binary()) -> L.
+expect(Value, Message) ->
+    {ok, Inner} = case Value of
+        {ok, _} -> Value;
+        _assert_fail ->
+            erlang:error(#{gleam_error => let_assert,
+                        message => Message,
+                        value => _assert_fail,
+                        module => <<"my/mod"/utf8>>,
+                        function => <<"expect"/utf8>>,
+                        line => 3})
+    end,
+    Inner.
