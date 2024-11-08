@@ -1,4 +1,4 @@
-use crate::assert_infer;
+use crate::{assert_error, assert_infer};
 
 #[test]
 fn empty_list() {
@@ -88,4 +88,20 @@ fn expression2() {
 #[test]
 fn expression3() {
     assert_infer!("let assert 1 = 1", "Int");
+}
+
+#[test]
+fn message() {
+    assert_infer!(
+        r#"
+let assert Ok(inner) = Ok(10) as "This clearly never fails"
+inner
+"#,
+        "Int"
+    );
+}
+
+#[test]
+fn non_string_message() {
+    assert_error!("let assert 1 = 2 as 3");
 }

@@ -45,6 +45,30 @@ fn variable_rewrites() {
     );
 }
 
+#[test]
+fn message() {
+    assert_erl!(
+        r#"
+pub fn unwrap_or_panic(value) {
+  let assert Ok(inner) = value as "Oops, there was an error"
+  inner
+}
+"#
+    );
+}
+
+#[test]
+fn variable_message() {
+    assert_erl!(
+        r#"
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as message
+  inner
+}
+"#
+    );
+}
+
 // TODO: patterns that are just vars don't render a case expression
 // #[test]
 // fn just_pattern() {

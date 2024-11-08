@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as message\n  inner\n}\n"
+---
+----- SOURCE CODE
+
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as message
+  inner
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError } from "../gleam.mjs";
+
+export function expect(value, message) {
+  if (!value.isOk()) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "expect",
+      message,
+      { value: value }
+    )
+  }
+  let inner = value[0];
+  return inner;
+}
