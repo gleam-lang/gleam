@@ -64,13 +64,13 @@ impl InMemoryFileSystem {
             .collect()
     }
 
-    /// All paths (files and directories) currently in the filesystem,
-    /// excluding the filesystem root ("/").
-    pub fn subpaths(&self) -> Vec<Utf8PathBuf> {
+    /// All files currently in the filesystem (directories are not included).
+    pub fn files(&self) -> Vec<Utf8PathBuf> {
         self.files
             .borrow()
-            .keys()
-            .filter(|p| p.as_path() != Utf8Path::new("/"))
+            .iter()
+            .filter(|(_, f)| !f.is_directory())
+            .map(|(path, _)| path)
             .cloned()
             .collect()
     }
@@ -468,25 +468,22 @@ fn test_cannot_remove_root_from_in_memory_fs() -> Result<(), Error> {
 }
 
 #[test]
-fn test_subpaths_exclude_root() -> Result<(), Error> {
+fn test_files() -> Result<(), Error> {
     let imfs = InMemoryFileSystem::new();
     imfs.write(&Utf8PathBuf::from("/a/b/c.txt"), "a")?;
     imfs.write(&Utf8PathBuf::from("/d/e.txt"), "a")?;
 
-    let mut subpaths = imfs.subpaths();
+    let mut files = imfs.files();
 
     // Sort for test determinism due to hash map usage.
-    subpaths.sort_unstable();
+    files.sort_unstable();
 
     assert_eq!(
         vec![
-            Utf8PathBuf::from("/a"),
-            Utf8PathBuf::from("/a/b"),
             Utf8PathBuf::from("/a/b/c.txt"),
-            Utf8PathBuf::from("/d"),
             Utf8PathBuf::from("/d/e.txt"),
         ],
-        subpaths
+        files
     );
 
     Ok(())
