@@ -1375,7 +1375,67 @@ fn unused_module_select_constructor() {
 import wibble
 
 pub fn main() {
+  wibble.Wibble
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_module_select_constructor_call() {
+    assert_warning!(
+        ("wibble", "pub type Wibble { Wibble(Int) }"),
+        r#"
+import wibble
+
+pub fn main() {
   wibble.Wibble(1)
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_module_select_function() {
+    assert_warning!(
+        ("wibble", "pub fn println(a) { Nil }"),
+        r#"
+import wibble
+
+pub fn main() {
+  wibble.println
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn unused_module_select_const() {
+    assert_warning!(
+        ("wibble", "pub const a = 1"),
+        r#"
+import wibble
+
+pub fn main() {
+  wibble.a
+  1
+}
+"#
+    );
+}
+
+#[test]
+fn calling_function_from_other_module_is_not_marked_unused() {
+    assert_warning!(
+        ("wibble", "pub fn println(a) { Nil }"),
+        r#"
+import wibble
+
+pub fn main() {
+  wibble.println("hello!")
   1
 }
 "#
