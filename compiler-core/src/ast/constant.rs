@@ -4,11 +4,13 @@ use crate::type_::{FieldMap, HasType};
 pub type TypedConstant = Constant<Arc<Type>, EcoString>;
 pub type UntypedConstant = Constant<(), ()>;
 
+// TODO: remove RecordTag paramter
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Constant<T, RecordTag> {
     Int {
         location: SrcSpan,
         value: EcoString,
+        int_value: BigInt,
     },
 
     Float {

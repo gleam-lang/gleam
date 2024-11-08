@@ -468,6 +468,36 @@ impl<'a> Environment<'a> {
         }
     }
 
+    pub fn get_type_variants_fields(
+        &self,
+        module: &EcoString,
+        name: &EcoString,
+    ) -> Vec<&EcoString> {
+        self.get_constructors_for_type(module, name)
+            .iter()
+            .flat_map(|c| &c.variants)
+            .filter_map(|variant| {
+                self.type_value_constructor_to_constructor(module, variant)?
+                    .variant
+                    .record_field_map()
+            })
+            .flat_map(|field_map| field_map.fields.keys())
+            .collect_vec()
+    }
+
+    fn type_value_constructor_to_constructor(
+        &self,
+        module: &EcoString,
+        variant: &TypeValueConstructor,
+    ) -> Option<&ValueConstructor> {
+        if *module == self.current_module {
+            self.scope.get(&variant.name)
+        } else {
+            let (_, module) = self.imported_modules.get(module)?;
+            module.get_public_value(&variant.name)
+        }
+    }
+
     pub fn insert_accessors(&mut self, type_name: EcoString, accessors: AccessorsMap) {
         let _ = self.accessors.insert(type_name, accessors);
     }
@@ -487,6 +517,7 @@ impl<'a> Environment<'a> {
                 package,
                 module,
                 args,
+                inferred_variant,
             } => {
                 let args = args
                     .iter()
@@ -498,6 +529,7 @@ impl<'a> Environment<'a> {
                     package: package.clone(),
                     module: module.clone(),
                     args,
+                    inferred_variant: *inferred_variant,
                 })
             }
 
@@ -724,6 +756,27 @@ impl<'a> Environment<'a> {
             .map(|(suggestion, _)| suggestion)
             .collect()
     }
+
+    pub fn type_variant_name(
+        &self,
+        type_module: &EcoString,
+        type_name: &EcoString,
+        variant_index: u16,
+    ) -> Option<&EcoString> {
+        let type_constructors = if type_module == &self.current_module {
+            &self.module_types_constructors
+        } else {
+            &self
+                .importable_modules
+                .get(type_module)?
+                .types_value_constructors
+        };
+
+        type_constructors
+            .get(type_name)
+            .and_then(|type_constructors| type_constructors.variants.get(variant_index as usize))
+            .map(|variant| &variant.name)
+    }
 }
 
 #[derive(Debug)]
@@ -782,7 +835,11 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
 
         return match action {
             Action::Link => {
-                *type_.borrow_mut() = TypeVar::Link { type_: t2 };
+                let mut t2 = t2.deref().clone();
+                t2.generalise_custom_type_variant();
+                *type_.borrow_mut() = TypeVar::Link {
+                    type_: Arc::new(t2),
+                };
                 Ok(())
             }
 

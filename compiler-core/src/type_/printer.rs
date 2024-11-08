@@ -3,7 +3,7 @@ use ecow::EcoString;
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{Type, TypeVar};
+use crate::type_::{collapse_links, Type, TypeVar};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -113,31 +113,22 @@ pub struct Names {
     /// - key:   `("wibble", "Wobble")`
     /// - value: `"Woo"`
     ///
-    local_value_constructors: HashMap<(EcoString, EcoString), EcoString>,
+    local_value_constructors: BiMap<(EcoString, EcoString), EcoString>,
+}
 
-    /// A map from local constructor names to the modules which they refer to.
-    /// This helps resolve cases like:
-    /// ```gleam
-    /// import wibble.{Wobble}
-    /// type Wibble { Wobble }
-    /// ```
-    /// Here, `Wobble` is shadowed, causing `Wobble` not to be valid syntax
-    /// for `wibble.Wobble`.
-    ///
-    /// Each key is the local name of the constructor, and the value is the module
-    /// for which the unqualified version is valid. In the above example,
-    /// it would result in
-    /// - key:   `"Wobble"`
-    /// - value: `"module"` (Whatever the current module is)
-    ///
-    /// But in this case:
-    /// ```gleam
-    /// import wibble.{Wobble as Wubble}
-    /// type Wibble { Wobble }
-    /// ```
-    /// No shadowing occurs, so this isn't needed.
-    ///
-    constructor_names: HashMap<EcoString, EcoString>,
+/// The `PartialEq` implementation for `Type` doesn't account for `TypeVar::Link`,
+/// so we implement an equality check that does account for it here.
+fn compare_arguments(arguments: &[Arc<Type>], parameters: &[Arc<Type>]) -> bool {
+    if arguments.len() != parameters.len() {
+        return false;
+    }
+
+    arguments
+        .iter()
+        .zip(parameters)
+        .all(|(argument, parameter)| {
+            collapse_links(argument.clone()) == collapse_links(parameter.clone())
+        })
 }
 
 impl Names {
@@ -147,7 +138,6 @@ impl Names {
             imported_modules: Default::default(),
             type_variables: Default::default(),
             local_value_constructors: Default::default(),
-            constructor_names: Default::default(),
         }
     }
 
@@ -164,12 +154,19 @@ impl Names {
             .insert((module_name, type_name), local_alias);
     }
 
-    pub fn type_in_scope(&mut self, local_alias: EcoString, type_: &Type) {
+    pub fn type_in_scope(
+        &mut self,
+        local_alias: EcoString,
+        type_: &Type,
+        parameters: &[Arc<Type>],
+    ) {
         match type_ {
-            Type::Named { module, name, .. } => {
+            Type::Named {
+                module, name, args, ..
+            } if compare_arguments(args, parameters) => {
                 self.named_type_in_scope(module.clone(), name.clone(), local_alias);
             }
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
+            Type::Named { .. } | Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => {
                 _ = self.local_types.remove_by_right(&local_alias);
             }
         }
@@ -223,10 +220,10 @@ impl Names {
         value_name: EcoString,
         local_alias: EcoString,
     ) {
+        _ = self.local_value_constructors.remove_by_right(&local_alias);
         _ = self
             .local_value_constructors
             .insert((module_name.clone(), value_name), local_alias.clone());
-        _ = self.constructor_names.insert(local_alias, module_name);
     }
 
     /// Get the name and optional module qualifier for a named constructor.
@@ -238,17 +235,8 @@ impl Names {
         let key: (EcoString, EcoString) = (module.clone(), name.clone());
 
         // There is a local name for this value, use that.
-        if let Some(name) = self.local_value_constructors.get(&key) {
-            // Only return unqualified syntax if the constructor is not shadowed,
-            // and unqualified syntax is valid.
-            if self
-                .constructor_names
-                .get(name)
-                .expect("Constructors must be added to both maps")
-                == module
-            {
-                return NameContextInformation::Unqualified(name.as_str());
-            }
+        if let Some(name) = self.local_value_constructors.get_by_left(&key) {
+            return NameContextInformation::Unqualified(name.as_str());
         }
 
         // This value is from a module that has been imported
@@ -455,6 +443,7 @@ fn test_local_type() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "Cat");
@@ -472,6 +461,7 @@ fn test_prelude_type() {
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "Int");
@@ -492,6 +482,7 @@ fn test_shadowed_prelude_type() {
         module: "gleam".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "gleam.Int");
@@ -540,6 +531,7 @@ fn test_tuple_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
+                inferred_variant: None,
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
@@ -547,6 +539,7 @@ fn test_tuple_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
+                inferred_variant: None,
             }),
         ],
     };
@@ -569,6 +562,7 @@ fn test_fn_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
+                inferred_variant: None,
             }),
             Arc::new(Type::Named {
                 name: "String".into(),
@@ -576,6 +570,7 @@ fn test_fn_type() {
                 module: "gleam".into(),
                 publicity: crate::ast::Publicity::Public,
                 package: "".into(),
+                inferred_variant: None,
             }),
         ],
         retrn: Arc::new(Type::Named {
@@ -584,6 +579,7 @@ fn test_fn_type() {
             module: "gleam".into(),
             publicity: crate::ast::Publicity::Public,
             package: "".into(),
+            inferred_variant: None,
         }),
     };
 
@@ -602,6 +598,7 @@ fn test_module_alias() {
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "animals.Cat");
@@ -625,6 +622,7 @@ fn test_type_alias_and_generics() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "Cat(one)");
@@ -648,6 +646,7 @@ fn test_unqualified_import_and_generic() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "C(one)");
@@ -663,6 +662,7 @@ fn nested_module() {
         module: "one/two/three".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "three.Cat");
@@ -686,6 +686,7 @@ fn test_unqualified_import_and_module_alias() {
         module: "mod1".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "C");
@@ -707,6 +708,7 @@ fn test_module_imports() {
         module: "mod".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     let typ1 = Type::Named {
@@ -715,6 +717,7 @@ fn test_module_imports() {
         module: "mod2".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     assert_eq!(printer.print_type(&type_), "animals.Cat");
@@ -743,6 +746,7 @@ fn test_multiple_generic_annotations() {
         module: "tigermodule".into(),
         publicity: crate::ast::Publicity::Public,
         package: "".into(),
+        inferred_variant: None,
     };
 
     let typ1 = Type::Var {

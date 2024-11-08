@@ -1,8 +1,14 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
-assertion_line: 214
 expression: "\n@external(erlang, \"one\", \"one\")\npub fn one(x: Int) -> Int\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "one", "one")
+pub fn one(x: Int) -> Int
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

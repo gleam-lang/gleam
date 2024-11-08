@@ -17,6 +17,7 @@ expression: "{ 1 { 1.0 2.0 } 3 }"
                             end: 3,
                         },
                         value: "1",
+                        int_value: 1,
                     },
                 ),
                 Expression(
@@ -54,6 +55,7 @@ expression: "{ 1 { 1.0 2.0 } 3 }"
                             end: 17,
                         },
                         value: "3",
+                        int_value: 3,
                     },
                 ),
             ],

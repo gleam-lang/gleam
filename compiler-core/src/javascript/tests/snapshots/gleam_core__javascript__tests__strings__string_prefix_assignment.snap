@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\npub fn go(x) {\n  case x {\n    \"Hello, \" as greeting <> name -> greeting\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    "Hello, " as greeting <> name -> greeting
+    _ -> "Unknown"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function go(x) {
   if (x.startsWith("Hello, ")) {
     let name = x.slice(7);

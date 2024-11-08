@@ -2,6 +2,24 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        import one as two\n        import two\n        "
 ---
+----- SOURCE CODE
+-- one.gleam
+
+            pub fn fn1() { 1 }
+            
+
+-- two.gleam
+
+            pub fn fn2() { 1 }
+            
+
+-- main.gleam
+
+        import one as two
+        import two
+        
+
+----- ERROR
 error: Duplicate import
   ┌─ /src/one/two.gleam:2:9
   │

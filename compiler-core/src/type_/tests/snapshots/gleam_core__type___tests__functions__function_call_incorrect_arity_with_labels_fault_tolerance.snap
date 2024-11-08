@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\nfn wibble(wibble arg1: fn() -> Int, wobble arg2: Int) -> Int {\n  arg1() + arg2\n}\n\npub fn main() {\n  wibble(wobble: \"\")\n}\n"
 ---
+----- SOURCE CODE
+
+fn wibble(wibble arg1: fn() -> Int, wobble arg2: Int) -> Int {
+  arg1() + arg2
+}
+
+pub fn main() {
+  wibble(wobble: "")
+}
+
+
+----- ERROR
 error: Incorrect arity
   ┌─ /src/one/two.gleam:7:3
   │

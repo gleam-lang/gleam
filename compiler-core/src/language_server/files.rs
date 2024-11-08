@@ -1,11 +1,13 @@
+use std::collections::HashSet;
 use std::time::SystemTime;
 
 use debug_ignore::DebugIgnore;
 
 use crate::{
+    error::Error,
     io::{
-        memory::InMemoryFileSystem, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
-        Stdio, WrappedReader,
+        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
+        FileSystemWriter, ReadDir, Stdio, WrappedReader,
     },
     Result,
 };
@@ -150,7 +152,7 @@ where
         }
     }
 
-    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, crate::Error> {
+    fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error> {
         self.io.canonicalise(path)
     }
 }
@@ -167,6 +169,21 @@ where
         _cwd: Option<&Utf8Path>,
         _stdio: Stdio,
     ) -> Result<i32> {
+        panic!("The language server is not permitted to create subprocesses")
+    }
+}
+
+impl<IO> BeamCompiler for FileSystemProxy<IO>
+where
+    IO: BeamCompiler,
+{
+    fn compile_beam(
+        &self,
+        _out: &Utf8Path,
+        _lib: &Utf8Path,
+        _modules: &HashSet<Utf8PathBuf>,
+        _stdio: Stdio,
+    ) -> Result<(), Error> {
         panic!("The language server is not permitted to create subprocesses")
     }
 }

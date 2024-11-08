@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nlet b = True\ncase b {}\n"
 ---
+----- SOURCE CODE
+
+let b = True
+case b {}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:1
   │

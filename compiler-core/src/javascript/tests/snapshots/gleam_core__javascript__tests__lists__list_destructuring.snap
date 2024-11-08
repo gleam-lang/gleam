@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/lists.rs
-assertion_line: 62
 expression: "\nfn go(x, y) {\n  let assert [] = x\n  let assert [a] = x\n  let assert [1, 2] = x\n  let assert [_, #(3, b)] = y\n  let assert [head, ..tail] = y\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x, y) {
+  let assert [] = x
+  let assert [a] = x
+  let assert [1, 2] = x
+  let assert [_, #(3, b)] = y
+  let assert [head, ..tail] = y
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x, y) {

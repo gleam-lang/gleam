@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn fallible() -> Result(Int, Nil) {\n  todo\n}\n\npub fn main() {\n  let assert Ok(value) = fallible()\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn fallible() -> Result(Int, Nil) {
+  todo
+}
+
+pub fn main() {
+  let assert Ok(value) = fallible()
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑           
+}
+
+
+----- AFTER ACTION
+
+pub fn fallible() -> Result(Int, Nil) {
+  todo
+}
+
+pub fn main() {
+  let assert Ok(value): Result(Int, Nil) = fallible()
+}

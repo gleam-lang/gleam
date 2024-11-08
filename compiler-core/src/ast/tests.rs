@@ -91,10 +91,11 @@ fn compile_expression(src: &str) -> TypedStatement {
         module: "mymod".into(),
         name: "Cat".into(),
         args: vec![],
+        inferred_variant: None,
     });
     let variant = ValueConstructorVariant::Record {
         documentation: Some("wibble".into()),
-        constructors_count: 1,
+        variants_count: 1,
         name: "Cat".into(),
         arity: 2,
         location: SrcSpan { start: 12, end: 15 },
@@ -103,7 +104,7 @@ fn compile_expression(src: &str) -> TypedStatement {
             fields: [("name".into(), 0), ("age".into(), 1)].into(),
         }),
         module: "mymod".into(),
-        constructor_index: 0,
+        variant_index: 0,
     };
     environment.insert_variable(
         "Cat".into(),
@@ -113,30 +114,32 @@ fn compile_expression(src: &str) -> TypedStatement {
         Deprecation::NotDeprecated,
     );
 
+    let accessors = [
+        (
+            "name".into(),
+            RecordAccessor {
+                index: 0,
+                label: "name".into(),
+                type_: type_::string(),
+            },
+        ),
+        (
+            "age".into(),
+            RecordAccessor {
+                index: 1,
+                label: "age".into(),
+                type_: type_::int(),
+            },
+        ),
+    ];
+
     environment.insert_accessors(
         "Cat".into(),
         AccessorsMap {
             publicity: Publicity::Public,
             type_: cat_type,
-            accessors: [
-                (
-                    "name".into(),
-                    RecordAccessor {
-                        index: 0,
-                        label: "name".into(),
-                        type_: type_::string(),
-                    },
-                ),
-                (
-                    "age".into(),
-                    RecordAccessor {
-                        index: 1,
-                        label: "age".into(),
-                        type_: type_::int(),
-                    },
-                ),
-            ]
-            .into(),
+            shared_accessors: accessors.clone().into(),
+            variant_specific_accessors: vec![accessors.into()],
         },
     );
     let mut problems = Problems::new();
@@ -220,6 +223,7 @@ wibble}"#,
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 14, end: 15 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
@@ -264,16 +268,19 @@ fn find_node_list() {
         location: SrcSpan { start: 1, end: 2 },
         type_: type_::int(),
         value: "1".into(),
+        int_value: 1.into(),
     };
     let int2 = TypedExpr::Int {
         location: SrcSpan { start: 4, end: 5 },
         type_: type_::int(),
         value: "2".into(),
+        int_value: 2.into(),
     };
     let int3 = TypedExpr::Int {
         location: SrcSpan { start: 7, end: 8 },
         type_: type_::int(),
         value: "3".into(),
+        int_value: 3.into(),
     };
 
     assert_eq!(list.find_node(0), Some(Located::Expression(list)));
@@ -297,16 +304,19 @@ fn find_node_tuple() {
         location: SrcSpan { start: 2, end: 3 },
         type_: type_::int(),
         value: "1".into(),
+        int_value: 1.into(),
     };
     let int2 = TypedExpr::Int {
         location: SrcSpan { start: 5, end: 6 },
         type_: type_::int(),
         value: "2".into(),
+        int_value: 2.into(),
     };
     let int3 = TypedExpr::Int {
         location: SrcSpan { start: 8, end: 9 },
         type_: type_::int(),
         value: "3".into(),
+        int_value: 3.into(),
     };
 
     assert_eq!(tuple.find_node(0), Some(Located::Expression(tuple)));
@@ -342,6 +352,7 @@ fn find_node_tuple_index() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 2, end: 3 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
@@ -383,6 +394,7 @@ fn find_node_fn() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 7, end: 8 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
@@ -402,18 +414,21 @@ fn find_node_call() {
     let retrn = TypedExpr::Int {
         location: SrcSpan { start: 11, end: 12 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
     let arg1 = TypedExpr::Int {
         location: SrcSpan { start: 15, end: 16 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
     let arg2 = TypedExpr::Int {
         location: SrcSpan { start: 18, end: 19 },
         value: "2".into(),
+        int_value: 2.into(),
         type_: type_::int(),
     };
 
@@ -440,6 +455,7 @@ fn find_node_record_access() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 12, end: 13 },
         value: "3".into(),
+        int_value: 3.into(),
         type_: type_::int(),
     };
 
@@ -459,6 +475,7 @@ fn find_node_record_update() {
     let int = TypedExpr::Int {
         location: SrcSpan { start: 27, end: 28 },
         value: "4".into(),
+        int_value: 4.into(),
         type_: type_::int(),
     };
 
@@ -483,18 +500,21 @@ case 1, 2 {
     let int1 = TypedExpr::Int {
         location: SrcSpan { start: 6, end: 7 },
         value: "1".into(),
+        int_value: 1.into(),
         type_: type_::int(),
     };
 
     let int2 = TypedExpr::Int {
         location: SrcSpan { start: 9, end: 10 },
         value: "2".into(),
+        int_value: 2.into(),
         type_: type_::int(),
     };
 
     let int3 = TypedExpr::Int {
         location: SrcSpan { start: 23, end: 24 },
         value: "3".into(),
+        int_value: 3.into(),
         type_: type_::int(),
     };
 
@@ -519,13 +539,13 @@ fn find_node_bool() {
             publicity: Publicity::Public,
             variant: ValueConstructorVariant::Record {
                 documentation: None,
-                constructors_count: 2,
+                variants_count: 2,
                 name: "True".into(),
                 arity: 0,
                 field_map: None,
                 location: SrcSpan { start: 0, end: 0 },
                 module: PRELUDE_MODULE_NAME.into(),
-                constructor_index: 0,
+                variant_index: 0,
             },
             type_: type_::bool(),
         },

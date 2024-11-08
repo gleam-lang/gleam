@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "pub fn main() -> String {\n            eat_veggie\n            |> Orange\n         }\n\n         type Fruit{ Orange }\n         type Veg{ Lettuce }\n\n         fn eat_veggie(v: Veg) -> String {\n            \"Ok\"\n         }"
+---
+----- SOURCE CODE
+pub fn main() -> String {
+            eat_veggie
+            |> Orange
+         }
+
+         type Fruit{ Orange }
+         type Veg{ Lettuce }
+
+         fn eat_veggie(v: Veg) -> String {
+            "Ok"
+         }
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:3:16
+  │
+3 │             |> Orange
+  │                ^^^^^^
+
+Expected type:
+
+    fn(fn(Veg) -> String) -> a
+
+Found type:
+
+    Fruit

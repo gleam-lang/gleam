@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wibble.{type Wibble as Wobble}\n\npub fn main() {\n  let value = wibble.Wibble\n}\n"
+---
+----- BEFORE ACTION
+
+import wibble.{type Wibble as Wobble}
+
+pub fn main() {
+  let value = wibble.Wibble
+  ▔▔▔▔▔▔▔▔▔▔↑              
+}
+
+
+----- AFTER ACTION
+
+import wibble.{type Wibble as Wobble}
+
+pub fn main() {
+  let value: Wobble = wibble.Wibble
+}

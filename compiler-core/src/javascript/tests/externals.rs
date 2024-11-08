@@ -313,3 +313,13 @@ pub fn should_not_be_generated() {
 "#
     );
 }
+
+#[test]
+fn discarded_names_in_external_are_passed_correctly() {
+    assert_js!(
+        r#"
+@external(javascript, "wibble", "wobble")
+pub fn woo(_ignored: a) -> Nil
+"#
+    );
+}

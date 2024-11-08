@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() { 1 == todo }"
 ---
+----- SOURCE CODE
+pub fn main() { 1 == todo }
+
+----- WARNING
 warning: Todo found
   ┌─ /src/warning/wrn.gleam:1:22
   │

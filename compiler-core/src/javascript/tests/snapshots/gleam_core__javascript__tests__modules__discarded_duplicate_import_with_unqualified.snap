@@ -2,6 +2,22 @@
 source: compiler-core/src/javascript/tests/modules.rs
 expression: "\nimport esa/rocket_ship\nimport nasa/rocket_ship.{go} as _nasa_rocket\npub fn esa_go() { rocket_ship.go() }\npub fn nasa_go() { go() }\n"
 ---
+----- SOURCE CODE
+-- esa/rocket_ship.gleam
+pub fn go() { 1 }
+
+-- nasa/rocket_ship.gleam
+pub fn go() { 1 }
+
+-- main.gleam
+
+import esa/rocket_ship
+import nasa/rocket_ship.{go} as _nasa_rocket
+pub fn esa_go() { rocket_ship.go() }
+pub fn nasa_go() { go() }
+
+
+----- COMPILED JAVASCRIPT
 import * as $rocket_ship from "../esa/rocket_ship.mjs";
 import { go } from "../nasa/rocket_ship.mjs";
 

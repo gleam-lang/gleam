@@ -2,4 +2,8 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: pub type Thing
 ---
+----- SOURCE CODE
+pub type Thing
+
+----- COMPILED JAVASCRIPT
 export {}

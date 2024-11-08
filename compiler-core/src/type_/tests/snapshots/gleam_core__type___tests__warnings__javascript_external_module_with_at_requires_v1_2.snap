@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n@external(javascript, \"module@module\", \"func\")\npub fn main() { Nil }\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "module@module", "func")
+pub fn main() { Nil }
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:2:1
   │

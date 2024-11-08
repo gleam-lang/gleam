@@ -19,6 +19,7 @@ fn custom_bool() -> Arc<Type> {
         module: "one/two".into(),
         name: "Bool".into(),
         args: vec![],
+        inferred_variant: None,
     })
 }
 

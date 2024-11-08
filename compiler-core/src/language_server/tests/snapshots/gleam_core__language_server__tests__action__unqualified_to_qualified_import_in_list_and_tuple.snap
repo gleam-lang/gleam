@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport option.{Some}\n\npub fn main() {\n    let list = [Some(1), option.None]\n    let tuple = #(Some(2), option.None)\n}\n"
+---
+----- BEFORE ACTION
+
+import option.{Some}
+
+pub fn main() {
+    let list = [Some(1), option.None]
+                ▔▔▔▔▔↑               
+    let tuple = #(Some(2), option.None)
+}
+
+
+----- AFTER ACTION
+
+import option.{}
+
+pub fn main() {
+    let list = [option.Some(1), option.None]
+    let tuple = #(option.Some(2), option.None)
+}

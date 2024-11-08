@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 468
 expression: "\nfn go(x) {\n  let assert <<a:float-32-little, b:int>> = x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert <<a:float-32-little, b:int>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {

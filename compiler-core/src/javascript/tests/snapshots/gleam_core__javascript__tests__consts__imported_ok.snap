@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/javascript/tests/consts.rs
-assertion_line: 30
 expression: "import gleam\n\npub type X {\n  Ok\n}\n\npub const y = gleam.Ok\n"
 ---
+----- SOURCE CODE
+import gleam
+
+pub type X {
+  Ok
+}
+
+pub const y = gleam.Ok
+
+
+----- COMPILED JAVASCRIPT
 import * as $gleam from "../gleam.mjs";
 import { Ok, CustomType as $CustomType } from "../gleam.mjs";
 

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nfn usable(f) {\n  f(#(1, 2))\n}\n\npub fn main() {\n  use #(a, b) <- usable\n  a + b\n}\n"
+---
+----- BEFORE ACTION
+
+fn usable(f) {
+  f(#(1, 2))
+}
+
+pub fn main() {
+  use #(a, b) <- usable
+  ▔▔▔▔▔▔▔▔▔↑           
+  a + b
+}
+
+
+----- AFTER ACTION
+
+fn usable(f) {
+  f(#(1, 2))
+}
+
+pub fn main() {
+  use #(a, b): #(Int, Int) <- usable
+  a + b
+}

@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/case_clause_guards.rs
 expression: "pub fn main(xs) -> Int {\n  case xs {\n    [x] | [_, x] -> x\n    _ -> 1\n  }\n}\n"
 ---
+----- SOURCE CODE
+pub fn main(xs) -> Int {
+  case xs {
+    [x] | [_, x] -> x
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main(xs) {
   if (xs.hasLength(1)) {
     let x = xs.head;

@@ -21,6 +21,7 @@ expression: "let assert [x] = [2]"
                             end: 19,
                         },
                         value: "2",
+                        int_value: 2,
                     },
                 ],
                 tail: None,

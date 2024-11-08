@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/recursion.rs
 expression: "\npub fn map(map) {\n  map()\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn map(map) {
+  map()
+}
+
+
+----- COMPILED JAVASCRIPT
 export function map(map) {
   return map();
 }

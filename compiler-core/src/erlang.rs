@@ -405,7 +405,11 @@ fn module_function<'a>(
     let return_spec = type_printer.print(&function.return_type);
 
     let spec = fun_spec(function_name, args_spec, return_spec);
-    let arguments = fun_args(&function.arguments, &mut env);
+    let arguments = if function.external_erlang.is_some() {
+        external_fun_args(&function.arguments, &mut env)
+    } else {
+        fun_args(&function.arguments, &mut env)
+    };
 
     let body = function
         .external_erlang
@@ -438,7 +442,24 @@ fn file_attribute<'a>(
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
     let line = line_numbers.line_number(function.location.start);
+    let path = path.replace("\\", "\\\\");
     docvec!["-file(\"", path, "\", ", line, ")."]
+}
+
+fn external_fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
+    wrap_args(args.iter().map(|a| {
+        let name = match &a.names {
+            ArgNames::Discard { name, .. }
+            | ArgNames::LabelledDiscard { name, .. }
+            | ArgNames::Named { name, .. }
+            | ArgNames::NamedLabelled { name, .. } => name,
+        };
+        if name.chars().all(|c| c == '_') {
+            env.next_local_var_name("argument")
+        } else {
+            env.next_local_var_name(name)
+        }
+    }))
 }
 
 fn fun_args<'a>(args: &'a [TypedArg], env: &mut Env<'a>) -> Document<'a> {
@@ -668,21 +689,21 @@ fn const_segment<'a>(
     options: &'a [TypedConstantBitArraySegmentOption],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let mut value_is_a_string_literal = false;
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds
-        Constant::String { value, .. } => {
-            value_is_a_string_literal = true;
-            value.to_doc().surround("\"", "\"")
-        }
+    let value_is_a_string_literal = matches!(value, Constant::String { .. });
 
-        // As normal
-        Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
-            const_inline(value, env)
-        }
+    let create_document = |env: &mut Env<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds
+            Constant::String { value, .. } => value.to_doc().surround("\"", "\""),
 
-        // Wrap anything else in parentheses
-        value => const_inline(value, env).surround("(", ")"),
+            // As normal
+            Constant::Int { .. } | Constant::Float { .. } | Constant::BitArray { .. } => {
+                const_inline(value, env)
+            }
+
+            // Wrap anything else in parentheses
+            value => const_inline(value, env).surround("(", ")"),
+        }
     };
 
     let size = |value: &'a TypedConstant, env: &mut Env<'a>| match value {
@@ -696,7 +717,7 @@ fn const_segment<'a>(
     let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
-        document,
+        create_document,
         options,
         size,
         unit,
@@ -721,23 +742,22 @@ fn expr_segment<'a>(
     options: &'a [BitArrayOption<TypedExpr>],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let mut value_is_a_string_literal = false;
+    let value_is_a_string_literal = matches!(value, TypedExpr::String { .. });
 
-    let document = match value {
-        // Skip the normal <<value/utf8>> surrounds and set the string literal flag
-        TypedExpr::String { value, .. } => {
-            value_is_a_string_literal = true;
-            string_inner(value).surround("\"", "\"")
+    let create_document = |env: &mut Env<'a>| {
+        match value {
+            // Skip the normal <<value/utf8>> surrounds and set the string literal flag
+            TypedExpr::String { value, .. } => string_inner(value).surround("\"", "\""),
+
+            // As normal
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::Var { .. }
+            | TypedExpr::BitArray { .. } => expr(value, env),
+
+            // Wrap anything else in parentheses
+            value => expr(value, env).surround("(", ")"),
         }
-
-        // As normal
-        TypedExpr::Int { .. }
-        | TypedExpr::Float { .. }
-        | TypedExpr::Var { .. }
-        | TypedExpr::BitArray { .. } => expr(value, env),
-
-        // Wrap anything else in parentheses
-        value => expr(value, env).surround("(", ")"),
     };
 
     let size = |expression: &'a TypedExpr, env: &mut Env<'a>| match expression {
@@ -763,7 +783,7 @@ fn expr_segment<'a>(
     let unit = |value: &'a u8| Some(eco_format!("unit:{value}").to_doc());
 
     bit_array_segment(
-        document,
+        create_document,
         options,
         size,
         unit,
@@ -773,8 +793,8 @@ fn expr_segment<'a>(
     )
 }
 
-fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
-    mut document: Document<'a>,
+fn bit_array_segment<'a, Value: 'a, CreateDoc, SizeToDoc, UnitToDoc>(
+    mut create_document: CreateDoc,
     options: &'a [BitArrayOption<Value>],
     mut size_to_doc: SizeToDoc,
     mut unit_to_doc: UnitToDoc,
@@ -783,6 +803,7 @@ fn bit_array_segment<'a, Value: 'a, SizeToDoc, UnitToDoc>(
     env: &mut Env<'a>,
 ) -> Document<'a>
 where
+    CreateDoc: FnMut(&mut Env<'a>) -> Document<'a>,
     SizeToDoc: FnMut(&'a Value, &mut Env<'a>) -> Option<Document<'a>>,
     UnitToDoc: FnMut(&'a u8) -> Option<Document<'a>>,
 {
@@ -824,6 +845,8 @@ where
             Opt::Unit { value, .. } => unit = unit_to_doc(value),
         }
     }
+
+    let mut document = create_document(env);
 
     document = document.append(size);
     let others_is_empty = others.is_empty();
@@ -1593,11 +1616,7 @@ fn docs_args_call<'a>(
                 .append(args)
         }
 
-        TypedExpr::Fn {
-            is_capture: true,
-            body,
-            ..
-        } => {
+        TypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
             if let Statement::Expression(TypedExpr::Call {
                 fun,
                 args: inner_args,
@@ -1637,11 +1656,11 @@ fn docs_args_call<'a>(
 }
 
 fn record_update<'a>(
-    spread: &'a TypedExpr,
+    record: &'a TypedExpr,
     args: &'a [TypedRecordUpdateArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    let expr_doc = maybe_block_expr(spread, env);
+    let expr_doc = maybe_block_expr(record, env);
 
     args.iter().fold(expr_doc, |tuple_doc, arg| {
         // Increment the index by 2, because the first element
@@ -1825,7 +1844,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 
         TypedExpr::RecordAccess { record, index, .. } => tuple_index(record, index + 1, env),
 
-        TypedExpr::RecordUpdate { spread, args, .. } => record_update(spread, args, env),
+        TypedExpr::RecordUpdate { record, args, .. } => record_update(record, args, env),
 
         TypedExpr::Case {
             subjects, clauses, ..
@@ -1866,7 +1885,9 @@ fn pipeline<'a>(
 
 fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Document<'a> {
     match assignment.kind {
-        AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
+        AssignmentKind::Let | AssignmentKind::Generated => {
+            let_(&assignment.value, &assignment.pattern, env)
+        }
         AssignmentKind::Assert { .. } => let_assert(&assignment.value, &assignment.pattern, env),
     }
 }

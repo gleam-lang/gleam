@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\ntype User {\n    name: \"Test User\",\n}\n"
 ---
+----- SOURCE CODE
+
+type User {
+    name: "Test User",
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │

@@ -2,6 +2,10 @@
 source: compiler-core/src/javascript/tests/results.rs
 expression: "pub fn main() { Ok(1) }"
 ---
+----- SOURCE CODE
+pub fn main() { Ok(1) }
+
+----- COMPILED JAVASCRIPT
 import { Ok } from "../gleam.mjs";
 
 export function main() {

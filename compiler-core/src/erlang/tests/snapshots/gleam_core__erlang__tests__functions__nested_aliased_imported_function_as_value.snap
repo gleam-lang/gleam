@@ -1,8 +1,17 @@
 ---
 source: compiler-core/src/erlang/tests/functions.rs
-assertion_line: 48
 expression: "\nimport some/other.{wibble as wobble}\n\npub fn main() {\n  wobble\n}\n"
 ---
+----- SOURCE CODE
+
+import some/other.{wibble as wobble}
+
+pub fn main() {
+  wobble
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

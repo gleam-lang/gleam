@@ -2,6 +2,22 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type User {\n  User(id: Int, name: String)\n}\n\nfn login(user: User) {\n  user\n}\n\npub fn main(user: User) {\n  login(user.wibble)\n}\n"
 ---
+----- SOURCE CODE
+
+pub type User {
+  User(id: Int, name: String)
+}
+
+fn login(user: User) {
+  user
+}
+
+pub fn main(user: User) {
+  login(user.wibble)
+}
+
+
+----- ERROR
 error: Unknown record field
    ┌─ /src/one/two.gleam:11:13
    │
@@ -12,7 +28,7 @@ The value being accessed has this type:
 
     User
 
-It has these fields:
+It has these accessible fields:
 
     .id
     .name

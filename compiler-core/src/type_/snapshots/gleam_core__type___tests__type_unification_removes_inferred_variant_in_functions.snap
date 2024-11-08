@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub type Either(a, b) {\n  Left(value: a)\n  Right(value: b)\n}\n\nfn a_or_b(_first: value, second: value) -> value {\n  second\n}\n\npub fn main() {\n  let func = a_or_b(fn() { Left(1) }, fn() { Right(\"hello\") })\n  Left(..func(), value: 10)\n}\n"
+---
+----- SOURCE CODE
+
+pub type Either(a, b) {
+  Left(value: a)
+  Right(value: b)
+}
+
+fn a_or_b(_first: value, second: value) -> value {
+  second
+}
+
+pub fn main() {
+  let func = a_or_b(fn() { Left(1) }, fn() { Right("hello") })
+  Left(..func(), value: 10)
+}
+
+
+----- ERROR
+error: Unsafe record update
+   ┌─ /src/one/two.gleam:13:10
+   │
+13 │   Left(..func(), value: 10)
+   │          ^^^^^^ I'm not sure this is always a `Left`
+
+
+This value cannot be used to build an updated `Left` as it could be some
+other variant.
+
+Consider pattern matching on it with a case expression and then
+constructing a new record with its values.

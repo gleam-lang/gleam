@@ -348,3 +348,33 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn discarded_arg_in_external_are_passed_correctly() {
+    assert_erl!(
+        r#"
+@external(erlang, "wibble", "wobble")
+pub fn woo(_a: a) -> Nil
+"#
+    );
+}
+
+#[test]
+fn multiple_discarded_args_in_external_are_passed_correctly() {
+    assert_erl!(
+        r#"
+@external(erlang, "wibble", "wobble")
+pub fn woo(_: a, _: b) -> Nil
+"#
+    );
+}
+
+#[test]
+fn multiple_discarded_args_in_external_are_passed_correctly_2() {
+    assert_erl!(
+        r#"
+@external(erlang, "wibble", "wobble")
+pub fn woo(__: a, _two: b) -> Nil
+"#
+    );
+}

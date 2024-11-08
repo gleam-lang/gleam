@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: let assert <<bitValue>> = <<73>>
 ---
+----- SOURCE CODE
+let assert <<bitValue>> = <<73>>
+
+----- ERROR
 error: Invalid variable name
   ┌─ /src/one/two.gleam:1:14
   │

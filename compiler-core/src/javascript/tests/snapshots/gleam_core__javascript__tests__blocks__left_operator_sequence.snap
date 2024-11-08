@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/blocks.rs
 expression: "\nfn go() {\n  1 == {\n    1\n    2\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  1 == {
+    1
+    2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 function go() {
   return 1 === (() => {
     1;

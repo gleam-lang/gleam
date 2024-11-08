@@ -17,6 +17,7 @@ expression: "{ 1 }"
                             end: 3,
                         },
                         value: "1",
+                        int_value: 1,
                     },
                 ),
             ],

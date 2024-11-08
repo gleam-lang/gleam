@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/custom_types.rs
 expression: "\ntype Two(a, a) {\n  Two(a, a)\n}\n\ntype Three(a, a) {\n  Three\n}\n"
 ---
+----- SOURCE CODE
+
+type Two(a, a) {
+  Two(a, a)
+}
+
+type Three(a, a) {
+  Three
+}
+
+
+----- ERROR
 error: Duplicate type parameter
   ┌─ /src/one/two.gleam:2:13
   │

@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests/patterns.rs
-assertion_line: 25
 expression: "\npub fn main() {\n  case Ok(1) {\n    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name\n  }\n}"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  case Ok(1) {
+    Ok(duplicate_name) | Error(duplicate_name) -> duplicate_name
+  }
+}
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

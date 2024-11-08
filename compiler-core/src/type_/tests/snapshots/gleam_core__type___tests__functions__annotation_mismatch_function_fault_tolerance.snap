@@ -2,6 +2,27 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn bad(x: Int) -> Float {\n  // This does not match the return annotation\n  1\n}\n\npub fn user() -> Float {\n  // This checks that the bad function is still usable, the types coming from\n  // its annotations. This function is valid.\n  bad(1)\n}\n\n// Another bad function to make sure that analysis has not stopped. This error\n// should also be emitted.\npub fn bad_2() {\n  bad(Nil)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn bad(x: Int) -> Float {
+  // This does not match the return annotation
+  1
+}
+
+pub fn user() -> Float {
+  // This checks that the bad function is still usable, the types coming from
+  // its annotations. This function is valid.
+  bad(1)
+}
+
+// Another bad function to make sure that analysis has not stopped. This error
+// should also be emitted.
+pub fn bad_2() {
+  bad(Nil)
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:4:3
   │

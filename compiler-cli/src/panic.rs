@@ -1,13 +1,13 @@
 #![allow(clippy::unwrap_used)]
-use std::panic::PanicInfo;
+use std::panic::PanicHookInfo;
 
 pub fn add_handler() {
-    std::panic::set_hook(Box::new(move |info: &PanicInfo<'_>| {
+    std::panic::set_hook(Box::new(move |info: &PanicHookInfo<'_>| {
         print_compiler_bug_message(info)
     }));
 }
 
-fn print_compiler_bug_message(info: &PanicInfo<'_>) {
+fn print_compiler_bug_message(info: &PanicHookInfo<'_>) {
     let message = match (
         info.payload().downcast_ref::<&str>(),
         info.payload().downcast_ref::<String>(),

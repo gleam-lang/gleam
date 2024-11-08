@@ -2,6 +2,22 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "\ntype Cat {\n  Cat(String, cuteness: Int)\n}\n\nfn go(cat) {\n  let Cat(x, y) = cat\n  let Cat(cuteness: y, ..) = cat\n  let Cat(x, cuteness: y) = cat\n  x\n}\n\n"
 ---
+----- SOURCE CODE
+
+type Cat {
+  Cat(String, cuteness: Int)
+}
+
+fn go(cat) {
+  let Cat(x, y) = cat
+  let Cat(cuteness: y, ..) = cat
+  let Cat(x, cuteness: y) = cat
+  x
+}
+
+
+
+----- COMPILED JAVASCRIPT
 import { CustomType as $CustomType } from "../gleam.mjs";
 
 class Cat extends $CustomType {

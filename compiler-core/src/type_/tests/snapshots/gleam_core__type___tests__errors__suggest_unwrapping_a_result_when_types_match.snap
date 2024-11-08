@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  let value = Ok(1)\n  add_1(value)\n}\n\nfn add_1(to x) { x + 1 }\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let value = Ok(1)
+  add_1(value)
+}
+
+fn add_1(to x) { x + 1 }
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:9
+  │
+4 │   add_1(value)
+  │         ^^^^^
+
+Expected type:
+
+    Int
+
+Found type:
+
+    Result(Int, a)
+
+Hint: If you want to get a `Int` out of a `Result(Int, a)` you can pattern match
+on it:
+
+    case result {
+      Ok(value) -> todo
+      Error(error) -> todo
+    }

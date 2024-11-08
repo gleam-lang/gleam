@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x) {\n  case x {\n    Ok(_) -> 1\n    Error(_) -> 0\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    Ok(_) -> 1
+    Error(_) -> 0
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(x) {
   if (x.isOk()) {
     return 1;

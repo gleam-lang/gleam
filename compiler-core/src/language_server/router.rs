@@ -2,7 +2,7 @@ use super::{configuration::SharedConfig, feedback::FeedbackBookKeeper};
 use crate::{
     build::SourceFingerprint,
     error::{FileIoAction, FileKind},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
         DownloadDependencies, MakeLocker,
@@ -36,6 +36,7 @@ where
     // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
         + FileSystemWriter
+        + BeamCompiler
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker

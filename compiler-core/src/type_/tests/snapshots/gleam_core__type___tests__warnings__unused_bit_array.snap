@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n    pub fn main() {\n        <<3>>\n\t\t\t\t2\n    }"
 ---
+----- SOURCE CODE
+
+    pub fn main() {
+        <<3>>
+				2
+    }
+
+----- WARNING
 warning: Unused literal
   ┌─ /src/warning/wrn.gleam:3:9
   │

@@ -2,6 +2,22 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "\nfn go(a, b) {\n  a == True\n  a != True\n  a == False\n  a != False\n  a == a\n  a != a\n  b == Nil\n  b != Nil\n  b == b\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(a, b) {
+  a == True
+  a != True
+  a == False
+  a != False
+  a == a
+  a != a
+  b == Nil
+  b != Nil
+  b == b
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(a, b) {
   a === true;
   a !== true;

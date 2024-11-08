@@ -2,6 +2,20 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport one/two\n\npub fn main(_x: two.Thing) {\n  Nil\n}\n"
 ---
+----- SOURCE CODE
+-- one/two.gleam
+
+
+-- main.gleam
+
+import one/two
+
+pub fn main(_x: two.Thing) {
+  Nil
+}
+
+
+----- ERROR
 error: Unknown module type
   ┌─ /src/one/two.gleam:4:17
   │

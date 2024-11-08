@@ -42,6 +42,7 @@ use itertools::Itertools;
 use name::{check_argument_names, check_name_case};
 use std::{
     collections::HashMap,
+    ops::Deref,
     sync::{Arc, OnceLock},
 };
 use vec1::Vec1;
@@ -899,7 +900,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         type_parameters: &[&EcoString],
     ) -> Result<(), Error> {
         let CustomType {
-            location,
             publicity,
             opaque,
             name,
@@ -919,22 +919,25 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .expect("Type for custom type not found in register_values")
             .type_
             .clone();
-        if let Some(accessors) =
-            custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?
-        {
-            let map = AccessorsMap {
-                publicity: if *opaque {
-                    Publicity::Private
-                } else {
-                    *publicity
-                },
-                accessors,
-                // TODO: improve the ownership here so that we can use the
-                // `return_type_constructor` below rather than looking it up twice.
-                type_: type_.clone(),
-            };
-            environment.insert_accessors(name.clone(), map)
-        }
+
+        let Accessors {
+            shared_accessors,
+            variant_specific_accessors,
+        } = custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?;
+
+        let map = AccessorsMap {
+            publicity: if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            },
+            shared_accessors,
+            // TODO: improve the ownership here so that we can use the
+            // `return_type_constructor` below rather than looking it up twice.
+            type_: type_.clone(),
+            variant_specific_accessors,
+        };
+        environment.insert_accessors(name.clone(), map);
 
         let mut constructors_data = vec![];
 
@@ -971,33 +974,35 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 args_types.push(t);
 
                 // Register the label for this parameter, if there is one
-                if let Some((_, label)) = label {
-                    field_map.insert(label.clone(), i as u32).map_err(|_| {
-                        Error::DuplicateField {
+                if let Some((location, label)) = label {
+                    if field_map.insert(label.clone(), i as u32).is_err() {
+                        self.problems.error(Error::DuplicateField {
                             label: label.clone(),
                             location: *location,
-                        }
-                    })?;
+                        });
+                    };
                 }
             }
             let field_map = field_map.into_option();
             // Insert constructor function into module scope
+            let mut type_ = type_.deref().clone();
+            type_.set_custom_type_variant(index as u16);
             let type_ = match constructor.arguments.len() {
-                0 => type_.clone(),
-                _ => fn_(args_types.clone(), type_.clone()),
+                0 => Arc::new(type_),
+                _ => fn_(args_types.clone(), Arc::new(type_)),
             };
             let constructor_info = ValueConstructorVariant::Record {
                 documentation: constructor
                     .documentation
                     .as_ref()
                     .map(|(_, doc)| doc.clone()),
-                constructors_count: constructors.len() as u16,
+                variants_count: constructors.len() as u16,
                 name: constructor.name.clone(),
                 arity: constructor.arguments.len() as u16,
                 field_map: field_map.clone(),
                 location: constructor.location,
                 module: self.module_name.clone(),
-                constructor_index: index as u16,
+                variant_index: index as u16,
             };
             index += 1;
 
@@ -1110,6 +1115,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module: self.module_name.to_owned(),
             name: name.clone(),
             args: parameters.clone(),
+            inferred_variant: None,
         });
         let _ = self.hydrators.insert(name.clone(), hydrator);
         environment
@@ -1183,7 +1189,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             environment
                 .names
-                .type_in_scope(name.clone(), type_.as_ref());
+                .type_in_scope(name.clone(), type_.as_ref(), &parameters);
 
             // Insert the alias so that it can be used by other code.
             environment.insert_type_constructor(
@@ -1670,19 +1676,25 @@ fn assert_unique_name(
     }
 }
 
+struct Accessors {
+    shared_accessors: HashMap<EcoString, RecordAccessor>,
+    variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
+}
+
 fn custom_type_accessors<A: std::fmt::Debug>(
     constructors: &[RecordConstructor<A>],
     hydrator: &mut Hydrator,
     environment: &mut Environment<'_>,
     problems: &mut Problems,
-) -> Result<Option<HashMap<EcoString, RecordAccessor>>, Error> {
+) -> Result<Accessors, Error> {
     let args = get_compatible_record_fields(constructors);
 
-    let mut fields = HashMap::with_capacity(args.len());
+    let mut shared_accessors = HashMap::with_capacity(args.len());
+
     hydrator.disallow_new_type_variables();
     for (index, label, ast) in args {
         let type_ = hydrator.type_from_ast(ast, environment, problems)?;
-        let _ = fields.insert(
+        let _ = shared_accessors.insert(
             label.clone(),
             RecordAccessor {
                 index: index as u64,
@@ -1691,7 +1703,34 @@ fn custom_type_accessors<A: std::fmt::Debug>(
             },
         );
     }
-    Ok(Some(fields))
+
+    let mut variant_specific_accessors = Vec::with_capacity(constructors.len());
+
+    for constructor in constructors {
+        let mut fields = HashMap::with_capacity(constructor.arguments.len());
+
+        for (index, argument) in constructor.arguments.iter().enumerate() {
+            let Some((_location, label)) = &argument.label else {
+                continue;
+            };
+
+            let type_ = hydrator.type_from_ast(&argument.ast, environment, problems)?;
+            let _ = fields.insert(
+                label.clone(),
+                RecordAccessor {
+                    index: index as u64,
+                    label: label.clone(),
+                    type_,
+                },
+            );
+        }
+        variant_specific_accessors.push(fields);
+    }
+
+    Ok(Accessors {
+        shared_accessors,
+        variant_specific_accessors,
+    })
 }
 
 /// Returns the fields that have the same label and type across all variants of

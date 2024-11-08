@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n@deprecated(\"Don't use this!\")\npub type Cat {\n    Cat(name: String)\n}\n\npub type Dog = Cat\n        "
 ---
+----- SOURCE CODE
+
+@deprecated("Don't use this!")
+pub type Cat {
+    Cat(name: String)
+}
+
+pub type Dog = Cat
+        
+
+----- WARNING
 warning: Deprecated type used
   ┌─ /src/warning/wrn.gleam:7:16
   │

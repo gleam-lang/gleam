@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport maths as math\npub fn add_two_vectors(a: math.Vector, b: math.Vector) {\n  a + b\n}\n"
+---
+----- SOURCE CODE
+-- maths.gleam
+pub type Vector { Vector(x: Float, y: Float) }
+
+-- main.gleam
+
+import maths as math
+pub fn add_two_vectors(a: math.Vector, b: math.Vector) {
+  a + b
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:3
+  │
+4 │   a + b
+  │   ^
+
+The + operator expects arguments of this type:
+
+    Int
+
+But this argument has this type:
+
+    math.Vector

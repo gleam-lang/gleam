@@ -95,9 +95,11 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         let type_info = type_info.clone().with_location(import.location);
 
-        self.environment
-            .names
-            .type_in_scope(imported_name.clone(), type_info.type_.as_ref());
+        self.environment.names.type_in_scope(
+            imported_name.clone(),
+            type_info.type_.as_ref(),
+            &type_info.parameters,
+        );
 
         if let Err(e) = self
             .environment

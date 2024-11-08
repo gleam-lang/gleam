@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nlet x = fn(f) { \"Hello, \" <> f() }\nuse <- x()\nlet n = 1\nn + 2\n"
 ---
+----- SOURCE CODE
+
+let x = fn(f) { "Hello, " <> f() }
+use <- x()
+let n = 1
+n + 2
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:5:1
   │

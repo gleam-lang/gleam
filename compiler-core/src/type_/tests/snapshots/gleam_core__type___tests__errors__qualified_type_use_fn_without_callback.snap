@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport some_mod\npub fn main() {\n  use value <- some_mod.do_a_thing(10)\n}\n"
+---
+----- SOURCE CODE
+-- some_mod.gleam
+pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }
+
+-- main.gleam
+
+import some_mod
+pub fn main() {
+  use value <- some_mod.do_a_thing(10)
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:4:16
+  │
+4 │   use value <- some_mod.do_a_thing(10)
+  │                ^^^^^^^^^^^^^^^^^^^^^^^
+
+The function on the right hand side of `<-` has to take a callback function
+as its last argument. But the last argument of this function has type:
+
+    some_mod.NotACallback
+
+See: https://tour.gleam.run/advanced-features/use/

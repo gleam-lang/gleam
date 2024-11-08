@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\npub fn main() {\n  wibble(arg::arg)\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  wibble(arg::arg)
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:14
   │

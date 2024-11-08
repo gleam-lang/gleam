@@ -2,4 +2,8 @@
 source: compiler-core/src/javascript/tests/consts.rs
 expression: pub const a = 1
 ---
+----- SOURCE CODE
+pub const a = 1
+
+----- COMPILED JAVASCRIPT
 export const a = 1;

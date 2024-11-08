@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub const bits = <<\"hello\">>"
 ---
+----- SOURCE CODE
+pub const bits = <<"hello">>
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:1:20
   │

@@ -39,6 +39,7 @@ expression: "\nlet tup = #(#(#(#(4))))\n{{{tup.0}.0}.0}.0\n"
                                                     end: 20,
                                                 },
                                                 value: "4",
+                                                int_value: 4,
                                             },
                                         ],
                                     },

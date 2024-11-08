@@ -2,4 +2,10 @@
 source: compiler-core/src/javascript/tests/numbers.rs
 expression: "\nconst x = 09_179\n"
 ---
+----- SOURCE CODE
+
+const x = 09_179
+
+
+----- COMPILED JAVASCRIPT
 const x = 9_179;

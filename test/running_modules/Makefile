@@ -1,4 +1,4 @@
-.phony: test-all
+.PHONY: test-all
 test-all:
 	@echo test/running_modules
 	@./run_tests.sh

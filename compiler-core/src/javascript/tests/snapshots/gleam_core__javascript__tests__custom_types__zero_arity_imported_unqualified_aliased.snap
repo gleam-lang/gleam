@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other.{Two as Three}\npub fn main() {\n  Three\n}"
 ---
+----- SOURCE CODE
+import other.{Two as Three}
+pub fn main() {
+  Three
+}
+
+----- COMPILED JAVASCRIPT
 import * as $other from "../other.mjs";
 import { Two as Three } from "../other.mjs";
 

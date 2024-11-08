@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/numbers.rs
 expression: "\nfn go() {\n  let a = 3\n  let b = --a\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  let a = 3
+  let b = --a
+}
+
+
+----- COMPILED JAVASCRIPT
 function go() {
   let a = 3;
   let b = - - a;

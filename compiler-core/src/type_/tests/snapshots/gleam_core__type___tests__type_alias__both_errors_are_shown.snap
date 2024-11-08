@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/type_/tests/type_alias.rs
-assertion_line: 129
 expression: "\ntype X =\n  List(Intt)\n\nfn example(a: X) {\n  todo\n}\n"
 ---
+----- SOURCE CODE
+
+type X =
+  List(Intt)
+
+fn example(a: X) {
+  todo
+}
+
+
+----- ERROR
 error: Unknown type
   ┌─ /src/one/two.gleam:3:8
   │

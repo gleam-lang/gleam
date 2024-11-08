@@ -2,6 +2,10 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: type Fancy_Bool = Bool
 ---
+----- SOURCE CODE
+type Fancy_Bool = Bool
+
+----- ERROR
 error: Invalid type alias name
   ┌─ /src/one/two.gleam:1:6
   │

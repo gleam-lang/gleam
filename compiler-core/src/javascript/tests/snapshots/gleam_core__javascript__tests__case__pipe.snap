@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn go(x, f) {\n  case x |> f {\n    0 -> 1\n    _ -> 2\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x, f) {
+  case x |> f {
+    0 -> 1
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(x, f) {
   let $ = (() => {
     let _pipe = x;

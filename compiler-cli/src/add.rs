@@ -25,6 +25,7 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
         &paths,
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
+        Vec::new(),
         UseManifest::Yes,
     )?;
 

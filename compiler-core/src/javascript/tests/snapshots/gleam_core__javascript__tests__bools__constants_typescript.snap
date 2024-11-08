@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "\npub const a = True\npub const b = False\npub const c = Nil\n"
 ---
+----- SOURCE CODE
+
+pub const a = True
+pub const b = False
+pub const c = Nil
+
+
+----- TYPESCRIPT DEFINITIONS
 export const a: boolean;
 
 export const b: boolean;

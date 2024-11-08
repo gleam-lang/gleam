@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/lists.rs
 expression: "\nfn go() {\n  [] == [1]\n  [] != [1]\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  [] == [1]
+  [] != [1]
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toList, isEqual } from "../gleam.mjs";
 
 function go() {

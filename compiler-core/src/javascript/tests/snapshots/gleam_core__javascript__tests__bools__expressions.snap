@@ -2,6 +2,16 @@
 source: compiler-core/src/javascript/tests/bools.rs
 expression: "\nfn go() {\n    True\n    False\n    Nil\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+    True
+    False
+    Nil
+}
+
+
+----- COMPILED JAVASCRIPT
 function go() {
   true;
   false;

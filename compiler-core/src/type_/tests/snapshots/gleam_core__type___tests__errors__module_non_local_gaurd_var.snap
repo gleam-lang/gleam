@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn one() { 1 }\nfn main() { case 1 { _ if one -> 1 } }"
 ---
+----- SOURCE CODE
+fn one() { 1 }
+fn main() { case 1 { _ if one -> 1 } }
+
+----- ERROR
 error: Invalid guard variable
   ┌─ /src/one/two.gleam:2:27
   │

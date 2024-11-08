@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "\npub fn loop(indentation) {\n  case indentation > 0 {\n    True -> loop(indentation - 1)\n    False -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn loop(indentation) {
+  case indentation > 0 {
+    True -> loop(indentation - 1)
+    False -> Nil
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function loop(loop$indentation) {
   while (true) {
     let indentation = loop$indentation;

@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n        pub fn main() {\n            let x = 7\n            let _ = --x\n        }\n        "
 ---
+----- SOURCE CODE
+
+        pub fn main() {
+            let x = 7
+            let _ = --x
+        }
+        
+
+----- WARNING
 warning: Unnecessary double negation (--) on integer
   ┌─ /src/warning/wrn.gleam:4:21
   │

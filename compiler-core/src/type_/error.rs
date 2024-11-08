@@ -11,6 +11,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
+use num_bigint::BigInt;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use std::sync::Arc;
@@ -66,10 +67,45 @@ pub struct UnknownType {
     pub name: EcoString,
 }
 
+/// This is used by the unknown record field error to tell if an unknown field
+/// is a field appearing in another variant of the same type to provide a better
+/// error message explaining why it can't be accessed:
+///
+/// ```gleam
+/// pub type Wibble {
+///   Wibble(field: Int)
+///   Wobble(thing: String)
+/// }
+///
+/// Wobble("hello").field
+/// //             ^^^^^^
+/// ```
+///
+/// Here the error can be extra useful and explain that to access `field` all
+/// variants should have that field at the same position and with the same type.
+///
 #[derive(Debug, Eq, PartialEq, Clone, Copy)]
-pub enum RecordVariants {
-    HasVariants,
-    NoVariants,
+pub enum UnknownField {
+    /// The field we're trying to access appears in at least a variant, so it
+    /// can be useful to explain why it cannot be accessed and how to fix it
+    /// (adding it to all variants/making sure it has the same type/making sure
+    /// it's in the same position).
+    ///
+    AppearsInAVariant,
+
+    /// The field we are trying to access appears in a variant, but we can
+    /// infer that the value we are accessing on is never the one that this
+    /// value is, so we can give information accordingly.
+    AppearsInAnImpossibleVariant,
+
+    /// The field is not in any of the variants, this might truly be a typo and
+    /// there's no need to add further explanations.
+    ///
+    TrulyUnknown,
+
+    /// The type that the user is trying to access has no fields whatsoever,
+    /// such as Int or fn(..) -> _
+    NoFields,
 }
 
 /// A suggestion for an unknown module
@@ -183,7 +219,7 @@ pub enum Error {
         label: EcoString,
         fields: Vec<EcoString>,
         usage: FieldAccessUsage,
-        variants: RecordVariants,
+        unknown_field: UnknownField,
     },
 
     IncorrectArity {
@@ -193,8 +229,9 @@ pub enum Error {
         labels: Vec<EcoString>,
     },
 
-    UpdateMultiConstructorType {
+    UnsafeRecordUpdate {
         location: SrcSpan,
+        reason: UnsafeRecordUpdateReason,
     },
 
     UnnecessarySpreadOperator {
@@ -214,7 +251,6 @@ pub enum Error {
         situation: Option<UnifyErrorSituation>,
         expected: Arc<Type>,
         given: Arc<Type>,
-        rigid_type_names: im::HashMap<u64, EcoString>,
     },
 
     RecursiveType {
@@ -682,6 +718,7 @@ pub enum Warning {
 
     UnreachableCaseClause {
         location: SrcSpan,
+        reason: UnreachableCaseClauseReason,
     },
 
     /// This happens when someone tries to write a case expression where one of
@@ -803,6 +840,13 @@ pub enum Warning {
         wrongfully_allowed_version: Version,
         feature_kind: FeatureKind,
     },
+
+    /// When targeting JavaScript and an `Int` value is specified that lies
+    /// outside the range `Number.MIN_SAFE_INTEGER` - `Number.MAX_SAFE_INTEGER`.
+    ///
+    JavaScriptIntUnsafe {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -814,6 +858,8 @@ pub enum FeatureKind {
     NestedTupleAccess,
     InternalAnnotation,
     AtInJavascriptModules,
+    RecordUpdateVariantInference,
+    RecordAccessVariantInference,
 }
 
 impl FeatureKind {
@@ -826,6 +872,8 @@ impl FeatureKind {
             FeatureKind::LabelShorthandSyntax => Version::new(1, 4, 0),
             FeatureKind::ConstantStringConcatenation => Version::new(1, 4, 0),
             FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
+            FeatureKind::RecordUpdateVariantInference
+            | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
         }
     }
 }
@@ -850,6 +898,17 @@ pub enum TodoOrPanic {
     Panic,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub enum UnreachableCaseClauseReason {
+    /// The clause is unreachable because a previous pattern
+    /// matches the same case.
+    DuplicatePattern,
+    /// The clause is unreachable because we have inferred the variant
+    /// of the custom type that we are matching on, and this matches
+    /// against one of the variants we know it isn't.
+    ImpossibleVariant,
+}
+
 impl Error {
     // Location where the error started
     pub fn start_location(&self) -> u32 {
@@ -865,7 +924,7 @@ impl Error {
             | Error::NotFn { location, .. }
             | Error::UnknownRecordField { location, .. }
             | Error::IncorrectArity { location, .. }
-            | Error::UpdateMultiConstructorType { location, .. }
+            | Error::UnsafeRecordUpdate { location, .. }
             | Error::UnnecessarySpreadOperator { location, .. }
             | Error::IncorrectTypeArity { location, .. }
             | Error::CouldNotUnify { location, .. }
@@ -933,19 +992,6 @@ impl Error {
             _ => self,
         }
     }
-
-    pub fn with_unify_error_rigid_names(mut self, new_names: &im::HashMap<u64, EcoString>) -> Self {
-        match self {
-            Error::CouldNotUnify {
-                rigid_type_names: ref mut annotated_names,
-                ..
-            } => {
-                *annotated_names = new_names.clone();
-                self
-            }
-            _ => self,
-        }
-    }
 }
 
 impl Warning {
@@ -987,7 +1033,8 @@ impl Warning {
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
             | Warning::UnreachableCodeAfterPanic { location, .. }
             | Warning::RedundantPipeFunctionCapture { location, .. }
-            | Warning::FeatureRequiresHigherGleamVersion { location, .. } => *location,
+            | Warning::FeatureRequiresHigherGleamVersion { location, .. }
+            | Warning::JavaScriptIntUnsafe { location, .. } => *location,
         }
     }
 
@@ -1056,6 +1103,17 @@ pub fn convert_get_value_constructor_error(
             type_with_same_name: imported_value_as_type,
         },
     }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum UnsafeRecordUpdateReason {
+    UnknownVariant {
+        constructed_variant: EcoString,
+    },
+    WrongVariant {
+        constructed_variant: EcoString,
+        spread_variant: EcoString,
+    },
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -1314,12 +1372,6 @@ pub enum UnifyErrorSituation {
     /// The operands of a binary operator were incorrect.
     Operator(BinOp),
 
-    /// A try expression returned a different error type to the previous try.
-    TryErrorMismatch,
-
-    /// The final value of a try expression was not a Result.
-    TryReturnResult,
-
     /// One of the elements of a list was not the same type as the others.
     ListElementMismatch,
 
@@ -1364,17 +1416,6 @@ annotation of this function.",
                 Some("This function cannot handle the argument sent through the (|>) pipe:")
             }
             Self::Operator(_op) => None,
-
-            Self::TryErrorMismatch => Some(
-                "This returned value has a type incompatible with the previous try expression.
-All the try expressions in a block and the final result value must have
-the same error type.",
-            ),
-
-            Self::TryReturnResult => Some(
-                "This returned value has a type incompatible with the previous try expression.
-The returned value after a try must be of type Result.",
-            ),
 
             Self::ListElementMismatch => Some(
                 "All elements of a list must be the same type, but this one doesn't
@@ -1448,14 +1489,6 @@ impl UnifyError {
         self.with_unify_error_situation(UnifyErrorSituation::Operator(binop))
     }
 
-    pub fn inconsistent_try(self, return_value_is_result: bool) -> Self {
-        self.with_unify_error_situation(if return_value_is_result {
-            UnifyErrorSituation::TryErrorMismatch
-        } else {
-            UnifyErrorSituation::TryReturnResult
-        })
-    }
-
     pub fn into_error(self, location: SrcSpan) -> Error {
         match self {
             Self::CouldNotUnify {
@@ -1467,7 +1500,6 @@ impl UnifyError {
                 expected,
                 given,
                 situation: note,
-                rigid_type_names: im::hashmap![],
             },
 
             Self::ExtraVarInAlternativePattern { name } => {
@@ -1519,7 +1551,6 @@ impl UnifyError {
                     expected: one.clone(),
                     given: other.clone(),
                     situation: None,
-                    rigid_type_names: im::hashmap![],
                 },
 
                 FunctionsMismatchReason::Arity {
@@ -1560,5 +1591,17 @@ pub fn convert_unify_call_error(e: UnifyError, location: SrcSpan, kind: Argument
             location,
         ),
         ArgumentKind::Regular => convert_unify_error(e, location),
+    }
+}
+
+/// When targeting JavaScript, adds a warning if the given Int value is outside the range of
+/// safe integers as defined by Number.MIN_SAFE_INTEGER and Number.MAX_SAFE_INTEGER.
+///
+pub fn check_javascript_int_safety(int_value: &BigInt, location: SrcSpan, problems: &mut Problems) {
+    let js_min_safe_integer = -9007199254740991i64;
+    let js_max_safe_integer = 9007199254740991i64;
+
+    if *int_value < js_min_safe_integer.into() || *int_value > js_max_safe_integer.into() {
+        problems.warning(Warning::JavaScriptIntUnsafe { location });
     }
 }

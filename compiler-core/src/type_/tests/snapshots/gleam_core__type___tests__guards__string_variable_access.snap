@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/guards.rs
 expression: "\npub fn a(a: String) {\n  case a {\n    _ if a.b -> 1\n    _ -> 0\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn a(a: String) {
+  case a {
+    _ if a.b -> 1
+    _ -> 0
+  }
+}
+
+
+----- ERROR
 error: Unknown record field
   ┌─ /src/one/two.gleam:4:11
   │

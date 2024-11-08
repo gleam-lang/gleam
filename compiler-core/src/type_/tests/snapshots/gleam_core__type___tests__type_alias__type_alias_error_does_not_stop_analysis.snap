@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/type_alias.rs
 expression: "\ntype UnusedParameter(a) =\n  Int\n\ntype UnknownType =\n  Dunno\n"
 ---
+----- SOURCE CODE
+
+type UnusedParameter(a) =
+  Int
+
+type UnknownType =
+  Dunno
+
+
+----- ERROR
 error: Unused type parameter
   ┌─ /src/one/two.gleam:2:1
   │  

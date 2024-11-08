@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  fn(a, b: Int, c) { a + b + c }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  fn(a, b: Int, c) { a + b + c }
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑               
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  fn(a: Int, b: Int, c: Int) -> Int { a + b + c }
+}

@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble { Wibble(wibble: Int) }\n\npub const wibble = 1\npub const wobble = Wibble(wibble:)\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(wibble: Int) }
+
+pub const wibble = 1
+pub const wobble = Wibble(wibble:)
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:5:27
   │

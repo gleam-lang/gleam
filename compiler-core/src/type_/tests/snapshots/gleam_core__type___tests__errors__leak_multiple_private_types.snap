@@ -2,6 +2,26 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n        type Private {\n            Private\n        }\n\n        pub fn ret_private() -> Private {\n            Private\n        }\n\n        pub fn ret_private2() -> Private {\n            Private\n        }\n\n        pub fn main() {\n            ret_private()\n        }\n        "
 ---
+----- SOURCE CODE
+
+        type Private {
+            Private
+        }
+
+        pub fn ret_private() -> Private {
+            Private
+        }
+
+        pub fn ret_private2() -> Private {
+            Private
+        }
+
+        pub fn main() {
+            ret_private()
+        }
+        
+
+----- ERROR
 error: Private type used in public interface
   ┌─ /src/one/two.gleam:6:9
   │

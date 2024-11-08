@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/todo.rs
 expression: "\nfn go() {\n  let x = \"I should \" <> \"do this\"\n  todo as x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  let x = "I should " <> "do this"
+  todo as x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go() {

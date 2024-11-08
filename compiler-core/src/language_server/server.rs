@@ -5,7 +5,7 @@ use super::{
 };
 use crate::{
     diagnostic::{Diagnostic, Level},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
@@ -52,6 +52,7 @@ impl<'a, IO> LanguageServer<'a, IO>
 where
     IO: FileSystemReader
         + FileSystemWriter
+        + BeamCompiler
         + CommandExecutor
         + DownloadDependencies
         + MakeLocker

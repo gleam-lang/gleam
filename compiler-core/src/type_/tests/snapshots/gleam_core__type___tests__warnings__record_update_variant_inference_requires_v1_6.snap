@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int)\n  Wobble(a: Int, c: Int)\n}\n\npub fn main(wibble) {\n  case wibble {\n    Wibble(..) -> Wibble(..wibble, b: 10)\n    Wobble(..) -> panic\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(a: Int, b: Int)
+  Wobble(a: Int, c: Int)
+}
+
+pub fn main(wibble) {
+  case wibble {
+    Wibble(..) -> Wibble(..wibble, b: 10)
+    Wobble(..) -> panic
+  }
+}
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:9:19
+  │
+9 │     Wibble(..) -> Wibble(..wibble, b: 10)
+  │                   ^^^^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.6.0
+
+Record updates for custom types when the variant is known was introduced in
+version v1.6.0. But the Gleam version range specified in your `gleam.toml`
+would allow this code to run on an earlier version like v1.0.0, resulting
+in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.6.0"

@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\n@external(erlang, \"\", \"\")\nfn main(wibble x: Int, y: Int) -> Int\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "", "")
+fn main(wibble x: Int, y: Int) -> Int
+
+
+----- ERROR
 error: Unlabelled argument after labelled argument
   ┌─ /src/one/two.gleam:3:24
   │

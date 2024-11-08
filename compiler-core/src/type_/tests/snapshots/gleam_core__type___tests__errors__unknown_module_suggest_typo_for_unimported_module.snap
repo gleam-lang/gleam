@@ -2,6 +2,18 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub fn main() {\n  woble.wubble()\n}\n"
 ---
+----- SOURCE CODE
+-- wibble/wobble.gleam
+pub fn wubble() {}
+
+-- main.gleam
+
+pub fn main() {
+  woble.wubble()
+}
+
+
+----- ERROR
 error: Unknown module
   ┌─ /src/one/two.gleam:3:3
   │

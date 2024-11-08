@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(wibble: Int)\n  Wobble(wobble: Int)\n}\n\npub fn main() {\n  let always_wibble = Wibble(10)\n  always_wibble.wobble\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(wibble: Int)
+  Wobble(wobble: Int)
+}
+
+pub fn main() {
+  let always_wibble = Wibble(10)
+  always_wibble.wobble
+}
+
+
+----- ERROR
+error: Unknown record field
+  ┌─ /src/one/two.gleam:9:16
+  │
+9 │   always_wibble.wobble
+  │                ^^^^^^^ Did you mean `wibble`?
+
+The value being accessed has this type:
+
+    Wibble
+
+It has these accessible fields:
+
+    .wibble
+
+Note: The field you are trying to access exists but not on the variant
+which is this value always is. A field that is not present in all variants
+can only be accessed when the value is inferred to be one variant.

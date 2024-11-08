@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_module_infer};
+use crate::{assert_module_error, assert_module_infer, assert_no_warnings};
 
 // https://github.com/gleam-lang/gleam/issues/2392
 #[test]
@@ -151,5 +151,35 @@ pub fn main() {
   let x = 1 |> callback(2)
 }
 "#
+    );
+}
+
+#[test]
+fn no_warnings_when_piping_into_labelled_capture_as_first_argument() {
+    assert_no_warnings!(
+        "
+fn wibble(label1 a, label2 b, lots c, of d, labels e) {
+  a + b * c - d / e
+}
+
+pub fn main() {
+  1 |> wibble(label1: _, label2: 2, lots: 3, of: 4, labels: 5)
+}
+"
+    );
+}
+
+#[test]
+fn no_warnings_when_piping_into_labelled_capture_as_only_argument() {
+    assert_no_warnings!(
+        "
+fn wibble(descriptive_label value) {
+  value
+}
+
+pub fn main() {
+  42 |> wibble(descriptive_label: _)
+}
+"
     );
 }

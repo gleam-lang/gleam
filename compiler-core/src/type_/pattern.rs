@@ -19,6 +19,9 @@ pub struct PatternTyper<'a, 'b> {
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
+    /// Variables which have been inferred to a specific variant of their type
+    /// from this pattern-matching. Key is the variable name, Value is the inferred variant index.
+    inferred_variant_variables: HashMap<EcoString, u16>,
     problems: &'a mut Problems,
 
     /// The minimum Gleam version required to compile the typed pattern.
@@ -41,6 +44,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
+            inferred_variant_variables: HashMap::new(),
             minimum_required_version: Version::new(0, 1, 0),
             problems,
         }
@@ -69,6 +73,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });
                 }
+                // We no longer have access to the variable from the subject of the pattern
+                // so it doesn't need to be inferred any more.
+                let _ = self.inferred_variant_variables.remove(name);
                 // Record that this variable originated in this pattern so any
                 // following alternative patterns can be checked to ensure they
                 // have the same variables.
@@ -81,12 +88,14 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
 
             PatternMode::Alternative(assigned) => {
-                match self.environment.scope.get(name) {
+                match self.environment.scope.get_mut(name) {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.into());
                         let initial_typ = initial.type_.clone();
-                        unify(initial_typ, type_)
+                        unify(initial_typ, type_.clone())?;
+                        unify_constructor_variants(Arc::make_mut(&mut initial.type_), &type_);
+                        Ok(())
                     }
 
                     // This variable was not defined in the Initial multi-pattern
@@ -96,10 +105,66 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         }
     }
 
+    fn set_subject_variable_variant(&mut self, name: EcoString, variant_index: u16) {
+        match &self.mode {
+            PatternMode::Initial => {
+                // If this name is reassigned in the pattern itself, we don't need to infer
+                // it, since it isn't accessible in this scope anymore.
+                if self.initial_pattern_vars.contains(&name) {
+                    return;
+                }
+
+                let variable = self
+                    .environment
+                    .scope
+                    .get(&name)
+                    .expect("Variable already exists in the case subjects");
+
+                // The type in this scope is now separate from the parent scope, so we
+                // remove any links to ensure that they aren't linked in any way and that
+                // we don't accidentally set the variant of the variable outside of this scope
+                let mut type_ = collapse_links(variable.type_.clone());
+                Arc::make_mut(&mut type_).set_custom_type_variant(variant_index);
+                // Mark this variable as having been inferred
+                let _ = self
+                    .inferred_variant_variables
+                    .insert(name.clone(), variant_index);
+                // This variable is only inferred in this branch of the case expression
+                self.environment.insert_local_variable(
+                    name,
+                    variable.definition_location().span,
+                    type_,
+                );
+            }
+
+            PatternMode::Alternative(_) => {
+                // If we haven't inferred this variable in all alternative patterns so far,
+                // we can't set its variant here
+                let Some(inferred_variant) = self.inferred_variant_variables.get(&name) else {
+                    return;
+                };
+
+                // If multiple variants are possible in this pattern, we can't infer it at all
+                // and we have to remove the variant index
+                if *inferred_variant != variant_index {
+                    // This variable's variant is no longer known
+                    let _ = self.inferred_variant_variables.remove(&name);
+                    let variable = self
+                        .environment
+                        .scope
+                        .get_mut(&name)
+                        .expect("Variable already exists in the case subjects");
+
+                    Arc::make_mut(&mut variable.type_).generalise_custom_type_variant();
+                }
+            }
+        }
+    }
+
     pub fn infer_alternative_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
-        subjects: &[Arc<Type>],
+        subjects: &[TypedExpr],
         location: &SrcSpan,
     ) -> Result<Vec<TypedPattern>, Error> {
         self.mode = PatternMode::Alternative(vec![]);
@@ -130,7 +195,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn infer_multi_pattern(
         &mut self,
         multi_pattern: UntypedMultiPattern,
-        subjects: &[Arc<Type>],
+        subjects: &[TypedExpr],
         location: &SrcSpan,
     ) -> Result<Vec<TypedPattern>, Error> {
         // If there are N subjects the multi-pattern is expected to be N patterns
@@ -144,8 +209,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         // Unify each pattern in the multi-pattern with the corresponding subject
         let mut typed_multi = Vec::with_capacity(multi_pattern.len());
-        for (pattern, subject_type) in multi_pattern.into_iter().zip(subjects) {
-            let pattern = self.unify(pattern, subject_type.clone())?;
+        for (pattern, subject) in multi_pattern.into_iter().zip(subjects) {
+            let subject_variable = match subject {
+                TypedExpr::Var { name, .. } => Some(name.clone()),
+                _ => None,
+            };
+
+            let pattern = self.unify(pattern, subject.type_(), subject_variable)?;
             typed_multi.push(pattern);
         }
         Ok(typed_multi)
@@ -199,7 +269,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let options: Vec<_> = options
             .into_iter()
             .map(|o| {
-                crate::analyse::infer_bit_array_option(o, |value, type_| self.unify(value, type_))
+                crate::analyse::infer_bit_array_option(o, |value, type_| {
+                    self.unify(value, type_, None)
+                })
             })
             .try_collect()?;
 
@@ -220,7 +292,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 _ => Ok(segment_type),
             }
         }?;
-        let typed_value = self.unify(*value, type_.clone())?;
+        let typed_value = self.unify(*value, type_.clone(), None)?;
 
         Ok(BitArraySegment {
             location,
@@ -238,6 +310,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         &mut self,
         pattern: UntypedPattern,
         type_: Arc<Type>,
+        // The name of the variable this pattern matches on, if any. Used for variant inference.
+        //
+        // Example:
+        // ```gleam
+        // case some_wibble {
+        //   Wibble(..) -> {
+        //     some_wibble.field_only_present_in_wibble
+        //   }
+        //   _ -> panic
+        // }
+        // ```
+        //
+        // Here, the pattern `Wibble(..)` has the subject variable `some_wibble`, meaning that
+        // in the inner scope, we can infer that the `some_wibble` variable is the `Wibble` variant
+        //
+        subject_variable: Option<EcoString>,
     ) -> Result<TypedPattern, Error> {
         match pattern {
             Pattern::Discard { name, location, .. } => {
@@ -330,9 +418,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 pattern,
                 location,
             } => {
-                self.insert_variable(&name, type_.clone(), location)
+                let pattern = self.unify(*pattern, type_, subject_variable)?;
+                self.insert_variable(&name, pattern.type_().clone(), location)
                     .map_err(|e| convert_unify_error(e, pattern.location()))?;
-                let pattern = self.unify(*pattern, type_)?;
                 Ok(Pattern::Assign {
                     name,
                     pattern: Box::new(pattern),
@@ -340,9 +428,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 })
             }
 
-            Pattern::Int { location, value } => {
+            Pattern::Int {
+                location,
+                value,
+                int_value,
+            } => {
                 unify(type_, int()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Int { location, value })
+
+                if self.environment.target == Target::JavaScript {
+                    check_javascript_int_safety(&int_value, location, self.problems);
+                }
+
+                Ok(Pattern::Int {
+                    location,
+                    value,
+                    int_value,
+                })
             }
 
             Pattern::Float { location, value } => {
@@ -375,12 +476,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         .clone();
                     let elements = elements
                         .into_iter()
-                        .map(|element| self.unify(element, type_.clone()))
+                        .map(|element| self.unify(element, type_.clone(), None))
                         .try_collect()?;
                     let type_ = list(type_);
 
                     let tail = match tail {
-                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone())?)),
+                        Some(tail) => Some(Box::new(self.unify(*tail, type_.clone(), None)?)),
                         None => None,
                     };
 
@@ -397,7 +498,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     expected: type_.clone(),
                     situation: None,
                     location,
-                    rigid_type_names: hashmap![],
                 }),
             },
 
@@ -415,7 +515,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elems = elems
                         .into_iter()
                         .zip(type_elems)
-                        .map(|(pattern, type_)| self.unify(pattern, type_.clone()))
+                        .map(|(pattern, type_)| self.unify(pattern, type_.clone(), None))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }
@@ -429,7 +529,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     let elems = elems
                         .into_iter()
                         .zip(elems_types)
-                        .map(|(pattern, type_)| self.unify(pattern, type_))
+                        .map(|(pattern, type_)| self.unify(pattern, type_, None))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elems, location })
                 }
@@ -444,7 +544,6 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         expected: type_,
                         situation: None,
                         location,
-                        rigid_type_names: hashmap![],
                     })
                 }
             },
@@ -595,7 +694,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         documentation,
                         module,
                         location,
-                        constructor_index,
+                        variant_index: constructor_index,
                         ..
                     } => PatternConstructor {
                         documentation: documentation.clone(),
@@ -648,7 +747,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         implicit,
                                         label,
                                     } = arg;
-                                    let value = self.unify(value, type_.clone())?;
+                                    let value = self.unify(value, type_.clone(), None)?;
                                     Ok(CallArg {
                                         value,
                                         location,
@@ -657,8 +756,18 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     })
                                 })
                                 .try_collect()?;
-                            unify(type_, retrn.clone())
+                            unify(type_.clone(), retrn.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
+
+                            if let Some((variable_to_infer, inferred_variant)) =
+                                subject_variable.zip(retrn.custom_type_inferred_variant())
+                            {
+                                self.set_subject_variable_variant(
+                                    variable_to_infer,
+                                    inferred_variant,
+                                );
+                            }
+
                             Ok(Pattern::Constructor {
                                 location,
                                 module,
@@ -678,10 +787,22 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                         }
                     }
 
-                    Type::Named { .. } => {
+                    Type::Named {
+                        inferred_variant, ..
+                    } => {
                         if pattern_args.is_empty() {
                             unify(type_, instantiated_constructor_type.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
+
+                            if let Some((variable_to_infer, inferred_variant)) =
+                                subject_variable.zip(*inferred_variant)
+                            {
+                                self.set_subject_variable_variant(
+                                    variable_to_infer,
+                                    inferred_variant,
+                                );
+                            }
+
                             Ok(Pattern::Constructor {
                                 location,
                                 module,
@@ -739,5 +860,43 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         if minimum_required_version > self.minimum_required_version {
             self.minimum_required_version = minimum_required_version;
         }
+    }
+}
+
+/// Unifies the variants of two variables declared in alternative patterns.
+///
+/// This ensures that constructor variant information is only stored if
+/// all alternate pattern variables have the same variant. For example:
+///
+/// ```gleam
+/// type Wibble {
+///   Wibble(wibble: Int, wobble: Float)
+///   Wobble(wubble: String, wooble, Bool)
+/// }
+///
+/// case some_value {
+///   Wibble(..) as wibble | Wobble(..) as wibble ->
+///     Wibble(..wibble, wobble: 1.3)
+/// }
+/// ```
+///
+/// The `wibble` variable will not have the constructor variant stored,
+/// since it can be one of two possible variants.
+///
+fn unify_constructor_variants(into: &mut Type, from: &Type) {
+    match (into, from) {
+        (
+            Type::Named {
+                inferred_variant: into_index,
+                ..
+            },
+            Type::Named {
+                inferred_variant: from_index,
+                ..
+            },
+        ) if from_index != into_index => *into_index = None,
+        // If the variants are the same, or they aren't both named types,
+        // no modifications are needed
+        _ => {}
     }
 }

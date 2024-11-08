@@ -12,6 +12,7 @@ import {
   stringBits,
   toBitArray,
   toList,
+  sizedInt,
 } from "./prelude.mjs";
 
 let failures = 0;
@@ -149,6 +150,56 @@ assertNotEqual(new UtfCodepoint(128013), new UtfCodepoint(128014));
 // toBitArray
 
 assertEqual(new BitArray(new Uint8Array([])), toBitArray([]));
+
+const testValues = [
+  { input: 0, u8: 0 },
+  { input: 1, u8: 1 },
+  { input: 127, u8: 127 },
+  { input: 128, u8: 128 },
+  { input: 129, u8: 129 },
+  { input: 255, u8: 255 },
+  { input: 256, u8: 0 },
+  { input: 257, u8: 1 },
+  { input: 2000, u8: 208 },
+  { input: 0, u8: 0 },
+  { input: -1, u8: 255 },
+  { input: -127, u8: 129 },
+  { input: -128, u8: 128 },
+  { input: -129, u8: 127 },
+  { input: -255, u8: 1 },
+  { input: -256, u8: 0 },
+  { input: -257, u8: 255 },
+  { input: -2000, u8: 48 },
+];
+
+for (const { input, u8 } of testValues) {
+  assertEqual(new BitArray(new Uint8Array([u8])), toBitArray([input]));
+}
+
+assertEqual(new BitArray(new Uint8Array([])), toBitArray([new Uint8Array([])]));
+assertEqual(
+  new BitArray(new Uint8Array([1, 2, 4, 8])),
+  toBitArray([new Uint8Array([1, 2, 4, 8])])
+);
+
+assertEqual(
+  new BitArray(new Uint8Array(testValues.map((t) => t.u8))),
+  toBitArray(testValues.map((t) => t.input))
+);
+
+assertEqual(
+  new BitArray(
+    new Uint8Array([1, 2, 4, 8, ...testValues.map((t) => t.u8), 80, 90, 100])
+  ),
+  toBitArray([
+    new Uint8Array([]),
+    new Uint8Array([1, 2, 4, 8]),
+    ...testValues.map((t) => t.input),
+    new Uint8Array([80, 90]),
+    new Uint8Array([]),
+    new Uint8Array([100]),
+  ])
+);
 
 assertEqual(
   new BitArray(new Uint8Array([97, 98, 99])),
@@ -344,6 +395,8 @@ assertNotEqual(new HasCustomEquals(1, 1), new HasCustomEquals(2, 1));
 assertEqual(hasEqualsField, { ...hasEqualsField });
 assertNotEqual(hasEqualsField, hasEqualsField2);
 
+// BitArray
+
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(0), 1);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(2), 3);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 1, true, false), 1);
@@ -353,6 +406,14 @@ assertEqual(new BitArray(new Uint8Array([1, 2, 3])).intFromSlice(0, 2, false, fa
 assertEqual(new BitArray(new Uint8Array([1, 160, 3])).intFromSlice(0, 2, false, true), -24575);
 assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 2, true, false), 40962);
 assertEqual(new BitArray(new Uint8Array([160, 2, 3])).intFromSlice(0, 2, true, true), -24574);
+assertEqual(
+  new BitArray(new Uint8Array([255, 255, 255, 255, 255, 255, 255])).intFromSlice(0, 7, true, true),
+  -1,
+);
+assertEqual(
+  new BitArray(new Uint8Array([255, 255, 255, 255, 255, 255, 254])).intFromSlice(0, 7, true, false),
+  Number(0xFFFFFFFFFFFFFEn),
+);
 assertEqual(
   new BitArray(new Uint8Array([63, 240, 0, 0, 0, 0, 0, 0])).floatFromSlice(0, 8, true),
   1.0,
@@ -372,6 +433,49 @@ assertEqual(
 assertEqual(
   new BitArray(new Uint8Array([1, 2, 3])).sliceAfter(1),
   new BitArray(new Uint8Array([2, 3])),
+);
+
+// sizedInt()
+
+assertEqual(
+  sizedInt(100, 0, true),
+  new Uint8Array([]),
+);
+assertEqual(
+  sizedInt(0, 32, true),
+  new Uint8Array([0, 0, 0, 0]),
+);
+assertEqual(
+  sizedInt(1, 24, true),
+  new Uint8Array([0, 0, 1]),
+);
+assertEqual(
+  sizedInt(-1, 32, true),
+  new Uint8Array([255, 255, 255, 255]),
+);
+assertEqual(
+  sizedInt(80000, 16, true),
+  new Uint8Array([56, 128]),
+);
+assertEqual(
+  sizedInt(-80000, 16, true),
+  new Uint8Array([199, 128]),
+);
+assertEqual(
+  sizedInt(-489_391_639_457_909_760, 56, true),
+  new Uint8Array([53, 84, 229, 150, 16, 180, 0]),
+);
+assertEqual(
+  sizedInt(-1, 64, true),
+  new Uint8Array([255, 255, 255, 255, 255, 255, 255, 255]),
+);
+assertEqual(
+  sizedInt(Number.MAX_SAFE_INTEGER, 64, true),
+  new Uint8Array([0, 31, 255, 255, 255, 255, 255, 255]),
+);
+assertEqual(
+  sizedInt(Number.MIN_SAFE_INTEGER, 64, true),
+  new Uint8Array([255, 224, 0, 0, 0, 0, 0, 1]),
 );
 
 // Result.isOk

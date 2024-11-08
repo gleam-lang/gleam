@@ -2,6 +2,10 @@
 source: compiler-core/src/javascript/tests/consts.rs
 expression: "pub const a = [1, 2, 3]"
 ---
+----- SOURCE CODE
+pub const a = [1, 2, 3]
+
+----- COMPILED JAVASCRIPT
 import { toList } from "../gleam.mjs";
 
 export const a = /* @__PURE__ */ toList([1, 2, 3]);

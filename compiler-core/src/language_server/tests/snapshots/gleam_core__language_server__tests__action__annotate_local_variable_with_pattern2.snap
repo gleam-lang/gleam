@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main(values) {\n  let #(left, right) = values\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(values) {
+  let #(left, right) = values
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑       
+}
+
+
+----- AFTER ACTION
+
+pub fn main(values) {
+  let #(left, right): #(a, b) = values
+}

@@ -76,6 +76,23 @@ export function go() {
 }
 
 #[wasm_bindgen_test]
+fn test_compile_package_js_unsupported_feature() {
+    reset_filesystem(0);
+    write_module(
+        0,
+        "one",
+        r#"
+fn wibble() { <<0:16-native>> }
+pub fn main() { wibble() }
+"#,
+    );
+
+    assert!(compile_package(0, "javascript")
+        .unwrap_err()
+        .contains("Unsupported feature for compilation target"));
+}
+
+#[wasm_bindgen_test]
 fn test_warnings() {
     reset_filesystem(0);
     write_module(0, "one", "const x = 1");

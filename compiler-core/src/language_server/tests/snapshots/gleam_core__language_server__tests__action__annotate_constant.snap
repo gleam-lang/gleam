@@ -1,0 +1,13 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub const my_constant = 20\n"
+---
+----- BEFORE ACTION
+
+pub const my_constant = 20
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑   
+
+
+----- AFTER ACTION
+
+pub const my_constant: Int = 20

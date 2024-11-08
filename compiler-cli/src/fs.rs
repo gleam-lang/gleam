@@ -2,8 +2,8 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind},
     io::{
-        CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter, OutputFile,
-        ReadDir, Stdio, WrappedReader,
+        BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
+        OutputFile, ReadDir, Stdio, WrappedReader,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
@@ -12,11 +12,12 @@ use gleam_core::{
     Result, Warning,
 };
 use std::{
+    collections::HashSet,
     ffi::OsStr,
     fmt::Debug,
     fs::File,
     io::{self, BufRead, BufReader, Write},
-    sync::OnceLock,
+    sync::{Arc, Mutex, OnceLock},
     time::SystemTime,
 };
 
@@ -55,12 +56,16 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
 }
 
 /// A `FileWriter` implementation that writes to the file system.
-#[derive(Debug, Clone, Copy)]
-pub struct ProjectIO;
+#[derive(Debug, Clone)]
+pub struct ProjectIO {
+    beam_compiler: Arc<Mutex<crate::beam_compiler::BeamCompiler>>,
+}
 
 impl ProjectIO {
     pub fn new() -> Self {
-        Self
+        Self {
+            beam_compiler: Default::default(),
+        }
     }
 
     pub fn boxed() -> Box<Self> {
@@ -222,6 +227,22 @@ impl CommandExecutor for ProjectIO {
     }
 }
 
+impl BeamCompiler for ProjectIO {
+    fn compile_beam(
+        &self,
+        out: &Utf8Path,
+        lib: &Utf8Path,
+        modules: &HashSet<Utf8PathBuf>,
+        stdio: Stdio,
+    ) -> Result<(), Error> {
+        self.beam_compiler
+            .lock()
+            .as_mut()
+            .expect("could not get beam_compiler")
+            .compile(self, out, lib, modules, stdio)
+    }
+}
+
 impl MakeLocker for ProjectIO {
     fn make_locker(&self, paths: &ProjectPaths, target: Target) -> Result<Box<dyn Locker>> {
         let locker = LspLocker::new(paths, target)?;
@@ -231,7 +252,7 @@ impl MakeLocker for ProjectIO {
 
 impl DownloadDependencies for ProjectIO {
     fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest> {
-        crate::dependencies::download(paths, NullTelemetry, None, UseManifest::Yes)
+        crate::dependencies::download(paths, NullTelemetry, None, Vec::new(), UseManifest::Yes)
     }
 }
 

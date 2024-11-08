@@ -49,10 +49,10 @@ use ecow::EcoString;
 use crate::type_::Type;
 
 use super::{
-    AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, SrcSpan, Statement, TodoKind,
-    TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition, TypedExpr,
-    TypedExprBitArraySegment, TypedFunction, TypedModule, TypedPattern,
-    TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
+    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
+    TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant,
+    TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, Use,
 };
 
 pub trait Visit<'ast> {
@@ -66,6 +66,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_function(&mut self, fun: &'ast TypedFunction) {
         visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
+        visit_typed_module_constant(self, constant);
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -129,20 +133,12 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        is_capture: &'ast bool,
+        kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<TypeAst>,
     ) {
-        visit_typed_expr_fn(
-            self,
-            location,
-            type_,
-            is_capture,
-            args,
-            body,
-            return_annotation,
-        );
+        visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_expr_list(
@@ -268,10 +264,10 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        spread: &'ast TypedExpr,
+        record: &'ast TypedExpr,
         args: &'ast [TypedRecordUpdateArg],
     ) {
-        visit_typed_expr_record_update(self, location, type_, spread, args);
+        visit_typed_expr_record_update(self, location, type_, record, args);
     }
 
     fn visit_typed_expr_negate_bool(&mut self, location: &'ast SrcSpan, value: &'ast TypedExpr) {
@@ -443,6 +439,41 @@ pub trait Visit<'ast> {
             right_side_assignment,
         );
     }
+
+    fn visit_type_ast(&mut self, node: &'ast TypeAst) {
+        visit_type_ast(self, node);
+    }
+
+    fn visit_type_ast_constructor(
+        &mut self,
+        location: &'ast SrcSpan,
+        module: &'ast Option<(EcoString, SrcSpan)>,
+        name: &'ast EcoString,
+        arguments: &'ast Vec<TypeAst>,
+    ) {
+        visit_type_ast_constructor(self, location, module, name, arguments);
+    }
+
+    fn visit_type_ast_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        arguments: &'ast Vec<TypeAst>,
+        return_: &'ast TypeAst,
+    ) {
+        visit_type_ast_fn(self, location, arguments, return_);
+    }
+
+    fn visit_type_ast_var(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        visit_type_ast_var(self, location, name);
+    }
+
+    fn visit_type_ast_tuple(&mut self, location: &'ast SrcSpan, elems: &'ast Vec<TypeAst>) {
+        visit_type_ast_tuple(self, location, elems);
+    }
+
+    fn visit_type_ast_hole(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
+        visit_type_ast_hole(self, location, name);
+    }
 }
 
 pub fn visit_typed_module<'a, V>(v: &mut V, module: &'a TypedModule)
@@ -463,7 +494,7 @@ where
         Definition::TypeAlias(_typealias) => { /* TODO */ }
         Definition::CustomType(_custom_type) => { /* TODO */ }
         Definition::Import(_import) => { /* TODO */ }
-        Definition::ModuleConstant(_module_constant) => { /* TODO */ }
+        Definition::ModuleConstant(constant) => v.visit_typed_module_constant(constant),
     }
 }
 pub fn visit_typed_function<'a, V>(v: &mut V, fun: &'a TypedFunction)
@@ -475,6 +506,95 @@ where
     }
 }
 
+pub fn visit_type_ast<'a, V>(v: &mut V, node: &'a TypeAst)
+where
+    V: Visit<'a> + ?Sized,
+{
+    match node {
+        TypeAst::Constructor(super::TypeAstConstructor {
+            location,
+            arguments,
+            module,
+            name,
+        }) => {
+            v.visit_type_ast_constructor(location, module, name, arguments);
+        }
+        TypeAst::Fn(super::TypeAstFn {
+            location,
+            arguments,
+            return_,
+        }) => {
+            v.visit_type_ast_fn(location, arguments, return_);
+        }
+        TypeAst::Var(super::TypeAstVar { location, name }) => {
+            v.visit_type_ast_var(location, name);
+        }
+        TypeAst::Tuple(super::TypeAstTuple { location, elems }) => {
+            v.visit_type_ast_tuple(location, elems);
+        }
+        TypeAst::Hole(super::TypeAstHole { location, name }) => {
+            v.visit_type_ast_hole(location, name);
+        }
+    }
+}
+
+pub fn visit_type_ast_constructor<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _module: &'a Option<(EcoString, SrcSpan)>,
+    _name: &'a EcoString,
+    arguments: &'a Vec<TypeAst>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_type_ast(argument);
+    }
+}
+
+pub fn visit_type_ast_fn<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    arguments: &'a Vec<TypeAst>,
+    return_: &'a TypeAst,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    for argument in arguments {
+        v.visit_type_ast(argument);
+    }
+    v.visit_type_ast(return_);
+}
+
+pub fn visit_type_ast_var<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+    // No further traversal needed for variables
+}
+
+pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elems: &'a Vec<TypeAst>)
+where
+    V: Visit<'a> + ?Sized,
+{
+    for elem in elems {
+        v.visit_type_ast(elem);
+    }
+}
+
+pub fn visit_type_ast_hole<'a, V>(_v: &mut V, _location: &'a SrcSpan, _name: &'a EcoString)
+where
+    V: Visit<'a> + ?Sized,
+{
+    // No further traversal needed for holes
+}
+
+pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
 pub fn visit_typed_expr<'a, V>(v: &mut V, node: &'a TypedExpr)
 where
     V: Visit<'a> + ?Sized,
@@ -484,6 +604,7 @@ where
             location,
             type_,
             value,
+            int_value: _,
         } => v.visit_typed_expr_int(location, type_, value),
         TypedExpr::Float {
             location,
@@ -512,11 +633,11 @@ where
         TypedExpr::Fn {
             location,
             type_,
-            is_capture,
+            kind,
             args,
             body,
             return_annotation,
-        } => v.visit_typed_expr_fn(location, type_, is_capture, args, body, return_annotation),
+        } => v.visit_typed_expr_fn(location, type_, kind, args, body, return_annotation),
         TypedExpr::List {
             location,
             type_,
@@ -594,9 +715,9 @@ where
         TypedExpr::RecordUpdate {
             location,
             type_,
-            spread,
+            record,
             args,
-        } => v.visit_typed_expr_record_update(location, type_, spread, args),
+        } => v.visit_typed_expr_record_update(location, type_, record, args),
         TypedExpr::NegateBool { location, value } => {
             v.visit_typed_expr_negate_bool(location, value)
         }
@@ -677,7 +798,7 @@ pub fn visit_typed_expr_fn<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _typ: &'a Arc<Type>,
-    _is_capture: &'a bool,
+    _kind: &'a FunctionLiteralKind,
     _args: &'a [TypedArg],
     body: &'a [TypedStatement],
     _return_annotation: &'a Option<TypeAst>,
@@ -850,12 +971,12 @@ pub fn visit_typed_expr_record_update<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _typ: &'a Arc<Type>,
-    spread: &'a TypedExpr,
+    record: &'a TypedExpr,
     args: &'a [TypedRecordUpdateArg],
 ) where
     V: Visit<'a> + ?Sized,
 {
-    v.visit_typed_expr(spread);
+    v.visit_typed_expr(record);
     for arg in args {
         v.visit_typed_record_update_arg(arg);
     }
@@ -979,7 +1100,11 @@ where
     V: Visit<'a> + ?Sized,
 {
     match pattern {
-        Pattern::Int { location, value } => v.visit_typed_pattern_int(location, value),
+        Pattern::Int {
+            location,
+            value,
+            int_value: _,
+        } => v.visit_typed_pattern_int(location, value),
         Pattern::Float { location, value } => v.visit_typed_pattern_float(location, value),
         Pattern::String { location, value } => v.visit_typed_pattern_string(location, value),
         Pattern::Variable {

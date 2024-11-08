@@ -1170,6 +1170,53 @@ fn do_thing() -> LocalResult {
 }
 
 #[test]
+fn hover_print_alias_when_parameters_match() {
+    let code = "
+type MyResult(a, b) = Result(a, b)
+
+fn do_thing() -> MyResult(Int, Int) {
+  Error(1)
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("do_thing").under_char('d')
+    );
+}
+
+#[test]
+fn hover_print_underlying_for_imported_alias() {
+    let code = "
+import alias.{type A}
+
+fn wibble() -> Result(Int, String) {
+  todo
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code).add_hex_module("alias", "pub type A = Result(Int, String)"),
+        find_position_of("wibble").under_char('l')
+    );
+}
+
+#[test]
+fn hover_print_aliased_imported_generic_type() {
+    let code = "
+import gleam/option.{type Option as Maybe}
+
+const none: Maybe(Int) = option.None
+";
+
+    assert_hover!(
+        TestProject::for_source(code)
+            .add_hex_module("gleam/option", "pub type Option(a) { None Some(a) }"),
+        find_position_of("none").under_char('e')
+    );
+}
+
+#[test]
 fn hover_print_qualified_prelude_type_when_shadowed_by_alias() {
     let code = "
 type Result = #(Bool, String)
@@ -1192,5 +1239,38 @@ const value = True
     assert_hover!(
         TestProject::for_source(code).add_hex_module("alias", "pub type Bool = #(Int, Int)"),
         find_position_of("value").under_char('v')
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3761
+#[test]
+fn hover_over_block_in_list_spread() {
+    let code = "
+pub fn main() {
+  [1, 2, ..{
+    let x = 1
+    [x]
+  }]
+}
+";
+
+    assert_hover!(TestProject::for_source(code), find_position_of("x"));
+}
+
+// https://github.com/gleam-lang/gleam/issues/3758
+#[test]
+fn hover_for_anonymous_function_annotation() {
+    let code = "
+/// An example type.
+pub type Wibble
+
+pub fn main() {
+  fn(w: Wibble) { todo }
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("w: Wibble").under_char('b')
     );
 }

@@ -1,0 +1,34 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type Wibble {\n  Wibble(field: Int)\n  Wobble(not_field: String, field: Int)\n}\n\npub fn main(wibble: Wibble) {\n  wibble.field\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble(field: Int)
+  Wobble(not_field: String, field: Int)
+}
+
+pub fn main(wibble: Wibble) {
+  wibble.field
+}
+
+
+----- ERROR
+error: Unknown record field
+  ┌─ /src/one/two.gleam:8:9
+  │
+8 │   wibble.field
+  │         ^^^^^^ This field does not exist
+
+The value being accessed has this type:
+
+    Wibble
+
+It does not have any fields shared by all variants.
+
+Note: The field you are trying to access might not be consistently present
+or positioned across the custom type's variants, preventing reliable
+access. Ensure the field exists in the same position and has the same
+type in all variants, or pattern matching on it to enable direct accessor
+syntax.

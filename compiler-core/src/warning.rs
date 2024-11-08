@@ -4,7 +4,10 @@ use crate::{
     error::wrap,
     type_::{
         self,
-        error::{FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic},
+        error::{
+            FeatureKind, LiteralCollectionKind, PanicPosition, TodoOrPanic,
+            UnreachableCaseClauseReason,
+        },
         pretty::Printer,
     },
 };
@@ -727,11 +730,17 @@ Run this command to add it to your dependencies:
                     }
                 }
 
-                type_::Warning::UnreachableCaseClause { location } => {
-                    let text: String =
-                        "This case clause cannot be reached as a previous clause matches
-the same values.\n"
-                            .into();
+                type_::Warning::UnreachableCaseClause { location, reason } => {
+                    let text: String = match reason {
+                        UnreachableCaseClauseReason::DuplicatePattern => wrap(
+                            "This case clause cannot be reached as a previous clause matches \
+the same values.\n",
+                        ),
+                        UnreachableCaseClauseReason::ImpossibleVariant => wrap(
+                            "This case clause cannot be reached as it matches \
+on a variant of a type which is never present.\n",
+                        ),
+                    };
                     Diagnostic {
                         title: "Unreachable case clause".into(),
                         text,
@@ -1018,6 +1027,12 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::AtInJavascriptModules => {
                             "The ability to have `@` in a Javascript module's name was"
                         }
+                        FeatureKind::RecordUpdateVariantInference => {
+                            "Record updates for custom types when the variant is known was"
+                        }
+                        FeatureKind::RecordAccessVariantInference => {
+                            "Field access on custom types when the variant is known was"
+                        }
                     };
 
                     Diagnostic {
@@ -1046,6 +1061,29 @@ See: https://tour.gleam.run/functions/pipelines/",
                         }),
                     }
                 }
+
+                type_::Warning::JavaScriptIntUnsafe { location } => Diagnostic {
+                    title: "Int is outside JavaScript's safe integer range".into(),
+                    text: wrap(
+                        "This integer value is too large to be represented accurately by \
+JavaScript's number type. To avoid this warning integer values must be in the range \
+-(2^53 - 1) - (2^53 - 1).
+
+See JavaScript's Number.MAX_SAFE_INTEGER and Number.MIN_SAFE_INTEGER properties for more \
+information.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        path: path.to_path_buf(),
+                        src: src.clone(),
+                        label: diagnostic::Label {
+                            text: Some("This is not a safe integer value on JavaScript".into()),
+                            span: *location,
+                        },
+                        extra_labels: Vec::new(),
+                    }),
+                },
             },
         }
     }

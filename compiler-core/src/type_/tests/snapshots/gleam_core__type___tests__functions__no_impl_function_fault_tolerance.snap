@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn no_impl() -> Nil\n\npub type X = UnknownType\n"
 ---
+----- SOURCE CODE
+
+pub fn no_impl() -> Nil
+
+pub type X = UnknownType
+
+
+----- ERROR
 error: Function without an implementation
   ┌─ /src/one/two.gleam:2:1
   │

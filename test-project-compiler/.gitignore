@@ -1,0 +1,3 @@
+cases/*/build
+cases/*/manifest.toml
+support/*/manifest.toml

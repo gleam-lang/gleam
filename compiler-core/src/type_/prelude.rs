@@ -68,6 +68,7 @@ pub fn int() -> Arc<Type> {
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![],
+        inferred_variant: None,
     })
 }
 
@@ -78,6 +79,7 @@ pub fn float() -> Arc<Type> {
         name: FLOAT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
+        inferred_variant: None,
     })
 }
 
@@ -88,6 +90,7 @@ pub fn bool() -> Arc<Type> {
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
+        inferred_variant: None,
     })
 }
 
@@ -98,6 +101,7 @@ pub fn string() -> Arc<Type> {
         name: STRING.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
+        inferred_variant: None,
     })
 }
 
@@ -108,6 +112,7 @@ pub fn nil() -> Arc<Type> {
         name: NIL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
+        inferred_variant: None,
     })
 }
 
@@ -118,6 +123,7 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![t],
+        inferred_variant: None,
     })
 }
 
@@ -128,6 +134,7 @@ pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![a, e],
+        inferred_variant: None,
     })
 }
 
@@ -152,6 +159,7 @@ pub fn named(
         module: module.into(),
         name: name.into(),
         args,
+        inferred_variant: None,
     })
 }
 
@@ -162,6 +170,7 @@ pub fn bits() -> Arc<Type> {
         name: BIT_ARRAY.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
+        inferred_variant: None,
     })
 }
 
@@ -172,6 +181,7 @@ pub fn utf_codepoint() -> Arc<Type> {
         name: UTF_CODEPOINT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
+        inferred_variant: None,
     })
 }
 
@@ -261,8 +271,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             field_map: None,
                             arity: 0,
                             location: SrcSpan::default(),
-                            constructors_count: 2,
-                            constructor_index: 0,
+                            variants_count: 2,
+                            variant_index: 0,
                         },
                         bool(),
                     ),
@@ -277,8 +287,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             field_map: None,
                             arity: 0,
                             location: SrcSpan::default(),
-                            constructors_count: 2,
-                            constructor_index: 1,
+                            variants_count: 2,
+                            variant_index: 1,
                         },
                         bool(),
                     ),
@@ -354,8 +364,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             arity: 0,
                             field_map: None,
                             location: SrcSpan::default(),
-                            constructors_count: 1,
-                            constructor_index: 0,
+                            variants_count: 1,
+                            variant_index: 0,
                         },
                         nil(),
                     ),
@@ -433,8 +443,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             field_map: None,
                             arity: 1,
                             location: SrcSpan::default(),
-                            constructors_count: 2,
-                            constructor_index: 0,
+                            variants_count: 2,
+                            variant_index: 0,
                         },
                         fn_(vec![ok.clone()], result(ok, error)),
                     ),
@@ -451,8 +461,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             field_map: None,
                             arity: 1,
                             location: SrcSpan::default(),
-                            constructors_count: 2,
-                            constructor_index: 1,
+                            variants_count: 2,
+                            variant_index: 1,
                         },
                         fn_(vec![error.clone()], result(ok, error)),
                     ),

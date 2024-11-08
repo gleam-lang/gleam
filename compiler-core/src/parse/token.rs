@@ -1,3 +1,4 @@
+use num_bigint::BigInt;
 use std::fmt;
 
 use ecow::EcoString;
@@ -7,7 +8,7 @@ pub enum Token {
     Name { name: EcoString },
     UpName { name: EcoString },
     DiscardName { name: EcoString },
-    Int { value: EcoString },
+    Int { value: EcoString, int_value: BigInt },
     Float { value: EcoString },
     String { value: EcoString },
     CommentDoc { content: EcoString },
@@ -202,9 +203,12 @@ impl fmt::Display for Token {
             Token::Name { name } | Token::UpName { name } | Token::DiscardName { name } => {
                 name.as_str()
             }
-            Token::Int { value } | Token::Float { value } | Token::String { value } => {
-                value.as_str()
+            Token::Int {
+                value,
+                int_value: _,
             }
+            | Token::Float { value }
+            | Token::String { value } => value.as_str(),
             Token::AmperAmper => "&&",
             Token::As => "as",
             Token::Assert => "assert",

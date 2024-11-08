@@ -2,4 +2,12 @@
 source: compiler-core/src/javascript/tests/tuples.rs
 expression: "\npub fn go() {\n  #(\"1\", \"2\", \"3\")\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go() {
+  #("1", "2", "3")
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 export function go(): [string, string, string];

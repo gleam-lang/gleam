@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nconst some_int = 5\nconst invalid_concat = some_int <> \"with_string\"\n"
 ---
+----- SOURCE CODE
+
+const some_int = 5
+const invalid_concat = some_int <> "with_string"
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:24
   │

@@ -459,3 +459,31 @@ fn function_literals_get_properly_wrapped_3() {
 "#
     );
 }
+
+#[test]
+fn labelled_argument_ordering() {
+    // https://github.com/gleam-lang/gleam/issues/3671
+    assert_js!(
+        "
+type A { A }
+type B { B }
+type C { C }
+type D { D }
+
+fn wibble(a a: A, b b: B, c c: C, d d: D) {
+  Nil
+}
+
+pub fn main() {
+  wibble(A, C, D, b: B)
+  wibble(A, C, D, b: B)
+  wibble(B, C, D, a: A)
+  wibble(B, C, a: A, d: D)
+  wibble(B, C, d: D, a: A)
+  wibble(B, D, a: A, c: C)
+  wibble(B, D, c: C, a: A)
+  wibble(C, D, b: B, a: A)
+}
+"
+    );
+}

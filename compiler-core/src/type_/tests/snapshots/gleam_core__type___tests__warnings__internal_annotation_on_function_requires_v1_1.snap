@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n@internal\npub fn wibble() { Nil }\n"
 ---
+----- SOURCE CODE
+
+@internal
+pub fn wibble() { Nil }
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:2:1
   │

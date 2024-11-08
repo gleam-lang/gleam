@@ -1,8 +1,16 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 501
 expression: "\nfn go(x) {\n  let assert <<_, a:2-bytes>> = x\n  let assert <<_, b:bytes-size(2)>> = x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert <<_, a:2-bytes>> = x
+  let assert <<_, b:bytes-size(2)>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {

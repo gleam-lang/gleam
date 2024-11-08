@@ -2,6 +2,38 @@
 source: compiler-core/src/erlang/tests/reserved.rs
 expression: "pub type After { TestAfter }\npub type And { TestAnd }\npub type Andalso { TestAndAlso }\npub type Band { TestBAnd }\npub type Begin { TestBegin }\npub type Bnot { TestBNot }\npub type Bor { TestBOr }\npub type Bsl { TestBsl }\npub type Bsr { TestBsr }\npub type Bxor { TestBXor }\npub type Case { TestCase }\npub type Catch { TestCatch }\npub type Cond { TestCond }\npub type Div { TestDiv }\npub type End { TestEnd }\npub type Fun { TestFun }\npub type If { TestIf }\npub type Let { TestLet }\npub type Maybe { TestMaybe }\npub type Not { TestNot }\npub type Of { TestOf }\npub type Or { TestOr }\npub type Orelse { TestOrElse }\npub type Query { TestQuery }\npub type Receive { TestReceive }\npub type Rem { TestRem }\npub type Try { TestTry }\npub type When { TestWhen }\npub type Xor { TestXor }"
 ---
+----- SOURCE CODE
+pub type After { TestAfter }
+pub type And { TestAnd }
+pub type Andalso { TestAndAlso }
+pub type Band { TestBAnd }
+pub type Begin { TestBegin }
+pub type Bnot { TestBNot }
+pub type Bor { TestBOr }
+pub type Bsl { TestBsl }
+pub type Bsr { TestBsr }
+pub type Bxor { TestBXor }
+pub type Case { TestCase }
+pub type Catch { TestCatch }
+pub type Cond { TestCond }
+pub type Div { TestDiv }
+pub type End { TestEnd }
+pub type Fun { TestFun }
+pub type If { TestIf }
+pub type Let { TestLet }
+pub type Maybe { TestMaybe }
+pub type Not { TestNot }
+pub type Of { TestOf }
+pub type Or { TestOr }
+pub type Orelse { TestOrElse }
+pub type Query { TestQuery }
+pub type Receive { TestReceive }
+pub type Rem { TestRem }
+pub type Try { TestTry }
+pub type When { TestWhen }
+pub type Xor { TestXor }
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

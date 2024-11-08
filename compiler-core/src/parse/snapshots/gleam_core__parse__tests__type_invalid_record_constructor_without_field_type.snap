@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\npub opaque type User {\n    name\n}\n"
 ---
+----- SOURCE CODE
+
+pub opaque type User {
+    name
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │

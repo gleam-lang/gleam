@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 357
 expression: "\nfn go(x) {\n  let assert <<a:16-big-signed>> = x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert <<a:16-big-signed>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub type X {\n  A\n  B(e0: Int, e0: Int)\n}\n\nfn compiler_crash(x: X) {\n  case x {\n    A -> todo\n    _ -> todo\n  }\n}\n  "
+---
+----- SOURCE CODE
+
+pub type X {
+  A
+  B(e0: Int, e0: Int)
+}
+
+fn compiler_crash(x: X) {
+  case x {
+    A -> todo
+    _ -> todo
+  }
+}
+  
+
+----- ERROR
+error: Duplicate label
+  ┌─ /src/one/two.gleam:4:14
+  │
+4 │   B(e0: Int, e0: Int)
+  │              ^^
+
+The label `e0` has already been defined. Rename this label.

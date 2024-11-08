@@ -339,6 +339,23 @@ fn pipe_mismatch_error() {
 }
 
 #[test]
+fn pipe_value_type_mismatch_error() {
+    assert_module_error!(
+        "pub fn main() -> String {
+            eat_veggie
+            |> Orange
+         }
+
+         type Fruit{ Orange }
+         type Veg{ Lettuce }
+
+         fn eat_veggie(v: Veg) -> String {
+            \"Ok\"
+         }"
+    );
+}
+
+#[test]
 fn case_tuple_guard() {
     assert_error!("case #(1, 2, 3) { x if x == #(1, 1.0) -> 1 }");
 }
@@ -641,6 +658,23 @@ pub type Person {
 }
 pub fn get_name(person: Person) { person.name }
 pub fn get_age(person: Person) { person.age }"
+    );
+}
+
+#[test]
+fn record_access_on_inferred_variant_when_field_is_in_other_variants() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(wibble: Int)
+  Wobble(wobble: Int)
+}
+
+pub fn main() {
+  let always_wibble = Wibble(10)
+  always_wibble.wobble
+}
+"
     );
 }
 
@@ -2251,5 +2285,357 @@ pub fn main() {
   woble.wubble()
 }
 ",
+    );
+}
+
+#[test]
+fn qualified_type_mismatched_type_error() {
+    assert_with_module_error!(
+        ("wibble", "pub type Wobble"),
+        "
+import wibble
+const my_wobble: wibble.Wobble = Nil
+"
+    );
+}
+
+#[test]
+fn qualified_type_similar_type_name() {
+    assert_with_module_error!(
+        ("wibble", "pub type Int"),
+        "
+import wibble
+const value: wibble.Int = 20
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_a_function() {
+    assert_with_module_error!(
+        ("wibble", "pub type Function { Function(fn() -> Nil) }"),
+        "
+import wibble.{type Function as FuncWrapper}
+pub fn main(f: FuncWrapper) {
+  f()
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_unknown_field() {
+    assert_module_error!(
+        "
+import gleam
+type Int {
+  Int(bit_size: gleam.Int, bits: BitArray)
+}
+
+pub fn main(not_a_record: gleam.Int) {
+  not_a_record.bits
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_invalid_operands() {
+    assert_with_module_error!(
+        ("maths", "pub type Vector { Vector(x: Float, y: Float) }"),
+        "
+import maths as math
+pub fn add_two_vectors(a: math.Vector, b: math.Vector) {
+  a + b
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_invalid_pipe_argument() {
+    assert_with_module_error!(
+        (
+            "mod",
+            "pub type Wibble pub fn takes_wibble(value: Wibble) { value }"
+        ),
+        "
+import mod
+pub fn main() {
+  Nil |> mod.takes_wibble
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_unification_error() {
+    assert_module_error!(
+        "
+import gleam
+
+type Bool {
+  True
+  False
+}
+
+const list_of_bools = [True, False, gleam.False]
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_a_tuple() {
+    assert_with_module_error!(
+        ("mod", "pub type Pair(a, b) { Pair(a, b) }"),
+        "
+import mod.{type Pair as Duo}
+pub fn first(pair: Duo(a, b)) {
+  pair.0
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_not_fn_in_use() {
+    assert_with_module_error!(
+        ("some_mod", "pub type Function(param1, param2, return)"),
+        "
+import some_mod as sm
+pub fn main(func: sm.Function(Int, String, Float)) {
+  use <- func()
+}
+"
+    );
+}
+
+#[test]
+fn qualified_type_use_fn_without_callback() {
+    assert_with_module_error!(
+        (
+            "some_mod",
+            "pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }"
+        ),
+        "
+import some_mod
+pub fn main() {
+  use value <- some_mod.do_a_thing(10)
+}
+"
+    );
+}
+
+#[test]
+fn suggest_unwrapping_a_result_when_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  let value = Ok(1)
+  add_1(value)
+}
+
+fn add_1(to x) { x + 1 }
+"
+    );
+}
+
+#[test]
+fn unknown_field_that_appears_in_an_imported_variant_has_note() {
+    assert_with_module_error!(
+        (
+            "some_mod",
+            "pub type Wibble {
+              Wibble(field: Int)
+              Wobble(not_field: String, field: Int)
+            }"
+        ),
+        "
+import some_mod
+pub fn main(wibble: some_mod.Wibble) {
+  wibble.field
+}
+"
+    );
+}
+
+#[test]
+fn unknown_field_that_appears_in_a_variant_has_note() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(field: Int)
+  Wobble(not_field: String, field: Int)
+}
+
+pub fn main(wibble: Wibble) {
+  wibble.field
+}
+"
+    );
+}
+
+#[test]
+fn unknown_field_that_does_not_appear_in_variant_has_no_note() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble(field: Int)
+  Wobble(not_field: String, field: Int)
+}
+
+pub fn main(wibble: Wibble) {
+  wibble.wibble
+}
+"
+    );
+}
+
+#[test]
+fn no_note_about_reliable_access_if_the_accessed_type_has_a_single_variant() {
+    assert_module_error!(
+        "
+pub type User {
+  User(name: String)
+}
+
+pub fn main() {
+  User(\"Jak\").nam
+}
+"
+    );
+}
+
+#[test]
+fn no_crash_on_duplicate_record_fields() {
+    // https://github.com/gleam-lang/gleam/issues/3713
+    assert_module_error!(
+        "
+pub type X {
+  A
+  B(e0: Int, e0: Int)
+}
+
+fn compiler_crash(x: X) {
+  case x {
+    A -> todo
+    _ -> todo
+  }
+}
+  "
+    );
+}
+
+#[test]
+fn record_update_unknown_variant() {
+    assert_module_error!(
+        r#"
+pub type Wibble {
+  Wibble(wibble: Int, wubble: Bool)
+  Wobble(wobble: Int, wubble: Bool)
+}
+
+pub fn wibble(value: Wibble) {
+  Wibble(..value, wubble: True)
+}
+"#
+    );
+}
+
+#[test]
+fn record_update_wrong_variant() {
+    assert_module_error!(
+        r#"
+pub type MyRecord {
+  A(common: Int, other: String)
+  B(common: Int, different: Float)
+}
+
+pub fn b_to_a(value: MyRecord) {
+  case value {
+    A(..) -> value
+    B(..) as b -> A(..b, other: "Hi")
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn record_update_wrong_variant_imported_type() {
+    assert_with_module_error!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wobble: Int, wubble: Int)
+}"
+        ),
+        "
+import wibble
+
+pub fn main(wibble: wibble.Wibble) {
+  case wibble {
+    wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
+    _ -> panic
+  }
+}
+"
+    );
+}
+
+#[test]
+fn inferred_variant_record_update_change_type_parameter() {
+    assert_module_error!(
+        r#"
+pub type Box(a) {
+  Locked(password: String, value: a)
+  Unlocked(password: String, value: a)
+}
+
+pub fn main() {
+  let box = Locked("ungu€$$4bLe", 11)
+  case box {
+    Locked(..) as box -> Locked(..box, value: True)
+    Unlocked(..) as box -> Unlocked(..box, value: False)
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn inferred_variant_record_update_change_type_parameter_different_branches() {
+    assert_module_error!(
+        r#"
+pub type Box(a) {
+  Locked(password: String, value: a)
+  Unlocked(password: String, value: a)
+}
+
+pub fn main() {
+  let box = Locked("ungu€$$4bLe", 11)
+  case box {
+    Locked(..) as box -> Locked(..box, value: True)
+    Unlocked(..) as box -> Unlocked(..box, password: "pwd")
+  }
+}
+"#
+    );
+}
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3783
+fn duplicate_fields_in_record_update_reports_error() {
+    assert_module_error!(
+        "
+pub type Wibble { Wibble(thing: Int, other: Int) }
+
+pub fn main() {
+  let wibble = Wibble(1, 2)
+  let wobble = Wibble(..wibble, thing: 1, thing: 2)
+}
+"
     );
 }

@@ -2,6 +2,22 @@
 source: compiler-core/src/type_/tests/functions.rs
 expression: "\npub fn main() {\n  let wibble = True\n  case wibble {\n    True -> {\n      1.0 + 1.0\n    }\n    _ -> {\n      1.0 + 1.0\n    }\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let wibble = True
+  case wibble {
+    True -> {
+      1.0 + 1.0
+    }
+    _ -> {
+      1.0 + 1.0
+    }
+  }
+}
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:6:7
   │

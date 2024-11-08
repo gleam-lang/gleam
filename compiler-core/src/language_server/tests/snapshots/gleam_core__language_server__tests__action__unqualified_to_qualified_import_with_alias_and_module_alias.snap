@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport list.{map as transform} as lst\n\npub fn double_list(items: List(Int)) -> List(Int) {\n    transform(items, fn(x) { x * 2 })\n}\n"
+---
+----- BEFORE ACTION
+
+import list.{map as transform} as lst
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    transform(items, fn(x) { x * 2 })
+    ▔▔▔▔▔▔▔▔▔▔↑                      
+}
+
+
+----- AFTER ACTION
+
+import list.{} as lst
+
+pub fn double_list(items: List(Int)) -> List(Int) {
+    lst.map(items, fn(x) { x * 2 })
+}

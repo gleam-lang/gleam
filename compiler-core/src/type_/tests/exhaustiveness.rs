@@ -996,8 +996,7 @@ fn case_error_prints_module_names() {
         "
 import wibble
 pub type Things { Thing1 Thing2(Int) }
-pub fn main() {
-    let wobble_thing = #(wibble.Wobble, Thing2(23))
+pub fn main(wobble_thing) {
     case wobble_thing {
         #(wibble.Wibble, Thing1) -> Nil
     }
@@ -1012,8 +1011,8 @@ fn case_error_prints_module_alias() {
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble as wobble
-pub fn main() {
-    case wobble.Wobble {
+pub fn main(wibble) {
+    case wibble {
         wobble.Wibble -> Nil
     }
 }
@@ -1027,8 +1026,8 @@ fn case_error_prints_unqualified_value() {
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble}
-pub fn main() {
-    case Wobble {
+pub fn main(wibble) {
+    case wibble {
         Wibble -> Nil
     }
 }
@@ -1042,8 +1041,8 @@ fn case_error_prints_aliased_unqualified_value() {
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble as Wubble}
-pub fn main() {
-    case Wibble {
+pub fn main(wibble) {
+    case wibble {
         Wibble -> Nil
     }
 }
@@ -1148,9 +1147,8 @@ case b {}
 fn empty_case_of_custom_type() {
     assert_module_error!(
         "
-type Wibble { Wibble Wobble Wubble }
-pub fn main() {
-  let wibble = Wobble
+pub type Wibble { Wibble Wobble Wubble }
+pub fn main(wibble: Wibble) {
   case wibble {}
 }
 "
@@ -1270,6 +1268,104 @@ let b = 3.14
 let c = False
 case a, b, c {
   12, _, False -> Nil
+}
+"
+    );
+}
+
+#[test]
+fn inferred_variant() {
+    assert_no_warnings!(
+        "
+pub type Wibble {
+  Wibble(Bool)
+  Wobble(Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(False)
+  case wibble {
+    Wibble(True) -> 1
+    Wibble(False) -> 0
+  }
+}
+",
+    );
+}
+
+#[test]
+fn inferred_variant2() {
+    assert_no_warnings!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main(b: Bool) {
+  let wibble = Wibble
+  case wibble, b {
+    Wibble, True -> True
+    Wibble, False -> False
+  }
+}
+",
+    );
+}
+
+#[test]
+fn inferred_variant3() {
+    assert_no_warnings!(
+        "
+pub type Wibble {
+  Wibble(Int, Float, Bool)
+  Wobble(String)
+}
+
+pub fn main() {
+  let wibble = Wibble(1, 3.14, False)
+  let Wibble(_int, _float, _bool) = wibble
+}
+",
+    );
+}
+
+#[test]
+fn other_variant_unreachable_when_inferred() {
+    assert_warning!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main() {
+  let always_wobble = Wobble
+  case always_wobble {
+    Wibble -> panic
+    Wobble -> Nil
+  }
+}
+"
+    );
+}
+
+#[test]
+fn other_variant_unreachable_when_inferred2() {
+    assert_warning!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+  Wubble
+}
+
+pub fn main() {
+  let always_wobble = Wobble
+  case always_wobble {
+    Wibble | Wubble -> panic
+    Wobble -> Nil
+  }
 }
 "
     );

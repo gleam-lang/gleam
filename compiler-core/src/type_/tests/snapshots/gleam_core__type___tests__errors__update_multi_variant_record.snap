@@ -1,17 +1,27 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
-assertion_line: 1987
 expression: "\npub type Point {\n  Point2(a: Int, b: Int)\n  Point3(a: Int, b: Int, c: Int)\n}\n\npub fn main() {\n  Point3(..Point2(a: 1, b: 2))\n}"
 ---
-error: Unsafe record update
-  ┌─ /src/one/two.gleam:8:3
+----- SOURCE CODE
+
+pub type Point {
+  Point2(a: Int, b: Int)
+  Point3(a: Int, b: Int, c: Int)
+}
+
+pub fn main() {
+  Point3(..Point2(a: 1, b: 2))
+}
+
+----- ERROR
+error: Incorrect record update
+  ┌─ /src/one/two.gleam:8:12
   │
 8 │   Point3(..Point2(a: 1, b: 2))
-  │   ^^^^^^ I can't tell this is always the right constructor
+  │            ^^^^^^^^^^^^^^^^^^ This is a `Point2`
 
-This type has multiple constructors so it cannot be safely updated. If
-this value was one of the other variants then the update would be produce
-incorrect results.
+This value is a `Point2` so it cannot be used to build a `Point3`, even if
+they share some fields.
 
-Consider pattern matching on it with a case expression and thenconstructing
-a new record with its values.
+Note: If you want to change one variant of a type into another, you should
+specify all fields explicitly instead of using the record update syntax.

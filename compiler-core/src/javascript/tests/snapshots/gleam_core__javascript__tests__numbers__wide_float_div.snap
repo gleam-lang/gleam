@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/numbers.rs
 expression: "\nfn go() {\n  111111111111111111111111111111. /. 22222222222222222222222222222222222.\n}\n"
 ---
+----- SOURCE CODE
+
+fn go() {
+  111111111111111111111111111111. /. 22222222222222222222222222222222222.
+}
+
+
+----- COMPILED JAVASCRIPT
 import { divideFloat } from "../gleam.mjs";
 
 function go() {

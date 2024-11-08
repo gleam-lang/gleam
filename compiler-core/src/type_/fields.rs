@@ -39,10 +39,11 @@ impl FieldMap {
     /// Reorder an argument list so that labelled fields supplied out-of-order are
     /// in the correct order.
     ///
-    pub fn reorder<A>(&self, args: &mut [CallArg<A>], location: SrcSpan) -> Result<(), Error> {
+    pub fn reorder<A>(&self, args: &mut Vec<CallArg<A>>, location: SrcSpan) -> Result<(), Error> {
         let mut labelled_arguments_given = false;
         let mut seen_labels = HashSet::new();
         let mut unknown_labels = Vec::new();
+        let number_of_arguments = args.len();
 
         if self.arity as usize != args.len() {
             return Err(Error::IncorrectArity {
@@ -69,11 +70,18 @@ impl FieldMap {
             }
         }
 
-        let mut i = 0;
-        while i < args.len() {
+        // Keeps track of which labelled arguments need to be inserted into which indices
+        let mut labelled_arguments = HashMap::new();
+
+        // We iterate the argument in reverse order, because we have to remove elements
+        // from the `args` list quite a lot, and removing from the end of a list is more
+        // efficient than removing from the beginning or the middle.
+        let mut i = args.len();
+        while i > 0 {
+            i -= 1;
             let (label, &location) = match &args.get(i).expect("Field indexing to get label").label
             {
-                // A labelled argument, we may need to reposition it in the array vector
+                // A labelled argument, we may need to reposition it
                 Some(l) => (
                     l,
                     &args
@@ -84,7 +92,6 @@ impl FieldMap {
 
                 // Not a labelled argument
                 None => {
-                    i += 1;
                     continue;
                 }
             };
@@ -92,27 +99,29 @@ impl FieldMap {
             let position = match self.fields.get(label) {
                 None => {
                     unknown_labels.push((label.clone(), location));
-                    i += 1;
                     continue;
                 }
 
                 Some(&p) => p,
             };
 
-            // If the argument is already in the right place
-            if position as usize == i {
-                let _ = seen_labels.insert(label.clone());
-                i += 1;
-            } else {
-                if seen_labels.contains(label) {
-                    return Err(Error::DuplicateArgument {
-                        location,
-                        label: label.clone(),
-                    });
-                }
-                let _ = seen_labels.insert(label.clone());
+            if seen_labels.contains(label) {
+                return Err(Error::DuplicateArgument {
+                    location,
+                    label: label.clone(),
+                });
+            }
+            let _ = seen_labels.insert(label.clone());
 
-                args.swap(position as usize, i);
+            // Add this argument to the `labelled_arguments` map, and remove if from the
+            // existing arguments list. It will be reinserted later in the correct index
+            let _ = labelled_arguments.insert(position as usize, args.remove(i));
+        }
+
+        // The labelled arguments must be reinserted in order
+        for i in 0..number_of_arguments {
+            if let Some(arg) = labelled_arguments.remove(&i) {
+                args.insert(i, arg);
             }
         }
 

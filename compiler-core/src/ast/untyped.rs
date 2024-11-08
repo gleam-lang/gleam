@@ -7,6 +7,7 @@ pub enum UntypedExpr {
     Int {
         location: SrcSpan,
         value: EcoString,
+        int_value: BigInt,
     },
 
     Float {
@@ -34,9 +35,9 @@ pub enum UntypedExpr {
         /// For anonymous functions, this is the location of the entire function including the end of the body.
         /// For named functions, this is the location of the function head.
         location: SrcSpan,
+        kind: FunctionLiteralKind,
         /// The byte location of the end of the function head before the opening bracket
         end_of_head_byte_index: u32,
-        is_capture: bool,
         arguments: Vec<UntypedArg>,
         body: Vec1<UntypedStatement>,
         return_annotation: Option<TypeAst>,
@@ -114,7 +115,7 @@ pub enum UntypedExpr {
     RecordUpdate {
         location: SrcSpan,
         constructor: Box<Self>,
-        spread: RecordUpdateSpread,
+        record: RecordBeingUpdated,
         arguments: Vec<UntypedRecordUpdateArg>,
     },
 
@@ -281,4 +282,20 @@ pub struct Use {
     /// The patterns on the left hand side of `<-` in a use expression.
     ///
     pub assignments: Vec<UseAssignment>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum FunctionLiteralKind {
+    Capture,
+    Anonymous { head: SrcSpan },
+    Use { location: SrcSpan },
+}
+
+impl FunctionLiteralKind {
+    pub fn is_capture(&self) -> bool {
+        match self {
+            FunctionLiteralKind::Capture => true,
+            FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => false,
+        }
+    }
 }

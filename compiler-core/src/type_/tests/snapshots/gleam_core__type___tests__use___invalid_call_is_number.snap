@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/use_.rs
 expression: "\nuse <- 123\n123\n"
 ---
+----- SOURCE CODE
+
+use <- 123
+123
+
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:2:8
   │

@@ -2,6 +2,14 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\nfn main() {\n    use fn <- result.try(get_username())\n}\n"
 ---
+----- SOURCE CODE
+
+fn main() {
+    use fn <- result.try(get_username())
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:9
   │

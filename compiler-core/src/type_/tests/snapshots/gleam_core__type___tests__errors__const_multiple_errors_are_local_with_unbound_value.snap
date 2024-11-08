@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const lst = [1, 2.0]\nconst unbound: MyInvalidType = MyInvalidType\nconst assignment1: String = lst\nconst assignment2: String = unbound"
 ---
+----- SOURCE CODE
+const lst = [1, 2.0]
+const unbound: MyInvalidType = MyInvalidType
+const assignment1: String = lst
+const assignment2: String = unbound
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:1:17
   │

@@ -17,15 +17,17 @@ macro_rules! assert_error {
         assert_eq!(($src, $error), ($src, result),);
     };
     ($src:expr) => {
-        let result = $crate::parse::tests::expect_error($src);
-        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
+        let error = $crate::parse::tests::expect_error($src);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
 macro_rules! assert_module_error {
     ($src:expr) => {
-        let result = $crate::parse::tests::expect_module_error($src);
-        insta::assert_snapshot!(insta::internals::AutoName, result, $src);
+        let error = $crate::parse::tests::expect_module_error($src);
+        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
 
@@ -628,6 +630,18 @@ pub fn main() -> Nil {
 }
 
 #[test]
+fn deprecation_without_message() {
+    assert_module_error!(
+        r#"
+@deprecated()
+pub fn main() -> Nil {
+  Nil
+}
+"#
+    );
+}
+
+#[test]
 fn multiple_internal_attributes() {
     assert_module_error!(
         r#"
@@ -1165,10 +1179,24 @@ fn newline_tokens() {
     assert_eq!(
         make_tokenizer("1\n\n2\n").collect_vec(),
         [
-            Ok((0, Token::Int { value: "1".into() }, 1)),
+            Ok((
+                0,
+                Token::Int {
+                    value: "1".into(),
+                    int_value: 1.into()
+                },
+                1
+            )),
             Ok((1, Token::NewLine, 2)),
             Ok((2, Token::NewLine, 3)),
-            Ok((3, Token::Int { value: "2".into() }, 4)),
+            Ok((
+                3,
+                Token::Int {
+                    value: "2".into(),
+                    int_value: 2.into()
+                },
+                4
+            )),
             Ok((4, Token::NewLine, 5))
         ]
     );
@@ -1504,5 +1532,45 @@ pub fn main() {
   }
 }
 "#
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3730
+#[test]
+fn missing_constructor_arguments() {
+    assert_module_error!(
+        "
+pub type A {
+  A(Int)
+}
+
+const a = A()
+"
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/3796
+#[test]
+fn missing_type_constructor_arguments_in_type_definition() {
+    assert_module_error!(
+        "
+pub type A() {
+  A(Int)
+}
+"
+    );
+}
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_1() {
+    assert_module_error!("pub fn main() -> Int() {}");
+}
+
+#[test]
+fn missing_type_constructor_arguments_in_type_annotation_2() {
+    assert_module_error!(
+        "pub fn main() {
+  let a: Int() = todo
+}"
     );
 }

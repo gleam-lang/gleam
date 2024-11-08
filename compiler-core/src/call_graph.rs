@@ -251,9 +251,9 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             UntypedExpr::RecordUpdate {
-                spread, arguments, ..
+                record, arguments, ..
             } => {
-                self.expression(&spread.base);
+                self.expression(&record.base);
                 for argument in arguments {
                     self.expression(&argument.value);
                 }

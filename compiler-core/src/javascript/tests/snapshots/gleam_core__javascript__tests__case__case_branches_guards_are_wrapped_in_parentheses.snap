@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/case.rs
 expression: "\nfn anything() -> a {\n  case [] {\n    [a] if False || True -> a\n    _ -> anything()\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn anything() -> a {
+  case [] {
+    [a] if False || True -> a
+    _ -> anything()
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 import { toList } from "../gleam.mjs";
 
 function anything() {

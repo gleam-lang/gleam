@@ -2,6 +2,17 @@
 source: compiler-core/src/javascript/tests/strings.rs
 expression: "\npub fn go(x) {\n  case x {\n    \"1\" as prefix <> _ | \"11\" as prefix <> _ -> prefix\n    _ -> \"Unknown\"\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn go(x) {
+  case x {
+    "1" as prefix <> _ | "11" as prefix <> _ -> prefix
+    _ -> "Unknown"
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 export function go(x) {
   if (x.startsWith("1")) {
     let prefix = "1";

@@ -128,6 +128,7 @@ impl ModuleDecoder {
             module,
             name,
             args,
+            inferred_variant: None,
         }))
     }
 
@@ -261,6 +262,7 @@ impl ModuleDecoder {
         Constant::Int {
             location: Default::default(),
             value: value.into(),
+            int_value: crate::parse::parse_int_value(value).expect("int value to parse as bigint"),
         }
     }
 
@@ -512,11 +514,11 @@ impl ModuleDecoder {
             name: reader.get_name()?.into(),
             module: reader.get_module()?.into(),
             arity: reader.get_arity(),
-            constructors_count: reader.get_constructors_count(),
+            variants_count: reader.get_constructors_count(),
             field_map: self.field_map(&reader.get_field_map()?)?,
             location: self.src_span(&reader.get_location()?)?,
             documentation: self.optional_string(reader.get_documentation()?),
-            constructor_index: reader.get_constructor_index(),
+            variant_index: reader.get_constructor_index(),
         })
     }
 
@@ -542,8 +544,24 @@ impl ModuleDecoder {
         Ok(AccessorsMap {
             publicity: Publicity::Public,
             type_: self.type_(&reader.get_type()?)?,
-            accessors: read_hashmap!(&reader.get_accessors()?, self, record_accessor),
+            shared_accessors: read_hashmap!(&reader.get_shared_accessors()?, self, record_accessor),
+            variant_specific_accessors: read_vec!(
+                &reader.get_variant_specific_accessors()?,
+                self,
+                variant_specific_accessors
+            ),
         })
+    }
+
+    fn variant_specific_accessors(
+        &mut self,
+        reader: &variant_specific_accessors::Reader<'_>,
+    ) -> Result<HashMap<EcoString, RecordAccessor>> {
+        Ok(read_hashmap!(
+            &reader.get_accessors()?,
+            self,
+            record_accessor
+        ))
     }
 
     fn record_accessor(&mut self, reader: &record_accessor::Reader<'_>) -> Result<RecordAccessor> {

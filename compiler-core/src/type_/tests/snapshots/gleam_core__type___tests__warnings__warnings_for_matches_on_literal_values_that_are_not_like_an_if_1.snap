@@ -2,6 +2,16 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\n    pub fn main() {\n        case True {\n          _ -> 1\n        }\n    }\n        "
 ---
+----- SOURCE CODE
+
+    pub fn main() {
+        case True {
+          _ -> 1
+        }
+    }
+        
+
+----- WARNING
 warning: Match on a literal value
   ┌─ /src/warning/wrn.gleam:3:14
   │

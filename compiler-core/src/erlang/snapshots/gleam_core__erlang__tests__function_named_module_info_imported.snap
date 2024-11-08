@@ -1,8 +1,17 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 698
 expression: "\nimport some_module\n\npub fn main() {\n    some_module.module_info()\n}\n"
 ---
+----- SOURCE CODE
+
+import some_module
+
+pub fn main() {
+    some_module.module_info()
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

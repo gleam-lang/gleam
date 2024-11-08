@@ -2,6 +2,11 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "const wibble = 1\nconst wibble = 2"
 ---
+----- SOURCE CODE
+const wibble = 1
+const wibble = 2
+
+----- ERROR
 error: Duplicate definition
   ┌─ /src/one/two.gleam:1:1
   │

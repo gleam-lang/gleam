@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub type Wibble { Wibble(arg1: Int, arg2: Bool ) }\n\npub fn main() {\n  let Wibble(arg1:, arg2:) = Wibble(1, True)\n  arg1\n}\n"
 ---
+----- SOURCE CODE
+
+pub type Wibble { Wibble(arg1: Int, arg2: Bool ) }
+
+pub fn main() {
+  let Wibble(arg1:, arg2:) = Wibble(1, True)
+  arg1
+}
+
+
+----- WARNING
 warning: Unused variable
   ┌─ /src/warning/wrn.gleam:5:21
   │

@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-assertion_line: 402
 expression: "\nfn go(x) {\n  let assert <<258:16>> = x\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert <<258:16>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {

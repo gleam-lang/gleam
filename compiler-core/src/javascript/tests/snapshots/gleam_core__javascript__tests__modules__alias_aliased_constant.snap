@@ -2,6 +2,13 @@
 source: compiler-core/src/javascript/tests/modules.rs
 expression: "\nimport rocket_ship.{ x as y }\nconst z = y\n"
 ---
+----- SOURCE CODE
+
+import rocket_ship.{ x as y }
+const z = y
+
+
+----- COMPILED JAVASCRIPT
 import * as $rocket_ship from "../rocket_ship.mjs";
 import { x as y } from "../rocket_ship.mjs";
 

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Result\n\npub fn main() {\n  let value = Ok(12)\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Result
+
+pub fn main() {
+  let value = Ok(12)
+  ▔▔▔▔▔▔▔▔▔▔↑       
+}
+
+
+----- AFTER ACTION
+
+pub type Result
+
+pub fn main() {
+  let value: gleam.Result(Int, a) = Ok(12)
+}

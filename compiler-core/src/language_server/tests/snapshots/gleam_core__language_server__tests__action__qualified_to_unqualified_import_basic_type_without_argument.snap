@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport wobble\n\npub fn identity(x: wobble.Wobble) -> wobble.Wobble {\n    x\n}\n"
+---
+----- BEFORE ACTION
+
+import wobble
+
+pub fn identity(x: wobble.Wobble) -> wobble.Wobble {
+                         ▔↑                         
+    x
+}
+
+
+----- AFTER ACTION
+
+import wobble.{type Wobble}
+
+pub fn identity(x: Wobble) -> Wobble {
+    x
+}

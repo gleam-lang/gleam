@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn wibble(x: String) { x }\nfn multi_result(x: some_name) {\n  wibble(x)\n}"
 ---
+----- SOURCE CODE
+fn wibble(x: String) { x }
+fn multi_result(x: some_name) {
+  wibble(x)
+}
+
+----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:3:10
   │

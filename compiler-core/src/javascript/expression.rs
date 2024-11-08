@@ -165,7 +165,7 @@ impl<'module> Generator<'module> {
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
 
             TypedExpr::RecordAccess { record, label, .. } => self.record_access(record, label),
-            TypedExpr::RecordUpdate { spread, args, .. } => self.record_update(spread, args),
+            TypedExpr::RecordUpdate { record, args, .. } => self.record_update(record, args),
 
             TypedExpr::Var {
                 name, constructor, ..
@@ -328,6 +328,7 @@ impl<'module> Generator<'module> {
                         location: _,
                         type_: _,
                         value,
+                        int_value: _,
                     } => value.parse().unwrap_or(0),
                     _ => 0,
                 };
@@ -1239,6 +1240,23 @@ pub(crate) fn guard_constant_expression<'a>(
                     tracker.error_used = true;
                 }
             }
+
+            // If there's no arguments and the type is a function that takes
+            // arguments then this is the constructor being referenced, not the
+            // function being called.
+            if let Some(arity) = type_.fn_arity() {
+                if args.is_empty() && arity != 0 {
+                    let arity = arity as u16;
+                    return Ok(record_constructor(
+                        type_.clone(),
+                        None,
+                        name,
+                        arity,
+                        tracker,
+                    ));
+                }
+            }
+
             let field_values: Vec<_> = args
                 .iter()
                 .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
@@ -1510,7 +1528,11 @@ fn sized_bit_array_segment_details<'a>(
     let size = match size {
         Some(Opt::Size { value: size, .. }) => {
             let size_int = match *size.clone() {
-                Constant::Int { location: _, value } => value.parse().unwrap_or(0),
+                Constant::Int {
+                    location: _,
+                    value,
+                    int_value: _,
+                } => value.parse().unwrap_or(0),
                 _ => 0,
             };
             if size_int > 0 && size_int % 8 != 0 {

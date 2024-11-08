@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nimport wibble\n\npub fn main(wibble: wibble.Wibble) {\n  case wibble {\n    wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)\n    _ -> panic\n  }\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+  Wobble(wobble: Int, wubble: Int)
+}
+
+-- main.gleam
+
+import wibble
+
+pub fn main(wibble: wibble.Wibble) {
+  case wibble {
+    wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
+    _ -> panic
+  }
+}
+
+
+----- ERROR
+error: Incorrect record update
+  ┌─ /src/one/two.gleam:6:47
+  │
+6 │     wibble.Wibble(..) as w -> wibble.Wobble(..w, wubble: 10)
+  │                                               ^ This is a `Wibble`
+
+This value is a `Wibble` so it cannot be used to build a `Wobble`, even if
+they share some fields.
+
+Note: If you want to change one variant of a type into another, you should
+specify all fields explicitly instead of using the record update syntax.

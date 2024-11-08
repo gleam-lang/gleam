@@ -2,6 +2,12 @@
 source: compiler-core/src/javascript/tests/modules.rs
 expression: "import rocket_ship.{launch}\npub fn go() { launch() }\n"
 ---
+----- SOURCE CODE
+import rocket_ship.{launch}
+pub fn go() { launch() }
+
+
+----- COMPILED JAVASCRIPT
 import * as $rocket_ship from "../rocket_ship.mjs";
 import { launch } from "../rocket_ship.mjs";
 

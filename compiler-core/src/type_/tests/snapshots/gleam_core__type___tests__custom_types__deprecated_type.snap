@@ -2,6 +2,20 @@
 source: compiler-core/src/type_/tests/custom_types.rs
 expression: "\n@deprecated(\"Dont use this!\")\npub type Cat {\n  Cat(name: String, cuteness: Int)\n}\n\npub fn name() -> String {\n  let c = Cat(\"Numi\", 20)\n  c.name\n}\n        "
 ---
+----- SOURCE CODE
+
+@deprecated("Dont use this!")
+pub type Cat {
+  Cat(name: String, cuteness: Int)
+}
+
+pub fn name() -> String {
+  let c = Cat("Numi", 20)
+  c.name
+}
+        
+
+----- WARNING
 warning: Deprecated value used
   ┌─ /src/warning/wrn.gleam:8:11
   │

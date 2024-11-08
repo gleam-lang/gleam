@@ -2,6 +2,15 @@
 source: compiler-core/src/parse/tests.rs
 expression: "\n@internal\ntype Wibble {\n  Wibble\n}\n"
 ---
+----- SOURCE CODE
+
+@internal
+type Wibble {
+  Wibble
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:2:1
   │

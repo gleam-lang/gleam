@@ -52,6 +52,10 @@ impl ParseError {
             ParseErrorType::ExpectedDefinition => {
                 ("I was expecting a definition after this", vec![])
             }
+            ParseErrorType::ExpectedDeprecationMessage => (
+                "A deprecation attribute must have a string message.",
+                vec![],
+            ),
             ParseErrorType::ExpectedFunctionDefinition => {
                 ("I was expecting a function definition after this", vec![])
             }
@@ -308,6 +312,21 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/flow-control/case-expressions/".into(),
                 ],
             ),
+            ParseErrorType::ConstantRecordConstructorNoArguments => (
+                "I was expecting arguments here",
+                vec!["A record must be passed arguments when constructed.".into()],
+            ),
+            ParseErrorType::TypeConstructorNoArguments => (
+                "I was expecting arguments here",
+                vec!["A type constructor must be passed arguments.".into()],
+            ),
+            ParseErrorType::TypeDefinitionNoArguments => (
+                "I was expecting generic parameters here",
+                vec![
+                    "A generic type must have at least a generic parameter.".into(),
+                    "Hint: If a type is not generic you should omit the `()`.".into(),
+                ],
+            ),
         }
     }
 }
@@ -323,6 +342,7 @@ pub enum ParseErrorType {
     ExpectedValue,              // no value after "="
     ExpectedStatement,          // no statement after "@<name>"
     ExpectedDefinition,         // after attributes
+    ExpectedDeprecationMessage, // after "deprecated"
     ExpectedFunctionDefinition, // after function-only attributes
     ExprLparStart,              // it seems "(" was used to start an expression
     ExtraSeparator,             // #(1,,) <- the 2nd comma is an extra separator
@@ -375,6 +395,9 @@ pub enum ParseErrorType {
     },
     CallInClauseGuard, // case x { _ if f() -> 1 }
     IfExpression,
+    ConstantRecordConstructorNoArguments, // const x = Record()
+    TypeConstructorNoArguments,           // let a : Int()
+    TypeDefinitionNoArguments,            // pub type Wibble() { ... }
 }
 
 impl LexicalError {

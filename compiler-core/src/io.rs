@@ -4,7 +4,13 @@ use crate::error::{Error, FileIoAction, FileKind, Result};
 use async_trait::async_trait;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
-use std::{collections::HashMap, fmt::Debug, io, time::SystemTime, vec::IntoIter};
+use std::{
+    collections::{HashMap, HashSet},
+    fmt::Debug,
+    io,
+    time::SystemTime,
+    vec::IntoIter,
+};
 use tar::{Archive, Entry};
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -221,6 +227,17 @@ impl Stdio {
             Stdio::Null => std::process::Stdio::null(),
         }
     }
+}
+
+/// A trait used to compile Erlang and Elixir modules to BEAM bytecode.
+pub trait BeamCompiler {
+    fn compile_beam(
+        &self,
+        out: &Utf8Path,
+        lib: &Utf8Path,
+        modules: &HashSet<Utf8PathBuf>,
+        stdio: Stdio,
+    ) -> Result<(), Error>;
 }
 
 /// A trait used to write files.

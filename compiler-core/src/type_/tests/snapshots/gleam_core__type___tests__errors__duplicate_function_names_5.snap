@@ -2,6 +2,14 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n@external(erlang, \"a\", \"b\")\nfn dupe(x) -> x\nfn dupe() { 1 }\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "a", "b")
+fn dupe(x) -> x
+fn dupe() { 1 }
+
+
+----- ERROR
 error: Duplicate definition
   ┌─ /src/one/two.gleam:3:1
   │

@@ -2,14 +2,30 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\npub fn main(x) {\ncase x {\n59 -> \"gleew\"\n14 -> \"glabber\"\n1 -> \"\"\n_ -> \"glooper\"\n2 -> \"\"\n3 -> \"glen\"\n4 -> \"glew\"\n}\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(x) {
+case x {
+59 -> "gleew"
+14 -> "glabber"
+1 -> ""
+_ -> "glooper"
+2 -> ""
+3 -> "glen"
+4 -> "glew"
+}
+}
+
+
+----- WARNING
 warning: Unreachable case clause
   ┌─ /src/warning/wrn.gleam:8:1
   │
 8 │ 2 -> ""
   │ ^^^^^^^
 
-This case clause cannot be reached as a previous clause matches
-the same values.
+This case clause cannot be reached as a previous clause matches the same
+values.
 
 Hint: It can be safely removed.
 
@@ -19,8 +35,8 @@ warning: Unreachable case clause
 9 │ 3 -> "glen"
   │ ^^^^^^^^^^^
 
-This case clause cannot be reached as a previous clause matches
-the same values.
+This case clause cannot be reached as a previous clause matches the same
+values.
 
 Hint: It can be safely removed.
 
@@ -30,7 +46,7 @@ warning: Unreachable case clause
 10 │ 4 -> "glew"
    │ ^^^^^^^^^^^
 
-This case clause cannot be reached as a previous clause matches
-the same values.
+This case clause cannot be reached as a previous clause matches the same
+values.
 
 Hint: It can be safely removed.

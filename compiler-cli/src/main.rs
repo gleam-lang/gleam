@@ -49,6 +49,7 @@
 extern crate pretty_assertions;
 
 mod add;
+mod beam_compiler;
 mod build;
 mod build_lock;
 mod cli;
@@ -92,6 +93,14 @@ use clap::{
     Args, Parser, Subcommand,
 };
 use strum::VariantNames;
+
+#[derive(Args, Debug, Clone)]
+struct UpdateOptions {
+    /// (optional) Names of the packages to update
+    /// If omitted, all dependencies will be updated
+    #[arg(verbatim_doc_comment)]
+    packages: Vec<String>,
+}
 
 #[derive(Parser, Debug)]
 #[command(
@@ -154,7 +163,7 @@ enum Command {
     Deps(Dependencies),
 
     /// Update dependency packages to their latest versions
-    Update,
+    Update(UpdateOptions),
 
     /// Work with the Hex package manager
     #[command(subcommand)]
@@ -253,6 +262,10 @@ enum Command {
     Export(ExportTarget),
 }
 
+fn template_doc() -> &'static str {
+    "The template to use"
+}
+
 fn target_doc() -> String {
     format!("The platform to target ({})", Target::VARIANTS.join("|"))
 }
@@ -288,7 +301,7 @@ pub struct NewOptions {
     #[arg(long)]
     pub name: Option<String>,
 
-    #[arg(long, ignore_case = true, default_value = "lib")]
+    #[arg(long, ignore_case = true, default_value = "erlang", help = template_doc())]
     pub template: new::Template,
 
     /// Skip git initialization and creation of .gitignore, .git/* and .github/* files
@@ -343,7 +356,7 @@ enum Dependencies {
     Download,
 
     /// Update dependency packages to their latest versions
-    Update,
+    Update(UpdateOptions),
 }
 
 #[derive(Subcommand, Debug)]
@@ -468,7 +481,7 @@ fn main() {
 
         Command::Deps(Dependencies::Download) => download_dependencies(),
 
-        Command::Deps(Dependencies::Update) => dependencies::update(),
+        Command::Deps(Dependencies::Update(options)) => dependencies::update(options.packages),
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 
@@ -518,7 +531,7 @@ fn main() {
 
         Command::Remove { packages } => remove::command(packages),
 
-        Command::Update => dependencies::update(),
+        Command::Update(options) => dependencies::update(options.packages),
 
         Command::Clean => clean(),
 
@@ -623,6 +636,12 @@ fn project_paths_at_current_directory_without_toml() -> ProjectPaths {
 
 fn download_dependencies() -> Result<()> {
     let paths = find_project_paths()?;
-    _ = dependencies::download(&paths, cli::Reporter::new(), None, UseManifest::Yes)?;
+    _ = dependencies::download(
+        &paths,
+        cli::Reporter::new(),
+        None,
+        Vec::new(),
+        UseManifest::Yes,
+    )?;
     Ok(())
 }

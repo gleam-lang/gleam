@@ -2,6 +2,14 @@
 source: compiler-core/src/javascript/tests/functions.rs
 expression: "pub fn main() {\n  fn() { main() }\n  1\n}\n"
 ---
+----- SOURCE CODE
+pub fn main() {
+  fn() { main() }
+  1
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main() {
   () => { return main(); };
   return 1;

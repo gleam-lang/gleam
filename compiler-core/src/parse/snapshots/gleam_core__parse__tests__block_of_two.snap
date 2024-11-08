@@ -17,6 +17,7 @@ expression: "{ 1 2 }"
                             end: 3,
                         },
                         value: "1",
+                        int_value: 1,
                     },
                 ),
                 Expression(
@@ -26,6 +27,7 @@ expression: "{ 1 2 }"
                             end: 5,
                         },
                         value: "2",
+                        int_value: 2,
                     },
                 ),
             ],

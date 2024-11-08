@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type IntAlias = Int\n\npub fn main() {\n  let value = 20\n}\n"
+---
+----- BEFORE ACTION
+
+pub type IntAlias = Int
+
+pub fn main() {
+  let value = 20
+  ▔▔▔▔↑         
+}
+
+
+----- AFTER ACTION
+
+pub type IntAlias = Int
+
+pub fn main() {
+  let value: IntAlias = 20
+}

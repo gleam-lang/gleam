@@ -2,6 +2,21 @@
 source: compiler-core/src/javascript/tests/externals.rs
 expression: "\n@external(javascript, \"one\", \"one\")\npub fn js() -> Nil\n\n@external(erlang, \"one\", \"one\")\npub fn erl() -> Nil\n\npub fn should_not_be_generated() {\n  js()\n  erl()\n}\n"
 ---
+----- SOURCE CODE
+
+@external(javascript, "one", "one")
+pub fn js() -> Nil
+
+@external(erlang, "one", "one")
+pub fn erl() -> Nil
+
+pub fn should_not_be_generated() {
+  js()
+  erl()
+}
+
+
+----- COMPILED JAVASCRIPT
 import { one as js } from "one";
 
 export { js };

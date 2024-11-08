@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn go() {\n  let assert <<0:9_007_199_254_740_992>> = <<>>\n}\n"
+---
+----- SOURCE CODE
+
+pub fn go() {
+  let assert <<0:9_007_199_254_740_992>> = <<>>
+}
+
+
+----- WARNING
+warning: Int is outside JavaScript's safe integer range
+  ┌─ /src/warning/wrn.gleam:3:18
+  │
+3 │   let assert <<0:9_007_199_254_740_992>> = <<>>
+  │                  ^^^^^^^^^^^^^^^^^^^^^ This is not a safe integer value on JavaScript
+
+This integer value is too large to be represented accurately by
+JavaScript's number type. To avoid this warning integer values must be in
+the range -(2^53 - 1) - (2^53 - 1).
+
+See JavaScript's Number.MAX_SAFE_INTEGER and Number.MIN_SAFE_INTEGER
+properties for more information.

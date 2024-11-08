@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Person {\n    Teacher(name: String, age: Int, title: String)\n    Student(name: String, age: Int)\n}\npub fn get_height(person: Person) { person.height }"
 ---
+----- SOURCE CODE
+
+pub type Person {
+    Teacher(name: String, age: Int, title: String)
+    Student(name: String, age: Int)
+}
+pub fn get_height(person: Person) { person.height }
+
+----- ERROR
 error: Unknown record field
   ┌─ /src/one/two.gleam:6:43
   │
@@ -12,12 +21,7 @@ The value being accessed has this type:
 
     Person
 
-It has these fields:
+It has these accessible fields:
 
     .age
     .name
-
-Note: The field you are trying to access might not be consistently present
-or positioned across the custom type's variants, preventing reliable
-access. Ensure the field exists in the same position and has the same type
-in all variants to enable direct accessor syntax.

@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 258
 expression: "\npub fn main() {\n  let text = \"first defined\"\n  let other = case \"defined again\" {\n    text -> Nil\n  }\n  let text = \"a third time\"\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let text = "first defined"
+  let other = case "defined again" {
+    text -> Nil
+  }
+  let text = "a third time"
+}
+
+
+----- COMPILED JAVASCRIPT
 export function main() {
   let text = "first defined";
   let other = (() => {

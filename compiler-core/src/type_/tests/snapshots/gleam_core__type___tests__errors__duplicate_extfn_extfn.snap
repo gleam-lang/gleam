@@ -2,6 +2,15 @@
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\n@external(erlang, \"module1\", \"function1\")\nfn wibble() -> Float\n@external(erlang, \"module2\", \"function2\")\nfn wibble() -> Float\n"
 ---
+----- SOURCE CODE
+
+@external(erlang, "module1", "function1")
+fn wibble() -> Float
+@external(erlang, "module2", "function2")
+fn wibble() -> Float
+
+
+----- ERROR
 error: Duplicate definition
   ┌─ /src/one/two.gleam:3:1
   │

@@ -34,6 +34,10 @@ True
   kind:   EnumMember
   detail: gleam
   sort:   4_True
+wibble
+  kind:   Field
+  detail: Int
+  sort:   1_wibble
 wobble
   kind:   Field
   detail: Int

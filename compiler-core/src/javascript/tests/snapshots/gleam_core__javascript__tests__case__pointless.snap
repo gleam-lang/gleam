@@ -1,8 +1,17 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 6
 expression: "\nfn go(x) {\n  case x {\n    _ -> x\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    _ -> x
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 function go(x) {
   {
     return x;

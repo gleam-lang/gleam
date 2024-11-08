@@ -2,6 +2,15 @@
 source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "pub type Cat { Cat(name: String) }\n\npub fn return_unapplied_cat() {\n  Cat\n}\n"
 ---
+----- SOURCE CODE
+pub type Cat { Cat(name: String) }
+
+pub fn return_unapplied_cat() {
+  Cat
+}
+
+
+----- TYPESCRIPT DEFINITIONS
 import type * as _ from "../gleam.d.mts";
 
 export class Cat extends _.CustomType {

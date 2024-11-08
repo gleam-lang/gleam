@@ -208,7 +208,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         let assignment = Assignment {
             location,
             annotation: None,
-            kind: AssignmentKind::Let,
+            kind: AssignmentKind::Generated,
             pattern: Pattern::Variable {
                 location,
                 name: PIPE_VARIABLE.into(),
@@ -295,16 +295,11 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             fn_(vec![self.argument_type.clone()], return_type.clone()),
         )
         .map_err(|e| {
-            if self.check_if_pipe_function_mismatch(&e) {
-                return convert_unify_error(flip_unify_error(e), function.location());
+            if self.check_if_pipe_type_mismatch(&e) {
+                return convert_unify_error(e, function.location())
+                    .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch);
             }
-            let is_pipe_mismatch = self.check_if_pipe_type_mismatch(&e);
-            let error = convert_unify_error(e, function.location());
-            if is_pipe_mismatch {
-                error.with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
-            } else {
-                error
-            }
+            convert_unify_error(flip_unify_error(e), function.location())
         })?;
 
         Ok(TypedExpr::Call {
@@ -334,35 +329,25 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         }
     }
 
-    fn check_if_pipe_function_mismatch(&mut self, error: &UnifyError) -> bool {
-        match error {
-            UnifyError::CouldNotUnify {
-                situation:
-                    Some(UnifyErrorSituation::FunctionsMismatch {
-                        reason: FunctionsMismatchReason::Arity { .. },
-                    }),
-                ..
-            } => true,
-            _ => false,
-        }
-    }
-
     fn warn_if_call_first_argument_is_hole(&mut self, call: &UntypedExpr) {
-        if let UntypedExpr::Fn {
-            is_capture: true,
-            body,
-            ..
-        } = &call
-        {
-            if let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first() {
-                match arguments.as_slice() {
-                    [first] | [first, ..] if first.is_capture_hole() => self
-                        .expr_typer
-                        .problems
-                        .warning(Warning::RedundantPipeFunctionCapture {
-                            location: first.location,
-                        }),
-                    _ => (),
+        if let UntypedExpr::Fn { kind, body, .. } = &call {
+            if kind.is_capture() {
+                if let Statement::Expression(UntypedExpr::Call { arguments, .. }) = body.first() {
+                    match arguments.as_slice() {
+                        // If the first argument is labelled, we don't warn the user
+                        // as they might be intentionally adding it to provide more
+                        // information about exactly which argument is being piped into.
+                        [first] | [first, ..]
+                            if first.is_capture_hole() && first.label.is_none() =>
+                        {
+                            self.expr_typer.problems.warning(
+                                Warning::RedundantPipeFunctionCapture {
+                                    location: first.location,
+                                },
+                            )
+                        }
+                        _ => (),
+                    }
                 }
             }
         }

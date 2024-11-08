@@ -1,16 +1,18 @@
 use ecow::EcoString;
+use num_bigint::BigInt;
 use vec1::Vec1;
 
 use crate::{
     analyse::Inferred,
     ast::{
-        AssignName, Assignment, BinOp, CallArg, Constant, Definition, Pattern, RecordUpdateSpread,
-        SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst, TypeAstConstructor, TypeAstFn,
-        TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg, UntypedAssignment, UntypedClause,
-        UntypedConstant, UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition,
-        UntypedExpr, UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
-        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
-        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, Use, UseAssignment,
+        AssignName, Assignment, BinOp, CallArg, Constant, Definition, FunctionLiteralKind, Pattern,
+        RecordBeingUpdated, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
+        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
+        UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
+        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedPattern,
+        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias,
+        Use, UseAssignment,
     },
     build::Target,
 };
@@ -239,7 +241,11 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
     fn update_expr(&mut self, e: UntypedExpr) -> UntypedExpr {
         match e {
             UntypedExpr::Var { location, name } => self.fold_var(location, name),
-            UntypedExpr::Int { location, value } => self.fold_int(location, value),
+            UntypedExpr::Int {
+                location,
+                value,
+                int_value,
+            } => self.fold_int(location, value, int_value),
             UntypedExpr::Float { location, value } => self.fold_float(location, value),
             UntypedExpr::String { location, value } => self.fold_string(location, value),
 
@@ -251,14 +257,14 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::Fn {
                 location,
                 end_of_head_byte_index,
-                is_capture,
+                kind,
                 arguments,
                 body,
                 return_annotation,
             } => self.fold_fn(
                 location,
                 end_of_head_byte_index,
-                is_capture,
+                kind,
                 arguments,
                 body,
                 return_annotation,
@@ -319,9 +325,9 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::RecordUpdate {
                 location,
                 constructor,
-                spread,
+                record,
                 arguments,
-            } => self.fold_record_update(location, constructor, spread, arguments),
+            } => self.fold_record_update(location, constructor, record, arguments),
 
             UntypedExpr::NegateBool { location, value } => self.fold_negate_bool(location, value),
 
@@ -370,8 +376,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
             UntypedExpr::Fn {
                 location,
+                kind,
                 end_of_head_byte_index,
-                is_capture,
                 arguments,
                 body,
                 return_annotation,
@@ -382,7 +388,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 UntypedExpr::Fn {
                     location,
                     end_of_head_byte_index,
-                    is_capture,
+                    kind,
                     arguments,
                     body,
                     return_annotation,
@@ -521,7 +527,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             UntypedExpr::RecordUpdate {
                 location,
                 constructor,
-                spread,
+                record,
                 arguments,
             } => {
                 let constructor = Box::new(self.fold_expr(*constructor));
@@ -535,7 +541,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 UntypedExpr::RecordUpdate {
                     location,
                     constructor,
-                    spread,
+                    record,
                     arguments,
                 }
             }
@@ -638,8 +644,12 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_int(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
-        UntypedExpr::Int { location, value }
+    fn fold_int(&mut self, location: SrcSpan, value: EcoString, int_value: BigInt) -> UntypedExpr {
+        UntypedExpr::Int {
+            location,
+            value,
+            int_value,
+        }
     }
 
     fn fold_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
@@ -665,7 +675,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         end_of_head_byte_index: u32,
-        is_capture: bool,
+        kind: FunctionLiteralKind,
         arguments: Vec<UntypedArg>,
         body: Vec1<UntypedStatement>,
         return_annotation: Option<TypeAst>,
@@ -673,7 +683,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         UntypedExpr::Fn {
             location,
             end_of_head_byte_index,
-            is_capture,
+            kind,
             arguments,
             body,
             return_annotation,
@@ -799,13 +809,13 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         constructor: Box<UntypedExpr>,
-        spread: RecordUpdateSpread,
+        record: RecordBeingUpdated,
         arguments: Vec<UntypedRecordUpdateArg>,
     ) -> UntypedExpr {
         UntypedExpr::RecordUpdate {
             location,
             constructor,
-            spread,
+            record,
             arguments,
         }
     }
@@ -842,7 +852,11 @@ pub trait UntypedConstantFolder {
     /// You probably don't want to override this method.
     fn update_constant(&mut self, m: UntypedConstant) -> UntypedConstant {
         match m {
-            Constant::Int { location, value } => self.fold_constant_int(location, value),
+            Constant::Int {
+                location,
+                value,
+                int_value,
+            } => self.fold_constant_int(location, value, int_value),
 
             Constant::Float { location, value } => self.fold_constant_float(location, value),
 
@@ -891,8 +905,17 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_int(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
-        Constant::Int { location, value }
+    fn fold_constant_int(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        int_value: BigInt,
+    ) -> UntypedConstant {
+        Constant::Int {
+            location,
+            value,
+            int_value,
+        }
     }
 
     fn fold_constant_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
@@ -1076,7 +1099,11 @@ pub trait PatternFolder {
     /// You probably don't want to override this method.
     fn update_pattern(&mut self, m: UntypedPattern) -> UntypedPattern {
         match m {
-            Pattern::Int { location, value } => self.fold_pattern_int(location, value),
+            Pattern::Int {
+                location,
+                value,
+                int_value,
+            } => self.fold_pattern_int(location, value, int_value),
 
             Pattern::Float { location, value } => self.fold_pattern_float(location, value),
 
@@ -1150,8 +1177,17 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_int(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
-        Pattern::Int { location, value }
+    fn fold_pattern_int(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        int_value: BigInt,
+    ) -> UntypedPattern {
+        Pattern::Int {
+            location,
+            value,
+            int_value,
+        }
     }
 
     fn fold_pattern_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {

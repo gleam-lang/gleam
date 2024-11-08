@@ -1,8 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-assertion_line: 63
 expression: "\nfn main() { let five = 5 }"
 ---
+----- SOURCE CODE
+
+fn main() { let five = 5 }
+
+----- WARNING
 warning: Unused private function
   ┌─ /src/warning/wrn.gleam:2:1
   │

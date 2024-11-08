@@ -2,6 +2,17 @@
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "\npub fn main(a) {\n  case a {\n    <<\"hello\">> -> Nil\n    _ -> Nil\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main(a) {
+  case a {
+    <<"hello">> -> Nil
+    _ -> Nil
+  }
+}
+
+
+----- WARNING
 warning: Incompatible gleam version range
   ┌─ /src/warning/wrn.gleam:4:7
   │

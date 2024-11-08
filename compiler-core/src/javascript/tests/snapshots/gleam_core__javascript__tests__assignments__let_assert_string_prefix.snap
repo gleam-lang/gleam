@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/javascript/tests/assignments.rs
-assertion_line: 179
 expression: "\npub fn main() {\n  let assert \"Game \" <> id = \"Game 1\"\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert "Game " <> id = "Game 1"
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 export function main() {

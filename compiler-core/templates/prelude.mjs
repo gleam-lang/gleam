@@ -138,27 +138,59 @@ export class UtfCodepoint {
 
 // @internal
 export function toBitArray(segments) {
-  let size = (segment) =>
-    segment instanceof Uint8Array ? segment.byteLength : 1;
-  let bytes = segments.reduce((acc, segment) => acc + size(segment), 0);
-  let view = new DataView(new ArrayBuffer(bytes));
+  if (segments.length === 0) {
+    return new BitArray(new Uint8Array());
+  }
+
+  if (segments.length === 1) {
+    // When there is a single Uint8Array segment, pass it directly to the bit
+    // array constructor to avoid a copy
+    if (segments[0] instanceof Uint8Array) {
+      return new BitArray(segments[0]);
+    }
+
+    return new BitArray(new Uint8Array(segments));
+  }
+
+  // Count the total number of bytes, and check if there are any Uint8Array
+  // segments
+  let bytes = 0;
+  let hasUint8ArraySegment = false;
+  for (const segment of segments) {
+    if (segment instanceof Uint8Array) {
+      bytes += segment.byteLength;
+      hasUint8ArraySegment = true;
+    } else {
+      bytes++;
+    }
+  }
+
+  // If there aren't any Uint8Array segments then pass the segments array
+  // directly to the Uint8Array constructor
+  if (!hasUint8ArraySegment) {
+    return new BitArray(new Uint8Array(segments));
+  }
+
+  // Copy the segments into a Uint8Array
+  let u8Array = new Uint8Array(bytes);
   let cursor = 0;
   for (let segment of segments) {
     if (segment instanceof Uint8Array) {
-      new Uint8Array(view.buffer).set(segment, cursor);
+      u8Array.set(segment, cursor);
       cursor += segment.byteLength;
     } else {
-      view.setInt8(cursor, segment);
+      u8Array[cursor] = segment;
       cursor++;
     }
   }
-  return new BitArray(new Uint8Array(view.buffer));
+
+  return new BitArray(u8Array);
 }
 
 // @internal
 // Derived from this answer https://stackoverflow.com/questions/8482309/converting-javascript-integer-to-byte-array-and-back
 export function sizedInt(value, size, isBigEndian) {
-  if (size < 0) {
+  if (size <= 0) {
     return new Uint8Array();
   }
   if (size % 8 != 0) {
@@ -168,22 +200,39 @@ export function sizedInt(value, size, isBigEndian) {
 
   const byteArray = new Uint8Array(size / 8);
 
+  let byteModulus = 256;
+
   // Convert negative number to two's complement representation
   if (value < 0) {
-    value = 2 ** size + value;
+    let valueModulus;
+
+    // For output sizes larger than 48 bits BigInt is needed in order to
+    // maintain accuracy
+    if (size <= 48) {
+      valueModulus = 2 ** size;
+    } else {
+      valueModulus = 1n << BigInt(size);
+
+      value = BigInt(value);
+      byteModulus = BigInt(byteModulus);
+    }
+
+    value %= valueModulus;
+    value = valueModulus + value;
   }
 
+  // The following loops work with both Number and BigInt types
   if (isBigEndian) {
     for (let i = byteArray.length - 1; i >= 0; i--) {
-      const byte = value % 256;
-      byteArray[i] = byte;
-      value = (value - byte) / 256;
+      const byte = value % byteModulus;
+      byteArray[i] = Number(byte);
+      value = (value - byte) / byteModulus;
     }
   } else {
     for (let i = 0; i < byteArray.length; i++) {
-      const byte = value % 256;
-      byteArray[i] = byte;
-      value = (value - byte) / 256;
+      const byte = value % byteModulus;
+      byteArray[i] = Number(byte);
+      value = (value - byte) / byteModulus;
     }
   }
 
@@ -192,32 +241,61 @@ export function sizedInt(value, size, isBigEndian) {
 
 // @internal
 export function byteArrayToInt(byteArray, start, end, isBigEndian, isSigned) {
-  let value = 0;
+  const byteSize = end - start;
 
-  // Read bytes as an unsigned integer value
-  if (isBigEndian) {
-    for (let i = start; i < end; i++) {
-      value = value * 256 + byteArray[i];
+  // Ints wider than 48 bits are read using a BigInt, but narrower ones can
+  // be read with a JS number which is faster
+  if (byteSize <= 6) {
+    let value = 0;
+
+    // Read bytes as an unsigned integer value
+    if (isBigEndian) {
+      for (let i = start; i < end; i++) {
+        value = value * 256 + byteArray[i];
+      }
+    } else {
+      for (let i = end - 1; i >= start; i--) {
+        value = value * 256 + byteArray[i];
+      }
     }
+
+    // For signed integers, check if the high bit is set and if so then
+    // reinterpret as two's complement
+    if (isSigned) {
+      const highBit = 2 ** (byteSize * 8 - 1);
+      if (value >= highBit) {
+        value -= highBit * 2;
+      }
+    }
+
+    return value;
   } else {
-    for (let i = end - 1; i >= start; i--) {
-      value = value * 256 + byteArray[i];
+    let value = 0n;
+
+    // Read bytes as an unsigned integer value
+    if (isBigEndian) {
+      for (let i = start; i < end; i++) {
+        value = (value << 8n) + BigInt(byteArray[i]);
+      }
+    } else {
+      for (let i = end - 1; i >= start; i--) {
+        value = (value << 8n) + BigInt(byteArray[i]);
+      }
     }
-  }
 
-  if (isSigned) {
-    const byteSize = end - start;
-
-    const highBit = 2 ** (byteSize * 8 - 1);
-
-    // If the high bit is set and this is a signed integer, reinterpret as
-    // two's complement
-    if (value >= highBit) {
-      value -= highBit * 2;
+    // For signed integers, check if the high bit is set and if so then
+    // reinterpret as two's complement
+    if (isSigned) {
+      const highBit = 1n << BigInt(byteSize * 8 - 1);
+      if (value >= highBit) {
+        value -= highBit * 2n;
+      }
     }
-  }
 
-  return value;
+    // Convert the result into a JS number. This may cause quantizing/error on
+    // values outside JavaScript's safe integer range.
+    return Number(value);
+  }
 }
 
 // @internal

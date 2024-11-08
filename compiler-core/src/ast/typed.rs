@@ -9,6 +9,7 @@ pub enum TypedExpr {
         location: SrcSpan,
         type_: Arc<Type>,
         value: EcoString,
+        int_value: BigInt,
     },
 
     Float {
@@ -48,7 +49,7 @@ pub enum TypedExpr {
     Fn {
         location: SrcSpan,
         type_: Arc<Type>,
-        is_capture: bool,
+        kind: FunctionLiteralKind,
         args: Vec<TypedArg>,
         body: Vec1<TypedStatement>,
         return_annotation: Option<TypeAst>,
@@ -135,7 +136,7 @@ pub enum TypedExpr {
     RecordUpdate {
         location: SrcSpan,
         type_: Arc<Type>,
-        spread: Box<Self>,
+        record: Box<Self>,
         args: Vec<TypedRecordUpdateArg>,
     },
 
@@ -250,9 +251,23 @@ impl TypedExpr {
             // beyond the index under search.
             Self::Tuple {
                 elems: expressions, ..
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_node(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                self.self_if_contains_location(byte_index)
             }
-            | Self::List {
+
+            Self::List {
                 elements: expressions,
+                tail,
                 ..
             } => {
                 for expression in expressions {
@@ -265,6 +280,11 @@ impl TypedExpr {
                     }
                 }
 
+                if let Some(tail) = tail {
+                    if let Some(node) = tail.find_node(byte_index) {
+                        return Some(node);
+                    }
+                }
                 self.self_if_contains_location(byte_index)
             }
 
@@ -310,10 +330,10 @@ impl TypedExpr {
                 .find_map(|arg| arg.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
-            Self::RecordUpdate { spread, args, .. } => args
+            Self::RecordUpdate { record, args, .. } => args
                 .iter()
                 .find_map(|arg| arg.find_node(byte_index))
-                .or_else(|| spread.find_node(byte_index))
+                .or_else(|| record.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
         }
     }

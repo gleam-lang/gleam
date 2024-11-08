@@ -1,8 +1,15 @@
 ---
 source: compiler-core/src/erlang/tests/strings.rs
-assertion_line: 106
 expression: "\npub fn y() -> String {\n  \"\\u{79}\"\n}\n"
 ---
+----- SOURCE CODE
+
+pub fn y() -> String {
+  "\u{79}"
+}
+
+
+----- COMPILED ERLANG
 -module(my@mod).
 -compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
 

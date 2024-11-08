@@ -2,6 +2,13 @@
 source: compiler-core/src/type_/tests/exhaustiveness.rs
 expression: "\nlet list = []\ncase list {}\n"
 ---
+----- SOURCE CODE
+
+let list = []
+case list {}
+
+
+----- ERROR
 error: Inexhaustive patterns
   ┌─ /src/one/two.gleam:3:1
   │

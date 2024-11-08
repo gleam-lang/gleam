@@ -1,8 +1,18 @@
 ---
 source: compiler-core/src/javascript/tests/case.rs
-assertion_line: 20
 expression: "\nfn go(x) {\n  case x {\n    True -> todo\n    _ -> 1\n  }\n}\n"
 ---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    True -> todo
+    _ -> 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
