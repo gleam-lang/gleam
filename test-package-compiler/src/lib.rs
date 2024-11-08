@@ -40,7 +40,7 @@ pub fn prepare(path: &str) -> String {
     let warnings = VectorWarningEmitterIO::default();
     let warning_emitter = WarningEmitter::new(Rc::new(warnings.clone()));
     let filesystem = test_helpers_rs::to_in_memory_filesystem(&root);
-    let initial_files = filesystem.subpaths();
+    let initial_files = filesystem.files();
     let root = Utf8PathBuf::from("");
     let out = Utf8PathBuf::from("/out/lib/the_package");
     let lib = Utf8PathBuf::from("/out/lib");
@@ -69,9 +69,7 @@ pub fn prepare(path: &str) -> String {
     match result {
         Outcome::Ok(_) => {
             for path in initial_files {
-                if filesystem.is_directory(&path) {
-                    filesystem.delete_directory(&path).unwrap();
-                } else {
+                if filesystem.is_file(&path) {
                     filesystem.delete_file(&path).unwrap();
                 }
             }
