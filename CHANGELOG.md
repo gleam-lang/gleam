@@ -29,6 +29,15 @@
 
 - The shorthand names for the two targets, `erl` and `js` are now
   deprecated in code such as `@target`.
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- A custom panic message can now be specified when asserting a value with `let assert`:
+
+  ```gleam
+  let assert Ok(regex) = regex.compile("ab?c+") as "This regex is always valid"
+  ```
+
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - When targeting JavaScript the compiler now generates faster and smaller code
@@ -53,6 +62,7 @@
 
 - The language server now provides type information when hovering over argument
   labels.
+
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - The Language Server now suggests a code action to desugar a use expression
