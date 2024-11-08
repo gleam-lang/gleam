@@ -6464,6 +6464,59 @@ fn formatter_adds_todo_inside_empty_block() {
         "pub fn main() {{}}",
         r#"pub fn main() {
   { todo }
+}"#
+    );
+}
+
+#[test]
+fn let_assert_as() {
+    assert_format!(
+        r#"pub fn main() {
+  let assert 10 = 10 as "10 == 10"
+}
+"#
+    );
+}
+
+#[test]
+fn let_assert_as_long_message() {
+    assert_format!(
+        r#"pub fn main() {
+  let assert Ok(10) = Ok(10)
+    as "It's pretty obvious that this will never fail, but just in case, here is why."
+}
+"#
+    );
+}
+
+#[test]
+fn let_assert_as_long_message_and_value() {
+    assert_format!(
+        r#"pub fn main() {
+  let assert Ok(something) =
+    some_very_long_variable_which_always_represents_a_successful_result
+    as "As you can see by the incredibly descriptive variable name, this operation never fails."
+}
+"#
+    );
+}
+
+#[test]
+fn let_assert_as_concatenated_message() {
+    assert_format!(
+        r#"pub fn main() {
+  let assert 1 = 2 as { "This will" <> " " <> "crash" }
+}
+"#
+    );
+}
+
+#[test]
+fn let_assert_as_variable_message() {
+    assert_format!(
+        r#"pub fn main() {
+  let message = "Hi :)"
+  let assert 1 = 2 as message
 }
 "#
     );
