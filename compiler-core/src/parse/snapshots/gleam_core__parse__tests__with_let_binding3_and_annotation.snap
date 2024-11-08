@@ -49,6 +49,7 @@ expression: "let assert [x]: List(Int) = [2]"
                     start: 4,
                     end: 10,
                 },
+                message: None,
             },
             annotation: Some(
                 Constructor(

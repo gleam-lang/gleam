@@ -900,9 +900,11 @@ impl<'comments> Formatter<'comments> {
             AssignmentKind::Let | AssignmentKind::Generated => ("let ", None),
             AssignmentKind::Assert { message, .. } => (
                 "let assert ",
-                message
-                    .as_ref()
-                    .map(|message| " as ".to_doc().append(self.expr(message))),
+                message.as_ref().map(|message| {
+                    break_("", " ")
+                        .nest(INDENT)
+                        .append("as ".to_doc().append(self.expr(message).group()))
+                }),
             ),
         };
 

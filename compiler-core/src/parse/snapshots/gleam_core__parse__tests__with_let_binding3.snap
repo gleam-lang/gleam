@@ -49,6 +49,7 @@ expression: "let assert [x] = [2]"
                     start: 4,
                     end: 10,
                 },
+                message: None,
             },
             annotation: None,
         },
