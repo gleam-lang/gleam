@@ -860,6 +860,7 @@ pub enum FeatureKind {
     AtInJavascriptModules,
     RecordUpdateVariantInference,
     RecordAccessVariantInference,
+    LetAssertWithMessage,
 }
 
 impl FeatureKind {
@@ -874,6 +875,7 @@ impl FeatureKind {
             FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
             FeatureKind::RecordUpdateVariantInference
             | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
+            FeatureKind::LetAssertWithMessage => Version::new(1, 6, 0),
         }
     }
 }

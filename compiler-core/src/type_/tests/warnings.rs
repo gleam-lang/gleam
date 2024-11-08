@@ -2520,6 +2520,18 @@ pub fn main(wibble) {
 }
 
 #[test]
+fn let_assert_with_message_requires_v1_6() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        r#"
+pub fn main() {
+  let assert Ok(10) = Error(20) as "This will crash..."
+}
+"#,
+    );
+}
+
+#[test]
 fn javascript_unsafe_int_decimal() {
     assert_js_warning!(
         r#"

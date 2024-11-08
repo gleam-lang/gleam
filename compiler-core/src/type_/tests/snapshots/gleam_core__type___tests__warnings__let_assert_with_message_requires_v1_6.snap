@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  let assert Ok(10) = Error(20) as \"This will crash...\"\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let assert Ok(10) = Error(20) as "This will crash..."
+}
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:3:36
+  │
+3 │   let assert Ok(10) = Error(20) as "This will crash..."
+  │                                    ^^^^^^^^^^^^^^^^^^^^ This requires a Gleam version >= 1.6.0
+
+Specifying a custom panic message when using let assert was introduced in
+version v1.6.0. But the Gleam version range specified in your `gleam.toml`
+would allow this code to run on an earlier version like v1.0.0, resulting
+in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.6.0"

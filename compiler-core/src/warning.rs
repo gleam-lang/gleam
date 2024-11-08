@@ -1082,6 +1082,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::RecordAccessVariantInference => {
                             "Field access on custom types when the variant is known was"
                         }
+                        FeatureKind::LetAssertWithMessage => {
+                            "Specifying a custom panic message when using let assert was"
+                        }
                     };
 
                     Diagnostic {

@@ -1405,6 +1405,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             AssignmentKind::Assert { location, message } => {
                 let message = match message {
                     Some(message) => {
+                        self.track_feature_usage(
+                            FeatureKind::LetAssertWithMessage,
+                            message.location(),
+                        );
                         let message = self.infer(*message)?;
 
                         unify(string(), message.type_())
