@@ -39,7 +39,12 @@
   aren't located at the root of their repository:
 
   ```toml
-  repository = { type = "github", user = "gleam-lang", repo = "gleam", path = "packages/my_package" }
+  repository = {
+    type = "github",
+    user = "gleam-lang",
+    repo = "gleam",
+    path = "packages/my_package"
+  }
   ```
 
   ([Richard Viney](https://github.com/richard-viney))
@@ -187,8 +192,8 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- When targeting JavaScript the compiler now emits a warning for integer literals
-  and constants that lie outside JavaScript's safe integer range:
+- When targeting JavaScript the compiler now emits a warning for integer
+  literals and constants that lie outside JavaScript's safe integer range:
 
   ```txt
   warning: Int is outside the safe range on JavaScript
@@ -301,8 +306,8 @@
 
   ([Jiangda Wang](https://github.com/Frank-III))
 
-- The Language Server now suggests a code action to convert unqualified imports to
-  qualified imports, which updates all occurrences of the unqualified name
+- The Language Server now suggests a code action to convert unqualified imports
+  to qualified imports, which updates all occurrences of the unqualified name
   throughout the module:
 
   ```gleam
@@ -415,6 +420,10 @@
 - Fixed a bug where an incorrect `Int` would be returned when pattern matching
   to a negative value wider than 48 bits in a bit array.
   ([Richard Viney](https://github.com/richard-viney))
+
+- Fixed a bug where unused values coming from other modules wouldn't raise a
+  warning.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.5.1 - 2024-09-26
 
