@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1539
+assertion_line: 1593
 expression: "\ntype Wibble {\n    @deprecated(\"1\")\n    @deprecated(\"2\")\n    Wibble1\n    Wibble2\n}\n"
 ---
+----- SOURCE CODE
+
+type Wibble {
+    @deprecated("1")
+    @deprecated("2")
+    Wibble1
+    Wibble2
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:4:5
   │
