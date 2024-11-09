@@ -572,13 +572,13 @@ pub enum Error {
     ///     Wobble1
     /// }
     /// ```
-    AllVariantsConstructorDeprecated {
+    AllVariantsDeprecated {
         location: SrcSpan,
     },
 
     /// Occers when any varient of a custom type is deprecated while
     /// the custom type itself is deprecated
-    VariantDeprecatedOnDeprecatedConstructor {
+    DeprecatedVariantOnDeprecatedType {
         location: SrcSpan,
     },
 }
@@ -882,26 +882,35 @@ pub enum FeatureKind {
     RecordAccessVariantInference,
     LetAssertWithMessage,
     ConstructorWithDeprecatedAnnotation,
+    VariantWithDeprecatedAnnotation,
 }
 
 impl FeatureKind {
     pub fn required_version(&self) -> Version {
         match self {
-            FeatureKind::InternalAnnotation => Version::new(1, 1, 0),
-            FeatureKind::NestedTupleAccess => Version::new(1, 1, 0),
+            FeatureKind::InternalAnnotation | FeatureKind::NestedTupleAccess => {
+                Version::new(1, 1, 0)
+            }
+
             FeatureKind::AtInJavascriptModules => Version::new(1, 2, 0),
+
             FeatureKind::ArithmeticInGuards => Version::new(1, 3, 0),
-            FeatureKind::LabelShorthandSyntax => Version::new(1, 4, 0),
-            FeatureKind::ConstantStringConcatenation => Version::new(1, 4, 0),
+
+            FeatureKind::LabelShorthandSyntax | FeatureKind::ConstantStringConcatenation => {
+                Version::new(1, 4, 0)
+            }
+
             FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
+
             FeatureKind::RecordUpdateVariantInference
-            | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
-            FeatureKind::LetAssertWithMessage => Version::new(1, 7, 0),
-            FeatureKind::ConstructorWithDeprecatedAnnotation => Version::new(1, 6, 0),
+            | FeatureKind::RecordAccessVariantInference
+            | FeatureKind::VariantWithDeprecatedAnnotation => Version::new(1, 6, 0),
+
+            FeatureKind::ConstructorWithDeprecatedAnnotation
+            | FeatureKind::LetAssertWithMessage => Version::new(1, 7, 0),
         }
     }
 }
-
 #[derive(Debug, Eq, PartialEq, Clone, Copy, serde::Serialize, serde::Deserialize)]
 pub enum PanicPosition {
     /// When the unreachable part is a function argument, this means that one
@@ -997,8 +1006,8 @@ impl Error {
             | Error::UseFnDoesntTakeCallback { location, .. }
             | Error::UseFnIncorrectArity { location, .. }
             | Error::BadName { location, .. }
-            | Error::AllVariantsConstructorDeprecated { location }
-            | Error::VariantDeprecatedOnDeprecatedConstructor { location } => location.start,
+            | Error::AllVariantsDeprecated { location }
+            | Error::DeprecatedVariantOnDeprecatedType { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }

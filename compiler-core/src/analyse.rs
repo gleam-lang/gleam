@@ -837,7 +837,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     self.check_name_case(name_location, &name, Named::CustomTypeVariant);
                     if constructor_deprecation.is_deprecated() {
                         self.track_feature_usage(
-                            FeatureKind::ConstructorWithDeprecatedAnnotation,
+                            FeatureKind::VariantWithDeprecatedAnnotation,
                             location,
                         );
                     }
@@ -886,17 +886,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .parameters
             .clone();
 
-        // check if all constructors are deprecated if so error
+        // Check if all constructors are deprecated if so error.
         if !constructors.is_empty()
             && constructors
                 .iter()
                 .all(|record| record.deprecation.is_deprecated())
         {
             self.problems
-                .error(Error::AllVariantsConstructorDeprecated { location });
+                .error(Error::AllVariantsDeprecated { location });
         }
 
-        // if any constructor record/varient is deprecated while
+        // If any constructor record/varient is deprecated while
         // the type is deprecated as a whole that is considered an error.
         if deprecation.is_deprecated()
             && !constructors.is_empty()
@@ -904,13 +904,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 .iter()
                 .any(|record| record.deprecation.is_deprecated())
         {
-            // report error on all variants attibuted with deprecated
+            // Report error on all variants attibuted with deprecated
             constructors
                 .iter()
                 .filter(|record| record.deprecation.is_deprecated())
                 .for_each(|record| {
                     self.problems
-                        .error(Error::VariantDeprecatedOnDeprecatedConstructor {
+                        .error(Error::DeprecatedVariantOnDeprecatedType {
                             location: record.location,
                         });
                 });

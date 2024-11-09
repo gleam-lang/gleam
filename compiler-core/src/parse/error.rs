@@ -330,7 +330,7 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "Hint: If a type is not generic you should omit the `()`.".into(),
                 ],
             ),
-            ParseErrorType::UnknownAttributeRecordConstructor => {
+            ParseErrorType::UnknownAttributeRecordVariant => {
                 ("This attribute cannot be used on a type variant.", vec![])
             }
         }
@@ -404,7 +404,7 @@ pub enum ParseErrorType {
     ConstantRecordConstructorNoArguments, // const x = Record()
     TypeConstructorNoArguments,           // let a : Int()
     TypeDefinitionNoArguments,            // pub type Wibble() { ... }
-    UnknownAttributeRecordConstructor, // an attribute was used that is not know for a custom type constructor
+    UnknownAttributeRecordVariant, // an attribute was used that is not know for a custom type variant
 }
 
 impl LexicalError {

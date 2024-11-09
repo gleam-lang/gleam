@@ -1,8 +1,19 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1589
+assertion_line: 1643
 expression: "\ntype Wibble {\n    @external(erlang, \"one\", \"two\")\n    @target(erlang)\n    @internal\n    Wibble1\n}\n"
 ---
+----- SOURCE CODE
+
+type Wibble {
+    @external(erlang, "one", "two")
+    @target(erlang)
+    @internal
+    Wibble1
+}
+
+
+----- ERROR
 error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │  

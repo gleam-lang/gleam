@@ -3212,7 +3212,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                         }),
                     }
                 },
-                        TypeError::AllVariantsConstructorDeprecated { location } => {
+                        TypeError::AllVariantsDeprecated { location } => {
                             let text = String::from("Consider deprecating the type as a whole.
 
   @deprecated(\"message\")
@@ -3222,7 +3222,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
   }
 ");
                             Diagnostic {
-                                title: "Deprecating all variants of a type is not allowed.".into(),
+                                title: "All variants of custom type deprecated.".into(),
                                 text,
                                 hint: None,
                                 level: Level::Error,
@@ -3236,13 +3236,14 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                                     extra_labels: vec![],
                                 })
                             }
-                        }
-                        ,
-                        TypeError::VariantDeprecatedOnDeprecatedConstructor{location}=> {
-                            let text = String::from("Consider removing the deprecation attribute on the type's variant.");
+                        },
+                        TypeError::DeprecatedVariantOnDeprecatedType{ location } => {
+                            let text = wrap("This custom type has already been deprecated, so deprecating \
+one of its variants does nothing.
+Consider removing the deprecation attribute on the variant.");
 
                             Diagnostic {
-                                title: "Deprecating variants of a type that is deprecated is not allowed".into(),
+                                title: "Custom type already deprecated".into(),
                                 text,
                                 hint: None,
                                 level: Level::Error,

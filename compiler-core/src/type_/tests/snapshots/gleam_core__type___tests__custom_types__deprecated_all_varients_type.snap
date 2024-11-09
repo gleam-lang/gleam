@@ -3,7 +3,18 @@ source: compiler-core/src/type_/tests/custom_types.rs
 assertion_line: 35
 expression: "\npub type Numbers {\n  @deprecated(\"1\")\n  One\n  @deprecated(\"2\")\n  Two\n}\n"
 ---
-error: Deprecating all variants of a type is not allowed.
+----- SOURCE CODE
+
+pub type Numbers {
+  @deprecated("1")
+  One
+  @deprecated("2")
+  Two
+}
+
+
+----- ERROR
+error: All variants of custom type deprecated.
   ┌─ /src/one/two.gleam:2:1
   │
 2 │ pub type Numbers {
