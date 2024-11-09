@@ -804,6 +804,20 @@ fn test_convert_outer_let_assert_to_case() {
 }
 
 #[test]
+fn test_convert_let_assert_with_message_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as message
+  inner
+}
+"#,
+        find_position_of("assert").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
 fn test_convert_assert_custom_type_with_label_shorthands_to_case() {
     assert_code_action!(
         CONVERT_TO_CASE,

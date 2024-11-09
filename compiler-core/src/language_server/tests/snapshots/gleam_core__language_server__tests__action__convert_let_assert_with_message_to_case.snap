@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn expect(value, message) {\n  let assert Ok(inner) = value as message\n  inner\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as message
+      ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑                 
+  inner
+}
+
+
+----- AFTER ACTION
+
+pub fn expect(value, message) {
+  let inner = case value {
+    Ok(inner) -> inner
+    _ -> panic as message
+  }
+  inner
+}
