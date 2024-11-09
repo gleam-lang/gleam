@@ -339,7 +339,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         }
 
         // This pattern only applies to `let assert`
-        if !matches!(assignment.kind, AssignmentKind::Assert { .. }) {
+        let AssignmentKind::Assert { message, .. } = &assignment.kind else {
             return;
         };
 
@@ -358,6 +358,14 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
             .code
             .get(pattern_location.start as usize..pattern_location.end as usize)
             .expect("Location must be valid");
+
+        let message = message.as_ref().map(|message| {
+            let location = message.location();
+            self.module
+                .code
+                .get(location.start as usize..location.end as usize)
+                .expect("Location must be valid")
+        });
 
         let range = src_span_to_lsp_range(assignment.location, self.edits.line_numbers);
         let indent = " ".repeat(range.start.character as usize);
@@ -378,10 +386,12 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
             new_text: format!(
                 "let {assigned} = case {expr} {{
 {indent}  {pattern} -> {value}
-{indent}  _ -> panic
+{indent}  _ -> panic{message_join}{message}
 {indent}}}",
                 // "_" isn't a valid expression, so we just return Nil from the case expression
-                value = if assigned == "_" { "Nil" } else { assigned }
+                value = if assigned == "_" { "Nil" } else { assigned },
+                message_join = if message.is_some() { " as " } else { "" },
+                message = message.unwrap_or("")
             ),
         };
 
