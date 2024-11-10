@@ -6464,7 +6464,8 @@ fn formatter_adds_todo_inside_empty_block() {
         "pub fn main() {{}}",
         r#"pub fn main() {
   { todo }
-}"#
+}
+"#
     );
 }
 
