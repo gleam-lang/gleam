@@ -319,6 +319,19 @@ macro_rules! assert_js_warning {
 }
 
 #[macro_export]
+macro_rules! assert_js_no_warnings {
+    ($src:expr) => {
+        let warning = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![],
+            crate::build::Target::JavaScript,
+            None,
+        );
+        assert!(warning.is_empty());
+    };
+}
+
+#[macro_export]
 macro_rules! assert_warnings_with_gleam_version {
     ($gleam_version:expr, $src:expr$(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(

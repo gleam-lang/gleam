@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
-    assert_js_warning, assert_no_warnings, assert_warning, assert_warnings_with_gleam_version,
-    assert_warnings_with_imports,
+    assert_js_no_warnings, assert_js_warning, assert_no_warnings, assert_warning,
+    assert_warnings_with_gleam_version, assert_warnings_with_imports,
 };
 
 #[test]
@@ -2668,6 +2668,44 @@ fn javascript_unsafe_int_segment_size_in_pattern() {
 pub fn go() {
   let assert <<0:9_007_199_254_740_992>> = <<>>
 }
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_with_external_implementation() {
+    assert_js_no_warnings!(
+        r#"
+@external(javascript, "./test.mjs", "go")
+pub fn go() -> Int {
+  9_007_199_254_740_992
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_segment_in_pattern_with_external_implementation() {
+    assert_js_no_warnings!(
+        r#"
+@external(javascript, "./test.mjs", "go")
+pub fn go(b: BitArray) -> BitArray {
+  let assert <<0xFFF0000000000000:64>> = b
+}
+"#
+    );
+}
+
+#[test]
+fn javascript_unsafe_int_with_external_function_call() {
+    assert_js_warning!(
+        r#"
+pub fn main() {
+  9_007_199_254_740_992 + helper()
+}
+
+@external(javascript, "a", "b")
+fn helper() -> Int
 "#
     );
 }
