@@ -68,33 +68,26 @@ impl BeamCompiler {
         let mut buf = String::new();
         let mut accumulated_modules: Vec<String> = Vec::new();
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
-            let trimmed = buf.trim();
-
-            if trimmed.starts_with("gleam-compile") {
-                match trimmed {
-                    "gleam-compile-result-ok" => {
-                        // Return Ok with the accumulated modules
-                        return Ok(accumulated_modules);
-                    }
-                    "gleam-compile-result-error" => {
-                        return Err(Error::ShellCommand {
-                            program: "escript".into(),
-                            err: None,
-                        });
-                    }
-                    _ => {}
+            match buf.trim() {
+                "gleam-compile-result-ok" => {
+                    // Return Ok with the accumulated modules
+                    return Ok(accumulated_modules);
                 }
-            } else if trimmed.starts_with("module:") {
-                if let Some(module_content) = trimmed.strip_prefix("module:") {
-                    accumulated_modules.push(module_content.to_string());
+                "gleam-compile-result-error" => {
+                    return Err(Error::ShellCommand {
+                        program: "escript".into(),
+                        err: None,
+                    })
                 }
-            } else {
-                match stdio {
-                    Stdio::Inherit => {
-                        print!("{}", buf);
+                s if s.starts_with("gleam-compile-module:") => {
+                    if let Some(module_content) = s.strip_prefix("gleam-compile-module:") {
+                        accumulated_modules.push(module_content.to_string());
                     }
+                }
+                _ => match stdio {
+                    Stdio::Inherit => print!("{}", buf),
                     Stdio::Null => {}
-                }
+                },
             }
 
             buf.clear()
