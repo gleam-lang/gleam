@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Bug fixes
+
+- Fixed a bug where some reserved field names were not properly escaped in
+  custom types on the JavaScript target.
+  ([yoshi](https://github.com/joshi-monster))
+
 ## v1.6.0-rc1 - 2024-11-10
 
 ### Build tool

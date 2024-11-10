@@ -293,7 +293,9 @@ impl<'a> Generator<'a> {
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
-                    Some((_, name)) => docvec!["this.", name, " = ", var, ";"],
+                    Some((_, name)) => {
+                        docvec!["this.", maybe_escape_property_doc(name), " = ", var, ";"]
+                    }
                 }
             }),
             line(),
@@ -740,6 +742,21 @@ fn is_usable_js_identifier(word: &str) -> bool {
     )
 }
 
+fn is_usable_js_property(label: &str) -> bool {
+    !matches!(
+        label,
+        // `then` to avoid a custom type that defines a `then` function being used as a `thenable`
+        // in Javascript.
+        "then"
+            // `constructor` to avoid unintentional overriding of the constructor of records,
+            // leading to potential runtime crashes while using `withFields`.
+            | "constructor"
+            // `prototype` and `__proto__` to avoid unintentionally overriding the prototype chain
+            | "prototype"
+            | "__proto__"
+    )
+}
+
 fn maybe_escape_identifier_string(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
         EcoString::from(word)
@@ -757,6 +774,14 @@ fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
         word.to_doc()
     } else {
         escape_identifier(word).to_doc()
+    }
+}
+
+fn maybe_escape_property_doc(label: &str) -> Document<'_> {
+    if is_usable_js_property(label) {
+        label.to_doc()
+    } else {
+        escape_identifier(label).to_doc()
     }
 }
 

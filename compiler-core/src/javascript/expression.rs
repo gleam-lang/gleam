@@ -868,7 +868,7 @@ impl<'module> Generator<'module> {
             let fields = updates
                 .iter()
                 .map(|TypedRecordUpdateArg { label, value, .. }| {
-                    (label.to_doc(), gen.wrap_expression(value))
+                    (maybe_escape_property_doc(label), gen.wrap_expression(value))
                 });
             let object = try_wrap_object(fields)?;
             Ok(docvec![record, ".withFields(", object, ")"])
