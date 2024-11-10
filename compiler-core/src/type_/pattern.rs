@@ -16,6 +16,7 @@ use std::sync::Arc;
 
 pub struct PatternTyper<'a, 'b> {
     environment: &'a mut Environment<'b>,
+    implementations: &'a Implementations,
     hydrator: &'a Hydrator,
     mode: PatternMode,
     initial_pattern_vars: HashSet<EcoString>,
@@ -36,11 +37,13 @@ enum PatternMode {
 impl<'a, 'b> PatternTyper<'a, 'b> {
     pub fn new(
         environment: &'a mut Environment<'b>,
+        implementations: &'a Implementations,
         hydrator: &'a Hydrator,
         problems: &'a mut Problems,
     ) -> Self {
         Self {
             environment,
+            implementations,
             hydrator,
             mode: PatternMode::Initial,
             initial_pattern_vars: HashSet::new(),
@@ -435,7 +438,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             } => {
                 unify(type_, int()).map_err(|e| convert_unify_error(e, location))?;
 
-                if self.environment.target == Target::JavaScript {
+                if self.environment.target == Target::JavaScript
+                    && !self.implementations.uses_javascript_externals
+                {
                     check_javascript_int_safety(&int_value, location, self.problems);
                 }
 

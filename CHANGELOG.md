@@ -8,6 +8,10 @@
   custom types on the JavaScript target.
   ([yoshi](https://github.com/joshi-monster))
 
+- Fixed a bug where a warning about unsafe integers on the JavaScript target was
+  emitted when the enclosing function has an external JavaScript implementation.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.6.0-rc1 - 2024-11-10
 
 ### Build tool
