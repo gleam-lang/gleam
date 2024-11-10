@@ -728,3 +728,42 @@ pub fn main() {
 "#
     );
 }
+#[test]
+fn record_access_in_guard_with_reserved_field_name() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Thing(constructor: Nil)
+}
+
+pub fn main() {
+  let a = Thing(constructor: Nil)
+  case Nil {
+      Nil if a.constructor == Nil -> a.constructor
+      _ -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn record_access_in_pattern_with_reserved_field_name() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Thing(constructor: Nil)
+}
+
+pub fn main() {
+  let a = Thing(constructor: Nil)
+  let Thing(constructor: ctor) = a
+  case a {
+      a if a.constructor == ctor -> Nil
+      Thing(constructor:) if ctor == constructor -> Nil
+      _ -> Nil
+  }
+}
+"#
+    );
+}

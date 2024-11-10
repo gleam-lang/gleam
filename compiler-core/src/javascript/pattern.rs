@@ -156,7 +156,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         concat(self.path.iter().map(|segment| match segment {
             Index::Int(i) => eco_format!("[{i}]").to_doc(),
             // TODO: escape string if needed
-            Index::String(s) => docvec!(".", s),
+            Index::String(s) => docvec!(".", maybe_escape_property_doc(s)),
             Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
             Index::IntFromSlice {
                 start,
@@ -365,7 +365,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             ClauseGuard::FieldAccess {
                 label, container, ..
             } => {
-                docvec!(self.guard(container)?, ".", label)
+                docvec!(
+                    self.guard(container)?,
+                    ".",
+                    maybe_escape_property_doc(label)
+                )
             }
 
             ClauseGuard::ModuleSelect {
