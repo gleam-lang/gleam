@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\npub type Thing {\n  Thing(constructor: Nil)\n}\n\npub fn main() {\n  let a = Thing(constructor: Nil)\n  let b = Thing(..a, constructor: Nil)\n}\n"
+expression: "\npub type Thing {\n  Thing(constructor: Nil)\n}\n\npub fn main() {\n  let a = Thing(constructor: Nil)\n  let b = Thing(..a, constructor: Nil)\n  b.constructor\n}\n"
 ---
 ----- SOURCE CODE
 
@@ -11,6 +11,7 @@ pub type Thing {
 pub fn main() {
   let a = Thing(constructor: Nil)
   let b = Thing(..a, constructor: Nil)
+  b.constructor
 }
 
 
@@ -27,5 +28,5 @@ export class Thing extends $CustomType {
 export function main() {
   let a = new Thing(undefined);
   let b = a.withFields({ constructor$: undefined });
-  return b;
+  return b.constructor$;
 }

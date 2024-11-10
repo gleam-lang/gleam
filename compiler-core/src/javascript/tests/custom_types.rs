@@ -706,6 +706,7 @@ pub type Thing {
 pub fn main() {
   let a = Thing(constructor: Nil)
   let b = Thing(..a, constructor: Nil)
+  b.constructor
 }
 "#
     );
@@ -722,6 +723,7 @@ pub type Thing {
 pub fn main() {
   let a = Thing(then: Nil)
   let b = Thing(..a, then: Nil)
+  b.then
 }
 "#
     );

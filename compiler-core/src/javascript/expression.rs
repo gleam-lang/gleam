@@ -854,7 +854,7 @@ impl<'module> Generator<'module> {
     fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
         self.not_in_tail_position(|gen| {
             let record = gen.wrap_expression(record)?;
-            Ok(docvec![record, ".", label])
+            Ok(docvec![record, ".", maybe_escape_property_doc(label)])
         })
     }
 
