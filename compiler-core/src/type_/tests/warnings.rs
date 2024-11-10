@@ -2520,7 +2520,7 @@ pub fn main(wibble) {
 }
 
 #[test]
-fn let_assert_with_message_requires_v1_6() {
+fn let_assert_with_message_requires_v1_7() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),
         r#"
