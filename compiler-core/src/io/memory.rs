@@ -444,7 +444,6 @@ impl BeamCompiler for InMemoryFileSystem {
         _modules: &HashSet<Utf8PathBuf>,
         _stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
-        // What to do here?
         Ok(Vec::new()) // Always succeed.
     }
 }
