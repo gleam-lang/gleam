@@ -17,4 +17,4 @@ expression: "./cases/with_dep"
 
 
 //// with_dep/build/prod/erlang/gleam_version
-1.5.0
+<gleam compiler version string>

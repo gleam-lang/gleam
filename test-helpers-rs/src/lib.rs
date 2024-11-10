@@ -1,5 +1,8 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use gleam_core::io::{memory::InMemoryFileSystem, Content, FileSystemWriter};
+use gleam_core::{
+    io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
+    version::COMPILER_VERSION,
+};
 use itertools::Itertools;
 use regex::Regex;
 use std::{collections::HashMap, fmt::Write, sync::OnceLock};
@@ -53,7 +56,8 @@ impl TestCompileOutput {
                                 .replace("\\\\", "/");
                             let line_number = caps.get(2).expect("line number").as_str();
                             format!("-file(\"{path}\", {line_number}).")
-                        });
+                        })
+                        .replace(COMPILER_VERSION, "<gleam compiler version string>");
                     buffer.push_str(&text)
                 }
             };
