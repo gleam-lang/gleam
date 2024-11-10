@@ -328,7 +328,6 @@ where
         app_file_config: Option<&ErlangAppCodegenConfiguration>,
     ) -> Result<(), Error> {
         let mut written = HashSet::new();
-        let native_modules: Vec<EcoString>;
         let build_dir = self.out.join(paths::ARTEFACT_DIRECTORY_NAME);
         let include_dir = self.out.join("include");
         let io = self.io.clone();
@@ -353,13 +352,13 @@ where
         // version and not the newly compiled version.
         Erlang::new(&build_dir, &include_dir).render(io.clone(), modules, self.root)?;
 
-        if self.compile_beam_bytecode {
+        let native_modules: Vec<EcoString> = if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
-            native_modules = self.compile_erlang_to_beam(&written)?;
+            self.compile_erlang_to_beam(&written)?
         } else {
             tracing::debug!("skipping_erlang_bytecode_compilation");
-            native_modules = Vec::new();
-        }
+            Vec::new()
+        };
 
         if let Some(config) = app_file_config {
             ErlangApp::new(&self.out.join("ebin"), config).render(

@@ -156,23 +156,18 @@ impl<'a> ErlangApp<'a> {
     }
 
     fn format_atom(s: &EcoString) -> EcoString {
-        match s.chars().next() {
-            Some(first_char) => {
-                // Check if first character is not lowercase
-                let needs_quotes = !first_char.is_ascii_lowercase();
+        let mut chars = s.chars();
 
-                // Check if string contains any characters other than alphanumeric, underscore, or @
-                let contains_special = s
-                    .chars()
-                    .any(|c| !(c.is_alphanumeric() || c == '_' || c == '@'));
+        let Some(first) = chars.next() else {
+            return "''".into();
+        };
 
-                if needs_quotes || contains_special {
-                    EcoString::from(format!("'{}'", s))
-                } else {
-                    s.clone()
-                }
-            }
-            None => EcoString::from("''"),
+        let needs_escape = |c: char| !(c.is_alphanumeric() || c == '_' || c == '@');
+
+        if !first.is_ascii_lowercase() || chars.any(needs_escape) {
+            format!("'{}'", s).into()
+        } else {
+            s.clone()
         }
     }
 }
