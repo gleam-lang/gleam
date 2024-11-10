@@ -693,3 +693,36 @@ pub fn main() {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/3813
+#[test]
+fn record_with_field_named_constructor() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Thing(constructor: Nil)
+}
+
+pub fn main() {
+  let a = Thing(constructor: Nil)
+  let b = Thing(..a, constructor: Nil)
+}
+"#
+    );
+}
+
+#[test]
+fn record_with_field_named_then() {
+    assert_js!(
+        r#"
+pub type Thing {
+  Thing(then: Nil)
+}
+
+pub fn main() {
+  let a = Thing(then: Nil)
+  let b = Thing(..a, then: Nil)
+}
+"#
+    );
+}
