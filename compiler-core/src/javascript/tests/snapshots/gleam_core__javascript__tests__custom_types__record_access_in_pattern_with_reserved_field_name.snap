@@ -1,0 +1,44 @@
+---
+source: compiler-core/src/javascript/tests/custom_types.rs
+expression: "\npub type Thing {\n  Thing(constructor: Nil)\n}\n\npub fn main() {\n  let a = Thing(constructor: Nil)\n  let Thing(constructor: ctor) = a\n  case a {\n      a if a.constructor == ctor -> Nil\n      Thing(constructor:) if ctor == constructor -> Nil\n      _ -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Thing {
+  Thing(constructor: Nil)
+}
+
+pub fn main() {
+  let a = Thing(constructor: Nil)
+  let Thing(constructor: ctor) = a
+  case a {
+      a if a.constructor == ctor -> Nil
+      Thing(constructor:) if ctor == constructor -> Nil
+      _ -> Nil
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType } from "../gleam.mjs";
+
+export class Thing extends $CustomType {
+  constructor(constructor) {
+    super();
+    this.constructor$ = constructor;
+  }
+}
+
+export function main() {
+  let a = new Thing(undefined);
+  let ctor = a.constructor$;
+  if (a.constructor$ === ctor) {
+    let a$1 = a;
+    return undefined;
+  } else if (a instanceof Thing && (ctor === a.constructor$)) {
+    let constructor = a.constructor$;
+    return undefined;
+  } else {
+    return undefined;
+  }
+}
