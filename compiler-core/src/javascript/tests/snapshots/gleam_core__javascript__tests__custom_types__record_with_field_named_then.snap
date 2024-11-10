@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/custom_types.rs
-expression: "\npub type Thing {\n  Thing(then: Nil)\n}\n\npub fn main() {\n  let a = Thing(then: Nil)\n  let b = Thing(..a, then: Nil)\n}\n"
+expression: "\npub type Thing {\n  Thing(then: Nil)\n}\n\npub fn main() {\n  let a = Thing(then: Nil)\n  let b = Thing(..a, then: Nil)\n  b.then\n}\n"
 ---
 ----- SOURCE CODE
 
@@ -11,6 +11,7 @@ pub type Thing {
 pub fn main() {
   let a = Thing(then: Nil)
   let b = Thing(..a, then: Nil)
+  b.then
 }
 
 
@@ -27,5 +28,5 @@ export class Thing extends $CustomType {
 export function main() {
   let a = new Thing(undefined);
   let b = a.withFields({ then$: undefined });
-  return b;
+  return b.then$;
 }
