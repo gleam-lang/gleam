@@ -19,7 +19,7 @@ compile_package_loop() ->
             case compile_package(Lib, Out, Modules) of
                 {ok, ModuleNames} ->
                     PrintModuleName = fun(ModuleName) ->
-                        io:put_chars("module:" ++ atom_to_list(ModuleName) ++ "\n")
+                        io:put_chars("gleam-compile-module:" ++ atom_to_list(ModuleName) ++ "\n")
                     end,
                     lists:map(PrintModuleName, ModuleNames),
                     io:put_chars("gleam-compile-result-ok\n");
