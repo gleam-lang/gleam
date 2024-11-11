@@ -1,6 +1,10 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
-    build::{Mode, Target, Telemetry}, error::{FileIoAction, FileKind}, paths::ProjectPaths, Error, Result
+    build::{Mode, Target, Telemetry},
+    error::{FileIoAction, FileKind},
+    paths::ProjectPaths,
+    Error,
+    Result
 };
 use strum::IntoEnumIterator;
 
