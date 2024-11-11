@@ -330,10 +330,10 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "Hint: If a type is not generic you should omit the `()`.".into(),
                 ],
             ),
-            ParseErrorType::UnknownAttributeRecordVariant => {
+            ParseErrorType::UnknownAttributeRecordVariant => (
                 "This attribute cannot be used on a variant.",
                 vec!["Hint: Did you mean `@deprecated`?".into()],
-            }
+            ),
         }
     }
 }
