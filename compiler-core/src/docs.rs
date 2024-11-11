@@ -94,7 +94,7 @@ pub fn generate_html<IO: FileSystemReader>(
 
     let mut files = vec![];
 
-    let mut search_indexes = vec![];
+    let mut search_items = vec![];
 
     let modules_links: Vec<_> = modules
         .clone()
@@ -148,11 +148,12 @@ pub fn generate_html<IO: FileSystemReader>(
             content: Content::Text(temp.render().expect("Page template rendering")),
         });
 
-        search_indexes.push(SearchIndex {
-            doc: config.name.to_string(),
+        search_items.push(SearchItem {
+            type_: SearchItemType::Page,
+            parent_title: config.name.to_string(),
             title: config.name.to_string(),
-            content,
-            url: page.path.to_string(),
+            doc: content,
+            ref_: page.path.to_string(),
         })
     }
 
@@ -213,50 +214,54 @@ pub fn generate_html<IO: FileSystemReader>(
                 })
                 .join("\n");
 
-            search_indexes.push(SearchIndex {
-                doc: module.name.to_string(),
+            search_items.push(SearchItem {
+                type_: SearchItemType::Type,
+                parent_title: module.name.to_string(),
                 title: type_.name.to_string(),
-                content: format!(
+                doc: format!(
                     "{}\n{}\n{}\n{}",
                     type_.definition,
                     type_.text_documentation,
                     constructors,
                     import_synonyms(&module.name, type_.name)
                 ),
-                url: format!("{}.html#{}", module.name, type_.name),
+                ref_: format!("{}.html#{}", module.name, type_.name),
             })
         });
         constants.iter().for_each(|constant| {
-            search_indexes.push(SearchIndex {
-                doc: module.name.to_string(),
+            search_items.push(SearchItem {
+                type_: SearchItemType::Constant,
+                parent_title: module.name.to_string(),
                 title: constant.name.to_string(),
-                content: format!(
+                doc: format!(
                     "{}\n{}\n{}",
                     constant.definition,
                     constant.text_documentation,
                     import_synonyms(&module.name, constant.name)
                 ),
-                url: format!("{}.html#{}", module.name, constant.name),
+                ref_: format!("{}.html#{}", module.name, constant.name),
             })
         });
         functions.iter().for_each(|function| {
-            search_indexes.push(SearchIndex {
-                doc: module.name.to_string(),
+            search_items.push(SearchItem {
+                type_: SearchItemType::Function,
+                parent_title: module.name.to_string(),
                 title: function.name.to_string(),
-                content: format!(
+                doc: format!(
                     "{}\n{}\n{}",
                     function.signature,
                     function.text_documentation,
                     import_synonyms(&module.name, function.name)
                 ),
-                url: format!("{}.html#{}", module.name, function.name),
+                ref_: format!("{}.html#{}", module.name, function.name),
             })
         });
-        search_indexes.push(SearchIndex {
-            doc: module.name.to_string(),
+        search_items.push(SearchItem {
+            type_: SearchItemType::Module,
+            parent_title: module.name.to_string(),
             title: module.name.to_string(),
-            content: documentation_content,
-            url: format!("{}.html", module.name),
+            doc: documentation_content,
+            ref_: format!("{}.html", module.name),
         });
 
         let page_title = format!("{} · {} · v{}", name, config.name, config.version);
@@ -358,20 +363,27 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    // lunr.min.js, search-data.js and index.js:
+    // lunr.min.js, search-data.js, search-data.json and index.js
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("js/lunr.min.js"),
         content: Content::Text(std::include_str!("../templates/docs-js/lunr.min.js").to_string()),
     });
 
+    let search_data_json = serde_to_string(&SearchData {
+        items: escape_html_contents(search_items),
+        proglang: SearchProgLang::Gleam,
+    })
+    .expect("search index serialization");
+
     files.push(OutputFile {
         path: Utf8PathBuf::from("search-data.js"),
-        content: Content::Text(format!(
-            "window.Gleam.initSearch({});",
-            serde_to_string(&escape_html_contents(search_indexes))
-                .expect("search index serialization")
-        )),
+        content: Content::Text(format!("window.Gleam.initSearch({});", search_data_json)),
+    });
+
+    files.push(OutputFile {
+        path: Utf8PathBuf::from("search-data.json"),
+        content: Content::Text(search_data_json.to_string()),
     });
 
     files.push(OutputFile {
@@ -505,16 +517,17 @@ fn escape_html_content(it: String) -> String {
         .replace('\'', "&#39;")
 }
 
-fn escape_html_contents(indexes: Vec<SearchIndex>) -> Vec<SearchIndex> {
+fn escape_html_contents(indexes: Vec<SearchItem>) -> Vec<SearchItem> {
     indexes
         .into_iter()
-        .map(|idx| SearchIndex {
-            doc: idx.doc,
+        .map(|idx| SearchItem {
+            type_: idx.type_,
+            parent_title: idx.parent_title,
             title: idx.title,
-            content: escape_html_content(idx.content),
-            url: idx.url,
+            doc: escape_html_content(idx.doc),
+            ref_: idx.ref_,
         })
-        .collect::<Vec<SearchIndex>>()
+        .collect::<Vec<SearchItem>>()
 }
 
 fn import_synonyms(parent: &str, child: &str) -> String {
@@ -824,9 +837,37 @@ struct ModuleTemplate<'a> {
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
-struct SearchIndex {
-    doc: String,
+struct SearchData {
+    items: Vec<SearchItem>,
+    proglang: SearchProgLang,
+}
+
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+struct SearchItem {
+    #[serde(rename = "type")]
+    type_: SearchItemType,
+    #[serde(rename = "parentTitle")]
+    parent_title: String,
     title: String,
-    content: String,
-    url: String,
+    doc: String,
+    #[serde(rename = "ref")]
+    ref_: String,
+}
+
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[serde(rename_all = "lowercase")]
+enum SearchItemType {
+    Constant,
+    Function,
+    Module,
+    Page,
+    Type,
+}
+
+#[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
+#[serde(rename_all = "lowercase")]
+enum SearchProgLang {
+    // Elixir,
+    // Erlang,
+    Gleam,
 }

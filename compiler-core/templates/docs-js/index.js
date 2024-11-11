@@ -171,7 +171,7 @@ window.Gleam = (function () {
     else el.addEventListener(type, handler);
   };
 
-  const searchLoaded = function (index, docs) {
+  const searchLoaded = function (index, searchItems) {
     const preview_words_after = 10;
     const preview_words_before = 5;
     const previews = 3;
@@ -285,13 +285,13 @@ window.Gleam = (function () {
       }
 
       function addResult(resultsList, result) {
-        const doc = docs[result.ref];
+        const searchItem = searchItems[result.ref];
         const resultsListItem = document.createElement("li");
         resultsListItem.classList.add("search-results-list-item");
         resultsList.appendChild(resultsListItem);
         const resultLink = document.createElement("a");
         resultLink.classList.add("search-result");
-        resultLink.setAttribute("href", `${window.unnest}/${doc.url}`);
+        resultLink.setAttribute("href", `${window.unnest}/${searchItem.ref}`);
         resultsListItem.appendChild(resultLink);
         const resultTitle = document.createElement("div");
         resultTitle.classList.add("search-result-title");
@@ -303,14 +303,14 @@ window.Gleam = (function () {
         resultTitle.appendChild(resultDoc);
         const resultDocTitle = document.createElement("div");
         resultDocTitle.classList.add("search-result-doc-title");
-        resultDocTitle.innerHTML = doc.doc;
+        resultDocTitle.innerHTML = searchItem.parentTitle;
         resultDoc.appendChild(resultDocTitle);
         let resultDocOrSection = resultDocTitle;
-        if (doc.doc != doc.title) {
+        if (searchItem.parentTitle != searchItem.title) {
           resultDoc.classList.add("search-result-doc-parent");
           const resultSection = document.createElement("div");
           resultSection.classList.add("search-result-section");
-          resultSection.innerHTML = doc.title;
+          resultSection.innerHTML = searchItem.title;
           resultTitle.appendChild(resultSection);
           resultDocOrSection = resultSection;
         }
@@ -334,11 +334,11 @@ window.Gleam = (function () {
               let ellipsesBefore = true;
               let ellipsesAfter = true;
               for (let k = 0; k < preview_words_before; k++) {
-                const nextSpace = doc.content.lastIndexOf(
+                const nextSpace = searchItem.doc.lastIndexOf(
                   " ",
                   previewStart - 2,
                 );
-                const nextDot = doc.content.lastIndexOf(". ", previewStart - 2);
+                const nextDot = searchItem.doc.lastIndexOf(". ", previewStart - 2);
                 if (nextDot >= 0 && nextDot > nextSpace) {
                   previewStart = nextDot + 1;
                   ellipsesBefore = false;
@@ -352,15 +352,15 @@ window.Gleam = (function () {
                 previewStart = nextSpace + 1;
               }
               for (let k = 0; k < preview_words_after; k++) {
-                const nextSpace = doc.content.indexOf(" ", previewEnd + 1);
-                const nextDot = doc.content.indexOf(". ", previewEnd + 1);
+                const nextSpace = searchItem.doc.indexOf(" ", previewEnd + 1);
+                const nextDot = searchItem.doc.indexOf(". ", previewEnd + 1);
                 if (nextDot >= 0 && nextDot < nextSpace) {
                   previewEnd = nextDot;
                   ellipsesAfter = false;
                   break;
                 }
                 if (nextSpace < 0) {
-                  previewEnd = doc.content.length;
+                  previewEnd = searchItem.doc.length;
                   ellipsesAfter = false;
                   break;
                 }
@@ -383,9 +383,9 @@ window.Gleam = (function () {
           resultDocOrSection.innerHTML = "";
           addHighlightedText(
             resultDocOrSection,
-            doc.title,
+            searchItem.title,
             0,
-            doc.title.length,
+            searchItem.title.length,
             titlePositions,
           );
         }
@@ -422,7 +422,7 @@ window.Gleam = (function () {
           const resultPreviews = document.createElement("div");
           resultPreviews.classList.add("search-result-previews");
           resultLink.appendChild(resultPreviews);
-          const content = doc.content;
+          const content = searchItem.doc;
           for (
             let j = 0;
             j < Math.min(previewPositions.length, previews);
@@ -449,7 +449,7 @@ window.Gleam = (function () {
         }
         const resultRelUrl = document.createElement("span");
         resultRelUrl.classList.add("search-result-rel-url");
-        resultRelUrl.innerText = doc.url;
+        resultRelUrl.innerText = searchItem.ref;
         resultTitle.appendChild(resultRelUrl);
       }
 
@@ -567,28 +567,30 @@ window.Gleam = (function () {
     });
   };
 
-  self.initSearch = function initSeach(docs) {
+  self.initSearch = function initSeach(searchData) {
     // enable support for hyphenated search words
     lunr.tokenizer.separator = /[\s/]+/;
-
     const index = lunr(function () {
       this.ref("id");
+      // this.field("type");
+      // this.field("parentTitle");
       this.field("title", { boost: 200 });
-      this.field("content", { boost: 2 });
-      this.field("url");
+      this.field("doc", { boost: 2 });
+      this.field("ref");
       this.metadataWhitelist = ["position"];
 
-      for (let [i, entry] of docs.entries()) {
+      for (let [i, entry] of searchData.items.entries()) {
         this.add({
           id: i,
+          // type: entry.type,
+          parentTitle: entry.parentTitle,
           title: entry.title,
-          content: entry.content,
-          url: `${window.unnest}/${entry.url}`,
+          doc: entry.doc,
+          ref: `${window.unnest}/${entry.ref}`,
         });
       }
     });
-
-    searchLoaded(index, docs);
+    searchLoaded(index, searchData.items);
   };
 
   const init = function () {
