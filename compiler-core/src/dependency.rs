@@ -529,7 +529,7 @@ mod tests {
 
     #[test]
     fn resolution_error_message() {
-        let _ = resolve_versions(
+        let result = resolve_versions(
             interesting_remote(),
             HashMap::new(),
             "app".into(),
@@ -539,8 +539,13 @@ mod tests {
             ]
             .into_iter(),
             &vec![].into_iter().collect(),
-        )
-        .unwrap();
+        );
+
+        if let Err(Error::DependencyResolutionFailed(message)) = result {
+            insta::assert_snapshot!(message)
+        } else {
+            panic!("expected a resolution error message")
+        }
     }
 
     #[test]
