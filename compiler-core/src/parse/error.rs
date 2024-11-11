@@ -331,7 +331,8 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                 ],
             ),
             ParseErrorType::UnknownAttributeRecordVariant => {
-                ("This attribute cannot be used on a type variant.", vec![])
+                "This attribute cannot be used on a variant.",
+                vec!["Hint: Did you mean `@deprecated`?".into()],
             }
         }
     }
