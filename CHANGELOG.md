@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Build tool
+
+- The version of Erlang used in the GitHub Actions workflow created by
+  `gleam new` has been increased from v26.0.2 to v27.1.2.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Bug fixes
 
 - Fixed a bug where some reserved field names were not properly escaped in
