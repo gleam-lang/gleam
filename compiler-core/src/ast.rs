@@ -7,7 +7,7 @@ mod tests;
 pub mod visit;
 
 pub use self::typed::TypedExpr;
-pub use self::untyped::{FunctionLiteralKind, UntypedExpr, Use};
+pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
@@ -2197,7 +2197,59 @@ pub enum Statement<TypeT, ExpressionT> {
     /// Assigning an expression to variables using a pattern.
     Assignment(Assignment<TypeT, ExpressionT>),
     /// A `use` expression.
-    Use(Use),
+    Use(Use<TypeT, ExpressionT>),
+}
+
+pub type UntypedUse = Use<(), UntypedExpr>;
+pub type TypedUse = Use<Arc<Type>, TypedExpr>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct Use<TypeT, ExpressionT> {
+    /// In an untyped use this is the expression with the untyped code of the
+    /// callback function.
+    ///
+    /// In a typed use this is the typed function call the use expression
+    /// desugars to.
+    ///
+    pub call: Box<ExpressionT>,
+
+    /// This is the location of the whole use line, starting from the `use`
+    /// keyword and ending with the function call on the right hand side of
+    /// `<-`.
+    ///
+    /// ```gleam
+    /// use a <- reult.try(result)
+    /// ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    pub location: SrcSpan,
+
+    /// This is the SrcSpan of the patterns you find on the left hand side of
+    /// `<-` in a use expression.
+    ///
+    /// ```gleam
+    /// use pattern1, pattern2 <- todo
+    ///     ^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    /// In case there's no patterns it will be corresponding to the SrcSpan of
+    /// the `use` keyword itself.
+    ///
+    pub assignments_location: SrcSpan,
+
+    /// The patterns on the left hand side of `<-` in a use expression.
+    ///
+    pub assignments: Vec<UseAssignment<TypeT>>,
+}
+
+pub type UntypedUseAssignment = UseAssignment<()>;
+pub type TypedUseAssignment = UseAssignment<Arc<Type>>;
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UseAssignment<TypeT> {
+    pub location: SrcSpan,
+    pub pattern: Pattern<TypeT>,
+    pub annotation: Option<TypeAst>,
 }
 
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
@@ -2274,7 +2326,7 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
-            Statement::Use(_use) => unreachable!("Use must not exist for typed code"),
+            Statement::Use(_use) => _use.call.type_(),
         }
     }
 
@@ -2282,13 +2334,13 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.definition_location(),
             Statement::Assignment(_) => None,
-            Statement::Use(_) => None,
+            Statement::Use(use_) => use_.call.definition_location(),
         }
     }
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
-            Statement::Use(_) => None,
+            Statement::Use(use_) => use_.call.find_node(byte_index),
             Statement::Expression(expression) => expression.find_node(byte_index),
             Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
                 if assignment.location.contains(byte_index) {
@@ -2336,11 +2388,4 @@ impl TypedAssignment {
     pub fn type_(&self) -> Arc<Type> {
         self.value.type_()
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UseAssignment {
-    pub location: SrcSpan,
-    pub pattern: UntypedPattern,
-    pub annotation: Option<TypeAst>,
 }
