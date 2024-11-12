@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1607
+assertion_line: 1628
 expression: "\ntype Wibble {\n    @target(erlang)\n    Wibble2\n}\n"
 ---
 ----- SOURCE CODE
@@ -16,4 +16,6 @@ error: Syntax error
   ┌─ /src/parse/error.gleam:3:5
   │
 3 │     @target(erlang)
-  │     ^^^^^^^^^^^^^^^ This attribute cannot be used on a type variant.
+  │     ^^^^^^^^^^^^^^^ This attribute cannot be used on a variant.
+
+Hint: Did you mean `@deprecated`?
