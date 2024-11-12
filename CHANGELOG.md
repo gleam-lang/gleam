@@ -47,12 +47,11 @@
   aren't located at the root of their repository:
 
   ```toml
-  repository = {
-    type = "github",
-    user = "gleam-lang",
-    repo = "gleam",
-    path = "packages/my_package"
-  }
+  [repository]
+  type = "github"
+  user = "gleam-lang"
+  repo = "gleam"
+  path = "packages/my_package"
   ```
 
   ([Richard Viney](https://github.com/richard-viney))
