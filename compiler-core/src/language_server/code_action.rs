@@ -7,7 +7,7 @@ use crate::{
             visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg, Visit as _,
         },
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern,
+        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern, TypedRecordUpdateArg, TypedUse,
     },
     build::{Located, Module},
     line_numbers::LineNumbers,
@@ -21,7 +21,7 @@ use crate::{
 use ecow::EcoString;
 use im::HashMap;
 use itertools::Itertools;
-use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, TextEdit, Url};
+use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
 
 use super::{
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
@@ -2072,4 +2072,170 @@ pub fn code_action_convert_unqualified_constructor_to_qualified(
     );
     let new_actions = second_pass.code_actions();
     actions.extend(new_actions);
+}
+
+/// Builder for code action to apply the desugar use expression.
+///
+pub struct DesugarUse<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbers,
+    selected_use: Option<&'a TypedUse>,
+}
+
+impl<'a> DesugarUse<'a> {
+    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+        let line_numbers = LineNumbers::new(&module.code);
+        Self {
+            module,
+            params,
+            line_numbers,
+            selected_use: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(use_) = self.selected_use else {
+            return vec![];
+        };
+
+        let TypedExpr::Call { args, .. } = use_.call.as_ref() else {
+            return vec![];
+        };
+
+        let Some(CallArg {
+            implicit: Some(ImplicitCallArgOrigin::Use),
+            value: TypedExpr::Fn { body, type_, .. },
+            ..
+        }) = args.last()
+        else {
+            return vec![];
+        };
+
+        let mut edits = vec![];
+
+        // If there's arguments on the left hand side of the function we extract
+        // those so we can paste them back as the anonymous function arguments.
+        let assignments = if type_.fn_arity().map_or(false, |arity| arity >= 1) {
+            let assignments_range =
+                use_.assignments_location.start as usize..use_.assignments_location.end as usize;
+            self.module
+                .code
+                .get(assignments_range)
+                .expect("use assignments")
+        } else {
+            ""
+        };
+
+        // We first delete everything on the left hand side of use and the use
+        // arrow.
+        edits.push(self.delete_edit(SrcSpan {
+            start: use_.location.start,
+            end: use_.right_hand_side_location.start,
+        }));
+
+        let use_line_end = use_.right_hand_side_location.end;
+        let use_rhs_function_has_some_explicit_args = args.len() > 1;
+        let use_rhs_function_ends_with_closed_parentheses = dbg!(self
+            .module
+            .code
+            .get(use_line_end as usize - 1..use_line_end as usize))
+            == Some(")");
+
+        edits.push(if use_rhs_function_ends_with_closed_parentheses {
+            // If the function on the right hand side of use ends with a closed
+            // parentheses then we have to remove it and add it later at the end
+            // of the anonymous function we're inserting.
+            //
+            //     use <- wibble()
+            //                   ^ To add the fn() we need to first remove this
+            //
+            // So here we write over the last closed parentheses to remove it.
+            self.src_span_edit(
+                SrcSpan {
+                    start: use_line_end - 1,
+                    end: use_line_end,
+                },
+                // If the function on the rhs of use has other orguments besides
+                // the implicit fn expression then we need to put a comma after
+                // the last argument.
+                if use_rhs_function_has_some_explicit_args {
+                    format!(", fn({}) {{", assignments)
+                } else {
+                    format!("fn({}) {{", assignments)
+                },
+            )
+        } else {
+            // On the other hand, if the function on the right hand side doesn't
+            // end with a closed parenthese then we have to manually add it.
+            //
+            //     use <- wibble
+            //                  ^ No parentheses
+            //
+            self.add_edit(use_line_end, format!("(fn({}) {{", assignments))
+        });
+
+        // Then we have to increase indentation for all the lines of the use
+        // body.
+        let first_fn_expression_range =
+            src_span_to_lsp_range(body.first().location(), &self.line_numbers);
+        let use_body_range = src_span_to_lsp_range(use_.call.location(), &self.line_numbers);
+
+        for line in first_fn_expression_range.start.line..=use_body_range.end.line {
+            edits.push(TextEdit {
+                range: Range {
+                    start: Position { line, character: 0 },
+                    end: Position { line, character: 0 },
+                },
+                new_text: "  ".to_string(),
+            })
+        }
+
+        let final_line_indentation = " ".repeat(use_body_range.start.character as usize);
+        edits.push(self.add_edit(
+            use_.call.location().end,
+            format!("\n{final_line_indentation}}})"),
+        ));
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Desugar use expression")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    fn src_span_edit(&self, location: SrcSpan, new_text: String) -> TextEdit {
+        TextEdit {
+            range: src_span_to_lsp_range(location, &self.line_numbers),
+            new_text,
+        }
+    }
+
+    fn add_edit(&self, at: u32, new_text: String) -> TextEdit {
+        self.src_span_edit(SrcSpan { start: at, end: at }, new_text)
+    }
+
+    fn delete_edit(&self, location: SrcSpan) -> TextEdit {
+        self.src_span_edit(location, "".to_string())
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for DesugarUse<'ast> {
+    fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
+        // We only want to take into account the innermost use we find ourselves
+        // into, so we can't stop at the first use we find (the outermost one)
+        // and have to keep traversing it in case we're inside some nested
+        // `use`s.
+        let use_src_span = use_.location.merge(&use_.call.location());
+        let use_range = src_span_to_lsp_range(use_src_span, &self.line_numbers);
+        if !within(self.params.range, use_range) {
+            return;
+        }
+        self.selected_use = Some(use_);
+        self.visit_typed_expr(&use_.call);
+    }
 }

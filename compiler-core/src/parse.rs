@@ -920,6 +920,7 @@ where
         Ok(Statement::Use(Use {
             location: SrcSpan::new(start, call.location().end),
             assignments_location,
+            right_hand_side_location: call.location(),
             assignments,
             call: Box::new(call),
         }))

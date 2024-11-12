@@ -1662,6 +1662,13 @@ impl SrcSpan {
     pub fn contains(&self, byte_index: u32) -> bool {
         byte_index >= self.start && byte_index <= self.end
     }
+
+    pub fn merge(&self, with: &SrcSpan) -> SrcSpan {
+        Self {
+            start: self.start.min(with.start),
+            end: self.end.max(with.end),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -2217,11 +2224,21 @@ pub struct Use<TypeT, ExpressionT> {
     /// `<-`.
     ///
     /// ```gleam
-    /// use a <- reult.try(result)
-    /// ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    /// use a <- result.try(result)
+    /// ^^^^^^^^^^^^^^^^^^^^^^^^^^^
     /// ```
     ///
     pub location: SrcSpan,
+
+    /// This is the location of the expression on the right hand side of the use
+    /// arrow.
+    ///
+    /// ```gleam
+    /// use a <- result.try(result)
+    ///          ^^^^^^^^^^^^^^^^^^
+    /// ```
+    ///
+    pub right_hand_side_location: SrcSpan,
 
     /// This is the SrcSpan of the patterns you find on the left hand side of
     /// `<-` in a use expression.
