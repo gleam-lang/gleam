@@ -2138,10 +2138,10 @@ impl<'a> DesugarUse<'a> {
 
         let use_line_end = use_.right_hand_side_location.end;
         let use_rhs_function_has_some_explicit_args = args.len() > 1;
-        let use_rhs_function_ends_with_closed_parentheses = dbg!(self
+        let use_rhs_function_ends_with_closed_parentheses = self
             .module
             .code
-            .get(use_line_end as usize - 1..use_line_end as usize))
+            .get(use_line_end as usize - 1..use_line_end as usize)
             == Some(")");
 
         edits.push(if use_rhs_function_ends_with_closed_parentheses {
