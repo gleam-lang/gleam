@@ -1085,9 +1085,6 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::LetAssertWithMessage => {
                             "Specifying a custom panic message when using let assert was"
                         }
-                        FeatureKind::ConstructorWithDeprecatedAnnotation => {
-                            "The constructor's `@deprecated` annotation was"
-                        }
                         FeatureKind::VariantWithDeprecatedAnnotation => {
                             "Deprecating individual custom type variants was"
                         }

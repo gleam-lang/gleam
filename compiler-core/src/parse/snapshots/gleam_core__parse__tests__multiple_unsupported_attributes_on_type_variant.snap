@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1643
+assertion_line: 1664
 expression: "\ntype Wibble {\n    @external(erlang, \"one\", \"two\")\n    @target(erlang)\n    @internal\n    Wibble1\n}\n"
 ---
 ----- SOURCE CODE
@@ -20,4 +20,6 @@ error: Syntax error
 3 │ ╭     @external(erlang, "one", "two")
 4 │ │     @target(erlang)
 5 │ │     @internal
-  │ ╰─────────────^ This attribute cannot be used on a type variant.
+  │ ╰─────────────^ This attribute cannot be used on a variant.
+
+Hint: Did you mean `@deprecated`?

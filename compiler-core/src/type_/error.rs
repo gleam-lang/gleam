@@ -881,7 +881,6 @@ pub enum FeatureKind {
     RecordUpdateVariantInference,
     RecordAccessVariantInference,
     LetAssertWithMessage,
-    ConstructorWithDeprecatedAnnotation,
     VariantWithDeprecatedAnnotation,
 }
 
@@ -903,11 +902,11 @@ impl FeatureKind {
             FeatureKind::UnannotatedUtf8StringSegment => Version::new(1, 5, 0),
 
             FeatureKind::RecordUpdateVariantInference
-            | FeatureKind::RecordAccessVariantInference
-            | FeatureKind::VariantWithDeprecatedAnnotation => Version::new(1, 6, 0),
+            | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
 
-            FeatureKind::ConstructorWithDeprecatedAnnotation
-            | FeatureKind::LetAssertWithMessage => Version::new(1, 7, 0),
+            FeatureKind::VariantWithDeprecatedAnnotation | FeatureKind::LetAssertWithMessage => {
+                Version::new(1, 7, 0)
+            }
         }
     }
 }
