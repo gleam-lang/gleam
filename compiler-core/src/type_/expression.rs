@@ -696,6 +696,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Statement::Use(Use {
             call: Box::new(call),
             location: use_.location,
+            right_hand_side_location: use_.right_hand_side_location,
             assignments_location: use_.assignments_location,
             // TODO: figure out what to do with assignments in the typed use
             // case. They're not really needed so I'm discarding those but it
