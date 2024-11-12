@@ -66,6 +66,7 @@ const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
+const DESUGAR_USE_EXPRESSION: &str = "Desugar use expression";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -3222,3 +3223,143 @@ pub fn main() {
     assert_eq!(remove_unused_action(code), expected.to_string())
 }
 */
+
+#[test]
+fn desugar_use_expression_with_no_parens() {
+    let src = r#"
+pub fn main() {
+  use <- wibble
+  todo
+  todo
+}
+
+fn wibble(f) {
+    f()
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("use").select_until(find_position_of("todo")),
+    );
+}
+
+#[test]
+fn desugar_use_expression_with_empty_parens() {
+    let src = r#"
+pub fn main() {
+  use <- wibble()
+  todo
+  todo
+}
+
+fn wibble(f) {
+    f()
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("use").to_selection(),
+    );
+}
+
+#[test]
+fn desugar_use_expression_with_parens_and_other_args() {
+    let src = r#"
+pub fn main() {
+  use <- wibble(1, 2)
+  todo
+  todo
+}
+
+fn wibble(n, m, f) {
+    f()
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("wibble").select_until(find_position_of("1")),
+    );
+}
+
+#[test]
+fn desugar_use_expression_with_single_pattern() {
+    let src = r#"
+pub fn main() {
+  use a <- wibble(1, 2)
+  todo
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(1)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").to_selection(),
+    );
+}
+
+#[test]
+fn desugar_use_expression_with_multiple_patterns() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(1, 2)
+  todo
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(1, 2)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").nth_occurrence(2).to_selection(),
+    );
+}
+
+#[test]
+fn desugar_nested_use_expressions_picks_inner_under_cursor() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(1, 2)
+  use a, b <- wibble(a, b)
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(1, 2)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").under_last_char().to_selection(),
+    );
+}
+
+#[test]
+fn desugar_nested_use_expressions_picks_inner_under_cursor_2() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(1, 2)
+  use a, b <- wibble(a, b)
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(1, 2)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
