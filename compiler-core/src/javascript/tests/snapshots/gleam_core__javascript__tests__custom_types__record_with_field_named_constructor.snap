@@ -27,6 +27,9 @@ export class Thing extends $CustomType {
 
 export function main() {
   let a = new Thing(undefined);
-  let b = a.withFields({ constructor$: undefined });
+  let b = (() => {
+    let _record = a;
+    return new Thing(undefined);
+  })();
   return b.constructor$;
 }
