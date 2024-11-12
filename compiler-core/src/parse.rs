@@ -63,7 +63,7 @@ use crate::ast::{
     TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
     UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
     UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, Use, UseAssignment, CAPTURE_VARIABLE,
+    UntypedStatement, UntypedUseAssignment, Use, UseAssignment, CAPTURE_VARIABLE,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -925,7 +925,7 @@ where
         }))
     }
 
-    fn parse_use_assignment(&mut self) -> Result<Option<UseAssignment>, ParseError> {
+    fn parse_use_assignment(&mut self) -> Result<Option<UntypedUseAssignment>, ParseError> {
         let start = self.tok0.as_ref().map(|t| t.0).unwrap_or(0);
 
         let pattern = self.parse_pattern()?.ok_or_else(|| ParseError {

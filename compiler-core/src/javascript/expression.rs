@@ -131,9 +131,7 @@ impl<'module> Generator<'module> {
         match statement {
             Statement::Expression(expression) => self.expression(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
-            Statement::Use(_use) => {
-                unreachable!("Use must not be present for JavaScript generation")
-            }
+            Statement::Use(_use) => self.expression(&_use.call),
         }
     }
 
@@ -506,9 +504,7 @@ impl<'module> Generator<'module> {
                     self.child_expression(assignment.value.as_ref())
                 }
 
-                Statement::Use(_) => {
-                    unreachable!("use statements must not be present for JavaScript generation")
-                }
+                Statement::Use(use_) => self.child_expression(&use_.call),
             }
         } else {
             self.immediately_invoked_function_expression(statements, |gen, statements| {

@@ -8,8 +8,8 @@ use crate::{
         TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
         UntypedArg, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
         UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
-        UntypedMultiPattern, UntypedStatement, Use, UseAssignment, RECORD_UPDATE_VARIABLE,
-        USE_ASSIGNMENT_VARIABLE,
+        UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
+        UseAssignment, RECORD_UPDATE_VARIABLE, USE_ASSIGNMENT_VARIABLE,
     },
     build::Target,
     exhaustiveness::{self, Reachability},
@@ -620,7 +620,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_use(
         &mut self,
-        use_: Use,
+        use_: UntypedUse,
         sequence_location: SrcSpan,
         mut following_expressions: Vec<UntypedStatement>,
     ) -> TypedStatement {
@@ -693,7 +693,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             },
         );
 
-        Statement::Expression(call)
+        Statement::Use(Use {
+            call: Box::new(call),
+            location: use_.location,
+            assignments_location: use_.assignments_location,
+            // TODO: figure out what to do with assignments in the typed use
+            // case. They're not really needed so I'm discarding those but it
+            // doesn't feel great and sounds like it would be confusing if
+            // someone in the future tries to access those from the typed AST.
+            assignments: vec![],
+        })
     }
 
     fn infer_negate_bool(
@@ -3938,7 +3947,7 @@ struct UseAssignments {
 }
 
 impl UseAssignments {
-    fn from_use_expression(sugar_assignments: Vec<UseAssignment>) -> UseAssignments {
+    fn from_use_expression(sugar_assignments: Vec<UntypedUseAssignment>) -> UseAssignments {
         let mut assignments = UseAssignments::default();
 
         for (index, assignment) in sugar_assignments.into_iter().enumerate() {
