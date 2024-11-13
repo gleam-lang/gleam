@@ -219,7 +219,7 @@ fn module_is_stale_if_deps_are_stale() {
 }
 
 #[test]
-fn loader_output_does_not_change_if_deps_are_stale() {
+fn module_continues_to_be_stale_if_deps_get_updated() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
     let artefact = Utf8Path::new("/artefact");
@@ -242,14 +242,17 @@ fn loader_output_does_not_change_if_deps_are_stale() {
     write_src(&fs, "/src/three.gleam", 1, TEST_SOURCE_1);
     write_cache(&fs, "three", 2, vec![], TEST_SOURCE_1);
 
-    let loaded1 = run_loader(fs.clone(), root, artefact);
+    let _loaded1 = run_loader(fs.clone(), root, artefact);
 
     // update the dependency
     write_cache(&fs, "one", 3, vec![], TEST_SOURCE_2);
     let loaded2 = run_loader(fs, root, artefact);
 
-    assert_eq!(loaded1.to_compile, loaded2.to_compile);
-    assert_eq!(loaded1.cached, loaded2.cached);
+    assert_eq!(loaded2.to_compile, vec![EcoString::from("two")]);
+    assert_eq!(
+        loaded2.cached,
+        vec![EcoString::from("one"), EcoString::from("three")]
+    );
 }
 
 #[test]
