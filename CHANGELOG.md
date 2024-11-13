@@ -12,6 +12,9 @@
   emitted when the enclosing function has an external JavaScript implementation.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where updating a dependency could break the build cache.
+  ([yoshi](https://github.com/joshi-monster))
+
 ## v1.6.0-rc1 - 2024-11-10
 
 ### Build tool

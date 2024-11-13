@@ -140,7 +140,7 @@ where
             match input {
                 // A new uncached module is to be compiled
                 Input::New(module) => {
-                    tracing::debug!(module = %module.name, "module_to_be_compiled");
+                    tracing::debug!(module = %module.name, "new_module_to_be_compiled");
                     self.stale_modules.add(module.name.clone());
                     loaded.to_compile.push(module);
                 }
@@ -149,9 +149,9 @@ where
                 // recompiled as the changes in the dependencies may have affect
                 // the output, making the cache invalid.
                 Input::Cached(info) if self.stale_modules.includes_any(&info.dependencies) => {
-                    tracing::debug!(module = %info.name, "module_to_be_compiled");
+                    tracing::debug!(module = %info.name, "stale_module_to_be_compiled");
                     self.stale_modules.add(info.name.clone());
-                    let module = self.load_and_parse(info)?;
+                    let module = self.load_stale_module(info)?;
                     loaded.to_compile.push(module);
                 }
 
@@ -280,8 +280,22 @@ where
         Ok(inputs.collection)
     }
 
-    fn load_and_parse(&self, cached: CachedModule) -> Result<UncompiledModule> {
+    fn load_stale_module(&self, cached: CachedModule) -> Result<UncompiledModule> {
         let mtime = self.io.modification_time(&cached.source_path)?;
+
+        // We need to delete any existing cache_meta files for this module.
+        // While we figured it out this time because the module has stale dependencies,
+        // next time the dependencies might no longer be stale, but we still need to be able to tell
+        // that this module needs to be recompiled until it sucessfully compiles at least once.
+        // This can happen if the stale dependency includes breaking changes.
+        let artefact = cached.name.replace("/", "@");
+        let meta_path = self
+            .artefact_directory
+            .join(artefact.as_str())
+            .with_extension("cache_meta");
+
+        let _ = self.io.delete_file(&meta_path);
+
         read_source(
             self.io.clone(),
             self.target,
