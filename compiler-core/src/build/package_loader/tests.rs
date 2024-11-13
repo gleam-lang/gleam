@@ -219,6 +219,40 @@ fn module_is_stale_if_deps_are_stale() {
 }
 
 #[test]
+fn loader_output_does_not_change_if_deps_are_stale() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Cache is stale
+    write_src(&fs, "/src/one.gleam", 1, TEST_SOURCE_2);
+    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
+
+    // Cache is fresh but dep is stale
+    write_src(&fs, "/src/two.gleam", 1, "import one");
+    write_cache(
+        &fs,
+        "two",
+        2,
+        vec![(EcoString::from("one"), SrcSpan { start: 0, end: 0 })],
+        "import one",
+    );
+
+    // Cache is fresh
+    write_src(&fs, "/src/three.gleam", 1, TEST_SOURCE_1);
+    write_cache(&fs, "three", 2, vec![], TEST_SOURCE_1);
+
+    let loaded1 = run_loader(fs.clone(), root, artefact);
+
+    // update the dependency
+    write_cache(&fs, "one", 3, vec![], TEST_SOURCE_2);
+    let loaded2 = run_loader(fs, root, artefact);
+
+    assert_eq!(loaded1.to_compile, loaded2.to_compile);
+    assert_eq!(loaded1.cached, loaded2.cached);
+}
+
+#[test]
 fn invalid_module_name() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");
