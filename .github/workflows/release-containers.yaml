@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         base-image:
+          - scratch
           - erlang
           - erlang-slim
           - erlang-alpine
