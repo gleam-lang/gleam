@@ -3,8 +3,7 @@ use gleam_core::{
     build::{Mode, Target, Telemetry},
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
-    Error,
-    Result
+    Error, Result,
 };
 use strum::IntoEnumIterator;
 
@@ -38,13 +37,12 @@ impl BuildLock {
 
         let lock_path = self.directory.join("gleam.lock");
 
-        let mut file = fslock::LockFile::open(lock_path.as_str())
-            .map_err(|e| Error::FileIo {
-                kind: FileKind::File,
-                path: lock_path.clone(),
-                action: FileIoAction::Create,
-                err: Some(e.to_string()),
-            })?;
+        let mut file = fslock::LockFile::open(lock_path.as_str()).map_err(|e| Error::FileIo {
+            kind: FileKind::File,
+            path: lock_path.clone(),
+            action: FileIoAction::Create,
+            err: Some(e.to_string()),
+        })?;
 
         if !file.try_lock_with_pid().expect("Trying build locking") {
             telemetry.waiting_for_build_directory_lock();
