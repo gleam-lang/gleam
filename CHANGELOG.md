@@ -21,6 +21,10 @@
 - Fixed a bug where updating a dependency could break the build cache.
   ([yoshi](https://github.com/joshi-monster))
 
+- Fixed a bug where if the build directory was not writable then the build tool
+  would crash when trying to lock the build directory.
+  ([Zak Farmer](https://github.com/ZakFarmer))
+
 ## v1.6.0-rc1 - 2024-11-10
 
 ### Build tool
