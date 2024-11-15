@@ -302,7 +302,7 @@ where
         Ok(())
     }
 
-    fn encode_and_write_metadata(&mut self, modules: &Vec<Module>) -> Result<()> {
+    fn encode_and_write_metadata(&mut self, modules: &[Module]) -> Result<()> {
         if !self.write_metadata {
             tracing::debug!("package_metadata_writing_disabled");
             return Ok(());

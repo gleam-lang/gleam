@@ -227,7 +227,7 @@ impl Package {
     }
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct Module {
     pub name: EcoString,
     pub code: EcoString,
