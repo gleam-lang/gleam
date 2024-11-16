@@ -152,7 +152,7 @@ where
                 },
                 end: Position {
                     line: self.cursor_position.line,
-                    character: self.cursor_position.character + after.len() as u32,
+                    character: self.cursor_position.character,
                 },
             },
             format!("{before}{after}"),

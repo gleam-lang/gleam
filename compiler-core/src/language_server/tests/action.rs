@@ -1,4 +1,3 @@
-use crate::line_numbers::LineNumbers;
 use itertools::Itertools;
 use lsp_types::{
     CodeActionContext, CodeActionParams, PartialResultParams, Position, Range, Url,
@@ -50,27 +49,12 @@ fn apply_code_action(title: &str, tester: TestProject<'_>, range: Range) -> Stri
     apply_code_edit(src, changes)
 }
 
-/// This function replicates how the text editor applies TextEdit.
-///
 fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -> String {
     let mut result = src.to_string();
-    let line_numbers = LineNumbers::new(src);
-    let mut offset = 0;
-    for (_, mut change) in changes {
-        change.sort_by_key(|edit| (edit.range.start.line, edit.range.start.character));
-        for edit in change {
-            let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
-                as i32
-                - offset;
-            let end = line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32
-                - offset;
-            let range = (start as usize)..(end as usize);
-            offset += end - start;
-            offset -= edit.new_text.len() as i32;
-            result.replace_range(range, &edit.new_text);
-        }
+    for (_, change) in changes {
+        result = super::apply_code_edit(result.as_str(), change);
     }
-    result
+    result.to_string()
 }
 
 const REMOVE_UNUSED_IMPORTS: &str = "Remove unused imports";
