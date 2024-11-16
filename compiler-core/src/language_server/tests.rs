@@ -29,6 +29,7 @@ use crate::{
         engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
         DownloadDependencies, LockGuard, Locker, MakeLocker,
     },
+    line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
@@ -732,4 +733,27 @@ fn byte_index_to_position(src: &str, byte_index: usize) -> Position {
     }
 
     Position::new(line, col)
+}
+
+/// This function replicates how the text editor applies TextEdit.
+///
+pub fn apply_code_edit(src: &str, mut change: Vec<lsp_types::TextEdit>) -> String {
+    let mut result = src.to_string();
+    let line_numbers = LineNumbers::new(src);
+    let mut offset = 0;
+
+    change.sort_by_key(|edit| (edit.range.start.line, edit.range.start.character));
+    for edit in change {
+        let start = line_numbers.byte_index(edit.range.start.line, edit.range.start.character)
+            as i32
+            - offset;
+        let end =
+            line_numbers.byte_index(edit.range.end.line, edit.range.end.character) as i32 - offset;
+        let range = (start as usize)..(end as usize);
+        offset += end - start;
+        offset -= edit.new_text.len() as i32;
+        result.replace_range(range, &edit.new_text);
+    }
+
+    result
 }

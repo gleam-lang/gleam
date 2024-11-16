@@ -22,6 +22,33 @@ pub fn show_complete(code: &str, position: Position) -> String {
     str
 }
 
+fn apply_conversion(src: &str, completions: Vec<CompletionItem>, value: &str) -> String {
+    let completion = completions
+        .iter()
+        .find(|c| c.label == value.to_string())
+        .expect(&format!("no completion with value `{value}`"));
+
+    let mut edits = vec![];
+    if let Some(lsp_types::CompletionTextEdit::Edit(edit)) = &completion.text_edit {
+        edits.push(edit.clone());
+    }
+    apply_code_edit(src, edits)
+}
+
+#[macro_export]
+macro_rules! assert_apply_completion {
+    ($project:expr, $name:literal, $position:expr) => {
+        let src = $project.src;
+        let completions = completion($project, $position);
+        let output = format!(
+            "{}\n\n----- After applying completion -----\n{}",
+            show_complete(src, $position),
+            apply_conversion(src, completions, $name)
+        );
+        insta::assert_snapshot!(insta::internals::AutoName, output, src);
+    };
+}
+
 #[macro_export]
 macro_rules! assert_completion {
     ($project:expr) => {
@@ -1787,4 +1814,45 @@ pub fn main(x: Int) {
 ";
 
     assert_completion!(TestProject::for_source(code), Position::new(3, 0));
+}
+
+// https://github.com/gleam-lang/gleam/issues/3833
+#[test]
+fn autocomplete_doesnt_delete_the_piece_of_code_that_comes_after() {
+    let code = "
+import list
+pub fn main(x: Int) {
+  list.list.filter([1, 2, 3], todo)
+}
+";
+    let list = "
+pub fn filter(_, _) { [] }
+pub fn map(_, _) { [] }
+";
+
+    assert_apply_completion!(
+        TestProject::for_source(code).add_dep_module("list", list),
+        "list.map",
+        Position::new(3, 7)
+    );
+}
+
+#[test]
+fn autocomplete_doesnt_delete_the_piece_of_code_that_comes_after_2() {
+    let code = "
+import list
+pub fn main(x: Int) {
+  list.mlist.filter([1, 2, 3], todo)
+}
+";
+    let list = "
+pub fn filter(_, _) { [] }
+pub fn map(_, _) { [] }
+";
+
+    assert_apply_completion!(
+        TestProject::for_source(code).add_dep_module("list", list),
+        "list.map",
+        Position::new(3, 8)
+    );
 }
