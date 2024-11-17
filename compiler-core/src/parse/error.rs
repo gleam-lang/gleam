@@ -65,7 +65,10 @@ impl ParseError {
             ),
             ParseErrorType::ExprLparStart => (
                 "This parenthesis cannot be understood here",
-                vec!["Hint: To group expressions in gleam use \"{\" and \"}\".".into()],
+                vec![
+                    "Hint: To group expressions in gleam use \"{\" and \"}\".".into(),
+                    "Hint: Tuples are created with `#(` and `)`.".into(),
+                ],
             ),
             ParseErrorType::IncorrectName => (
                 "I'm expecting a lowercase name here",
