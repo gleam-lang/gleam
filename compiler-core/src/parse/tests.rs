@@ -1574,3 +1574,18 @@ fn missing_type_constructor_arguments_in_type_annotation_2() {
 }"
     );
 }
+
+#[test]
+fn tuple_without_hash() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+    let triple = (1, 2.2, "three")
+    io.debug(triple)
+    let (a, *, *) = triple
+    io.debug(a)
+    io.debug(triple.1)
+}
+"#
+    );
+}
