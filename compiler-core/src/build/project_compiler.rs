@@ -214,7 +214,7 @@ where
     /// Checks that version file found in the build directory matches the current version of gleam.
     pub fn check_gleam_version(&self) -> Result<(), Error> {
         let version_path = self.paths.build_gleam_version(self.mode(), self.target());
-        return if self.io.is_file(&version_path) {
+        if self.io.is_file(&version_path) {
             let version = self.io.read(&version_path)?;
             if version == COMPILER_VERSION {
                 Ok(())
@@ -223,7 +223,7 @@ where
             }
         } else {
             Err(Error::NoVersionFile)
-        };
+        }
     }
 
     /// Clear the build directory before continuing.
