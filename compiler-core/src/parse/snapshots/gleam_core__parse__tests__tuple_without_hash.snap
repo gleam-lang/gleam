@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\npub fn main() {\n    let triple = (1, 2.2, \"three\")\n    io.debug(triple)\n    let (a, *, *) = triple\n    io.debug(a)\n    io.debug(triple.1)\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+pub fn main() {
+    let triple = (1, 2.2, "three")
+    io.debug(triple)
+    let (a, *, *) = triple
+    io.debug(a)
+    io.debug(triple.1)
+}
+
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:3:18
+  │
+3 │     let triple = (1, 2.2, "three")
+  │                  ^ This parenthesis cannot be understood here
+
+Hint: To group expressions in gleam use "{" and "}".
+Hint: Tuples are created with `#(` and `)`.
