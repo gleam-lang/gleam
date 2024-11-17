@@ -295,6 +295,10 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         minimum_required_version: SmallVersion,
         wrongfully_allowed_version: SmallVersion,
     },
+    #[error("Build directory version does not match compiler version")]
+    BuildVersionMismatch,
+    #[error("Build directory does not contain a version file")]
+    NoVersionFile,
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -3626,6 +3630,8 @@ or you can publish it using a different version number"),
                 location: None,
                 hint: Some("Please add the --replace flag if you want to replace the release.".into()),
             }],
+            Error::BuildVersionMismatch => vec![],
+            Error::NoVersionFile => vec![]
         }
     }
 }

@@ -211,24 +211,30 @@ where
             .map(|modules| Package { config, modules })
     }
 
-    /// Checks that version file found in the build directory matches the
-    /// current version of gleam. If not, we will clear the build directory
-    /// before continuing. This will ensure that upgrading gleam will not leave
-    /// one with confusing or hard to debug states.
+    /// Checks that version file found in the build directory matches the current version of gleam.
     pub fn check_gleam_version(&self) -> Result<(), Error> {
+        let version_path = self.paths.build_gleam_version(self.mode(), self.target());
+        return if self.io.is_file(&version_path) {
+            let version = self.io.read(&version_path)?;
+            if version == COMPILER_VERSION {
+                Ok(())
+            } else {
+                Err(Error::BuildVersionMismatch)
+            }
+        } else {
+            Err(Error::NoVersionFile)
+        };
+    }
+
+    /// Clear the build directory before continuing.
+    /// This will ensure that upgrading gleam will not leave one with confusing or hard to debug
+    /// states.
+    pub fn clear_build_dir(&self) -> Result<(), Error> {
         let build_path = self
             .paths
             .build_directory_for_target(self.mode(), self.target());
         let version_path = self.paths.build_gleam_version(self.mode(), self.target());
-        if self.io.is_file(&version_path) {
-            let version = self.io.read(&version_path)?;
-            if version == COMPILER_VERSION {
-                return Ok(());
-            }
-        }
 
-        // Either file is missing our the versions do not match. Time to rebuild
-        tracing::info!("removing_build_state_from_different_gleam_version");
         self.io.delete_directory(&build_path)?;
 
         // Recreate build directory with new updated version file

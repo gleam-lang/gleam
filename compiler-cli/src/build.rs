@@ -5,7 +5,7 @@ use gleam_core::{
     manifest::Manifest,
     paths::ProjectPaths,
     warning::WarningEmitterIO,
-    Result,
+    Error, Result,
 };
 
 use crate::{
@@ -48,7 +48,6 @@ pub(crate) fn main_with_warnings(
 
     tracing::info!("Compiling packages");
     let result = {
-        let _guard = lock.lock(telemetry);
         let compiler = ProjectCompiler::new(
             root_config,
             options,
@@ -58,6 +57,15 @@ pub(crate) fn main_with_warnings(
             ProjectPaths::new(current_dir),
             io,
         );
+
+        if let Err(e @ (Error::BuildVersionMismatch | Error::NoVersionFile)) =
+            compiler.check_gleam_version()
+        {
+            tracing::warn!("{e}");
+            compiler.clear_build_dir()?;
+        }
+
+        let _guard = lock.lock(telemetry);
         compiler.compile()?
     };
 

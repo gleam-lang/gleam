@@ -9,6 +9,7 @@ use gleam_core::{
     io::FileSystemWriter,
     paths::ProjectPaths,
     warning::VectorWarningEmitterIO,
+    Error,
 };
 use std::rc::Rc;
 
@@ -41,6 +42,11 @@ pub fn prepare(path: &str, mode: Mode) -> String {
         ProjectPaths::new(root),
         filesystem.clone(),
     );
+
+    let check_vers_result = compiler.check_gleam_version();
+    if let Err(Error::BuildVersionMismatch | Error::NoVersionFile) = check_vers_result {
+        compiler.clear_build_dir().unwrap();
+    }
 
     compiler.compile().unwrap();
 
