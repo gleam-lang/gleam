@@ -59,7 +59,6 @@ where
         // package before we run for the first time.
         // TODO: remove this once the caches have contain all the information
         {
-            let _guard = locker.lock_for_build();
             let path = paths.build_directory_for_package(Mode::Lsp, target, &name);
             io.delete_directory(&path)?;
         }
@@ -97,9 +96,6 @@ where
     }
 
     pub fn compile(&mut self) -> Outcome<Vec<Utf8PathBuf>, Error> {
-        // Lock the build directory to ensure to ensure we are the only one compiling
-        let _lock_guard = self.locker.lock_for_build();
-
         // Verify that the build directory was created using the same version of
         // Gleam as we are running. If it is not then we discard the build
         // directory as the cache files may be in a different format.
@@ -112,6 +108,9 @@ where
             Err(e) => return e.into(),
             _ => (),
         };
+
+        // Lock the build directory to ensure to ensure we are the only one compiling
+        let _lock_guard = self.locker.lock_for_build();
 
         let compiled_dependencies = match self.project_compiler.compile_dependencies() {
             Ok(it) => it,
