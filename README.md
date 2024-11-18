@@ -162,6 +162,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/kwando">Hannes Nevalainen</a> -
   <a href="https://github.com/ildorn">Hannes Schnaitter</a> -
   <a href="https://github.com/hfjallemark">Hans Fjällemark</a> -
+  <a href="https://github.com/oderwat">Hans Raaf</a> -
   <a href="https://github.com/jhundman">Hayes Hundman</a> -
   <a href="https://github.com/hayleigh-dot-dev">Hayleigh Thompson</a> -
   <a href="https://github.com/hibachrach">Hazel Bachrach</a> -
@@ -251,7 +252,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/matthewrobinsondev">Matt Robinson</a> -
   <a href="https://github.com/matt-savvy">Matt Savoia</a> -
   <a href="https://github.com/mattvanhorn">Matt Van Horn</a> -
-  <a href="https://github.com/KtorZ">Matthias Benkort</a> -
+  <a href="https://github.com/mwhitworth">Matthew Whitworth</a> -
   <a href="https://github.com/maxmcd">Max McDonnell</a> -
   <a href="https://github.com/max-tern">max-tern</a> -
   <a href="https://github.com/metame">metame</a> -
