@@ -43,6 +43,28 @@
   labels.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The Language Server now suggests a code action to desugar a use expression
+  into the equivalent function call. For example, this snippet of code:
+
+  ```gleam
+  pub fn main() {
+    use profile <- result.try(fetch_profile(user))
+    render_welcome(user, profile)
+  }
+  ```
+
+  Will be turned into:
+
+  ```gleam
+  pub fn main() {
+    result.try(fetch_profile(user), fn(profile) {
+      render_welcome(user, profile)
+    })
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now adds a `todo` inside empty blocks.
