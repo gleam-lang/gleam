@@ -10,7 +10,7 @@
   exist with `gleam add`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-### Language server
+### Language Server
 
 - The language server now provides type information when hovering over argument
   labels.
