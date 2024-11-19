@@ -577,8 +577,7 @@ impl TypedExpr {
             TypedExpr::Block { statements, .. } => statements.iter().all(|s| match s {
                 Statement::Expression(e) => e.is_pure_value_constructor(),
                 Statement::Assignment(assignment) => assignment.value.is_pure_value_constructor(),
-                // A use is just a function call under the hood, so it's not pure.
-                Statement::Use(_) => false,
+                Statement::Use(_) => panic!("No use in typed expr"),
             }),
 
             // A case is pure if its subject and all its branches are.
@@ -609,8 +608,7 @@ impl TypedExpr {
             TypedExpr::Fn { body, .. } => body.iter().all(|s| match s {
                 Statement::Expression(expression) => expression.is_pure_value_constructor(),
                 Statement::Assignment(assignment) => assignment.value.is_pure_value_constructor(),
-                // A use is just a function call under the hood, so we don't ever consider it pure
-                Statement::Use(_) => false,
+                Statement::Use(_) => panic!("No use in typed expr"),
             }),
             _ => false,
         }
