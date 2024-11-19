@@ -1,4 +1,4 @@
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
 
 #[test]
 fn multiple() {
@@ -13,6 +13,36 @@ type Y {
 @target(javascript)
 type Z {
   Z
+}
+"
+    );
+}
+
+#[test]
+fn formatter_removes_target_shorthand_erlang() {
+    assert_format_rewrite!(
+        "@target(erl)
+fn wibble() {
+  todo
+}",
+        "@target(erlang)
+fn wibble() {
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn formatter_removes_target_shorthand_javascript() {
+    assert_format_rewrite!(
+        "@target(js)
+fn wibble() {
+  todo
+}",
+        "@target(javascript)
+fn wibble() {
+  todo
 }
 "
     );
