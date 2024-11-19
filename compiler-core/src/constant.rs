@@ -82,12 +82,8 @@ fn fold_single_constant(value: &TypedConstant) -> FoldedConstant<'_> {
         Constant::BinaryOperation {
             left, right, name, ..
         } => fold_constant_bin_op(left, right, name),
-        Constant::Int { value, .. } => {
-            FoldedConstant::Int(value.parse().expect("Syntax should be valid"))
-        }
-        Constant::Float { value, .. } => {
-            FoldedConstant::Float(value.parse().expect("Syntax should be valid"))
-        }
+        Constant::Int { int_value, .. } => FoldedConstant::Int(int_value.clone()),
+        Constant::Float { float_value, .. } => FoldedConstant::Float(float_value.clone()),
         Constant::String { value, .. } => FoldedConstant::String(value.clone()),
         Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
             FoldedConstant::Bool(true)
