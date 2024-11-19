@@ -132,6 +132,10 @@
   file of same name without warning. It now produces an error.
   ([PgBiel](https://github.com/PgBiel))
 
+- The compiler now raises a warning for unused case expressions, code blocks and
+  pipelines that would be safe to remove.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
