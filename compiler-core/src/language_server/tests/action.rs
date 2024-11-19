@@ -3363,3 +3363,22 @@ fn wibble(n, m, f) {
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
+
+#[test]
+fn desugar_use_expression_with_type_annotations() {
+    let src = r#"
+pub fn main() {
+  use a: Int, b: Int <- wibble(1, 2)
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(1, 2)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
