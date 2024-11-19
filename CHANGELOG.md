@@ -27,6 +27,10 @@
   expression.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The shorthand names for the two targets, `erl` and `js` are now
+  deprecated in code such as `@target`.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
