@@ -76,7 +76,7 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
 use lexer::{LexResult, Spanned};
-use num_bigint::BigInt;
+use num::BigInt;
 use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::str::FromStr;

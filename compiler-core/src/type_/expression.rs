@@ -18,7 +18,7 @@ use hexpm::version::Version;
 use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
-use num_bigint::BigInt;
+use num::BigInt;
 use vec1::Vec1;
 
 #[derive(Clone, Copy, Debug, Eq, PartialOrd, Ord, PartialEq, Serialize)]

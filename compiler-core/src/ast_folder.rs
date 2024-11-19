@@ -1,5 +1,5 @@
 use ecow::EcoString;
-use num_bigint::BigInt;
+use num::BigInt;
 use vec1::Vec1;
 
 use crate::{

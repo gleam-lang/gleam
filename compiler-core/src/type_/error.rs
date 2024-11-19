@@ -11,7 +11,7 @@ use crate::{
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use hexpm::version::Version;
-use num_bigint::BigInt;
+use num::BigInt;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use std::sync::Arc;

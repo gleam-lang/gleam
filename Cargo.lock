@@ -875,7 +875,7 @@ dependencies = [
  "itertools",
  "lsp-server",
  "lsp-types",
- "num-bigint",
+ "num",
  "pathdiff",
  "petgraph",
  "pretty_assertions",
@@ -1414,11 +1414,13 @@ dependencies = [
 ]
 
 [[package]]
-name = "num-bigint"
-version = "0.4.6"
+name = "num"
+version = "0.4.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a5e44f723f1133c9deac646763579fdb3ac745e418f2a7af9cd0c431da1f20b9"
+checksum = "35bd024e8b2ff75562e5f34e7f4905839deb4b22955ef5e73d2fea1b9813cb23"
 dependencies = [
+ "num-bigint",
+ "num-complex",
  "num-integer",
  "num-iter",
  "num-rational",

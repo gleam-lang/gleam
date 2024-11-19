@@ -24,7 +24,7 @@ use crate::type_::{
 use std::sync::Arc;
 
 use ecow::EcoString;
-use num_bigint::BigInt;
+use num::BigInt;
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
