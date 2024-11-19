@@ -7,7 +7,7 @@ use crate::{
             visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg, Visit as _,
         },
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern, TypedRecordUpdateArg, TypedUse,
+        SrcSpan, TypedExpr, TypedModuleConstant, TypedPattern, TypedUse,
     },
     build::{Located, Module},
     line_numbers::LineNumbers,
