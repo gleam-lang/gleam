@@ -22,5 +22,4 @@ warning: Incomplete use expression
 
 This code will crash if it is run. Be sure to finish it before
 running your program.
-A use expression must always be followed by at least one more
-expression.
+A use expression must always be followed by at least one expression.

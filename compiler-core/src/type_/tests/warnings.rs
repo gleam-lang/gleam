@@ -2709,3 +2709,14 @@ fn helper() -> Int
 "#
     );
 }
+
+#[test]
+fn incomplete_code_block_raises_warning() {
+    assert_warning!(
+        r#"
+pub fn main() {
+    {}
+}
+"#
+    );
+}

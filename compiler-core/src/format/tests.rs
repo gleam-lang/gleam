@@ -6457,3 +6457,14 @@ fn record_inside_const_list() {
 "#
     );
 }
+
+#[test]
+fn formatter_adds_todo_inside_empty_block() {
+    assert_format_rewrite!(
+        "pub fn main() {{}}",
+        r#"pub fn main() {
+  { todo }
+}
+"#
+    );
+}
