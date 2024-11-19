@@ -340,6 +340,7 @@ pub enum Located<'a> {
     Arg(&'a TypedArg),
     Annotation(SrcSpan, std::sync::Arc<Type>),
     UnqualifiedImport(UnqualifiedImport<'a>),
+    Label(SrcSpan, std::sync::Arc<Type>),
 }
 
 impl<'a> Located<'a> {
@@ -393,6 +394,7 @@ impl<'a> Located<'a> {
             }),
             Self::Arg(_) => None,
             Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
+            Self::Label(_, _) => None,
         }
     }
 }

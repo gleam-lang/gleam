@@ -1274,3 +1274,40 @@ pub fn main() {
         find_position_of("w: Wibble").under_char('b')
     );
 }
+
+#[test]
+fn hover_for_label_in_pattern() {
+    let code = "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main() {
+  let Wibble(wibble: _, wobble: _) = todo
+  todo
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("wibble: _").under_char('l')
+    );
+}
+
+#[test]
+fn hover_for_label_in_expression() {
+    let code = "
+fn add(wibble a, wobble b) {
+  a + b
+}
+
+pub fn main() {
+  add(wibble: 1, wobble: 2)
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("wibble:").under_char('i')
+    );
+}
