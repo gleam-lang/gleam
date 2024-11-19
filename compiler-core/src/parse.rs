@@ -3284,16 +3284,33 @@ functions are declared separately from types.";
 
     // Expect a target name. e.g. `javascript` or `erlang`
     fn expect_target(&mut self) -> Result<Target, ParseError> {
-        let (_, t, _) = match self.next_tok() {
+        let (start, t, end) = match self.next_tok() {
             Some(t) => t,
             None => {
                 return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
             }
         };
         match t {
-            Token::Name { name } => match Target::from_str(&name) {
-                Ok(target) => Ok(target),
-                Err(_) => self.next_tok_unexpected(Target::variant_strings()),
+            Token::Name { name } => match name.as_str() {
+                "javascript" => Ok(Target::JavaScript),
+                "erlang" => Ok(Target::Erlang),
+                "js" => {
+                    self.warnings
+                        .push(DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
+                            location: SrcSpan { start, end },
+                            full_name: "javascript",
+                        });
+                    Ok(Target::JavaScript)
+                }
+                "erl" => {
+                    self.warnings
+                        .push(DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
+                            location: SrcSpan { start, end },
+                            full_name: "erlang",
+                        });
+                    Ok(Target::Erlang)
+                }
+                _ => self.next_tok_unexpected(Target::variant_strings()),
             },
             _ => self.next_tok_unexpected(Target::variant_strings()),
         }

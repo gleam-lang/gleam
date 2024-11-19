@@ -201,6 +201,11 @@ pub enum DeprecatedSyntaxWarning {
     /// ```
     ///
     DeprecatedRecordSpreadPattern { location: SrcSpan },
+
+    DeprecatedTargetShorthand {
+        full_name: &'static str,
+        location: SrcSpan,
+    },
 }
 
 impl Warning {
@@ -303,6 +308,32 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 location: Some(Location {
                     label: diagnostic::Label {
                         text: Some("This can be replaced with `_`".into()),
+                        span: *location,
+                    },
+                    path: path.clone(),
+                    src: src.clone(),
+                    extra_labels: vec![],
+                }),
+            },
+
+            Warning::DeprecatedSyntax {
+                path,
+                src,
+                warning:
+                    DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
+                        location,
+                        full_name,
+                    },
+            } => Diagnostic {
+                title: "Deprecated target shorthand syntax".into(),
+                text: wrap(&format!(
+                    "This shorthand target name is deprecated. Use the full name: `{full_name}` instead."
+                )),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: Some(Location {
+                    label: diagnostic::Label {
+                        text: Some(format!("This should be replaced with `{full_name}`")),
                         span: *location,
                     },
                     path: path.clone(),

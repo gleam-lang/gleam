@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\n@target(js)\npub fn wibble() { panic }\n"
+---
+----- SOURCE CODE
+
+@target(js)
+pub fn wibble() { panic }
+
+
+----- WARNING
+warning: Deprecated target shorthand syntax
+  ┌─ test/path:2:9
+  │
+2 │ @target(js)
+  │         ^^ This should be replaced with `javascript`
+
+This shorthand target name is deprecated. Use the full name: `javascript`
+instead.

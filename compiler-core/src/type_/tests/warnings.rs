@@ -2720,3 +2720,23 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn deprecated_target_shorthand_erlang() {
+    assert_warning!(
+        "
+@target(erl)
+pub fn wibble() { panic }
+"
+    );
+}
+
+#[test]
+fn deprecated_target_shorthand_javascript() {
+    assert_warning!(
+        "
+@target(js)
+pub fn wibble() { panic }
+"
+    );
+}
