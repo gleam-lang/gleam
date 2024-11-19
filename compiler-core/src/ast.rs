@@ -1248,13 +1248,15 @@ impl CallArg<TypedExpr> {
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
             // In all other cases we're happy with the default behaviour.
             //
-            _ => if let Some(located) = self.value.find_node(byte_index) {
-                Some(located)
-            } else if self.location.contains(byte_index) && self.label.is_some() {
-                Some(Located::Label(self.location, self.value.type_()))
-            } else {
-                None
-            },
+            _ => {
+                if let Some(located) = self.value.find_node(byte_index) {
+                    Some(located)
+                } else if self.location.contains(byte_index) && self.label.is_some() {
+                    Some(Located::Label(self.location, self.value.type_()))
+                } else {
+                    None
+                }
+            }
         }
     }
 }
