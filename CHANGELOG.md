@@ -11,3 +11,5 @@
 ### Formatter
 
 ### Bug fixed
+
+- Fixed a bug where `gleam update` would fail to update versions.
