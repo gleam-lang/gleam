@@ -115,7 +115,7 @@ pub enum UseManifest {
 
 pub fn update(packages: Vec<String>) -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let use_manifest = if packages.is_empty() {
+    let use_manifest = if !packages.is_empty() {
         UseManifest::Yes
     } else {
         UseManifest::No
