@@ -564,10 +564,13 @@ impl TypedExpr {
             // A pipeline is a pure value constructor if its last step is a record builder.
             // For example `wibble() |> wobble() |> Ok`
             TypedExpr::Pipeline { finally, .. } => {
-                finally.is_fn_with_pure_body() || finally.is_pure_value_constructor()
+                finally.is_fn_with_all_pure_value_constructors_in_body()
+                    || finally.is_pure_value_constructor()
             }
 
-            TypedExpr::Call { fun, .. } => fun.is_fn_with_pure_body() || fun.is_record_builder(),
+            TypedExpr::Call { fun, .. } => {
+                fun.is_fn_with_all_pure_value_constructors_in_body() || fun.is_record_builder()
+            }
 
             // A block is pure if all the statements it's made of are pure.
             // For example `{ True 1 }`
@@ -601,7 +604,7 @@ impl TypedExpr {
     }
 
     #[must_use]
-    fn is_fn_with_pure_body(&self) -> bool {
+    fn is_fn_with_all_pure_value_constructors_in_body(&self) -> bool {
         match self {
             TypedExpr::Fn { body, .. } => body.iter().all(|s| match s {
                 Statement::Expression(expression) => expression.is_pure_value_constructor(),
