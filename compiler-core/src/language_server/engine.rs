@@ -280,6 +280,8 @@ where
                 Located::Arg(_) => None,
 
                 Located::Annotation(_, _) => Some(completer.completion_types()),
+
+                Located::Label(_, _) => None,
             };
 
             Ok(completions)
@@ -597,6 +599,9 @@ Unused labelled fields:
                         module,
                     ))
                 }
+                Located::Label(location, type_) => {
+                    Some(hover_for_label(location, type_, lines, module))
+                }
             })
         })
     }
@@ -860,6 +865,20 @@ fn hover_for_annotation(
 ```
 {documentation}"
     );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(location, &line_numbers)),
+    }
+}
+
+fn hover_for_label(
+    location: SrcSpan,
+    type_: Arc<Type>,
+    line_numbers: LineNumbers,
+    module: &Module,
+) -> Hover {
+    let type_ = Printer::new(&module.ast.names).print_type(&type_);
+    let contents = format!("```gleam\n{type_}\n```");
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(location, &line_numbers)),

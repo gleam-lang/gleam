@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\npub fn main() {\n  let Wibble(wibble: _, wobble: _) = todo\n  todo\n}\n"
+---
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+pub fn main() {
+  let Wibble(wibble: _, wobble: _) = todo
+             ▔▔▔▔↑▔▔▔▔                   
+  todo
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nInt\n```",
+    ),
+)

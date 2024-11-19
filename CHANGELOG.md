@@ -8,6 +8,10 @@
 
 ### Language Server
 
+- The language server now provides type information when hovering over argument
+  labels.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixed
