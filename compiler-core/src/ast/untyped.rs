@@ -13,6 +13,7 @@ pub enum UntypedExpr {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: BigRational,
     },
 
     String {

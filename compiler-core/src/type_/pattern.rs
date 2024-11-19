@@ -451,9 +451,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 })
             }
 
-            Pattern::Float { location, value } => {
+            Pattern::Float {
+                location,
+                value,
+                float_value,
+            } => {
                 unify(type_, float()).map_err(|e| convert_unify_error(e, location))?;
-                Ok(Pattern::Float { location, value })
+                Ok(Pattern::Float {
+                    location,
+                    value,
+                    float_value,
+                })
             }
 
             Pattern::String { location, value } => {

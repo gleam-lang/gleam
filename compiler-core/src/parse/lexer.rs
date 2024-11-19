@@ -614,11 +614,13 @@ where
                 }
                 value.push_str(&self.radix_run(10));
             }
+            let float_value = value.parse().expect("Float syntax should be valid");
             let end_pos = self.get_pos();
             (
                 start_pos,
                 Token::Float {
                     value: value.into(),
+                    float_value,
                 },
                 end_pos,
             )

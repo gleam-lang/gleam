@@ -1,5 +1,5 @@
 use ecow::EcoString;
-use num::BigInt;
+use num::{BigInt, BigRational};
 use vec1::Vec1;
 
 use crate::{
@@ -246,7 +246,11 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 value,
                 int_value,
             } => self.fold_int(location, value, int_value),
-            UntypedExpr::Float { location, value } => self.fold_float(location, value),
+            UntypedExpr::Float {
+                location,
+                value,
+                float_value,
+            } => self.fold_float(location, value, float_value),
             UntypedExpr::String { location, value } => self.fold_string(location, value),
 
             UntypedExpr::Block {
@@ -652,8 +656,17 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
-        UntypedExpr::Float { location, value }
+    fn fold_float(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        float_value: BigRational,
+    ) -> UntypedExpr {
+        UntypedExpr::Float {
+            location,
+            value,
+            float_value,
+        }
     }
 
     fn fold_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedExpr {
@@ -858,7 +871,11 @@ pub trait UntypedConstantFolder {
                 int_value,
             } => self.fold_constant_int(location, value, int_value),
 
-            Constant::Float { location, value } => self.fold_constant_float(location, value),
+            Constant::Float {
+                location,
+                value,
+                float_value,
+            } => self.fold_constant_float(location, value, float_value),
 
             Constant::String { location, value } => self.fold_constant_string(location, value),
 
@@ -920,8 +937,17 @@ pub trait UntypedConstantFolder {
         }
     }
 
-    fn fold_constant_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
-        Constant::Float { location, value }
+    fn fold_constant_float(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        float_value: BigRational,
+    ) -> UntypedConstant {
+        Constant::Float {
+            location,
+            value,
+            float_value,
+        }
     }
 
     fn fold_constant_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedConstant {
@@ -1114,7 +1140,11 @@ pub trait PatternFolder {
                 int_value,
             } => self.fold_pattern_int(location, value, int_value),
 
-            Pattern::Float { location, value } => self.fold_pattern_float(location, value),
+            Pattern::Float {
+                location,
+                value,
+                float_value,
+            } => self.fold_pattern_float(location, value, float_value),
 
             Pattern::String { location, value } => self.fold_pattern_string(location, value),
 
@@ -1199,8 +1229,17 @@ pub trait PatternFolder {
         }
     }
 
-    fn fold_pattern_float(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {
-        Pattern::Float { location, value }
+    fn fold_pattern_float(
+        &mut self,
+        location: SrcSpan,
+        value: EcoString,
+        float_value: BigRational,
+    ) -> UntypedPattern {
+        Pattern::Float {
+            location,
+            value,
+            float_value,
+        }
     }
 
     fn fold_pattern_string(&mut self, location: SrcSpan, value: EcoString) -> UntypedPattern {

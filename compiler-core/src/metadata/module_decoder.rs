@@ -270,6 +270,7 @@ impl ModuleDecoder {
         Constant::Float {
             location: Default::default(),
             value: value.into(),
+            float_value: value.parse().expect("Syntax should be valid"),
         }
     }
 

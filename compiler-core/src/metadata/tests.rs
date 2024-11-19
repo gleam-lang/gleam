@@ -1,4 +1,5 @@
 use hexpm::version::Version;
+use num::BigInt;
 use rand::Rng;
 use type_::{AccessorsMap, FieldMap, RecordAccessor};
 
@@ -846,6 +847,7 @@ fn constant_float() {
     let module = constant_module(Constant::Float {
         location: Default::default(),
         value: "1.0".into(),
+        float_value: BigInt::from(1).into(),
     });
 
     assert_eq!(roundtrip(&module), module);
@@ -874,6 +876,7 @@ fn constant_tuple() {
             Constant::Float {
                 location: Default::default(),
                 value: "1.0".into(),
+                float_value: BigInt::from(1).into(),
             },
             Constant::Tuple {
                 location: Default::default(),
@@ -886,6 +889,7 @@ fn constant_tuple() {
                     Constant::Float {
                         location: Default::default(),
                         value: "1.0".into(),
+                        float_value: BigInt::from(1).into(),
                     },
                 ],
             },
@@ -936,6 +940,7 @@ fn constant_record() {
                 value: Constant::Float {
                     location: Default::default(),
                     value: "0.0".into(),
+                    float_value: BigInt::ZERO.into(),
                 },
             },
             CallArg {

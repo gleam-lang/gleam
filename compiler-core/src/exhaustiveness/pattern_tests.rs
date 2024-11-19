@@ -1,3 +1,5 @@
+use num::BigInt;
+
 use crate::{
     ast::{SrcSpan, TypedPattern},
     type_,
@@ -28,6 +30,7 @@ fn register_float() {
     let input = TypedPattern::Float {
         location: SrcSpan::default(),
         value: "1.1".into(),
+        float_value: (BigInt::from(11), BigInt::from(10)).into(),
     };
     let id = patterns.register(&input);
     assert_eq!(
@@ -132,6 +135,7 @@ fn register_tuple() {
             TypedPattern::Float {
                 value: "4.5".into(),
                 location: SrcSpan::default(),
+                float_value: (BigInt::from(45), BigInt::from(10)).into(),
             },
         ],
     };

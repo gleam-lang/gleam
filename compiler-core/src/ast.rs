@@ -24,7 +24,7 @@ use crate::type_::{
 use std::sync::Arc;
 
 use ecow::EcoString;
-use num::BigInt;
+use num::{BigInt, BigRational};
 #[cfg(test)]
 use pretty_assertions::assert_eq;
 use vec1::Vec1;
@@ -1739,6 +1739,7 @@ pub enum Pattern<Type> {
     Float {
         location: SrcSpan,
         value: EcoString,
+        float_value: BigRational,
     },
 
     String {

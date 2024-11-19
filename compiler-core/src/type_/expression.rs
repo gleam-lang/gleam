@@ -2668,7 +2668,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-            Constant::Float { location, value } => Ok(Constant::Float { location, value }),
+            Constant::Float {
+                location,
+                value,
+                float_value,
+            } => Ok(Constant::Float {
+                location,
+                value,
+                float_value,
+            }),
 
             Constant::String {
                 location, value, ..

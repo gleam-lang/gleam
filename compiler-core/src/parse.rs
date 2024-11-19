@@ -501,11 +501,12 @@ where
                 }
             }
 
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 UntypedExpr::Float {
                     location: SrcSpan { start, end },
                     value,
+                    float_value,
                 }
             }
 
@@ -1216,11 +1217,12 @@ where
                     int_value,
                 }
             }
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 Pattern::Float {
                     location: SrcSpan { start, end },
                     value,
+                    float_value,
                 }
             }
             Some((start, Token::Hash, _)) => {
@@ -2727,11 +2729,12 @@ where
                 }))
             }
 
-            Some((start, Token::Float { value }, end)) => {
+            Some((start, Token::Float { value, float_value }, end)) => {
                 self.advance();
                 Ok(Some(Constant::Float {
                     value,
                     location: SrcSpan { start, end },
+                    float_value,
                 }))
             }
 
