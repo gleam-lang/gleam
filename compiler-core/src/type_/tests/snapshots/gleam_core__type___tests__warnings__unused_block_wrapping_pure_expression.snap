@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  { 1 }\n  Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  { 1 }
+  Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   { 1 }
+  │   ^^^^^ This value is never used

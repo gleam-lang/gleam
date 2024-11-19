@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n    let a = 1\n    case a {\n        1 -> a\n        _ -> 12\n    }\n    Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    let a = 1
+    case a {
+        1 -> a
+        _ -> 12
+    }
+    Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:4:5
+  │  
+4 │ ╭     case a {
+5 │ │         1 -> a
+6 │ │         _ -> 12
+7 │ │     }
+  │ ╰─────^ This value is never used
