@@ -2715,8 +2715,8 @@ fn incomplete_code_block_raises_warning() {
         r#"
 pub fn main() {
     {}
-}
-"#
+    }
+    "#
     );
 }
 
@@ -2737,5 +2737,168 @@ fn deprecated_target_shorthand_javascript() {
 @target(js)
 pub fn wibble() { panic }
 "
+    );
+}
+
+#[test]
+fn unused_block_wrapping_pure_expressions() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  {
+    True
+    1
+  }
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn unused_block_wrapping_pure_expression() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  { 1 }
+  Nil
+}
+"#
+    );
+}
+
+#[test]
+fn unused_block_wrapping_impure_expressions_is_not_reported_as_pure() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+  {
+    wibble()
+    1
+  }
+  Nil
+}
+
+fn wibble() { wibble() }
+"#
+    );
+}
+
+#[test]
+fn unused_case_expression() {
+    assert_warning!(
+        r#"
+pub fn main() {
+    let a = 1
+    case a {
+        1 -> a
+        _ -> 12
+    }
+    Nil
+}
+"#
+    );
+}
+
+#[test]
+fn impure_case_expression_is_not_marked_as_unused() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+    let a = 1
+    case a {
+        1 -> wibble()
+        _ -> 12
+    }
+    Nil
+}
+
+fn wibble() { wibble() }
+"#
+    );
+}
+
+#[test]
+fn impure_case_expression_is_not_marked_as_unused_2() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+    let a = 1
+    case wibble() {
+        1 -> a
+        _ -> 12
+    }
+    Nil
+}
+
+fn wibble() { wibble() }
+"#
+    );
+}
+
+#[test]
+fn unused_fn_function_call() {
+    assert_warning!(
+        r#"
+pub fn main() {
+    fn(a) { a + 1 }(1)
+    Nil
+}
+"#
+    );
+}
+
+#[test]
+fn impure_fn_function_call_not_mark_as_unused() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+    fn(_) { panic }(1)
+    Nil
+}
+"#
+    );
+}
+
+#[test]
+fn unused_pipeline_ending_with_pure_fn() {
+    assert_warning!(
+        r#"
+pub fn main() {
+    1
+    |> fn(n) { n + 1 }
+
+    Nil
+}
+"#
+    );
+}
+
+#[test]
+fn unused_pipeline_ending_with_impure_fn() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+    1
+    |> fn(_) { panic }
+
+    Nil
+}
+"#
+    );
+}
+
+#[test]
+fn pipeline_with_regular_function_call_is_never_marked_unused() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+    1 |> wibble
+
+    Nil
+}
+
+fn wibble(n) { n }
+"#
     );
 }
