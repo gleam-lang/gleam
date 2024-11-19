@@ -52,7 +52,7 @@ use super::{
     untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
     SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
     TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant,
-    TypedPattern, TypedPatternBitArraySegment, TypedRecordUpdateArg, TypedStatement, TypedUse,
+    TypedPattern, TypedPatternBitArraySegment, TypedStatement, TypedUse,
 };
 
 pub trait Visit<'ast> {
