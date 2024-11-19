@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n    {}\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    {}
+}
+
+
+----- WARNING
+warning: Incomplete block
+  ┌─ /src/warning/wrn.gleam:3:5
+  │
+3 │     {}
+  │     ^^ This code is incomplete
+
+This code will crash if it is run. Be sure to finish it before
+running your program.
+A block must always contain at least one expression.

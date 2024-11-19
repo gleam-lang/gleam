@@ -1058,13 +1058,19 @@ where
         let body = self.parse_statement_seq()?;
         let (_, end) = self.expect_one(&Token::RightBrace)?;
         let location = SrcSpan { start, end };
-        match body {
-            None => parse_error(ParseErrorType::NoExpression, SrcSpan { start, end }),
-            Some((statements, _)) => Ok(UntypedExpr::Block {
-                statements,
+        let statements = match body {
+            Some((statements, _)) => statements,
+            None => vec1![Statement::Expression(UntypedExpr::Todo {
+                kind: TodoKind::EmptyBlock,
                 location,
-            }),
-        }
+                message: None
+            })],
+        };
+
+        Ok(UntypedExpr::Block {
+            location,
+            statements,
+        })
     }
 
     // The left side of an "=" or a "->"

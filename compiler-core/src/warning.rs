@@ -325,12 +325,18 @@ running your program.",
                     );
                     let title = match kind {
                         TodoKind::Keyword => "Todo found",
+                        TodoKind::EmptyBlock => {
+                            text.push_str(
+                                "
+A block must always contain at least one expression.",
+                            );
+                            "Incomplete block"
+                        }
                         TodoKind::EmptyFunction => "Unimplemented function",
                         TodoKind::IncompleteUse => {
                             text.push_str(
                                 "
-A use expression must always be followed by at least one more
-expression.",
+A use expression must always be followed by at least one expression.",
                             );
                             "Incomplete use expression"
                         }
