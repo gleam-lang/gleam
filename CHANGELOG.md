@@ -22,6 +22,11 @@
 
   ([yoshi](https://github.com/joshi-monster))
 
+- It is now allowed to write a block with no expressions. Like an empty function
+  body, an empty block is considered incomplete as if it contained a `todo`
+  expression.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
@@ -35,6 +40,9 @@
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
+
+- The formatter now adds a `todo` inside empty blocks.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug fixed
 
