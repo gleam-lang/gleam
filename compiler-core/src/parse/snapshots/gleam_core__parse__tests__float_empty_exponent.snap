@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1595
 expression: 1.32e
 ---
 ----- SOURCE CODE
