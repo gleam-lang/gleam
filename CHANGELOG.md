@@ -50,6 +50,10 @@
 
 ### Bug fixed
 
+- The compiler now throws an error when a float literal ends with an `e` and
+  is missing an exponent.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed

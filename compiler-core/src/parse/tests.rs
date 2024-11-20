@@ -1589,3 +1589,8 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn float_empty_exponent() {
+    assert_error!("1.32e");
+}

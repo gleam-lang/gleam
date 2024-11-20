@@ -24,7 +24,8 @@ pub enum LexicalErrorType {
     DigitOutOfRadix,                                 // 0x012 , 2 is out of radix
     NumTrailingUnderscore,                           // 1_000_ is not allowed
     RadixIntNoValue,                                 // 0x, 0b, 0o without a value
-    UnexpectedStringEnd,                             // Unterminated string literal
+    MissingExponent,     // 1.0e, for example, where there is no exponent
+    UnexpectedStringEnd, // Unterminated string literal
     UnrecognizedToken { tok: char },
     InvalidTripleEqual,
 }
@@ -420,6 +421,10 @@ impl LexicalError {
                 vec!["Hint: remove it.".into()],
             ),
             LexicalErrorType::RadixIntNoValue => ("This integer has no value", vec![]),
+            LexicalErrorType::MissingExponent => (
+                "This float is missing an exponent",
+                vec!["Hint: Add an exponent or remove the trailing `e`".into()],
+            ),
             LexicalErrorType::UnexpectedStringEnd => {
                 ("The string starting here was left open", vec![])
             }

@@ -154,7 +154,7 @@ where
                 check_for_minus = true;
                 let name = self.lex_name()?;
                 self.emit(name);
-                self.maybe_lex_dot_access();
+                self.maybe_lex_dot_access()?;
             } else if self.is_number_start(c, self.chr1) {
                 check_for_minus = true;
                 let num = self.lex_number()?;
@@ -522,10 +522,10 @@ where
                 let _ = self.next_char();
                 self.lex_number_radix(start_pos, 2, "0b")?
             } else {
-                self.lex_decimal_number()
+                self.lex_decimal_number()?
             }
         } else {
-            self.lex_decimal_number()
+            self.lex_decimal_number()?
         };
 
         if Some('_') == self.chr0 {
@@ -580,15 +580,15 @@ where
 
     // Lex a normal number, that is, no octal, hex or binary number.
     // This function cannot be reached without the head of the stream being either 0-9 or '-', 0-9
-    fn lex_decimal_number(&mut self) -> Spanned {
+    fn lex_decimal_number(&mut self) -> LexResult {
         self.lex_decimal_or_int_number(true)
     }
 
-    fn lex_int_number(&mut self) -> Spanned {
+    fn lex_int_number(&mut self) -> LexResult {
         self.lex_decimal_or_int_number(false)
     }
 
-    fn lex_decimal_or_int_number(&mut self, can_lex_decimal: bool) -> Spanned {
+    fn lex_decimal_or_int_number(&mut self, can_lex_decimal: bool) -> LexResult {
         let start_pos = self.get_pos();
         let mut value = String::new();
         // consume negative sign
@@ -612,42 +612,50 @@ where
                             .expect("lex_normal_number scientific negative"),
                     );
                 }
-                value.push_str(&self.radix_run(10));
+                let exponent_run = self.radix_run(10);
+                if exponent_run.is_empty() {
+                    return Err(LexicalError {
+                        error: LexicalErrorType::MissingExponent,
+                        location: SrcSpan::new(start_pos, self.get_pos()),
+                    });
+                }
+                value.push_str(&exponent_run);
             }
             let end_pos = self.get_pos();
-            (
+            Ok((
                 start_pos,
                 Token::Float {
                     value: value.into(),
                 },
                 end_pos,
-            )
+            ))
         } else {
             let int_value = super::parse_int_value(&value).expect("int value to parse as bigint");
             let end_pos = self.get_pos();
-            (
+            Ok((
                 start_pos,
                 Token::Int {
                     value: value.into(),
                     int_value,
                 },
                 end_pos,
-            )
+            ))
         }
     }
 
     // Maybe lex dot access that comes after name token.
-    fn maybe_lex_dot_access(&mut self) {
+    fn maybe_lex_dot_access(&mut self) -> Result<(), LexicalError> {
         // It can be nested like: `tuple.1.2.3.4`
         loop {
             if Some('.') == self.chr0 && matches!(self.chr1, Some('0'..='9')) {
                 self.eat_single_char(Token::Dot);
-                let number = self.lex_int_number();
+                let number = self.lex_int_number()?;
                 self.emit(number);
             } else {
                 break;
             }
         }
+        Ok(())
     }
 
     // Consume a sequence of numbers with the given radix,
