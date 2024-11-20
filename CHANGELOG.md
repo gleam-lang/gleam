@@ -92,6 +92,9 @@
   subjects and one of them being a constant record.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Variant inference on prelude types now works correctly if the variant is constant.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
