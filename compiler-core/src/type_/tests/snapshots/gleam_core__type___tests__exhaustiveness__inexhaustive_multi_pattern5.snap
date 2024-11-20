@@ -1,25 +1,26 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-expression: "\nlet a = 12\nlet b = 3.14\nlet c = False\ncase a, b, c {\n  12, _, False -> Nil\n}\n"
+expression: "\npub fn main(c: Bool) {\n  let a = 12\n  let b = 3.14\n  case a, b, c {\n    12, _, False -> Nil\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
-let a = 12
-let b = 3.14
-let c = False
-case a, b, c {
-  12, _, False -> Nil
+pub fn main(c: Bool) {
+  let a = 12
+  let b = 3.14
+  case a, b, c {
+    12, _, False -> Nil
+  }
 }
 
 
 ----- ERROR
 error: Inexhaustive patterns
-  ┌─ /src/one/two.gleam:5:1
+  ┌─ /src/one/two.gleam:5:3
   │  
-5 │ ╭ case a, b, c {
-6 │ │   12, _, False -> Nil
-7 │ │ }
-  │ ╰─^
+5 │ ╭   case a, b, c {
+6 │ │     12, _, False -> Nil
+7 │ │   }
+  │ ╰───^
 
 This case expression does not have a pattern for all possible values. If it
 is run on one of the values without a pattern then it will crash.

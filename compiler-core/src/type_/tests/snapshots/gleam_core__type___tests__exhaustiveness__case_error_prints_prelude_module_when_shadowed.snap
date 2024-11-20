@@ -1,13 +1,12 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-expression: "\nimport gleam\ntype MyResult { Ok Error }\npub fn main() {\n  let res = gleam.Ok(10)\n  case res {\n    gleam.Ok(n) -> Nil\n  }\n}\n"
+expression: "\nimport gleam\ntype MyResult { Ok Error }\npub fn main(res: Result(Int, Nil)) {\n  case res {\n    gleam.Ok(n) -> Nil\n  }\n}\n"
 ---
 ----- SOURCE CODE
 
 import gleam
 type MyResult { Ok Error }
-pub fn main() {
-  let res = gleam.Ok(10)
+pub fn main(res: Result(Int, Nil)) {
   case res {
     gleam.Ok(n) -> Nil
   }
@@ -16,11 +15,11 @@ pub fn main() {
 
 ----- ERROR
 error: Inexhaustive patterns
-  ┌─ /src/one/two.gleam:6:3
+  ┌─ /src/one/two.gleam:5:3
   │  
-6 │ ╭   case res {
-7 │ │     gleam.Ok(n) -> Nil
-8 │ │   }
+5 │ ╭   case res {
+6 │ │     gleam.Ok(n) -> Nil
+7 │ │   }
   │ ╰───^
 
 This case expression does not have a pattern for all possible values. If it

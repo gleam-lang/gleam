@@ -1966,7 +1966,6 @@ fn warnings_for_matches_on_literal_values_that_are_not_like_an_if_2() {
     pub fn main() {
         case True {
           True -> 1
-          _ -> 2
         }
     }
         "#

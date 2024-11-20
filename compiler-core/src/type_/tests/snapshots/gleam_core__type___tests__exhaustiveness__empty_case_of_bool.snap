@@ -1,19 +1,20 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-expression: "\nlet b = True\ncase b {}\n"
+expression: "\npub fn main(b: Bool) {\n  case b {}\n}\n"
 ---
 ----- SOURCE CODE
 
-let b = True
-case b {}
+pub fn main(b: Bool) {
+  case b {}
+}
 
 
 ----- ERROR
 error: Inexhaustive patterns
-  ┌─ /src/one/two.gleam:3:1
+  ┌─ /src/one/two.gleam:3:3
   │
-3 │ case b {}
-  │ ^^^^^^^^^
+3 │   case b {}
+  │   ^^^^^^^^^
 
 This case expression does not have a pattern for all possible values. If it
 is run on one of the values without a pattern then it will crash.
