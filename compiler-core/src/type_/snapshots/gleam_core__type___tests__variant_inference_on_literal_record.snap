@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble\n}\n\npub fn main() {\n  case Wibble, Wobble {\n    Wibble, Wibble -> todo\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main() {
+  case Wibble, Wobble {
+    Wibble, Wibble -> todo
+  }
+}
+
+
+----- ERROR
+error: Inexhaustive patterns
+   ┌─ /src/one/two.gleam:8:3
+   │  
+ 8 │ ╭   case Wibble, Wobble {
+ 9 │ │     Wibble, Wibble -> todo
+10 │ │   }
+   │ ╰───^
+
+This case expression does not have a pattern for all possible values. If it
+is run on one of the values without a pattern then it will crash.
+
+The missing patterns are:
+
+    _, Wobble

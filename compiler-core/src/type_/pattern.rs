@@ -214,6 +214,16 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         let mut typed_multi = Vec::with_capacity(multi_pattern.len());
         for (pattern, subject) in multi_pattern.into_iter().zip(subjects) {
             let subject_variable = match subject {
+                TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            // Records should not be considered local variables
+                            // See: https://github.com/gleam-lang/gleam/issues/3861
+                            variant: ValueConstructorVariant::Record { .. },
+                            ..
+                        },
+                    ..
+                } => None,
                 TypedExpr::Var { name, .. } => Some(name.clone()),
                 _ => None,
             };
