@@ -84,13 +84,17 @@ pub fn float() -> Arc<Type> {
 }
 
 pub fn bool() -> Arc<Type> {
+    bool_with_variant(None)
+}
+
+fn bool_with_variant(variant_index: Option<u16>) -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
         publicity: Publicity::Public,
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        inferred_variant: None,
+        inferred_variant: variant_index,
     })
 }
 
@@ -128,13 +132,17 @@ pub fn list(t: Arc<Type>) -> Arc<Type> {
 }
 
 pub fn result(a: Arc<Type>, e: Arc<Type>) -> Arc<Type> {
+    result_with_variant(a, e, None)
+}
+
+fn result_with_variant(a: Arc<Type>, e: Arc<Type>, variant_index: Option<u16>) -> Arc<Type> {
     Arc::new(Type::Named {
         publicity: Publicity::Public,
         name: RESULT.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
         args: vec![a, e],
-        inferred_variant: None,
+        inferred_variant: variant_index,
     })
 }
 
@@ -274,7 +282,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             variants_count: 2,
                             variant_index: 0,
                         },
-                        bool(),
+                        bool_with_variant(Some(0)),
                     ),
                 );
                 let _ = prelude.values.insert(
@@ -290,7 +298,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             variants_count: 2,
                             variant_index: 1,
                         },
-                        bool(),
+                        bool_with_variant(Some(1)),
                     ),
                 );
                 let _ = prelude.types.insert(
@@ -446,7 +454,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             variants_count: 2,
                             variant_index: 0,
                         },
-                        fn_(vec![ok.clone()], result(ok, error)),
+                        fn_(vec![ok.clone()], result_with_variant(ok, error, Some(0))),
                     ),
                 );
                 let ok = generic_var(ids.next());
@@ -464,7 +472,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             variants_count: 2,
                             variant_index: 1,
                         },
-                        fn_(vec![error.clone()], result(ok, error)),
+                        fn_(vec![error.clone()], result_with_variant(ok, error, Some(1))),
                     ),
                 );
             }
