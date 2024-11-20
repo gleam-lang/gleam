@@ -3008,3 +3008,20 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn variant_inference_on_prelude_types() {
+    assert_module_infer!(
+        "
+pub fn main() {
+  let always_ok = Ok(10)
+  case always_ok {
+    Ok(1) -> 1
+    Ok(2) -> 3
+    _ -> panic
+  }
+}
+",
+        vec![("main", "fn() -> Int")]
+    );
+}
