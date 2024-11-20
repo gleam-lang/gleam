@@ -1,20 +1,20 @@
 ---
 source: compiler-core/src/type_/tests/exhaustiveness.rs
-expression: "\nlet a = Ok(1)\nlet b = True\ncase a, b {}\n"
+expression: "\npub fn main(a: Result(a, b), b: Bool) {\n  case a, b {}\n}\n"
 ---
 ----- SOURCE CODE
 
-let a = Ok(1)
-let b = True
-case a, b {}
+pub fn main(a: Result(a, b), b: Bool) {
+  case a, b {}
+}
 
 
 ----- ERROR
 error: Inexhaustive patterns
-  ┌─ /src/one/two.gleam:4:1
+  ┌─ /src/one/two.gleam:3:3
   │
-4 │ case a, b {}
-  │ ^^^^^^^^^^^^
+3 │   case a, b {}
+  │   ^^^^^^^^^^^^
 
 This case expression does not have a pattern for all possible values. If it
 is run on one of the values without a pattern then it will crash.

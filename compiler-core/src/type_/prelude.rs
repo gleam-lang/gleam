@@ -87,7 +87,7 @@ pub fn bool() -> Arc<Type> {
     bool_with_variant(None)
 }
 
-fn bool_with_variant(variant_index: Option<u16>) -> Arc<Type> {
+pub fn bool_with_variant(variant_index: Option<u16>) -> Arc<Type> {
     Arc::new(Type::Named {
         args: vec![],
         publicity: Publicity::Public,

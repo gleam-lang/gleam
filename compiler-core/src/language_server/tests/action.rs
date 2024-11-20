@@ -1414,8 +1414,7 @@ fn add_missing_patterns_bool() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,
         "
-pub fn main() {
-  let bool = True
+pub fn main(bool: Bool) {
   case bool {}
 }
 ",
@@ -1449,8 +1448,7 @@ fn add_missing_patterns_tuple() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,
         "
-pub fn main() {
-  let two_at_once = #(True, Ok(1))
+pub fn main(two_at_once: #(Bool, Result(Int, Nil))) {
   case two_at_once {
     #(False, Error(_)) -> Nil
   }
@@ -1499,8 +1497,7 @@ fn add_missing_patterns_multi() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,
         r#"
-pub fn main() {
-  let a = True
+pub fn main(a: Bool) {
   let b = 1
   case a, b {
 
@@ -1518,8 +1515,7 @@ fn add_missing_patterns_inline() {
     assert_code_action!(
         ADD_MISSING_PATTERNS,
         r#"
-pub fn main() {
-  let a = True
+pub fn main(a: Bool) {
   let value = case a {}
 }
 "#,

@@ -547,7 +547,7 @@ fn find_node_bool() {
                 module: PRELUDE_MODULE_NAME.into(),
                 variant_index: 0,
             },
-            type_: type_::bool(),
+            type_: type_::bool_with_variant(Some(0)),
         },
         name: "True".into(),
     };

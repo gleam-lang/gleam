@@ -1054,8 +1054,7 @@ pub fn main(wibble) {
 fn case_error_prints_prelude_module_unqualified() {
     assert_module_error!(
         "
-pub fn main() {
-  let result = Ok(Nil)
+pub fn main(result: Result(Nil, Nil)) {
   case result {
     Ok(Nil) -> Nil
   }
@@ -1070,8 +1069,7 @@ fn case_error_prints_prelude_module_when_shadowed() {
         "
 import gleam
 type MyResult { Ok Error }
-pub fn main() {
-  let res = gleam.Ok(10)
+pub fn main(res: Result(Int, Nil)) {
   case res {
     gleam.Ok(n) -> Nil
   }
@@ -1135,10 +1133,11 @@ pub fn main() {
 // when there are no case arms, instead of just suggesting `_` as it did previously.
 #[test]
 fn empty_case_of_bool() {
-    assert_error!(
+    assert_module_error!(
         "
-let b = True
-case b {}
+pub fn main(b: Bool) {
+  case b {}
+}
 "
     );
 }
@@ -1197,11 +1196,11 @@ case name {}
 
 #[test]
 fn empty_case_of_multi_pattern() {
-    assert_error!(
+    assert_module_error!(
         "
-let a = Ok(1)
-let b = True
-case a, b {}
+pub fn main(a: Result(a, b), b: Bool) {
+  case a, b {}
+}
 "
     );
 }
@@ -1221,12 +1220,12 @@ case a, b {
 
 #[test]
 fn inexhaustive_multi_pattern2() {
-    assert_error!(
+    assert_module_error!(
         "
-let a = Ok(1)
-let b = True
-case a, b {
-  Ok(1), True -> Nil
+pub fn main(a: Result(Int, Nil), b: Bool) {
+  case a, b {
+    Ok(1), True -> Nil
+  }
 }
 "
     );
@@ -1247,13 +1246,14 @@ case a, b {
 
 #[test]
 fn inexhaustive_multi_pattern4() {
-    assert_error!(
+    assert_module_error!(
         "
-let a = 12
-let b = 3.14
-let c = False
-case a, b, c {
-  1, 2.0, True -> Nil
+pub fn main(c: Bool) {
+  let a = 12
+  let b = 3.14
+  case a, b, c {
+    1, 2.0, True -> Nil
+  }
 }
 "
     );
@@ -1261,13 +1261,14 @@ case a, b, c {
 
 #[test]
 fn inexhaustive_multi_pattern5() {
-    assert_error!(
+    assert_module_error!(
         "
-let a = 12
-let b = 3.14
-let c = False
-case a, b, c {
-  12, _, False -> Nil
+pub fn main(c: Bool) {
+  let a = 12
+  let b = 3.14
+  case a, b, c {
+    12, _, False -> Nil
+  }
 }
 "
     );
