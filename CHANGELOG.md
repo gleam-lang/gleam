@@ -76,6 +76,10 @@
   is missing an exponent.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the compiler would crash when pattern matching on multiple
+  subjects and one of them being a constant record.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed

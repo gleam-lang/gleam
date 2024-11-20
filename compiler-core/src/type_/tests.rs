@@ -2989,3 +2989,22 @@ pub fn rebox(box) {
         ]
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3861
+fn variant_inference_on_literal_record() {
+    assert_module_error!(
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+}
+
+pub fn main() {
+  case Wibble, Wobble {
+    Wibble, Wibble -> todo
+  }
+}
+"
+    );
+}
