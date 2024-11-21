@@ -2,7 +2,7 @@ name: ci-verify-binary-architecture
 
 on:
   workflow_dispatch:
-  push:
+  # push:
 
 env:
   CARGO_TERM_COLOR: always
