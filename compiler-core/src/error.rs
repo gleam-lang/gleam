@@ -25,6 +25,7 @@ use std::sync::Arc;
 use termcolor::Buffer;
 use thiserror::Error;
 use vec1::Vec1;
+use version_ranges::Ranges;
 
 use camino::{Utf8Path, Utf8PathBuf};
 
