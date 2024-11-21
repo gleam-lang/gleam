@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let \"_\" <> thing = \"_Hello\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let "_" <> thing = "_Hello"
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑         
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let thing = case "_Hello" {
+    "_" <> thing -> thing
+    _ -> todo
+  }
+}

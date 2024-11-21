@@ -3633,3 +3633,160 @@ pub fn main() {
         find_position_of("wibble").to_selection(),
     );
 }
+
+#[test]
+fn inexhaustive_let_result_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main(result) {
+  let Ok(value) = result
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_to_case_indented() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main(result) {
+  {
+    let Ok(value) = result
+  }
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_to_case_multi_variables() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let [var1, var2, _var3, var4] = [1, 2, 3, 4]
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_to_case_discard() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let [_elem] = [6]
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_to_case_no_variables() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let [] = []
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_alias_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let 10 as ten = 10
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_tuple_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let #(first, 10, third) = #(5, 10, 15)
+}
+",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_bit_array_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        "pub fn main() {
+  let <<bits1, bits2>> = <<73, 98>>
+}",
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_string_prefix_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"pub fn main() {
+  let "_" <> thing = "_Hello"
+}"#,
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inexhaustive_let_string_prefix_pattern_alias_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"pub fn main() {
+  let "123" as one_two_three <> rest = "123456"
+}"#,
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn inner_inexhaustive_let_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"pub fn main(result) {
+  let [wibble] = {
+    let Ok(wobble) = {
+      result
+    }
+    [wobble]
+  }
+}"#,
+        find_position_of("let Ok").select_until(find_position_of(") =")),
+    );
+}
+
+#[test]
+fn outer_inexhaustive_let_to_case() {
+    assert_code_action!(
+        CONVERT_TO_CASE,
+        r#"pub fn main(result) {
+  let [wibble] = {
+    let Ok(wobble) = {
+      result
+    }
+    [wobble]
+  }
+}"#,
+        find_position_of("let [").select_until(find_position_of("] =")),
+    );
+}
+
+#[test]
+fn no_code_action_for_exhaustive_let_to_case() {
+    assert_no_code_actions!(
+        CONVERT_TO_CASE,
+        r#"pub fn first(pair) {
+  let #(first, second) = pair
+  first
+}"#,
+        find_position_of("let").select_until(find_position_of("=")),
+    );
+}

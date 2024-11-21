@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let [] = []\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let [] = []
+  ▔▔▔▔▔▔▔↑   
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let _ = case [] {
+    [] -> Nil
+    [_, ..] -> todo
+  }
+}

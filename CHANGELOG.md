@@ -111,6 +111,29 @@
 
 - The language server now provides correct information when hovering over
   patterns in use expressions.
+
+- The language server now suggests a code action to convert an inexhaustive
+  `let` assignment into a `case` expression:
+
+  ```gleam
+  pub fn unwrap_result(result: Result(a, b)) -> a {
+    let Ok(inner) = result
+    inner
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  pub fn unwrap_result(result: Result(a, b)) -> a {
+    let inner = case result {
+      Ok(inner) -> inner
+      Error(_) -> todo
+    }
+    inner
+  }
+  ```
+
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter

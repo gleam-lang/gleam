@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let <<bits1, bits2>> = <<73, 98>>\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let <<bits1, bits2>> = <<73, 98>>
+  ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑           
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let #(bits1, bits2) = case <<73, 98>> {
+    <<bits1, bits2>> -> #(bits1, bits2)
+    _ -> todo
+  }
+}

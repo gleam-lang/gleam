@@ -32,8 +32,9 @@ use super::{
     code_action::{
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        AddAnnotations, CodeActionBuilder, DesugarUse, FillInMissingLabelledArgs,
-        LabelShorthandSyntax, LetAssertToCase, RedundantTupleInCaseSubject, TurnIntoUse,
+        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
+        FillInMissingLabelledArgs, LabelShorthandSyntax, LetAssertToCase,
+        RedundantTupleInCaseSubject, TurnIntoUse,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
@@ -317,6 +318,13 @@ where
             code_action_fix_names(&lines, &params, &this.error, &mut actions);
             code_action_import_module(module, &lines, &params, &this.error, &mut actions);
             code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
+            code_action_inexhaustive_let_to_case(
+                module,
+                &lines,
+                &params,
+                &this.error,
+                &mut actions,
+            );
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());

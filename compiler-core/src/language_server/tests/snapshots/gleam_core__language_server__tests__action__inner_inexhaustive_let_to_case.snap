@@ -1,0 +1,28 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(result) {\n    let [wibble] = {\n        let Ok(wobble) = {\n            result\n        }\n        [wobble]\n    }\n}"
+---
+----- BEFORE ACTION
+pub fn main(result) {
+    let [wibble] = {
+        let Ok(wobble) = {
+        ▔▔▔▔▔▔▔▔▔▔▔▔▔↑    
+            result
+        }
+        [wobble]
+    }
+}
+
+
+----- AFTER ACTION
+pub fn main(result) {
+    let [wibble] = {
+        let wobble = case {
+            result
+        } {
+          Ok(wobble) -> wobble
+          Error(_) -> todo
+        }
+        [wobble]
+    }
+}
