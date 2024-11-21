@@ -3382,3 +3382,22 @@ fn wibble(n, m, f) {
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
+
+#[test]
+fn desugar_use_expression_doesnt_work_with_complex_patterns() {
+    let src = r#"
+pub fn main() {
+  use #(a, b), 1 <- wibble(1, 2)
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(todo, todo)
+}
+"#;
+    assert_no_code_actions!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
