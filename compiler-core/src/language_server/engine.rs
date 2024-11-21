@@ -1031,7 +1031,7 @@ fn code_action_unused_values(
 
     for unused in unused_values {
         let SrcSpan { start, end } = *unused;
-        let hover_range = src_span_to_lsp_range(SrcSpan::new(start, end), &line_numbers);
+        let hover_range = src_span_to_lsp_range(SrcSpan::new(start, end), line_numbers);
 
         // Check if this span is contained within any previously processed span
         if processed_lsp_range
@@ -1047,7 +1047,7 @@ fn code_action_unused_values(
         }
 
         let edit = TextEdit {
-            range: src_span_to_lsp_range(SrcSpan::new(start, start), &line_numbers),
+            range: src_span_to_lsp_range(SrcSpan::new(start, start), line_numbers),
             new_text: "let _ = ".into(),
         };
 
@@ -1092,13 +1092,13 @@ fn code_action_unused_imports(
 
         // If removing an unused alias or at the beginning of the file, don't backspace
         // Otherwise, adjust the end position by 1 to ensure the entire line is deleted with the import.
-        let adjusted_end = if delete_line(unused, &line_numbers) {
+        let adjusted_end = if delete_line(unused, line_numbers) {
             end + 1
         } else {
             end
         };
 
-        let range = src_span_to_lsp_range(SrcSpan::new(start, adjusted_end), &line_numbers);
+        let range = src_span_to_lsp_range(SrcSpan::new(start, adjusted_end), line_numbers);
         // Keep track of whether any unused import has is where the cursor is
         hovered = hovered || overlaps(params.range, range);
 
@@ -1161,7 +1161,7 @@ fn code_action_fix_names(
             correction,
         } = name_correction;
 
-        let range = src_span_to_lsp_range(location, &line_numbers);
+        let range = src_span_to_lsp_range(location, line_numbers);
         // Check if the user's cursor is on the invalid name
         if overlaps(params.range, range) {
             let edit = TextEdit {
