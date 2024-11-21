@@ -20,7 +20,9 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
-    io::{gleam_source_files, CommandExecutor, FileSystemReader, FileSystemWriter},
+    io::{
+        gleam_cache_files, gleam_source_files, CommandExecutor, FileSystemReader, FileSystemWriter,
+    },
     metadata, type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
@@ -109,6 +111,14 @@ where
         // will check the mtimes and hashes of sources and caches to determine
         // which should be loaded.
         let mut inputs = self.read_sources_and_caches()?;
+
+        // Check for any removed modules, by looking at cache files that don't exist in inputs
+        for cache_file in gleam_cache_files(&self.io, &self.artefact_directory) {
+            let module = module_name(&self.artefact_directory, &cache_file);
+            if (!inputs.contains_key(&module)) {
+                self.stale_modules.add(module);
+            }
+        }
 
         // Determine order in which modules are to be processed
         let mut dep_location_map = HashMap::new();
