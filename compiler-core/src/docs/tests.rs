@@ -366,3 +366,19 @@ fn source_link_for_github_repository_with_path() {
         "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1-L1"
     ));
 }
+
+#[test]
+fn canonical_link() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_canonical");
+    let modules = vec![(
+        "app.gleam",
+        r#"
+/// Here is some documentation
+pub fn one() {
+  1
+}
+"#,
+    )];
+    insta::assert_snapshot!(compile(config, modules));
+}

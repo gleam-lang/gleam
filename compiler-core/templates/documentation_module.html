@@ -29,6 +29,12 @@
 {% endif %}
 {% endblock %}
 
+{% block head -%}
+{% if !project_name.is_empty() && !module_name.is_empty() -%}
+<link rel="canonical" href="{{ unnest }}/{{ project_name|safe }}/{{ module_name|safe }}.html" />
+{%- endif %}
+{%- endblock %}
+
 {% block content %}
 <h1 id="module-name" class="module-name">
   <a href="#module-name">{{ module_name }}</a>
