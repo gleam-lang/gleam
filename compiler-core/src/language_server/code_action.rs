@@ -77,11 +77,15 @@ impl CodeActionBuilder {
 
 /// A little wrapper around LineNumbers to make it easier to build text edits.
 ///
-struct LineNumbersHelper {
-    line_numbers: LineNumbers,
+struct LineNumbersHelper<'a> {
+    line_numbers: &'a LineNumbers,
 }
 
-impl LineNumbersHelper {
+impl<'a> LineNumbersHelper<'a> {
+    fn new(line_numbers: &'a LineNumbers) -> Self {
+        LineNumbersHelper { line_numbers }
+    }
+
     fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
         src_span_to_lsp_range(location, &self.line_numbers)
     }
@@ -137,7 +141,7 @@ impl LineNumbersHelper {
 /// }
 /// ```
 pub struct RedundantTupleInCaseSubject<'a> {
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     code: &'a EcoString,
     extra: &'a ModuleExtra,
     params: &'a CodeActionParams,
@@ -200,11 +204,13 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
 }
 
 impl<'a> RedundantTupleInCaseSubject<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
         Self {
-            line_numbers: LineNumbersHelper {
-                line_numbers: LineNumbers::new(&module.code),
-            },
+            line_numbers: LineNumbersHelper::new(line_numbers),
             code: &module.code,
             extra: &module.extra,
             params,
@@ -311,7 +317,7 @@ pub struct LetAssertToCase<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     actions: Vec<CodeAction>,
-    line_numbers: LineNumbers,
+    line_numbers: &'a LineNumbers,
     pattern_variables: Vec<EcoString>,
 }
 
@@ -424,8 +430,11 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
 }
 
 impl<'a> LetAssertToCase<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
-        let line_numbers = LineNumbers::new(&module.code);
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
         Self {
             module,
             params,
@@ -447,17 +456,20 @@ impl<'a> LetAssertToCase<'a> {
 pub struct LabelShorthandSyntax<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     edits: Vec<TextEdit>,
 }
 
 impl<'a> LabelShorthandSyntax<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
-        let line_numbers = LineNumbers::new(&module.code);
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper { line_numbers },
+            line_numbers: LineNumbersHelper::new(line_numbers),
             edits: vec![],
         }
     }
@@ -521,17 +533,20 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
 pub struct FillInMissingLabelledArgs<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     selected_call: Option<(SrcSpan, &'a FieldMap, &'a [TypedCallArg])>,
 }
 
 impl<'a> FillInMissingLabelledArgs<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
-        let line_numbers = LineNumbers::new(&module.code);
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper { line_numbers },
+            line_numbers: LineNumbersHelper::new(line_numbers),
             selected_call: None,
         }
     }
@@ -638,6 +653,7 @@ struct ImportSuggestion {
 
 pub fn code_action_import_module(
     module: &Module,
+    line_numbers: &LineNumbers,
     params: &CodeActionParams,
     error: &Option<Error>,
     actions: &mut Vec<CodeAction>,
@@ -663,7 +679,6 @@ pub fn code_action_import_module(
         return;
     }
 
-    let line_numbers = LineNumbers::new(&module.code);
     let first_import_pos = position_of_first_definition_if_import(module, &line_numbers);
     let first_is_import = first_import_pos.is_some();
     let import_location = first_import_pos.unwrap_or_default();
@@ -742,6 +757,7 @@ fn suggest_imports(
 
 pub fn code_action_add_missing_patterns(
     module: &Module,
+    line_numbers: &LineNumbers,
     params: &CodeActionParams,
     error: &Option<Error>,
     actions: &mut Vec<CodeAction>,
@@ -764,9 +780,7 @@ pub fn code_action_add_missing_patterns(
         return;
     }
 
-    let line_numbers = LineNumbersHelper {
-        line_numbers: LineNumbers::new(&module.code),
-    };
+    let line_numbers = LineNumbersHelper::new(line_numbers);
 
     for (location, missing) in missing_patterns {
         let range = line_numbers.src_span_to_lsp_range(location);
@@ -883,7 +897,7 @@ pub struct AddAnnotations<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: Vec<TextEdit>,
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     printer: Printer<'a>,
 }
 
@@ -1024,13 +1038,16 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
 }
 
 impl<'a> AddAnnotations<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
-        let line_numbers = LineNumbers::new(&module.code);
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
         Self {
             module,
             params,
             edits: Vec::new(),
-            line_numbers: LineNumbersHelper { line_numbers },
+            line_numbers: LineNumbersHelper::new(line_numbers),
             // We need to use the same printer for all the edits because otherwise
             // we could get duplicate type variable names.
             printer: Printer::new(&module.ast.names),
@@ -1276,7 +1293,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
 pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     qualified_constructor: QualifiedConstructor<'a>,
     edits: Vec<TextEdit>,
 }
@@ -1291,7 +1308,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     pub fn new(
         module: &'a Module,
         params: &'a CodeActionParams,
-        line_numbers: LineNumbers,
+        line_numbers: &'a LineNumbers,
         qualified_constructor: QualifiedConstructor<'a>,
     ) -> Self {
         Self {
@@ -1603,10 +1620,10 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
 
 pub fn code_action_convert_qualified_constructor_to_unqualified(
     module: &Module,
+    line_numbers: &LineNumbers,
     params: &CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
-    let line_numbers = LineNumbers::new(&module.code);
     let mut first_pass =
         QualifiedToUnqualifiedImportFirstPass::new(module, params, line_numbers.clone());
     first_pass.visit_typed_module(&module.ast);
@@ -1809,7 +1826,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
 struct UnqualifiedToQualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     unqualified_constructor: UnqualifiedConstructor<'a>,
     edits: Vec<TextEdit>,
 }
@@ -1818,13 +1835,13 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
     pub fn new(
         module: &'a Module,
         params: &'a CodeActionParams,
-        line_numbers: LineNumbers,
+        line_numbers: &'a LineNumbers,
         unqualified_constructor: UnqualifiedConstructor<'a>,
     ) -> Self {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper { line_numbers },
+            line_numbers: LineNumbersHelper::new(line_numbers),
             unqualified_constructor,
             edits: vec![],
         }
@@ -2004,10 +2021,10 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
 
 pub fn code_action_convert_unqualified_constructor_to_qualified(
     module: &Module,
+    line_numbers: &LineNumbers,
     params: &CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
-    let line_numbers = LineNumbers::new(&module.code);
     let mut first_pass =
         UnqualifiedToQualifiedImportFirstPass::new(module, params, line_numbers.clone());
     first_pass.visit_typed_module(&module.ast);
@@ -2029,17 +2046,20 @@ pub fn code_action_convert_unqualified_constructor_to_qualified(
 pub struct DesugarUse<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper,
+    line_numbers: LineNumbersHelper<'a>,
     selected_use: Option<&'a TypedUse>,
 }
 
 impl<'a> DesugarUse<'a> {
-    pub fn new(module: &'a Module, params: &'a CodeActionParams) -> Self {
-        let line_numbers = LineNumbers::new(&module.code);
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper { line_numbers },
+            line_numbers: LineNumbersHelper::new(line_numbers),
             selected_use: None,
         }
     }
