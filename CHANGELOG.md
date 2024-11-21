@@ -171,6 +171,9 @@
   file of same name without warning. It now produces an error.
   ([PgBiel](https://github.com/PgBiel))
 
+- Modules depending on removed or renamed modules now get automatically recompiled.
+  ([Sakari Bergen](https://github.com/sbergen))
+
 - The compiler now raises a warning for unused case expressions, code blocks and
   pipelines that would be safe to remove.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

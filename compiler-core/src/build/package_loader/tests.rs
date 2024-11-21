@@ -219,6 +219,29 @@ fn module_is_stale_if_deps_are_stale() {
 }
 
 #[test]
+fn module_is_stale_if_deps_removed() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Source is removed, cache is present
+    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
+
+    // Cache is fresh but dep is removed
+    write_src(&fs, "/src/two.gleam", 1, "import one");
+    write_cache(
+        &fs,
+        "two",
+        2,
+        vec![(EcoString::from("one"), SrcSpan { start: 0, end: 0 })],
+        "import one",
+    );
+
+    let loaded = run_loader(fs, root, artefact);
+    assert_eq!(loaded.to_compile, vec![EcoString::from("two")]);
+}
+
+#[test]
 fn module_continues_to_be_stale_if_deps_get_updated() {
     let fs = InMemoryFileSystem::new();
     let root = Utf8Path::new("/");

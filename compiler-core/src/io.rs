@@ -278,11 +278,25 @@ pub trait FileSystemReader {
 /// Symlinks are followed.
 pub fn gleam_source_files(io: &impl FileSystemReader, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
     tracing::trace!("gleam_source_files {:?}", dir);
+    files_with_extension(io, dir, "gleam")
+}
 
+/// Iterates over Gleam cache files (`.cache`) in a certain directory.
+/// Symlinks are followed.
+pub fn gleam_cache_files(io: &impl FileSystemReader, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+    tracing::trace!("gleam_cache_files {:?}", dir);
+    files_with_extension(io, dir, "cache")
+}
+
+fn files_with_extension(
+    io: &impl FileSystemReader,
+    dir: &Utf8Path,
+    extension: &str,
+) -> Vec<Utf8PathBuf> {
     DirWalker::new(dir.to_path_buf())
         .into_file_iter(io)
         .filter_map(Result::ok)
-        .filter(|path| path.extension() == Some("gleam"))
+        .filter(|path| path.extension() == Some(extension))
         .collect()
 }
 
