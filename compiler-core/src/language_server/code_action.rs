@@ -87,12 +87,12 @@ impl<'a> LineNumbersHelper<'a> {
     }
 
     fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
-        src_span_to_lsp_range(location, &self.line_numbers)
+        src_span_to_lsp_range(location, self.line_numbers)
     }
 
     fn edit_src_span(&self, location: SrcSpan, new_text: String) -> TextEdit {
         TextEdit {
-            range: src_span_to_lsp_range(location, &self.line_numbers),
+            range: src_span_to_lsp_range(location, self.line_numbers),
             new_text,
         }
     }
@@ -327,7 +327,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         // we only check for the code action between the `let` and `=`.
         let code_action_location =
             SrcSpan::new(assignment.location.start, assignment.value.location().start);
-        let code_action_range = src_span_to_lsp_range(code_action_location, &self.line_numbers);
+        let code_action_range = src_span_to_lsp_range(code_action_location, self.line_numbers);
 
         self.visit_typed_expr(&assignment.value);
 
@@ -357,7 +357,7 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
             .get(pattern_location.start as usize..pattern_location.end as usize)
             .expect("Location must be valid");
 
-        let range = src_span_to_lsp_range(assignment.location, &self.line_numbers);
+        let range = src_span_to_lsp_range(assignment.location, self.line_numbers);
         let indent = " ".repeat(range.start.character as usize);
 
         // Figure out which variables are assigned in the pattern
@@ -679,19 +679,15 @@ pub fn code_action_import_module(
         return;
     }
 
-    let first_import_pos = position_of_first_definition_if_import(module, &line_numbers);
+    let first_import_pos = position_of_first_definition_if_import(module, line_numbers);
     let first_is_import = first_import_pos.is_some();
     let import_location = first_import_pos.unwrap_or_default();
 
-    let after_import_newlines = add_newlines_after_import(
-        import_location,
-        first_is_import,
-        &line_numbers,
-        &module.code,
-    );
+    let after_import_newlines =
+        add_newlines_after_import(import_location, first_is_import, line_numbers, &module.code);
 
     for missing_import in missing_imports {
-        let range = src_span_to_lsp_range(missing_import.location, &line_numbers);
+        let range = src_span_to_lsp_range(missing_import.location, line_numbers);
         if !overlaps(params.range, range) {
             continue;
         }
