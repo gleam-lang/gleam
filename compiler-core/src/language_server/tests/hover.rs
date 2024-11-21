@@ -1311,3 +1311,37 @@ pub fn main() {
         find_position_of("wibble:").under_char('i')
     );
 }
+
+#[test]
+fn hover_for_pattern_in_use() {
+    let code = "
+type Wibble {
+  Wibble(Int, Float)
+}
+
+pub fn main() {
+  use Wibble(int, float) <- todo
+  todo
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("int").under_char('i')
+    );
+}
+
+#[test]
+fn hover_for_annotation_in_use() {
+    let code = "
+pub fn main() {
+  use something: Int <- todo
+  todo
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("Int").under_char('n')
+    );
+}

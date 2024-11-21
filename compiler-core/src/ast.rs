@@ -2278,6 +2278,24 @@ pub struct UseAssignment<TypeT> {
     pub annotation: Option<TypeAst>,
 }
 
+impl TypedUse {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        for assignment in self.assignments.iter() {
+            if let Some(found) = assignment.pattern.find_node(byte_index) {
+                return Some(found);
+            }
+            if let Some(found) = assignment
+                .annotation
+                .as_ref()
+                .and_then(|annotation| annotation.find_node(byte_index, assignment.pattern.type_()))
+            {
+                return Some(found);
+            }
+        }
+        self.call.find_node(byte_index)
+    }
+}
+
 pub type TypedStatement = Statement<Arc<Type>, TypedExpr>;
 pub type UntypedStatement = Statement<(), UntypedExpr>;
 
@@ -2366,16 +2384,17 @@ impl TypedStatement {
 
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         match self {
-            Statement::Use(use_) => use_.call.find_node(byte_index),
+            Statement::Use(use_) => use_.find_node(byte_index),
             Statement::Expression(expression) => expression.find_node(byte_index),
-            Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
-                if assignment.location.contains(byte_index) {
-                    Some(Located::Statement(self))
-                } else {
-                    None
-                }
-            }),
+            Statement::Assignment(assignment) => assignment.find_node(byte_index),
         }
+        .or_else(|| {
+            if self.location().contains(byte_index) {
+                Some(Located::Statement(self))
+            } else {
+                None
+            }
+        })
     }
 
     pub fn type_defining_location(&self) -> SrcSpan {
