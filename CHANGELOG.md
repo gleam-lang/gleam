@@ -65,6 +65,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now provides correct information when hovering over
+  patterns in use expressions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter now adds a `todo` inside empty blocks.
