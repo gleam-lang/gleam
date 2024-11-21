@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let [_elem] = [6]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let [_elem] = [6]
+  ▔▔▔▔▔▔▔▔▔▔▔▔↑    
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let _ = case [6] {
+    [_elem] -> Nil
+    [] -> todo
+    [_, _, ..] -> todo
+  }
+}
