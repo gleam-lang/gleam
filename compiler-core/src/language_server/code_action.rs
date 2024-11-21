@@ -2235,7 +2235,24 @@ impl<'ast> ast::visit::Visit<'ast> for DesugarUse<'ast> {
         if !within(self.params.range, use_range) {
             return;
         }
-        self.selected_use = Some(use_);
+
+        // If the use expression is using patterns that are not just variable
+        // assignments then we can't automatically rewrite it as it would result
+        // in a syntax error as we can't pattern match in an anonymous function
+        // head.
+        // At the same time we can't safely add bindings inside the anonymous
+        // function body by picking placeholder names as we'd risk shadowing
+        // variables coming from the outer scope.
+        //
+        // So we just skip those use expressions we can't safely rewrite!
+        if use_
+            .assignments
+            .iter()
+            .all(|assignment| assignment.pattern.is_variable())
+        {
+            self.selected_use = Some(use_);
+        }
+
         self.visit_typed_expr(&use_.call);
     }
 }

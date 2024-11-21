@@ -1837,8 +1837,17 @@ impl<A> Pattern<A> {
     /// Returns `true` if the pattern is [`Discard`].
     ///
     /// [`Discard`]: Pattern::Discard
+    #[must_use]
     pub fn is_discard(&self) -> bool {
         matches!(self, Self::Discard { .. })
+    }
+
+    #[must_use]
+    pub fn is_variable(&self) -> bool {
+        match self {
+            Pattern::Variable { .. } => true,
+            _ => false,
+        }
     }
 }
 
