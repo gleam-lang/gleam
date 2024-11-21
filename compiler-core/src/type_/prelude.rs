@@ -87,14 +87,20 @@ pub fn bool() -> Arc<Type> {
     bool_with_variant(None)
 }
 
-pub fn bool_with_variant(variant_index: Option<u16>) -> Arc<Type> {
+pub fn bool_with_variant(variant: Option<bool>) -> Arc<Type> {
+    let variant = match variant {
+        Some(true) => Some(0),
+        Some(false) => Some(1),
+        None => None,
+    };
+
     Arc::new(Type::Named {
         args: vec![],
         publicity: Publicity::Public,
         name: BOOL.into(),
         module: PRELUDE_MODULE_NAME.into(),
         package: PRELUDE_PACKAGE_NAME.into(),
-        inferred_variant: variant_index,
+        inferred_variant: variant,
     })
 }
 
@@ -282,7 +288,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             variants_count: 2,
                             variant_index: 0,
                         },
-                        bool_with_variant(Some(0)),
+                        bool_with_variant(Some(true)),
                     ),
                 );
                 let _ = prelude.values.insert(
@@ -298,7 +304,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             variants_count: 2,
                             variant_index: 1,
                         },
-                        bool_with_variant(Some(1)),
+                        bool_with_variant(Some(false)),
                     ),
                 );
                 let _ = prelude.types.insert(
