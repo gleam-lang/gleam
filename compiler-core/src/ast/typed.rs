@@ -1,5 +1,7 @@
 use std::sync::OnceLock;
 
+use type_::TypedCallArg;
+
 use super::*;
 use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
 
@@ -615,6 +617,20 @@ impl TypedExpr {
         match self {
             TypedExpr::Panic { .. } => true,
             _ => false,
+        }
+    }
+
+    pub(crate) fn call_arguments(&self) -> Option<&Vec<TypedCallArg>> {
+        match self {
+            TypedExpr::Call { args, .. } => Some(args),
+            _ => None,
+        }
+    }
+
+    pub(crate) fn fn_expression_body(&self) -> Option<&Vec1<TypedStatement>> {
+        match self {
+            TypedExpr::Fn { body, .. } => Some(body),
+            _ => None,
         }
     }
 }
