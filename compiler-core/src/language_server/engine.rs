@@ -298,19 +298,42 @@ where
                 return Ok(None);
             };
 
-            code_action_unused_values(module, &params, &mut actions);
-            code_action_unused_imports(module, &params, &mut actions);
-            code_action_convert_qualified_constructor_to_unqualified(module, &params, &mut actions);
-            code_action_convert_unqualified_constructor_to_qualified(module, &params, &mut actions);
-            code_action_fix_names(module, &params, &this.error, &mut actions);
-            code_action_import_module(module, &params, &this.error, &mut actions);
-            code_action_add_missing_patterns(module, &params, &this.error, &mut actions);
-            actions.extend(LetAssertToCase::new(module, &params).code_actions());
-            actions.extend(RedundantTupleInCaseSubject::new(module, &params).code_actions());
-            actions.extend(LabelShorthandSyntax::new(module, &params).code_actions());
-            actions.extend(FillInMissingLabelledArgs::new(module, &params).code_actions());
-            actions.extend(DesugarUse::new(module, &params).code_actions());
-            AddAnnotations::new(module, &params).code_action(&mut actions);
+            let line_numbers = LineNumbers::new(&module.code);
+
+            code_action_unused_values(module, &line_numbers, &params, &mut actions);
+            code_action_unused_imports(module, &line_numbers, &params, &mut actions);
+            code_action_convert_qualified_constructor_to_unqualified(
+                module,
+                &line_numbers,
+                &params,
+                &mut actions,
+            );
+            code_action_convert_unqualified_constructor_to_qualified(
+                module,
+                &line_numbers,
+                &params,
+                &mut actions,
+            );
+            code_action_fix_names(&line_numbers, &params, &this.error, &mut actions);
+            code_action_import_module(module, &line_numbers, &params, &this.error, &mut actions);
+            code_action_add_missing_patterns(
+                module,
+                &line_numbers,
+                &params,
+                &this.error,
+                &mut actions,
+            );
+            actions.extend(LetAssertToCase::new(module, &line_numbers, &params).code_actions());
+            actions.extend(
+                RedundantTupleInCaseSubject::new(module, &line_numbers, &params).code_actions(),
+            );
+            actions
+                .extend(LabelShorthandSyntax::new(module, &line_numbers, &params).code_actions());
+            actions.extend(
+                FillInMissingLabelledArgs::new(module, &line_numbers, &params).code_actions(),
+            );
+            actions.extend(DesugarUse::new(module, &line_numbers, &params).code_actions());
+            AddAnnotations::new(module, &line_numbers, &params).code_action(&mut actions);
 
             Ok(if actions.is_empty() {
                 None
@@ -981,6 +1004,7 @@ fn position_within(position: Position, range: Range) -> bool {
 
 fn code_action_unused_values(
     module: &Module,
+    line_numbers: &LineNumbers,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
@@ -999,9 +1023,6 @@ fn code_action_unused_values(
     if unused_values.is_empty() {
         return;
     }
-
-    // Convert src spans to lsp range
-    let line_numbers = LineNumbers::new(&module.code);
 
     // Sort spans by start position, with longer spans coming first
     unused_values.sort_by_key(|span| (span.start, -(span.end as i64 - span.start as i64)));
@@ -1042,6 +1063,7 @@ fn code_action_unused_values(
 
 fn code_action_unused_imports(
     module: &Module,
+    line_numbers: &LineNumbers,
     params: &lsp::CodeActionParams,
     actions: &mut Vec<CodeAction>,
 ) {
@@ -1062,8 +1084,6 @@ fn code_action_unused_imports(
         return;
     }
 
-    // Convert src spans to lsp range
-    let line_numbers = LineNumbers::new(&module.code);
     let mut hovered = false;
     let mut edits = Vec::with_capacity(unused.len());
 
@@ -1107,7 +1127,7 @@ struct NameCorrection {
 }
 
 fn code_action_fix_names(
-    module: &Module,
+    line_numbers: &LineNumbers,
     params: &lsp::CodeActionParams,
     error: &Option<Error>,
     actions: &mut Vec<CodeAction>,
@@ -1134,9 +1154,6 @@ fn code_action_fix_names(
     if name_corrections.is_empty() {
         return;
     }
-
-    // Convert src spans to lsp range
-    let line_numbers = LineNumbers::new(&module.code);
 
     for name_correction in name_corrections {
         let NameCorrection {
