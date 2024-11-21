@@ -2902,3 +2902,37 @@ fn wibble(n) { n }
 "#
     );
 }
+
+#[test]
+fn use_with_pure_fn_expression_is_marked_as_unused() {
+    assert_warning!(
+        r#"
+pub fn main() {
+    {
+        use _ <- fn(a) { a }
+        1
+    }
+
+    Nil
+}
+"#
+    );
+}
+
+#[test]
+fn use_statement_calling_regular_function_is_never_marked_unused() {
+    assert_no_warnings!(
+        r#"
+pub fn main() {
+    {
+        use _ <- each([1, 2, 3])
+        1
+    }
+
+    Nil
+}
+
+fn each(list, _fun) { list }
+"#
+    );
+}

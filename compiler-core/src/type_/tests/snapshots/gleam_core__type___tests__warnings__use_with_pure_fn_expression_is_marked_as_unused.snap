@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n    {\n        use _ <- fn(a) { a }\n        1\n    }\n\n    Nil\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+    {
+        use _ <- fn(a) { a }
+        1
+    }
+
+    Nil
+}
+
+
+----- WARNING
+warning: Unused value
+  ┌─ /src/warning/wrn.gleam:3:5
+  │  
+3 │ ╭     {
+4 │ │         use _ <- fn(a) { a }
+5 │ │         1
+6 │ │     }
+  │ ╰─────^ This value is never used
