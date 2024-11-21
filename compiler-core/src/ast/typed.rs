@@ -561,24 +561,30 @@ impl TypedExpr {
             // long as it's not called!
             TypedExpr::ModuleSelect { .. } => true,
 
-            // A pipeline is a pure value constructor if its last step is a record builder.
-            // For example `wibble() |> wobble() |> Ok`
-            TypedExpr::Pipeline { finally, .. } => {
-                finally.is_fn_with_all_pure_value_constructors_in_body()
-                    || finally.is_pure_value_constructor()
-            }
+            // A pipeline is a pure value constructor if its last step is a record builder,
+            // or a call to a fn expression that has a body comprised of just pure value
+            // constructors. For example:
+            //  - `wibble() |> wobble() |> Ok`
+            //  - `"hello" |> fn(s) { s <> " world!" }`
+            TypedExpr::Pipeline { finally, .. } => match finally.as_ref() {
+                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
+                fun => fun.is_pure_value_constructor(),
+            },
 
-            TypedExpr::Call { fun, .. } => {
-                fun.is_fn_with_all_pure_value_constructors_in_body() || fun.is_record_builder()
-            }
+            TypedExpr::Call { fun, .. } => match fun.as_ref() {
+                // Immediately calling a fn expression that has a body comprised of just
+                // pure value constructors is in itself pure.
+                TypedExpr::Fn { body, .. } => body.iter().all(|s| s.is_pure_value_constructor()),
+                // And calling a record builder is a pure value constructor:
+                // `Some(1)`
+                fun => fun.is_record_builder(),
+            },
 
             // A block is pure if all the statements it's made of are pure.
             // For example `{ True 1 }`
-            TypedExpr::Block { statements, .. } => statements.iter().all(|s| match s {
-                Statement::Expression(e) => e.is_pure_value_constructor(),
-                Statement::Assignment(assignment) => assignment.value.is_pure_value_constructor(),
-                Statement::Use(_) => panic!("No use in typed expr"),
-            }),
+            TypedExpr::Block { statements, .. } => {
+                statements.iter().all(|s| s.is_pure_value_constructor())
+            }
 
             // A case is pure if its subject and all its branches are.
             // For example:
@@ -599,18 +605,6 @@ impl TypedExpr {
             // we don't want to raise a warning for an unused value if it's one
             // of those.
             TypedExpr::Todo { .. } | TypedExpr::Panic { .. } | TypedExpr::Invalid { .. } => false,
-        }
-    }
-
-    #[must_use]
-    fn is_fn_with_all_pure_value_constructors_in_body(&self) -> bool {
-        match self {
-            TypedExpr::Fn { body, .. } => body.iter().all(|s| match s {
-                Statement::Expression(expression) => expression.is_pure_value_constructor(),
-                Statement::Assignment(assignment) => assignment.value.is_pure_value_constructor(),
-                Statement::Use(_) => panic!("No use in typed expr"),
-            }),
-            _ => false,
         }
     }
 

@@ -2715,8 +2715,8 @@ fn incomplete_code_block_raises_warning() {
         r#"
 pub fn main() {
     {}
-    }
-    "#
+}
+"#
     );
 }
 

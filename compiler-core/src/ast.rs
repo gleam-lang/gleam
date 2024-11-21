@@ -2414,6 +2414,18 @@ impl TypedStatement {
             Statement::Use(use_) => use_.location,
         }
     }
+
+    fn is_pure_value_constructor(&self) -> bool {
+        match self {
+            Statement::Expression(expression) => expression.is_pure_value_constructor(),
+            Statement::Assignment(assignment) => {
+                // A let assert is not considered a pure value constructor
+                // as it could crash the program!
+                !assignment.kind.is_assert() && assignment.value.is_pure_value_constructor()
+            }
+            Statement::Use(Use { call, .. }) => call.is_pure_value_constructor(),
+        }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
