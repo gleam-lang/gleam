@@ -897,6 +897,7 @@ dependencies = [
  "tracing",
  "unicode-segmentation",
  "vec1",
+ "version-ranges",
  "xxhash-rust",
 ]
 
@@ -2665,6 +2666,15 @@ name = "vec1"
 version = "1.12.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "eab68b56840f69efb0fefbe3ab6661499217ffdc58e2eef7c3f6f69835386322"
+
+[[package]]
+name = "version-ranges"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f8d079415ceb2be83fc355adbadafe401307d5c309c7e6ade6638e6f9f42f42d"
+dependencies = [
+ "smallvec",
+]
 
 [[package]]
 name = "version_check"

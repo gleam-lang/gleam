@@ -36,6 +36,7 @@ globset = { version = "0", features = ["serde1"] }
 xxhash-rust = { version = "0", features = ["xxh3"] }
 # Pubgrub dependency resolution algorithm
 pubgrub = "0"
+version-ranges = "0.1.1"
 # Used for converting absolute path to relative path
 pathdiff = { version = "0", features = ["camino"] }
 # Memory arena using ids rather than references
