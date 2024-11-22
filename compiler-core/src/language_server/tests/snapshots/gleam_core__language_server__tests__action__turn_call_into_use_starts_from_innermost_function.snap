@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  wibble(10, 20, fn(a) {\n    wibble(30, 40, fn(b) { a + b })\n  })\n}\n\nfn wibble(m, n, f) {\n  f(1)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble(10, 20, fn(a) {
+    wibble(30, 40, fn(b) { a + b })
+           ▔▔▔▔↑                   
+  })
+}
+
+fn wibble(m, n, f) {
+  f(1)
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  wibble(10, 20, fn(a) {
+    use b <- wibble(30, 40)
+    a + b
+  })
+}
+
+fn wibble(m, n, f) {
+  f(1)
+}

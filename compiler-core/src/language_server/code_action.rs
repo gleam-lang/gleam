@@ -108,6 +108,13 @@ impl<'a> TextEdits<'a> {
     pub fn delete(&mut self, location: SrcSpan) {
         self.replace(location, "".to_string())
     }
+
+    fn delete_range(&self, range: Range) -> TextEdit {
+        TextEdit {
+            range,
+            new_text: "".into(),
+        }
+    }
 }
 
 /// Code action to remove literal tuples in case subjects, essentially making
@@ -2184,4 +2191,263 @@ impl<'ast> ast::visit::Visit<'ast> for DesugarUse<'ast> {
 
         self.visit_typed_expr(&use_.call);
     }
+}
+
+/// Builder for code action to apply the turn into use expression.
+///
+pub struct TurnIntoUse<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    line_numbers: LineNumbersHelper<'a>,
+    selected_call: Option<CallLocations>,
+}
+
+/// All the locations we'll need to transform a function call into a use
+/// expression.
+struct CallLocations {
+    call_span: SrcSpan,
+    called_function_span: SrcSpan,
+    callback_args_span: Option<SrcSpan>,
+    arg_before_callback_span: Option<SrcSpan>,
+    callback_body_span: SrcSpan,
+}
+
+impl<'a> TurnIntoUse<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            line_numbers: LineNumbersHelper::new(line_numbers),
+            selected_call: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(CallLocations {
+            call_span,
+            called_function_span,
+            callback_args_span,
+            arg_before_callback_span,
+            callback_body_span,
+        }) = self.selected_call
+        else {
+            return vec![];
+        };
+
+        let mut edits = vec![];
+
+        // This is the nesting level of the `use` keyword we've inserted, we
+        // want to move the entire body of the anonymous function to this level.
+        let use_nesting_level = self
+            .line_numbers
+            .src_span_to_lsp_range(called_function_span)
+            .start
+            .character;
+        let indentation = " ".repeat(use_nesting_level as usize);
+
+        // First we move the callback arguments to the left hand side of the
+        // call and add the `use` keyword.
+        let left_hand_side_text = if let Some(args_location) = callback_args_span {
+            let args_start = args_location.start as usize;
+            let args_end = args_location.end as usize;
+            let args_text = self.module.code.get(args_start..args_end).expect("fn args");
+            format!("use {args_text} <- ")
+        } else {
+            "use <- ".into()
+        };
+
+        edits.push(
+            self.line_numbers
+                .insert_at(call_span.start, left_hand_side_text),
+        );
+
+        let edit = match arg_before_callback_span {
+            // If the function call has no other arguments besides the callback then
+            // we just have to remove the `fn(...) {` part.
+            //
+            //     wibble(fn(...) { ... })
+            //           ^^^^^^^^^^ This goes from the end of the called function
+            //                      To the start of the first thing in the anonymous
+            //                      function's body.
+            //
+            None => self.line_numbers.edit_src_span(
+                SrcSpan::new(called_function_span.end, callback_body_span.start),
+                format!("\n{indentation}"),
+            ),
+            // If it has other arguments we'll have to remove those and add a closed
+            // parentheses too:
+            //
+            //     wibble(1, 2, fn(...) { ... })
+            //                ^^^^^^^^^^^ We have to replace this with a `)`, it
+            //                            goes from the end of the second-to-last
+            //                            argument to the start of the first thing
+            //                            in the anonymous function's body.
+            //
+            Some(arg_before_callback) => self.line_numbers.edit_src_span(
+                SrcSpan::new(arg_before_callback.end, callback_body_span.start),
+                format!(")\n{indentation}"),
+            ),
+        };
+        edits.push(edit);
+
+        // Then we have to remove two spaces of indentation from each line of
+        // the callback function's body.
+        let body_range = self.line_numbers.src_span_to_lsp_range(callback_body_span);
+        for line in body_range.start.line + 1..=body_range.end.line {
+            edits.push(self.line_numbers.delete_range(Range::new(
+                Position { line, character: 0 },
+                Position { line, character: 2 },
+            )))
+        }
+
+        // Then we have to remove the anonymous fn closing `}` and the call's
+        // closing `)`.
+        edits.push(
+            self.line_numbers
+                .delete_src_span(SrcSpan::new(callback_body_span.end, call_span.end)),
+        );
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Turn into use expression")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        // The cursor has to be inside the last statement of the function to
+        // offer the code action.
+        let last_statement_range = self
+            .line_numbers
+            .src_span_to_lsp_range(fun.body.last().location());
+        if within(self.params.range, last_statement_range) {
+            if let Some(call_data) = turn_statement_into_use(fun.body.last()) {
+                self.selected_call = Some(call_data);
+            }
+        }
+
+        ast::visit::visit_typed_function(self, fun)
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [ast::TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        // We can only offer this code action for anonymous functions and not
+        // the ones implicitly added by the compiler.
+        if let FunctionLiteralKind::Anonymous { .. } = kind {
+            // The cursor has to be inside the last statement of the body to
+            // offer the code action.
+            let Some(last_statement) = body.last() else {
+                return;
+            };
+            let last_statement_range = self
+                .line_numbers
+                .src_span_to_lsp_range(last_statement.location());
+            if within(self.params.range, last_statement_range) {
+                if let Some(call_data) = turn_statement_into_use(last_statement) {
+                    self.selected_call = Some(call_data);
+                }
+            }
+        }
+
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+    }
+
+    fn visit_typed_expr_block(
+        &mut self,
+        location: &'ast SrcSpan,
+        statements: &'ast [ast::TypedStatement],
+    ) {
+        let Some(last_statement) = statements.last() else {
+            return;
+        };
+
+        // The cursor has to be inside the last statement of the block to offer
+        // the code action.
+        let statement_range = self
+            .line_numbers
+            .src_span_to_lsp_range(last_statement.location());
+        if within(self.params.range, statement_range) {
+            // Only the last statement of a block can be turned into a use!
+            if let Some(selected_call) = turn_statement_into_use(last_statement) {
+                self.selected_call = Some(selected_call)
+            }
+        }
+
+        ast::visit::visit_typed_expr_block(self, location, statements);
+    }
+}
+
+fn turn_statement_into_use(statement: &ast::TypedStatement) -> Option<CallLocations> {
+    match statement {
+        ast::Statement::Use(_) | ast::Statement::Assignment(_) => None,
+        ast::Statement::Expression(expression) => turn_expression_into_use(expression),
+    }
+}
+
+fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
+    let TypedExpr::Call {
+        args,
+        location: call_span,
+        fun: called_function,
+        ..
+    } = expr
+    else {
+        return None;
+    };
+
+    let CallArg {
+        value: last_arg,
+        implicit: None,
+        ..
+    } = args.last()?
+    else {
+        return None;
+    };
+
+    let TypedExpr::Fn {
+        args: callback_args,
+        body,
+        ..
+    } = last_arg
+    else {
+        return None;
+    };
+
+    let callback_args_span = match (callback_args.first(), callback_args.last()) {
+        (Some(first), Some(last)) => Some(first.location.merge(&last.location)),
+        _ => None,
+    };
+
+    let arg_before_callback_span = if args.len() >= 2 {
+        args.get(args.len() - 2).map(|call_arg| call_arg.location)
+    } else {
+        None
+    };
+
+    let callback_body_span = body.first().location().merge(&body.last().last_location());
+
+    Some(CallLocations {
+        call_span: *call_span,
+        called_function_span: called_function.location(),
+        callback_args_span,
+        arg_before_callback_span,
+        callback_body_span,
+    })
 }
