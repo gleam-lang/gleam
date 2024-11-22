@@ -83,29 +83,29 @@ struct TextEdits<'a> {
 }
 
 impl<'a> TextEdits<'a> {
-    fn new(line_numbers: &'a LineNumbers) -> Self {
+    pub fn new(line_numbers: &'a LineNumbers) -> Self {
         TextEdits {
             line_numbers,
             edits: vec![],
         }
     }
 
-    fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
+    pub fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
         src_span_to_lsp_range(location, self.line_numbers)
     }
 
-    fn replace(&mut self, location: SrcSpan, new_text: String) {
+    pub fn replace(&mut self, location: SrcSpan, new_text: String) {
         self.edits.push(TextEdit {
             range: src_span_to_lsp_range(location, self.line_numbers),
             new_text,
         })
     }
 
-    fn insert(&mut self, at: u32, new_text: String) {
+    pub fn insert(&mut self, at: u32, new_text: String) {
         self.replace(SrcSpan { start: at, end: at }, new_text)
     }
 
-    fn delete(&mut self, location: SrcSpan) {
+    pub fn delete(&mut self, location: SrcSpan) {
         self.replace(location, "".to_string())
     }
 }
