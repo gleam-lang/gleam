@@ -1667,9 +1667,9 @@ fn record_update<'a>(
         line(),
         call(constructor, args, env)
     ];
-    
+
     env.current_scope_vars = vars;
-    
+
     document
 }
 
