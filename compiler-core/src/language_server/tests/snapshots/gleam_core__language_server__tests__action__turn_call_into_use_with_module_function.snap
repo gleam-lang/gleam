@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport other\npub fn main() {\n  other.wibble(10, 20, fn(a) {\n    todo\n    a + b\n  })\n}\n"
+---
+----- BEFORE ACTION
+
+import other
+pub fn main() {
+  other.wibble(10, 20, fn(a) {
+        ↑                     
+    todo
+    a + b
+  })
+}
+
+
+----- AFTER ACTION
+
+import other
+pub fn main() {
+  use a <- other.wibble(10, 20)
+  todo
+  a + b
+}

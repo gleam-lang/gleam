@@ -2246,7 +2246,7 @@ impl<'a> TurnIntoUse<'a> {
         // want to move the entire body of the anonymous function to this level.
         let use_nesting_level = self
             .line_numbers
-            .src_span_to_lsp_range(called_function_span)
+            .src_span_to_lsp_range(call_span)
             .start
             .character;
         let indentation = " ".repeat(use_nesting_level as usize);
@@ -2314,7 +2314,7 @@ impl<'a> TurnIntoUse<'a> {
         );
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Turn into use expression")
+        CodeActionBuilder::new("Convert to `use`")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), edits)
             .preferred(false)
@@ -2348,21 +2348,17 @@ impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
         body: &'ast [ast::TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        // We can only offer this code action for anonymous functions and not
-        // the ones implicitly added by the compiler.
-        if let FunctionLiteralKind::Anonymous { .. } = kind {
-            // The cursor has to be inside the last statement of the body to
-            // offer the code action.
-            let Some(last_statement) = body.last() else {
-                return;
-            };
-            let last_statement_range = self
-                .line_numbers
-                .src_span_to_lsp_range(last_statement.location());
-            if within(self.params.range, last_statement_range) {
-                if let Some(call_data) = turn_statement_into_use(last_statement) {
-                    self.selected_call = Some(call_data);
-                }
+        // The cursor has to be inside the last statement of the body to
+        // offer the code action.
+        let Some(last_statement) = body.last() else {
+            return;
+        };
+        let last_statement_range = self
+            .line_numbers
+            .src_span_to_lsp_range(last_statement.location());
+        if within(self.params.range, last_statement_range) {
+            if let Some(call_data) = turn_statement_into_use(last_statement) {
+                self.selected_call = Some(call_data);
             }
         }
 
