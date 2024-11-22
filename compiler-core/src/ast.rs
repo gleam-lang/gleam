@@ -2386,15 +2386,14 @@ impl TypedStatement {
         match self {
             Statement::Use(use_) => use_.find_node(byte_index),
             Statement::Expression(expression) => expression.find_node(byte_index),
-            Statement::Assignment(assignment) => assignment.find_node(byte_index),
+            Statement::Assignment(assignment) => assignment.find_node(byte_index).or_else(|| {
+                if assignment.location.contains(byte_index) {
+                    Some(Located::Statement(self))
+                } else {
+                    None
+                }
+            }),
         }
-        .or_else(|| {
-            if self.location().contains(byte_index) {
-                Some(Located::Statement(self))
-            } else {
-                None
-            }
-        })
     }
 
     pub fn type_defining_location(&self) -> SrcSpan {
