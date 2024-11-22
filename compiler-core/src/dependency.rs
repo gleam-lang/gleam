@@ -7,6 +7,7 @@ use hexpm::{
     Dependency, Release,
     version::{Range, ResolutionError, Version},
 };
+use itertools::Itertools;
 use pubgrub::{
     solver::{Dependencies, choose_package_with_fewest_versions},
     type_aliases::Map,
@@ -82,15 +83,17 @@ pub fn resolve_major_versions(
     versions
         .iter()
         .filter_map(|(package, version)| {
-            // TODO: find out best error type for this operation
             let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
                 return None;
             };
 
             let Some(latest) = &hexpackage
                 .releases
-                .last()
+                .iter()
                 .map(|release| release.version.clone())
+                .filter(|version| !version.is_pre())
+                .sorted_by(|a, b| b.cmp(a))
+                .next()
             else {
                 return None;
             };
