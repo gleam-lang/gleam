@@ -74,6 +74,28 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The Language Server now suggests a code action to turn a function call into
+  the equivalent use expression. For example, this snippet of code:
+
+  ```gleam
+  pub fn main() {
+    result.try(fetch_profile(user) fn(profile) {
+      render_welcome(user, profile)
+    })
+  }
+  ```
+
+  Will be turned into:
+
+  ```gleam
+  pub fn main() {
+    use profile <- result.try(fetch_profile(user))
+    render_welcome(user, profile)
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now provides correct information when hovering over
   patterns in use expressions.
   ([Surya Rose](https://github.com/GearsDatapacks))
