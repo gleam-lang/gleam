@@ -228,24 +228,31 @@ impl DirWalker {
                 // canonicalised path (which we only use to check for already
                 // visited directories).
                 return Ok(Some(next_path));
-            } else if io.is_directory(&real_path)
-                && self.dirs_walked.insert(real_path.clone()).is_none()
-            {
-                let dir_entries = io.read_dir(&next_path)?;
+            }
 
-                for entry in dir_entries {
-                    match entry {
-                        Ok(entry) => self.walk_queue.push_back(entry.into_path()),
-                        Err(_) => {
-                            return Err(Error::FileIo {
-                                kind: FileKind::Directory,
-                                action: FileIoAction::Read,
-                                path: next_path,
-                                err: None,
-                            });
-                        }
-                    }
-                }
+            // If it's not a directory then it contains no other files, so there's nothing to do.
+            if !io.is_directory(&real_path) {
+                continue;
+            }
+
+            // If we have already processed this directory then we don't need to do it again.
+            // This could be due to symlinks.
+            let already_seen = self.dirs_walked.insert(real_path.clone()).is_some();
+            if already_seen {
+                continue;
+            }
+
+            for entry in io.read_dir(&next_path)? {
+                let Ok(entry) = entry else {
+                    return Err(Error::FileIo {
+                        kind: FileKind::Directory,
+                        action: FileIoAction::Read,
+                        path: next_path,
+                        err: None,
+                    });
+                };
+
+                self.walk_queue.push_back(entry.into_path())
             }
         }
 

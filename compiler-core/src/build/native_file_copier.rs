@@ -168,35 +168,35 @@ where
         // Insert the full relative `.mjs` path in `seen_modules` as there is
         // no conflict if two `.mjs` files have the same name but are in
         // different subpaths, unlike Erlang files.
-        if let Some(existing) = self
+        let existing = self
             .seen_modules
-            .insert(mjs_path.clone(), relative_path.clone())
-        {
-            let existing_is_gleam = existing.extension() == Some("gleam");
-            return Err(
-                if existing_is_gleam || relative_path.extension() == Some("gleam") {
-                    let (gleam_file, native_file) = if existing_is_gleam {
-                        (&existing, relative_path)
-                    } else {
-                        (relative_path, &existing)
-                    };
-                    Error::ClashingGleamModuleAndNativeFileName {
-                        module: eco_format!("{}", gleam_file.with_extension("")),
-                        gleam_file: gleam_file.clone(),
-                        native_file: native_file.clone(),
-                    }
-                } else {
-                    // The only way for two `.mjs` files to clash is by having
-                    // the exact same path.
-                    assert_eq!(&existing, relative_path);
-                    Error::DuplicateSourceFile {
-                        file: existing.to_string(),
-                    }
-                },
-            );
+            .insert(mjs_path.clone(), relative_path.clone());
+
+        // If there was no already existing one then there's no problem.
+        let Some(existing) = existing else {
+            return Ok(());
+        };
+
+        let existing_is_gleam = existing.extension() == Some("gleam");
+        if existing_is_gleam || relative_path.extension() == Some("gleam") {
+            let (gleam_file, native_file) = if existing_is_gleam {
+                (&existing, relative_path)
+            } else {
+                (relative_path, &existing)
+            };
+            return Err(Error::ClashingGleamModuleAndNativeFileName {
+                module: eco_format!("{}", gleam_file.with_extension("")),
+                gleam_file: gleam_file.clone(),
+                native_file: native_file.clone(),
+            });
         }
 
-        Ok(())
+        // The only way for two `.mjs` files to clash is by having
+        // the exact same path.
+        assert_eq!(&existing, relative_path);
+        return Err(Error::DuplicateSourceFile {
+            file: existing.to_string(),
+        });
     }
 
     /// Erlang module files cannot have the same name regardless of their
