@@ -63,6 +63,44 @@ where
     Ok(packages)
 }
 
+/**
+* This is a preliminary implementation to get to first implementation.
+* It is unoptimal as it makes a request for each hex package.
+* Alternative is to create a package config with all direct dependencies
+* with "*" but I'm not sure if we will get correct resolution that way as
+* dependencies might cause the package to not return the latest major version.
+*/
+fn resolve_major_versions(
+    package_fetcher: Box<dyn PackageFetcher>,
+    versions: PackageVersions,
+) -> Result<PackageVersions> {
+    versions
+        .iter()
+        .map(|(package, version)| {
+            // TODO: find out best error type for this operation
+            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+                return Err(Error::Hex(
+                    "Unable to retrieve package information".to_string(),
+                ));
+            };
+
+            let Some(latest) = &hexpackage
+                .releases
+                .last()
+                .map(|release| release.version.clone())
+            else {
+                return Err(Error::Hex("No releases available for package".to_string()));
+            };
+
+            if latest.major > version.major {
+                Ok((package.to_string(), latest.clone()))
+            } else {
+                Ok((package.to_string(), version.clone()))
+            }
+        })
+        .collect()
+}
+
 // If the string would parse to an exact version then return the version
 fn parse_exact_version(ver: &str) -> Option<Version> {
     let version = ver.trim();
@@ -471,6 +509,88 @@ mod tests {
             },
         );
 
+        let _ = deps.insert(
+            "core_package".into(),
+            hexpm::Package {
+                name: "core_package".into(),
+                repository: "hexpm".into(),
+                releases: vec![
+                    Release {
+                        version: Version::try_from("0.1.0").unwrap(),
+                        requirements: [(
+                            "gleam_stdlib".into(),
+                            Dependency {
+                                app: None,
+                                optional: true,
+                                repository: None,
+                                requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
+                            },
+                        )]
+                        .into(),
+                        retirement_status: None,
+                        outer_checksum: vec![1, 2, 3],
+                        meta: (),
+                    },
+                    Release {
+                        version: Version::try_from("1.0.0").unwrap(),
+                        requirements: [(
+                            "gleam_stdlib".into(),
+                            Dependency {
+                                app: None,
+                                optional: true,
+                                repository: None,
+                                requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
+                            },
+                        )]
+                        .into(),
+                        retirement_status: None,
+                        outer_checksum: vec![1, 2, 3],
+                        meta: (),
+                    },
+                    Release {
+                        version: Version::try_from("1.1.0").unwrap(),
+                        requirements: [(
+                            "gleam_stdlib".into(),
+                            Dependency {
+                                app: None,
+                                optional: true,
+                                repository: None,
+                                requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
+                            },
+                        )]
+                        .into(),
+                        retirement_status: None,
+                        outer_checksum: vec![1, 2, 3],
+                        meta: (),
+                    },
+                ],
+            },
+        );
+
+        let _ = deps.insert(
+            "package_depends_on_core".into(),
+            hexpm::Package {
+                name: "package_depends_on_core".into(),
+                repository: "hexpm".into(),
+                releases: vec![Release {
+                    version: Version::try_from("0.1.0").unwrap(),
+                    requirements: [(
+                        "core_package".into(),
+                        Dependency {
+                            app: None,
+                            optional: true,
+                            repository: None,
+                            requirement: Range::new(">= 0.1.0 and < 1.0.0".into()),
+                        },
+                    )]
+                    .into(),
+                    retirement_status: None,
+                    outer_checksum: vec![1, 2, 3],
+                    meta: (),
+                }],
+            },
+        );
+
         Box::new(Remote { deps })
     }
 
@@ -831,5 +951,35 @@ mod tests {
         );
         assert_eq!(parse_exact_version("~> 1.0.0"), None);
         assert_eq!(parse_exact_version(">= 1.0.0"), None);
+    }
+
+    #[test]
+    fn resolve_major_version_upgrades() {
+        let result = resolve_major_versions(
+            make_remote(),
+            vec![
+                ("core_package".into(), Version::try_from("0.1.0").unwrap()),
+                (
+                    "package_depends_on_core".into(),
+                    Version::try_from("0.1.0").unwrap(),
+                ),
+            ]
+            .into_iter()
+            .collect(),
+        )
+        .unwrap();
+
+        assert_eq!(
+            result,
+            vec![
+                ("core_package".into(), Version::try_from("1.1.0").unwrap()),
+                (
+                    "package_depends_on_core".into(),
+                    Version::try_from("0.1.0").unwrap()
+                )
+            ]
+            .into_iter()
+            .collect()
+        );
     }
 }
