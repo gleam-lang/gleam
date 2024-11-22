@@ -418,6 +418,26 @@ pub fn download<Telem: Telemetry>(
     }
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
+    let versions = manifest
+        .packages
+        .iter()
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .collect();
+    let major_versions_available = dependency::resolve_major_versions(
+        PackageFetcher::boxed(runtime.handle().clone()),
+        versions,
+    );
+
+    if !major_versions_available.is_empty() {
+        println!("Hint: the following dependencies have new major versions available...");
+
+        major_versions_available
+            .iter()
+            .for_each(|(name, (v1, v2))| {
+                println!("{}@{} -> {}@{}", name, v1, name, v2);
+            });
+    }
+
     Ok(manifest)
 }
 
