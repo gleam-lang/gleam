@@ -2366,6 +2366,17 @@ impl TypedStatement {
         }
     }
 
+    /// Returns the location of the last element of a statement. This means that
+    /// if the statement is a use you'll get the location of the last item at
+    /// the end of its block.
+    pub fn last_location(&self) -> SrcSpan {
+        match self {
+            Statement::Expression(expression) => expression.last_location(),
+            Statement::Assignment(assignment) => assignment.value.last_location(),
+            Statement::Use(use_) => use_.call.last_location(),
+        }
+    }
+
     pub fn type_(&self) -> Arc<Type> {
         match self {
             Statement::Expression(expression) => expression.type_(),

@@ -633,6 +633,36 @@ impl TypedExpr {
             _ => None,
         }
     }
+
+    // If the expression is a fn or a block then returns the location of its
+    // last element, otherwise it returns the location of the whole expression.
+    pub fn last_location(&self) -> SrcSpan {
+        match self {
+            TypedExpr::Int { location, .. }
+            | TypedExpr::Float { location, .. }
+            | TypedExpr::String { location, .. }
+            | TypedExpr::Var { location, .. }
+            | TypedExpr::List { location, .. }
+            | TypedExpr::Call { location, .. }
+            | TypedExpr::BinOp { location, .. }
+            | TypedExpr::Case { location, .. }
+            | TypedExpr::RecordAccess { location, .. }
+            | TypedExpr::ModuleSelect { location, .. }
+            | TypedExpr::Tuple { location, .. }
+            | TypedExpr::TupleIndex { location, .. }
+            | TypedExpr::Todo { location, .. }
+            | TypedExpr::Panic { location, .. }
+            | TypedExpr::BitArray { location, .. }
+            | TypedExpr::RecordUpdate { location, .. }
+            | TypedExpr::NegateBool { location, .. }
+            | TypedExpr::NegateInt { location, .. }
+            | TypedExpr::Invalid { location, .. }
+            | TypedExpr::Pipeline { location, .. } => *location,
+
+            TypedExpr::Block { statements, .. } => statements.last().last_location(),
+            TypedExpr::Fn { body, .. } => body.last().last_location(),
+        }
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {

@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  wibble(fn() { todo })\n}\n\nfn wibble(f) {\n  f()\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble(fn() { todo })
+  ↑                    
+}
+
+fn wibble(f) {
+  f()
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  use <- wibble
+  todo
+}
+
+fn wibble(f) {
+  f()
+}
