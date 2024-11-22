@@ -2644,3 +2644,14 @@ pub fn b_to_a(value: Wibble(a)) -> Wibble(Int) {
 "#
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3879
+fn inexhaustive_use_reports_error() {
+    assert_error!(
+        r#"
+use [1, 2, 3] <- todo
+todo
+"#
+    );
+}

@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\nuse [1, 2, 3] <- todo\ntodo\n"
+---
+----- SOURCE CODE
+
+use [1, 2, 3] <- todo
+todo
+
+
+----- ERROR
+error: Inexhaustive pattern
+  ┌─ /src/one/two.gleam:2:5
+  │
+2 │ use [1, 2, 3] <- todo
+  │     ^^^^^^^^^
+
+This assignment uses a pattern that does not match all possible values. If
+one of the other values is used then the assignment will crash.
+
+The missing patterns are:
+
+    []
+    [_, _, _, _, ..]
+    [_, _, _]
+    [_, _]
+    [_]
+
+Hint: Use a more general pattern or use `let assert` instead.
