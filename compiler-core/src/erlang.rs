@@ -1659,12 +1659,18 @@ fn record_update<'a>(
     args: &'a [TypedCallArg],
     env: &mut Env<'a>,
 ) -> Document<'a> {
-    docvec![
+    let vars = env.current_scope_vars.clone();
+
+    let document = docvec![
         assignment(record, env),
         ",",
         line(),
         call(constructor, args, env)
-    ]
+    ];
+    
+    env.current_scope_vars = vars;
+    
+    document
 }
 
 /// Wrap a document in begin end

@@ -365,3 +365,21 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+fn nested_record_update() {
+    assert_erl!(
+        "pub type Wibble {
+  Wibble(a: Int, b: Wobble, c: Int)
+}
+
+pub type Wobble {
+  Wobble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let base = Wibble(1, Wobble(2, 3), 4)
+  Wibble(..base, b: Wobble(..base.b, b: 5))
+}"
+    );
+}

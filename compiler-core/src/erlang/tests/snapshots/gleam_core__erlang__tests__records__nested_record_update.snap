@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "pub type Wibble {\n  Wibble(a: Int, b: Wobble, c: Int)\n}\n\npub type Wobble {\n  Wobble(a: Int, b: Int)\n}\n\npub fn main() {\n  let base = Wibble(1, Wobble(2, 3), 4)\n  Wibble(..base, b: Wobble(..base.b, b: 5))\n}"
+---
+----- SOURCE CODE
+pub type Wibble {
+  Wibble(a: Int, b: Wobble, c: Int)
+}
+
+pub type Wobble {
+  Wobble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let base = Wibble(1, Wobble(2, 3), 4)
+  Wibble(..base, b: Wobble(..base.b, b: 5))
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/0]).
+-export_type([wibble/0, wobble/0]).
+
+-type wibble() :: {wibble, integer(), wobble(), integer()}.
+
+-type wobble() :: {wobble, integer(), integer()}.
+
+-file("/root/project/test/my/mod.gleam", 9).
+-spec main() -> wibble().
+main() ->
+    Base = {wibble, 1, {wobble, 2, 3}, 4},
+    _record = Base,
+    {wibble,
+        erlang:element(2, _record),
+        begin
+            _record@1 = erlang:element(3, Base),
+            {wobble, erlang:element(2, _record@1), 5}
+        end,
+        erlang:element(4, _record)}.
