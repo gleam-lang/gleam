@@ -77,32 +77,36 @@ impl CodeActionBuilder {
 
 /// A little wrapper around LineNumbers to make it easier to build text edits.
 ///
-struct LineNumbersHelper<'a> {
+struct TextEdits<'a> {
     line_numbers: &'a LineNumbers,
+    edits: Vec<TextEdit>,
 }
 
-impl<'a> LineNumbersHelper<'a> {
+impl<'a> TextEdits<'a> {
     fn new(line_numbers: &'a LineNumbers) -> Self {
-        LineNumbersHelper { line_numbers }
+        TextEdits {
+            line_numbers,
+            edits: vec![],
+        }
     }
 
     fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
         src_span_to_lsp_range(location, self.line_numbers)
     }
 
-    fn edit_src_span(&self, location: SrcSpan, new_text: String) -> TextEdit {
+    fn replace(&self, location: SrcSpan, new_text: String) -> TextEdit {
         TextEdit {
             range: src_span_to_lsp_range(location, self.line_numbers),
             new_text,
         }
     }
 
-    fn insert_at(&self, at: u32, new_text: String) -> TextEdit {
-        self.edit_src_span(SrcSpan { start: at, end: at }, new_text)
+    fn insert(&self, at: u32, new_text: String) -> TextEdit {
+        self.replace(SrcSpan { start: at, end: at }, new_text)
     }
 
-    fn delete_src_span(&self, location: SrcSpan) -> TextEdit {
-        self.edit_src_span(location, "".to_string())
+    fn delete(&self, location: SrcSpan) -> TextEdit {
+        self.replace(location, "".to_string())
     }
 }
 
@@ -141,7 +145,7 @@ impl<'a> LineNumbersHelper<'a> {
 /// }
 /// ```
 pub struct RedundantTupleInCaseSubject<'a> {
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     code: &'a EcoString,
     extra: &'a ModuleExtra,
     params: &'a CodeActionParams,
@@ -210,7 +214,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         params: &'a CodeActionParams,
     ) -> Self {
         Self {
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            line_numbers: TextEdits::new(line_numbers),
             code: &module.code,
             extra: &module.extra,
             params,
@@ -253,7 +257,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         // Delete `#`
         edits.push(
             self.line_numbers
-                .delete_src_span(SrcSpan::new(location.start, location.start + 1)),
+                .delete(SrcSpan::new(location.start, location.start + 1)),
         );
 
         // Delete `(`
@@ -263,7 +267,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
             .find(|(i, _)| !self.extra.is_within_comment(location.start + *i as u32))
             .expect("`(` not found in tuple");
 
-        edits.push(self.line_numbers.delete_src_span(SrcSpan::new(
+        edits.push(self.line_numbers.delete(SrcSpan::new(
             location.start + lparen_offset as u32,
             location.start + lparen_offset as u32 + 1,
         )));
@@ -285,7 +289,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
                         .is_within_comment(last_elem_location.end + *i as u32)
                 })
             {
-                edits.push(self.line_numbers.delete_src_span(SrcSpan::new(
+                edits.push(self.line_numbers.delete(SrcSpan::new(
                     last_elem_location.end + trailing_comma_offset as u32,
                     last_elem_location.end + trailing_comma_offset as u32 + 1,
                 )));
@@ -295,7 +299,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
         // Delete )
         edits.push(
             self.line_numbers
-                .delete_src_span(SrcSpan::new(location.end - 1, location.end)),
+                .delete(SrcSpan::new(location.end - 1, location.end)),
         );
 
         edits
@@ -304,7 +308,7 @@ impl<'a> RedundantTupleInCaseSubject<'a> {
     fn discard_tuple_items(&self, discard_location: SrcSpan, tuple_items: usize) -> TextEdit {
         // Replace the old discard with multiple discard, one for each of the
         // tuple items.
-        self.line_numbers.edit_src_span(
+        self.line_numbers.replace(
             discard_location,
             itertools::intersperse(iter::repeat("_").take(tuple_items), ", ").collect(),
         )
@@ -456,7 +460,7 @@ impl<'a> LetAssertToCase<'a> {
 pub struct LabelShorthandSyntax<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     edits: Vec<TextEdit>,
 }
 
@@ -469,7 +473,7 @@ impl<'a> LabelShorthandSyntax<'a> {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            line_numbers: TextEdits::new(line_numbers),
             edits: vec![],
         }
     }
@@ -499,9 +503,9 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
                 label: Some(label),
                 value: TypedExpr::Var { name, location, .. },
                 ..
-            } if is_selected && !arg.uses_label_shorthand() && label == name => self
-                .edits
-                .push(self.line_numbers.delete_src_span(*location)),
+            } if is_selected && !arg.uses_label_shorthand() && label == name => {
+                self.edits.push(self.line_numbers.delete(*location))
+            }
             _ => (),
         }
 
@@ -517,9 +521,9 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
                 label: Some(label),
                 value: TypedPattern::Variable { name, location, .. },
                 ..
-            } if is_selected && !arg.uses_label_shorthand() && label == name => self
-                .edits
-                .push(self.line_numbers.delete_src_span(*location)),
+            } if is_selected && !arg.uses_label_shorthand() && label == name => {
+                self.edits.push(self.line_numbers.delete(*location))
+            }
             _ => (),
         }
 
@@ -533,7 +537,7 @@ impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
 pub struct FillInMissingLabelledArgs<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     selected_call: Option<(SrcSpan, &'a FieldMap, &'a [TypedCallArg])>,
 }
 
@@ -546,7 +550,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            line_numbers: TextEdits::new(line_numbers),
             selected_call: None,
         }
     }
@@ -582,7 +586,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
                 return vec![];
             }
 
-            let add_labels_edit = self.line_numbers.insert_at(
+            let add_labels_edit = self.line_numbers.insert(
                 call_location.end - 1,
                 missing_labels
                     .iter()
@@ -776,7 +780,7 @@ pub fn code_action_add_missing_patterns(
         return;
     }
 
-    let line_numbers = LineNumbersHelper::new(line_numbers);
+    let line_numbers = TextEdits::new(line_numbers);
 
     for (location, missing) in missing_patterns {
         let range = line_numbers.src_span_to_lsp_range(location);
@@ -828,7 +832,7 @@ pub fn code_action_add_missing_patterns(
 
         for pattern in missing {
             let new_text = format!("\n{indent}  {pattern} -> todo");
-            edits.push(line_numbers.insert_at(insert_at, new_text))
+            edits.push(line_numbers.insert(insert_at, new_text))
         }
 
         // Add a newline + indent after the last pattern if there are no clauses
@@ -875,8 +879,8 @@ pub fn code_action_add_missing_patterns(
             }
 
             // Remove any blank spaces/lines between the start brace and end brace
-            edits.push(line_numbers.delete_src_span(SrcSpan::new(start_brace_location, insert_at)));
-            edits.push(line_numbers.insert_at(insert_at, format!("\n{indent}")))
+            edits.push(line_numbers.delete(SrcSpan::new(start_brace_location, insert_at)));
+            edits.push(line_numbers.insert(insert_at, format!("\n{indent}")))
         }
 
         CodeActionBuilder::new("Add missing patterns")
@@ -893,7 +897,7 @@ pub struct AddAnnotations<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: Vec<TextEdit>,
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     printer: Printer<'a>,
 }
 
@@ -924,7 +928,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             return;
         }
 
-        self.edits.push(self.line_numbers.insert_at(
+        self.edits.push(self.line_numbers.insert(
             pattern_location.end,
             format!(": {}", self.printer.print_type(&assignment.type_())),
         ));
@@ -943,7 +947,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             return;
         }
 
-        self.edits.push(self.line_numbers.insert_at(
+        self.edits.push(self.line_numbers.insert(
             constant.name_location.end,
             format!(": {}", self.printer.print_type(&constant.type_)),
         ));
@@ -966,7 +970,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
                 continue;
             }
 
-            self.edits.push(self.line_numbers.insert_at(
+            self.edits.push(self.line_numbers.insert(
                 argument.location.end,
                 format!(": {}", self.printer.print_type(&argument.type_)),
             ));
@@ -974,7 +978,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
 
         // Annotate the return type if it isn't already annotated
         if fun.return_annotation.is_none() {
-            self.edits.push(self.line_numbers.insert_at(
+            self.edits.push(self.line_numbers.insert(
                 fun.location.end,
                 format!(" -> {}", self.printer.print_type(&fun.return_type)),
             ));
@@ -1014,7 +1018,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
                 continue;
             }
 
-            self.edits.push(self.line_numbers.insert_at(
+            self.edits.push(self.line_numbers.insert(
                 argument.location.end,
                 format!(": {}", self.printer.print_type(&argument.type_)),
             ));
@@ -1027,7 +1031,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
             let pretty_type = self.printer.print_type(return_type);
             self.edits.push(
                 self.line_numbers
-                    .insert_at(location.end, format!(" -> {pretty_type}")),
+                    .insert(location.end, format!(" -> {pretty_type}")),
             );
         }
     }
@@ -1043,7 +1047,7 @@ impl<'a> AddAnnotations<'a> {
             module,
             params,
             edits: Vec::new(),
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            line_numbers: TextEdits::new(line_numbers),
             // We need to use the same printer for all the edits because otherwise
             // we could get duplicate type variable names.
             printer: Printer::new(&module.ast.names),
@@ -1289,7 +1293,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
 pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     qualified_constructor: QualifiedConstructor<'a>,
     edits: Vec<TextEdit>,
 }
@@ -1310,7 +1314,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper { line_numbers },
+            line_numbers: TextEdits::new(line_numbers),
             edits: vec![],
             qualified_constructor,
         }
@@ -1356,7 +1360,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
                 location.start + self.qualified_constructor.used_name.len() as u32 + 1, // plus .
             )
         };
-        self.edits.push(self.line_numbers.delete_src_span(span));
+        self.edits.push(self.line_numbers.delete(span));
     }
 
     fn edit_import(&mut self) {
@@ -1382,8 +1386,7 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         }
         let (insert_pos, new_text) = self.determine_insert_position_and_text();
         let span = SrcSpan::new(insert_pos, insert_pos);
-        self.edits
-            .push(self.line_numbers.edit_src_span(span, new_text));
+        self.edits.push(self.line_numbers.replace(span, new_text));
     }
 
     fn find_last_char_before_closing_brace(&self) -> Option<(usize, char)> {
@@ -1822,7 +1825,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
 struct UnqualifiedToQualifiedImportSecondPass<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     unqualified_constructor: UnqualifiedConstructor<'a>,
     edits: Vec<TextEdit>,
 }
@@ -1837,7 +1840,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            line_numbers: TextEdits::new(line_numbers),
             unqualified_constructor,
             edits: vec![],
         }
@@ -1849,7 +1852,7 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             location.start + self.unqualified_constructor.constructor.used_name().len() as u32,
         );
 
-        self.edits.push(self.line_numbers.edit_src_span(
+        self.edits.push(self.line_numbers.replace(
             src_span,
             format!(
                 "{}.{}",
@@ -1905,11 +1908,10 @@ impl<'a> UnqualifiedToQualifiedImportSecondPass<'a> {
             last_char_pos += 1;
         }
 
-        self.edits
-            .push(self.line_numbers.delete_src_span(SrcSpan::new(
-                constructor_import_span.start,
-                last_char_pos as u32,
-            )));
+        self.edits.push(self.line_numbers.delete(SrcSpan::new(
+            constructor_import_span.start,
+            last_char_pos as u32,
+        )));
     }
 }
 
@@ -2042,7 +2044,7 @@ pub fn code_action_convert_unqualified_constructor_to_qualified(
 pub struct DesugarUse<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper<'a>,
+    line_numbers: TextEdits<'a>,
     selected_use: Option<&'a TypedUse>,
 }
 
@@ -2055,7 +2057,7 @@ impl<'a> DesugarUse<'a> {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            line_numbers: TextEdits::new(line_numbers),
             selected_use: None,
         }
     }
@@ -2097,7 +2099,7 @@ impl<'a> DesugarUse<'a> {
 
         // We first delete everything on the left hand side of use and the use
         // arrow.
-        edits.push(self.line_numbers.delete_src_span(SrcSpan {
+        edits.push(self.line_numbers.delete(SrcSpan {
             start: use_.location.start,
             end: use_.right_hand_side_location.start,
         }));
@@ -2119,7 +2121,7 @@ impl<'a> DesugarUse<'a> {
             //                   ^ To add the fn() we need to first remove this
             //
             // So here we write over the last closed parentheses to remove it.
-            self.line_numbers.edit_src_span(
+            self.line_numbers.replace(
                 SrcSpan {
                     start: use_line_end - 1,
                     end: use_line_end,
@@ -2141,7 +2143,7 @@ impl<'a> DesugarUse<'a> {
             //                  ^ No parentheses
             //
             self.line_numbers
-                .insert_at(use_line_end, format!("(fn({}) {{", assignments))
+                .insert(use_line_end, format!("(fn({}) {{", assignments))
         });
 
         // Then we have to increase indentation for all the lines of the use
@@ -2164,7 +2166,7 @@ impl<'a> DesugarUse<'a> {
         }
 
         let final_line_indentation = " ".repeat(use_body_range.start.character as usize);
-        edits.push(self.line_numbers.insert_at(
+        edits.push(self.line_numbers.insert(
             use_.call.location().end,
             format!("\n{final_line_indentation}}})"),
         ));

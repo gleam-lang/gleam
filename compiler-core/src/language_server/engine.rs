@@ -298,42 +298,32 @@ where
                 return Ok(None);
             };
 
-            let line_numbers = LineNumbers::new(&module.code);
+            let lines = LineNumbers::new(&module.code);
 
-            code_action_unused_values(module, &line_numbers, &params, &mut actions);
-            code_action_unused_imports(module, &line_numbers, &params, &mut actions);
+            code_action_unused_values(module, &lines, &params, &mut actions);
+            code_action_unused_imports(module, &lines, &params, &mut actions);
             code_action_convert_qualified_constructor_to_unqualified(
                 module,
-                &line_numbers,
+                &lines,
                 &params,
                 &mut actions,
             );
             code_action_convert_unqualified_constructor_to_qualified(
                 module,
-                &line_numbers,
+                &lines,
                 &params,
                 &mut actions,
             );
-            code_action_fix_names(&line_numbers, &params, &this.error, &mut actions);
-            code_action_import_module(module, &line_numbers, &params, &this.error, &mut actions);
-            code_action_add_missing_patterns(
-                module,
-                &line_numbers,
-                &params,
-                &this.error,
-                &mut actions,
-            );
-            actions.extend(LetAssertToCase::new(module, &line_numbers, &params).code_actions());
-            actions.extend(
-                RedundantTupleInCaseSubject::new(module, &line_numbers, &params).code_actions(),
-            );
+            code_action_fix_names(&lines, &params, &this.error, &mut actions);
+            code_action_import_module(module, &lines, &params, &this.error, &mut actions);
+            code_action_add_missing_patterns(module, &lines, &params, &this.error, &mut actions);
+            actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
-                .extend(LabelShorthandSyntax::new(module, &line_numbers, &params).code_actions());
-            actions.extend(
-                FillInMissingLabelledArgs::new(module, &line_numbers, &params).code_actions(),
-            );
-            actions.extend(DesugarUse::new(module, &line_numbers, &params).code_actions());
-            AddAnnotations::new(module, &line_numbers, &params).code_action(&mut actions);
+                .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());
+            actions.extend(LabelShorthandSyntax::new(module, &lines, &params).code_actions());
+            actions.extend(FillInMissingLabelledArgs::new(module, &lines, &params).code_actions());
+            actions.extend(DesugarUse::new(module, &lines, &params).code_actions());
+            AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
 
             Ok(if actions.is_empty() {
                 None
