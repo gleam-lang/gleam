@@ -109,11 +109,11 @@ impl<'a> TextEdits<'a> {
         self.replace(location, "".to_string())
     }
 
-    fn delete_range(&self, range: Range) -> TextEdit {
-        TextEdit {
+    fn delete_range(&mut self, range: Range) {
+        self.edits.push(TextEdit {
             range,
             new_text: "".into(),
-        }
+        })
     }
 }
 
@@ -2198,7 +2198,7 @@ impl<'ast> ast::visit::Visit<'ast> for DesugarUse<'ast> {
 pub struct TurnIntoUse<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
-    line_numbers: LineNumbersHelper<'a>,
+    edits: TextEdits<'a>,
     selected_call: Option<CallLocations>,
 }
 
@@ -2221,7 +2221,7 @@ impl<'a> TurnIntoUse<'a> {
         Self {
             module,
             params,
-            line_numbers: LineNumbersHelper::new(line_numbers),
+            edits: TextEdits::new(line_numbers),
             selected_call: None,
         }
     }
@@ -2240,15 +2240,9 @@ impl<'a> TurnIntoUse<'a> {
             return vec![];
         };
 
-        let mut edits = vec![];
-
         // This is the nesting level of the `use` keyword we've inserted, we
         // want to move the entire body of the anonymous function to this level.
-        let use_nesting_level = self
-            .line_numbers
-            .src_span_to_lsp_range(call_span)
-            .start
-            .character;
+        let use_nesting_level = self.edits.src_span_to_lsp_range(call_span).start.character;
         let indentation = " ".repeat(use_nesting_level as usize);
 
         // First we move the callback arguments to the left hand side of the
@@ -2262,12 +2256,9 @@ impl<'a> TurnIntoUse<'a> {
             "use <- ".into()
         };
 
-        edits.push(
-            self.line_numbers
-                .insert_at(call_span.start, left_hand_side_text),
-        );
+        self.edits.insert(call_span.start, left_hand_side_text);
 
-        let edit = match arg_before_callback_span {
+        match arg_before_callback_span {
             // If the function call has no other arguments besides the callback then
             // we just have to remove the `fn(...) {` part.
             //
@@ -2276,7 +2267,7 @@ impl<'a> TurnIntoUse<'a> {
             //                      To the start of the first thing in the anonymous
             //                      function's body.
             //
-            None => self.line_numbers.edit_src_span(
+            None => self.edits.replace(
                 SrcSpan::new(called_function_span.end, callback_body_span.start),
                 format!("\n{indentation}"),
             ),
@@ -2289,34 +2280,31 @@ impl<'a> TurnIntoUse<'a> {
             //                            argument to the start of the first thing
             //                            in the anonymous function's body.
             //
-            Some(arg_before_callback) => self.line_numbers.edit_src_span(
+            Some(arg_before_callback) => self.edits.replace(
                 SrcSpan::new(arg_before_callback.end, callback_body_span.start),
                 format!(")\n{indentation}"),
             ),
         };
-        edits.push(edit);
 
         // Then we have to remove two spaces of indentation from each line of
         // the callback function's body.
-        let body_range = self.line_numbers.src_span_to_lsp_range(callback_body_span);
+        let body_range = self.edits.src_span_to_lsp_range(callback_body_span);
         for line in body_range.start.line + 1..=body_range.end.line {
-            edits.push(self.line_numbers.delete_range(Range::new(
+            self.edits.delete_range(Range::new(
                 Position { line, character: 0 },
                 Position { line, character: 2 },
-            )))
+            ))
         }
 
         // Then we have to remove the anonymous fn closing `}` and the call's
         // closing `)`.
-        edits.push(
-            self.line_numbers
-                .delete_src_span(SrcSpan::new(callback_body_span.end, call_span.end)),
-        );
+        self.edits
+            .delete(SrcSpan::new(callback_body_span.end, call_span.end));
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Convert to `use`")
             .kind(CodeActionKind::REFACTOR_REWRITE)
-            .changes(self.params.text_document.uri.clone(), edits)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
         action
@@ -2327,9 +2315,7 @@ impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // The cursor has to be inside the last statement of the function to
         // offer the code action.
-        let last_statement_range = self
-            .line_numbers
-            .src_span_to_lsp_range(fun.body.last().location());
+        let last_statement_range = self.edits.src_span_to_lsp_range(fun.body.last().location());
         if within(self.params.range, last_statement_range) {
             if let Some(call_data) = turn_statement_into_use(fun.body.last()) {
                 self.selected_call = Some(call_data);
@@ -2353,9 +2339,7 @@ impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
         let Some(last_statement) = body.last() else {
             return;
         };
-        let last_statement_range = self
-            .line_numbers
-            .src_span_to_lsp_range(last_statement.location());
+        let last_statement_range = self.edits.src_span_to_lsp_range(last_statement.location());
         if within(self.params.range, last_statement_range) {
             if let Some(call_data) = turn_statement_into_use(last_statement) {
                 self.selected_call = Some(call_data);
@@ -2376,9 +2360,7 @@ impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
 
         // The cursor has to be inside the last statement of the block to offer
         // the code action.
-        let statement_range = self
-            .line_numbers
-            .src_span_to_lsp_range(last_statement.location());
+        let statement_range = self.edits.src_span_to_lsp_range(last_statement.location());
         if within(self.params.range, statement_range) {
             // Only the last statement of a block can be turned into a use!
             if let Some(selected_call) = turn_statement_into_use(last_statement) {
