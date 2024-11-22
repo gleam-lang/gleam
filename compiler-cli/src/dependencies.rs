@@ -422,6 +422,12 @@ pub fn download<Telem: Telemetry>(
         .packages
         .iter()
         .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .filter(|(name, _)| {
+            manifest
+                .requirements
+                .iter()
+                .any(|(required_pkg, _)| name == required_pkg)
+        })
         .collect();
     let major_versions_available = dependency::resolve_major_versions(
         PackageFetcher::boxed(runtime.handle().clone()),
