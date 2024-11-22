@@ -85,6 +85,9 @@
   is missing an exponent.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a crash with ENOTEMPTY (os error 39) when building on NTFS partitions
+  ([Ivan Ermakov](https://github.com/ivanjermakov))
+
 - Fixed a bug where the compiler would crash when pattern matching on multiple
   subjects and one of them being a constant record.
   ([Surya Rose](https://github.com/GearsDatapacks))

@@ -10,32 +10,41 @@ use strum::IntoEnumIterator;
 #[derive(Debug)]
 pub(crate) struct BuildLock {
     directory: Utf8PathBuf,
+    filename: String,
 }
 
 impl BuildLock {
     /// Lock the build directory for the specified mode and target.
     pub fn new_target(paths: &ProjectPaths, mode: Mode, target: Target) -> Result<Self> {
-        let build = paths.build_directory_for_target(mode, target);
-        crate::fs::mkdir(&build)?;
-        Ok(Self { directory: build })
+        let directory = paths.build_directory();
+        crate::fs::mkdir(&directory)?;
+        Ok(Self {
+            directory,
+            filename: format!("gleam-{mode}-{target}.lock"),
+        })
     }
 
     /// Lock the packages directory.
     pub fn new_packages(paths: &ProjectPaths) -> Result<Self> {
-        let packages = paths.build_packages_directory();
-        crate::fs::mkdir(&packages)?;
+        let directory = paths.build_packages_directory();
+        crate::fs::mkdir(&directory)?;
         Ok(Self {
-            directory: packages,
+            directory,
+            filename: "gleam.lock".to_string(),
         })
     }
 
-    /// Lock the specified directory
+    /// Construct the lock file path
+    pub fn lock_path(&self) -> Utf8PathBuf {
+        self.directory.join(&self.filename)
+    }
+
+    /// Lock the directory specified by the lock
     pub fn lock<Telem: Telemetry + ?Sized>(&self, telemetry: &Telem) -> Result<Guard> {
-        tracing::debug!(path=?self.directory, "locking_build_directory");
+        let lock_path = self.lock_path();
+        tracing::debug!(path=?lock_path, "locking_directory");
 
         crate::fs::mkdir(&self.directory)?;
-
-        let lock_path = self.directory.join("gleam.lock");
 
         let mut file = fslock::LockFile::open(lock_path.as_str()).map_err(|e| Error::FileIo {
             kind: FileKind::File,
@@ -44,9 +53,9 @@ impl BuildLock {
             err: Some(e.to_string()),
         })?;
 
-        if !file.try_lock_with_pid().expect("Trying build locking") {
+        if !file.try_lock_with_pid().expect("Trying directory locking") {
             telemetry.waiting_for_build_directory_lock();
-            file.lock_with_pid().expect("Build locking")
+            file.lock_with_pid().expect("Directory locking")
         }
 
         Ok(Guard(file))
