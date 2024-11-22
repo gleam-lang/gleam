@@ -66,7 +66,7 @@ const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
-const DESUGAR_USE_EXPRESSION: &str = "Desugar use expression";
+const DESUGAR_USE_EXPRESSION: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 
 macro_rules! assert_code_action {

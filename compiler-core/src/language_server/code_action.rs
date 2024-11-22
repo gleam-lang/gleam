@@ -2151,7 +2151,7 @@ impl<'a> DesugarUse<'a> {
         );
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Desugar use expression")
+        CodeActionBuilder::new("Convert from `use`")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
