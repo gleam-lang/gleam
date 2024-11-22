@@ -542,7 +542,7 @@ pub fn code_action_inexhaustive_let_to_case(
             .get(pattern_location.start as usize..pattern_location.end as usize)
             .expect("Location must be valid");
 
-        let range = src_span_to_lsp_range(*location, &line_numbers);
+        let range = text_edits.src_span_to_lsp_range(*location);
 
         // Figure out which variables are assigned in the pattern
         let variables = PatternVariableFinder::find_variables_in_pattern(pattern);
