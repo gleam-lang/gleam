@@ -64,24 +64,27 @@ where
 }
 
 /**
+* Used to compare 2 versions of a package.
+*/
+pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
+
+/**
 * This is a preliminary implementation to get to first implementation.
 * It is unoptimal as it makes a request for each hex package.
 * Alternative is to create a package config with all direct dependencies
 * with "*" but I'm not sure if we will get correct resolution that way as
 * dependencies might cause the package to not return the latest major version.
 */
-fn resolve_major_versions(
+pub fn resolve_major_versions(
     package_fetcher: Box<dyn PackageFetcher>,
     versions: PackageVersions,
-) -> Result<PackageVersions> {
+) -> PackageVersionDiffs {
     versions
         .iter()
-        .map(|(package, version)| {
+        .filter_map(|(package, version)| {
             // TODO: find out best error type for this operation
             let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
-                return Err(Error::Hex(
-                    "Unable to retrieve package information".to_string(),
-                ));
+                return None;
             };
 
             let Some(latest) = &hexpackage
@@ -89,14 +92,14 @@ fn resolve_major_versions(
                 .last()
                 .map(|release| release.version.clone())
             else {
-                return Err(Error::Hex("No releases available for package".to_string()));
+                return None;
             };
 
-            if latest.major > version.major {
-                Ok((package.to_string(), latest.clone()))
-            } else {
-                Ok((package.to_string(), version.clone()))
+            if latest.major <= version.major {
+                return None;
             }
+
+            Some((package.to_string(), (version.clone(), latest.clone())))
         })
         .collect()
 }
@@ -966,18 +969,17 @@ mod tests {
             ]
             .into_iter()
             .collect(),
-        )
-        .unwrap();
+        );
 
         assert_eq!(
             result,
-            vec![
-                ("core_package".into(), Version::try_from("1.1.0").unwrap()),
+            vec![(
+                "core_package".into(),
                 (
-                    "package_depends_on_core".into(),
-                    Version::try_from("0.1.0").unwrap()
+                    Version::try_from("0.1.0").unwrap(),
+                    Version::try_from("1.1.0").unwrap()
                 )
-            ]
+            ),]
             .into_iter()
             .collect()
         );
