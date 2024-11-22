@@ -586,10 +586,10 @@ struct CaseClause<'a> {
     expression: &'a str,
 }
 
-fn print_case_expression<'a>(
+fn print_case_expression(
     indent_size: usize,
     subject: &str,
-    clauses: Vec<CaseClause<'a>>,
+    clauses: Vec<CaseClause<'_>>,
     buffer: &mut String,
 ) {
     let indent = " ".repeat(indent_size);
