@@ -1365,7 +1365,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
-        match (kind, exhaustiveness_check) {
+        match (&kind, exhaustiveness_check) {
             (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
             (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
                 self.problems.error(e);
