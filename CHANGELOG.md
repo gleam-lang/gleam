@@ -121,6 +121,10 @@
 - Variant inference on prelude types now works correctly if the variant is constant.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where patterns in `use` expressions would not be checked to ensure that
+  they were exhaustive.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
