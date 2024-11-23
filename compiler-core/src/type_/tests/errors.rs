@@ -2639,3 +2639,14 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3879
+fn inexhaustive_use_reports_error() {
+    assert_error!(
+        r#"
+use [1, 2, 3] <- todo
+todo
+"#
+    );
+}
