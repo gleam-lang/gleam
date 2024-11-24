@@ -1556,13 +1556,20 @@ where
 
             Some((start, Token::Name { name }, end)) => {
                 self.advance();
-                let mut unit = ClauseGuard::Var {
-                    location: SrcSpan { start, end },
-                    type_: (),
-                    name,
-                };
 
                 self.parse_function_call_in_clause_guard(start)?;
+
+                let mut unit = if let Some(record) =
+                    self.parse_record_in_clause_guard(&name, SrcSpan { start, end })?
+                {
+                    record
+                } else {
+                    ClauseGuard::Var {
+                        location: SrcSpan { start, end },
+                        type_: (),
+                        name,
+                    }
+                };
 
                 loop {
                     let dot_s = match self.maybe_one(&Token::Dot) {
@@ -1640,6 +1647,37 @@ where
                     Ok(None)
                 }
             }
+        }
+    }
+
+    fn parse_record_in_clause_guard(
+        &mut self,
+        module: &EcoString,
+        module_location: SrcSpan,
+    ) -> Result<Option<UntypedClauseGuard>, ParseError> {
+        let (name, end) = match (self.tok0.take(), self.peek_tok1()) {
+            (Some((_, Token::Dot, _)), Some(Token::UpName { .. })) => {
+                self.advance(); // dot
+                let Some((_, Token::UpName { name }, end)) = self.next_tok() else {
+                    return Ok(None);
+                };
+                (name, end)
+            }
+            (tok0, _) => {
+                self.tok0 = tok0;
+                return Ok(None);
+            }
+        };
+
+        if let Some(record) = self.parse_const_record_finish(
+            module_location.start,
+            Some((module.clone(), module_location)),
+            name,
+            end,
+        )? {
+            Ok(Some(ClauseGuard::Constant(record)))
+        } else {
+            Ok(None)
         }
     }
 

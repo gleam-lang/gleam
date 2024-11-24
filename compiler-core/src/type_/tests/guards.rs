@@ -1,4 +1,4 @@
-use crate::{assert_module_error, assert_module_infer};
+use crate::{assert_infer_with_module, assert_module_error, assert_module_infer};
 
 #[test]
 fn nested_record_access() {
@@ -43,5 +43,44 @@ pub fn a(a: String) {
   }
 }
 "#
+    );
+}
+
+#[test]
+fn qualified_record() {
+    assert_infer_with_module!(
+        ("wibble", "pub type Wibble { Wibble Wobble }"),
+        "
+import wibble
+
+pub fn main(wibble: wibble.Wibble) {
+  case wibble {
+    w if w == wibble.Wobble -> True
+    _ -> False
+  }
+}
+",
+        vec![("main", "fn(Wibble) -> Bool")]
+    );
+}
+
+#[test]
+fn qualified_record_with_arguments() {
+    assert_infer_with_module!(
+        (
+            "wibble",
+            "pub type Wibble { Wibble(Int) Wobble(Int, Float) }"
+        ),
+        "
+import wibble
+
+pub fn main(wibble: wibble.Wibble) {
+  case wibble {
+    w if w == wibble.Wobble(1, 3.8) -> True
+    _ -> False
+  }
+}
+",
+        vec![("main", "fn(Wibble) -> Bool")]
     );
 }

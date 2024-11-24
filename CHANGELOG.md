@@ -129,6 +129,9 @@
   file of same name without warning. It now produces an error.
   ([PgBiel](https://github.com/PgBiel))
 
+- Fixed a bug where qualified records were not allowed in clause guards.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
