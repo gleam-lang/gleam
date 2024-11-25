@@ -16,19 +16,18 @@ enum Index<'a> {
     Int(usize),
     String(&'a str),
     ByteAt(usize),
-    IntFromSlice {
+    BitArraySliceToInt {
         start: usize,
         end: usize,
         endianness: Endianness,
         is_signed: bool,
     },
-    FloatFromSlice {
+    BitArraySliceToFloat {
         start: usize,
         end: usize,
         endianness: Endianness,
     },
-    BinaryFromSlice(usize, usize),
-    SliceAfter(usize),
+    BitArraySlice(usize, Option<usize>),
     StringPrefixSlice(usize),
 }
 
@@ -40,26 +39,37 @@ pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
     assignments: Vec<Assignment<'a>>,
 }
 
+#[derive(Debug)]
+pub enum BitArrayTailSpreadType {
+    /// The tail of the bit array pattern is for all remaining bits
+    Bits,
+
+    /// The tail of the bit array pattern is for all remaining whole bytes. This
+    /// requires an additional runtime check that the number of remaining bits
+    /// is a multiple of 8, as otherwise the pattern doesn't match.
+    Bytes,
+}
+
 struct Offset {
-    bytes: usize,
-    open_ended: bool,
+    bits: usize,
+    tail_spread_type: Option<BitArrayTailSpreadType>,
 }
 
 impl Offset {
     pub fn new() -> Self {
         Self {
-            bytes: 0,
-            open_ended: false,
+            bits: 0,
+            tail_spread_type: None,
         }
     }
     // This should never be called on an open ended offset
     // However previous checks ensure bit_array segments without a size are only
     // allowed at the end of a pattern
     pub fn increment(&mut self, step: usize) {
-        self.bytes += step
+        self.bits += step
     }
-    pub fn set_open_ended(&mut self) {
-        self.open_ended = true
+    pub fn set_open_ended(&mut self, tail_spread_type: BitArrayTailSpreadType) {
+        self.tail_spread_type = Some(tail_spread_type);
     }
 }
 
@@ -106,14 +116,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::ByteAt(i));
     }
 
-    fn push_int_from_slice(
+    fn push_bit_array_slice_to_int(
         &mut self,
         start: usize,
         end: usize,
         endianness: Endianness,
         is_signed: bool,
     ) {
-        self.path.push(Index::IntFromSlice {
+        self.path.push(Index::BitArraySliceToInt {
             start,
             end,
             endianness,
@@ -121,20 +131,16 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         });
     }
 
-    fn push_float_from_slice(&mut self, start: usize, end: usize, endianness: Endianness) {
-        self.path.push(Index::FloatFromSlice {
+    fn push_bit_array_slice_to_float(&mut self, start: usize, end: usize, endianness: Endianness) {
+        self.path.push(Index::BitArraySliceToFloat {
             start,
             end,
             endianness,
         });
     }
 
-    fn push_binary_from_slice(&mut self, start: usize, end: usize) {
-        self.path.push(Index::BinaryFromSlice(start, end));
-    }
-
-    fn push_rest_from(&mut self, i: usize) {
-        self.path.push(Index::SliceAfter(i));
+    fn push_bit_array_slice(&mut self, start: usize, end: Option<usize>) {
+        self.path.push(Index::BitArraySlice(start, end));
     }
 
     fn push_string_times(&mut self, s: &'a str, times: usize) {
@@ -159,13 +165,13 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             // TODO: escape string if needed
             Index::String(s) => docvec![".", maybe_escape_property_doc(s)],
             Index::ByteAt(i) => docvec![".byteAt(", i, ")"],
-            Index::IntFromSlice {
+            Index::BitArraySliceToInt {
                 start,
                 end,
                 endianness,
                 is_signed,
             } => docvec![
-                ".intFromSlice(",
+                ".sliceToInt(",
                 start,
                 ", ",
                 end,
@@ -175,12 +181,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 bool(*is_signed),
                 ")"
             ],
-            Index::FloatFromSlice {
+            Index::BitArraySliceToFloat {
                 start,
                 end,
                 endianness,
             } => docvec![
-                ".floatFromSlice(",
+                ".sliceToFloat(",
                 start,
                 ", ",
                 end,
@@ -188,11 +194,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 bool(endianness.is_big()),
                 ")"
             ],
-            Index::BinaryFromSlice(start, end) => {
-                docvec![".binaryFromSlice(", start, ", ", end, ")"]
-            }
-            Index::SliceAfter(i) => docvec![".sliceAfter(", i, ")"],
-            Index::StringPrefixSlice(i) => docvec![".slice(", i, ")"],
+            Index::BitArraySlice(start, end) => match end {
+                Some(end) => docvec![".slice(", start, ", ", end, ")"],
+                None => docvec![".slice(", start, ")"],
+            },
+            Index::StringPrefixSlice(i) => docvec!(".slice(", i, ")"),
         }))
     }
 
@@ -601,7 +607,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                         match segment.value.as_ref() {
                             Pattern::Int { int_value, .. }
-                                if details.size <= SAFE_INT_SEGMENT_MAX_SIZE =>
+                                if details.size <= SAFE_INT_SEGMENT_MAX_SIZE
+                                    && details.size % 8 == 0
+                                    && offset.bits % 8 == 0 =>
                             {
                                 let bytes = bit_array_segment_int_value_to_bytes(
                                     (*int_value).clone(),
@@ -610,23 +618,26 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 )?;
 
                                 for byte in bytes {
-                                    self.push_byte_at(offset.bytes);
+                                    self.push_byte_at(offset.bits / 8);
                                     self.push_equality_check(subject.clone(), docvec![byte]);
                                     self.pop();
-                                    offset.increment(1);
+                                    offset.increment(8);
                                 }
                             }
 
                             _ => {
-                                let start = offset.bytes;
-                                let increment = details.size / 8;
-                                let end = offset.bytes + increment;
+                                let start = offset.bits;
+                                let increment = details.size;
+                                let end = offset.bits + increment;
 
                                 if segment.type_ == crate::type_::int() {
-                                    if details.size == 8 && !details.is_signed {
-                                        self.push_byte_at(offset.bytes);
+                                    if details.size == 8
+                                        && !details.is_signed
+                                        && offset.bits % 8 == 0
+                                    {
+                                        self.push_byte_at(offset.bits / 8);
                                     } else {
-                                        self.push_int_from_slice(
+                                        self.push_bit_array_slice_to_int(
                                             start,
                                             end,
                                             details.endianness,
@@ -634,7 +645,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                         );
                                     }
                                 } else {
-                                    self.push_float_from_slice(start, end, details.endianness);
+                                    self.push_bit_array_slice_to_float(
+                                        start,
+                                        end,
+                                        details.endianness,
+                                    );
                                 }
 
                                 self.traverse_pattern(subject, &segment.value)?;
@@ -644,25 +659,55 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         }
                     } else {
                         match segment.options.as_slice() {
-                            [Opt::Bytes { .. }] => {
-                                self.push_rest_from(offset.bytes);
+                            [Opt::Bits { .. }] => {
+                                self.push_bit_array_slice(offset.bits, None);
                                 self.traverse_pattern(subject, &segment.value)?;
                                 self.pop();
-                                offset.set_open_ended();
+                                offset.set_open_ended(BitArrayTailSpreadType::Bits);
+                                Ok(())
+                            }
+
+                            [Opt::Bits { .. }, Opt::Size { value: size, .. }]
+                            | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
+                                Pattern::Int { value, .. } => {
+                                    let start = offset.bits;
+                                    let increment = value.parse::<usize>().expect(
+                                        "part of an Int node should always parse as integer",
+                                    );
+                                    offset.increment(increment);
+                                    let end = offset.bits;
+
+                                    self.push_bit_array_slice(start, Some(end));
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
+                                }
+
+                                _ => Err(Error::Unsupported {
+                                    feature: "This bit array size option in patterns".into(),
+                                    location: segment.location,
+                                }),
+                            },
+
+                            [Opt::Bytes { .. }] => {
+                                self.push_bit_array_slice(offset.bits, None);
+                                self.traverse_pattern(subject, &segment.value)?;
+                                self.pop();
+                                offset.set_open_ended(BitArrayTailSpreadType::Bytes);
                                 Ok(())
                             }
 
                             [Opt::Bytes { .. }, Opt::Size { value: size, .. }]
                             | [Opt::Size { value: size, .. }, Opt::Bytes { .. }] => match &**size {
                                 Pattern::Int { value, .. } => {
-                                    let start = offset.bytes;
+                                    let start = offset.bits;
                                     let increment = value.parse::<usize>().expect(
                                         "part of an Int node should always parse as integer",
-                                    );
+                                    ) * 8;
                                     offset.increment(increment);
-                                    let end = offset.bytes;
+                                    let end = offset.bits;
 
-                                    self.push_binary_from_slice(start, end);
+                                    self.push_bit_array_slice(start, Some(end));
                                     self.traverse_pattern(subject, &segment.value)?;
                                     self.pop();
                                     Ok(())
@@ -677,13 +722,19 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             [Opt::Utf8 { .. }] => match segment.value.as_ref() {
                                 Pattern::String { value, .. } => {
                                     for byte in value.as_bytes() {
-                                        self.push_byte_at(offset.bytes);
-                                        self.push_equality_check(
-                                            subject.clone(),
-                                            EcoString::from(format!("0x{byte:X}")).to_doc(),
-                                        );
+                                        if offset.bits % 8 == 0 {
+                                            self.push_byte_at(offset.bits / 8);
+                                        } else {
+                                            self.push_bit_array_slice_to_int(
+                                                offset.bits,
+                                                offset.bits + 8,
+                                                Endianness::Big,
+                                                false,
+                                            );
+                                        }
+                                        self.push_equality_check(subject.clone(), byte.to_doc());
                                         self.pop();
-                                        offset.increment(1);
+                                        offset.increment(8);
                                     }
 
                                     Ok(())
@@ -703,7 +754,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     }
                 }
 
-                self.push_bit_array_length_check(subject.clone(), offset.bytes, offset.open_ended);
+                self.push_bit_array_bit_size_check(
+                    subject.clone(),
+                    offset.bits,
+                    offset.tail_spread_type,
+                );
                 Ok(())
             }
             Pattern::VarUsage { location, .. } => Err(Error::Unsupported {
@@ -770,14 +825,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         if segment.type_ == crate::type_::float() && size == 16 {
             return Err(Error::Unsupported {
                 feature: "Float width of 16 bits in patterns".into(),
-                location: segment.location,
-            });
-        }
-
-        // Ints that aren't byte-aligned are not supported
-        if segment.type_ == crate::type_::int() && size % 8 != 0 {
-            return Err(Error::Unsupported {
-                feature: "Non byte aligned integer in patterns".into(),
                 location: segment.location,
             });
         }
@@ -859,15 +906,15 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         })
     }
 
-    fn push_bit_array_length_check(
+    fn push_bit_array_bit_size_check(
         &mut self,
         subject: Document<'a>,
-        expected_bytes: usize,
-        has_tail_spread: bool,
+        expected_bit_size: usize,
+        tail_spread_type: Option<BitArrayTailSpreadType>,
     ) {
-        self.checks.push(Check::BitArrayLength {
-            expected_bytes,
-            has_tail_spread,
+        self.checks.push(Check::BitArrayBitSize {
+            expected_bit_size,
+            tail_spread_type,
             subject,
             path: self.path_document(),
         })
@@ -923,11 +970,11 @@ pub enum Check<'a> {
         expected_length: usize,
         has_tail_spread: bool,
     },
-    BitArrayLength {
+    BitArrayBitSize {
         subject: Document<'a>,
         path: Document<'a>,
-        expected_bytes: usize,
-        has_tail_spread: bool,
+        expected_bit_size: usize,
+        tail_spread_type: Option<BitArrayTailSpreadType>,
     },
     StringPrefix {
         subject: Document<'a>,
@@ -1013,21 +1060,41 @@ impl<'a> Check<'a> {
                     docvec!["!", subject, path, length_check,]
                 }
             }
-            Check::BitArrayLength {
+            Check::BitArrayBitSize {
                 subject,
                 path,
-                expected_bytes,
-                has_tail_spread,
+                expected_bit_size,
+                tail_spread_type,
             } => {
-                let length_check = if has_tail_spread {
-                    eco_format!(".length >= {expected_bytes}").to_doc()
-                } else {
-                    eco_format!(".length == {expected_bytes}").to_doc()
+                let bit_size = docvec![subject.clone(), path.clone(), ".bitSize"];
+
+                let bit_size_check = match tail_spread_type {
+                    Some(BitArrayTailSpreadType::Bits) => {
+                        docvec![bit_size, " >= ", expected_bit_size]
+                    }
+                    Some(BitArrayTailSpreadType::Bytes) => {
+                        // When the tail spread is for bytes rather than bits,
+                        // check that there is a whole number of bytes left in
+                        // the bit array
+                        docvec![
+                            "(",
+                            bit_size.clone(),
+                            " >= ",
+                            expected_bit_size,
+                            " && (",
+                            bit_size,
+                            " - ",
+                            expected_bit_size,
+                            ") % 8 === 0)"
+                        ]
+                    }
+                    None => docvec![bit_size, " == ", expected_bit_size],
                 };
+
                 if match_desired {
-                    docvec![subject, path, length_check,]
+                    bit_size_check
                 } else {
-                    docvec!["!(", subject, path, length_check, ")",]
+                    docvec!["!(", bit_size_check, ")"]
                 }
             }
             Check::StringPrefix {
@@ -1051,7 +1118,7 @@ impl<'a> Check<'a> {
             | Check::Variant { .. }
             | Check::Equal { .. }
             | Check::ListLength { .. }
-            | Check::BitArrayLength { .. }
+            | Check::BitArrayBitSize { .. }
             | Check::StringPrefix { .. }
             | Check::Booly { .. } => false,
             Check::Guard { .. } => true,

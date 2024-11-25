@@ -14,7 +14,7 @@ fn go(x) {
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
-  if (!(x.length == 3)) {
+  if (!(x.bitSize == 24)) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -24,7 +24,7 @@ function go(x) {
       { value: x }
     )
   }
-  if (!(x.length == 3)) {
+  if (!(x.bitSize == 24)) {
     throw makeError(
       "let_assert",
       "my/mod",

@@ -13,7 +13,7 @@ fn go(x) {
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
-  if (x.byteAt(0) !== 254 || !(x.length == 1)) {
+  if (x.byteAt(0) !== 254 || !(x.bitSize == 8)) {
     throw makeError(
       "let_assert",
       "my/mod",
