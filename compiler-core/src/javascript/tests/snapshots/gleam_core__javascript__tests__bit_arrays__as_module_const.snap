@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\n          pub const data = <<\n            0x1,\n            2,\n            2:size(16),\n            0x4:size(32),\n            -1:32,\n            \"Gleam\":utf8,\n            4.2:float,\n            4.2:32-float,\n            -1:64,\n            <<\n              <<1, 2, 3>>:bits,\n              \"Gleam\":utf8,\n              1024\n            >>:bits\n          >>\n        "
+expression: "\n          pub const data = <<\n            0x1,\n            2,\n            2:size(16),\n            0x4:size(32),\n            -1:32,\n            \"Gleam\":utf8,\n            4.2:float,\n            4.2:32-float,\n            <<0xFA>>:bits-6, \n            -1:64,\n            <<\n              <<1, 2, 3>>:bits,\n              \"Gleam\":utf8,\n              1024\n            >>:bits\n          >>\n        "
 ---
 ----- SOURCE CODE
 
@@ -13,6 +13,7 @@ expression: "\n          pub const data = <<\n            0x1,\n            2,\n
             "Gleam":utf8,
             4.2:float,
             4.2:32-float,
+            <<0xFA>>:bits-6, 
             -1:64,
             <<
               <<1, 2, 3>>:bits,
@@ -34,10 +35,11 @@ export const data = /* @__PURE__ */ toBitArray([
   stringBits("Gleam"),
   sizedFloat(4.2, 64, true),
   sizedFloat(4.2, 32, true),
+  /* @__PURE__ */ toBitArray([250]).slice(0, 6),
   sizedInt(-1, 64, true),
   /* @__PURE__ */ toBitArray([
-    /* @__PURE__ */ toBitArray([1, 2, 3]).buffer,
+    /* @__PURE__ */ toBitArray([1, 2, 3]),
     stringBits("Gleam"),
     0,
-  ]).buffer,
+  ]),
 ]);

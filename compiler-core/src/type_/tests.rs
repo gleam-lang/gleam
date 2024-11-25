@@ -231,7 +231,7 @@ fn get_warnings(
     warnings.take().into_iter().collect_vec()
 }
 
-fn get_printed_warnings(
+pub(crate) fn get_printed_warnings(
     src: &str,
     deps: Vec<DependencyModule<'_>>,
     target: Target,
@@ -343,6 +343,34 @@ macro_rules! assert_warnings_with_gleam_version {
         assert!(!warning.is_empty());
         let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_js_warnings_with_gleam_version {
+    ($gleam_version:expr, $src:expr$(,)?) => {
+        let warning = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![],
+            crate::build::Target::JavaScript,
+            Some($gleam_version),
+        );
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+}
+
+#[macro_export]
+macro_rules! assert_js_no_warnings_with_gleam_version {
+    ($gleam_version:expr, $src:expr$(,)?) => {
+        let warning = $crate::type_::tests::get_printed_warnings(
+            $src,
+            vec![],
+            crate::build::Target::JavaScript,
+            Some($gleam_version),
+        );
+        assert!(warning.is_empty());
     };
 }
 

@@ -1083,6 +1083,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::VariantWithDeprecatedAnnotation => {
                             "Deprecating individual custom type variants was"
                         }
+                        FeatureKind::JavaScriptUnalignedBitArray => {
+                            "Use of unaligned bit arrays on the JavaScript target was"
+                        }
                     };
 
                     Diagnostic {

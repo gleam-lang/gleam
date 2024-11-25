@@ -241,7 +241,8 @@ impl<'module> Generator<'module> {
                 if segment.type_ == crate::type_::int() {
                     match (details.size_value, segment.value.as_ref()) {
                         (Some(size_value), TypedExpr::Int { int_value, .. })
-                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into() =>
+                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                                && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
                         {
                             let bytes = bit_array_segment_int_value_to_bytes(
                                 int_value.clone(),
@@ -296,7 +297,24 @@ impl<'module> Generator<'module> {
                     }
 
                     // Bit arrays
-                    [Opt::Bytes { .. } | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+                    [Opt::Bits { .. }] => Ok(value),
+
+                    // Bit arrays with explicit size. The explicit size slices the bit array to the
+                    // specified size. A runtime exception is thrown if the size exceeds the number
+                    // of bits in the bit array.
+                    [Opt::Bits { .. }, Opt::Size { value: size, .. }]
+                    | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
+                        TypedExpr::Int { value: size, .. } => {
+                            Ok(docvec![value, ".slice(0, ", size, ")"])
+                        }
+
+                        TypedExpr::Var { name, .. } => Ok(docvec![value, ".slice(0, ", name, ")"]),
+
+                        _ => Err(Error::Unsupported {
+                            feature: "This bit array segment option".into(),
+                            location: segment.location,
+                        }),
+                    },
 
                     // Anything else
                     _ => Err(Error::Unsupported {
@@ -348,15 +366,6 @@ impl<'module> Generator<'module> {
                     TypedExpr::Int { int_value, .. } => Some(int_value),
                     _ => None,
                 };
-
-                if let Some(size_value) = size_value.as_ref() {
-                    if *size_value > BigInt::ZERO && size_value % 8 != BigInt::ZERO {
-                        return Err(Error::Unsupported {
-                            feature: "Non byte aligned array".into(),
-                            location: segment.location,
-                        });
-                    }
-                }
 
                 (
                     size_value,
@@ -1473,7 +1482,8 @@ fn bit_array<'a>(
             if segment.type_ == crate::type_::int() {
                 match (details.size_value, segment.value.as_ref()) {
                     (Some(size_value), Constant::Int { int_value, .. })
-                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into() =>
+                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
                     {
                         let bytes = bit_array_segment_int_value_to_bytes(
                             int_value.clone(),
@@ -1527,8 +1537,23 @@ fn bit_array<'a>(
                     Ok(docvec!["codepointBits(", value, ")"])
                 }
 
-                // Bit strings
-                [Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+                // Bit arrays
+                [Opt::Bits { .. }] => Ok(value),
+
+                // Bit arrays with explicit size. The explicit size slices the bit array to the
+                // specified size. A runtime exception is thrown if the size exceeds the number
+                // of bits in the bit array.
+                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
+                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
+                    Constant::Int { value: size, .. } => {
+                        Ok(docvec![value, ".slice(0, ", size, ")"])
+                    }
+
+                    _ => Err(Error::Unsupported {
+                        feature: "This bit array segment option".into(),
+                        location: segment.location,
+                    }),
+                },
 
                 // Anything else
                 _ => Err(Error::Unsupported {
@@ -1590,15 +1615,6 @@ fn sized_bit_array_segment_details<'a>(
                 Constant::Int { int_value, .. } => Some(int_value),
                 _ => None,
             };
-
-            if let Some(size_value) = size_value.as_ref() {
-                if *size_value > BigInt::ZERO && size_value % 8 != BigInt::ZERO {
-                    return Err(Error::Unsupported {
-                        feature: "Non byte aligned array".into(),
-                        location: segment.location,
-                    });
-                }
-            }
 
             (size_value, constant_expr_fun(tracker, size)?)
         }

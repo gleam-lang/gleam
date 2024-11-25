@@ -17,6 +17,10 @@
   path to a directory containing CA certificates to install Hex packages.
   ([winstxnhdw](https://github.com/winstxnhdw))
 
+- On the JavaScript target, bit array expressions and patterns no longer need to
+  be byte aligned, and the `bits` segment type is now supported in patterns.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Language server
 
 - The language server now offers a code action to convert the first step of a
