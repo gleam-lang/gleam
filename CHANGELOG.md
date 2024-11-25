@@ -64,6 +64,10 @@
   The custom type variant constructor `X` is not in scope here.
   ```
 
+- On the JavaScript target, bit array expressions and patterns no longer need to
+  be byte aligned, and the `bits` segment type is now supported in patterns.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Build tool
 
 - `gleam new` now has refined project name validation - rather than failing on

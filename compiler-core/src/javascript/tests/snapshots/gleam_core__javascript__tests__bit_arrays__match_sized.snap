@@ -13,7 +13,7 @@ fn go(x) {
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
-  if (!(x.length == 3)) {
+  if (!(x.bitSize == 24)) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -23,7 +23,7 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.intFromSlice(0, 2, true, false);
+  let a = x.sliceToInt(0, 16, true, false);
   let b = x.byteAt(2);
   return x;
 }

@@ -1,20 +1,20 @@
 ---
 source: compiler-core/src/javascript/tests/bit_arrays.rs
-expression: "\nfn go(x) {\n  let assert <<_, b:bytes>> = <<1,2,3>>\n}\n"
+expression: "\nfn go(x) {\n  let assert <<_:4, f:bits-2, _:1>> = <<0x77:7>>\n}\n"
 ---
 ----- SOURCE CODE
 
 fn go(x) {
-  let assert <<_, b:bytes>> = <<1,2,3>>
+  let assert <<_:4, f:bits-2, _:1>> = <<0x77:7>>
 }
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError, toBitArray } from "../gleam.mjs";
+import { makeError, toBitArray, sizedInt } from "../gleam.mjs";
 
 function go(x) {
-  let $ = toBitArray([1, 2, 3]);
-  if (!($.length >= 1)) {
+  let $ = toBitArray([sizedInt(0x77, 7, true)]);
+  if (!($.bitSize == 7)) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -24,6 +24,6 @@ function go(x) {
       { value: $ }
     )
   }
-  let b = $.sliceAfter(1);
+  let f = $.slice(4, 6);
   return $;
 }

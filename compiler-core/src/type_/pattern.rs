@@ -1,6 +1,7 @@
 use hexpm::version::Version;
 use im::hashmap;
 use itertools::Itertools;
+use num_bigint::BigInt;
 
 /// Type inference and checking of patterns used in case expressions
 /// and variables bindings.
@@ -295,6 +296,41 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 error: error.error,
                 location: error.location,
             })?;
+
+        // Track usage of the unaligned bit arrays feature on JavaScript so that
+        // warnings can be emitted if the Gleam version constraint is too low
+        if self.environment.target == Target::JavaScript {
+            for option in options.iter() {
+                match option {
+                    // Use of the `bits` segment type
+                    BitArrayOption::<TypedPattern>::Bits { location } => {
+                        self.track_feature_usage(
+                            FeatureKind::JavaScriptUnalignedBitArray,
+                            *location,
+                        );
+                    }
+
+                    // Int segments that aren't a whole number of bytes
+                    BitArrayOption::<TypedPattern>::Size { value, .. } if segment_type == int() => {
+                        match &**value {
+                            Pattern::<_>::Int {
+                                location,
+                                int_value,
+                                ..
+                            } if int_value % 8 != BigInt::ZERO => {
+                                self.track_feature_usage(
+                                    FeatureKind::JavaScriptUnalignedBitArray,
+                                    *location,
+                                );
+                            }
+                            _ => (),
+                        }
+                    }
+
+                    _ => (),
+                }
+            }
+        }
 
         let type_ = {
             match value.deref() {
