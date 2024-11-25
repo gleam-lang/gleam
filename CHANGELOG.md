@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- On the JavaScript target, bit array expressions and patterns no longer need to
+  be byte aligned, and the `bits` segment type is now supported in patterns.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## 1.7.0-rc3 - 2025-12-02
 
 ### Formatter
