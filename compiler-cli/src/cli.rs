@@ -77,6 +77,11 @@ pub fn confirm(question: &str) -> Result<bool, Error> {
     }
 }
 
+pub fn confirm_with_text(response: &str) -> Result<bool, Error> {
+    let answer = ask(&format!("Type '{response}' to continue"))?;
+    Ok(response == answer)
+}
+
 pub fn ask_password(question: &str) -> Result<String, Error> {
     let prompt = format!("{question} (will not be printed as you type): ");
     rpassword::prompt_password(prompt)
