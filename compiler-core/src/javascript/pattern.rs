@@ -409,7 +409,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         subject: &Document<'a>,
         pattern: &'a TypedPattern,
     ) -> Result<(), Error> {
-        println!("traverse_pattern! {:?}", pattern);
         match pattern {
             Pattern::String { value, .. } => {
                 self.push_equality_check(subject.clone(), expression::string(value));
