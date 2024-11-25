@@ -276,28 +276,33 @@ pub trait FileSystemReader {
 
 /// Iterates over Gleam source files (`.gleam`) in a certain directory.
 /// Symlinks are followed.
-pub fn gleam_source_files(io: &impl FileSystemReader, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+pub fn gleam_source_files<'a>(
+    io: &'a impl FileSystemReader,
+    dir: &'a Utf8Path,
+) -> impl Iterator<Item = Utf8PathBuf> + 'a {
     tracing::trace!("gleam_source_files {:?}", dir);
     files_with_extension(io, dir, "gleam")
 }
 
 /// Iterates over Gleam cache files (`.cache`) in a certain directory.
 /// Symlinks are followed.
-pub fn gleam_cache_files(io: &impl FileSystemReader, dir: &Utf8Path) -> Vec<Utf8PathBuf> {
+pub fn gleam_cache_files<'a>(
+    io: &'a impl FileSystemReader,
+    dir: &'a Utf8Path,
+) -> impl Iterator<Item = Utf8PathBuf> + 'a {
     tracing::trace!("gleam_cache_files {:?}", dir);
     files_with_extension(io, dir, "cache")
 }
 
-fn files_with_extension(
-    io: &impl FileSystemReader,
-    dir: &Utf8Path,
-    extension: &str,
-) -> Vec<Utf8PathBuf> {
+fn files_with_extension<'a>(
+    io: &'a impl FileSystemReader,
+    dir: &'a Utf8Path,
+    extension: &'a str,
+) -> impl Iterator<Item = Utf8PathBuf> + 'a {
     DirWalker::new(dir.to_path_buf())
         .into_file_iter(io)
         .filter_map(Result::ok)
         .filter(|path| path.extension() == Some(extension))
-        .collect()
 }
 
 /// A trait used to run other programs.
