@@ -916,6 +916,7 @@ pub enum FeatureKind {
     RecordAccessVariantInference,
     LetAssertWithMessage,
     VariantWithDeprecatedAnnotation,
+    UnalignedBitArrayOnJavascript,
 }
 
 impl FeatureKind {
@@ -938,9 +939,9 @@ impl FeatureKind {
             FeatureKind::RecordUpdateVariantInference
             | FeatureKind::RecordAccessVariantInference => Version::new(1, 6, 0),
 
-            FeatureKind::VariantWithDeprecatedAnnotation | FeatureKind::LetAssertWithMessage => {
-                Version::new(1, 7, 0)
-            }
+            FeatureKind::VariantWithDeprecatedAnnotation
+            | FeatureKind::LetAssertWithMessage
+            | FeatureKind::UnalignedBitArrayOnJavascript => Version::new(1, 7, 0),
         }
     }
 }
