@@ -113,6 +113,16 @@ jobs:
           use-cross: ${{ matrix.use-cross }}
         if: ${{ matrix.run-integration-tests }}
 
+      - name: Verify binary architecture
+        shell: bash
+        run: |
+          BINARY_PATH="${CARGO_HOME}/bin/gleam"
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+              BINARY_PATH="${BINARY_PATH}.exe"
+          fi
+          ./bin/verify-binary-architecture.sh "${{ matrix.target }}" "$BINARY_PATH"
+        if: ${{ matrix.run-integration-tests }}
+
       - name: Run tests
         uses: clechasseur/rs-cargo@v2
         with:
