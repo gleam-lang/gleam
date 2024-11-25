@@ -62,6 +62,8 @@
   team packages and v0 packages.
   ([Louis Pilfold](https://github.com/lpil))
 
+- New projects now require `gleam_stdlib` v0.44.0.
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
