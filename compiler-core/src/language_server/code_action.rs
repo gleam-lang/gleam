@@ -982,12 +982,6 @@ pub fn code_action_add_missing_patterns(
             indent_size += 1;
         }
 
-        // TODO: It would be nice to use the `print_case_expression` function here,
-        // however that causes things like comments to be removed, which is undesirable.
-        // In future we should work out a way to use that function, as the code below is
-        // pretty convoluted and difficult to understand, because it accounts for a set of
-        // very specific edge-cases. A generic formatting function would be much better.
-
         let indent = " ".repeat(indent_size);
 
         // Insert the missing patterns just after the final clause, or just before
