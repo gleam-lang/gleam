@@ -58,6 +58,10 @@
   `src/` and `test/`.
   ([PgBiel](https://github.com/PgBiel))
 
+- `gleam publish` now requires more verbose confirmation for publishing Gleam
+  team packages and v0 packages.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument

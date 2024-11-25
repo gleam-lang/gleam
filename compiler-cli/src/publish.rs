@@ -39,8 +39,8 @@ impl PublishCommand {
         let paths = crate::find_project_paths()?;
         let mut config = crate::config::root_config()?;
 
-        let should_publish = check_for_gleam_prefix(&config, i_am_sure)?
-            && check_for_version_zero(&config, i_am_sure)?
+        let should_publish = check_for_gleam_prefix(&config)?
+            && check_for_version_zero(&config)?
             && check_repo_url(&config, i_am_sure)?;
 
         if !should_publish {
@@ -147,7 +147,7 @@ valid, {} returned status {}",
 }
 
 /// Ask for confirmation if the package name if a v0.x.x version
-fn check_for_version_zero(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
+fn check_for_version_zero(config: &PackageConfig) -> Result<bool, Error> {
     if config.version.major != 0 {
         return Ok(true);
     }
@@ -158,15 +158,19 @@ fn check_for_version_zero(config: &PackageConfig, i_am_sure: bool) -> Result<boo
 Semantic versioning doesn't apply to version 0.x.x releases, so your
 users will not be protected from breaking changes. This can result
 in a poor user experience where packages can break unexpectedly with
-updates that would normally be safe."
+updates that would normally be safe.
+
+If your package is not ready to be used in production it should not
+be published.
+\n"
     );
-    let should_publish = i_am_sure || cli::confirm("\nDo you wish to continue?")?;
+    let should_publish = cli::confirm_with_text("I am not using semantic versioning")?;
     println!();
     Ok(should_publish)
 }
 
 /// Ask for confirmation if the package name if `gleam_*`
-fn check_for_gleam_prefix(config: &PackageConfig, i_am_sure: bool) -> Result<bool, Error> {
+fn check_for_gleam_prefix(config: &PackageConfig) -> Result<bool, Error> {
     if !config.name.starts_with("gleam_") || config.name.starts_with("gleam_community_") {
         return Ok(true);
     }
@@ -174,10 +178,9 @@ fn check_for_gleam_prefix(config: &PackageConfig, i_am_sure: bool) -> Result<boo
     println!(
         "You are about to publish a package with a name that starts with
 the prefix `gleam_`, which is for packages maintained by the Gleam
-core team.",
+core team.\n",
     );
-    let should_publish =
-        i_am_sure || cli::confirm("\nAre you sure you want to use this package name?")?;
+    let should_publish = cli::confirm_with_text("I am part of the Gleam core team")?;
     println!();
     Ok(should_publish)
 }
