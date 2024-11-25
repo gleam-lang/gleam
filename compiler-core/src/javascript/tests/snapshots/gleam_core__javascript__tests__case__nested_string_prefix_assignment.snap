@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\ntype Wibble {\n  Wibble(wobble: String)\n}\n\npub fn main() {\n  let tmp = Wibble(wobble: \"wibble\")\n  case tmp {\n    Wibble(wobble: \"w\" as wibble <> rest) -> wibble <> rest\n    _ -> panic\n  }\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble(wobble: String)
+}
+
+pub fn main() {
+  let tmp = Wibble(wobble: "wibble")
+  case tmp {
+    Wibble(wobble: "w" as wibble <> rest) -> wibble <> rest
+    _ -> panic
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
+
+class Wibble extends $CustomType {
+  constructor(wobble) {
+    super();
+    this.wobble = wobble;
+  }
+}
+
+export function main() {
+  let tmp = new Wibble("wibble");
+  if (tmp instanceof Wibble && tmp.wobble.startsWith("w")) {
+    let rest = tmp.wobble.slice(1);
+    let wibble = "w";
+    return wibble + rest;
+  } else {
+    throw makeError(
+      "panic",
+      "my/mod",
+      10,
+      "main",
+      "`panic` expression evaluated.",
+      {}
+    )
+  }
+}

@@ -409,6 +409,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         subject: &Document<'a>,
         pattern: &'a TypedPattern,
     ) -> Result<(), Error> {
+        println!("traverse_pattern! {:?}", pattern);
         match pattern {
             Pattern::String { value, .. } => {
                 self.push_equality_check(subject.clone(), expression::string(value));
@@ -519,7 +520,16 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     // let prefix = "wibble";
                     // ^^^^^^^^^^^^^^^^^^^^^ we're adding this assignment inside the if clause
                     //                       the case branch gets translated into.
-                    self.push_assignment(expression::string(left_side_string), left);
+                    //
+                    // We also want to push this assignment without using push_assignment, since we
+                    // do _not_ want to access the current path on the static string!
+                    let var = self.next_local_var(left);
+                    self.assignments.push(Assignment {
+                        subject: expression::string(left_side_string),
+                        path: docvec![],
+                        name: left,
+                        var,
+                    });
                 }
                 Ok(())
             }

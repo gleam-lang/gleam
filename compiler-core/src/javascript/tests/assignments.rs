@@ -185,6 +185,23 @@ pub fn main() {
     );
 }
 
+// https://github.com/gleam-lang/gleam/issues/3894
+#[test]
+fn let_assert_nested_string_prefix() {
+    assert_js!(
+        r#"
+type Wibble {
+  Wibble(wibble: String)
+}
+
+pub fn main() {
+  let assert Wibble(wibble: "w" as prefix <> rest) = Wibble("wibble")
+  prefix <> rest
+}
+"#
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/2931
 #[test]
 fn keyword_assignment() {

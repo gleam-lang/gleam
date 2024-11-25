@@ -267,3 +267,48 @@ pub fn main() {
 "#
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/3894
+#[test]
+fn nested_string_prefix_assignment() {
+    assert_js!(
+        r#"
+type Wibble {
+  Wibble(wobble: String)
+}
+
+pub fn main() {
+  let tmp = Wibble(wobble: "wibble")
+  case tmp {
+    Wibble(wobble: "w" as wibble <> rest) -> wibble <> rest
+    _ -> panic
+  }
+}
+"#
+    )
+}
+
+#[test]
+fn deeply_nested_string_prefix_assignment() {
+    assert_js!(
+        r#"
+type Wibble {
+  Wibble(Wobble)
+}            
+type Wobble {
+  Wobble(wabble: Wabble)
+}
+type Wabble {
+  Wabble(tuple: #(Int, String))
+}
+
+pub fn main() {
+  let tmp = Wibble(Wobble(Wabble(#(42, "wibble"))))
+  case tmp {
+    Wibble(Wobble(Wabble(#(_int, "w" as wibble <> rest)))) -> wibble <> rest
+    _ -> panic
+  }
+}
+"#
+    )
+}
