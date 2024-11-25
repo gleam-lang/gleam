@@ -36,6 +36,9 @@
   compile time where possible.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Qualified records can now be used in clause guards.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
@@ -128,9 +131,6 @@
 - Fixed a bug where a `module.mjs` file would be overwritten by a `module.gleam`
   file of same name without warning. It now produces an error.
   ([PgBiel](https://github.com/PgBiel))
-
-- Fixed a bug where qualified records were not allowed in clause guards.
-  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.6.1 - 2024-11-19
 
