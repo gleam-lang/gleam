@@ -60,6 +60,15 @@ jobs:
           args: --release --target ${{ matrix.target }}
           use-cross: ${{ matrix.use-cross }}
 
+      - name: Verify binary architecture
+        shell: bash
+        run: |
+          BINARY_PATH="target/${{ matrix.target }}/release/gleam"
+          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
+              BINARY_PATH="${BINARY_PATH}.exe"
+          fi
+          ./bin/verify-binary-architecture.sh "${{ matrix.target }}" "$BINARY_PATH"
+
       - name: Build archive
         shell: bash
         run: |
