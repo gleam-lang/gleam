@@ -1,4 +1,4 @@
-use crate::{assert_js, assert_js_error, assert_module_error, assert_ts_def};
+use crate::{assert_js, assert_module_error, assert_ts_def};
 
 #[test]
 fn type_() {
@@ -278,20 +278,6 @@ pub fn should_be_generated(x: Int) -> Int {
 
 @external(erlang, "one", "one")
 pub fn should_not_be_generated(x: Int) -> Int
-"#
-    );
-}
-
-#[test]
-fn erlang_bit_patterns() {
-    assert_js_error!(
-        r#"
-pub fn should_not_be_generated(x) {
-  case x {
-    <<_, rest:bits>> -> rest
-    _ -> x
-  }
-}
 "#
     );
 }

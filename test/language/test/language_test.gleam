@@ -24,6 +24,11 @@ pub fn main() {
       suite("bit arrays target", bit_array_target_tests()),
       suite("bit arrays", bit_array_tests()),
       suite("sized bit arrays", sized_bit_array_tests()),
+      suite(
+        "unaligned bit array expressions",
+        unaligned_bit_array_expression_tests(),
+      ),
+      suite("unaligned bit array patterns", unaligned_bit_array_pattern_tests()),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -1131,6 +1136,355 @@ fn sized_bit_array_tests() -> List(Test) {
   ]
 }
 
+fn unaligned_bit_array_expression_tests() -> List(Test) {
+  [
+    "<<0xFF:6, 0:2>> == <<0xFA>>"
+      |> example(fn() { assert_equal(True, <<0xFF:6, 0:2>> == <<0xFC>>) }),
+    "<<0xFF:6, 0:3, 0x75:9>> == <<252, 29, 1:2>>"
+      |> example(fn() {
+        assert_equal(True, <<0xFF:6, 0:3, 0x75:9>> == <<252, 29, 1:2>>)
+      }),
+    "<<-1:55, 44:11-little, 0x75:9-big>> == <<255, 255, 255, 255, 255, 255, 254, 88, 14, 5:3>>"
+      |> example(fn() {
+        assert_equal(
+          True,
+          <<-1:55, 44:11-little, 0x75:9-big>>
+            == <<255, 255, 255, 255, 255, 255, 254, 88, 14, 5:3>>,
+        )
+      }),
+    "<<0:1, 2:2, 2:3, 1:1>> == <<0b0100101:7>>"
+      |> example(fn() {
+        assert_equal(True, <<0:1, 2:2, 2:3, 1:1>> == <<0b0100101:7>>)
+      }),
+    "<<-100:6, -10:32-little, -10:32-big, -100:48-big, -100:48-little>> == <<115, 219, 255, 255, 255, 255, 255, 255, 219, 255, 255, 255, 255, 254, 114, 115, 255, 255, 255, 255, 63:6>>"
+      |> example(fn() {
+        assert_equal(
+          True,
+          <<-100:6, -10:32-little, -10:32-big, -100:48-big, -100:48-little>>
+            == <<
+            115, 219, 255, 255, 255, 255, 255, 255, 219, 255, 255, 255, 255, 254,
+            114, 115, 255, 255, 255, 255, 63:6,
+          >>,
+        )
+      }),
+    "<<2:3, 2.9283123:float-little, -1.375e5:32-float-big>> == <<91, 153, 120, 255, 229, 205, 160, 232, 25, 0, 200, 224, 0:3>>"
+      |> example(fn() {
+        assert_equal(
+          True,
+          <<2:3, 2.9283123:float-little, -1.375e5:32-float-big>>
+            == <<91, 153, 120, 255, 229, 205, 160, 232, 25, 0, 200, 224, 0:3>>,
+        )
+      }),
+    "<<7:6, <<1:3>>:bits, <<1, 2, 3>>:bits, 1:1, <<-1124.789e4:float-little>>:bits>> == <<28, 128, 129, 1, 192, 0, 0, 16, 8, 157, 25, 112, 1:2>>"
+      |> example(fn() {
+        assert_equal(
+          True,
+          <<
+            7:6,
+            <<1:3>>:bits,
+            <<1, 2, 3>>:bits,
+            1:1,
+            <<-1124.789e4:float-little>>:bits,
+          >>
+            == <<28, 128, 129, 1, 192, 0, 0, 16, 8, 157, 25, 112, 1:2>>,
+        )
+      }),
+    "<<9_444_732_965_739_289_353_650_176:75>> == <<255, 255, 255, 255, 255, 248, 0, 0, 0, 0:size(3)>>"
+      |> example(fn() {
+        assert_equal(
+          True,
+          <<9_444_732_965_739_289_353_650_176:75>>
+            == <<255, 255, 255, 255, 255, 248, 0, 0, 0, 0:size(3)>>,
+        )
+      }),
+    "<<0xFC:6>> == <<<<0xFC>>:bits-6>>"
+      |> example(fn() {
+        assert_equal(True, <<0b100101:6>> == <<<<0b10010100>>:bits-6>>)
+      }),
+    "<<0xE7>> == <<<<0xEC>>:bits-4, 7:4>>"
+      |> example(fn() {
+        assert_equal(True, <<0xE7>> == <<<<0xEC>>:bits-4, 7:4>>)
+      }),
+    "<<0b11001:5>> == <<<<0b11011100>>:bits-size(three), 1:size(two)>>"
+      |> example(fn() {
+        let three = 3
+        let two = 2
+        assert_equal(
+          True,
+          <<0b11001:5>> == <<<<0b11011100>>:bits-size(three), 1:size(two)>>,
+        )
+      }),
+  ]
+}
+
+fn unaligned_bit_array_pattern_tests() -> List(Test) {
+  [
+    "let assert <<a:4, b:4, c:3, d:4, e:1>> = <<0xAB, 0b11010101>>"
+      |> example(fn() {
+        assert_equal(#(0xA, 0xB, 0b110, 0b1010, 0b1), {
+          let assert <<a:4, b:4, c:3, d:4, e:1>> = <<0xAB, 0b11010101>>
+          #(a, b, c, d, e)
+        })
+      }),
+    "let assert <<a:12, b:4>> = <<0xB6, 0xE3>>"
+      |> example(fn() {
+        assert_equal(#(0xB6E, 0x03), {
+          let assert <<a:12, b:4>> = <<0xB6, 0xE3>>
+          #(a, b)
+        })
+      }),
+    "let assert <<a:4, b:12>> = <<0xB6, 0xE3>>"
+      |> example(fn() {
+        assert_equal(#(0x0B, 0x6E3), {
+          let assert <<a:4, b:12>> = <<0xB6, 0xE3>>
+          #(a, b)
+        })
+      }),
+    "let assert <<a:12-little, b:4>> = <<0xB6, 0xE3>>"
+      |> example(fn() {
+        assert_equal(#(0xEB6, 0x03), {
+          let assert <<a:12-little, b:4>> = <<0xB6, 0xE3>>
+          #(a, b)
+        })
+      }),
+    "let assert <<a:4, b:12-little>> = <<0xB6, 0xE3>>"
+      |> example(fn() {
+        assert_equal(#(0x0B, 0x36E), {
+          let assert <<a:4, b:12-little>> = <<0xB6, 0xE3>>
+          #(a, b)
+        })
+      }),
+    "let assert <<a:5, b:11>> = <<0xB6, 0xE3>>"
+      |> example(fn() {
+        assert_equal(#(22, 1763), {
+          let assert <<a:5, b:11>> = <<0xB6, 0xE3>>
+          #(a, b)
+        })
+      }),
+    "let assert <<_:8, a:17>> = <<0xFF, 0xB6, 0xE3, 1:1>>"
+      |> example(fn() {
+        assert_equal(93_639, {
+          let assert <<_:8, a:17>> = <<0xFF, 0xB6, 0xE3, 1:1>>
+          a
+        })
+      }),
+    "let assert <<a:17, _:bits>> = <<0xA6, 0xE3, 6:3>>"
+      |> example(fn() {
+        assert_equal(85_447, {
+          let assert <<a:17, _:bits>> = <<0xA6, 0xE3, 6:3>>
+          a
+        })
+      }),
+    "let assert <<a:17, _:bits>> = <<0xA6, 0xE3, 6:3>>"
+      |> example(fn() {
+        assert_equal(85_447, {
+          let assert <<a:17, _:bits>> = <<0xA6, 0xE3, 6:3>>
+          a
+        })
+      }),
+    "let assert <<a:7-signed, _:bits>> = <<0b10011010>>"
+      |> example(fn() {
+        assert_equal(-51, {
+          let assert <<a:7-signed, _:bits>> = <<0b10011010>>
+          a
+        })
+      }),
+    "let assert <<_:5, a:13-big, _:bits>> = <<0xA5, 0x6C, 0xAA>>"
+      |> example(fn() {
+        assert_equal(5554, {
+          let assert <<_:5, a:13-big, _:bits>> = <<0xA5, 0x6C, 0xAA>>
+          a
+        })
+      }),
+    "let assert <<_:5, a:13-little-signed, _:bits>> = <<0xA5, 0x6C, 0xAA>>"
+      |> example(fn() {
+        assert_equal(-3411, {
+          let assert <<_:5, a:13-little-signed, _:bits>> = <<0xA5, 0x6C, 0xAA>>
+          a
+        })
+      }),
+    "let assert <<_:3, a:8-big-signed, _:bits>> = <<253, 94>>"
+      |> example(fn() {
+        assert_equal(-22, {
+          let assert <<_:3, a:8-big-signed, _:bits>> = <<253, 94>>
+          a
+        })
+      }),
+    "let assert <<_:3, a:12-big-unsigned, _:bits>> = <<233, 164>>"
+      |> example(fn() {
+        assert_equal(1234, {
+          let assert <<_:3, a:12-big-unsigned, _:bits>> = <<233, 164>>
+          a
+        })
+      }),
+    "let assert <<_:3, a:12-little, _:bits>> = <<250, 72>>"
+      |> example(fn() {
+        assert_equal(1234, {
+          let assert <<_:3, a:12-little, _:bits>> = <<250, 72>>
+          a
+        })
+      }),
+    "let assert <<_:7, a:22, _:bits>> = <<250, 72, 223, 189>>"
+      |> example(fn() {
+        assert_equal(596_983, {
+          let assert <<_:7, a:22, _:bits>> = <<250, 72, 223, 189>>
+          a
+        })
+      }),
+    "let assert <<_:1, a:23, _:bits>> = <<146, 192, 70, 25, 1:1>>"
+      |> example(fn() {
+        assert_equal(1_228_870, {
+          let assert <<_:1, a:23, _:bits>> = <<146, 192, 70, 25, 1:1>>
+          a
+        })
+      }),
+    "let assert <<_:1, a:32>> = <<217, 150, 209, 191, 0:1>>"
+      |> example(fn() {
+        assert_equal(3_006_112_638, {
+          let assert <<_:1, a:32>> = <<217, 150, 209, 191, 0:1>>
+          a
+        })
+      }),
+    "let assert <<_:1, a:32-signed>> = <<146, 192, 70, 25, 1:1>>"
+      |> example(fn() {
+        assert_equal(629_181_491, {
+          let assert <<_:1, a:32-signed>> = <<146, 192, 70, 25, 1:1>>
+          a
+        })
+      }),
+    "let assert <<_:1, a:32-little-unsigned>> = <<251, 24, 47, 227, 1:1>>"
+      |> example(fn() {
+        assert_equal(3_344_904_438, {
+          let assert <<_:1, a:32-little-unsigned>> = <<251, 24, 47, 227, 1:1>>
+          a
+        })
+      }),
+    "let assert <<a:33-little-unsigned>> = <<240, 102, 91, 101, 1:1>>"
+      |> example(fn() {
+        assert_equal(5_995_456_240, {
+          let assert <<a:33-little-unsigned>> = <<240, 102, 91, 101, 1:1>>
+          a
+        })
+      }),
+    "let assert <<a:40-big-signed, _:8>> = <<231, 255, 255, 255, 254, 123>>"
+      |> example(fn() {
+        assert_equal(-103_079_215_106, {
+          let assert <<a:40-big-signed, _:8>> = <<231, 255, 255, 255, 254, 123>>
+          a
+        })
+      }),
+    "let assert <<_:1, a:54-big-unsigned, _:bits>> = <<0, 231, 255, 255, 253, 123, 17>>"
+      |> example(fn() {
+        assert_equal(127_543_348_739_464, {
+          let assert <<_:1, a:54-big-unsigned, _:bits>> = <<
+            0, 231, 255, 255, 253, 123, 17,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:8, a:54-little-signed, _:bits>> = <<142, 231, 255, 255, 253, 123, 17, 139>>"
+      |> example(fn() {
+        assert_equal(-8_425_025_061_257_241, {
+          let assert <<_:8, a:54-little-signed, _:bits>> = <<
+            142, 231, 255, 255, 253, 123, 17, 139,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:7, a:55-little-signed, _:bits>> = <<142, 231, 255, 255, 253, 123, 17, 139>>"
+      |> example(fn() {
+        assert_equal(-8_293_899_692_933_261, {
+          let assert <<_:7, a:55-little-signed, _:bits>> = <<
+            142, 231, 255, 255, 253, 123, 17, 139,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:8, a:40-big-signed, _:8>> = <<142, 231, 255, 255, 253, 123, 17>>"
+      |> example(fn() {
+        assert_equal(-103_079_215_749, {
+          let assert <<_:8, a:40-big-signed, _:8>> = <<
+            142, 231, 255, 255, 253, 123, 17,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:14, a:71-little-signed, _:bits>> = <<250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177>>"
+      |> example(fn() {
+        assert_equal(70_821_197_049_655, {
+          let assert <<_:14, a:71-little-signed, _:bits>> = <<
+            250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:14, a:71-big-signed, _:bits>> = <<250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177>>"
+      |> example(fn() {
+        assert_equal(515_906_807_693_217_628_160, {
+          let assert <<_:14, a:71-big-signed, _:bits>> = <<
+            250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:11, a:float-32, _:bits>> = <<112, 152, 127, 244, 0, 7, 0:2>>"
+      |> example(fn() {
+        assert_equal(-511.25, {
+          let assert <<_:11, a:float-32, _:bits>> = <<
+            112, 152, 127, 244, 0, 7, 0:2,
+          >>
+          a
+        })
+      }),
+    "let assert <<_:7, a:float-little, _:bits>> = <<8, 0, 0, 0, 1, 129, 39, 103, 129, 127:7>>"
+      |> example(fn() {
+        assert_equal(-5011.75, {
+          let assert <<_:7, a:float-little, _:bits>> = <<
+            8, 0, 0, 0, 1, 129, 39, 103, 129, 127:7,
+          >>
+          a
+        })
+      }),
+    "let assert <<a:bits-7, b:bits-3>> = <<0b11001011, 0b01:2>>"
+      |> example(fn() {
+        assert_equal(#(<<0b1100101:7>>, <<0b101:3>>), {
+          let assert <<a:bits-7, b:bits-3>> = <<0b11001011, 0b01:2>>
+          #(a, b)
+        })
+      }),
+    "let assert <<a:bits-16, b:bits-13, c:bits-11, d:bits-24>> = <<0x47, 0x9A, 0x25, 0x0C, 0xDA, 0xF1, 0xEE, 0x31>>"
+      |> example(fn() {
+        assert_equal(
+          #(<<71, 154>>, <<37, 1:5>>, <<155, 2:3>>, <<0xF1, 0xEE, 0x31>>),
+          {
+            let assert <<a:bits-16, b:bits-13, c:bits-11, d:bits-24>> = <<
+              0x47, 0x9A, 0x25, 0x0C, 0xDA, 0xF1, 0xEE, 0x31,
+            >>
+            #(a, b, c, d)
+          },
+        )
+      }),
+    "let assert <<a:bits-3, b:bytes-2, _:bytes>> = <<0b110:3, 0x12, 0xAB, 0x95, 0xFE>>"
+      |> example(fn() {
+        assert_equal(#(<<0b110:3>>, <<0x12, 0xAB>>, <<0x95, 0xFE>>), {
+          let assert <<a:bits-3, b:bytes-2, c:bytes>> = <<
+            0b110:3, 0x12, 0xAB, 0x95, 0xFE,
+          >>
+          #(a, b, c)
+        })
+      }),
+    "let assert <<0x12, _:5, _:bytes>> = <<0x12, 0xFF:6, 0x95, 0xFE>>"
+      |> example(fn() {
+        assert_equal(False, {
+          case <<0x12, 0xAB, 0x95, 0xFE>> {
+            <<0x34, _:5, _:bytes>> -> True
+            _ -> False
+          }
+        })
+      }),
+  ]
+}
+
 fn list_spread_tests() -> List(Test) {
   [
     "[1, ..[]]"
@@ -1477,6 +1831,24 @@ fn bit_array_match_tests() {
           a
         })
       }),
+    "let <<a:56-big-unsigned>> = <<0x00, 0xaa, 255, 255, 255, 255, 255>>"
+      |> example(fn() {
+        assert_equal(0xaaffffffffff, {
+          let assert <<a:56-big-unsigned>> = <<
+            0x00, 0xaa, 255, 255, 255, 255, 255,
+          >>
+          a
+        })
+      }),
+    "let <<a:56-little-unsigned>> = <<255, 255, 255, 255, 255, 0xaa, 0x00>>"
+      |> example(fn() {
+        assert_equal(0xaaffffffffff, {
+          let assert <<a:56-little-unsigned>> = <<
+            255, 255, 255, 255, 255, 0xaa, 0x00,
+          >>
+          a
+        })
+      }),
     "let <<a:float, b:int>> = <<63,240,0,0,0,0,0,0,1>>"
       |> example(fn() {
         assert_equal(#(1.0, 1), {
@@ -1563,6 +1935,22 @@ fn bit_array_match_tests() {
     "<<71, 108, 101, 97, 109>> == <<\"Gleam\":utf8>>"
       |> example(fn() {
         assert_equal(True, <<71, 108, 101, 97, 109>> == <<"Gleam":utf8>>)
+      }),
+    "<<i:40-signed, _:bits>> == <<231, 255, 255, 255, 254, 123>>"
+      |> example(fn() {
+        assert_equal(-103_079_215_106, {
+          let assert <<i:40-signed, _:bits>> = <<231, 255, 255, 255, 254, 123>>
+          i
+        })
+      }),
+    "<<_, i:40-signed, _:bits>> == <<142, 231, 255, 255, 253, 123, 17>>"
+      |> example(fn() {
+        assert_equal(-103_079_215_749, {
+          let assert <<_, i:40-signed, _:bits>> = <<
+            142, 231, 255, 255, 253, 123, 17,
+          >>
+          i
+        })
       }),
   ]
 }
