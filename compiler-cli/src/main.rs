@@ -338,7 +338,7 @@ pub struct CompilePackage {
     /// This likely wants to be a `.mjs` file as NodeJS does not permit
     /// importing of other JavaScript file extensions.
     ///
-    #[arg(long = "javascript-prelude")]
+    #[arg(verbatim_doc_comment, long = "javascript-prelude")]
     javascript_prelude: Option<Utf8PathBuf>,
 
     /// Skip Erlang to BEAM bytecode compilation if given
@@ -396,12 +396,31 @@ enum Hex {
     /// - HEXPM_USER: (optional) The Hex username to authenticate with.
     /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    #[command(verbatim_doc_comment)]
     Revert {
         #[arg(long)]
         package: Option<String>,
 
         #[arg(long)]
         version: Option<String>,
+    },
+
+    /// Create a Hex API key
+    CreateKey {
+        /// The name of the API key
+        name: String,
+        // TODO: support configurable permissions.
+        // /// The permissions the key will have.
+        // ///
+        // /// - api:read        API read access.
+        // /// - api:write       API write access.
+        // /// - repository:ORG  Access to repositories for an organisation.
+        // /// - repositories    Access to repositories for all your organisations.
+        // ///
+        // /// This flag can be given multiple times.
+        // ///
+        // #[arg(verbatim_doc_comment, long = "permission")]
+        // permissions: Vec<String>,
     },
 }
 
@@ -481,6 +500,8 @@ fn main() {
         Command::Deps(Dependencies::Download) => download_dependencies(),
 
         Command::Deps(Dependencies::Update(options)) => dependencies::update(options.packages),
+
+        Command::Hex(Hex::CreateKey { name }) => hex::create_api_key(name),
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 

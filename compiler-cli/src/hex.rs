@@ -202,3 +202,26 @@ impl ApiKeyCommand for RevertCommand {
         Ok(())
     }
 }
+
+pub(crate) fn create_api_key(name: String) -> std::result::Result<(), Error> {
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let hex_config = hexpm::Config::new();
+    let http = HttpClient::new();
+
+    // Get login creds from user
+    let username = std::env::var(USER_KEY).or_else(|_| cli::ask(USER_PROMPT))?;
+    let password = std::env::var(PASS_KEY).or_else(|_| cli::ask_password(PASS_PROMPT))?;
+
+    // Get API key
+    let api_key = runtime.block_on(hex::create_api_key(
+        &name,
+        &username,
+        &password,
+        &hex_config,
+        &http,
+    ))?;
+
+    println!("{api_key}");
+
+    Ok(())
+}
