@@ -79,7 +79,7 @@ jobs:
 
           BINARY_PATH="target/${{ matrix.target }}/release/gleam"
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-              BINARY_PATH="${BINARY_PATH}.exe"
+            BINARY_PATH="${BINARY_PATH}.exe"
           fi
 
           ./bin/verify-binary-architecture.sh "${{ matrix.target }}" "$BINARY_PATH"
