@@ -118,7 +118,7 @@ jobs:
         run: |
           BINARY_PATH="${CARGO_HOME}/bin/gleam"
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-              BINARY_PATH="${BINARY_PATH}.exe"
+            BINARY_PATH="${BINARY_PATH}.exe"
           fi
           ./bin/verify-binary-architecture.sh "${{ matrix.target }}" "$BINARY_PATH"
         if: ${{ matrix.run-integration-tests }}
