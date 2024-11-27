@@ -1,16 +1,20 @@
+use crate::{cli, http::HttpClient};
+use camino::Utf8PathBuf;
 use gleam_core::{
+    encryption,
     hex::{self, RetirementReason},
     io::HttpClient as _,
+    paths::global_hexpm_credentials_path,
     Error, Result,
 };
-
-use crate::{cli, http::HttpClient};
+use std::time::SystemTime;
 
 const USER_PROMPT: &str = "https://hex.pm username";
-const USER_KEY: &str = "HEXPM_USER";
+const USER_ENV_NAME: &str = "HEXPM_USER";
 const PASS_PROMPT: &str = "https://hex.pm password";
-const PASS_KEY: &str = "HEXPM_PASS";
-const API_KEY: &str = "HEXPM_API_KEY";
+const LOCAL_PASS_PROMPT: &str = "Local password";
+const PASS_ENV_NAME: &str = "HEXPM_PASS";
+const API_ENV_NAME: &str = "HEXPM_API_KEY";
 
 /// A helper trait that handles the provisioning and destruction of a Hex API key.
 pub trait ApiKeyCommand {
@@ -26,12 +30,12 @@ pub trait ApiKeyCommand {
         runtime: &tokio::runtime::Runtime,
         hex_config: &hexpm::Config,
     ) -> Result<()> {
-        let hostname = crate::publish::get_hostname();
+        let hostname = generate_api_key_name();
         let http = HttpClient::new();
 
         // Get login creds from user
-        let username = std::env::var(USER_KEY).or_else(|_| cli::ask(USER_PROMPT))?;
-        let password = std::env::var(PASS_KEY).or_else(|_| cli::ask_password(PASS_PROMPT))?;
+        let username = std::env::var(USER_ENV_NAME).or_else(|_| cli::ask(USER_PROMPT))?;
+        let password = std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(PASS_PROMPT))?;
 
         // Get API key
         let api_key = runtime.block_on(hex::create_api_key(
@@ -52,7 +56,10 @@ pub trait ApiKeyCommand {
         let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
         let hex_config = hexpm::Config::new();
 
-        let api_key = std::env::var(API_KEY).unwrap_or_default().trim().to_owned();
+        let api_key = std::env::var(API_ENV_NAME)
+            .unwrap_or_default()
+            .trim()
+            .to_owned();
 
         if api_key.is_empty() {
             self.with_new_api_key(&runtime, &hex_config)
@@ -203,25 +210,165 @@ impl ApiKeyCommand for RevertCommand {
     }
 }
 
-pub(crate) fn create_api_key(name: String) -> std::result::Result<(), Error> {
-    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let hex_config = hexpm::Config::new();
-    let http = HttpClient::new();
+pub(crate) fn authenticate() -> Result<()> {
+    let mut auth = HexAuthentication::new();
 
-    // Get login creds from user
-    let username = std::env::var(USER_KEY).or_else(|_| cli::ask(USER_PROMPT))?;
-    let password = std::env::var(PASS_KEY).or_else(|_| cli::ask_password(PASS_PROMPT))?;
+    if auth.has_stored_api_key() {
+        let question = "You already have a local Hex API token. Would you
+like to replace it with a new one?";
+        if !cli::confirm(question)? {
+            return Ok(());
+        }
+    }
 
-    // Get API key
-    let api_key = runtime.block_on(hex::create_api_key(
-        &name,
-        &username,
-        &password,
-        &hex_config,
-        &http,
-    ))?;
-
-    println!("{api_key}");
-
+    _ = auth.create_and_store_api_key()?;
     Ok(())
+}
+
+#[derive(Debug)]
+pub struct EncryptedApiKey {
+    name: String,
+    encrypted: String,
+}
+
+#[derive(Debug)]
+pub struct UnencryptedApiKey {
+    name: String,
+    unencrypted: String,
+}
+
+pub struct HexAuthentication {
+    runtime: tokio::runtime::Runtime,
+    http: HttpClient,
+    stored_api_key_path: Utf8PathBuf,
+}
+
+impl HexAuthentication {
+    /// Reads the stored API key from disc, if it exists.
+    ///
+    pub fn new() -> Self {
+        Self {
+            runtime: tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime"),
+            http: HttpClient::new(),
+            stored_api_key_path: global_hexpm_credentials_path(),
+        }
+    }
+
+    /// Create a new API key, removing the previous one if it already exists.
+    ///
+    pub fn create_and_store_api_key(&mut self) -> Result<UnencryptedApiKey> {
+        if self.stored_api_key_path.exists() {
+            self.remove_stored_api_key()?;
+        }
+
+        let name = generate_api_key_name();
+        let hex_config = hexpm::Config::new();
+
+        // Get login creds from user
+        let username = ask_username()?;
+        let password = ask_password()?;
+
+        // Get API key
+        let future = hex::create_api_key(&name, &username, &password, &hex_config, &self.http);
+        let api_key = self.runtime.block_on(future)?;
+
+        println!(
+            "
+Please enter a new unique password. This will be used to locally
+encrypt your Hex API key.
+"
+        );
+        let password = ask_local_password()?;
+        let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)?;
+
+        crate::fs::write(&self.stored_api_key_path, &format!("{name}\n{encrypted}"))?;
+        println!(
+            "Encrypted Hex API key written to {path}",
+            path = self.stored_api_key_path
+        );
+
+        Ok(UnencryptedApiKey {
+            name,
+            unencrypted: api_key,
+        })
+    }
+
+    pub fn has_stored_api_key(&self) -> bool {
+        self.stored_api_key_path.exists()
+    }
+
+    /// Get an API key from
+    /// 1. the HEXPM_API_KEY env var
+    /// 2. the file system (encrypted)
+    /// 3. the Hex API
+    pub fn get_or_create_api_key(&mut self) -> Result<String> {
+        if let Some(key) = Self::load_env_api_key()? {
+            return Ok(key);
+        }
+
+        if let Some(key) = Self::load_stored_api_key()? {
+            return Ok(key);
+        }
+
+        Ok(self.create_and_store_api_key()?.unencrypted)
+    }
+
+    fn load_env_api_key() -> Result<Option<String>> {
+        let api_key = std::env::var(API_ENV_NAME).unwrap_or_default();
+        if api_key.trim().is_empty() {
+            return Ok(None);
+        } else {
+            Ok(Some(api_key))
+        }
+    }
+
+    fn load_stored_api_key() -> Result<Option<String>> {
+        let Some(EncryptedApiKey { encrypted, .. }) = Self::read_stored_api_key()? else {
+            return Ok(None);
+        };
+        let password = ask_local_password()?;
+        let key = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)?;
+        Ok(Some(key))
+    }
+
+    fn read_stored_api_key() -> Result<Option<EncryptedApiKey>> {
+        let path = global_hexpm_credentials_path();
+        if !path.exists() {
+            return Ok(None);
+        }
+        let text = crate::fs::read(&path)?;
+        let mut chunks = text.splitn(2, '\n');
+        let name = chunks.next().unwrap().to_string();
+        let encrypted = chunks.next().unwrap().to_string();
+        Ok(Some(EncryptedApiKey { name, encrypted }))
+    }
+
+    fn remove_stored_api_key(&mut self) -> Result<()> {
+        todo!()
+    }
+}
+
+fn ask_local_password() -> std::result::Result<String, Error> {
+    std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
+}
+
+fn ask_password() -> std::result::Result<String, Error> {
+    std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(PASS_PROMPT))
+}
+
+fn ask_username() -> std::result::Result<String, Error> {
+    std::env::var(USER_ENV_NAME).or_else(|_| cli::ask(USER_PROMPT))
+}
+
+// TODO: move to authenticator
+pub fn generate_api_key_name() -> String {
+    let timestamp = SystemTime::now()
+        .duration_since(SystemTime::UNIX_EPOCH)
+        .expect("This function must only be called after January 1, 1970. Sorry time traveller!")
+        .as_secs();
+    let name = hostname::get()
+        .expect("Looking up hostname")
+        .to_string_lossy()
+        .to_string();
+    format!("{name}-{timestamp}")
 }

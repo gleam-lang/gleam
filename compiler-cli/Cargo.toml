@@ -37,6 +37,7 @@ same-file = "1"
 opener = "0"
 # Pubgrub dependency resolution algorithm
 pubgrub = "0"
+
 camino = { workspace = true, features = ["serde1"] }
 async-trait.workspace = true
 base16.workspace = true

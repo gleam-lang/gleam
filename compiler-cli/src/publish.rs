@@ -780,13 +780,6 @@ fn prevent_publish_git_dependency() {
     );
 }
 
-pub fn get_hostname() -> String {
-    hostname::get()
-        .expect("Looking up hostname")
-        .to_string_lossy()
-        .to_string()
-}
-
 fn quotes(x: &str) -> String {
     format!(r#"<<"{x}">>"#)
 }
