@@ -52,16 +52,15 @@
   `@deprecated` attribute:
 
   ```gleam
-  pub type HashAlgor {
-    @deprecated("unsafe encription")
-    MD5
-    SHA224
-    SHA512
+  pub type HashAlgorithm {
+    @deprecated("Please upgrade to another algorithm")
+    Md5
+    Sha224
+    Sha512
   }
 
   pub fn hash_password(input: String) -> String {
-    let results = hashing_lib.hash_input(input:, algo: MD5) // warning: MD5 is depreacated
-    results.hash
+    hash(input:, algorithm: Md5) // Warning: Deprecated value used
   }
   ```
 
