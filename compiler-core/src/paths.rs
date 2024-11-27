@@ -126,11 +126,16 @@ pub fn global_package_cache_package_tarball(package_name: &str, version: &str) -
     global_packages_cache().join(format!("{package_name}-{version}.tar"))
 }
 
+pub fn global_hexpm_credentials_path() -> Utf8PathBuf {
+    global_hexpm_cache().join("credentials")
+}
+
+fn global_hexpm_cache() -> Utf8PathBuf {
+    default_global_gleam_cache().join("hex").join("hexpm")
+}
+
 fn global_packages_cache() -> Utf8PathBuf {
-    default_global_gleam_cache()
-        .join("hex")
-        .join("hexpm")
-        .join("packages")
+    global_hexpm_cache().join("packages")
 }
 
 pub fn default_global_gleam_cache() -> Utf8PathBuf {

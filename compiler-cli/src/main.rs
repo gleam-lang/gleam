@@ -405,23 +405,8 @@ enum Hex {
         version: Option<String>,
     },
 
-    /// Create a Hex API key
-    CreateKey {
-        /// The name of the API key
-        name: String,
-        // TODO: support configurable permissions.
-        // /// The permissions the key will have.
-        // ///
-        // /// - api:read        API read access.
-        // /// - api:write       API write access.
-        // /// - repository:ORG  Access to repositories for an organisation.
-        // /// - repositories    Access to repositories for all your organisations.
-        // ///
-        // /// This flag can be given multiple times.
-        // ///
-        // #[arg(verbatim_doc_comment, long = "permission")]
-        // permissions: Vec<String>,
-    },
+    /// Authenticate with Hex
+    Authenticate,
 }
 
 #[derive(Subcommand, Debug)]
@@ -501,7 +486,7 @@ fn main() {
 
         Command::Deps(Dependencies::Update(options)) => dependencies::update(options.packages),
 
-        Command::Hex(Hex::CreateKey { name }) => hex::create_api_key(name),
+        Command::Hex(Hex::Authenticate) => hex::authenticate(),
 
         Command::New(options) => new::create(options, COMPILER_VERSION),
 
