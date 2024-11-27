@@ -6,6 +6,7 @@ mod bit_array;
 mod blocks;
 mod cases;
 mod conditional_compilation;
+mod custom_type;
 mod external_fn;
 mod external_types;
 mod function;
@@ -253,85 +254,6 @@ fn type_alias() {
         "///
 type Many(a) =
   List(a)
-"
-    );
-}
-
-#[test]
-fn custom_types() {
-    assert_format!(
-        "type WowThisTypeHasJustTheLongestName(
-  some_long_type_variable,
-  and_another,
-  and_another_again,
-) {
-  Make
-}
-"
-    );
-
-    assert_format!(
-        "type Result(a, e) {
-  Ok(a)
-  Error(e)
-}
-"
-    );
-
-    assert_format!(
-        "type Result(a, e) {
-  Ok(value: a)
-  Error(error: e)
-}
-"
-    );
-
-    assert_format!(
-        "type SillyResult(a, e) {
-  Ok(
-    first_value_with_really_long_name: a,
-    second_value_with_really_long_name: a,
-  )
-  Error(error: e)
-}
-"
-    );
-
-    assert_format!(
-        "type SillyResult(a, e) {
-  Ok(
-    first_value_with_really_long_name: a,
-    second_value_with_really_long_name: List(
-      #(Int, fn(a, a, a, a, a, a, a) -> List(a)),
-    ),
-  )
-  Error(error: e)
-}
-"
-    );
-
-    assert_format!(
-        "type X {
-  X(
-    start: fn() -> a_reall_really_long_name_goes_here,
-    stop: fn() -> a_reall_really_long_name_goes_here,
-  )
-}
-"
-    );
-
-    assert_format!(
-        "pub opaque type X {
-  X
-}
-"
-    );
-
-    assert_format!(
-        "///
-pub type Option(a) {
-  None
-}
 "
     );
 }
@@ -3326,49 +3248,6 @@ type Whatever =
 }
 
 #[test]
-fn doc_comments_7_test() {
-    assert_format!(
-        r#"import one
-
-/// one
-///two
-type Whatever {
-  Whatever
-}
-"#
-    );
-}
-
-#[test]
-fn comments1() {
-    assert_format!(
-        r#"import one
-
-// one
-//two
-type Whatever {
-  Whatever
-}
-"#
-    );
-}
-
-#[test]
-fn comments2() {
-    assert_format!(
-        r#"import one
-
-// one
-//two
-/// three
-type Whatever {
-  Whatever
-}
-"#
-    );
-}
-
-#[test]
 fn comments3() {
     assert_format!(
         "// one
@@ -3403,38 +3282,6 @@ fn whatever() -> Nil
 }
 
 #[test]
-fn comments6() {
-    assert_format!(
-        r#"// one
-//two
-type Thingy
-"#
-    );
-}
-
-#[test]
-fn comments7() {
-    assert_format!(
-        r#"// one
-//two
-type Thingy
-"#
-    );
-}
-
-#[test]
-fn comments8() {
-    assert_format!(
-        r#"// one
-//two
-type Whatever {
-  Whatever
-}
-"#
-    );
-}
-
-#[test]
 fn comments9() {
     assert_format!(
         r#"// one
@@ -3442,29 +3289,6 @@ fn comments9() {
 type Whatever =
   Int
 "#
-    );
-}
-
-#[test]
-fn comments10() {
-    assert_format!(
-        r#"// zero
-import one
-
-// one
-//two
-type Whatever {
-  Whatever
-}
-"#
-    );
-
-    assert_format!(
-        "fn main() {
-  // Hello
-  \"world\"
-}
-"
     );
 }
 
@@ -4936,24 +4760,6 @@ pub fn main() {
     );
 }
 
-// https://github.com/gleam-lang/gleam/issues/1757
-#[test]
-fn multiple_line_custom_type_constructor_field_doc_comments() {
-    assert_format!(
-        r#"pub type Thingy {
-  Thingy(
-    /// One?
-    /// One!
-    one: One,
-    /// Two?
-    /// Two!
-    two: Two,
-  )
-}
-"#
-    );
-}
-
 // https://github.com/gleam-lang/gleam/issues/1872
 #[test]
 fn multiple_line_spread_list_comments() {
@@ -5356,17 +5162,6 @@ fn comment_at_end_of_type() {
         r#"pub type X {
   X
   // Afterwards
-}
-"#
-    );
-}
-
-#[test]
-fn deprecated_custom_type() {
-    assert_format!(
-        r#"@deprecated("Deprecated type")
-pub type One {
-  One
 }
 "#
     );
