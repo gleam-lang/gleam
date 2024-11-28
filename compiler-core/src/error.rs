@@ -524,6 +524,7 @@ impl From<capnp::NotInSchema> for Error {
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum InvalidProjectNameReason {
     Format,
+    FormatNotLowercase,
     GleamPrefix,
     ErlangReservedWord,
     ErlangStandardLibraryModule,
@@ -836,6 +837,9 @@ Please try again with a different project name.",
                             "is a reserved word in Gleam.",
                         InvalidProjectNameReason::GleamReservedModule =>
                             "is a reserved module name in Gleam.",
+                        InvalidProjectNameReason::FormatNotLowercase =>
+                            "does not have the correct format. Project names \
+may only contain lowercase letters",
                         InvalidProjectNameReason::Format =>
                             "does not have the correct format. Project names \
 must start with a lowercase letter and may only contain lowercase letters, \
