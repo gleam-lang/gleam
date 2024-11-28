@@ -325,3 +325,32 @@ fn skip_existing_git_files_when_skip_git_is_true() {
     assert!(path.join("README.md").exists());
     assert!(path.join(".gitignore").exists());
 }
+
+#[test]
+fn validate_name_format() {
+    assert!(crate::new::validate_name("project").is_ok());
+    assert!(crate::new::validate_name("project_name").is_ok());
+    assert!(crate::new::validate_name("project2").is_ok());
+
+    let invalid = ["Project", "PROJECT", "Project_Name"];
+    for name in invalid {
+        assert!(matches!(
+            crate::new::validate_name(name),
+            Err(Error::InvalidProjectName {
+                name: _,
+                reason: crate::new::InvalidProjectNameReason::FormatNotLowercase
+            })
+        ));
+    }
+
+    let invalid = ["0project", "_project", "project-name"];
+    for name in invalid {
+        assert!(matches!(
+            crate::new::validate_name(name),
+            Err(Error::InvalidProjectName {
+                name: _,
+                reason: crate::new::InvalidProjectNameReason::Format
+            })
+        ));
+    }
+}
