@@ -648,7 +648,7 @@ fn get_manifest<Telem: Telemetry>(
     if packages_to_update.is_empty()
         && is_same_requirements(
             &manifest.requirements,
-            &config.all_drect_dependencies()?,
+            &config.all_direct_dependencies()?,
             paths.root(),
         )?
     {
@@ -875,7 +875,7 @@ fn resolve_versions<Telem: Telemetry>(
 
     let manifest = Manifest {
         packages: manifest_packages,
-        requirements: config.all_drect_dependencies()?,
+        requirements: config.all_direct_dependencies()?,
     };
 
     Ok(manifest)
