@@ -88,6 +88,52 @@ pub fn update(packages: Vec<String>) -> Result<()> {
     Ok(())
 }
 
+pub fn remove<Telem: Telemetry>(
+    paths: &ProjectPaths,
+    telemetry: Telem,
+    packages_to_remove: Vec<EcoString>,
+) -> Result<Manifest> {
+    let span = tracing::info_span!("remove_deps");
+    let _enter = span.enter();
+
+    // We do this before acquiring the build lock so that we don't create the
+    // build directory if there is no gleam.toml
+    crate::config::ensure_config_exists(paths)?;
+
+    let lock = BuildLock::new_packages(paths)?;
+    let _guard = lock.lock(&telemetry);
+
+    // Read the project config
+    let mut config = crate::config::read(paths.root_config())?;
+    let mut manifest = read_manifest_from_disc(paths)?;
+    for package in packages_to_remove.iter() {
+        _ = config.dev_dependencies.remove(package);
+        _ = config.dependencies.remove(package);
+        _ = manifest.requirements.remove(package);
+    }
+
+    // Unlock all packages that we we want to remove - this removes them and all unneeded
+    // dependencies from `locked`.
+    let mut locked = config.locked(Some(&manifest))?;
+    unlock_packages(&mut locked, packages_to_remove.as_slice(), Some(&manifest))?;
+
+    // Only keep packages in the manifest that are still locked.
+    manifest
+        .packages
+        .retain(|package| locked.contains_key(&package.name));
+
+    // Remove any packages that are no longer required due to manifest changes
+    let local = LocalPackages::read_from_disc(paths)?;
+    remove_extra_packages(paths, &local, &manifest, &telemetry)?;
+
+    // Record new state of the packages directory
+    tracing::debug!("writing_manifest_toml");
+    write_manifest_to_disc(paths, &manifest)?;
+    LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
+
+    Ok(manifest)
+}
+
 pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {
     let Some((package, version)) = package.split_once('@') else {
         // Default to the latest version available.
