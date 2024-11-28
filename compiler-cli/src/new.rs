@@ -349,16 +349,24 @@ fn validate_name(name: &str) -> Result<(), Error> {
             name: name.to_string(),
             reason: InvalidProjectNameReason::GleamReservedModule,
         })
-    } else if !regex::Regex::new("^[a-z][a-z0-9_]*$")
-        .expect("new name regex could not be compiled")
+    } else if regex::Regex::new("^[a-z][a-z0-9_]*$")
+        .expect("failed regex to match valid name format")
+        .is_match(name)
+    {
+        Ok(())
+    } else if regex::Regex::new("^[a-zA-Z][a-zA-Z0-9_]*$")
+        .expect("failed regex to match valid but non-lowercase name format")
         .is_match(name)
     {
         Err(Error::InvalidProjectName {
             name: name.to_string(),
-            reason: InvalidProjectNameReason::Format,
+            reason: InvalidProjectNameReason::FormatNotLowercase,
         })
     } else {
-        Ok(())
+        Err(Error::InvalidProjectName {
+            name: name.to_string(),
+            reason: InvalidProjectNameReason::Format,
+        })
     }
 }
 
