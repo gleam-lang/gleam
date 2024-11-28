@@ -83,7 +83,6 @@ use gleam_core::{
     paths::ProjectPaths,
     version::COMPILER_VERSION,
 };
-use hex::ApiKeyCommand as _;
 use std::str::FromStr;
 
 use camino::Utf8PathBuf;
@@ -524,13 +523,11 @@ fn main() {
             version,
             reason,
             message,
-        }) => hex::RetireCommand::new(package, version, reason, message).run(),
+        }) => hex::retire(package, version, reason, message),
 
-        Command::Hex(Hex::Unretire { package, version }) => {
-            hex::UnretireCommand::new(package, version).run()
-        }
+        Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
 
-        Command::Hex(Hex::Revert { package, version }) => hex::revertcommand(package, version),
+        Command::Hex(Hex::Revert { package, version }) => hex::revert(package, version),
 
         Command::Add { packages, dev } => add::command(packages, dev),
 
