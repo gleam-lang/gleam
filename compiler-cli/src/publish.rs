@@ -5,7 +5,7 @@ use gleam_core::{
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
-    error::SmallVersion,
+    error::{wrap, SmallVersion},
     hex,
     paths::{self, ProjectPaths},
     requirement::Requirement,
@@ -56,6 +56,7 @@ impl PublishCommand {
         } = do_build_hex_tarball(&paths, &mut config)?;
 
         check_for_name_squatting(&compile_result)?;
+        check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
 
         // Build HTML documentation
         let docs_tarball = fs::create_tar_archive(docs::build_documentation(
@@ -118,6 +119,50 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
 
     if main.body.first().is_println() {
         return Err(Error::HexPackageSquatting);
+    }
+
+    Ok(())
+}
+
+fn check_for_multiple_top_level_modules(package: &Package, i_am_sure: bool) -> Result<(), Error> {
+    // Collect top-level module names
+    let mut top_level_module_names = package
+        .modules
+        .iter()
+        .filter_map(|module| module.name.split('/').next())
+        .collect::<Vec<_>>();
+
+    // Remove duplicates
+    top_level_module_names.sort_unstable();
+    top_level_module_names.dedup();
+
+    // If more than one top-level module name is found, prompt for confirmation
+    if top_level_module_names.len() > 1 {
+        let text = wrap(&format!(
+            "Your package defines multiple top-level modules: {}.
+
+Defining multiple top-level modules can lead to namespace pollution \
+and potential conflicts for consumers.
+
+To fix this, move all your modules under a single top-level module of your choice.
+
+For example:
+  src/{1}.gleam
+  src/{1}/module1.gleam
+  src/{1}/module2.gleam",
+            top_level_module_names.join(", "),
+            package.config.name
+        ));
+        println!("{text}\n");
+
+        let should_publish =
+            i_am_sure || cli::confirm("\nDo you wish to continue publishing this package?")?;
+        println!();
+
+        if !should_publish {
+            println!("Not publishing.");
+            std::process::exit(0);
+        }
     }
 
     Ok(())

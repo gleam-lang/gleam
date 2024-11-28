@@ -420,6 +420,10 @@ jobs:
         run: make test
         working-directory: ./test/running_modules
 
+      - name: test/multi_namespace
+        run: ./test.sh
+        working-directory: ./test/multi_namespace
+
       - name: Test FFI in subdirectories
         run: make
         working-directory: ./test/subdir_ffi
