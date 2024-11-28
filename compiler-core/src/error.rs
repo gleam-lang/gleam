@@ -1,7 +1,6 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
-use crate::type_::collapse_links;
 use crate::type_::error::{
     MissingAnnotation, Named, UnknownField, UnknownTypeHint, UnsafeRecordUpdateReason,
 };
@@ -22,7 +21,6 @@ use std::env;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
-use std::sync::Arc;
 use termcolor::Buffer;
 use thiserror::Error;
 use vec1::Vec1;
@@ -1832,7 +1830,6 @@ But function expects:
                     situation,
                 } => {
                     let mut printer = Printer::new(names);
-                    let hint = hint_unwrap_result(expected, given, &mut printer);
                     let mut text = if let Some(description) = situation.as_ref().and_then(|s| s.description()) {
                         let mut text = description.to_string();
                         text.push('\n');
@@ -1845,13 +1842,10 @@ But function expects:
                     text.push_str(&printer.print_type(expected));
                     text.push_str("\n\nFound type:\n\n    ");
                     text.push_str(&printer.print_type(given));
-                    if hint.is_some() {
-                        text.push('\n');
-                    }
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
-                        hint,
+                        hint: None,
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -3826,31 +3820,6 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
         BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
         _ => None,
-    }
-}
-
-fn hint_unwrap_result(
-    expected: &Arc<Type>,
-    given: &Arc<Type>,
-    printer: &mut Printer<'_>,
-) -> Option<String> {
-    // If the got type is `Result(a, _)` and the expected one is
-    // `a` then we can display the hint.
-    let wrapped_type = given.result_ok_type()?;
-    let expected = collapse_links(expected.clone());
-    if collapse_links(wrapped_type) != expected {
-        None
-    } else {
-        Some(wrap_format!(
-            "If you want to get a `{}` out of a `{}` you can pattern match on it:
-
-    case result {{
-      Ok(value) -> todo
-      Error(error) -> todo
-    }}",
-            printer.print_type(&expected),
-            printer.print_type(given),
-        ))
     }
 }
 
