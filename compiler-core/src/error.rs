@@ -532,6 +532,52 @@ pub enum InvalidProjectNameReason {
     GleamReservedModule,
 }
 
+pub fn format_invalid_project_name_error(
+    name: &str,
+    reason: &InvalidProjectNameReason,
+    with_suggestion: &Option<String>,
+) -> String {
+    let reason_message = match reason {
+        InvalidProjectNameReason::ErlangReservedWord => "is a reserved word in Erlang.",
+        InvalidProjectNameReason::ErlangStandardLibraryModule => {
+            "is a standard library module in Erlang."
+        }
+        InvalidProjectNameReason::GleamReservedWord => "is a reserved word in Gleam.",
+        InvalidProjectNameReason::GleamReservedModule => "is a reserved module name in Gleam.",
+        InvalidProjectNameReason::FormatNotLowercase => {
+            "does not have the correct format. Project names \
+may only contain lowercase letters."
+        }
+        InvalidProjectNameReason::Format => {
+            "does not have the correct format. Project names \
+must start with a lowercase letter and may only contain lowercase letters, \
+numbers and underscores."
+        }
+        InvalidProjectNameReason::GleamPrefix => {
+            "has the reserved prefix `gleam_`. \
+This prefix is intended for official Gleam packages only."
+        }
+    };
+
+    match with_suggestion {
+        Some(suggested_name) => wrap_format!(
+            "We were not able to create your project as `{}` {}
+
+Would you like to name your project '{}' instead?",
+            name,
+            reason_message,
+            suggested_name
+        ),
+        None => wrap_format!(
+            "We were not able to create your project as `{}` {}
+
+Please try again with a different project name.",
+            name,
+            reason_message
+        ),
+    }
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum StandardIoAction {
     Read,
@@ -823,32 +869,7 @@ of the Gleam dependency modules."
             }
 
             Error::InvalidProjectName { name, reason } => {
-                let text = wrap_format!(
-                    "We were not able to create your project as `{}` {}
-
-Please try again with a different project name.",
-                    name,
-                    match reason {
-                        InvalidProjectNameReason::ErlangReservedWord =>
-                            "is a reserved word in Erlang.",
-                        InvalidProjectNameReason::ErlangStandardLibraryModule =>
-                            "is a standard library module in Erlang.",
-                        InvalidProjectNameReason::GleamReservedWord =>
-                            "is a reserved word in Gleam.",
-                        InvalidProjectNameReason::GleamReservedModule =>
-                            "is a reserved module name in Gleam.",
-                        InvalidProjectNameReason::FormatNotLowercase =>
-                            "does not have the correct format. Project names \
-may only contain lowercase letters",
-                        InvalidProjectNameReason::Format =>
-                            "does not have the correct format. Project names \
-must start with a lowercase letter and may only contain lowercase letters, \
-numbers and underscores.",
-                        InvalidProjectNameReason::GleamPrefix =>
-                            "has the reserved prefix `gleam_`. \
-This prefix is intended for official Gleam packages only.",
-                    }
-                );
+                let text = format_invalid_project_name_error(name, reason, &None);
 
                 vec![Diagnostic {
                     title: "Invalid project name".into(),
