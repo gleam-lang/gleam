@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
 expression: "@external(erlang, \"one\", \"two\")\npub fn main() -> Int\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 @external(erlang, "one", "two")
@@ -14,6 +15,6 @@ error: Unsupported target
 2 │ pub fn main() -> Int
   │ ^^^^^^^^^^^^^
 
-The `main` function is public but doesn't have an implementation for
-the JavaScript target. All public functions of a package must be able to
+The `main` function is public but doesn't have an implementation for the
+JavaScript target. All public functions of a package must be able to
 compile for a module to be valid.

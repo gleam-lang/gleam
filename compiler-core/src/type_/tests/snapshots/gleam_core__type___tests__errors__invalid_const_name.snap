@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: const myInvalid_Constant = 42
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 const myInvalid_Constant = 42
@@ -12,6 +13,6 @@ error: Invalid constant name
 1 │ const myInvalid_Constant = 42
   │       ^^^^^^^^^^^^^^^^^^ This is not a valid constant name
 
-Hint: Constant names start with a lowercase letter and contain a-z, 0-9,
-or _.
+Hint: Constant names start with a lowercase letter and contain a-z, 0-9, or
+_.
 Try: my_invalid_constant

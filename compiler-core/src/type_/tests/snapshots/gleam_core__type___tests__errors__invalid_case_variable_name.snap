@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "case 21 { twentyOne -> {Nil} }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 case 21 { twentyOne -> {Nil} }
@@ -12,6 +13,6 @@ error: Invalid variable name
 1 │ case 21 { twentyOne -> {Nil} }
   │           ^^^^^^^^^ This is not a valid variable name
 
-Hint: Variable names start with a lowercase letter and contain a-z, 0-9,
-or _.
+Hint: Variable names start with a lowercase letter and contain a-z, 0-9, or
+_.
 Try: twenty_one
