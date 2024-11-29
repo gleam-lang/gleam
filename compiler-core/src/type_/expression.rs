@@ -4097,7 +4097,7 @@ struct RecordUpdateVariant<'a> {
     fields: &'a HashMap<EcoString, u32>,
 }
 
-impl<'a> RecordUpdateVariant<'a> {
+impl RecordUpdateVariant<'_> {
     fn arg_type(&self, index: u32) -> Arc<Type> {
         self.args
             .get(index as usize)

@@ -308,7 +308,7 @@ where
     }
 
     // Get all the modules that can be imported that have not already been imported.
-    fn completable_modules_for_import(&'a self) -> Vec<(&EcoString, &ModuleInterface)> {
+    fn completable_modules_for_import(&self) -> Vec<(&EcoString, &ModuleInterface)> {
         let mut direct_dep_packages: std::collections::HashSet<&EcoString> =
             std::collections::HashSet::from_iter(
                 self.compiler.project_compiler.config.dependencies.keys(),
@@ -723,7 +723,7 @@ where
         &'a self,
         importable_modules: &'a im::HashMap<EcoString, ModuleInterface>,
         type_: Arc<Type>,
-    ) -> Option<&HashMap<EcoString, RecordAccessor>> {
+    ) -> Option<&'a HashMap<EcoString, RecordAccessor>> {
         let type_ = collapse_links(type_);
         match type_.as_ref() {
             Type::Named {

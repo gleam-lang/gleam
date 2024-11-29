@@ -117,7 +117,6 @@ struct UpdateOptions {
         .usage(styling::AnsiColor::Yellow.on_default())
         .literal(styling::AnsiColor::Green.on_default())
 )]
-
 enum Command {
     /// Build the project
     Build {

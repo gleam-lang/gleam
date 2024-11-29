@@ -147,7 +147,7 @@ pub struct ScopeResetData {
     local_values: im::HashMap<EcoString, ValueConstructor>,
 }
 
-impl<'a> Environment<'a> {
+impl Environment<'_> {
     pub fn in_new_scope<T, E>(
         &mut self,
         problems: &mut Problems,

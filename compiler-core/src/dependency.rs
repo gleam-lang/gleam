@@ -207,7 +207,7 @@ impl<'a> DependencyProvider<'a> {
 
 type PackageName = String;
 
-impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'a> {
+impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'_> {
     fn choose_package_version<Name: Borrow<PackageName>, Ver: Borrow<PubgrubRange>>(
         &self,
         potential_packages: impl Iterator<Item = (Name, Ver)>,

@@ -51,7 +51,7 @@ impl<'a> ConnectionProgressReporter<'a> {
     }
 }
 
-impl<'a> ProgressReporter for ConnectionProgressReporter<'a> {
+impl ProgressReporter for ConnectionProgressReporter<'_> {
     fn compilation_started(&self) {
         // Do nothing. This is only used for tests currently.
         // In future we could make this emit a message to the client if compilation is taking a
