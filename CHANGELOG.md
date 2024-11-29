@@ -4,6 +4,9 @@
 
 ### Compiler
 
+- Removed compiler hint about pattern matching a `Result(a, b)` when being used where `a` is expected.
+  ([Kieran O'Reilly](https://github.com/SoTeKie))
+
 - Optimised code generated for record updates.
   ([yoshi](https://github.com/joshi-monster))
 
