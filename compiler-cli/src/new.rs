@@ -1,7 +1,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::ValueEnum;
 use gleam_core::{
-    erlang,
+    erlang, error,
     error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
     parse, Result,
 };
@@ -203,16 +203,7 @@ jobs:
 
 impl Creator {
     fn new(options: NewOptions, gleam_version: &'static str) -> Result<Self, Error> {
-        let project_name = if let Some(name) = options.name.clone() {
-            name
-        } else {
-            get_foldername(&options.project_root)?
-        }
-        .trim()
-        .to_string();
-
-        validate_name(&project_name)?;
-
+        let project_name = get_valid_project_name(options.name.clone(), &options.project_root)?;
         let root = get_current_directory()?.join(&options.project_root);
         let src = root.join("src");
         let test = root.join("test");
@@ -367,6 +358,85 @@ fn validate_name(name: &str) -> Result<(), Error> {
             name: name.to_string(),
             reason: InvalidProjectNameReason::Format,
         })
+    }
+}
+
+fn suggest_valid_name(invalid_name: &str, reason: &InvalidProjectNameReason) -> Option<String> {
+    match reason {
+        InvalidProjectNameReason::GleamPrefix => match invalid_name.strip_prefix("gleam_") {
+            Some(stripped) if invalid_name != "gleam_" => {
+                let suggestion = stripped.to_string();
+                match validate_name(&suggestion) {
+                    Ok(_) => Some(suggestion),
+                    Err(_) => None,
+                }
+            }
+            _ => None,
+        },
+        InvalidProjectNameReason::ErlangReservedWord => Some(format!("{}_app", invalid_name)),
+        InvalidProjectNameReason::ErlangStandardLibraryModule => {
+            Some(format!("{}_app", invalid_name))
+        }
+        InvalidProjectNameReason::GleamReservedWord => Some(format!("{}_app", invalid_name)),
+        InvalidProjectNameReason::GleamReservedModule => None,
+        InvalidProjectNameReason::FormatNotLowercase => Some(invalid_name.to_lowercase()),
+        InvalidProjectNameReason::Format => {
+            let suggestion = regex::Regex::new(r"[^a-z0-9]")
+                .expect("failed regex to match any non-lowercase and non-alphanumeric characters")
+                .replace_all(&invalid_name.to_lowercase(), "_")
+                .to_string();
+
+            let suggestion = regex::Regex::new(r"_+")
+                .expect("failed regex to match consecutive underscores")
+                .replace_all(&suggestion, "_")
+                .to_string();
+
+            match validate_name(&suggestion) {
+                Ok(_) => Some(suggestion),
+                Err(_) => None,
+            }
+        }
+    }
+}
+
+fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<String, Error> {
+    let initial_name = match name {
+        Some(name) => name,
+        None => get_foldername(project_root)?,
+    }
+    .trim()
+    .to_string();
+
+    match validate_name(&initial_name) {
+        Ok(()) => Ok(initial_name),
+        Err(Error::InvalidProjectName {
+            name: initial_name,
+            reason,
+        }) => {
+            let suggestion = suggest_valid_name(&initial_name, &reason);
+            match suggestion {
+                Some(ref suggested_name) => {
+                    let prompt = error::format_invalid_project_name_error(
+                        &initial_name,
+                        &reason,
+                        &suggestion,
+                    );
+                    if crate::cli::confirm(&prompt)? {
+                        Ok(suggested_name.to_string())
+                    } else {
+                        Err(Error::InvalidProjectName {
+                            name: initial_name,
+                            reason,
+                        })
+                    }
+                }
+                None => Err(Error::InvalidProjectName {
+                    name: initial_name,
+                    reason,
+                }),
+            }
+        }
+        Err(error) => Err(error),
     }
 }
 
