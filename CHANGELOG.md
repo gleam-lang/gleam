@@ -69,6 +69,10 @@
 
   ([Iesha](https://github.com/wilbert-mad))
 
+- On the JavaScript target, taking byte-aligned slices of bit arrays is now an
+  O(1) operation instead of O(N), significantly improving performance.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
