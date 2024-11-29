@@ -2441,7 +2441,7 @@ tuple has {} elements so the highest valid index is {}.",
 
                 TypeError::NotATupleUnbound { location } => {
                     let text = wrap("To index into a tuple we need to \
-know it size, but we don't know anything about this type yet. \
+know its size, but we don't know anything about this type yet. \
 Please add some type annotations so we can continue."
                         );
                     Diagnostic {
