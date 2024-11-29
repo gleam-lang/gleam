@@ -354,3 +354,85 @@ fn validate_name_format() {
         ));
     }
 }
+
+#[test]
+fn suggest_valid_names() {
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "gleam_",
+            &crate::new::InvalidProjectNameReason::GleamPrefix
+        ),
+        None
+    );
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "gleam_project",
+            &crate::new::InvalidProjectNameReason::GleamPrefix
+        ),
+        Some("project".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "try",
+            &crate::new::InvalidProjectNameReason::ErlangReservedWord
+        ),
+        Some("try_app".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "erl_eval",
+            &crate::new::InvalidProjectNameReason::ErlangStandardLibraryModule
+        ),
+        Some("erl_eval_app".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "assert",
+            &crate::new::InvalidProjectNameReason::GleamReservedWord
+        ),
+        Some("assert_app".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "gleam",
+            &crate::new::InvalidProjectNameReason::GleamReservedModule
+        ),
+        None
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "Project_Name",
+            &crate::new::InvalidProjectNameReason::FormatNotLowercase
+        ),
+        Some("project_name".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "Pr0ject-n4me!",
+            &crate::new::InvalidProjectNameReason::Format
+        ),
+        Some("pr0ject_n4me_".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "Pr0ject--n4me!",
+            &crate::new::InvalidProjectNameReason::Format
+        ),
+        Some("pr0ject_n4me_".to_string())
+    );
+
+    assert_eq!(
+        crate::new::suggest_valid_name(
+            "_pr0ject-name",
+            &crate::new::InvalidProjectNameReason::Format
+        ),
+        None
+    );
+}
