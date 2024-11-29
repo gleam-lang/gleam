@@ -101,6 +101,6 @@ const GLEAM_CORE_PACKAGE_NAME: &str = "";
 const STDLIB_PACKAGE_NAME: &str = "gleam_stdlib";
 
 mod schema_capnp {
-    #![allow(dead_code, unused_qualifications)]
+    #![allow(dead_code, unused_qualifications, clippy::all)]
     include!("../generated/schema_capnp.rs");
 }

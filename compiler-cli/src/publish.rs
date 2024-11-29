@@ -551,7 +551,7 @@ pub struct ReleaseMetadata<'a> {
     // extra: (kvlist(string => kvlist(...))) (optional)
 }
 
-impl<'a> ReleaseMetadata<'a> {
+impl ReleaseMetadata<'_> {
     pub fn as_erlang(&self) -> String {
         fn link(link: &(&str, http::Uri)) -> String {
             format!(
@@ -608,7 +608,7 @@ struct ReleaseRequirement<'a> {
     // Support alternate repositories at a later date.
     // repository: String,
 }
-impl<'a> ReleaseRequirement<'a> {
+impl ReleaseRequirement<'_> {
     pub fn as_erlang(&self) -> String {
         format!(
             r#"

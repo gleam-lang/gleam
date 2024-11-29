@@ -32,7 +32,7 @@ pub(crate) struct Router<IO, Reporter> {
     progress_reporter: Reporter,
 }
 
-impl<'a, IO, Reporter> Router<IO, Reporter>
+impl<IO, Reporter> Router<IO, Reporter>
 where
     // IO to be supplied from outside of gleam-core
     IO: FileSystemReader
@@ -43,7 +43,7 @@ where
         + MakeLocker
         + Clone,
     // IO to be supplied from inside of gleam-core
-    Reporter: ProgressReporter + Clone + 'a,
+    Reporter: ProgressReporter + Clone,
 {
     pub fn new(progress_reporter: Reporter, io: FileSystemProxy<IO>) -> Self {
         Self {

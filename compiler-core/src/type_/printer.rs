@@ -210,7 +210,7 @@ impl Names {
             return NameContextInformation::Qualified(module, name.as_str());
         };
 
-        return NameContextInformation::Unimported(name.as_str());
+        NameContextInformation::Unimported(name.as_str())
     }
 
     /// Record a named value in this module.

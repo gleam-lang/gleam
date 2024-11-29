@@ -871,7 +871,7 @@ pub struct CompiledPattern<'a> {
     pub assignments: Vec<Assignment<'a>>,
 }
 
-impl<'a> CompiledPattern<'a> {
+impl CompiledPattern<'_> {
     pub fn has_assignments(&self) -> bool {
         !self.assignments.is_empty()
     }
