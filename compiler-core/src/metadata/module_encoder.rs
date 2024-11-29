@@ -56,7 +56,7 @@ impl<'a> ModuleEncoder<'a> {
     fn set_line_numbers(&mut self, module: &mut module::Builder<'_>) {
         let mut line_numbers = module.reborrow().init_line_numbers();
         line_numbers.set_length(self.data.line_numbers.length);
-        let line_starts =
+        let mut line_starts =
             line_numbers.init_line_starts(self.data.line_numbers.line_starts.len() as u32);
         for (i, l) in self.data.line_numbers.line_starts.iter().enumerate() {
             line_starts.reborrow().set(i as u32, *l);
