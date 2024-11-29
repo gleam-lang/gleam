@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\npub type Person {\n    Teacher(title: String, age: Int, name: String)\n    Student(name: String, age: Int)\n}\npub fn get_name(person: Person) { person.name }\npub fn get_age(person: Person) { person.age }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -28,6 +29,6 @@ It has these accessible fields:
 
 Note: The field you are trying to access might not be consistently present
 or positioned across the custom type's variants, preventing reliable
-access. Ensure the field exists in the same position and has the same
-type in all variants, or pattern matching on it to enable direct accessor
+access. Ensure the field exists in the same position and has the same type
+in all variants, or pattern matching on it to enable direct accessor
 syntax.

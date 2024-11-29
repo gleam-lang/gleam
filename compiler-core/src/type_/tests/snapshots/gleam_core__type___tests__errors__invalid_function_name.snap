@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn doStuff() {}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn doStuff() {}
@@ -12,6 +13,6 @@ error: Invalid function name
 1 │ fn doStuff() {}
   │    ^^^^^^^ This is not a valid function name
 
-Hint: Function names start with a lowercase letter and contain a-z, 0-9,
-or _.
+Hint: Function names start with a lowercase letter and contain a-z, 0-9, or
+_.
 Try: do_stuff

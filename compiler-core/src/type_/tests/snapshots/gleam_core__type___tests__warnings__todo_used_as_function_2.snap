@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub fn main() {\n          todo(1)\n        }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub fn main() {
@@ -26,8 +27,8 @@ warning: Todo used as a function
 2 │           todo(1)
   │                ^
 
-`todo` is not a function and will crash before it can do anything with
-this argument.
+`todo` is not a function and will crash before it can do anything with this
+argument.
 
 Hint: if you want to display an error message you should write
 `todo as "my error message"`

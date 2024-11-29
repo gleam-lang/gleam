@@ -19,13 +19,13 @@ capnp = "0"
 # Template rendering
 askama = "0"
 # Markdown parsing
-pulldown-cmark = { version = "0", default-features = false, features = ["html"] }
+pulldown-cmark = { version = "0", default-features = false, features = [
+  "html",
+] }
 # Non-empty vectors
 vec1 = "1"
 # XDG directory locations
 dirs-next = "2"
-# Helper for wrapping text onto lines based upon width
-textwrap = { version = "=0.15.0", features = ["terminal_size"] }
 # SPDX license parsing
 spdx = "0"
 # Binary format de-serialization

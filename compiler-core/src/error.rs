@@ -16,6 +16,7 @@ use itertools::Itertools;
 use pubgrub::package::Package;
 use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
+use std::borrow::Cow;
 use std::collections::HashSet;
 use std::env;
 use std::fmt::{Debug, Display};
@@ -3873,5 +3874,93 @@ pub struct Unformatted {
 }
 
 pub fn wrap(text: &str) -> String {
-    textwrap::fill(text, std::cmp::min(75, textwrap::termwidth()))
+    let mut result = String::with_capacity(text.len());
+
+    for (i, line) in wrap_text(text, 75).iter().enumerate() {
+        if i > 0 {
+            result.push('\n');
+        }
+        result.push_str(line);
+    }
+
+    result
+}
+
+fn wrap_text(text: &str, width: usize) -> Vec<Cow<'_, str>> {
+    let mut lines: Vec<Cow<'_, str>> = Vec::new();
+    for line in text.split('\n') {
+        // check if line needs to be broken
+        match line.len() > width {
+            false => lines.push(Cow::from(line)),
+            true => {
+                let mut new_lines = break_line(line, width);
+                lines.append(&mut new_lines);
+            }
+        };
+    }
+
+    lines
+}
+
+fn break_line(line: &str, width: usize) -> Vec<Cow<'_, str>> {
+    let mut lines: Vec<Cow<'_, str>> = Vec::new();
+    let mut newline = String::from("");
+
+    // split line by spaces
+    for (i, word) in line.split(' ').enumerate() {
+        let is_new_line = i < 1 || newline.is_empty();
+
+        let can_add_word = match is_new_line {
+            true => newline.len() + word.len() <= width,
+            // +1 accounts for space added before word
+            false => newline.len() + (word.len() + 1) <= width,
+        };
+
+        if can_add_word {
+            if !is_new_line {
+                newline.push(' ');
+            }
+            newline.push_str(word);
+        } else {
+            // word too big, save existing line if present
+            if !newline.is_empty() {
+                // save current line and reset it
+                lines.push(Cow::from(newline.to_owned()));
+                newline.clear();
+            }
+
+            // then save word to a new line or break it
+            match word.len() > width {
+                false => newline.push_str(word),
+                true => {
+                    let (mut newlines, remainder) = break_word(word, width);
+                    lines.append(&mut newlines);
+                    newline.push_str(remainder);
+                }
+            }
+        }
+    }
+
+    // save last line after loop finishes
+    if !newline.is_empty() {
+        lines.push(Cow::from(newline));
+    }
+
+    lines
+}
+
+// breaks word into n lines based on width. Returns list of new lines and remainder
+fn break_word(word: &str, width: usize) -> (Vec<Cow<'_, str>>, &str) {
+    let mut new_lines: Vec<Cow<'_, str>> = Vec::new();
+    let (first, mut remainder) = word.split_at(width);
+    new_lines.push(Cow::from(first));
+
+    // split remainder until it's small enough
+    while remainder.len() > width {
+        let (first, second) = remainder.split_at(width);
+        new_lines.push(Cow::from(first));
+        remainder = second;
+    }
+
+    (new_lines, remainder)
 }

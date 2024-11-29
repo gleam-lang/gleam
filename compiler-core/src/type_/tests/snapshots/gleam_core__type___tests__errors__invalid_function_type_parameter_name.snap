@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn identity(value: someType) { value }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn identity(value: someType) { value }
@@ -12,6 +13,6 @@ error: Invalid type variable name
 1 │ fn identity(value: someType) { value }
   │                    ^^^^^^^^ This is not a valid type variable name
 
-Hint: Type Variable names start with a lowercase letter and contain a-z, 0-
-9, or _.
+Hint: Type Variable names start with a lowercase letter and contain a-z,
+0-9, or _.
 Try: some_type

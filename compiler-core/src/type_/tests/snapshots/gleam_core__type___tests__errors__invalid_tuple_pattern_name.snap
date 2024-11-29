@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "let #(a, secondValue) = #(1, 2)"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 let #(a, secondValue) = #(1, 2)
@@ -12,6 +13,6 @@ error: Invalid variable name
 1 │ let #(a, secondValue) = #(1, 2)
   │          ^^^^^^^^^^^ This is not a valid variable name
 
-Hint: Variable names start with a lowercase letter and contain a-z, 0-9,
-or _.
+Hint: Variable names start with a lowercase letter and contain a-z, 0-9, or
+_.
 Try: second_value

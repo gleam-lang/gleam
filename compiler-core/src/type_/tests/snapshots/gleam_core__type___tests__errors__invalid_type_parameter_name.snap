@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "type Wrapper(innerType) {}"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 type Wrapper(innerType) {}
@@ -12,6 +13,6 @@ error: Invalid type variable name
 1 │ type Wrapper(innerType) {}
   │              ^^^^^^^^^ This is not a valid type variable name
 
-Hint: Type Variable names start with a lowercase letter and contain a-z, 0-
-9, or _.
+Hint: Type Variable names start with a lowercase letter and contain a-z,
+0-9, or _.
 Try: inner_type

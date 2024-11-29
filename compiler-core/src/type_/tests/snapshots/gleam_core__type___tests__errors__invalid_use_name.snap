@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn use_test(f) { f(Nil) }\npub fn main() { use useVar <- use_test() }"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn use_test(f) { f(Nil) }
@@ -13,6 +14,6 @@ error: Invalid argument name
 2 │ pub fn main() { use useVar <- use_test() }
   │                     ^^^^^^ This is not a valid argument name
 
-Hint: Argument names start with a lowercase letter and contain a-z, 0-9,
-or _.
+Hint: Argument names start with a lowercase letter and contain a-z, 0-9, or
+_.
 Try: use_var
