@@ -8,56 +8,31 @@ fi
 TARGET_TRIPLE="$1"
 BINARY_PATH="$2"
 
-# Extract target OS and architecture
-TARGET_OS=$(echo "${TARGET_TRIPLE}" | grep -Eo "darwin|linux|windows" || echo "unknown")
-TARGET_ARCHITECTURE=$(echo "${TARGET_TRIPLE}" | grep -Eo "x86_64|aarch64" || echo "unknown")
-
-# Validate target OS and architecture
-if [ "$TARGET_OS" = "unknown" ]; then
-  echo "Unknown target OS in '${TARGET_TRIPLE}'"
-  exit 1
-fi
-if [ "$TARGET_ARCHITECTURE" = "unknown" ]; then
-  echo "Unknown target architecture in '${TARGET_TRIPLE}'"
-  exit 1
-fi
-
-# Map expected binary architecture based on target OS and architecture
-map_expected_binary_architecture() {
-  local target_os="$1"
-  local target_architecture="$2"
-
-  case "${target_os}" in
-    "darwin")
-      case "${target_architecture}" in
-        "x86_64") echo "x86_64" ;;
-        "aarch64") echo "arm64" ;;
-      esac
-      ;;
-    "linux")
-      case "${target_architecture}" in
-        "x86_64") echo "x86-64" ;;
-        "aarch64") echo "aarch64" ;;
-      esac
-      ;;
-    "windows")
-      case "${target_architecture}" in
-        "x86_64") echo "x86-64" ;;
-        "aarch64") echo "Aarch64" ;;
-      esac
-      ;;
-  esac
+# Parse target architecture
+parse_target_architecture() {
+  local target_triple="$1"
+  echo "$target_triple" \
+    | grep -Eo 'x86_64|aarch64' \
+    || echo "unknown target architecture"
 }
-EXPECTED_BINARY_ARCHITECTURE=$(map_expected_binary_architecture "$TARGET_OS" "$TARGET_ARCHITECTURE")
+TARGET_ARCHITECTURE=$(parse_target_architecture "$TARGET_TRIPLE")
 
-# Parse binary architecture
-file_output=$(file -b "${BINARY_PATH}")
-BINARY_ARCHITECTURE=$(echo "${file_output}" | grep -Eo "x86_64|arm64|x86-64|aarch64|x86-64|Aarch64" | head -n1 || echo "unknown")
+# Parse and normalize binary architecture
+parse_and_normalize_binary_architecture() {
+  local binary_path="$1"
+  file -b "$binary_path" \
+    | grep -Eo "x86_64|x86-64|arm64|aarch64|Aarch64" | head -n1 \
+    | sed -E 's/x86-64/x86_64/;s/(arm64|Aarch64)/aarch64/' \
+    || echo "unknown"
+}
+BINARY_ARCHITECTURE=$(parse_and_normalize_binary_architecture "${BINARY_PATH}")
 
 # Verify that binary architecture matches target architecture
-if [ "$BINARY_ARCHITECTURE" != "$EXPECTED_BINARY_ARCHITECTURE" ]; then
-  echo "Architecture mismatch for '${TARGET_TRIPLE}'"
-  echo "Expected: '${EXPECTED_BINARY_ARCHITECTURE}'"
+if [ "$BINARY_ARCHITECTURE" != "$TARGET_ARCHITECTURE" ]; then
+  echo "Architecture mismatch for '${TARGET_TRIPLE}'!"
+  echo "Expected: '${TARGET_ARCHITECTURE}'"
   echo "Got: '${BINARY_ARCHITECTURE}'"
   exit 1
 fi
+echo "Architecture match for '$TARGET_TRIPLE'!"
+exit 0
