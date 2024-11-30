@@ -10,20 +10,29 @@ BINARY_PATH="$2"
 BINARY_FILE_TYPE=$(file -b "$BINARY_PATH")
 
 # Architecture patterns
-X86_64_PATTERNS='x86-64|x86_64'
-AARCH64_PATTERNS='arm64|aarch64|Aarch64'
+ARCHITECTURE_PATTERNS_FOR_AARCH64='aarch64|Aarch64|arm64'
+ARCHITECTURE_PATTERNS_FOR_X86_64='x86-64|x86_64'
 
 # Architecture helper functions
-parse() { grep -Eo "$X86_64_PATTERNS|$AARCH64_PATTERNS" | head -n1; }
-normalize() { sed -E "s/($X86_64_PATTERNS)/x86-64/;s/($AARCH64_PATTERNS)/AArch64/"; }
+parse_architecture() {
+  grep -Eo \
+    -e "$ARCHITECTURE_PATTERNS_FOR_AARCH64" \
+    -e "$ARCHITECTURE_PATTERNS_FOR_X86_64" \
+    | head -n1
+}
+normalize_architecture() {
+  sed -E \
+    -e "s/($ARCHITECTURE_PATTERNS_FOR_AARCH64)/AArch64/" \
+    -e "s/($ARCHITECTURE_PATTERNS_FOR_X86_64)/x86-64/"
+}
 
 # Parse and normalize architectures
 TARGET_ARCHITECTURE=$(
-  echo "$TARGET_TRIPLE" | parse | normalize \
+  echo "$TARGET_TRIPLE" | parse_architecture | normalize_architecture \
   || echo "unknown target architecture"
 )
 BINARY_ARCHITECTURE=$(
-  echo "$BINARY_FILE_TYPE" | parse | normalize \
+  echo "$BINARY_FILE_TYPE" | parse_architecture | normalize_architecture \
   || echo "unknown binary architecture"
 )
 
