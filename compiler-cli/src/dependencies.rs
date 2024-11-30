@@ -88,11 +88,9 @@ pub fn update(packages: Vec<String>) -> Result<()> {
     Ok(())
 }
 
-pub fn remove<Telem: Telemetry>(
-    paths: &ProjectPaths,
-    telemetry: Telem,
-    packages_to_remove: Vec<EcoString>,
-) -> Result<Manifest> {
+/// Edit the manifest.toml file in this proejct, removing all extra requirements and packages
+/// that are no longer present in the gleam.toml config.
+pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Result<Manifest> {
     let span = tracing::info_span!("remove_deps");
     let _enter = span.enter();
 
@@ -104,23 +102,10 @@ pub fn remove<Telem: Telemetry>(
     let _guard = lock.lock(&telemetry);
 
     // Read the project config
-    let mut config = crate::config::read(paths.root_config())?;
+    let config = crate::config::read(paths.root_config())?;
     let mut manifest = read_manifest_from_disc(paths)?;
-    for package in packages_to_remove.iter() {
-        _ = config.dev_dependencies.remove(package);
-        _ = config.dependencies.remove(package);
-        _ = manifest.requirements.remove(package);
-    }
 
-    // Unlock all packages that we we want to remove - this removes them and all unneeded
-    // dependencies from `locked`.
-    let mut locked = config.locked(Some(&manifest))?;
-    unlock_packages(&mut locked, packages_to_remove.as_slice(), Some(&manifest))?;
-
-    // Only keep packages in the manifest that are still locked.
-    manifest
-        .packages
-        .retain(|package| locked.contains_key(&package.name));
+    remove_extra_requirements(&config, &mut manifest)?;
 
     // Remove any packages that are no longer required due to manifest changes
     let local = LocalPackages::read_from_disc(paths)?;
@@ -132,6 +117,46 @@ pub fn remove<Telem: Telemetry>(
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
     Ok(manifest)
+}
+
+/// Remove requirements and unneeded packages from manifest that are no longer present in config.
+fn remove_extra_requirements(config: &PackageConfig, manifest: &mut Manifest) -> Result<()> {
+    // "extra requirements" are all packages that are requirements in the manifest, but no longer
+    // part of the gleam.toml config.
+    let is_extra_requirement = |name: &EcoString| {
+        !config.dev_dependencies.contains_key(name) && !config.dependencies.contains_key(name)
+    };
+
+    // If a requirement is also used as a dependency, we do not want to force-unlock it.
+    // If the dependents get deleted as well, this transitive dependency will be dropped.
+    let is_unlockable_requirement = |name: &EcoString| {
+        manifest
+            .packages
+            .iter()
+            .all(|p| !p.requirements.contains(name))
+    };
+
+    let extra_requirements = manifest
+        .requirements
+        .keys()
+        .filter(|&name| is_extra_requirement(name) && is_unlockable_requirement(name))
+        .cloned()
+        .collect::<Vec<_>>();
+
+    manifest
+        .requirements
+        .retain(|name, _| !is_extra_requirement(name));
+
+    // Unlock all packages that we we want to remove - this removes them and all unneeded
+    // dependencies from `locked`.
+    let mut locked = config.locked(Some(manifest))?;
+    unlock_packages(&mut locked, extra_requirements.as_slice(), Some(manifest))?;
+    // Remove all unlocked packages from the manifest - these are truly no longer needed.
+    manifest
+        .packages
+        .retain(|package| locked.contains_key(&package.name));
+
+    Ok(())
 }
 
 pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requirement)> {

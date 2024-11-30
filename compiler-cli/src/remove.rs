@@ -1,5 +1,4 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::EcoString;
 
 use gleam_core::{
     error::{FileIoAction, FileKind},
@@ -47,11 +46,7 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
     let paths = crate::find_project_paths()?;
 
-    _ = crate::dependencies::remove(
-        &paths,
-        cli::Reporter::new(),
-        packages.iter().map(EcoString::from).collect(),
-    )?;
+    _ = crate::dependencies::cleanup(&paths, cli::Reporter::new())?;
 
     for package_to_remove in packages {
         cli::print_removed(&package_to_remove);
