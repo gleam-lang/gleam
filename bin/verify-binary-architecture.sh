@@ -8,9 +8,13 @@ fi
 TARGET_TRIPLE="$1"
 BINARY_PATH="$2"
 
+# Architecture patterns
+X86_64_PATTERNS='x86-64|x86_64'
+AARCH64_PATTERNS='arm64|aarch64|Aarch64'
+
 # Architecture helper functions
-parse() { grep -Eo 'x86_64|x86-64|arm64|aarch64|Aarch64' | head -n1; }
-normalize() { sed -E 's/(x86-64|x86_64)/x86-64/;s/(arm64|aarch64|Aarch64)/AArch64/'; }
+parse() { grep -Eo "$X86_64_PATTERNS|$AARCH64_PATTERNS" | head -n1; }
+normalize() { sed -E "s/($X86_64_PATTERNS)/x86-64/;s/($AARCH64_PATTERNS)/AArch64/"; }
 unknown_architecture_for() { echo "unknown $1 architecture"; }
 
 # Parse and normalize target architecture
