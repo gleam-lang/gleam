@@ -82,6 +82,9 @@
 
 - New projects now require `gleam_stdlib` v0.44.0.
 
+- `gleam remove` no longer requires a network connection.
+  ([yoshi](https://github.com/joshi-monster))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
