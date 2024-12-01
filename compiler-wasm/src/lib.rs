@@ -3,7 +3,8 @@ mod log_telemetry;
 mod tests;
 mod wasm_filesystem;
 
-use camino::Utf8PathBuf;
+use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use gleam_core::{
     analyse::TargetSupport,
     build::{
@@ -11,6 +12,8 @@ use gleam_core::{
     },
     config::PackageConfig,
     io::{FileSystemReader, FileSystemWriter},
+    metadata, paths,
+    type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::{VectorWarningEmitterIO, WarningEmitter},
     Error,
@@ -167,7 +170,11 @@ pub fn pop_warning(project_id: usize) -> Option<String> {
 
 fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     let ids = UniqueIdGenerator::new();
-    let mut type_manifests = im::HashMap::new();
+    let lib = Utf8PathBuf::from("/lib");
+    let out = Utf8PathBuf::from("/build");
+    let package = Utf8PathBuf::from("/");
+
+    let mut type_manifests = load_libraries(&ids, &project.fs, &lib)?;
     let mut defined_modules = im::HashMap::new();
     #[allow(clippy::arc_with_non_send_sync)]
     let warning_emitter = WarningEmitter::new(Rc::new(project.warnings));
@@ -175,6 +182,7 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
         name: "library".into(),
         version: Version::new(1, 0, 0),
         target,
+        // TODO: allow manipulation of the `PackageConfig`, like declaring dependencies.
         ..Default::default()
     };
 
@@ -187,10 +195,6 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
     };
 
     tracing::info!("Compiling package");
-
-    let lib = Utf8PathBuf::from("/lib");
-    let out = Utf8PathBuf::from("/build");
-    let package = Utf8PathBuf::from("/");
     let mut compiler = PackageCompiler::new(
         &config,
         Mode::Dev,
@@ -216,4 +220,39 @@ fn do_compile_package(project: Project, target: Target) -> Result<(), Error> {
         )
         .into_result()
         .map(|_| ())
+}
+
+fn load_libraries(
+    ids: &UniqueIdGenerator,
+    fs: &WasmFileSystem,
+    lib: &Utf8Path,
+) -> Result<im::HashMap<EcoString, ModuleInterface>, Error> {
+    tracing::info!("Reading precompiled module metadata files");
+    let mut manifests = im::HashMap::new();
+
+    for lib in fs.read_dir(lib)?.into_iter().filter_map(Result::ok) {
+        let path = lib.into_path().join(paths::ARTEFACT_DIRECTORY_NAME);
+        if !fs.is_directory(&path) {
+            continue;
+        }
+        for module in module_caches_paths(fs, &path)? {
+            let buf = fs.read_bytes(&module)?;
+            let module = metadata::ModuleDecoder::new(ids.clone()).read(buf.as_ref())?;
+            let _ = manifests.insert(module.name.clone(), module);
+        }
+    }
+
+    Ok(manifests)
+}
+
+pub fn module_caches_paths(
+    fs: &WasmFileSystem,
+    package_path: &Utf8Path,
+) -> Result<impl Iterator<Item = Utf8PathBuf>, Error> {
+    Ok(fs
+        .read_dir(package_path)?
+        .into_iter()
+        .filter_map(Result::ok)
+        .map(|f| f.into_path())
+        .filter(|p| p.extension() == Some("cache")))
 }
