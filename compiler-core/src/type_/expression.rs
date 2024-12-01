@@ -317,7 +317,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 ..
             } => {
                 if self.environment.target == Target::JavaScript
-                    && !self.implementations.uses_javascript_externals
+                    && !self.current_function_definition.has_javascript_external
                 {
                     check_javascript_int_safety(&int_value, location, self.problems);
                 }
