@@ -2712,7 +2712,7 @@ fn javascript_unsafe_int_with_external_function_call() {
     assert_js_warning!(
         r#"
 pub fn main() {
-  9_007_199_254_740_992 + helper()
+  helper() + 9_007_199_254_740_992
 }
 
 @external(javascript, "a", "b")

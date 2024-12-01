@@ -200,6 +200,10 @@
    nested inside another pattern would produce invalid code on Javascript.
    ([yoshi](https://github.com/joshi-monster))
 
+- Fixed a bug where expressions which use an unsafe integer on JavaScript would
+  not emit a warning if an @external function had been referenced.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
