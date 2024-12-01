@@ -29,19 +29,19 @@ normalize_architecture() {
 # Parse and normalize architectures
 TARGET_ARCHITECTURE=$(
   echo "$TARGET_TRIPLE" | parse_architecture | normalize_architecture \
-  || echo "unknown target architecture"
+  || echo "unknown (target)"
 )
 BINARY_ARCHITECTURE=$(
   echo "$BINARY_FILE_TYPE" | parse_architecture | normalize_architecture \
-  || echo "unknown binary architecture"
+  || echo "unknown (binary)"
 )
 
 # Verify that binary architecture matches target architecture
 if [ "$BINARY_ARCHITECTURE" != "$TARGET_ARCHITECTURE" ]; then
-  echo "Architecture mismatch for '$TARGET_TRIPLE'!"
-  echo "Expected: '$TARGET_ARCHITECTURE'"
-  echo "Got: '$BINARY_ARCHITECTURE'"
+  echo "error: Architecture mismatch for '$TARGET_TRIPLE'"
+  echo "Expected architecture: '$TARGET_ARCHITECTURE'"
+  echo "Found architecture: '$BINARY_ARCHITECTURE'"
   exit 1
 fi
-echo "Architecture match for '$TARGET_TRIPLE'!"
+echo "ok: Architecture match for '$TARGET_TRIPLE'"
 exit 0
