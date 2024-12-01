@@ -26,6 +26,37 @@ fn test_write_module() {
 }
 
 #[wasm_bindgen_test]
+fn test_load_gleam_toml() {
+    reset_filesystem(0);
+    assert_eq!(read_file_bytes(0, "/gleam.toml"), None);
+    write_file(
+        0,
+        "/gleam.toml",
+        r#"
+name = "invalid-dashed-name"
+version = "0.1.0"
+"#,
+    );
+    assert!(compile_package(0, "javascript")
+        .expect_err("should fail to compile")
+        .contains("Package names may only contain"));
+
+    // TODO: config does not influence codegen yet.
+    // So we can't assert valid config had an effect here.
+
+    reset_filesystem(0);
+    write_file(
+        0,
+        "/gleam.toml",
+        r#"
+name = "testing_package"
+version = "0.1.0"
+"#,
+    );
+    assert!(compile_package(0, "javascript").is_ok());
+}
+
+#[wasm_bindgen_test]
 fn test_compile_package_bad_target() {
     reset_filesystem(0);
     assert!(compile_package(0, "ruby").is_err());

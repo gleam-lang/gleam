@@ -915,6 +915,7 @@ dependencies = [
  "serde",
  "serde-wasm-bindgen",
  "termcolor",
+ "toml",
  "tracing",
  "tracing-wasm",
  "wasm-bindgen",
