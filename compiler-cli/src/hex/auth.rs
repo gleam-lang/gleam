@@ -115,7 +115,7 @@ encrypt your Hex API key.
     fn load_env_api_key() -> Result<Option<String>> {
         let api_key = std::env::var(API_ENV_NAME).unwrap_or_default();
         if api_key.trim().is_empty() {
-            return Ok(None);
+            Ok(None)
         } else {
             Ok(Some(api_key))
         }
@@ -137,9 +137,16 @@ encrypt your Hex API key.
         }
         let text = crate::fs::read(&path)?;
         let mut chunks = text.splitn(2, '\n');
-        let name = chunks.next().unwrap().to_string();
-        let encrypted = chunks.next().unwrap().to_string();
-        Ok(Some(EncryptedApiKey { name, encrypted }))
+        let Some(name) = chunks.next() else {
+            return Ok(None);
+        };
+        let Some(encrypted) = chunks.next() else {
+            return Ok(None);
+        };
+        Ok(Some(EncryptedApiKey {
+            name: name.to_string(),
+            encrypted: encrypted.to_string(),
+        }))
     }
 
     fn remove_stored_api_key(&mut self) -> Result<()> {
