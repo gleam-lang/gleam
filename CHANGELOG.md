@@ -237,6 +237,10 @@
 - Fixed a bug where the inferred variant of values was not properly cached,
   leading to incorrect errors on incremental builds and in the Language Server.
   ([Surya Rose](https://github.com/GearsDatapacks))
+  
+ - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
+   project path contains a non-ascii character.
+   ([yoshi](https://github.com/joshi-monster))
 
 ## v1.6.1 - 2024-11-19
 
