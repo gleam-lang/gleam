@@ -308,6 +308,12 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         minimum_required_version: SmallVersion,
         wrongfully_allowed_version: SmallVersion,
     },
+
+    #[error("Failed to encrypt data")]
+    FailedToEncrypt { detail: String },
+
+    #[error("Failed to decrypt data")]
+    FailedToDecrypt { detail: String },
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -1277,6 +1283,37 @@ https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-fo
                 }
                 vec![Diagnostic {
                     title: "File IO failure".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+
+            Error::FailedToEncrypt { detail } => {
+                let text = wrap_format!("A problem was encountered encrypting data.
+The error from the encryption library was:
+
+    {detail}"
+);
+                vec![Diagnostic {
+                    title: "Failed to encrypt data".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::FailedToDecrypt { detail } => {
+                let text = wrap_format!("A problem was encountered decrypting data.
+The error from the encryption library was:
+
+    {detail}"
+);
+                vec![Diagnostic {
+                    title: "Failed to decrypt data".into(),
                     text,
                     hint: None,
                     level: Level::Error,
