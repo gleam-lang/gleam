@@ -82,10 +82,6 @@
   exist with `gleam add`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-<<<<<<< HEAD
-- External files (such as `.mjs` and `.erl`) are now permitted in subdirectories
-  of `src/` and `test/`.
-=======
 - The compiler can now suggest to wrap a value in an `Ok` or `Error` if that can
   solve a type mismatch error:
 
@@ -129,7 +125,6 @@
 
 - FFI files (such as `.mjs` and `.erl`) are now permitted in subdirectories of
   `src/` and `test/`.
->>>>>>> 6394a8477 (changelog)
   ([PgBiel](https://github.com/PgBiel))
 
 - `gleam publish` now requires more verbose confirmation for publishing Gleam
@@ -290,10 +285,10 @@
 - Fixed a bug where the inferred variant of values was not properly cached,
   leading to incorrect errors on incremental builds and in the Language Server.
   ([Surya Rose](https://github.com/GearsDatapacks))
-  
- - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
-   project path contains a non-ascii character.
-   ([yoshi](https://github.com/joshi-monster))
+
+- Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
+  project path contains a non-ascii character.
+  ([yoshi](https://github.com/joshi-monster))
 
 ## v1.6.1 - 2024-11-19
 
