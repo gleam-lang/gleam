@@ -1,5 +1,6 @@
 # Changelog
 
+
 ## Unreleased
 
 ### Compiler
@@ -11,6 +12,14 @@
 ### Formatter
 
 ### Bug fix
+
+## v1.6.3 - 2024-12-03
+
+### Bug fixed
+
+- Fixed a bug where Gleam would be unable to compile to BEAM bytecode on older
+  versions of Erlang/OTP.
+  ([yoshi](https://github.com/joshi-monster))
 
 ## v1.6.2 - 2024-11-23
 
