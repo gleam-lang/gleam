@@ -150,7 +150,11 @@ add_lib_to_erlang_path(Lib) ->
     code:add_paths(filelib:wildcard([Lib, "/*/ebin"])).
 
 del_lib_from_erlang_path(Lib) ->
-    code:del_paths(filelib:wildcard([Lib, "/*/ebin"])).
+    Paths = filelib:wildcard([Lib, "/*/ebin"]),
+    case erlang:function_exported(code, del_paths, 1) of
+        true -> code:del_paths(Paths);
+        false -> lists:foreach(fun code:del_path/1, Paths)
+    end.
 
 configure_logging() ->
     Enabled = os:getenv("GLEAM_LOG") /= false,
