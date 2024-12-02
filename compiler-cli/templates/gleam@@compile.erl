@@ -4,12 +4,15 @@
 % TODO: Don't concurrently print warnings and errors
 % TODO: Some tests
 
-main(_) -> compile_package_loop().
+main(_) ->
+    ok = io:setopts([binary, {encoding, utf8}]),
+    ok = configure_logging(),
+    compile_package_loop().
 
 compile_package_loop() ->
-    case file:read_line(standard_io) of
+    case io:get_line("") of
         eof -> ok;
-        {ok, Line} ->
+        Line ->
             Chars = unicode:characters_to_list(Line),
             {ok, Tokens, _} = erl_scan:string(Chars),
             {ok, {Lib, Out, Modules}} = erl_parse:parse_term(Tokens),
@@ -25,9 +28,8 @@ compile_package(Lib, Out, Modules) ->
         filename:extension(Module) =:= ".ex"
     end,
     {ElixirModules, ErlangModules} = lists:partition(IsElixirModule, Modules),
-    ok = configure_logging(),
-    ok = add_lib_to_erlang_path(Lib),
     ok = filelib:ensure_dir([Out, $/]),
+    ok = add_lib_to_erlang_path(Lib),
     {ErlangOk, _ErlangBeams} = compile_erlang(ErlangModules, Out),
     {ElixirOk, _ElixirBeams} = case ErlangOk of
         true -> compile_elixir(ElixirModules, Out);
@@ -166,6 +168,6 @@ configure_logging() ->
 
 log(Term) ->
     case persistent_term:get(gleam_logging_enabled) of
-        true -> erlang:display(Term), ok;
+        true -> io:fwrite("~p~n", [Term]), ok;
         false -> ok
     end.
