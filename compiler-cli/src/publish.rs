@@ -16,82 +16,106 @@ use itertools::Itertools;
 use sha2::Digest;
 use std::{io::Write, path::PathBuf, time::Instant};
 
-use crate::{build, cli, docs, fs, hex::ApiKeyCommand, http::HttpClient};
+use crate::{build, cli, docs, fs, http::HttpClient};
 
-pub fn command(replace: bool, yes: bool) -> Result<()> {
-    let command = PublishCommand::setup(replace, yes)?;
+pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
+    let paths = crate::find_project_paths()?;
+    let mut config = crate::config::root_config()?;
 
-    if let Some(mut command) = command {
-        command.run()?;
+    let should_publish = check_for_gleam_prefix(&config)?
+        && check_for_version_zero(&config)?
+        && check_repo_url(&config, i_am_sure)?;
+
+    if !should_publish {
+        println!("Not publishing.");
+        return Ok(());
+    }
+
+    let Tarball {
+        mut compile_result,
+        data: package_tarball,
+        src_files_added,
+        generated_files_added,
+    } = do_build_hex_tarball(&paths, &mut config)?;
+
+    check_for_name_squatting(&compile_result)?;
+    check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
+
+    // Build HTML documentation
+    let docs_tarball = fs::create_tar_archive(docs::build_documentation(
+        &config,
+        &mut compile_result,
+        DocContext::HexPublish,
+    )?)?;
+
+    // Ask user if this is correct
+    if !generated_files_added.is_empty() {
+        println!("\nGenerated files:");
+        for file in generated_files_added.iter().sorted() {
+            println!("  - {}", file.0);
+        }
+    }
+    println!("\nSource files:");
+    for file in src_files_added.iter().sorted() {
+        println!("  - {file}");
+    }
+    println!("\nName: {}", config.name);
+    println!("Version: {}", config.version);
+
+    let should_publish = i_am_sure || cli::confirm("\nDo you wish to publish this package?")?;
+    if !should_publish {
+        println!("Not publishing.");
+        return Ok(());
+    }
+
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let hex_config = hexpm::Config::new();
+    let api_key =
+        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
+    let start = Instant::now();
+    cli::print_publishing(&config.name, &config.version);
+
+    runtime.block_on(hex::publish_package(
+        package_tarball,
+        config.version.to_string(),
+        &api_key,
+        &hex_config,
+        replace,
+        &HttpClient::new(),
+    ))?;
+
+    cli::print_publishing_documentation();
+    runtime.block_on(hex::publish_documentation(
+        &config.name,
+        &config.version,
+        docs_tarball,
+        &api_key,
+        &hex_config,
+        &HttpClient::new(),
+    ))?;
+    cli::print_published(start.elapsed());
+    println!(
+        "\nView your package at https://hex.pm/packages/{}",
+        &config.name
+    );
+
+    // Prompt the user to make a git tag if they have not.
+    let has_repo = config.repository.url().is_some();
+    let git = PathBuf::from(".git");
+    let version = format!("v{}", &config.version);
+    let git_tag = git.join("refs").join("tags").join(&version);
+    if has_repo && git.exists() && !git_tag.exists() {
+        println!(
+            "
+Please push a git tag for this release so source code links in the
+HTML documentation will work:
+
+    git tag {version}
+    git push origin {version}
+"
+        )
     }
     Ok(())
-}
-
-pub struct PublishCommand {
-    config: PackageConfig,
-    package_tarball: Vec<u8>,
-    docs_tarball: Vec<u8>,
-    replace: bool,
-}
-
-impl PublishCommand {
-    pub fn setup(replace: bool, i_am_sure: bool) -> Result<Option<Self>> {
-        let paths = crate::find_project_paths()?;
-        let mut config = crate::config::root_config()?;
-
-        let should_publish = check_for_gleam_prefix(&config)?
-            && check_for_version_zero(&config)?
-            && check_repo_url(&config, i_am_sure)?;
-
-        if !should_publish {
-            println!("Not publishing.");
-            std::process::exit(0);
-        }
-
-        let Tarball {
-            mut compile_result,
-            data: package_tarball,
-            src_files_added,
-            generated_files_added,
-        } = do_build_hex_tarball(&paths, &mut config)?;
-
-        check_for_name_squatting(&compile_result)?;
-        check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
-
-        // Build HTML documentation
-        let docs_tarball = fs::create_tar_archive(docs::build_documentation(
-            &config,
-            &mut compile_result,
-            DocContext::HexPublish,
-        )?)?;
-
-        // Ask user if this is correct
-        if !generated_files_added.is_empty() {
-            println!("\nGenerated files:");
-            for file in generated_files_added.iter().sorted() {
-                println!("  - {}", file.0);
-            }
-        }
-        println!("\nSource files:");
-        for file in src_files_added.iter().sorted() {
-            println!("  - {file}");
-        }
-        println!("\nName: {}", config.name);
-        println!("Version: {}", config.version);
-
-        let should_publish = i_am_sure || cli::confirm("\nDo you wish to publish this package?")?;
-        if !should_publish {
-            println!("Not publishing.");
-            std::process::exit(0);
-        }
-
-        Ok(Some(Self {
-            config,
-            docs_tarball,
-            package_tarball,
-            replace,
-        }))
-    }
 }
 
 fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
@@ -228,60 +252,6 @@ core team.\n",
     let should_publish = cli::confirm_with_text("I am part of the Gleam core team")?;
     println!();
     Ok(should_publish)
-}
-
-impl ApiKeyCommand for PublishCommand {
-    fn with_api_key(
-        &mut self,
-        runtime: &tokio::runtime::Handle,
-        hex_config: &hexpm::Config,
-        api_key: &str,
-    ) -> Result<()> {
-        let start = Instant::now();
-        cli::print_publishing(&self.config.name, &self.config.version);
-
-        runtime.block_on(hex::publish_package(
-            std::mem::take(&mut self.package_tarball),
-            self.config.version.to_string(),
-            api_key,
-            hex_config,
-            self.replace,
-            &HttpClient::new(),
-        ))?;
-
-        cli::print_publishing_documentation();
-        runtime.block_on(hex::publish_documentation(
-            &self.config.name,
-            &self.config.version,
-            std::mem::take(&mut self.docs_tarball),
-            api_key,
-            hex_config,
-            &HttpClient::new(),
-        ))?;
-        cli::print_published(start.elapsed());
-        println!(
-            "\nView your package at https://hex.pm/packages/{}",
-            &self.config.name
-        );
-
-        // Prompt the user to make a git tag if they have not.
-        let has_repo = self.config.repository.url().is_some();
-        let git = PathBuf::from(".git");
-        let version = format!("v{}", &self.config.version);
-        let git_tag = git.join("refs").join("tags").join(&version);
-        if has_repo && git.exists() && !git_tag.exists() {
-            println!(
-                "
-Please push a git tag for this release so source code links in the
-HTML documentation will work:
-
-    git tag {version}
-    git push origin {version}
-"
-            )
-        }
-        Ok(())
-    }
 }
 
 struct Tarball {

@@ -2,7 +2,7 @@ use std::time::{Instant, SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use crate::{cli, fs::ProjectIO, hex::ApiKeyCommand, http::HttpClient};
+use crate::{cli, fs::ProjectIO, http::HttpClient};
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
@@ -15,42 +15,21 @@ use gleam_core::{
 };
 
 pub fn remove(package: String, version: String) -> Result<()> {
-    RemoveCommand::new(package, version).run()
-}
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let hex_config = hexpm::Config::new();
+    let api_key =
+        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
+    let http = HttpClient::new();
 
-struct RemoveCommand {
-    package: String,
-    version: String,
-}
+    // Remove docs from API
+    let request = hexpm::remove_docs_request(&package, &version, &api_key, &hex_config)
+        .map_err(Error::hex)?;
+    let response = runtime.block_on(http.send(request))?;
+    hexpm::remove_docs_response(response).map_err(Error::hex)?;
 
-impl RemoveCommand {
-    pub fn new(package: String, version: String) -> Self {
-        Self { package, version }
-    }
-}
-
-impl ApiKeyCommand for RemoveCommand {
-    fn with_api_key(
-        &mut self,
-        handle: &tokio::runtime::Handle,
-        hex_config: &hexpm::Config,
-        api_key: &str,
-    ) -> Result<()> {
-        let http = HttpClient::new();
-
-        // Remove docs from API
-        let request = hexpm::remove_docs_request(&self.package, &self.version, api_key, hex_config)
-            .map_err(Error::hex)?;
-        let response = handle.block_on(http.send(request))?;
-        hexpm::remove_docs_response(response).map_err(Error::hex)?;
-
-        // Done!
-        println!(
-            "The docs for {} {} have been removed from HexDocs",
-            self.package, self.version
-        );
-        Ok(())
-    }
+    // Done!
+    println!("The docs for {package} {version} have been removed from HexDocs");
+    Ok(())
 }
 
 #[derive(Debug)]
@@ -146,60 +125,43 @@ pub(crate) fn build_documentation(
     Ok(outputs)
 }
 
-struct PublishCommand {
-    config: PackageConfig,
-    archive: Vec<u8>,
-}
-
 pub fn publish() -> Result<()> {
-    PublishCommand::new()?.run()
-}
+    let paths = crate::find_project_paths()?;
+    let config = crate::config::root_config()?;
 
-impl PublishCommand {
-    pub fn new() -> Result<Self> {
-        let paths = crate::find_project_paths()?;
-        let config = crate::config::root_config()?;
+    let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let hex_config = hexpm::Config::new();
+    let api_key =
+        crate::hex::HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
 
-        // Reset the build directory so we know the state of the project
-        crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
+    // Reset the build directory so we know the state of the project
+    crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
-        let mut built = crate::build::main(
-            Options {
-                root_target_support: TargetSupport::Enforced,
-                warnings_as_errors: false,
-                codegen: Codegen::All,
-                compile: Compile::All,
-                mode: Mode::Prod,
-                target: None,
-                no_print_progress: false,
-            },
-            crate::build::download_dependencies(cli::Reporter::new())?,
-        )?;
-        let outputs =
-            build_documentation(&config, &mut built.root_package, DocContext::HexPublish)?;
-        let archive = crate::fs::create_tar_archive(outputs)?;
-        Ok(Self { config, archive })
-    }
-}
+    let mut built = crate::build::main(
+        Options {
+            root_target_support: TargetSupport::Enforced,
+            warnings_as_errors: false,
+            codegen: Codegen::All,
+            compile: Compile::All,
+            mode: Mode::Prod,
+            target: None,
+            no_print_progress: false,
+        },
+        crate::build::download_dependencies(cli::Reporter::new())?,
+    )?;
+    let outputs = build_documentation(&config, &mut built.root_package, DocContext::HexPublish)?;
+    let archive = crate::fs::create_tar_archive(outputs)?;
 
-impl ApiKeyCommand for PublishCommand {
-    fn with_api_key(
-        &mut self,
-        handle: &tokio::runtime::Handle,
-        hex_config: &hexpm::Config,
-        api_key: &str,
-    ) -> Result<()> {
-        let start = Instant::now();
-        cli::print_publishing_documentation();
-        handle.block_on(hex::publish_documentation(
-            &self.config.name,
-            &self.config.version,
-            std::mem::take(&mut self.archive),
-            api_key,
-            hex_config,
-            &HttpClient::new(),
-        ))?;
-        cli::print_published(start.elapsed());
-        Ok(())
-    }
+    let start = Instant::now();
+    cli::print_publishing_documentation();
+    runtime.block_on(hex::publish_documentation(
+        &config.name,
+        &config.version,
+        archive,
+        &api_key,
+        &hex_config,
+        &HttpClient::new(),
+    ))?;
+    cli::print_published(start.elapsed());
+    Ok(())
 }
