@@ -446,7 +446,20 @@ impl Type {
             (one @ Type::Named { .. }, Type::Var { type_ }) => {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
-            (Type::Named { .. }, Type::Named { .. }) => self == other,
+            (
+                Type::Named {
+                    package,
+                    module,
+                    name,
+                    ..
+                },
+                Type::Named {
+                    package: other_package,
+                    module: other_module,
+                    name: other_name,
+                    ..
+                },
+            ) => package == other_package && module == other_module && name == other_name,
 
             (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
             (one @ Type::Fn { .. }, Type::Var { type_ }) => {
