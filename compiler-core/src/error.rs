@@ -2227,14 +2227,18 @@ Private types can only be used within the module that defines them.",
                     name,
                     module_name,
                     value_constructors,
+                    type_with_same_name: imported_value_as_type,
                     context,
                 } => {
-                    let text = match context {
-                        ModuleValueErrorContext::Import { type_with_same_name: true } =>
-                            format!("`{name}` is only a type, it cannot be imported as a value."),
-                        ModuleValueErrorContext::Usage { type_with_same_name: true } =>
-                            format!("{module_name}.{name} is a type/type constructor, it cannot be used as a value"),
-                        _ => format!("The module `{module_name}` does not have a `{name}` value."),
+                    let text = if *imported_value_as_type {
+                        match context {
+                            ModuleValueErrorContext::UnqualifiedImport =>
+                                wrap_format!("`{name}` is only a type, it cannot be imported as a value."),
+                            ModuleValueErrorContext::ModuleAccess =>
+                                wrap_format!("{module_name}.{name} is a type constructor, it cannot be used as a value"),
+                        }
+                    } else {
+                        wrap_format!("The module `{module_name}` does not have a `{name}` value.")
                     };
                     Diagnostic {
                         title: "Unknown module value".into(),
@@ -2243,7 +2247,7 @@ Private types can only be used within the module that defines them.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: if matches!(context, ModuleValueErrorContext::Import { type_with_same_name: true }) {
+                                text: if *imported_value_as_type && matches!(context, ModuleValueErrorContext::UnqualifiedImport) {
                                     Some(format!("Did you mean `type {name}`?"))
                                 } else {
                                     did_you_mean(name, value_constructors)
