@@ -87,6 +87,10 @@
   team packages and v0 packages.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam publish` now warns when publishing packages that define multiple top-level
+  modules, as this can lead to namespace pollution and conflicts for consumers.
+  ([Aleksei Gurianov](https://github.com/guria))
+
 - New projects now require `gleam_stdlib` v0.44.0.
 
 - `gleam remove` no longer requires a network connection.
