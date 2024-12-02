@@ -73,6 +73,9 @@
   O(1) operation instead of O(N), significantly improving performance.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Better error message for existed type constructor being used as value constructor.
+  ([Jiangda Wang](https://github.com/Frank-III))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
