@@ -227,6 +227,10 @@
   the left-hand side was a function call.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+ - Fixed a bug where Gleam would be unable to compile to BEAM bytecode on older
+   versions of Erlang/OTP.
+   ([yoshi](https://github.com/joshi-monster))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
