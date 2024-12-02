@@ -7,6 +7,8 @@ use gleam_core::{
     Error, Result,
 };
 
+pub use auth::HexAuthentication;
+
 pub fn retire(
     package: String,
     version: String,
@@ -15,8 +17,7 @@ pub fn retire(
 ) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = hexpm::Config::new();
-    let api_key =
-        auth::HexAuthentication::new(runtime.clone(), config.clone()).get_or_create_api_key()?;
+    let api_key = HexAuthentication::new(&runtime, config.clone()).get_or_create_api_key()?;
 
     runtime.block_on(hex::retire_release(
         &package,
@@ -34,8 +35,7 @@ pub fn retire(
 pub fn unretire(package: String, version: String) -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = hexpm::Config::new();
-    let api_key =
-        auth::HexAuthentication::new(runtime.clone(), config.clone()).get_or_create_api_key()?;
+    let api_key = HexAuthentication::new(&runtime, config.clone()).get_or_create_api_key()?;
 
     runtime.block_on(hex::unretire_release(
         &package,
@@ -46,11 +46,6 @@ pub fn unretire(package: String, version: String) -> Result<()> {
     ))?;
     cli::print_unretired(&package, &version);
     Ok(())
-}
-
-pub struct RevertCommand {
-    package: String,
-    version: String,
 }
 
 pub fn revert(package: Option<String>, version: Option<String>) -> Result<()> {
@@ -78,8 +73,7 @@ pub fn revert(package: Option<String>, version: Option<String>) -> Result<()> {
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
-    let api_key = auth::HexAuthentication::new(runtime.clone(), hex_config.clone())
-        .get_or_create_api_key()?;
+    let api_key = HexAuthentication::new(&runtime, hex_config.clone()).get_or_create_api_key()?;
     let http = HttpClient::new();
 
     // Revert release from API
@@ -96,7 +90,7 @@ pub fn revert(package: Option<String>, version: Option<String>) -> Result<()> {
 pub(crate) fn authenticate() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = hexpm::Config::new();
-    let mut auth = auth::HexAuthentication::new(runtime, config.clone());
+    let mut auth = HexAuthentication::new(&runtime, config.clone());
 
     if auth.has_stored_api_key() {
         let question = "You already have a local Hex API token. Would you

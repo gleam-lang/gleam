@@ -22,18 +22,18 @@ pub struct UnencryptedApiKey {
     unencrypted: String,
 }
 
-pub struct HexAuthentication {
-    runtime: tokio::runtime::Runtime,
+pub struct HexAuthentication<'runtime> {
+    runtime: &'runtime tokio::runtime::Runtime,
     http: HttpClient,
     stored_api_key_path: Utf8PathBuf,
     local_password: Option<String>,
     hex_config: hexpm::Config,
 }
 
-impl HexAuthentication {
+impl<'runtime> HexAuthentication<'runtime> {
     /// Reads the stored API key from disc, if it exists.
     ///
-    pub fn new(runtime: tokio::runtime::Runtime, hex_config: hexpm::Config) -> Self {
+    pub fn new(runtime: &'runtime tokio::runtime::Runtime, hex_config: hexpm::Config) -> Self {
         Self {
             runtime,
             http: HttpClient::new(),
