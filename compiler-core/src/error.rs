@@ -2,7 +2,7 @@
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::error::{
-    MissingAnnotation, ModuleValueErrorContext, Named, UnknownField, UnknownTypeHint,
+    MissingAnnotation, ModuleValueUsageContext, Named, UnknownField, UnknownTypeHint,
     UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
@@ -2195,9 +2195,9 @@ Private types can only be used within the module that defines them.",
                 } => {
                     let text = if *imported_value_as_type {
                         match context {
-                            ModuleValueErrorContext::UnqualifiedImport =>
+                            ModuleValueUsageContext::UnqualifiedImport =>
                                 wrap_format!("`{name}` is only a type, it cannot be imported as a value."),
-                            ModuleValueErrorContext::ModuleAccess =>
+                            ModuleValueUsageContext::ModuleAccess =>
                                 wrap_format!("{module_name}.{name} is a type constructor, it cannot be used as a value"),
                         }
                     } else {
@@ -2210,7 +2210,7 @@ Private types can only be used within the module that defines them.",
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: if *imported_value_as_type && matches!(context, ModuleValueErrorContext::UnqualifiedImport) {
+                                text: if *imported_value_as_type && matches!(context, ModuleValueUsageContext::UnqualifiedImport) {
                                     Some(format!("Did you mean `type {name}`?"))
                                 } else {
                                     did_you_mean(name, value_constructors)

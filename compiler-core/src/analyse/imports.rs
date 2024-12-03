@@ -152,7 +152,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     module_name: module.name.clone(),
                     value_constructors: module.public_value_names(),
                     type_with_same_name: module.get_public_type(import_name).is_some(),
-                    context: crate::type_::error::ModuleValueErrorContext::UnqualifiedImport,
+                    context: crate::type_::error::ModuleValueUsageContext::UnqualifiedImport,
                 });
                 return;
             }
