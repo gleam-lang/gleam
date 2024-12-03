@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: tuple().0.1
+---
+[
+    Expression(
+        TupleIndex {
+            location: SrcSpan {
+                start: 0,
+                end: 11,
+            },
+            index: 1,
+            tuple: TupleIndex {
+                location: SrcSpan {
+                    start: 0,
+                    end: 9,
+                },
+                index: 0,
+                tuple: Call {
+                    location: SrcSpan {
+                        start: 0,
+                        end: 7,
+                    },
+                    fun: Var {
+                        location: SrcSpan {
+                            start: 0,
+                            end: 5,
+                        },
+                        name: "tuple",
+                    },
+                    arguments: [],
+                },
+            },
+        },
+    ),
+]
