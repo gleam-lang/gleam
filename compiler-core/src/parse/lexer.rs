@@ -154,7 +154,6 @@ where
                 check_for_minus = true;
                 let name = self.lex_name()?;
                 self.emit(name);
-                self.maybe_lex_dot_access()?;
             } else if self.is_number_start(c, self.chr1) {
                 check_for_minus = true;
                 let num = self.lex_number()?;
@@ -437,6 +436,7 @@ where
                 } else {
                     let tok_end = self.get_pos();
                     self.emit((tok_start, Token::Dot, tok_end));
+                    self.maybe_lex_dot_access()?;
                 }
             }
             '#' => {
@@ -647,8 +647,7 @@ where
     fn maybe_lex_dot_access(&mut self) -> Result<(), LexicalError> {
         // It can be nested like: `tuple.1.2.3.4`
         loop {
-            if Some('.') == self.chr0 && matches!(self.chr1, Some('0'..='9')) {
-                self.eat_single_char(Token::Dot);
+            if matches!(self.chr0, Some('0'..='9')) {
                 let number = self.lex_int_number()?;
                 self.emit(number);
             } else {

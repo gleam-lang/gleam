@@ -214,6 +214,10 @@
   not emit a warning if an @external function had been referenced.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where nested tuple access would not be parsed correctly when
+  the left-hand side was a function call.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
