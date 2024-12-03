@@ -147,14 +147,18 @@ do_compile_elixir(Modules, Out) ->
     end.
 
 add_lib_to_erlang_path(Lib) ->
-    code:add_paths(filelib:wildcard([Lib, "/*/ebin"])).
+    code:add_paths(expand_lib_paths(Lib)).
 
+-if(?OTP_RELEASE >= 26).
 del_lib_from_erlang_path(Lib) ->
-    Paths = filelib:wildcard([Lib, "/*/ebin"]),
-    case erlang:function_exported(code, del_paths, 1) of
-        true -> code:del_paths(Paths);
-        false -> lists:foreach(fun code:del_path/1, Paths)
-    end.
+    code:del_paths(expand_lib_paths(Lib)).
+-else.
+del_lib_from_erlang_path(Lib) ->
+    lists:foreach(fun code:del_path/1, expand_lib_paths(Lib)).
+-endif.
+
+expand_lib_paths(Lib) ->
+    filelib:wildcard([Lib, "/*/ebin"]).
 
 configure_logging() ->
     Enabled = os:getenv("GLEAM_LOG") /= false,
