@@ -79,8 +79,8 @@
   exist with `gleam add`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- FFI files (such as `.mjs` and `.erl`) are now permitted in subdirectories of
-  `src/` and `test/`.
+- External files (such as `.mjs` and `.erl`) are now permitted in subdirectories
+  of `src/` and `test/`.
   ([PgBiel](https://github.com/PgBiel))
 
 - `gleam publish` now requires more verbose confirmation for publishing Gleam
@@ -91,6 +91,11 @@
 
 - `gleam remove` no longer requires a network connection.
   ([yoshi](https://github.com/joshi-monster))
+
+- Commands that work with the Hex package manager API now create and store an
+  API key rather than creating a new one each time. This API key is encrypted
+  with a local password, reducing risk of your Hex password being compromised.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Language Server
 
