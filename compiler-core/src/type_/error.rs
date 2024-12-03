@@ -201,7 +201,7 @@ pub enum Error {
         module_name: EcoString,
         value_constructors: Vec<EcoString>,
         type_with_same_name: bool,
-        context: ModuleValueErrorContext,
+        context: ModuleValueUsageContext,
     },
 
     ModuleAliasUsedAsName {
@@ -585,7 +585,7 @@ pub enum Error {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ModuleValueErrorContext {
+pub enum ModuleValueUsageContext {
     UnqualifiedImport,
     ModuleAccess,
 }
@@ -1142,7 +1142,7 @@ pub fn convert_get_value_constructor_error(
             module_name,
             value_constructors,
             type_with_same_name: imported_value_as_type,
-            context: ModuleValueErrorContext::ModuleAccess,
+            context: ModuleValueUsageContext::ModuleAccess,
         },
     }
 }

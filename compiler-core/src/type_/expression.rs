@@ -2225,7 +2225,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         module_name: module.name.clone(),
                         value_constructors: module.public_value_names(),
                         type_with_same_name: module.get_public_type(&label).is_some(),
-                        context: ModuleValueErrorContext::ModuleAccess,
+                        context: ModuleValueUsageContext::ModuleAccess,
                     })?;
 
             // Emit a warning if the value being used is deprecated.
@@ -2787,7 +2787,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         name: name.clone(),
                         value_constructors: module.public_value_names(),
                         type_with_same_name: module.get_public_type(name).is_some(),
-                        context: ModuleValueErrorContext::ModuleAccess,
+                        context: ModuleValueUsageContext::ModuleAccess,
                     })?
             }
         };
