@@ -88,17 +88,29 @@ pub fn revert(package: Option<String>, version: Option<String>) -> Result<()> {
 
 pub(crate) fn authenticate() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let http = HttpClient::new();
     let config = hexpm::Config::new();
     let mut auth = HexAuthentication::new(&runtime, config.clone());
+    let previous = auth.read_stored_api_key()?;
 
-    if auth.has_stored_api_key() {
-        let question = "You already have a local Hex API token. Would you
-like to replace it with a new one?";
+    if previous.is_some() {
+        let question = "You already have a local Hex API token. Would you like to replace it
+with a new one?";
         if !cli::confirm(question)? {
             return Ok(());
         }
     }
 
-    _ = auth.create_and_store_api_key()?;
+    let new_key = auth.create_and_store_api_key()?;
+
+    if let Some(previous) = previous {
+        println!("Deleting previous key `{}` from Hex", previous.name);
+        runtime.block_on(hex::remove_api_key(
+            &previous.name,
+            &config,
+            &new_key.unencrypted,
+            &http,
+        ))?;
+    }
     Ok(())
 }
