@@ -125,11 +125,6 @@ pub fn generate_html<IO: FileSystemReader>(
             "index" => config.description.to_string().clone(),
             _other => "".to_owned(),
         };
-        let host = if is_hex_publish == DocContext::HexPublish {
-            "https://hexdocs.pm"
-        } else {
-            ""
-        };
         let path = Utf8PathBuf::from(&page.path);
 
         let temp = PageTemplate {
