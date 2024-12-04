@@ -378,7 +378,7 @@ fn suggest_valid_name(invalid_name: &str, reason: &InvalidProjectNameReason) -> 
             Some(format!("{}_app", invalid_name))
         }
         InvalidProjectNameReason::GleamReservedWord => Some(format!("{}_app", invalid_name)),
-        InvalidProjectNameReason::GleamReservedModule => None,
+        InvalidProjectNameReason::GleamReservedModule => Some(format!("{}_app", invalid_name)),
         InvalidProjectNameReason::FormatNotLowercase => Some(invalid_name.to_lowercase()),
         InvalidProjectNameReason::Format => {
             let suggestion = regex::Regex::new(r"[^a-z0-9]")
