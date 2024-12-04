@@ -135,13 +135,15 @@ impl ModuleDecoder {
         let module = self.string(reader.get_module()?)?;
         let name = self.string(reader.get_name()?)?;
         let args = read_vec!(&reader.get_parameters()?, self, type_);
+        let inferred_variant = self.inferred_variant(&reader.get_inferred_variant()?)?;
+
         Ok(Arc::new(Type::Named {
             publicity: Publicity::Public,
             package,
             module,
             name,
             args,
-            inferred_variant: None,
+            inferred_variant,
         }))
     }
 
@@ -218,6 +220,14 @@ impl ModuleDecoder {
         Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
         })
+    }
+
+    fn inferred_variant(&mut self, reader: &inferred_variant::Reader<'_>) -> Result<Option<u16>> {
+        use schema::inferred_variant::Which;
+        match reader.which()? {
+            Which::Unknown(_) => Ok(None),
+            Which::Inferred(variant) => Ok(Some(variant)),
+        }
     }
 
     fn value_constructor(

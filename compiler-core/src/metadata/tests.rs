@@ -1454,3 +1454,41 @@ fn type_variable_ids_in_constructors_are_shared() {
 
     assert_eq!(roundtrip(&module).types_value_constructors, expected);
 }
+
+#[test]
+fn type_with_inferred_variant() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a/b".into(),
+        types: [(
+            "Wibble".into(),
+            TypeConstructor {
+                type_: Arc::new(Type::Named {
+                    publicity: Publicity::Public,
+                    package: "some_package".into(),
+                    module: "the/module".into(),
+                    name: "Wibble".into(),
+                    args: Vec::new(),
+                    inferred_variant: Some(1),
+                }),
+                publicity: Publicity::Public,
+                origin: Default::default(),
+                module: "the/module".into(),
+                parameters: vec![],
+                deprecation: Deprecation::NotDeprecated,
+                documentation: None,
+            },
+        )]
+        .into(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+    assert_eq!(roundtrip(&module), module);
+}

@@ -81,6 +81,15 @@ struct RecordAccessor {
   label @2 :Text;
 }
 
+# UInt16 cannot be used as a generic parameter to Option,
+# so we need to create a custom type for this.
+struct InferredVariant {
+  union {
+    unknown @0 :Void;
+    inferred @1 :UInt16;
+  }
+}
+
 struct Type {
   union {
     app :group {
@@ -88,6 +97,7 @@ struct Type {
       module @1 :Text;
       parameters @2 :List(Type);
       package @7 :Text;
+      inferredVariant @8 :InferredVariant;
     }
 
     fn :group {
