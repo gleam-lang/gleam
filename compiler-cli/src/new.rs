@@ -407,36 +407,32 @@ fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<St
     .trim()
     .to_string();
 
-    match validate_name(&initial_name) {
-        Ok(()) => Ok(initial_name),
-        Err(Error::InvalidProjectName {
-            name: initial_name,
-            reason,
-        }) => {
-            let suggestion = suggest_valid_name(&initial_name, &reason);
-            match suggestion {
-                Some(ref suggested_name) => {
-                    let prompt = error::format_invalid_project_name_error(
-                        &initial_name,
-                        &reason,
-                        &suggestion,
-                    );
-                    if crate::cli::confirm(&prompt)? {
-                        Ok(suggested_name.to_string())
-                    } else {
-                        Err(Error::InvalidProjectName {
-                            name: initial_name,
-                            reason,
-                        })
-                    }
-                }
-                None => Err(Error::InvalidProjectName {
-                    name: initial_name,
-                    reason,
-                }),
-            }
+    let invalid_reason = match validate_name(&initial_name) {
+        Ok(_) => return Ok(initial_name),
+        Err(Error::InvalidProjectName { reason, .. }) => reason,
+        Err(error) => return Err(error),
+    };
+
+    let suggested_name = match suggest_valid_name(&initial_name, &invalid_reason) {
+        Some(suggested_name) => suggested_name,
+        None => {
+            return Err(Error::InvalidProjectName {
+                name: initial_name,
+                reason: invalid_reason,
+            })
         }
-        Err(error) => Err(error),
+    };
+    let prompt_for_suggested_name = error::format_invalid_project_name_error(
+        &initial_name,
+        &invalid_reason,
+        &Some(suggested_name.clone()),
+    );
+    match crate::cli::confirm(&prompt_for_suggested_name)? {
+        true => Ok(suggested_name),
+        false => Err(Error::InvalidProjectName {
+            name: initial_name,
+            reason: invalid_reason,
+        }),
     }
 }
 
