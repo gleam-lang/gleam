@@ -107,7 +107,8 @@ mod schema_capnp {
         unused_qualifications,
         clippy::all,
         clippy::unwrap_used,
-        missing_debug_implementations
+        missing_debug_implementations,
+        missing_copy_implementations
     )]
     include!("../generated/schema_capnp.rs");
 }

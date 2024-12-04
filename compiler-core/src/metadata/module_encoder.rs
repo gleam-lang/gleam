@@ -524,12 +524,18 @@ impl<'a> ModuleEncoder<'a> {
                 args,
                 module,
                 package,
+                inferred_variant,
                 ..
             } => {
                 let mut app = builder.init_app();
                 app.set_name(name);
                 app.set_module(module);
                 app.set_package(package);
+                let mut variant_builder = app.reborrow().init_inferred_variant();
+                match inferred_variant {
+                    Some(variant) => variant_builder.set_inferred(*variant),
+                    None => variant_builder.set_unknown(()),
+                }
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 
