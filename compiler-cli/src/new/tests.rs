@@ -401,7 +401,7 @@ fn suggest_valid_names() {
             "gleam",
             &crate::new::InvalidProjectNameReason::GleamReservedModule
         ),
-        None
+        Some("gleam_app".to_string())
     );
 
     assert_eq!(
