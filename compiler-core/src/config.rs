@@ -932,7 +932,7 @@ mod package_name {
             Ok(name.into())
         } else {
             let error =
-                "Package names may only container lowercase letters, numbers, and underscores";
+                "Package names may only contain lowercase letters, numbers, and underscores";
             Err(serde::de::Error::custom(error))
         }
     }
@@ -947,7 +947,7 @@ name = "one-two"
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
             .to_string(),
-        "Package names may only container lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
+        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
     )
 }
 
@@ -960,6 +960,6 @@ name = "1"
         toml::from_str::<PackageConfig>(input)
             .unwrap_err()
             .to_string(),
-        "Package names may only container lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
+        "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
     )
 }
