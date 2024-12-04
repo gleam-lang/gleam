@@ -30,8 +30,8 @@
 {% endblock %}
 
 {% block head -%}
-{% if !project_name.is_empty() && !module_name.is_empty() -%}
-<link rel="canonical" href="{{ unnest }}/{{ project_name|safe }}/{{ module_name|safe }}.html" />
+{% if !host.is_empty() && !project_name.is_empty() -%}
+<link rel="canonical" href="{{ host }}/{{ project_name|safe }}/{{ file_path|safe }}" />
 {%- endif %}
 {%- endblock %}
 
