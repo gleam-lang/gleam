@@ -218,9 +218,9 @@
   pipelines that would be safe to remove.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
- - Fixed a bug where assigning the prefix of a string pattern to a variable
-   nested inside another pattern would produce invalid code on Javascript.
-   ([yoshi](https://github.com/joshi-monster))
+- Fixed a bug where assigning the prefix of a string pattern to a variable
+  nested inside another pattern would produce invalid code on Javascript.
+  ([yoshi](https://github.com/joshi-monster))
 
 - Fixed a bug where expressions which use an unsafe integer on JavaScript would
   not emit a warning if an @external function had been referenced.
@@ -230,9 +230,13 @@
   the left-hand side was a function call.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
- - Fixed a bug where Gleam would be unable to compile to BEAM bytecode on older
-   versions of Erlang/OTP.
-   ([yoshi](https://github.com/joshi-monster))
+- Fixed a bug where Gleam would be unable to compile to BEAM bytecode on older
+  versions of Erlang/OTP.
+  ([yoshi](https://github.com/joshi-monster))
+
+- Fixed a bug where the inferred variant of values was not properly cached,
+  leading to incorrect errors on incremental builds and in the Language Server.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.6.1 - 2024-11-19
 
