@@ -14,6 +14,11 @@
 
 ### Build tool
 
+- `gleam new` now has refined project name validation - rather than failing on
+  invalid project names, it suggests a valid alternative and prompts for
+  confirmation to use it.
+  ([Diemo Gebhardt](https://github.com/diemogebhardt))
+
 ### Language server
 
 - The language server can now fill in the labels of any function call, even when
@@ -54,4 +59,4 @@
 - Fixed a bug where a block expression containing a singular record update would
   produce invalid erlang.
   ([yoshi](https://github.com/joshi-monster))
-  
+
