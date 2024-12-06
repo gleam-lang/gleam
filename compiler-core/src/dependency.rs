@@ -546,8 +546,18 @@ mod tests {
                 ],
             ),
             (
+                "depends_on_old_version_of_direct_pkg",
+                vec![(
+                    "0.1.0",
+                    vec![("direct_pkg_with_major_version", ">= 0.1.0 and < 0.3.0")],
+                )],
+            ),
+            (
                 "this_pkg_depends_on_indirect_pkg",
-                vec![("0.1.0", vec![("indirect_pkg_with_major_version", ">= 0.1.0 and < 1.0.0")])],
+                vec![(
+                    "0.1.0",
+                    vec![("indirect_pkg_with_major_version", ">= 0.1.0 and < 1.0.0")],
+                )],
             ),
             (
                 "indirect_pkg_with_major_version",
@@ -974,9 +984,15 @@ mod tests {
                 (
                     EcoString::from("direct_pkg_with_major_version"),
                     requirement::Requirement::Hex {
+                        version: Range::new("> 0.1.0 and <= 2.0.0".into()),
+                    },
+                ),
+                (
+                    EcoString::from("depends_on_old_version_of_direct_pkg"),
+                    requirement::Requirement::Hex {
                         version: Range::new("> 0.1.0 and <= 1.0.0".into()),
                     },
-                )
+                ),
             ]
             .into_iter()
             .collect(),
@@ -993,11 +1009,21 @@ mod tests {
                     },
                 },
                 ManifestPackage {
-                    name: "package_depends_on_indirect_pkg".into(),
+                    name: "depends_on_old_version_of_direct_pkg".into(),
                     version: Version::parse("0.1.0").unwrap(),
                     build_tools: ["gleam".into()].into(),
                     otp_app: None,
-                    requirements: vec!["core_package".into()],
+                    requirements: vec!["direct_pkg_with_major_version".into()],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+                ManifestPackage {
+                    name: "pkg_depends_on_indirect_pkg".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec!["indirect_pkg_with_major_version".into()],
                     source: ManifestPackageSource::Hex {
                         outer_checksum: Base16Checksum(vec![1, 2, 3]),
                     },
