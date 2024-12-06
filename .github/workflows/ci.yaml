@@ -427,3 +427,7 @@ jobs:
       - name: Test FFI in subdirectories
         run: make
         working-directory: ./test/subdir_ffi
+
+      - name: test/unicode_path
+        run: make
+        working-directory: ./test/unicode_path ⭐
