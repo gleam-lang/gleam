@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "\nimport some_mod\npub fn main(wibble: some_mod.Wibble) {\n  wibble.field\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 -- some_mod.gleam
@@ -29,10 +28,8 @@ The value being accessed has this type:
 
     some_mod.Wibble
 
-It does not have any fields shared by all variants.
+It does not have fields that are common across all variants.
 
-Note: The field you are trying to access might not be consistently present
-or positioned across the custom type's variants, preventing reliable
-access. Ensure the field exists in the same position and has the same type
-in all variants, or pattern matching on it to enable direct accessor
-syntax.
+Note: The field you are trying to access is not defined consistently across
+all variants of this custom type. To fix this, ensure that all variants
+include the field with the same name, position, and type.

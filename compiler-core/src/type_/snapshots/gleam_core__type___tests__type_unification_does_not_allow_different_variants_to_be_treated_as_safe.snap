@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests.rs
 expression: "\npub type Wibble {\n  Wibble(a: Int, b: Int)\n  Wobble(a: Int, c: String)\n}\n\npub fn main() {\n  let a = case todo {\n    Wibble(..) as b -> Wibble(..b, b: 1)\n    Wobble(..) as b -> Wobble(..b, c: \"a\")\n  }\n\n  a.b\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -35,8 +34,6 @@ It has these accessible fields:
 
     .a
 
-Note: The field you are trying to access might not be consistently present
-or positioned across the custom type's variants, preventing reliable
-access. Ensure the field exists in the same position and has the same type
-in all variants, or pattern matching on it to enable direct accessor
-syntax.
+Note: The field you are trying to access is not defined consistently across
+all variants of this custom type. To fix this, ensure that all variants
+include the field with the same name, position, and type.
