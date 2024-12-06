@@ -33,6 +33,10 @@ if g run --target=javascript; then
   exit 1
 fi
 
+echo Running erlang shippment should succeed
+g export erlang-shipment
+grep "external_only_erlang_ffi" "build/erlang-shipment/external_only_erlang/ebin/external_only_erlang.app"
+
 echo
 echo Success! 💖
 echo

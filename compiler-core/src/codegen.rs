@@ -8,6 +8,7 @@ use crate::{
     line_numbers::LineNumbers,
     Result,
 };
+use ecow::EcoString;
 use itertools::Itertools;
 use std::fmt::Debug;
 
@@ -91,6 +92,7 @@ impl<'a> ErlangApp<'a> {
         writer: Writer,
         config: &PackageConfig,
         modules: &[Module],
+        native_modules: Vec<EcoString>,
     ) -> Result<()> {
         fn tuple(key: &str, value: &str) -> String {
             format!("    {{{key}, {value}}},\n")
@@ -108,7 +110,10 @@ impl<'a> ErlangApp<'a> {
         let modules = modules
             .iter()
             .map(|m| m.name.replace("/", "@"))
+            .chain(native_modules)
+            .unique()
             .sorted()
+            .map(|m| Self::format_atom(&m))
             .join(",\n               ");
 
         // TODO: When precompiling for production (i.e. as a precompiled hex
@@ -146,6 +151,22 @@ impl<'a> ErlangApp<'a> {
         );
 
         writer.write(&path, &text)
+    }
+
+    fn format_atom(s: &EcoString) -> EcoString {
+        let mut chars = s.chars();
+
+        let Some(first) = chars.next() else {
+            return "''".into();
+        };
+
+        let needs_escape = |c: char| !(c.is_alphanumeric() || c == '_' || c == '@');
+
+        if !first.is_ascii_lowercase() || chars.any(needs_escape) {
+            format!("'{}'", s).into()
+        } else {
+            s.clone()
+        }
     }
 }
 
