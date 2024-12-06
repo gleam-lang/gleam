@@ -422,15 +422,25 @@ pub fn download<Telem: Telemetry>(
     let major_versions_available =
         dependency::check_for_major_version_updates(&manifest, package_fetcher);
     if !major_versions_available.is_empty() {
-        // print to stderr instead of stdout because this is not part of the standard output of this
-        // command
-        eprintln!("\nHint: the following dependencies have new major versions available...\n");
-        for (name, (v1, v2)) in major_versions_available {
-            eprintln!("{}@{} -> {}@{}", name, v1, name, v2);
-        }
+        pretty_print_major_versions_available(major_versions_available);
     }
 
     Ok(manifest)
+}
+
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) {
+    let longest_package_name_length = versions.keys().map(|name| name.len()).max().unwrap_or(10);
+
+    // print to stderr instead of stdout because this is not part of the standard output of this
+    // command
+    eprintln!("\nHint: the following dependencies have new major versions available...\n");
+    for (name, (v1, v2)) in versions {
+        let padding = " ".repeat(longest_package_name_length - name.len());
+
+        // lazily assuming the longest version could be 8 characters. eg: 1.1234.2
+        // excluding qualifiers other than x.y.z
+        eprintln!("{name}:{padding} {v1:<8} -> {v2:<8}");
+    }
 }
 
 async fn add_missing_packages<Telem: Telemetry>(
