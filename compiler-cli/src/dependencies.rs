@@ -435,12 +435,14 @@ pub fn download<Telem: Telemetry>(
     );
 
     if !major_versions_available.is_empty() {
-        println!("Hint: the following dependencies have new major versions available...");
+        // print to stderr instead of because this is not part of the standard output of this
+        // command
+        eprintln!("Hint: the following dependencies have new major versions available...");
 
         major_versions_available
             .iter()
             .for_each(|(name, (v1, v2))| {
-                println!("{}@{} -> {}@{}", name, v1, name, v2);
+                eprintln!("{}@{} -> {}@{}", name, v1, name, v2);
             });
     }
 
