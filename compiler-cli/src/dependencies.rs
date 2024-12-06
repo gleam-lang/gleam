@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     process::Command,
     time::Instant,
@@ -1249,6 +1250,7 @@ async fn lookup_package(
 }
 
 struct PackageFetcher {
+    runtime_cache: RefCell<HashMap<String, hexpm::Package>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
 }
@@ -1256,9 +1258,18 @@ struct PackageFetcher {
 impl PackageFetcher {
     pub fn boxed(runtime: tokio::runtime::Handle) -> Box<Self> {
         Box::new(Self {
+            runtime_cache: RefCell::new(HashMap::new()),
             runtime,
             http: HttpClient::new(),
         })
+    }
+
+    /// Caches the result so subsequent calls to `get_dependencies` so that we don't need to make a
+    /// network request. Currently dependencies are fetched during initial version resolution, and
+    /// then during check for major version availability.
+    fn cache_package(&self, package: &str, result: hexpm::Package) {
+        let mut runtime_cache = self.runtime_cache.borrow_mut();
+        let _ = runtime_cache.insert(package.to_string(), result);
     }
 }
 
@@ -1293,6 +1304,15 @@ impl dependency::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+        {
+            let runtime_cache = self.runtime_cache.borrow();
+            let result = runtime_cache.get(package);
+
+            if let Some(result) = result {
+                return Ok(result.clone());
+            }
+        }
+
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
@@ -1302,7 +1322,10 @@ impl dependency::PackageFetcher for PackageFetcher {
             .map_err(Box::new)?;
 
         match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(a) => Ok(a),
+            Ok(a) => {
+                self.cache_package(package, a.clone());
+                Ok(a)
+            }
             Err(e) => match e {
                 hexpm::ApiError::NotFound => {
                     Err(format!("I couldn't find a package called `{}`", package).into())
