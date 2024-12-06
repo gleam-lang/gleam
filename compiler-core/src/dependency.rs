@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError};
 
-use crate::{Error, Result};
+use crate::{manifest, Error, Result};
 
 use ecow::EcoString;
 use hexpm::{
@@ -69,14 +69,7 @@ where
 */
 pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
 
-/**
-* This is a preliminary implementation to get to first implementation.
-* It is unoptimal as it makes a request for each hex package.
-* Alternative is to create a package config with all direct dependencies
-* with "*" but I'm not sure if we will get correct resolution that way as
-* dependencies might cause the package to not return the latest major version.
-*/
-pub fn resolve_major_versions(
+fn resolve_major_versions(
     package_fetcher: Box<dyn PackageFetcher>,
     versions: PackageVersions,
 ) -> PackageVersionDiffs {
@@ -105,6 +98,29 @@ pub fn resolve_major_versions(
             Some((package.to_string(), (version.clone(), latest.clone())))
         })
         .collect()
+}
+
+/// Check for major version updates for direct dependencies that are being blocked by some version
+/// constraints.
+pub fn check_for_major_version_updates(
+    manifest: &manifest::Manifest,
+    package_fetcher: Box<dyn PackageFetcher>,
+) -> HashMap<String, (Version, Version)> {
+    // get the resolved versions of the direct dependencies to check for major
+    // version updates.
+    let versions = manifest
+        .packages
+        .iter()
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .filter(|(name, _)| {
+            manifest
+                .requirements
+                .iter()
+                .any(|(required_pkg, _)| name == required_pkg)
+        })
+        .collect();
+
+    resolve_major_versions(package_fetcher, versions)
 }
 
 // If the string would parse to an exact version then return the version
@@ -337,6 +353,11 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
+        requirement,
+    };
+
     use super::*;
 
     struct Remote {
@@ -515,89 +536,70 @@ mod tests {
             },
         );
 
-        let _ = deps.insert(
-            "core_package".into(),
-            hexpm::Package {
-                name: "core_package".into(),
-                repository: "hexpm".into(),
-                releases: vec![
-                    Release {
-                        version: Version::try_from("0.1.0").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: true,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("1.0.0").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: true,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
-                    Release {
-                        version: Version::try_from("1.1.0").unwrap(),
-                        requirements: [(
-                            "gleam_stdlib".into(),
-                            Dependency {
-                                app: None,
-                                optional: true,
-                                repository: None,
-                                requirement: Range::new(">= 0.1.0 and < 0.3.0".into()),
-                            },
-                        )]
-                        .into(),
-                        retirement_status: None,
-                        outer_checksum: vec![1, 2, 3],
-                        meta: (),
-                    },
+        let simple_deps_for_major_version_check = vec![
+            (
+                "direct_pkg_with_major_version",
+                vec![
+                    ("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
                 ],
-            },
-        );
+            ),
+            (
+                "this_pkg_depends_on_indirect_pkg",
+                vec![("0.1.0", vec![("indirect_pkg_with_major_version", ">= 0.1.0 and < 1.0.0")])],
+            ),
+            (
+                "indirect_pkg_with_major_version",
+                vec![
+                    ("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                ],
+            ),
+        ];
 
-        let _ = deps.insert(
-            "package_depends_on_core".into(),
-            hexpm::Package {
-                name: "package_depends_on_core".into(),
-                repository: "hexpm".into(),
-                releases: vec![Release {
-                    version: Version::try_from("0.1.0").unwrap(),
-                    requirements: [(
-                        "core_package".into(),
-                        Dependency {
-                            app: None,
-                            optional: true,
-                            repository: None,
-                            requirement: Range::new(">= 0.1.0 and < 1.0.0".into()),
-                        },
-                    )]
-                    .into(),
-                    retirement_status: None,
-                    outer_checksum: vec![1, 2, 3],
-                    meta: (),
-                }],
-            },
-        );
+        insert_simplified_deps(simple_deps_for_major_version_check, &mut deps);
 
         Box::new(Remote { deps })
+    }
+
+    fn insert_simplified_deps(
+        simple_deps: Vec<(&str, Vec<(&str, Vec<(&str, &str)>)>)>,
+        deps: &mut HashMap<String, hexpm::Package>,
+    ) {
+        for (name, releases) in simple_deps {
+            let _ = deps.insert(
+                name.to_string(),
+                hexpm::Package {
+                    name: name.to_string(),
+                    repository: "hexpm".into(),
+                    releases: releases
+                        .into_iter()
+                        .map(|(version, requirements)| Release {
+                            version: Version::try_from(version).unwrap(),
+                            requirements: requirements
+                                .into_iter()
+                                .map(|(package, range)| {
+                                    (
+                                        package.into(),
+                                        Dependency {
+                                            app: None,
+                                            optional: true,
+                                            repository: None,
+                                            requirement: Range::new(range.into()),
+                                        },
+                                    )
+                                })
+                                .collect(),
+                            retirement_status: None,
+                            outer_checksum: vec![1, 2, 3],
+                            meta: (),
+                        })
+                        .collect(),
+                },
+            );
+        }
     }
 
     #[test]
@@ -961,23 +963,65 @@ mod tests {
 
     #[test]
     fn resolve_major_version_upgrades() {
-        let result = resolve_major_versions(
-            make_remote(),
-            vec![
-                ("core_package".into(), Version::try_from("0.1.0").unwrap()),
+        let manifest = manifest::Manifest {
+            requirements: vec![
                 (
-                    "package_depends_on_core".into(),
-                    Version::try_from("0.1.0").unwrap(),
+                    EcoString::from("package_depends_on_indirect_pkg"),
+                    requirement::Requirement::Hex {
+                        version: Range::new("> 0.1.0 and <= 1.0.0".into()),
+                    },
                 ),
+                (
+                    EcoString::from("direct_pkg_with_major_version"),
+                    requirement::Requirement::Hex {
+                        version: Range::new("> 0.1.0 and <= 1.0.0".into()),
+                    },
+                )
             ]
             .into_iter()
             .collect(),
-        );
+            //requirements: HashMap::new(),
+            packages: vec![
+                ManifestPackage {
+                    name: "direct_pkg_with_major_version".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+                ManifestPackage {
+                    name: "package_depends_on_indirect_pkg".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec!["core_package".into()],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+                ManifestPackage {
+                    name: "indirect_pkg_with_major_version".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+            ],
+        };
+        let result = check_for_major_version_updates(&manifest, make_remote());
 
+        // indirect package with major version will not be in the result even though a major
+        // version of it is available
         assert_eq!(
             result,
             vec![(
-                "core_package".into(),
+                "direct_pkg_with_major_version".into(),
                 (
                     Version::try_from("0.1.0").unwrap(),
                     Version::try_from("1.1.0").unwrap()
