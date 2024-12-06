@@ -1699,7 +1699,8 @@ Hint: Add some type annotations and try again.")
                         if variants == &UnknownField::NoFields {
                             text.push_str("\nIt does not have any fields.");
                         } else {
-                            text.push_str("\nIt does not have any fields shared by all variants.");
+                            text.push_str("\nIt does not have fields that are common \
+across all variants.");
                         }
                     } else {
                         text.push_str("\nIt has these accessible fields:\n");
@@ -1712,21 +1713,19 @@ Hint: Add some type annotations and try again.")
                     match variants {
                         UnknownField::AppearsInAVariant => {
                             let msg = wrap(
-                                "Note: The field you are trying to \
-access might not be consistently present or positioned across the custom \
-type's variants, preventing reliable access. Ensure the field exists in the \
-same position and has the same type in all variants, or pattern matching on it \
-to enable direct accessor syntax.",
+                                "Note: The field you are trying to access is \
+not defined consistently across all variants of this custom type. To fix this, \
+ensure that all variants include the field with the same name, position, and \
+type.",
                             );
                             text.push_str("\n\n");
                             text.push_str(&msg);
                         }
                         UnknownField::AppearsInAnImpossibleVariant => {
                             let msg = wrap(
-                                "Note: The field you are trying to \
-access exists, but not on the variant which this value always is. \
-A field that is not present in all variants can only be accessed when \
-the value is inferred to be one variant.",
+                                "Note: The field exists in this custom type \
+but is not defined for the current variant. Ensure that you are accessing the \
+field on a variant where it is valid.",
                             );
                             text.push_str("\n\n");
                             text.push_str(&msg);

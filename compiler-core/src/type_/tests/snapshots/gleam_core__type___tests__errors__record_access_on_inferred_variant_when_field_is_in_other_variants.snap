@@ -30,6 +30,6 @@ It has these accessible fields:
 
     .wibble
 
-Note: The field you are trying to access exists, but not on the variant
-which this value always is. A field that is not present in all variants can
-only be accessed when the value is inferred to be one variant.
+Note: The field exists in this custom type but is not defined for the
+current variant. Ensure that you are accessing the field on a variant where
+it is valid.
