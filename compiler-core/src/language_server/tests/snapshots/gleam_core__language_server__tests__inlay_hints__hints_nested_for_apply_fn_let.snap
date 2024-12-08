@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/inlay_hints.rs
+expression: hints
+---
+[
+  {
+    "position": {
+      "line": 9,
+      "character": 21
+    },
+    "label": "Int",
+    "kind": 1,
+    "paddingLeft": true
+  },
+  {
+    "position": {
+      "line": 10,
+      "character": 27
+    },
+    "label": "Int",
+    "kind": 1,
+    "paddingLeft": true
+  }
+]
