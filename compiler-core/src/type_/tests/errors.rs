@@ -2640,7 +2640,8 @@ pub type Wibble(a) {
 
 pub fn b_to_a(value: Wibble(a)) -> Wibble(Int) {
   Wibble(..value, a: 5)
-  "#
+}
+"#
     );
 }
 
