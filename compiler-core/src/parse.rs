@@ -1045,7 +1045,7 @@ where
             AssignmentKind::Let | AssignmentKind::Generated => {}
             AssignmentKind::Assert { message, .. } => {
                 if self.maybe_one(&Token::As).is_some() {
-                    let message_expression = self.expect_expression_unit()?;
+                    let message_expression = self.expect_expression_unit(false)?;
                     end = message_expression.location().end;
                     *message = Some(Box::new(message_expression));
                 }
