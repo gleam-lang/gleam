@@ -4,7 +4,47 @@
 
 ### Compiler
 
-- Removed compiler hint about pattern matching a `Result(a, b)` when being used where `a` is expected.
+- You can now use the `echo` keyword to debug print any value: `echo` can be
+  followed by any expression and it will print it to stderr alongside the module
+  it comes from and its line number. This:
+
+  ```gleam
+  pub fn main() {
+    echo [1, 2, 3]
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:2
+  [1, 2, 3]
+  ```
+
+  `echo` can also be used in the middle of a pipeline. This:
+
+  ```gleam
+  pub fn main() {
+    [1, 2, 3]
+    |> echo
+    |> list.map(fn(x) { x * 2 })
+    |> echo
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:3
+  [1, 2, 3]
+  /src/module.gleam:5
+  [2, 4, 6]
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Removed compiler hint about pattern matching a `Result(a, b)` when being used
+  where `a` is expected.
   ([Kieran O'Reilly](https://github.com/SoTeKie))
 
 - Optimised code generated for record updates.
@@ -35,7 +75,8 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- A custom panic message can now be specified when asserting a value with `let assert`:
+- A custom panic message can now be specified when asserting a value with
+  `let assert`:
 
   ```gleam
   let assert Ok(regex) = regex.compile("ab?c+") as "This regex is always valid"
@@ -73,7 +114,8 @@
   O(1) operation instead of O(N), significantly improving performance.
   ([Richard Viney](https://github.com/richard-viney))
 
-- Better error message for existed type constructor being used as value constructor.
+- Better error message for existed type constructor being used as value
+  constructor.
   ([Jiangda Wang](https://github.com/Frank-III))
 
 ### Build tool
@@ -90,8 +132,9 @@
   team packages and v0 packages.
   ([Louis Pilfold](https://github.com/lpil))
 
-- `gleam publish` now warns when publishing packages that define multiple top-level
-  modules, as this can lead to namespace pollution and conflicts for consumers.
+- `gleam publish` now warns when publishing packages that define multiple
+  top-level modules, as this can lead to namespace pollution and conflicts for
+  consumers.
   ([Aleksei Gurianov](https://github.com/guria))
 
 - New projects now require `gleam_stdlib` v0.44.0.
@@ -103,6 +146,12 @@
   API key rather than creating a new one each time. This API key is encrypted
   with a local password, reducing risk of your Hex password being compromised.
   ([Louis Pilfold](https://github.com/lpil))
+
+### Build tool
+
+- The build tool now refuses to publish any incomplete package that has any
+  `echo` debug printing left.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Language Server
 
@@ -237,10 +286,10 @@
 - Fixed a bug where the inferred variant of values was not properly cached,
   leading to incorrect errors on incremental builds and in the Language Server.
   ([Surya Rose](https://github.com/GearsDatapacks))
-  
- - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
-   project path contains a non-ascii character.
-   ([yoshi](https://github.com/joshi-monster))
+
+- Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
+  project path contains a non-ascii character.
+  ([yoshi](https://github.com/joshi-monster))
 
 ## v1.6.1 - 2024-11-19
 

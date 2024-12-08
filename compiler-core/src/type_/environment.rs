@@ -64,6 +64,9 @@ pub struct Environment<'a> {
     pub target_support: TargetSupport,
 
     pub names: Names,
+
+    /// Wether we ran into an `echo` or not while analysing the current module.
+    pub echo_found: bool,
 }
 
 impl<'a> Environment<'a> {
@@ -115,6 +118,7 @@ impl<'a> Environment<'a> {
             entity_usages: vec![HashMap::new()],
             target_support,
             names,
+            echo_found: false,
         }
     }
 }
