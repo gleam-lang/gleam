@@ -20,7 +20,7 @@ use itertools::Itertools;
 use pubgrub::Package;
 use pubgrub::{DerivationTree, VersionSet};
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
@@ -244,8 +244,11 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Failed to create canonical path for package {0}")]
     DependencyCanonicalizationFailed(String),
 
-    #[error("Dependency tree resolution failed: {0}")]
-    DependencyResolutionFailed(String),
+    #[error("Dependency tree resolution failed: {error}")]
+    DependencyResolutionFailed {
+        error: String,
+        locked_conflicts: Vec<EcoString>,
+    },
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(EcoString),
@@ -436,7 +439,10 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed<T: PackageFetcher>(error: ResolutionError<'_, T>) -> Error {
+    pub fn dependency_resolution_failed<T: PackageFetcher>(
+        error: ResolutionError<'_, T>,
+        locked: &HashMap<EcoString, hexpm::version::Version>,
+    ) -> Error {
         fn collect_conflicting_packages<
             'dt,
             P: Package,
@@ -469,43 +475,62 @@ impl Error {
             }
         }
 
-        Self::DependencyResolutionFailed(match error {
+        match error {
             ResolutionError::NoSolution(mut derivation_tree) => {
                 derivation_tree.collapse_no_versions();
 
                 let mut conflicting_packages = HashSet::new();
                 collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
 
-                wrap_format!(
-                    "Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
+                let conflict_names: Vec<EcoString> = conflicting_packages
+                    .iter()
+                    .map(|pkg| (*pkg).into())
+                    .collect();
 
-{}
-",
-                    conflicting_packages
-                        .into_iter()
-                        .map(|s| format!("- {s}"))
-                        .join("\n")
-                )
+                let locked_conflicts: Vec<EcoString> = conflict_names
+                    .iter()
+                    .filter(|name| locked.contains_key(*name))
+                    .cloned()
+                    .collect();
+
+                Error::DependencyResolutionFailed {
+                    error: format!(
+                        "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
+                         The conflicting packages are:\n{}",
+                        conflicting_packages
+                            .into_iter()
+                            .map(|s| format!("- {s}"))
+                            .join("\n")
+                    ),
+                    locked_conflicts,
+                }
             }
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
                 version,
                 source,
-            } => format!(
-                "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
-            ),
+            } => Error::DependencyResolutionFailed {
+                error: format!(
+                    "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}"
+                ),
+                locked_conflicts: vec![],
+            },
 
             ResolutionError::ErrorChoosingVersion { package, source } => {
-                format!("An error occured while chosing the version of {package}: {source}",)
+                Error::DependencyResolutionFailed {
+                    error: format!(
+                        "An error occured while chosing the version of {package}: {source}",
+                    ),
+                    locked_conflicts: vec![],
+                }
             }
 
-            ResolutionError::ErrorInShouldCancel(err) => {
-                format!("Dependency resolution was cancelled. {err}")
-            }
-        })
+            ResolutionError::ErrorInShouldCancel(err) => Error::DependencyResolutionFailed {
+                error: format!("Dependency resolution was cancelled. {err}"),
+                locked_conflicts: vec![],
+            },
+        }
     }
 
     pub fn expand_tar<E>(error: E) -> Error
@@ -4209,7 +4234,7 @@ manifest.toml and a version range specified in gleam.toml:
                 }]
             }
 
-            Error::DependencyResolutionFailed(error) => {
+            Error::DependencyResolutionFailed{error, locked_conflicts: _} => {
                 let text = format!(
                     "An error occurred while determining what dependency packages and
 versions should be downloaded.
@@ -4225,7 +4250,8 @@ The error from the version resolver library was:
                     location: None,
                     level: Level::Error,
                 }]
-            }
+            },
+
 
             Error::WrongDependencyProvided {
                 path,
