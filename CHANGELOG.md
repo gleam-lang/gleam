@@ -104,6 +104,11 @@
   with a local password, reducing risk of your Hex password being compromised.
   ([Louis Pilfold](https://github.com/lpil))
 
+- `gleam new` now has refined project name validation - rather than failing on
+  invalid project names, it suggests a valid alternative and prompts for
+  confirmation to use it.
+  ([Diemo Gebhardt](https://github.com/diemogebhardt))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
