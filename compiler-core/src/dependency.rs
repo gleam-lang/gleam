@@ -28,8 +28,8 @@ where
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
-    let requirements =
-        root_dependencies(dependencies, locked).map_err(Error::dependency_resolution_failed)?;
+    let requirements = root_dependencies(dependencies, locked)
+        .map_err(|err| Error::dependency_resolution_failed(err, locked))?;
 
     // Creating a map of all the required packages that have exact versions specified
     let exact_deps = &requirements
@@ -55,7 +55,7 @@ where
         root_name.as_str().into(),
         root_version,
     )
-    .map_err(Error::dependency_resolution_failed)?
+    .map_err(|err| Error::dependency_resolution_failed(err, locked))?
     .into_iter()
     .filter(|(name, _)| name.as_str() != root_name.as_str())
     .collect();
