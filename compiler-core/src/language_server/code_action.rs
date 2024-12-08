@@ -3,9 +3,7 @@ use std::{iter, sync::Arc};
 use crate::{
     ast::{
         self,
-        visit::{
-            visit_typed_call_arg, visit_typed_expr_call, visit_typed_pattern_call_arg, Visit as _,
-        },
+        visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
         SrcSpan, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern, TypedStatement,
         TypedUse,
@@ -807,7 +805,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         // containing the current selection so we can't stop at the first call
         // we find (the outermost one) and have to keep traversing it in case
         // we're inside a nested call.
-        visit_typed_expr_call(self, location, type_, fun, args)
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, args)
     }
 }
 
@@ -2599,4 +2597,135 @@ fn turn_expression_into_use(expr: &TypedExpr) -> Option<CallLocations> {
         arg_before_callback_span,
         callback_body_span,
     })
+}
+
+/// Builder for code action to apply the turn into use expression.
+///
+pub struct ExtractVariable<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    inside_capture_body: bool,
+    selected_expression: Option<SrcSpan>,
+    statement_before_selected_expression: Option<SrcSpan>,
+    latest_statement: Option<SrcSpan>,
+}
+
+impl<'a> ExtractVariable<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            inside_capture_body: false,
+            selected_expression: None,
+            latest_statement: None,
+            statement_before_selected_expression: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(location) = self.selected_expression else {
+            return vec![];
+        };
+
+        if let Some(container_location) = self.statement_before_selected_expression {
+            let nesting = self
+                .edits
+                .src_span_to_lsp_range(container_location)
+                .start
+                .character;
+            let nesting = " ".repeat(nesting as usize);
+            let content = self
+                .module
+                .code
+                .get(location.start as usize..location.end as usize)
+                .expect("selected expression");
+            self.edits.insert(
+                container_location.start,
+                format!("let value = {content}\n{nesting}"),
+            );
+        }
+        self.edits.replace(location, "value".into());
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Extract variable")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
+    fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
+        // A capture body is comprised of just a single expression statement
+        // that is inserted by the compiler, we don't really want to put
+        // anything before that; so in this case we avoid tracking it.
+        if !self.inside_capture_body {
+            self.latest_statement = Some(stmt.location());
+        }
+        ast::visit::visit_typed_statement(self, stmt);
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
+        let expr_location = expr.location();
+        let expr_range = self.edits.src_span_to_lsp_range(expr_location);
+        if within(self.params.range, expr_range) {
+            self.selected_expression = Some(expr_location);
+            self.statement_before_selected_expression = self.latest_statement;
+        }
+
+        ast::visit::visit_typed_expr(self, expr);
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        self.inside_capture_body = match kind {
+            // If a fn is a capture `int.wibble(1, _)` its body will consist of
+            // just a single expression statement. When visiting we must record
+            // we're inside a capture body.
+            FunctionLiteralKind::Capture => true,
+            FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => false,
+        };
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
+        self.inside_capture_body = false;
+    }
+
+    // We don't want to offer the action if the cursor is over a variable
+    // already!
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        _constructor: &'ast type_::ValueConstructor,
+        _name: &'ast EcoString,
+    ) {
+        let var_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, var_range) {
+            self.selected_expression = None;
+        }
+    }
+
+    // We don't want to offer the action if the cursor is over some invalid
+    // piece of code.
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, _type_: &'ast Arc<Type>) {
+        let invalid_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, invalid_range) {
+            self.selected_expression = None;
+        }
+    }
 }
