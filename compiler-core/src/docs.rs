@@ -74,6 +74,12 @@ pub fn generate_html<IO: FileSystemReader>(
         path,
     });
 
+    let host = if is_hex_publish == DocContext::HexPublish {
+        "https://hexdocs.pm"
+    } else {
+        ""
+    };
+
     // https://github.com/gleam-lang/gleam/issues/3020
     let links: Vec<_> = match is_hex_publish {
         DocContext::HexPublish => doc_links
@@ -119,6 +125,7 @@ pub fn generate_html<IO: FileSystemReader>(
             "index" => config.description.to_string().clone(),
             _other => "".to_owned(),
         };
+        let path = Utf8PathBuf::from(&page.path);
 
         let temp = PageTemplate {
             gleam_version: COMPILER_VERSION,
@@ -128,14 +135,16 @@ pub fn generate_html<IO: FileSystemReader>(
             project_name: &config.name,
             page_title: &page_title,
             page_meta_description: &page_meta_description,
+            file_path: &path.clone(),
             project_version: &config.version.to_string(),
             content: rendered_content,
             rendering_timestamp: &rendering_timestamp,
+            host,
             unnest: &unnest,
         };
 
         files.push(OutputFile {
-            path: Utf8PathBuf::from(&page.path),
+            path,
             content: Content::Text(temp.render().expect("Page template rendering")),
         });
 
@@ -252,9 +261,11 @@ pub fn generate_html<IO: FileSystemReader>(
 
         let page_title = format!("{} · {} · v{}", name, config.name, config.version);
         let page_meta_description = "";
+        let path = Utf8PathBuf::from(format!("{}.html", module.name));
 
         let template = ModuleTemplate {
             gleam_version: COMPILER_VERSION,
+            host,
             unnest,
             links: &links,
             pages: &pages,
@@ -263,7 +274,8 @@ pub fn generate_html<IO: FileSystemReader>(
             project_name: &config.name,
             page_title: &page_title,
             page_meta_description,
-            module_name: name,
+            module_name: EcoString::from(&name),
+            file_path: &path.clone(),
             project_version: &config.version.to_string(),
             functions,
             types,
@@ -272,7 +284,7 @@ pub fn generate_html<IO: FileSystemReader>(
         };
 
         files.push(OutputFile {
-            path: Utf8PathBuf::from(format!("{}.html", module.name)),
+            path,
             content: Content::Text(
                 template
                     .render()
@@ -776,8 +788,10 @@ struct Constant<'a> {
 struct PageTemplate<'a> {
     gleam_version: &'a str,
     unnest: &'a str,
+    host: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
+    file_path: &'a Utf8PathBuf,
     project_name: &'a str,
     project_version: &'a str,
     pages: &'a [Link],
@@ -792,8 +806,10 @@ struct PageTemplate<'a> {
 struct ModuleTemplate<'a> {
     gleam_version: &'a str,
     unnest: String,
+    host: &'a str,
     page_title: &'a str,
     page_meta_description: &'a str,
+    file_path: &'a Utf8PathBuf,
     module_name: EcoString,
     project_name: &'a str,
     project_version: &'a str,
