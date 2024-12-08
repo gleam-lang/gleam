@@ -1645,6 +1645,7 @@ fn type_with_inferred_variant() {
         warnings: vec![],
         is_internal: false,
         package: "some_package".into(),
+        contains_echo: false,
         origin: Origin::Src,
         name: "a/b".into(),
         types: [(
