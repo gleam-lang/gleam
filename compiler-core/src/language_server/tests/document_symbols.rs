@@ -4,7 +4,7 @@ use lsp_types::{DocumentSymbol, DocumentSymbolParams};
 use super::*;
 
 fn doc_symbols(tester: TestProject<'_>) -> Vec<DocumentSymbol> {
-    tester.at(Position::default(), |engine, param, _| {
+    tester.at(Position::default(), None, |engine, param, _| {
         let params = DocumentSymbolParams {
             text_document: param.text_document,
             work_done_progress_params: Default::default(),

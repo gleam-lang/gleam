@@ -12,7 +12,7 @@ fn code_actions(tester: TestProject<'_>, range: Range) -> Option<Vec<lsp_types::
         character: 0,
     };
 
-    tester.at(position, |engine, params, _| {
+    tester.at(position, None, |engine, params, _| {
         let params = CodeActionParams {
             text_document: params.text_document,
             range,

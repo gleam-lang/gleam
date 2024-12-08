@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/completion.rs
+expression: import dep
+---
+import dep|.
+
+
+----- Completion content -----
+Wibble
+  kind:   Class
+  detail: Type
+  sort:   3_Wibble
+  edits:
+    [0:10-0:10]: "{type Wibble}"
+Wibble
+  kind:   Constructor
+  detail: fn(String, Int) -> Wibble
+  sort:   3_Wibble
+  desc:   dep
+  edits:
+    [0:10-0:10]: "Wibble"

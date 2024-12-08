@@ -4,7 +4,7 @@ use lsp_types::{
 };
 
 fn signature_help(tester: TestProject<'_>, position: Position) -> Option<SignatureHelp> {
-    tester.at(position, |engine, param, _| {
+    tester.at(position, None, |engine, param, _| {
         let params = SignatureHelpParams {
             context: None,
             text_document_position_params: param,
