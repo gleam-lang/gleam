@@ -874,6 +874,7 @@ impl TypedExpr {
             | TypedExpr::NegateBool { location, .. }
             | TypedExpr::NegateInt { location, .. }
             | TypedExpr::Invalid { location, .. }
+            | TypedExpr::Echo { location, .. }
             | TypedExpr::Pipeline { location, .. } => *location,
 
             TypedExpr::Block { statements, .. } => statements.last().last_location(),
