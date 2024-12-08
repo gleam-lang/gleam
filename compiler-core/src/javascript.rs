@@ -12,6 +12,8 @@ use num_traits::ToPrimitive;
 use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::codegen::TypeScriptDeclarations;
+use crate::javascript::import::{ImportLocation, Imports, Member};
+use crate::sourcemap::SourceMapEmitter;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
@@ -23,8 +25,6 @@ use camino::Utf8Path;
 use ecow::{eco_format, EcoString};
 use expression::Context;
 use itertools::Itertools;
-
-use self::import::{Imports, Member};
 
 const INDENT: isize = 2;
 
@@ -48,6 +48,7 @@ pub struct Generator<'a> {
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
+    source_map_emitter: &'a mut SourceMapEmitter,
 }
 
 impl<'a> Generator<'a> {
@@ -56,6 +57,7 @@ impl<'a> Generator<'a> {
         module: &'a TypedModule,
         target_support: TargetSupport,
         typescript: TypeScriptDeclarations,
+        source_map_emitter: &'a mut SourceMapEmitter,
     ) -> Self {
         let current_module_name_segments_count = module.name.split('/').count();
 
@@ -67,6 +69,7 @@ impl<'a> Generator<'a> {
             module_scope: Default::default(),
             target_support,
             typescript,
+            source_map_emitter,
         }
     }
 
@@ -87,8 +90,27 @@ impl<'a> Generator<'a> {
         docvec!["/// <reference types=\"./", module, ".d.mts\" />", line()]
     }
 
+    fn sourcemap_reference(&self) -> Document<'a> {
+        match self.source_map_emitter {
+            SourceMapEmitter::Null => "".to_doc(),
+            SourceMapEmitter::Emit(_) => {
+                // Get the name of the module relative the directory (similar to basename)
+                let module = self
+                    .module
+                    .name
+                    .as_str()
+                    .split('/')
+                    .last()
+                    .expect("JavaScript generator could not identify imported module name.");
+
+                docvec!["//# sourceMappingURL=", module, ".mjs.map", line()]
+            }
+        }
+    }
+
     pub fn compile(&mut self) -> Output<'a> {
         let type_reference = self.type_reference();
+        let sourcemap_reference = self.sourcemap_reference();
 
         // Determine what JavaScript imports we need to generate
         let mut imports = self.collect_imports();
@@ -175,22 +197,29 @@ impl<'a> Generator<'a> {
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec![type_reference, "export {}", line()])
+            Ok(docvec![
+                sourcemap_reference,
+                type_reference,
+                "export {}",
+                line(),
+            ])
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(docvec![type_reference, statements])
+            Ok(docvec![sourcemap_reference, type_reference, statements])
         } else if statements.is_empty() {
             Ok(docvec![
+                sourcemap_reference,
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript)
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript, self.line_numbers),
             ])
         } else {
             Ok(docvec![
+                sourcemap_reference,
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript, self.line_numbers),
                 line(),
                 statements,
-                line()
+                line(),
             ])
         }
     }
@@ -206,7 +235,7 @@ impl<'a> Generator<'a> {
             name: name.to_doc(),
             alias: alias.map(|a| a.to_doc()),
         };
-        imports.register_module(path, [], [member]);
+        imports.register_module(path, ImportLocation::Prelude, [], [member]);
     }
 
     pub fn statement(&mut self, statement: &'a TypedDefinition) -> Option<Output<'a>> {
@@ -222,9 +251,10 @@ impl<'a> Generator<'a> {
             Definition::ModuleConstant(ModuleConstant {
                 publicity,
                 name,
+                location,
                 value,
                 ..
-            }) => Some(self.module_constant(*publicity, name, value)),
+            }) => Some(self.module_constant(*publicity, name, *location, value)),
 
             Definition::Function(function) => {
                 // If there's an external JavaScript implementation then it will be imported,
@@ -275,6 +305,10 @@ impl<'a> Generator<'a> {
                 .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
+        let location = self
+            .line_numbers
+            .line_and_column_number(constructor.location.start);
+
         let head = if publicity.is_private() || opaque {
             "class "
         } else {
@@ -283,16 +317,20 @@ impl<'a> Generator<'a> {
         let head = docvec![head, &constructor.name, " extends $CustomType {"];
 
         if constructor.arguments.is_empty() {
-            return head.append("}");
+            return head.append("}").attach_sourcemap_location(location);
         };
 
         let parameters = join(
-            constructor.arguments.iter().enumerate().map(parameter),
+            constructor.arguments.iter().enumerate().map(|(i, arg)| {
+                let location = self.line_numbers.line_and_column_number(arg.location.start);
+                parameter((i, arg)).attach_sourcemap_location(location)
+            }),
             break_(",", ", "),
         );
 
         let constructor_body = join(
             constructor.arguments.iter().enumerate().map(|(i, arg)| {
+                let location = self.line_numbers.line_and_column_number(arg.location.start);
                 let var = parameter((i, arg));
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
@@ -300,6 +338,7 @@ impl<'a> Generator<'a> {
                         docvec!["this.", maybe_escape_property_doc(name), " = ", var, ";"]
                     }
                 }
+                .attach_sourcemap_location(location)
             }),
             line(),
         );
@@ -315,7 +354,7 @@ impl<'a> Generator<'a> {
         ]
         .nest(INDENT);
 
-        docvec![head, class_body, line(), "}"]
+        docvec![head, class_body, line(), "}"].attach_sourcemap_location(location)
     }
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
@@ -348,19 +387,29 @@ impl<'a> Generator<'a> {
                     as_name,
                     unqualified_values: unqualified,
                     package,
+                    location,
                     ..
                 }) => {
-                    self.register_import(&mut imports, package, module, as_name, unqualified);
+                    self.register_import(
+                        &mut imports,
+                        ImportLocation::AtLocation(*location),
+                        package,
+                        module,
+                        as_name,
+                        unqualified,
+                    );
                 }
 
                 Definition::Function(Function {
                     name: Some((_, name)),
                     publicity,
                     external_javascript: Some((module, function, _location)),
+                    location,
                     ..
                 }) => {
                     self.register_external_function(
                         &mut imports,
+                        ImportLocation::AtLocation(*location),
                         *publicity,
                         name,
                         module,
@@ -400,6 +449,7 @@ impl<'a> Generator<'a> {
     fn register_import(
         &mut self,
         imports: &mut Imports<'a>,
+        location: ImportLocation,
         package: &'a str,
         module: &'a str,
         as_name: &'a Option<(AssignName, SrcSpan)>,
@@ -421,21 +471,23 @@ impl<'a> Generator<'a> {
         let module_name = eco_format!("${module_name}");
         let path = self.import_path(package, module);
         let unqualified_imports = unqualified.iter().map(|i| {
+            let location = self.line_numbers.line_and_column_number(i.location.start);
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
                 maybe_escape_identifier_doc(n)
             });
-            let name = maybe_escape_identifier_doc(&i.name);
+            let name = maybe_escape_identifier_doc(&i.name).attach_sourcemap_location(location);
             Member { name, alias }
         });
 
         let aliases = if discarded { vec![] } else { vec![module_name] };
-        imports.register_module(path, aliases, unqualified_imports);
+        imports.register_module(path, location, aliases, unqualified_imports);
     }
 
     fn register_external_function(
         &mut self,
         imports: &mut Imports<'a>,
+        location: ImportLocation,
         publicity: Publicity,
         name: &'a str,
         module: &'a str,
@@ -455,13 +507,14 @@ impl<'a> Generator<'a> {
         if publicity.is_importable() {
             imports.register_export(maybe_escape_identifier_string(name))
         }
-        imports.register_module(EcoString::from(module), [], [member]);
+        imports.register_module(EcoString::from(module), location, [], [member]);
     }
 
     fn module_constant(
         &mut self,
         publicity: Publicity,
         name: &'a str,
+        location: SrcSpan,
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if publicity.is_private() {
@@ -473,13 +526,16 @@ impl<'a> Generator<'a> {
         let document =
             expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
 
+        let location = self.line_numbers.line_and_column_number(location.start);
+
         Ok(docvec![
             head,
             maybe_escape_identifier_doc(name),
             " = ",
             document,
             ";",
-        ])
+        ]
+        .attach_sourcemap_location(location))
     }
 
     fn register_in_scope(&mut self, name: &str) {
@@ -525,16 +581,22 @@ impl<'a> Generator<'a> {
             Err(error) => return Some(Err(error)),
         };
 
-        let document = docvec![
-            head,
-            maybe_escape_identifier_doc(name.as_str()),
-            fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
+        let location = self
+            .line_numbers
+            .line_and_column_number(function.full_location().start);
+
+        Some(Ok(docvec![
+            docvec![
+                head,
+                maybe_escape_identifier_doc(name.as_str()),
+                fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
+            ]
+            .attach_sourcemap_location(location),
             " {",
             docvec![line(), body].nest(INDENT).group(),
             line(),
             "}",
-        ];
-        Some(Ok(document))
+        ]))
     }
 
     fn register_module_definitions_in_scope(&mut self) {
@@ -571,15 +633,25 @@ pub fn module(
     src: &EcoString,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
+    source_map_emitter: &mut SourceMapEmitter,
 ) -> Result<String, crate::Error> {
-    let document = Generator::new(line_numbers, module, target_support, typescript)
+    let mut generator = Generator::new(
+        line_numbers,
+        module,
+        target_support,
+        typescript,
+        source_map_emitter,
+    );
+    let document = generator
         .compile()
         .map_err(|error| crate::Error::JavaScript {
             path: path.to_path_buf(),
             src: src.clone(),
             error,
         })?;
-    Ok(document.to_pretty_string(80))
+    let mut buffer = String::new();
+    document.pretty_print(80, &mut buffer, generator.source_map_emitter)?;
+    Ok(buffer)
 }
 
 pub fn ts_declaration(

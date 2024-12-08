@@ -35,7 +35,7 @@ impl Position {
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
     module_name: EcoString,
-    line_numbers: &'module LineNumbers,
+    pub line_numbers: &'module LineNumbers,
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_scope_vars: im::HashMap<EcoString, usize>,
@@ -116,10 +116,19 @@ impl<'module> Generator<'module> {
     }
 
     fn tail_call_loop<'a>(&mut self, body: Document<'a>, args: &'a [TypedArg]) -> Output<'a> {
-        let loop_assignments = concat(args.iter().flat_map(Arg::get_variable_name).map(|name| {
-            let var = maybe_escape_identifier_doc(name);
-            docvec!["let ", var, " = loop$", name, ";", line()]
-        }));
+        let loop_assignments = concat(
+            args.iter()
+                .filter_map(|arg| arg.get_variable_name().map(|name| (name, arg.location)))
+                .map(|(name, location)| {
+                    let location = self.line_numbers.line_and_column_number(location.start);
+                    let var = maybe_escape_identifier_doc(name);
+                    docvec![
+                        docvec!["let ", var, " = loop$", name, ";"]
+                            .attach_sourcemap_location(location),
+                        line()
+                    ]
+                }),
+        );
         Ok(docvec!(
             "while (true) {",
             docvec!(line(), loop_assignments, body).nest(INDENT),
@@ -214,6 +223,7 @@ impl<'module> Generator<'module> {
                 panic!("invalid expressions should not reach code generation")
             }
         }?;
+
         Ok(if expression.handles_own_return() {
             document
         } else {
@@ -234,9 +244,12 @@ impl<'module> Generator<'module> {
         let segments_array = array(segments.iter().map(|segment| {
             let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
 
+            let location = self
+                .line_numbers
+                .line_and_column_number(segment.location.start);
+
             if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
                 let details = self.sized_bit_array_segment_details(segment)?;
-
                 if segment.type_ == crate::type_::int() {
                     match (details.size_value, segment.value.as_ref()) {
                         (Some(size_value), TypedExpr::Int { int_value, .. })
@@ -265,7 +278,8 @@ impl<'module> Generator<'module> {
                                 ", ",
                                 bool(details.endianness.is_big()),
                                 ")"
-                            ])
+                            ]
+                            .attach_sourcemap_location(location))
                         }
                     }
                 } else {
@@ -278,24 +292,28 @@ impl<'module> Generator<'module> {
                         ", ",
                         bool(details.endianness.is_big()),
                         ")"
-                    ])
+                    ]
+                    .attach_sourcemap_location(location))
                 }
             } else {
                 match segment.options.as_slice() {
                     // UTF8 strings
                     [Opt::Utf8 { .. }] => {
                         self.tracker.string_bit_array_segment_used = true;
-                        Ok(docvec!["stringBits(", value, ")"])
+                        Ok(docvec!["stringBits(", value, ")"].attach_sourcemap_location(location))
                     }
 
                     // UTF8 codepoints
                     [Opt::Utf8Codepoint { .. }] => {
                         self.tracker.codepoint_bit_array_segment_used = true;
-                        Ok(docvec!["codepointBits(", value, ")"])
+                        Ok(docvec!["codepointBits(", value, ")"]
+                            .attach_sourcemap_location(location))
                     }
 
                     // Bit arrays
-                    [Opt::Bytes { .. } | Opt::Bits { .. }] => Ok(docvec![value, ".buffer"]),
+                    [Opt::Bytes { .. } | Opt::Bits { .. }] => {
+                        Ok(docvec![value, ".buffer"].attach_sourcemap_location(location))
+                    }
 
                     // Anything else
                     _ => Err(Error::Unsupported {
@@ -305,7 +323,6 @@ impl<'module> Generator<'module> {
                 }
             }
         }))?;
-
         Ok(docvec!["toBitArray(", segments_array, ")"])
     }
 
@@ -496,10 +513,18 @@ impl<'module> Generator<'module> {
         let count = assignments.len();
         let mut documents = Vec::with_capacity((count + 1) * 2);
         for assignment in assignments.iter() {
-            documents.push(self.not_in_tail_position(|gen| gen.assignment(assignment))?);
+            let location = self
+                .line_numbers
+                .line_and_column_number(assignment.location.start);
+            let document = self.not_in_tail_position(|gen| gen.assignment(assignment))?;
+            documents.push(document.attach_sourcemap_location(location));
             documents.push(line());
         }
-        documents.push(self.expression(finally)?);
+        let location = self
+            .line_numbers
+            .line_and_column_number(finally.location().start);
+        let document = self.expression(finally)?;
+        documents.push(document.attach_sourcemap_location(location));
         Ok(documents.to_doc().force_break())
     }
 
@@ -532,14 +557,20 @@ impl<'module> Generator<'module> {
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 3);
         for (i, statement) in statements.iter().enumerate() {
+            let location = statement.location();
+            let start = self.line_numbers.line_and_column_number(location.start);
             if i + 1 < count {
-                documents.push(self.not_in_tail_position(|gen| gen.statement(statement))?);
+                let document = self
+                    .not_in_tail_position(|gen| gen.statement(statement))?
+                    .attach_sourcemap_location(start);
+                documents.push(document);
                 if requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
                 documents.push(line());
             } else {
-                documents.push(self.statement(statement)?);
+                let document = self.statement(statement)?.attach_sourcemap_location(start);
+                documents.push(document);
             }
         }
         if count == 1 {
@@ -564,6 +595,7 @@ impl<'module> Generator<'module> {
             // Subject must be rendered before the variable for variable numbering
             let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
             let js_name = self.next_local_var(name);
+
             return Ok(if self.scope_position.is_tail() {
                 docvec![
                     "let ",
@@ -646,9 +678,15 @@ impl<'module> Generator<'module> {
             for multipatterns in multipatterns {
                 let scope = gen.expression_generator.current_scope_vars.clone();
                 let mut compiled = gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
+                let consequence_location = clause.then.location();
+                let location = gen
+                    .expression_generator
+                    .line_numbers
+                    .line_and_column_number(consequence_location.start);
                 let consequence = gen
                     .expression_generator
-                    .expression_flattening_blocks(&clause.then)?;
+                    .expression_flattening_blocks(&clause.then)?
+                    .attach_sourcemap_location(location);
 
                 // We've seen one more clause
                 clause_number += 1;
@@ -671,36 +709,40 @@ impl<'module> Generator<'module> {
                 let is_first_clause = clause_number == 1;
                 let is_only_clause = is_final_clause && is_first_clause;
 
-                doc = if is_only_clause {
+                let location = gen
+                    .expression_generator
+                    .line_numbers
+                    .line_and_column_number(clause.location.start);
+
+                let doc_to_append = if is_only_clause {
                     // If this is the only clause and there are no checks then we can
                     // render just the body as the case does nothing
                     // A block is used as it could declare variables still.
-                    doc.append("{")
-                        .append(docvec!(line(), body).nest(INDENT))
-                        .append(line())
-                        .append("}")
+                    docvec!["{", docvec!(line(), body).nest(INDENT), line(), "}"]
                 } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
-                    doc.append(" else {")
-                        .append(docvec!(line(), body).nest(INDENT))
-                        .append(line())
-                        .append("}")
+                    docvec![" else {", docvec!(line(), body).nest(INDENT), line(), "}"]
                 } else {
-                    doc.append(if is_first_clause {
+                    let ifclause = if is_first_clause {
                         "if ("
                     } else {
                         " else if ("
-                    })
-                    .append(
-                        gen.expression_generator
-                            .pattern_take_checks_doc(&mut compiled, true),
-                    )
-                    .append(") {")
-                    .append(docvec!(line(), body).nest(INDENT))
-                    .append(line())
-                    .append("}")
-                };
+                    };
+                    let expr = gen
+                        .expression_generator
+                        .pattern_take_checks_doc(&mut compiled, true);
+                    docvec![
+                        ifclause,
+                        expr,
+                        ") {",
+                        docvec!(line(), body).nest(INDENT),
+                        line(),
+                        "}"
+                    ]
+                }
+                .attach_sourcemap_location(location);
+                doc = doc.append(doc_to_append);
             }
         }
 
@@ -711,8 +753,16 @@ impl<'module> Generator<'module> {
             .zip(subject_values)
             .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
             .map(|(name, value)| {
+                let location = value.location();
+                let location = gen
+                    .expression_generator
+                    .line_numbers
+                    .line_and_column_number(location.start);
                 let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-                Ok(docvec!("let ", name, " = ", value, ";", line()))
+                Ok(docvec!(
+                    docvec!["let ", name, " = ", value, ";"].attach_sourcemap_location(location),
+                    line()
+                ))
             })
             .try_collect()?;
 
@@ -877,8 +927,11 @@ impl<'module> Generator<'module> {
 
     fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
         self.not_in_tail_position(|gen| {
+            let location = record.location().start;
+            let location = gen.line_numbers.line_and_column_number(location);
             let record = gen.wrap_expression(record)?;
-            Ok(docvec![record, ".", maybe_escape_property_doc(label)])
+            Ok(docvec![record, ".", maybe_escape_property_doc(label)]
+                .attach_sourcemap_location(location))
         })
     }
 
@@ -929,22 +982,52 @@ impl<'module> Generator<'module> {
     }
 
     fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let location_left = self
+            .line_numbers
+            .line_and_column_number(left.location().start);
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(location_left);
+        let location_right = self
+            .line_numbers
+            .line_and_column_number(right.location().start);
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(location_right);
         self.tracker.int_division_used = true;
         Ok(docvec!("divideInt", wrap_args([left, right])))
     }
 
     fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let location_left = self
+            .line_numbers
+            .line_and_column_number(left.location().start);
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(location_left);
+        let location_right = self
+            .line_numbers
+            .line_and_column_number(right.location().start);
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(location_right);
         self.tracker.int_remainder_used = true;
         Ok(docvec!("remainderInt", wrap_args([left, right])))
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let location_left = self
+            .line_numbers
+            .line_and_column_number(left.location().start);
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(location_left);
+        let location_right = self
+            .line_numbers
+            .line_and_column_number(right.location().start);
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(location_right);
         self.tracker.float_division_used = true;
         Ok(docvec!("divideFloat", wrap_args([left, right])))
     }
@@ -955,17 +1038,32 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         should_be_equal: bool,
     ) -> Output<'a> {
+        let location_left = self
+            .line_numbers
+            .line_and_column_number(left.location().start);
+        let location_right = self
+            .line_numbers
+            .line_and_column_number(right.location().start);
+
         // If it is a simple scalar type then we can use JS' reference identity
         if is_js_scalar(left.type_()) {
-            let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-            let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+            let left_doc = self
+                .not_in_tail_position(|gen| gen.child_expression(left))?
+                .attach_sourcemap_location(location_left);
+            let right_doc = self
+                .not_in_tail_position(|gen| gen.child_expression(right))?
+                .attach_sourcemap_location(location_right);
             let operator = if should_be_equal { " === " } else { " !== " };
             return Ok(docvec!(left_doc, operator, right_doc));
         }
 
         // Other types must be compared using structural equality
-        let left = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
+        let left = self
+            .not_in_tail_position(|gen| gen.wrap_expression(left))?
+            .attach_sourcemap_location(location_left);
+        let right = self
+            .not_in_tail_position(|gen| gen.wrap_expression(right))?
+            .attach_sourcemap_location(location_right);
         Ok(self.prelude_equal_call(should_be_equal, left, right))
     }
 
@@ -993,8 +1091,18 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         op: &'a str,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let location_left = self
+            .line_numbers
+            .line_and_column_number(left.location().start);
+        let left = self
+            .not_in_tail_position(|gen| gen.child_expression(left))?
+            .attach_sourcemap_location(location_left);
+        let location_right = self
+            .line_numbers
+            .line_and_column_number(right.location().start);
+        let right = self
+            .not_in_tail_position(|gen| gen.child_expression(right))?
+            .attach_sourcemap_location(location_right);
         Ok(docvec!(left, " ", op, " ", right))
     }
 
@@ -1003,8 +1111,10 @@ impl<'module> Generator<'module> {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
-        let doc = self.throw_error("todo", &message, *location, vec![]);
-
+        let sourcemap_location = self.line_numbers.line_and_column_number(location.start);
+        let doc = self
+            .throw_error("todo", &message, *location, vec![])
+            .attach_sourcemap_location(sourcemap_location);
         Ok(doc)
     }
 
@@ -1013,7 +1123,10 @@ impl<'module> Generator<'module> {
             Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
             None => string("`panic` expression evaluated."),
         };
-        let doc = self.throw_error("panic", &message, *location, vec![]);
+        let sourcemap_location = self.line_numbers.line_and_column_number(location.start);
+        let doc = self
+            .throw_error("panic", &message, *location, vec![])
+            .attach_sourcemap_location(sourcemap_location);
 
         Ok(doc)
     }
@@ -1036,7 +1149,7 @@ impl<'module> Generator<'module> {
             .unwrap_or_default()
             .to_doc()
             .surround("\"", "\"");
-        let line = self.line_numbers.line_number(location.start).to_doc();
+        let location = self.line_numbers.line_and_column_number(location.start);
         let fields = wrap_object(fields.into_iter().map(|(k, v)| (k.to_doc(), Some(v))));
 
         docvec![
@@ -1044,12 +1157,13 @@ impl<'module> Generator<'module> {
             wrap_args([
                 string(error_name),
                 module,
-                line,
+                location.line.to_doc(),
                 function,
                 message.clone(),
                 fields
             ]),
         ]
+        .attach_sourcemap_location(location)
     }
 
     fn module_select<'a>(
@@ -1077,7 +1191,7 @@ impl<'module> Generator<'module> {
         kind: &'a AssignmentKind<TypedExpr>,
     ) -> Output<'a> {
         let any_assignments = !compiled_pattern.assignments.is_empty();
-        let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
+        let assignments = self.pattern_assignments_doc(compiled_pattern.assignments);
 
         // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
         // provided that does not get matched the code needs to throw an exception, which is done
@@ -1125,8 +1239,13 @@ impl<'module> Generator<'module> {
         .group())
     }
 
-    fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
-        let assignments = assignments.into_iter().map(Assignment::into_doc);
+    fn pattern_assignments_doc<'a>(&self, assignments: Vec<Assignment<'a>>) -> Document<'a> {
+        let assignments = assignments.into_iter().map(|assignment| {
+            let location = self
+                .line_numbers
+                .line_and_column_number(assignment.location.start);
+            assignment.into_doc().attach_sourcemap_location(location)
+        });
         join(assignments, line())
     }
 
@@ -1135,7 +1254,7 @@ impl<'module> Generator<'module> {
         compiled_pattern: &mut CompiledPattern<'a>,
     ) -> Document<'a> {
         let assignments = std::mem::take(&mut compiled_pattern.assignments);
-        Self::pattern_assignments_doc(assignments)
+        self.pattern_assignments_doc(assignments)
     }
 
     fn pattern_take_checks_doc<'a>(
