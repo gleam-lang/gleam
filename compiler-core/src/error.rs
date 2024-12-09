@@ -17,7 +17,7 @@ use pubgrub::package::Package;
 use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt::{Debug, Display};
 use std::io::Write;
@@ -238,6 +238,12 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Dependency tree resolution failed: {0}")]
     DependencyResolutionFailed(String),
 
+    #[error("{error}")]
+    DependencyResolutionFailedWithLocked {
+        locked_packages: Vec<EcoString>,
+        error: String,
+    },
+
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
     DuplicateDependency(EcoString),
 
@@ -378,7 +384,10 @@ impl Error {
         Self::TarFinish(error.to_string())
     }
 
-    pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
+    pub fn dependency_resolution_failed(
+        error: ResolutionError,
+        locked: &HashMap<EcoString, hexpm::version::Version>,
+    ) -> Error {
         fn collect_conflicting_packages<'dt, P: Package, V: Version>(
             derivation_tree: &'dt DerivationTree<P, V>,
             conflicting_packages: &mut HashSet<&'dt P>,
@@ -413,13 +422,37 @@ impl Error {
                 let mut conflicting_packages = HashSet::new();
                 collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
 
-                wrap_format!("Unable to find compatible versions for \
-the version constraints in your gleam.toml. \
-The conflicting packages are:
+                let conflict_names: Vec<EcoString> = conflicting_packages
+                .iter()
+                .map(|pkg| (*pkg).to_string().into())
+                .collect();
 
-{}
-",
-                    conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n"))
+            let locked_conflicts: Vec<EcoString> = conflict_names
+                .iter()
+                .filter(|name| locked.contains_key(*name))
+                .cloned()
+                .collect();
+
+                if !locked_conflicts.is_empty() {
+                Error::DependencyResolutionFailedWithLocked {
+                    error: wrap_format!(
+                        "Unable to find compatible versions due to locked package versions in your gleam.toml.\n\
+                         Consider unlocking or loosening the version constraints for:\n{}",
+                        locked_conflicts.iter().map(|n| format!("- {n}")).join("\n")
+                    ),
+                    locked_packages: locked_conflicts,
+                }.to_string()
+            } else {
+                Error::DependencyResolutionFailed(
+                    wrap_format!(
+                        "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
+                         The conflicting packages are:\n{}",
+                        conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
+                    )
+                ).to_string()
+            }
+
+
             }
 
             ResolutionError::ErrorRetrievingDependencies {
@@ -3570,7 +3603,36 @@ The error from the version resolver library was:
                 }]
             }
 
-            Error::GitDependencyUnsupported => vec![Diagnostic {
+            Error::DependencyResolutionFailedWithLocked { error, locked_packages } => {
+                let locked_list = locked_packages
+                    .iter()
+                    .map(|pkg| format!("- {pkg}"))
+                    .collect::<Vec<_>>()
+                    .join("\n");
+                let text = format!(
+
+"An error occurred while determining what dependency packages and
+versions should be downloaded.
+The error from the version resolver library was:
+
+            {}
+
+            To resolve this issue, consider loosening or removing the locked versions in your gleam.toml for:
+            {}
+            ",
+                    wrap(error),
+                    locked_list,
+                );
+                vec![Diagnostic {
+                    title: "Dependency resolution with a locked package".into(),
+                    text,
+                    hint: Some("Try removing or adjusting the locked version(s) in your gleam.toml and re-run the command.".into()),
+                    location: None,
+                    level: Level::Error,
+                }]
+            },
+
+                Error::GitDependencyUnsupported => vec![Diagnostic {
                 title: "Git dependencies are not currently supported".into(),
                 text: "Please remove all git dependencies from the gleam.toml file".into(),
                 hint: None,
