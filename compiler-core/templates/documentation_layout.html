@@ -12,7 +12,7 @@
          between multiple versions of the same package. -->
     <script src="{{ unnest }}/docs_config.js"></script>
     <link id="syntax-theme" rel="stylesheet" href="{{ unnest }}/css/atom-one-light.min.css?v={{ gleam_version }}"/>
-    {% block head %}{%- endblock %}
+    {% if !host.is_empty() && !project_name.is_empty() -%}<link rel="canonical" href="{{ host }}/{{ project_name|safe }}/{{ file_path|safe }}" />{%- endif %}
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
