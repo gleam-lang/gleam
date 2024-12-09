@@ -9,7 +9,7 @@ expression: "compile(config, modules)"
   <head>
     <meta charset="utf-8"/>
     <meta name="viewport" content="width=device-width, initial-scale=1"/>
-    <title>app ·  · v0.1.0</title>
+    <title>app · test_project_name · v0.1.0</title>
     <meta name="description" content=""/>
     <meta name="theme-color" content="#ffaff3" media="(prefers-color-scheme: light)"/>
     <meta name="theme-color" content="#33384d" media="(prefers-color-scheme: dark)"/>
@@ -18,7 +18,7 @@ expression: "compile(config, modules)"
          between multiple versions of the same package. -->
     <script src="./docs_config.js"></script>
     <link id="syntax-theme" rel="stylesheet" href="./css/atom-one-light.min.css?v=GLEAM_VERSION_HERE"/>
-    
+    <link rel="canonical" href="https://hexdocs.pm/test_project_name/app.html" />
   </head>
   <body class="prewrap-off theme-light drawer-closed">
     <script>
@@ -149,7 +149,7 @@ expression: "compile(config, modules)"
       </button>
 
       <h2>
-        <a href="./"></a>
+        <a href="./">test_project_name</a>
         <span id="project-version">
           <span> - v0.1.0 </span>
         </span>
@@ -187,7 +187,7 @@ expression: "compile(config, modules)"
       </h2>
       <div class="search">
         <div class="search-input-wrap">
-          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search " autocomplete="off">
+          <input type="text" id="search-input" class="search-input" tabindex="0" aria-label="Search test_project_name" autocomplete="off">
           <label for="search-input" class="search-label"><svg viewBox="0 0 24 24" class="search-icon"><use xlink:href="#icon-svg-search"></use></svg></label>
         </div>
         <div id="search-results" class="search-results"></div>
@@ -211,7 +211,7 @@ expression: "compile(config, modules)"
         <h2>Links</h2>
         <ul>
         
-          <li><a href="https://hex.pm/packages/">Hex</a></li>
+          <li><a href="https://hex.pm/packages/test_project_name">Hex</a></li>
         
         </ul>
         
