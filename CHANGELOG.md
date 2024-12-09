@@ -187,6 +187,13 @@
 - The formatter now adds a `todo` inside empty blocks.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+### Documentation
+
+- Canonical links created for documentation pages if published on Hex. Previously
+  published documentation would need to be updated. Resolves versioned pages to point
+  to latest page for search engines.
+  ([Dave Lage](https://github.com/rockerBOO))
+
 ### Bug fixed
 
 - The compiler now throws an error when a float literal ends with an `e` and
