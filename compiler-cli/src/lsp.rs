@@ -19,7 +19,11 @@ Many editors will automatically start the language server for you
 when you open a Gleam project. If yours does not you may need to
 look up how to configure your editor to use a language server.
 
-You can exit this program by pressing ctrl+c.
+If you are seeing this in the logs of your editor you can safely
+ignore this message.
+
+If you have run `gleam lsp` yourself in your terminal then exit
+this program by pressing ctrl+c.
 "
     );
 
