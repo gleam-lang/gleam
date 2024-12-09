@@ -3,7 +3,7 @@ use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
 use super::*;
 
 fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> {
-    tester.at(position, |engine, param, _| {
+    tester.at(position, None, |engine, param, _| {
         let params = GotoDefinitionParams {
             text_document_position_params: param,
             work_done_progress_params: Default::default(),
@@ -250,7 +250,7 @@ fn main() {
 
     let (mut engine, position_param) = TestProject::for_source(code)
         .add_hex_module("example_module", dep)
-        .positioned_with_io(Position::new(3, 20));
+        .positioned_with_io(Position::new(3, 20), None);
 
     let params = GotoDefinitionParams {
         text_document_position_params: position_param.clone(),
@@ -324,7 +324,7 @@ fn main() {
 
     let (mut engine, position_param) = TestProject::for_source(code)
         .add_dep_module("example_module", dep)
-        .positioned_with_io(Position::new(3, 20));
+        .positioned_with_io(Position::new(3, 20), None);
 
     let params = GotoDefinitionParams {
         text_document_position_params: position_param.clone(),

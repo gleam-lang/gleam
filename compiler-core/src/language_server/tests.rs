@@ -559,6 +559,7 @@ impl<'a> TestProject<'a> {
     pub fn positioned_with_io(
         &self,
         position: Position,
+        new_src: Option<&str>,
     ) -> (
         LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
         TextDocumentPositionParams,
@@ -570,6 +571,11 @@ impl<'a> TestProject<'a> {
         _ = io.src_module("app", self.src);
 
         let _response = engine.compile_please();
+
+        if let Some(new_src) = new_src {
+            _ = io.src_module("app", new_src);
+            _ = engine.compile_please();
+        }
 
         let param = self.build_path(position);
 
@@ -601,15 +607,15 @@ impl<'a> TestProject<'a> {
     pub fn at<T>(
         &self,
         position: Position,
+        new_src: Option<&str>,
         executor: impl FnOnce(
             &mut LanguageServerEngine<LanguageServerTestIO, LanguageServerTestIO>,
             TextDocumentPositionParams,
             EcoString,
         ) -> T,
     ) -> T {
-        let (mut engine, params) = self.positioned_with_io(position);
-
-        executor(&mut engine, params, self.src.into())
+        let (mut engine, params) = self.positioned_with_io(position, new_src);
+        executor(&mut engine, params, new_src.unwrap_or(self.src).into())
     }
 }
 

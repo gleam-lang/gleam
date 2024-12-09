@@ -39,7 +39,7 @@ fn apply_conversion(src: &str, completions: Vec<CompletionItem>, value: &str) ->
 macro_rules! assert_apply_completion {
     ($project:expr, $name:literal, $position:expr) => {
         let src = $project.src;
-        let completions = completion($project, $position);
+        let completions = completion($project, $position, None);
         let output = format!(
             "{}\n\n----- After applying completion -----\n{}",
             show_complete(src, $position),
@@ -62,11 +62,22 @@ macro_rules! assert_completion {
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
     ($project:expr, $position:expr) => {
+        assert_completion!($project, $position, None)
+    };
+
+    ($project:expr, $position:expr, $new_src:expr) => {
         let src = $project.src;
-        let result = completion($project, $position);
+        let result = completion($project, $position, $new_src);
         let output = format!(
             "{}\n\n----- Completion content -----\n{}",
-            show_complete(src, $position),
+            show_complete(
+                if let Some(new_src) = $new_src {
+                    new_src
+                } else {
+                    src
+                },
+                $position
+            ),
             format_completion_results(result)
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
@@ -184,8 +195,12 @@ fn format_completion_results(completions: Vec<CompletionItem>) -> EcoString {
     buffer
 }
 
-fn completion(tester: TestProject<'_>, position: Position) -> Vec<CompletionItem> {
-    tester.at(position, |engine, param, src| {
+fn completion(
+    tester: TestProject<'_>,
+    position: Position,
+    new_src: Option<&str>,
+) -> Vec<CompletionItem> {
+    tester.at(position, new_src, |engine, param, src| {
         let response = engine.completion(param, src);
 
         let mut completions = response.result.unwrap().unwrap_or_default();
@@ -199,7 +214,7 @@ fn completion_with_prefix(tester: TestProject<'_>, prefix: &str) -> Vec<Completi
     let tester = TestProject { src, ..tester };
     // Put the cursor inside the "typing_in_here" fn body.
     let line = 1 + prefix.lines().count();
-    completion(tester, Position::new(line as u32, 0))
+    completion(tester, Position::new(line as u32, 0), None)
         .into_iter()
         .filter(|c| c.label != "typing_in_here")
         .collect_vec()
@@ -796,6 +811,20 @@ pub fn wibble(
     assert_completion!(
         TestProject::for_source(code).add_module("a/b/dep", dep),
         Position::new(3, 0)
+    );
+}
+
+#[test]
+fn completions_for_type_import_completions_without_brackets() {
+    let dep = "
+pub type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+    assert_completion!(
+        TestProject::for_source("import dep").add_dep_module("dep", dep),
+        Position::new(0, 10),
+        Some("import dep.".into())
     );
 }
 
@@ -1535,7 +1564,7 @@ pub fn main() {
 
     // End of the comment (right after the last `/`)
     assert_eq!(
-        completion(TestProject::for_source(code), Position::new(3, 6)),
+        completion(TestProject::for_source(code), Position::new(3, 6), None),
         vec![],
     );
 }
@@ -1554,7 +1583,7 @@ pub fn main() {
 
     // At `c`
     assert_eq!(
-        completion(TestProject::for_source(code), Position::new(3, 7)),
+        completion(TestProject::for_source(code), Position::new(3, 7), None),
         vec![],
     );
 }
@@ -1573,7 +1602,7 @@ pub fn main() {
 
     // End of the comment (after `t`)
     assert_eq!(
-        completion(TestProject::for_source(code), Position::new(3, 14)),
+        completion(TestProject::for_source(code), Position::new(3, 14), None),
         vec![],
     );
 }
@@ -1587,7 +1616,7 @@ pub fn main() {
 ";
 
     assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 2)),
+        completion(TestProject::for_source(code), Position::new(2, 2), None),
         vec![],
     );
 }
@@ -1601,7 +1630,7 @@ pub fn main() {
 ";
 
     assert_eq!(
-        completion(TestProject::for_source(code), Position::new(2, 5)),
+        completion(TestProject::for_source(code), Position::new(2, 5), None),
         vec![],
     );
 }
@@ -1763,6 +1792,7 @@ fn fun() {
     let completions = completion(
         TestProject::for_source(code).add_dep_module("list", dep),
         Position::new(5, 10),
+        None,
     );
     assert_eq!(completions, vec![],);
 }

@@ -3,7 +3,7 @@ use lsp_types::{Hover, HoverParams, Position, Range};
 use super::*;
 
 fn hover(tester: TestProject<'_>, position: Position) -> Option<Hover> {
-    tester.at(position, |engine, param, _| {
+    tester.at(position, None, |engine, param, _| {
         let params = HoverParams {
             text_document_position_params: param,
             work_done_progress_params: Default::default(),
