@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     time::Instant,
 };
@@ -285,7 +286,29 @@ pub fn download<Telem: Telemetry>(
     }
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
+    let package_fetcher = PackageFetcher::boxed(runtime.handle().clone());
+    let major_versions_available =
+        dependency::check_for_major_version_updates(&manifest, package_fetcher);
+    if !major_versions_available.is_empty() {
+        pretty_print_major_versions_available(major_versions_available);
+    }
+
     Ok(manifest)
+}
+
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) {
+    let longest_package_name_length = versions.keys().map(|name| name.len()).max().unwrap_or(10);
+
+    // print to stderr instead of stdout because this is not part of the standard output of this
+    // command
+    eprintln!("\nHint: the following dependencies have new major versions available...\n");
+    for (name, (v1, v2)) in versions {
+        let padding = " ".repeat(longest_package_name_length - name.len());
+
+        // lazily assuming the longest version could be 8 characters. eg: 1.1234.2
+        // excluding qualifiers other than x.y.z
+        eprintln!("{name}:{padding} {v1:<8} -> {v2:<8}");
+    }
 }
 
 async fn add_missing_packages<Telem: Telemetry>(
@@ -937,6 +960,7 @@ async fn lookup_package(
 }
 
 struct PackageFetcher {
+    runtime_cache: RefCell<HashMap<String, hexpm::Package>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
 }
@@ -944,9 +968,18 @@ struct PackageFetcher {
 impl PackageFetcher {
     pub fn boxed(runtime: tokio::runtime::Handle) -> Box<Self> {
         Box::new(Self {
+            runtime_cache: RefCell::new(HashMap::new()),
             runtime,
             http: HttpClient::new(),
         })
+    }
+
+    /// Caches the result so subsequent calls to `get_dependencies` so that we don't need to make a
+    /// network request. Currently dependencies are fetched during initial version resolution, and
+    /// then during check for major version availability.
+    fn cache_package(&self, package: &str, result: hexpm::Package) {
+        let mut runtime_cache = self.runtime_cache.borrow_mut();
+        let _ = runtime_cache.insert(package.to_string(), result);
     }
 }
 
@@ -981,6 +1014,15 @@ impl dependency::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+        {
+            let runtime_cache = self.runtime_cache.borrow();
+            let result = runtime_cache.get(package);
+
+            if let Some(result) = result {
+                return Ok(result.clone());
+            }
+        }
+
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
@@ -990,7 +1032,10 @@ impl dependency::PackageFetcher for PackageFetcher {
             .map_err(Box::new)?;
 
         match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(a) => Ok(a),
+            Ok(a) => {
+                self.cache_package(package, a.clone());
+                Ok(a)
+            }
             Err(e) => match e {
                 hexpm::ApiError::NotFound => {
                     Err(format!("I couldn't find a package called `{}`", package).into())
