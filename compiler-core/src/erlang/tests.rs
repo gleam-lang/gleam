@@ -17,6 +17,7 @@ mod case;
 mod conditional_compilation;
 mod consts;
 mod custom_types;
+mod echo;
 mod external_fn;
 mod functions;
 mod guards;
@@ -94,7 +95,13 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
     .infer_module(ast, line_numbers, path)
     .expect("should successfully infer root Erlang");
     let line_numbers = LineNumbers::new(src);
-    module(&ast, &line_numbers).unwrap()
+
+    module(&ast, &line_numbers, "project/root".into())
+        .unwrap()
+        .replace(
+            std::include_str!("../../templates/echo.erl"),
+            "% ...omitted code from `templates/echo.erl`...",
+        )
 }
 
 #[macro_export]
