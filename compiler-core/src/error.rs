@@ -3121,7 +3121,7 @@ and the final one is the `use` callback function.\n"));
                         }
                     } else {
                         text.push_str("All the arguments have already been supplied, \
-so it cannot take the the `use` callback function as a final argument.\n")
+so it cannot take the `use` callback function as a final argument.\n")
                     };
 
                     text.push_str("\nSee: https://tour.gleam.run/advanced-features/use/");

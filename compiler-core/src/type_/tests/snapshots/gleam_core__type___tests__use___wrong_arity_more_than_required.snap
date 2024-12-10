@@ -17,7 +17,7 @@ error: Incorrect arity
   │        ^^^^^^^ Expected 2 arguments, got 3
 
 The function on the right of `<-` here takes 2 arguments.
-All the arguments have already been supplied, so it cannot take the the
-`use` callback function as a final argument.
+All the arguments have already been supplied, so it cannot take the `use`
+callback function as a final argument.
 
 See: https://tour.gleam.run/advanced-features/use/
