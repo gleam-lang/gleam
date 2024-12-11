@@ -40,32 +40,39 @@ jobs:
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
+            binary: x86-64
             use-cross: false
             run-integration-tests: true
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
+            binary: x86-64
             use-cross: true
             run-integration-tests: true
           - os: ubuntu-latest
             target: aarch64-unknown-linux-gnu
+            binary: aarch64
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
+            binary: aarch64
             use-cross: true
             run-integration-tests: false # Cannot run aarch64 binaries on x86_64
           # macos>=14 runs exclusively on aarch64 and will thus fail to execute properly for x64
           - os: macos-13 # intel
             target: x86_64-apple-darwin
+            binary: x86_64
             use-cross: false
             run-integration-tests: true
           - os: macos-latest # aarch64
             toolchain: stable
             target: aarch64-apple-darwin
+            binary: arm64
             use-cross: false
             run-integration-tests: true
           - os: windows-latest
             target: x86_64-pc-windows-msvc
+            binary: x86-64
             use-cross: false
             run-integration-tests: true
     steps:
@@ -120,7 +127,14 @@ jobs:
           if [[ "${{ matrix.target }}" == *"windows"* ]]; then
             BINARY_PATH="${BINARY_PATH}.exe"
           fi
-          ./bin/verify-binary-architecture.sh "${{ matrix.target }}" "$BINARY_PATH"
+
+          if ! file -b "$BINARY_PATH" | grep -q "${{ matrix.binary }}"; then
+            echo "error: Architecture mismatch"
+            echo "Expected architecture: '${{ matrix.binary }}'"
+            echo "Found binary type: '$(file -b "$BINARY_PATH")'"
+            exit 1
+          fi
+          echo "ok: Architecture match"
         if: ${{ matrix.run-integration-tests }}
 
       - name: Run tests
