@@ -80,16 +80,12 @@ fn resolve_major_versions(
                 return None;
             };
 
-            let Some(latest) = &hexpackage
+            let latest = hexpackage
                 .releases
                 .iter()
-                .map(|release| release.version.clone())
+                .map(|release| &release.version)
                 .filter(|version| !version.is_pre())
-                .sorted_by(|a, b| b.cmp(a))
-                .next()
-            else {
-                return None;
-            };
+                .max()?;
 
             if latest.major <= version.major {
                 return None;
@@ -996,7 +992,6 @@ mod tests {
             ]
             .into_iter()
             .collect(),
-            //requirements: HashMap::new(),
             packages: vec![
                 ManifestPackage {
                     name: "direct_pkg_with_major_version".into(),
