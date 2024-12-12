@@ -1335,3 +1335,27 @@ fn test_remove_package_that_is_also_a_transitive_dependency() {
     assert_eq!(manifest.requirements, config.dependencies);
     assert_eq!(manifest.packages, manifest_copy.packages);
 }
+
+#[test]
+fn test_pretty_print_major_versions_available() {
+    let versions = vec![
+        (
+            "very_long_package_name".to_string(),
+            (Version::new(18, 382, 43), Version::new(19, 0, 38)),
+        ),
+        (
+            "gleam_stdlib".to_string(),
+            (Version::new(0, 45, 0), Version::new(1, 0, 0)),
+        ),
+        (
+            "short_name".to_string(),
+            (Version::new(1, 0, 0), Version::new(2, 0, 0)),
+        ),
+    ]
+    .into_iter()
+    .collect();
+
+    let output = pretty_print_major_versions_available(versions);
+
+    insta::assert_snapshot!(output);
+}
