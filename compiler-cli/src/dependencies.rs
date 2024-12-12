@@ -423,25 +423,66 @@ pub fn download<Telem: Telemetry>(
     let major_versions_available =
         dependency::check_for_major_version_updates(&manifest, package_fetcher);
     if !major_versions_available.is_empty() {
-        pretty_print_major_versions_available(major_versions_available);
+        eprintln!(
+            "{}",
+            pretty_print_major_versions_available(major_versions_available)
+        );
     }
 
     Ok(manifest)
 }
 
-fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) {
-    let longest_package_name_length = versions.keys().map(|name| name.len()).max().unwrap_or(10);
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    let total_lines = versions.len() + 3;
+    let versions = versions
+        .iter()
+        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
+        .sorted();
 
-    // print to stderr instead of stdout because this is not part of the standard output of this
-    // command
-    eprintln!("\nHint: the following dependencies have new major versions available...\n");
-    for (name, (v1, v2)) in versions {
-        let padding = " ".repeat(longest_package_name_length - name.len());
+    let longest_parts = versions.clone().fold(
+        (0, 0, 0),
+        |(max_name, max_curr, max_major), (name, curr, major)| {
+            (
+                max_name.max(name.len()),
+                max_curr.max(curr.len()),
+                max_major.max(major.len()),
+            )
+        },
+    );
 
-        // lazily assuming the longest version could be 8 characters. eg: 1.1234.2
-        // excluding qualifiers other than x.y.z
-        eprintln!("{name}:{padding} {v1:<8} -> {v2:<8}");
+    let (longest_package_name_length, longest_current_version_length, longest_major_version_length) =
+        longest_parts;
+
+    let mut output_string = String::with_capacity(
+        (longest_package_name_length
+            + longest_current_version_length
+            + longest_major_version_length
+            + 5)
+            * total_lines,
+    );
+
+    output_string
+        .push_str("\nHint: the following dependencies have new major versions available:\n\n");
+    for (name, v1, v2) in versions {
+        let name_padding = " ".repeat(longest_package_name_length - name.len());
+        let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
+
+        output_string.push_str(
+            &[
+                name,
+                &name_padding,
+                " ",
+                &v1.to_string(),
+                &curr_ver_padding,
+                " -> ",
+                &v2.to_string(),
+                "\n",
+            ]
+            .concat(),
+        );
     }
+
+    output_string
 }
 
 async fn add_missing_packages<Telem: Telemetry>(
