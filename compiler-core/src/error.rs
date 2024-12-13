@@ -1032,20 +1032,71 @@ https://gleam.run/getting-started/installing/",
 Documentation for installing rebar3 can be viewed here:
 https://gleam.run/getting-started/installing/",
                     ),
+                    "bun" => text.push_str(
+                        "
+Documentation for installing bun can be viewed here:
+https://bun.sh/docs/installation/
+You may need to restart your shell after installing bun.",
+                    ),
+                    "deno" => text.push_str(
+                        "
+Documentation for installing Deno can be viewed here:
+https://docs.deno.com/runtime/getting_started/installation/",
+                    ),
+                    "node" => text.push_str(
+                        "
+Documentation for installing Node.js via package manager can be viewed here:
+https://nodejs.org/en/download/package-manager/all/",
+                    ),
                     _ => (),
                 }
-                match (program.as_str(), env::consts::OS) {
-                    // TODO: Further suggestions for other OSes?
-                    ("erl" | "erlc" | "escript", "macos") => text.push_str(
-                        "
-You can also install Erlang via homebrew using \"brew install erlang\"",
-                    ),
-                    ("rebar3", "macos") => text.push_str(
-                        "
-You can also install rebar3 via homebrew using \"brew install rebar3\"",
-                    ),
-                    _ => (),
-                };
+                match env::consts::OS {
+                    "macos" => {
+                        fn brew_install(program: &str) -> String {
+                            format!("\nYou can install {} via homebrew: brew install {}", program, program)
+                        }
+                        match program.as_str() {
+                            "erl" | "erlc" | "escript" => text.push_str(&brew_install("erlang")),
+                            "rebar3" => text.push_str(&brew_install("rebar3")),
+                            "deno" => text.push_str(&brew_install("deno")),
+                            "elixir" => text.push_str(&brew_install("elixir")),
+                            other => text.push_str(&wrap_format!("
+You might need to install {other} manually on your macOS."
+                            )),
+                        }
+                    }
+                    "linux" => {
+                        fn apt_install(program: &str) -> String {
+                            format!("\nYou can install {} via apt: sudo apt install {}", program, program)
+                        }
+                        let release = std::fs::read_to_string("/etc/os-release").ok();
+                        if let Some(release) = release {
+                            if release.contains("ubuntu") || release.contains("debian") {
+                                match program.as_str() {
+                                    "elixir" => text.push_str(&apt_install("elixir")),
+                                    other => text.push_str(&wrap_format!("
+You might need to install {other} manually on your Linux distribution.
+Please refer to the software's documentation for installation instructions."
+                                    )),
+                                }
+                            } else if release.contains("fedora") || release.contains("centos") {
+                                text.push_str(&wrap_format!("
+You might need to install {program} manually on your Linux distribution.
+Please refer to the software's documentation for installation instructions."
+                                ));
+                            } else {
+                                text.push_str(&wrap_format!("
+You might need to install {program} manually on your Linux distribution.
+Please refer to the software's documentation for installation instructions."
+                                ));
+                            }
+                        }
+                    }
+                    _ => text.push_str(&wrap_format!("
+You might need to install {program} manually, please refer to the
+software's documentation for installation instructions."
+                    )),
+                }
 
                 vec![Diagnostic {
                     title: "Program not found".into(),
