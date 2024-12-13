@@ -37,12 +37,15 @@ use crate::{
 
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher: Box<dyn dependency::PackageFetcher> =
+        PackageFetcher::boxed(runtime.handle().clone());
     let project = fs::get_project_root(fs::get_current_directory()?)?;
     let paths = ProjectPaths::new(project);
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,
         runtime.handle().clone(),
+        &*package_fetcher,
         Mode::Dev,
         &config,
         &cli::Reporter::new(),
@@ -252,11 +255,14 @@ pub fn download<Telem: Telemetry>(
 
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher: Box<dyn dependency::PackageFetcher> =
+        PackageFetcher::boxed(runtime.handle().clone());
 
     // Determine what versions we need
     let (manifest_updated, manifest) = get_manifest(
         paths,
         runtime.handle().clone(),
+        &*package_fetcher,
         mode,
         &config,
         &telemetry,
@@ -286,9 +292,8 @@ pub fn download<Telem: Telemetry>(
     }
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
-    let package_fetcher = PackageFetcher::boxed(runtime.handle().clone());
     let major_versions_available =
-        dependency::check_for_major_version_updates(&manifest, package_fetcher);
+        dependency::check_for_major_version_updates(&manifest, &*package_fetcher);
     if !major_versions_available.is_empty() {
         eprintln!(
             "{}",
@@ -515,9 +520,10 @@ impl LocalPackages {
     }
 }
 
-fn get_manifest<Telem: Telemetry>(
+fn get_manifest<'a, Telem: Telemetry>(
     paths: &ProjectPaths,
     runtime: tokio::runtime::Handle,
+    package_fetcher: &'a dyn dependency::PackageFetcher,
     mode: Mode,
     config: &PackageConfig,
     telemetry: &Telem,
@@ -539,7 +545,16 @@ fn get_manifest<Telem: Telemetry>(
     };
 
     if should_resolve {
-        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry, Vec::new())?;
+        let manifest = resolve_versions(
+            runtime,
+            package_fetcher,
+            mode,
+            paths,
+            config,
+            None,
+            telemetry,
+            Vec::new(),
+        )?;
         return Ok((true, manifest));
     }
 
@@ -560,6 +575,7 @@ fn get_manifest<Telem: Telemetry>(
         tracing::debug!("manifest_outdated");
         let manifest = resolve_versions(
             runtime,
+            package_fetcher,
             mode,
             paths,
             config,
@@ -715,6 +731,7 @@ impl PartialEq for ProvidedPackageSource {
 
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
+    package_fetcher: &dyn dependency::PackageFetcher,
     mode: Mode,
     project_paths: &ProjectPaths,
     config: &PackageConfig,
@@ -761,7 +778,7 @@ fn resolve_versions<Telem: Telemetry>(
         .collect();
 
     let resolved = dependency::resolve_versions(
-        PackageFetcher::boxed(runtime.clone()),
+        package_fetcher,
         provided_hex_packages,
         config.name.clone(),
         root_requirements.into_iter(),
