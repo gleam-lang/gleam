@@ -28,6 +28,7 @@ where
 {
     tracing::info!("resolving_versions");
     let root_version = Version::new(0, 0, 0);
+
     let requirements = root_dependencies(dependencies, locked)
         .map_err(|err| Error::dependency_resolution_failed(err, locked))?;
 

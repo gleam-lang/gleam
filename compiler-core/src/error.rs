@@ -238,10 +238,11 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Dependency tree resolution failed: {0}")]
     DependencyResolutionFailed(String),
 
-    #[error("{error}")]
+    #[error("Dependency tree resolution failed due to locked packages: {error}")]
     DependencyResolutionFailedWithLocked {
-        locked_packages: Vec<EcoString>,
         error: String,
+        // a vec of the names of locked dependencies responsible for the failure
+        locked_conflicts: Vec<EcoString>,
     },
 
     #[error("The package {0} is listed in dependencies and dev-dependencies")]
@@ -415,7 +416,7 @@ impl Error {
             }
         }
 
-        Self::DependencyResolutionFailed(match error {
+        match error {
             ResolutionError::NoSolution(mut derivation_tree) => {
                 derivation_tree.collapse_no_versions();
 
@@ -423,70 +424,79 @@ impl Error {
                 collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
 
                 let conflict_names: Vec<EcoString> = conflicting_packages
-                .iter()
-                .map(|pkg| (*pkg).to_string().into())
-                .collect();
+                    .iter()
+                    .map(|pkg| (*pkg).to_string().into())
+                    .collect();
 
-            let locked_conflicts: Vec<EcoString> = conflict_names
-                .iter()
-                .filter(|name| locked.contains_key(*name))
-                .cloned()
-                .collect();
+                let locked_conflicts: Vec<EcoString> = conflict_names
+                    .iter()
+                    .filter(|name| locked.contains_key(*name))
+                    .cloned()
+                    .collect();
 
                 if !locked_conflicts.is_empty() {
-                Error::DependencyResolutionFailedWithLocked {
-                    error: wrap_format!(
-                        "Unable to find compatible versions due to locked package versions in your gleam.toml.\n\
-                         Consider unlocking or loosening the version constraints for:\n{}",
-                        locked_conflicts.iter().map(|n| format!("- {n}")).join("\n")
-                    ),
-                    locked_packages: locked_conflicts,
-                }.to_string()
-            } else {
-                Error::DependencyResolutionFailed(
-                    wrap_format!(
-                        "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
-                         The conflicting packages are:\n{}",
-                        conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
+                    Error::DependencyResolutionFailedWithLocked {
+                        error: wrap_format!(
+                            "Unable to find compatible versions due to package versions locked by manifest.toml.\n\
+                             Consider unlocking the responsible locked package(s) :\n{}",
+                            locked_conflicts.iter().map(|s| format!("- {s}")).join("\n")
+                        ),
+                        locked_conflicts,
+                    }
+                } else {
+                    Error::DependencyResolutionFailed(
+                        wrap_format!(
+                            "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
+                             The conflicting packages are:\n{}",
+                            conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
+                        )
                     )
-                ).to_string()
-            }
-
-
-            }
+                }
+            } // end [`ResolutionError::NoSolution`] arm
 
             ResolutionError::ErrorRetrievingDependencies {
                 package,
                 version,
                 source,
-            } => format!(
+            } => {
+                let msg = format!(
                 "An error occurred while trying to retrieve dependencies of {package}@{version}: {source}",
-            ),
+            );
+                Error::DependencyResolutionFailed(msg)
+            }
 
             ResolutionError::DependencyOnTheEmptySet {
                 package,
                 version,
                 dependent,
-            } => format!(
-                "{package}@{version} has an impossible dependency on {dependent}",
-            ),
+            } => {
+                let msg =
+                    format!("{package}@{version} has an impossible dependency on {dependent}",);
+
+                Error::DependencyResolutionFailed(msg)
+            }
 
             ResolutionError::SelfDependency { package, version } => {
-                format!("{package}@{version} somehow depends on itself.")
+                let msg = format!("{package}@{version} somehow depends on itself.");
+                Error::DependencyResolutionFailed(msg)
             }
 
             ResolutionError::ErrorChoosingPackageVersion(err) => {
-                format!("Unable to determine package versions: {err}")
+                let msg = format!("Unable to determine package versions: {err}");
+                Error::DependencyResolutionFailed(msg)
             }
 
             ResolutionError::ErrorInShouldCancel(err) => {
-                format!("Dependency resolution was cancelled. {err}")
+                let msg = format!("Dependency resolution was cancelled. {err}");
+                Error::DependencyResolutionFailed(msg)
             }
 
-            ResolutionError::Failure(err) => format!(
-                "An unrecoverable error happened while solving dependencies: {err}"
-            ),
-        })
+            ResolutionError::Failure(err) => {
+                let msg =
+                    format!("An unrecoverable error happened while solving dependencies: {err}");
+                Error::DependencyResolutionFailed(msg)
+            }
+        }
     }
 
     pub fn expand_tar<E>(error: E) -> Error
@@ -3603,30 +3613,23 @@ The error from the version resolver library was:
                 }]
             }
 
-            Error::DependencyResolutionFailedWithLocked { error, locked_packages } => {
-                let locked_list = locked_packages
-                    .iter()
-                    .map(|pkg| format!("- {pkg}"))
-                    .collect::<Vec<_>>()
-                    .join("\n");
+            // locked_conflicts ignored as the version resolver lib builds the message
+            // enumerating them
+            Error::DependencyResolutionFailedWithLocked{error, locked_conflicts: _} => {
                 let text = format!(
-
 "An error occurred while determining what dependency packages and
 versions should be downloaded.
 The error from the version resolver library was:
 
             {}
 
-            To resolve this issue, consider loosening or removing the locked versions in your gleam.toml for:
-            {}
             ",
-                    wrap(error),
-                    locked_list,
+                    wrap(error)
                 );
                 vec![Diagnostic {
                     title: "Dependency resolution with a locked package".into(),
                     text,
-                    hint: Some("Try removing or adjusting the locked version(s) in your gleam.toml and re-run the command.".into()),
+                    hint: Some("Try removing locked version(s) in your manifest.toml and re-run the command.".into()),
                     location: None,
                     level: Level::Error,
                 }]

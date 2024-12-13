@@ -691,18 +691,50 @@ fn resolve_versions<Telem: Telemetry>(
     }
 
     // Convert provided packages into hex packages for pub-grub resolve
-    let provided_hex_packages = provided_packages
+    let provided_hex_packages: HashMap<EcoString, hexpm::Package> = provided_packages
         .iter()
         .map(|(name, package)| (name.clone(), package.to_hex_package(name)))
         .collect();
 
-    let resolved = dependency::resolve_versions(
+    let root_requirements_clone = root_requirements.clone();
+    let resolved: HashMap<String, Version> = match dependency::resolve_versions(
         PackageFetcher::boxed(runtime.clone()),
-        provided_hex_packages,
+        provided_hex_packages.clone(),
         config.name.clone(),
         root_requirements.into_iter(),
         &locked,
-    )?;
+    ) {
+        Ok(it) => it,
+        Err(
+            ref e @ Error::DependencyResolutionFailedWithLocked {
+                error: _,
+                ref locked_conflicts,
+            },
+        ) => {
+            // TODO: provide more error context
+            let should_try_unlock = cli::confirm(
+                "\nSome of these dependencies are locked to specific versions. It may
+be possible to find a solution if they are unlocked, would you like
+to unlock and try again? [y/n]",
+            )?;
+
+            if should_try_unlock {
+                unlock_packages(&mut locked, &locked_conflicts, manifest)?;
+
+                dependency::resolve_versions(
+                    PackageFetcher::boxed(runtime.clone()),
+                    provided_hex_packages,
+                    config.name.clone(),
+                    root_requirements_clone.into_iter(),
+                    &locked,
+                )?
+            } else {
+                return Err(e.clone());
+            }
+        }
+
+        Err(err) => return Err(err),
+    };
 
     // Convert the hex packages and local packages into manifest packages
     let manifest_packages = runtime.block_on(future::try_join_all(
