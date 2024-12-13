@@ -1322,9 +1322,9 @@ impl PackageFetcher {
         })
     }
 
-    /// Caches the result so subsequent calls to `get_dependencies` so that we don't need to make a
-    /// network request. Currently dependencies are fetched during initial version resolution, and
-    /// then during check for major version availability.
+    /// Caches the result of `get_dependencies` so that we don't need to make a network request.
+    /// Currently dependencies are fetched during initial version resolution, and then during check
+    /// for major version availability.
     fn cache_package(&self, package: &str, result: hexpm::Package) {
         let mut runtime_cache = self.runtime_cache.borrow_mut();
         let _ = runtime_cache.insert(package.to_string(), result);
