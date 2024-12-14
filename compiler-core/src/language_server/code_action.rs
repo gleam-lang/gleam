@@ -14,8 +14,10 @@ use crate::{
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
     type_::{
-        self, error::ModuleSuggestion, printer::Printer, FieldMap, ModuleValueConstructor, Type,
-        TypedCallArg,
+        self,
+        error::{ModuleSuggestion, VariableOrigin},
+        printer::Printer,
+        FieldMap, ModuleValueConstructor, Type, TypedCallArg,
     },
     Error,
 };
@@ -453,6 +455,7 @@ impl<'ast> ast::visit::Visit<'ast> for PatternVariableFinder {
         _location: &'ast SrcSpan,
         name: &'ast EcoString,
         _type: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
     ) {
         self.pattern_variables.push(name.clone());
     }

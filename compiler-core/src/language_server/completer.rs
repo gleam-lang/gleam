@@ -18,8 +18,9 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        self, collapse_links, pretty::Printer, FieldMap, ModuleInterface, PreludeType,
-        RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
+        self, collapse_links, error::VariableOrigin, pretty::Printer, FieldMap, ModuleInterface,
+        PreludeType, RecordAccessor, Type, TypeConstructor, ValueConstructorVariant,
+        PRELUDE_MODULE_NAME,
     },
     Result,
 };
@@ -1070,6 +1071,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
         _: &'ast ast::SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
     ) {
         self.push_completion(name, type_.clone());
     }

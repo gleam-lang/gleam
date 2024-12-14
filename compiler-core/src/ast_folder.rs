@@ -15,6 +15,7 @@ use crate::{
         UntypedUse, UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
+    type_::error::VariableOrigin,
 };
 
 #[allow(dead_code)]
@@ -1115,7 +1116,8 @@ pub trait PatternFolder {
                 location,
                 name,
                 type_: (),
-            } => self.fold_pattern_var(location, name),
+                origin,
+            } => self.fold_pattern_var(location, name, origin),
 
             Pattern::VarUsage {
                 location,
@@ -1200,11 +1202,17 @@ pub trait PatternFolder {
         Pattern::String { location, value }
     }
 
-    fn fold_pattern_var(&mut self, location: SrcSpan, name: EcoString) -> UntypedPattern {
+    fn fold_pattern_var(
+        &mut self,
+        location: SrcSpan,
+        name: EcoString,
+        origin: VariableOrigin,
+    ) -> UntypedPattern {
         Pattern::Variable {
             location,
             name,
             type_: (),
+            origin,
         }
     }
 
