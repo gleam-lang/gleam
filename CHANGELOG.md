@@ -248,9 +248,13 @@
   leading to incorrect errors on incremental builds and in the Language Server.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
- - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
-   project path contains a non-ascii character.
-   ([yoshi](https://github.com/joshi-monster))
+- Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
+  project path contains a non-ascii character.
+  ([yoshi](https://github.com/joshi-monster))
+
+- Fixed a bug where the compiler would display incorrect hints about ignoring
+  unused variables in certain cases.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.6.1 - 2024-11-19
 

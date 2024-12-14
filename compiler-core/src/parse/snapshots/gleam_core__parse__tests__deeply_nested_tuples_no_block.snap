@@ -56,6 +56,9 @@ expression: "\nlet tup = #(#(#(#(4))))\ntup.0.0.0.0\n"
                 },
                 name: "tup",
                 type_: (),
+                origin: Variable(
+                    "tup",
+                ),
             },
             kind: Let,
             annotation: None,

@@ -40,7 +40,10 @@
 
 use crate::{
     analyse::Inferred,
-    type_::{ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor},
+    type_::{
+        error::VariableOrigin, ModuleValueConstructor, PatternConstructor, TypedCallArg,
+        ValueConstructor,
+    },
 };
 use std::sync::Arc;
 
@@ -332,8 +335,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
+        origin: &'ast VariableOrigin,
     ) {
-        visit_typed_pattern_variable(self, location, name, type_);
+        visit_typed_pattern_variable(self, location, name, type_, origin);
     }
 
     fn visit_typed_pattern_var_usage(
@@ -1105,7 +1109,8 @@ where
             location,
             name,
             type_,
-        } => v.visit_typed_pattern_variable(location, name, type_),
+            origin,
+        } => v.visit_typed_pattern_variable(location, name, type_, origin),
         Pattern::VarUsage {
             location,
             name,
@@ -1191,6 +1196,7 @@ pub fn visit_typed_pattern_variable<'a, V>(
     _location: &'a SrcSpan,
     _name: &'a EcoString,
     _type: &'a Arc<Type>,
+    _origin: &'a VariableOrigin,
 ) where
     V: Visit<'a> + ?Sized,
 {
