@@ -1073,6 +1073,7 @@ You might need to install {other} manually on your macOS."
                         if let Some(release) = release {
                             if release.contains("ubuntu") || release.contains("debian") {
                                 match program.as_str() {
+                                    "erl" | "erlc" | "escript" => text.push_str(&apt_install("erlang")),
                                     "elixir" => text.push_str(&apt_install("elixir")),
                                     other => text.push_str(&wrap_format!("
 You might need to install {other} manually on your Linux distribution.
