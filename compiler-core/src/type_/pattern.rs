@@ -646,7 +646,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                         implicit,
                                         label,
                                     } = arg;
-                                    let value = self.unify(value, type_.clone())?;
+                                    let value = self.unify(value, type_.type_.clone())?;
                                     Ok(CallArg {
                                         value,
                                         location,

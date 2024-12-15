@@ -9,8 +9,9 @@ use crate::{
 };
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-    TypeVar, TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+    FunctionArgument, ModuleInterface, Type, TypeConstructor, TypeValueConstructor,
+    TypeValueConstructorField, TypeVar, TypeVariantConstructors, ValueConstructor,
+    ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -135,7 +136,7 @@ pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
     Arc::new(Type::Tuple { elems })
 }
 
-pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
+pub fn fn_(args: Vec<FunctionArgument>, retrn: Arc<Type>) -> Arc<Type> {
     Arc::new(Type::Fn { retrn, args })
 }
 
@@ -447,7 +448,13 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             constructors_count: 2,
                             constructor_index: 0,
                         },
-                        fn_(vec![ok.clone()], result(ok, error)),
+                        fn_(
+                            vec![FunctionArgument {
+                                name: None,
+                                type_: ok.clone(),
+                            }],
+                            result(ok, error),
+                        ),
                     ),
                 );
                 let ok = generic_var(ids.next());
@@ -465,7 +472,13 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             constructors_count: 2,
                             constructor_index: 1,
                         },
-                        fn_(vec![error.clone()], result(ok, error)),
+                        fn_(
+                            vec![FunctionArgument {
+                                name: None,
+                                type_: error.clone(),
+                            }],
+                            result(ok, error),
+                        ),
                     ),
                 );
             }

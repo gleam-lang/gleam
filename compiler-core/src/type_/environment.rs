@@ -379,6 +379,19 @@ impl<'a> Environment<'a> {
             None => self
                 .module_types
                 .get(name)
+                // .or_else(|| {
+                //     self.module_type_aliases
+                //         .get(name)
+                //         .map(|t| &TypeConstructor {
+                //             opaque: false,
+                //             type_: Arc::new(t.type_.clone()),
+                //             deprecation: t.deprecation,
+                //             origin: t.origin,
+                //             module: t.module.clone(),
+                //             parameters: t.parameters.clone(),
+                //             publicity: t.publicity,
+                //         })
+                // })
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
@@ -397,6 +410,12 @@ impl<'a> Environment<'a> {
                 module
                     .types
                     .get(name)
+                    // .map(|t| t.type_.clone())
+                    // .or_else(|| {
+                    //     self.module_type_aliases
+                    //         .get(name)
+                    //         .map(|t| Arc::new(t.type_.clone()))
+                    // })
                     .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
@@ -558,7 +577,10 @@ impl<'a> Environment<'a> {
 
             Type::Fn { args, retrn, .. } => fn_(
                 args.iter()
-                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
+                    .map(|t| FunctionArgument {
+                        name: None,
+                        type_: self.instantiate(t.type_.clone(), ids, hydrator),
+                    })
                     .collect(),
                 self.instantiate(retrn.clone(), ids, hydrator),
             ),
@@ -873,8 +895,8 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             }
 
             for (i, (a, b)) in args1.iter().zip(args2).enumerate() {
-                unify(a.clone(), b.clone())
-                    .map_err(|_| unify_wrong_arguments(&t1, a, &t2, b, i))?;
+                unify(a.type_.clone(), b.type_.clone())
+                    .map_err(|_| unify_wrong_arguments(&t1, &a.type_, &t2, &b.type_, i))?;
             }
 
             unify(retrn1.clone(), retrn2.clone())

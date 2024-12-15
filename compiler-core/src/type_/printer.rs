@@ -3,7 +3,10 @@ use ecow::EcoString;
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
-use crate::type_::{Type, TypeVar};
+use crate::{
+    analyse::name,
+    type_::{FunctionArgument, Type, TypeVar},
+};
 
 /// This class keeps track of what names are used for modules in the current
 /// scope, so they can be printed in errors, etc.
@@ -332,7 +335,7 @@ impl<'a> Printer<'a> {
 
             Type::Fn { args, retrn } => {
                 buffer.push_str("fn(");
-                self.print_arguments(args, buffer, print_mode);
+                self.print_function_arguments(args, buffer, print_mode);
                 buffer.push_str(") -> ");
                 self.print(retrn, buffer, print_mode);
             }
@@ -348,6 +351,20 @@ impl<'a> Printer<'a> {
                 buffer.push_str("#(");
                 self.print_arguments(elems, buffer, print_mode);
                 buffer.push(')');
+            }
+        }
+    }
+
+    fn print_function_arguments(
+        &mut self,
+        args: &[FunctionArgument],
+        typ_str: &mut EcoString,
+        print_mode: PrintMode,
+    ) {
+        for (i, arg) in args.iter().enumerate() {
+            self.print(&arg.type_, typ_str, print_mode);
+            if i < args.len() - 1 {
+                typ_str.push_str(", ");
             }
         }
     }
@@ -529,20 +546,26 @@ fn test_fn_type() {
 
     let type_ = Type::Fn {
         args: vec![
-            Arc::new(Type::Named {
-                name: "Int".into(),
-                args: vec![],
-                module: "gleam".into(),
-                publicity: crate::ast::Publicity::Public,
-                package: "".into(),
-            }),
-            Arc::new(Type::Named {
-                name: "String".into(),
-                args: vec![],
-                module: "gleam".into(),
-                publicity: crate::ast::Publicity::Public,
-                package: "".into(),
-            }),
+            FunctionArgument {
+                name: None,
+                type_: Arc::new(Type::Named {
+                    name: "Int".into(),
+                    args: vec![],
+                    module: "gleam".into(),
+                    publicity: crate::ast::Publicity::Public,
+                    package: "".into(),
+                }),
+            },
+            FunctionArgument {
+                name: None,
+                type_: Arc::new(Type::Named {
+                    name: "String".into(),
+                    args: vec![],
+                    module: "gleam".into(),
+                    publicity: crate::ast::Publicity::Public,
+                    package: "".into(),
+                }),
+            },
         ],
         retrn: Arc::new(Type::Named {
             name: "Bool".into(),

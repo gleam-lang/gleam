@@ -790,7 +790,14 @@ fn hover_for_pattern(pattern: &TypedPattern, line_numbers: LineNumbers, module: 
 
 fn get_function_type(fun: &TypedFunction) -> Type {
     Type::Fn {
-        args: fun.arguments.iter().map(|arg| arg.type_.clone()).collect(),
+        args: fun
+            .arguments
+            .iter()
+            .map(|arg| type_::FunctionArgument {
+                name: arg.names.get_variable_name().cloned(),
+                type_: arg.type_.clone(),
+            })
+            .collect(),
         retrn: fun.return_type.clone(),
     }
 }

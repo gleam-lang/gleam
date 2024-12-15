@@ -15,8 +15,8 @@ use crate::{
     line_numbers::LineNumbers,
     pretty::*,
     type_::{
-        ModuleValueConstructor, PatternConstructor, Type, TypeVar, ValueConstructor,
-        ValueConstructorVariant,
+        FunctionArgument, ModuleValueConstructor, PatternConstructor, Type, TypeVar,
+        ValueConstructor, ValueConstructorVariant,
     },
     Result,
 };
@@ -2140,7 +2140,7 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
         },
         Type::Fn { args, retrn } => {
             for arg in args {
-                type_var_ids(arg, ids)
+                type_var_ids(&arg.type_, ids)
             }
             type_var_ids(retrn, ids);
         }
@@ -2293,8 +2293,8 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {
-        let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
+    fn print_fn(&self, args: &[FunctionArgument], retrn: &Type) -> Document<'static> {
+        let args = join(args.iter().map(|a| self.print(&a.type_)), ", ".to_doc());
         let retrn = self.print(retrn);
         "fun(("
             .to_doc()

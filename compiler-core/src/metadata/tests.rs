@@ -11,9 +11,9 @@ use crate::{
     build::Origin,
     line_numbers::LineNumbers,
     type_::{
-        self, expression::Implementations, Deprecation, ModuleInterface, Type, TypeConstructor,
-        TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
-        ValueConstructorVariant,
+        self, expression::Implementations, Deprecation, FunctionArgument, ModuleInterface, Type,
+        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
+        ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
 };
@@ -210,7 +210,19 @@ fn module_with_fn_type() {
         types: [(
             "FnType".into(),
             TypeConstructor {
-                type_: type_::fn_(vec![type_::nil(), type_::float()], type_::int()),
+                type_: type_::fn_(
+                    vec![
+                        FunctionArgument {
+                            name: None,
+                            type_: type_::nil(),
+                        },
+                        FunctionArgument {
+                            name: None,
+                            type_: type_::float(),
+                        },
+                    ],
+                    type_::int(),
+                ),
                 publicity: Publicity::Public,
                 opaque: false,
                 origin: Default::default(),

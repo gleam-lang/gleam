@@ -68,7 +68,7 @@ pub enum Type {
     /// The type of a function. It takes arguments and returns a value.
     ///
     Fn {
-        args: Vec<Arc<Type>>,
+        args: Vec<FunctionArgument>,
         retrn: Arc<Type>,
     },
 
@@ -141,7 +141,10 @@ impl Type {
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
-            Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
+            Self::Fn { args, retrn, .. } => Some((
+                args.iter().map(|a| a.type_.clone()).collect(),
+                retrn.clone(),
+            )),
             Self::Var { type_ } => type_.borrow().fn_types(),
             _ => None,
         }
@@ -316,7 +319,7 @@ impl Type {
 
             Self::Fn { retrn, args, .. } => retrn
                 .find_private_type()
-                .or_else(|| args.iter().find_map(|t| t.find_private_type())),
+                .or_else(|| args.iter().find_map(|t| t.type_.find_private_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } => None,
@@ -338,7 +341,7 @@ impl Type {
 
             Self::Fn { retrn, args, .. } => retrn
                 .find_internal_type()
-                .or_else(|| args.iter().find_map(|t| t.find_internal_type())),
+                .or_else(|| args.iter().find_map(|t| t.type_.find_internal_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
@@ -362,6 +365,12 @@ pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
         }
     }
     t
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
+pub struct FunctionArgument {
+    pub name: Option<EcoString>,
+    pub type_: Arc<Type>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1087,7 +1096,7 @@ fn unify_unbound_type(type_: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
 
         Type::Fn { args, retrn } => {
             for arg in args {
-                unify_unbound_type(arg.clone(), own_id)?;
+                unify_unbound_type(arg.type_.clone(), own_id)?;
             }
             unify_unbound_type(retrn.clone(), own_id)
         }
@@ -1125,7 +1134,15 @@ fn match_fun_type(
 
         if let Some((args, retrn)) = new_value {
             *type_.borrow_mut() = TypeVar::Link {
-                type_: fn_(args.clone(), retrn.clone()),
+                type_: fn_(
+                    args.iter()
+                        .map(|t| FunctionArgument {
+                            name: None,
+                            type_: t.clone(),
+                        })
+                        .collect(),
+                    retrn.clone(),
+                ),
             };
             return Ok((args, retrn));
         }
@@ -1136,11 +1153,14 @@ fn match_fun_type(
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
-                args: args.clone(),
+                args: args.iter().map(|a| a.type_.clone()).collect(),
                 return_type: retrn.clone(),
             })
         } else {
-            Ok((args.clone(), retrn.clone()))
+            Ok((
+                args.iter().map(|a| a.type_.clone()).collect(),
+                retrn.clone(),
+            ))
         };
     }
 
@@ -1175,7 +1195,12 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         }
 
         Type::Fn { args, retrn } => fn_(
-            args.iter().map(|t| generalise(t.clone())).collect(),
+            args.iter()
+                .map(|t| FunctionArgument {
+                    name: t.name.clone(),
+                    type_: generalise(t.type_.clone()),
+                })
+                .collect(),
             generalise(retrn.clone()),
         ),
 

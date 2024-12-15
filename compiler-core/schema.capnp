@@ -90,6 +90,11 @@ struct RecordAccessor {
   label @2 :Text;
 }
 
+struct FunctionArgument {
+  name @0 :Text;
+  type @1 :Type;
+}
+
 struct Type {
   union {
     app :group {
@@ -100,7 +105,7 @@ struct Type {
     }
 
     fn :group {
-      arguments @3 :List(Type);
+      arguments @3 :List(FunctionArgument);
       return @4 :Type;
     }
 

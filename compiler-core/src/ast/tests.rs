@@ -13,8 +13,8 @@ use crate::{
     ast::{SrcSpan, TypedExpr},
     build::Located,
     type_::{
-        self, AccessorsMap, Environment, ExprTyper, FieldMap, ModuleValueConstructor,
-        RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Environment, ExprTyper, FieldMap, FunctionArgument,
+        ModuleValueConstructor, RecordAccessor, Type, ValueConstructor, ValueConstructorVariant,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -108,7 +108,19 @@ fn compile_expression(src: &str) -> TypedStatement {
     environment.insert_variable(
         "Cat".into(),
         variant,
-        type_::fn_(vec![type_::string(), type_::int()], cat_type.clone()),
+        type_::fn_(
+            vec![
+                FunctionArgument {
+                    name: None,
+                    type_: type_::string(),
+                },
+                FunctionArgument {
+                    name: None,
+                    type_: type_::int(),
+                },
+            ],
+            cat_type.clone(),
+        ),
         Publicity::Public,
         Deprecation::NotDeprecated,
     );

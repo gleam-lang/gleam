@@ -140,8 +140,17 @@ impl ModuleDecoder {
 
     fn type_fn(&mut self, reader: &schema::type_::fn_::Reader<'_>) -> Result<Arc<Type>> {
         let retrn = self.type_(&reader.get_return()?)?;
-        let args = read_vec!(&reader.get_arguments()?, self, type_);
+        let args = read_vec!(&reader.get_arguments()?, self, function_argument);
         Ok(Arc::new(Type::Fn { args, retrn }))
+    }
+
+    fn function_argument(
+        &mut self,
+        reader: &function_argument::Reader<'_>,
+    ) -> Result<type_::FunctionArgument> {
+        let name = self.optional_string(reader.get_name()?);
+        let type_ = self.type_(&reader.get_type()?)?;
+        Ok(type_::FunctionArgument { name, type_ })
     }
 
     fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {

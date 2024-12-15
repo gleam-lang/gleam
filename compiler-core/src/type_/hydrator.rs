@@ -204,7 +204,12 @@ impl Hydrator {
             }) => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment, problems))
+                    .map(|t| {
+                        Ok(FunctionArgument {
+                            name: None,
+                            type_: self.type_from_ast(t, environment, problems)?,
+                        })
+                    })
                     .try_collect()?;
                 let retrn = self.type_from_ast(retrn, environment, problems)?;
                 Ok(fn_(args, retrn))

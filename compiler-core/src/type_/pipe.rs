@@ -292,7 +292,13 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // Ensure that the function accepts one argument of the correct type
         unify(
             function.type_(),
-            fn_(vec![self.argument_type.clone()], return_type.clone()),
+            fn_(
+                vec![FunctionArgument {
+                    name: None,
+                    type_: self.argument_type.clone(),
+                }],
+                return_type.clone(),
+            ),
         )
         .map_err(|e| {
             if self.check_if_pipe_function_mismatch(&e) {
@@ -326,7 +332,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         match types {
             (Type::Fn { args: a, .. }, Type::Fn { args: b, .. }) if a.len() == b.len() => {
                 match (a.first(), b.first()) {
-                    (Some(a), Some(b)) => unify(a.clone(), b.clone()).is_err(),
+                    (Some(a), Some(b)) => unify(a.type_.clone(), b.type_.clone()).is_err(),
                     _ => false,
                 }
             }

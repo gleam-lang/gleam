@@ -38,8 +38,8 @@ use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
     ast::AssignName,
     type_::{
-        collapse_links, error::UnknownTypeConstructorError, is_prelude_module, Environment, Type,
-        TypeValueConstructor, TypeValueConstructorField, TypeVar,
+        collapse_links, error::UnknownTypeConstructorError, is_prelude_module, Environment,
+        FunctionArgument, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
     },
 };
 use ecow::EcoString;
@@ -905,7 +905,13 @@ impl ConstructorSpecialiser {
             },
 
             Type::Fn { args, retrn } => Type::Fn {
-                args: args.iter().map(|a| self.specialise_type(a)).collect(),
+                args: args
+                    .iter()
+                    .map(|a| FunctionArgument {
+                        name: a.name.clone(),
+                        type_: self.specialise_type(&a.type_),
+                    })
+                    .collect(),
                 retrn: retrn.clone(),
             },
 

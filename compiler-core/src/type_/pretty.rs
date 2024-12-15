@@ -1,4 +1,4 @@
-use super::{Type, TypeVar};
+use super::{FunctionArgument, Type, TypeVar};
 use crate::{
     docvec,
     pretty::{nil, *},
@@ -72,7 +72,7 @@ impl Printer {
 
             Type::Fn { args, retrn } => "fn("
                 .to_doc()
-                .append(self.args_to_gleam_doc(args))
+                .append(self.function_args_to_gleam_doc(args))
                 .append(") ->")
                 .append(
                     break_("", " ")
@@ -137,6 +137,22 @@ impl Printer {
 
         self.uid += 1;
         chars.into_iter().rev().collect()
+    }
+
+    fn function_args_to_gleam_doc(&mut self, args: &[FunctionArgument]) -> Document<'static> {
+        if args.is_empty() {
+            return nil();
+        }
+
+        let args = join(
+            args.iter().map(|t| self.print(&t.type_).group()),
+            break_(",", ", "),
+        );
+        break_("", "")
+            .append(args)
+            .nest(INDENT)
+            .append(break_(",", ""))
+            .group()
     }
 
     fn args_to_gleam_doc(&mut self, args: &[Arc<Type>]) -> Document<'static> {
@@ -290,20 +306,26 @@ fn pretty_print_test() {
     assert_string!(
         Type::Fn {
             args: vec![
-                Arc::new(Type::Named {
-                    args: vec![],
-                    module: "whatever".into(),
-                    package: "whatever".into(),
-                    name: "Int".into(),
-                    publicity: Publicity::Public,
-                }),
-                Arc::new(Type::Named {
-                    args: vec![],
-                    module: "whatever".into(),
-                    package: "whatever".into(),
-                    name: "Bool".into(),
-                    publicity: Publicity::Public,
-                }),
+                FunctionArgument {
+                    name: None,
+                    type_: Arc::new(Type::Named {
+                        args: vec![],
+                        module: "whatever".into(),
+                        package: "whatever".into(),
+                        name: "Int".into(),
+                        publicity: Publicity::Public,
+                    })
+                },
+                FunctionArgument {
+                    name: None,
+                    type_: Arc::new(Type::Named {
+                        args: vec![],
+                        module: "whatever".into(),
+                        package: "whatever".into(),
+                        name: "Bool".into(),
+                        publicity: Publicity::Public,
+                    })
+                },
             ],
             retrn: Arc::new(Type::Named {
                 args: vec![],
@@ -337,9 +359,12 @@ fn pretty_print_test() {
     );
     assert_string!(
         fn_(
-            vec![Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 78 })),
-            })],
+            vec![FunctionArgument {
+                name: None,
+                type_: Arc::new(Type::Var {
+                    type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 78 })),
+                })
+            }],
             Arc::new(Type::Var {
                 type_: Arc::new(RefCell::new(TypeVar::Unbound { id: 2 })),
             }),
@@ -348,9 +373,12 @@ fn pretty_print_test() {
     );
     assert_string!(
         fn_(
-            vec![Arc::new(Type::Var {
-                type_: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
-            })],
+            vec![FunctionArgument {
+                name: None,
+                type_: Arc::new(Type::Var {
+                    type_: Arc::new(RefCell::new(TypeVar::Generic { id: 78 })),
+                })
+            }],
             Arc::new(Type::Var {
                 type_: Arc::new(RefCell::new(TypeVar::Generic { id: 2 })),
             }),
@@ -364,7 +392,16 @@ fn function_test() {
     assert_eq!(pretty_print(fn_(vec![], int())), "fn() -> Int");
 
     assert_eq!(
-        pretty_print(fn_(vec![int(), int(), int()], int())),
+        pretty_print(fn_(
+            vec![int(), int(), int()]
+                .into_iter()
+                .map(|t| FunctionArgument {
+                    name: None,
+                    type_: t,
+                })
+                .collect(),
+            int()
+        )),
         "fn(Int, Int, Int) -> Int"
     );
 
@@ -384,7 +421,13 @@ fn function_test() {
                 float(),
                 float(),
                 float()
-            ],
+            ]
+            .into_iter()
+            .map(|t| FunctionArgument {
+                name: None,
+                type_: t,
+            })
+            .collect(),
             float()
         )),
         "fn(
@@ -415,7 +458,13 @@ fn function_test() {
                 float(),
                 float(),
                 float()
-            ],
+            ]
+            .into_iter()
+            .map(|t| FunctionArgument {
+                name: None,
+                type_: t,
+            })
+            .collect(),
             float()
         )),
         "fn(
@@ -439,7 +488,13 @@ fn function_test() {
                 float(),
                 float(),
                 float()
-            ]),],
+            ]),]
+            .into_iter()
+            .map(|t| FunctionArgument {
+                name: None,
+                type_: t,
+            })
+            .collect(),
             tuple(vec![
                 tuple(vec![float(), float(), float(), float(), float(), float()]),
                 tuple(vec![float(), float(), float(), float(), float(), float()]),

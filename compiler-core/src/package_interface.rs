@@ -1,24 +1,20 @@
 use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
-use itertools::Itertools;
 use serde::Serialize;
 
 #[cfg(test)]
 mod tests;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias, UntypedModule},
-    build::package_compiler::UncompiledModule,
     io::ordered_map,
-    schema_capnp::publicity,
     type_::{
-        self, expression::Implementations, Deprecation, Type, TypeAliasConstructor,
-        TypeConstructor, TypeVar, ValueConstructorVariant,
+        self, expression::Implementations, Deprecation, Type, TypeConstructor, TypeVar,
+        ValueConstructorVariant,
     },
 };
 
-use crate::build::{Module, Package};
+use crate::build::Package;
 
 /// The public interface of a package that gets serialised as a json object.
 #[derive(Serialize, Debug)]
@@ -501,9 +497,8 @@ impl ModuleInterface {
                             parameters: arguments
                                 .iter()
                                 .map(|arg| ParameterInterface {
-                                    //TODO: Find label
-                                    label: None,
-                                    type_: from_type_helper(arg.as_ref(), &mut id_map),
+                                    label: arg.name.clone(),
+                                    type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
                                 })
                                 .collect(),
                             return_: from_type_helper(return_type, &mut id_map),
@@ -561,7 +556,7 @@ fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
         Type::Fn { args, retrn } => TypeInterface::Fn {
             parameters: args
                 .iter()
-                .map(|arg| from_type_helper(arg.as_ref(), id_map))
+                .map(|arg| from_type_helper(arg.type_.as_ref(), id_map))
                 .collect(),
             return_: Box::new(from_type_helper(retrn, id_map)),
         },

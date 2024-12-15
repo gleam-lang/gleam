@@ -745,7 +745,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.previous_panics = false;
 
         let (args, body) = self.do_infer_fn(args, expected_args, body, &return_annotation)?;
-        let args_types = args.iter().map(|a| a.type_.clone()).collect();
+        let args_types = args
+            .iter()
+            .map(|a| FunctionArgument {
+                name: None,
+                type_: a.type_.clone(),
+            })
+            .collect();
         let type_ = fn_(args_types, body.last().type_());
 
         // Defining an anonymous function never panics.
@@ -3245,7 +3251,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 },
             ) if expected_arguments.len() == arguments.len() => self.infer_fn(
                 arguments,
-                expected_arguments,
+                expected_arguments
+                    .iter()
+                    .map(|a| a.type_.clone())
+                    .collect_vec()
+                    .as_slice(),
                 body,
                 false,
                 return_annotation,

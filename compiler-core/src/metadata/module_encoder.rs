@@ -7,8 +7,8 @@ use crate::{
     },
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
-        Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
+        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, FunctionArgument,
+        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
         TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
     },
 };
@@ -545,11 +545,36 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn build_function_argument(
+        &mut self,
+        mut builder: function_argument::Builder<'_>,
+        arg: &FunctionArgument,
+    ) {
+        match &arg.name {
+            Some(name) => builder.set_name(name),
+            None => builder.set_name(""),
+        }
+        self.build_type(builder.init_type(), arg.type_.as_ref());
+    }
+
+    fn build_function_arguments(
+        &mut self,
+        mut builder: capnp::struct_list::Builder<'_, function_argument::Owned>,
+        args: &[FunctionArgument],
+    ) {
+        for (i, arg) in args.iter().enumerate() {
+            self.build_function_argument(builder.reborrow().get(i as u32), arg);
+        }
+    }
+
     fn build_type(&mut self, builder: schema::type_::Builder<'_>, type_: &Type) {
         match type_ {
             Type::Fn { args, retrn } => {
                 let mut fun = builder.init_fn();
-                self.build_types(fun.reborrow().init_arguments(args.len() as u32), args);
+                self.build_function_arguments(
+                    fun.reborrow().init_arguments(args.len() as u32),
+                    args,
+                );
                 self.build_type(fun.init_return(), retrn)
             }
 

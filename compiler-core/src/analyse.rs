@@ -27,9 +27,10 @@ use crate::{
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant, Warning,
+        AccessorsMap, Deprecation, FunctionArgument, ModuleInterface, PatternConstructor,
+        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
@@ -526,7 +527,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 body,
                 Some(prereg_return_type.clone()),
             )?;
-            let args_types = args.iter().map(|a| a.type_.clone()).collect();
+            let args_types = args
+                .iter()
+                .map(|a| FunctionArgument {
+                    name: a.get_variable_name().cloned(),
+                    type_: a.type_.clone(),
+                })
+                .collect();
             let type_ = fn_(args_types, body.last().type_());
             Ok((
                 type_,
@@ -976,7 +983,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 });
 
                 // Register the type for this parameter
-                args_types.push(t);
+                args_types.push(FunctionArgument {
+                    name: None,
+                    type_: t,
+                });
 
                 // Register the label for this parameter, if there is one
                 if let Some((_, label)) = label {
@@ -992,7 +1002,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             // Insert constructor function into module scope
             let type_ = match constructor.arguments.len() {
                 0 => type_.clone(),
-                _ => fn_(args_types.clone(), type_.clone()),
+                _ => fn_(args_types, type_.clone()),
             };
             let constructor_info = ValueConstructorVariant::Record {
                 documentation: constructor
@@ -1321,7 +1331,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let arg_types = args
             .iter()
             .map(|arg| {
-                hydrator.type_from_option_ast(&arg.annotation, environment, &mut self.problems)
+                Ok(FunctionArgument {
+                    name: None,
+                    type_: hydrator.type_from_option_ast(
+                        &arg.annotation,
+                        environment,
+                        &mut self.problems,
+                    )?,
+                })
             })
             .try_collect()?;
         let return_type =
