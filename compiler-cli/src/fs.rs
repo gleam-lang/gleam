@@ -54,6 +54,24 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
     })
 }
 
+// Return the distro name if /etc/os-release exists, otherwise return "unknown"
+pub fn get_os_release() -> Result<String, Error> {
+    let os_release = std::fs::read_to_string("/etc/os-release");
+    match os_release {
+        Ok(release) => {
+            let mut distro = "unknown".to_string();
+            for line in release.lines() {
+                if line.starts_with("ID=") {
+                    distro = line.split('=').nth(1).unwrap_or("unknown").to_string();
+                    break;
+                }
+            }
+            Ok(distro)
+        }
+        Err(_) => Ok("unknown".to_string()),
+    }
+}
+
 /// A `FileWriter` implementation that writes to the file system.
 #[derive(Debug, Clone)]
 pub struct ProjectIO {
@@ -183,6 +201,8 @@ impl CommandExecutor for ProjectIO {
             Err(error) => Err(match error.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: program.to_string(),
+                    os: std::env::consts::OS.into(),
+                    distro: get_os_release().unwrap_or("unknown".to_string()),
                 },
 
                 other => Error::ShellCommand {

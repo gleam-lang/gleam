@@ -18,7 +18,6 @@ use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::env;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
@@ -31,6 +30,9 @@ use camino::{Utf8Path, Utf8PathBuf};
 pub type Name = EcoString;
 
 pub type Result<Ok, Err = Error> = std::result::Result<Ok, Err>;
+
+#[cfg(test)]
+pub mod tests;
 
 macro_rules! wrap_format {
     ($($tts:tt)*) => {
@@ -149,7 +151,11 @@ pub enum Error {
     Gzip(String),
 
     #[error("shell program `{program}` not found")]
-    ShellProgramNotFound { program: String },
+    ShellProgramNotFound {
+        program: String,
+        os: String,
+        distro: String,
+    },
 
     #[error("shell program `{program}` failed")]
     ShellCommand {
@@ -1018,7 +1024,7 @@ your app.src file \"{app_ver}\"."
                 }]
             }
 
-            Error::ShellProgramNotFound { program } => {
+            Error::ShellProgramNotFound { program , os, distro } => {
                 let mut text = format!("The program `{program}` was not found. Is it installed?");
 
                 match program.as_str() {
@@ -1030,7 +1036,23 @@ https://gleam.run/getting-started/installing/",
                     "rebar3" => text.push_str(
                         "
 Documentation for installing rebar3 can be viewed here:
-https://gleam.run/getting-started/installing/",
+https://gleam.run/getting-started/installing/
+https://rebar3.org/docs/getting-started/",
+                    ),
+                    "deno" => text.push_str(
+                        "
+Documentation for installing Deno can be viewed here:
+https://docs.deno.com/runtime/getting_started/installation/",
+                    ),
+                    "elixir" => text.push_str(
+                        "
+Documentation for installing Elixir can be viewed here:
+https://elixir-lang.org/install.html",
+                    ),
+                    "node" => text.push_str(
+                        "
+Documentation for installing Node.js via package manager can be viewed here:
+https://nodejs.org/en/download/package-manager/all/",
                     ),
                     "bun" => text.push_str(
                         "
@@ -1038,19 +1060,14 @@ Documentation for installing bun can be viewed here:
 https://bun.sh/docs/installation/
 You may need to restart your shell after installing bun.",
                     ),
-                    "deno" => text.push_str(
+                    "git" => text.push_str(
                         "
-Documentation for installing Deno can be viewed here:
-https://docs.deno.com/runtime/getting_started/installation/",
-                    ),
-                    "node" => text.push_str(
-                        "
-Documentation for installing Node.js via package manager can be viewed here:
-https://nodejs.org/en/download/package-manager/all/",
+Documentation for installing Git can be viewed here:
+https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
                     ),
                     _ => (),
                 }
-                match env::consts::OS {
+                match os.as_str() {
                     "macos" => {
                         fn brew_install(program: &str) -> String {
                             format!("\nYou can install {} via homebrew: brew install {}", program, program)
@@ -1060,38 +1077,25 @@ https://nodejs.org/en/download/package-manager/all/",
                             "rebar3" => text.push_str(&brew_install("rebar3")),
                             "deno" => text.push_str(&brew_install("deno")),
                             "elixir" => text.push_str(&brew_install("elixir")),
-                            other => text.push_str(&wrap_format!("
-You might need to install {other} manually on your macOS."
-                            )),
+                            "node" => text.push_str(&brew_install("node")),
+                            "bun" => text.push_str(&brew_install("oven-sh/bun/bun")),
+                            "git" => text.push_str(&brew_install("git")),
+                            _ => (),
                         }
                     }
                     "linux" => {
                         fn apt_install(program: &str) -> String {
                             format!("\nYou can install {} via apt: sudo apt install {}", program, program)
                         }
-                        let release = std::fs::read_to_string("/etc/os-release").ok();
-                        if let Some(release) = release {
-                            if release.contains("ubuntu") || release.contains("debian") {
-                                match program.as_str() {
-                                    "erl" | "erlc" | "escript" => text.push_str(&apt_install("erlang")),
-                                    "elixir" => text.push_str(&apt_install("elixir")),
-                                    other => text.push_str(&wrap_format!("
-You might need to install {other} manually on your Linux distribution.
-Please refer to the software's documentation for installation instructions."
-                                    )),
-                                }
-                            } else {
-                                text.push_str(&wrap_format!("
-You might need to install {program} manually on your Linux distribution.
-Please refer to the software's documentation for installation instructions."
-                                ));
+                        if distro == "debian" || distro == "ubuntu" {
+                            match program.as_str() {
+                                "elixir" => text.push_str(&apt_install("elixir")),
+                                "git" => text.push_str(&apt_install("git")),
+                                _ => (),
                             }
                         }
                     }
-                    _ => text.push_str(&wrap_format!("
-You might need to install {program} manually, please refer to the
-software's documentation for installation instructions."
-                    )),
+                    _ => (),
                 }
 
                 vec![Diagnostic {
