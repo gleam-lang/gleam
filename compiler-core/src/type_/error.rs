@@ -660,16 +660,16 @@ pub enum VariableOrigin {
 }
 
 impl VariableOrigin {
-    pub fn how_to_ignore(&self) -> String {
+    pub fn how_to_ignore(&self) -> Option<String> {
         match self {
             VariableOrigin::Variable(name) => {
-                format!("You can ignore it with an underscore: `_{name}`.")
+                Some(format!("You can ignore it with an underscore: `_{name}`."))
             }
-            VariableOrigin::LabelShorthand(label) => {
-                format!("You can ignore it with an underscore: `{label}: _`.")
-            }
-            VariableOrigin::AssignmentPattern => "You can safely remove it.".to_string(),
-            VariableOrigin::Generated => String::new(),
+            VariableOrigin::LabelShorthand(label) => Some(format!(
+                "You can ignore it with an underscore: `{label}: _`."
+            )),
+            VariableOrigin::AssignmentPattern => Some("You can safely remove it.".to_string()),
+            VariableOrigin::Generated => None,
         }
     }
 }
