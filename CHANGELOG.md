@@ -82,8 +82,49 @@
   exist with `gleam add`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- External files (such as `.mjs` and `.erl`) are now permitted in subdirectories
-  of `src/` and `test/`.
+- The compiler can now suggest to wrap a value in an `Ok` or `Error` if that can
+  solve a type mismatch error:
+
+  ```gleam
+  pub fn first(list: List(a)) -> Result(a, Nil) {
+    case number {
+      [] -> Error(Nil)
+      [first, ..rest] -> first
+    }
+  }
+  ```
+
+  Results in the following error:
+
+  ```txt
+  error: Type mismatch
+    ┌─ /src/one/two.gleam:5:5
+    │
+  5 │     [first, ..rest] -> first
+    │     ^^^^^^^^^^^^^^^^^^^^^^^^
+    │                        │
+    │                        Did you mean to wrap this in an `Ok`?
+
+  This case clause was found to return a different type than the previous
+  one, but all case clauses must return the same type.
+
+  Expected type:
+
+      Result(a, Nil)
+
+  Found type:
+
+      a
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Improved the error message for unknown record fields, displaying an additional
+  note on how to have a field accessor only if it makes sense.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- FFI files (such as `.mjs` and `.erl`) are now permitted in subdirectories of
+  `src/` and `test/`.
   ([PgBiel](https://github.com/PgBiel))
 
 - `gleam publish` now requires more verbose confirmation for publishing Gleam
@@ -244,10 +285,10 @@
 - Fixed a bug where the inferred variant of values was not properly cached,
   leading to incorrect errors on incremental builds and in the Language Server.
   ([Surya Rose](https://github.com/GearsDatapacks))
-  
- - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
-   project path contains a non-ascii character.
-   ([yoshi](https://github.com/joshi-monster))
+
+- Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
+  project path contains a non-ascii character.
+  ([yoshi](https://github.com/joshi-monster))
 
 ## v1.6.1 - 2024-11-19
 
