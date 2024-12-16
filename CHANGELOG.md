@@ -4,7 +4,8 @@
 
 ### Compiler
 
-- Removed compiler hint about pattern matching a `Result(a, b)` when being used where `a` is expected.
+- Removed compiler hint about pattern matching a `Result(a, b)` when being used
+  where `a` is expected.
   ([Kieran O'Reilly](https://github.com/SoTeKie))
 
 - Optimised code generated for record updates.
@@ -32,10 +33,10 @@
 
 - The shorthand names for the two targets, `erl` and `js` are now
   deprecated in code such as `@target`.
-
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- A custom panic message can now be specified when asserting a value with `let assert`:
+- A custom panic message can now be specified when asserting a value with
+  `let assert`:
 
   ```gleam
   let assert Ok(regex) = regex.compile("ab?c+") as "This regex is always valid"
@@ -73,7 +74,8 @@
   O(1) operation instead of O(N), significantly improving performance.
   ([Richard Viney](https://github.com/richard-viney))
 
-- Better error message for existed type constructor being used as value constructor.
+- Better error message for existed type constructor being used as value
+  constructor.
   ([Jiangda Wang](https://github.com/Frank-III))
 
 ### Build tool
@@ -90,11 +92,13 @@
   team packages and v0 packages.
   ([Louis Pilfold](https://github.com/lpil))
 
-- `gleam publish` now warns when publishing packages that define multiple top-level
-  modules, as this can lead to namespace pollution and conflicts for consumers.
+- `gleam publish` now warns when publishing packages that define multiple
+  top-level modules, as this can lead to namespace pollution and conflicts for
+  consumers.
   ([Aleksei Gurianov](https://github.com/guria))
 
 - New projects now require `gleam_stdlib` v0.44.0.
+  ([Louis Pilfold](https://github.com/lpil))
 
 - `gleam remove` no longer requires a network connection.
   ([yoshi](https://github.com/joshi-monster))
@@ -108,7 +112,6 @@
 
 - The language server now provides type information when hovering over argument
   labels.
-
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - The Language Server now suggests a code action to desugar a use expression
@@ -157,6 +160,7 @@
 
 - The language server now provides correct information when hovering over
   patterns in use expressions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 - The language server now suggests a code action to convert an inexhaustive
   `let` assignment into a `case` expression:
@@ -182,6 +186,9 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now provides an action to extract a value into a variable.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now adds a `todo` inside empty blocks.
@@ -189,9 +196,9 @@
 
 ### Documentation
 
-- Canonical links created for documentation pages if published on Hex. Previously
-  published documentation would need to be updated. Resolves versioned pages to point
-  to latest page for search engines.
+- Canonical links created for documentation pages if published on Hex.
+  Previously published documentation would need to be updated.
+  Resolves versioned pages to point to latest page for search engines.
   ([Dave Lage](https://github.com/rockerBOO))
 
 - The formatter now format lists the same in constants as in expressions
@@ -210,18 +217,20 @@
   subjects and one of them being a constant record.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Variant inference on prelude types now works correctly if the variant is constant.
+- Variant inference on prelude types now works correctly if the variant is
+  constant.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- Fixed a bug where patterns in `use` expressions would not be checked to ensure that
-  they were exhaustive.
+- Fixed a bug where patterns in `use` expressions would not be checked to ensure
+  that they were exhaustive.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug where a `module.mjs` file would be overwritten by a `module.gleam`
   file of same name without warning. It now produces an error.
   ([PgBiel](https://github.com/PgBiel))
 
-- Modules depending on removed or renamed modules now get automatically recompiled.
+- Modules depending on removed or renamed modules now get automatically
+  recompiled.
   ([Sakari Bergen](https://github.com/sbergen))
 
 - The compiler now raises a warning for unused case expressions, code blocks and
