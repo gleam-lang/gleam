@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err[0].text"
+---
+The program `git` was not found. Is it installed?
+Documentation for installing Git can be viewed here:
+https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
+You can install git via apt: sudo apt install git
