@@ -194,6 +194,9 @@
   to latest page for search engines.
   ([Dave Lage](https://github.com/rockerBOO))
 
+- The formatter now format lists the same in constants as in expressions
+  ([Jiangda Wang](https://github.com/Frank-III))
+
 ### Bug fixed
 
 - The compiler now throws an error when a float literal ends with an `e` and
@@ -244,7 +247,7 @@
 - Fixed a bug where the inferred variant of values was not properly cached,
   leading to incorrect errors on incremental builds and in the Language Server.
   ([Surya Rose](https://github.com/GearsDatapacks))
-  
+
  - Fixed a bug where Gleam would be unable to compile to BEAM bytecode if the
    project path contains a non-ascii character.
    ([yoshi](https://github.com/joshi-monster))
