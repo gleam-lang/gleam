@@ -1,0 +1,8 @@
+---
+source: compiler-core/src/error/tests.rs
+expression: "err[0].text"
+---
+The program `elixir` was not found. Is it installed?
+Documentation for installing Elixir can be viewed here:
+https://elixir-lang.org/install.html
+You can install elixir via homebrew: brew install elixir
