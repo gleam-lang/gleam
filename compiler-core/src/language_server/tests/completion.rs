@@ -351,6 +351,36 @@ pub fn wobble() {
 }
 
 #[test]
+fn completions_for_type_import_completions_without_brackets() {
+    let src = "import dep.";
+    let dep = "
+pub opaque type Wibble {
+  Wibble(wibble: String, wobble: Int)
+}
+";
+    let position = Position::new(0, 11);
+    let tester = TestProject::for_source("import dep").add_module("dep", dep);
+    let mut io = LanguageServerTestIO::new();
+    let mut engine = tester.build_engine(&mut io);
+    // pass a valid src to compile once
+    _ = io.src_module("app", tester.src);
+    let _ = engine.compile_please();
+    // update src to the one we want to test
+    _ = io.src_module("app", src);
+    let param = tester.build_path(position);
+    let response = engine.completion(param, src.into());
+
+    let mut completions = response.result.unwrap().unwrap_or_default();
+    completions.sort_by(|a, b| a.label.cmp(&b.label));
+    let output = format!(
+        "{}\n\n----- Completion content -----\n{}",
+        show_complete(src, position),
+        format_completion_results(completions)
+    );
+    insta::assert_snapshot!(insta::internals::AutoName, output, src);
+}
+
+#[test]
 fn importable_adds_extra_new_line_if_no_imports() {
     let dep = "pub fn wobble() {\nNil\n}";
     let code = "";
