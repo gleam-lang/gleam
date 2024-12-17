@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    case\n        list.map(\n          [1, 2, 3],\n          int.add(1, _)\n        )\n    {\n      _ -> todo\n    }\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    case
+        list.map(
+          [1, 2, 3],
+          ↑         
+          int.add(1, _)
+        )
+    {
+      _ -> todo
+    }
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    let value = [1, 2, 3]
+    case
+        list.map(
+          value,
+          int.add(1, _)
+        )
+    {
+      _ -> todo
+    }
+}

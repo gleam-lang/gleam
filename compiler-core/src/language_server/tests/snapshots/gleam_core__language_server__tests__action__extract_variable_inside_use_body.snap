@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n    use <- wibble(todo)\n    list.map([1, 2, 3], int.add(1, _))\n    todo\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+    use <- wibble(todo)
+    list.map([1, 2, 3], int.add(1, _))
+             ↑                        
+    todo
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+    use <- wibble(todo)
+    let value = [1, 2, 3]
+    list.map(value, int.add(1, _))
+    todo
+}
