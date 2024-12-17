@@ -54,8 +54,16 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
     })
 }
 
+#[inline]
+pub fn get_os() -> String {
+    std::env::consts::OS.to_string()
+}
+
 // Return the distro name if /etc/os-release exists, otherwise return "unknown"
-pub fn get_os_release() -> Result<String, Error> {
+pub fn get_os_distro() -> String {
+    if get_os() != "linux" {
+        return "unknown".to_string();
+    }
     let os_release = std::fs::read_to_string("/etc/os-release");
     match os_release {
         Ok(release) => {
@@ -66,9 +74,9 @@ pub fn get_os_release() -> Result<String, Error> {
                     break;
                 }
             }
-            Ok(distro)
+            distro
         }
-        Err(_) => Ok("unknown".to_string()),
+        Err(_) => "unknown".to_string(),
     }
 }
 
@@ -201,8 +209,8 @@ impl CommandExecutor for ProjectIO {
             Err(error) => Err(match error.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: program.to_string(),
-                    os: std::env::consts::OS.into(),
-                    distro: get_os_release().unwrap_or("unknown".to_string()),
+                    os: get_os(),
+                    distro: get_os_distro(),
                 },
 
                 other => Error::ShellCommand {
