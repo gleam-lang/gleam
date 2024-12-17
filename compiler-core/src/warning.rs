@@ -1069,7 +1069,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                         }
                         FeatureKind::InternalAnnotation => "The `@internal` annotation was",
                         FeatureKind::AtInJavascriptModules => {
-                            "The ability to have `@` in a Javascript module's name was"
+                            "The ability to have `@` in a JavaScript module's name was"
                         }
                         FeatureKind::RecordUpdateVariantInference => {
                             "Record updates for custom types when the variant is known was"
@@ -1082,6 +1082,9 @@ See: https://tour.gleam.run/functions/pipelines/",
                         }
                         FeatureKind::VariantWithDeprecatedAnnotation => {
                             "Deprecating individual custom type variants was"
+                        }
+                        FeatureKind::UnalignedBitArrayOnJavascript => {
+                            "Use of unaligned bit arrays on the JavaScript target was"
                         }
                     };
 

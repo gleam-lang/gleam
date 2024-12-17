@@ -22,47 +22,62 @@ export class Empty<T = never> extends List<T> {}
 export class NonEmpty<T> extends List<T> {}
 
 export class BitArray {
-  buffer: Uint8Array;
-  constructor(buffer: Uint8Array);
-  get length(): number;
+
+  constructor(buffer: Uint8Array, bitSize: number);
+
+  get internalBuffer(): Uint8Array;
+  get bitSize(): number;
+  get byteSize(): number;
+  iterateBytes(): ArrayIterator<number> | null;
   byteAt(index: number): number;
+
+  /** @internal */
+  equals(other: BitArray): boolean;
+
+  /** @internal */
+  slice(start: number, end: number): BitArray;
+
+  /** @internal */
+  sliceToFloat(start: number, end: number, isBigEndian: boolean): number;
+
+  /** @internal */
+  sliceToInt(start: number, end: number, isBigEndian: boolean, isSigned: boolean): number;
+
+  /** @deprecated */
+  get buffer(): Uint8Array;
+
+  /** @deprecated */
+  get length(): number;
+
+  /** @deprecated */
   floatFromSlice(index: number, end: number, isBigEndian: boolean): number;
+
+  /** @deprecated */
   intFromSlice(
     start: number,
     end: number,
     isBigEndian: boolean,
     isSigned: boolean
   ): number;
+
+  /** @deprecated */
   binaryFromSlice(start: number, end: number): BitArray;
-  sliceAfter(index: number): BitArray;
+
+  /** @deprecated */
+  sliceAfter(index: number): BitArray;  
 }
 
 export class UtfCodepoint {
   value: string;
 }
 
-export function toBitArray(segments: Array<number | Uint8Array>): BitArray;
+export function toBitArray(segments: Array<BitArray | Uint8Array | number>): BitArray;
 
 export function sizedInt(
   int: number,
   size: number,
   isBigEndian: boolean
 ): Uint8Array;
-
-export function byteArrayToInt(
-  byteArray: Uint8Array,
-  start: number,
-  end: number,
-  isBigEndian: boolean,
-  isSigned: boolean
-): number;
-
-export function byteArrayToFloat(
-  byteArray: Uint8Array,
-  start: number,
-  end: number,
-  isBigEndian: boolean
-): number;
 
 export function stringBits(string: string): Uint8Array;
 
