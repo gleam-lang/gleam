@@ -256,6 +256,10 @@
   unused variables in certain cases.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where the completer would not include braces in type import completions
+  when it should have.
+  ([Jiangda Wang](https://github.com/Frank-III))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
