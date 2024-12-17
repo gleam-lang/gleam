@@ -9,7 +9,7 @@ fn test_shell_program_not_found_error() {
 
     for cmd in &cmds {
         for os in &oses {
-            let os_enum: OS = OS::from(*os);
+            let os_enum = OS::from(*os);
             match os_enum {
                 OS::MacOS | OS::Windows => {
                     let err = Error::ShellProgramNotFound {
@@ -25,7 +25,7 @@ fn test_shell_program_not_found_error() {
                 }
                 OS::Linux => {
                     for distro in &distros {
-                        let distro_enum: Distro = Distro::from(*distro);
+                        let distro_enum = Distro::from(*distro);
                         let err = Error::ShellProgramNotFound {
                             program: cmd.to_string(),
                             os: os_enum,
@@ -38,7 +38,7 @@ fn test_shell_program_not_found_error() {
                         );
                     }
                 }
-                OS::Other => (),
+                _ => (),
             }
         }
     }

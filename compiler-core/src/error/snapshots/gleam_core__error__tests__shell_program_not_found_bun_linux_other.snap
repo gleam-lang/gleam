@@ -3,6 +3,6 @@ source: compiler-core/src/error/tests.rs
 expression: "err[0].text"
 ---
 The program `bun` was not found. Is it installed?
+
 Documentation for installing bun can be viewed here:
 https://bun.sh/docs/installation/
-You may need to restart your shell after installing bun.
