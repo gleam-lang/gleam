@@ -223,14 +223,6 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         // Add the assignment to the AST
         let assignment = TypedPipelineAssignment {
             location,
-            annotation: None,
-            kind: AssignmentKind::Generated,
-            pattern: Pattern::Variable {
-                location,
-                name: PIPE_VARIABLE.into(),
-                type_: expression.type_(),
-                origin: VariableOrigin::Generated,
-            },
             name: PIPE_VARIABLE.into(),
             value: Box::new(expression),
         };
