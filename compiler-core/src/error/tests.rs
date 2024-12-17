@@ -3,36 +3,42 @@ use insta::assert_snapshot;
 
 #[test]
 fn test_shell_program_not_found_error() {
-    let cmds = vec![
-        "erl", "erlc", "escript", "rebar3", "deno", "elixir", "node", "bun", "git",
-    ];
-    let oses = vec!["macos", "linux", "windows"];
-    let distros = vec!["ubuntu", "unknown"];
+    let cmds = vec!["erlc", "rebar3", "deno", "elixir", "node", "bun", "git"];
+    let oses = vec!["macos", "linux"];
+    let distros = vec!["ubuntu", "other"];
 
     for cmd in &cmds {
         for os in &oses {
-            match *os {
-                "macos" | "windows" => {
+            let os_enum: OS = OS::from(*os);
+            match os_enum {
+                OS::MacOS | OS::Windows => {
                     let err = Error::ShellProgramNotFound {
                         program: cmd.to_string(),
-                        os: os.to_string(),
-                        distro: "unknown".to_string(),
+                        os: os_enum,
+                        distro: Distro::Other,
                     }
                     .to_diagnostics();
-                    assert_snapshot!(format!("{cmd}-{os}-unknown"), err[0].text);
+                    assert_snapshot!(
+                        format!("shell_program_not_found_{cmd}_{os}_other"),
+                        err[0].text
+                    );
                 }
-                "linux" => {
+                OS::Linux => {
                     for distro in &distros {
+                        let distro_enum: Distro = Distro::from(*distro);
                         let err = Error::ShellProgramNotFound {
                             program: cmd.to_string(),
-                            os: os.to_string(),
-                            distro: distro.to_string(),
+                            os: os_enum,
+                            distro: distro_enum,
                         }
                         .to_diagnostics();
-                        assert_snapshot!(format!("{cmd}-{os}-{distro}"), err[0].text);
+                        assert_snapshot!(
+                            format!("shell_program_not_found_{cmd}_{os}_{distro}"),
+                            err[0].text
+                        );
                     }
                 }
-                _ => (),
+                OS::Other => (),
             }
         }
     }

@@ -153,8 +153,8 @@ pub enum Error {
     #[error("shell program `{program}` not found")]
     ShellProgramNotFound {
         program: String,
-        os: String,
-        distro: String,
+        os: OS,
+        distro: Distro,
     },
 
     #[error("shell program `{program}` failed")]
@@ -347,6 +347,42 @@ impl SmallVersion {
             major: version.major as u8,
             minor: version.minor as u8,
             patch: version.patch as u8,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum OS {
+    Linux,
+    MacOS,
+    Windows,
+    Other,
+}
+
+impl From<&str> for OS {
+    fn from(env_os: &str) -> Self {
+        match env_os {
+            "linux" => OS::Linux,
+            "macos" => OS::MacOS,
+            "windows" => OS::Windows,
+            _ => OS::Other,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq, Copy)]
+pub enum Distro {
+    Ubuntu,
+    Debian,
+    Other,
+}
+
+impl From<&str> for Distro {
+    fn from(distro_id: &str) -> Self {
+        match distro_id {
+            "ubuntu" => Distro::Ubuntu,
+            "debian" => Distro::Debian,
+            _ => Distro::Other,
         }
     }
 }
@@ -1025,7 +1061,7 @@ your app.src file \"{app_ver}\"."
             }
 
             Error::ShellProgramNotFound { program , os, distro } => {
-                let mut text = format!("The program `{program}` was not found. Is it installed?");
+                let mut text = format!("The program `{program}` was not found. Is it installed?\n");
 
                 match program.as_str() {
                     "erl" | "erlc" | "escript" => text.push_str(
@@ -1036,8 +1072,7 @@ https://gleam.run/getting-started/installing/",
                     "rebar3" => text.push_str(
                         "
 Documentation for installing rebar3 can be viewed here:
-https://gleam.run/getting-started/installing/
-https://rebar3.org/docs/getting-started/",
+https://gleam.run/getting-started/installing/",
                     ),
                     "deno" => text.push_str(
                         "
@@ -1057,8 +1092,7 @@ https://nodejs.org/en/download/package-manager/all/",
                     "bun" => text.push_str(
                         "
 Documentation for installing bun can be viewed here:
-https://bun.sh/docs/installation/
-You may need to restart your shell after installing bun.",
+https://bun.sh/docs/installation/",
                     ),
                     "git" => text.push_str(
                         "
@@ -1067,8 +1101,8 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
                     ),
                     _ => (),
                 }
-                match os.as_str() {
-                    "macos" => {
+                match os {
+                    OS::MacOS => {
                         fn brew_install(program: &str) -> String {
                             format!("\nYou can install {} via homebrew: brew install {}", program, program)
                         }
@@ -1083,16 +1117,19 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
                             _ => (),
                         }
                     }
-                    "linux" => {
+                    OS::Linux => {
                         fn apt_install(program: &str) -> String {
                             format!("\nYou can install {} via apt: sudo apt install {}", program, program)
                         }
-                        if distro == "debian" || distro == "ubuntu" {
-                            match program.as_str() {
-                                "elixir" => text.push_str(&apt_install("elixir")),
-                                "git" => text.push_str(&apt_install("git")),
-                                _ => (),
+                        match distro {
+                            Distro::Ubuntu | Distro::Debian => {
+                                match program.as_str() {
+                                    "elixir" => text.push_str(&apt_install("elixir")),
+                                    "git" => text.push_str(&apt_install("git")),
+                                    _ => (),
+                                }
                             }
+                            _ => (),
                         }
                     }
                     _ => (),

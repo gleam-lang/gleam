@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{NullTelemetry, Target},
-    error::{Error, FileIoAction, FileKind},
+    error::{Distro, Error, FileIoAction, FileKind, OS},
     io::{
         BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
         OutputFile, ReadDir, Stdio, WrappedReader,
@@ -55,28 +55,30 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
 }
 
 #[inline]
-pub fn get_os() -> String {
-    std::env::consts::OS.to_string()
+pub fn get_os() -> OS {
+    OS::from(std::env::consts::OS)
 }
 
-// Return the distro name if /etc/os-release exists, otherwise return "unknown"
-pub fn get_os_distro() -> String {
-    if get_os() != "linux" {
-        return "unknown".to_string();
-    }
-    let os_release = std::fs::read_to_string("/etc/os-release");
-    match os_release {
-        Ok(release) => {
-            let mut distro = "unknown".to_string();
-            for line in release.lines() {
-                if line.starts_with("ID=") {
-                    distro = line.split('=').nth(1).unwrap_or("unknown").to_string();
-                    break;
+// Return the distro enum if /etc/os-release exists, otherwise return Other
+pub fn get_os_distro() -> Distro {
+    if let OS::Linux = get_os() {
+        let os_release = std::fs::read_to_string("/etc/os-release");
+        match os_release {
+            Ok(release) => {
+                let mut distro = Distro::Other;
+                for line in release.lines() {
+                    if line.starts_with("ID=") {
+                        let distro_id = line.split('=').nth(1).unwrap_or("other");
+                        distro = Distro::from(distro_id);
+                        break;
+                    }
                 }
+                distro
             }
-            distro
+            Err(_) => Distro::Other,
         }
-        Err(_) => "unknown".to_string(),
+    } else {
+        Distro::Other
     }
 }
 
