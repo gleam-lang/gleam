@@ -441,20 +441,25 @@ impl Error {
 the version constraints in your gleam.toml. \
 The conflicting packages are:
 
-{}
-{}
+{}{}{}
 ",
-                    conflicting_packages.into_iter().sorted().join("\n"),
-                from_dep_of.into_iter().map(|(dependency, conflicts)| {
-                    if conflicts.len() > 1 {
-                        format!("- Conflict with {dependency} package\n{}", conflicts.into_iter().map(|(package, dependency_version)| format!("    - {} requires {} version {}", conflict, dependency, dependency_version)).join("\n"))
-                    } else if let Some((package, dependency_version)) = conflicts.get(0) {
-                        format!("- Package {package} requires {dependency} {dependency_version}\n")
-                    } else {
-                        format!("")
+                    conflicting_packages.clone().into_iter().sorted().join("\n"),
+                    if conflicting_packages.len() > 0 {
+                        "\n"
+                    }  else {
+                        ""
+                    },
+                    from_dep_of.into_iter().map(|(dependency, conflicts)| {
+                        if conflicts.len() > 1 {
+                            format!("- Conflict with {dependency} package\n{}", conflicts.into_iter().map(|(package, dependency_version)| format!("    - {} requires {} version {}", package, dependency, dependency_version)).join("\n"))
+                        } else if let Some((package, dependency_version)) = conflicts.get(0) {
+                            format!("- Package {package} requires {dependency} {dependency_version}")
+                        } else {
+                            unreachable!("The from_dep_of hashmap can't exist with an empty vector");
+                        }
                     }
-                }
-                ).join("\n"))
+                    ).join("\n")
+                )
             }
 
             ResolutionError::ErrorRetrievingDependencies {
