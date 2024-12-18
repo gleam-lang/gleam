@@ -262,6 +262,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/maxmcd">Max McDonnell</a> -
   <a href="https://github.com/max-tern">max-tern</a> -
   <a href="https://github.com/metame">metame</a> -
+  <a href="https://github.com/metatexx">METATEXX GmbH</a> -
   <a href="https://github.com/amiroff">Metin Emiroğlu</a> -
   <a href="https://github.com/stunthamster">Michael Duffy</a> -
   <a href="https://github.com/michaeljones">Michael Jones</a> -
