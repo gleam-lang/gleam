@@ -13,6 +13,8 @@ use std::{
 use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
 
+use crate::fs::{get_os, get_os_distro};
+
 #[derive(Debug)]
 struct BeamCompilerInner {
     process: Child,
@@ -111,6 +113,8 @@ impl BeamCompiler {
             .map_err(|e| match e.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: "escript".into(),
+                    os: get_os(),
+                    distro: get_os_distro(),
                 },
                 other => Error::ShellCommand {
                     program: "escript".into(),

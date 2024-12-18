@@ -76,6 +76,9 @@
 - Better error message for existed type constructor being used as value constructor.
   ([Jiangda Wang](https://github.com/Frank-III))
 
+- Print better error messages when shell commands used by compiler cannot be found.
+  ([wheatfox](https://github.com/enkerewpo))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
