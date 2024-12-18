@@ -387,12 +387,12 @@ impl Error {
             match derivation_tree {
                 DerivationTree::External(external) => match external {
                     pubgrub::report::External::NotRoot(package, _) => {
-                        let _ = conflicting_packages.insert(format!("- nr {package}"));
+                        let _ = conflicting_packages.insert(format!("- {package}"));
                     }
                     pubgrub::report::External::NoVersions(package, _) => {
-                        let _ = conflicting_packages.insert(format!("- nv {package}"));
+                        let _ = conflicting_packages.insert(format!("- {package}"));
                     }
-                    pubgrub::report::External::UnavailableDependencies(package, _) => {
+                    pubgrub::report::External::UnavailableDependencies(_, _) => {
                         // let _ = conflicting_packages.insert(format!("- ud {package}"));
                     }
                     pubgrub::report::External::FromDependencyOf(
@@ -445,10 +445,16 @@ The conflicting packages are:
 {}
 ",
                     conflicting_packages.into_iter().sorted().join("\n"),
-                from_dep_of.into_iter().map(|(dependency, conflicts)|
-                    format!("- Conflict with {dependency} package\n{}", conflicts.into_iter().map(|(conflict,
-                        version)| format!("    - {} requires {} version {}", conflict, dependency, version)).join("\n")
-                )).join("\n"))
+                from_dep_of.into_iter().map(|(dependency, conflicts)| {
+                    if conflicts.len() > 1 {
+                        format!("- Conflict with {dependency} package\n{}", conflicts.into_iter().map(|(package, dependency_version)| format!("    - {} requires {} version {}", conflict, dependency, dependency_version)).join("\n"))
+                    } else if let Some((package, dependency_version)) = conflicts.get(0) {
+                        format!("- Package {package} requires {dependency} {dependency_version}\n")
+                    } else {
+                        format!("")
+                    }
+                }
+                ).join("\n"))
             }
 
             ResolutionError::ErrorRetrievingDependencies {
