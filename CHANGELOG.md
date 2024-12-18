@@ -104,6 +104,27 @@
   with a local password, reducing risk of your Hex password being compromised.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Improved the error message for dependency resolution failures to more clearly 
+  explain why the conflict occurs. Previously, the error message only listed the 
+  names of the conflicting packages:
+
+  ```
+  - mist
+  - server
+  - cors_builder
+  ```
+
+  Now, the message provides more detailed descriptions:
+
+  ```
+  - Package `app` requires `cors_builder` 1.0.0 <= v < 2.0.0
+  - Conflict with the `mist` package:
+      - `cors_builder` requires `mist` version 1.0.0 <= v < 2.0.0
+      - `app` requires `mist` version 3.0.0 <= v < 4.0.0
+  ```
+
+  ([dinkelspiel](https://github.com/dinkelspiel))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
