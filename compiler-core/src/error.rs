@@ -380,7 +380,7 @@ impl Error {
 
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
         fn collect_conflicting_packages<'dt, P: Package, V: Version>(
-            derivation_tree: &DerivationTree<P, V>,
+            derivation_tree: &'dt DerivationTree<P, V>,
             conflicting_packages: &mut HashSet<String>,
             from_dep_of: &mut HashMap<String, Vec<(String, String)>>,
         ) {
