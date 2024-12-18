@@ -17,7 +17,7 @@ use pubgrub::package::Package;
 use pubgrub::report::DerivationTree;
 use pubgrub::version::Version;
 use std::borrow::Cow;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use std::env;
 use std::fmt::{Debug, Display};
 use std::io::Write;
@@ -381,27 +381,50 @@ impl Error {
     pub fn dependency_resolution_failed(error: ResolutionError) -> Error {
         fn collect_conflicting_packages<'dt, P: Package, V: Version>(
             derivation_tree: &'dt DerivationTree<P, V>,
-            conflicting_packages: &mut HashSet<&'dt P>,
+            conflicting_packages: &mut HashSet<String>,
+            from_dep_of: &mut HashMap<String, Vec<(String, String)>>,
         ) {
             match derivation_tree {
                 DerivationTree::External(external) => match external {
                     pubgrub::report::External::NotRoot(package, _) => {
-                        let _ = conflicting_packages.insert(package);
+                        let _ = conflicting_packages.insert(format!("- nr {package}"));
                     }
                     pubgrub::report::External::NoVersions(package, _) => {
-                        let _ = conflicting_packages.insert(package);
+                        let _ = conflicting_packages.insert(format!("- nv {package}"));
                     }
                     pubgrub::report::External::UnavailableDependencies(package, _) => {
-                        let _ = conflicting_packages.insert(package);
+                        // let _ = conflicting_packages.insert(format!("- ud {package}"));
                     }
-                    pubgrub::report::External::FromDependencyOf(package, _, dep_package, _) => {
-                        let _ = conflicting_packages.insert(package);
-                        let _ = conflicting_packages.insert(dep_package);
+                    pubgrub::report::External::FromDependencyOf(
+                        package,
+                        _,
+                        dep_package,
+                        dep_version,
+                    ) => {
+                        let mut vec =
+                            if let Some(current) = from_dep_of.get(&dep_package.to_string()) {
+                                current.to_owned()
+                            } else {
+                                Vec::<(String, String)>::new()
+                            };
+                        vec.push((package.to_string(), dep_version.to_string()));
+                        let _ = from_dep_of.insert(dep_package.to_string(), vec);
+                        // let _ = conflicting_packages.insert(format!(
+                        //     "- {package} which depends on {dep_package} {dep_version}"
+                        // ));
                     }
                 },
                 DerivationTree::Derived(derived) => {
-                    collect_conflicting_packages(&derived.cause1, conflicting_packages);
-                    collect_conflicting_packages(&derived.cause2, conflicting_packages);
+                    collect_conflicting_packages(
+                        &derived.cause1,
+                        conflicting_packages,
+                        from_dep_of,
+                    );
+                    collect_conflicting_packages(
+                        &derived.cause2,
+                        conflicting_packages,
+                        from_dep_of,
+                    );
                 }
             }
         }
@@ -411,15 +434,21 @@ impl Error {
                 derivation_tree.collapse_no_versions();
 
                 let mut conflicting_packages = HashSet::new();
-                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
+                let mut from_dep_of: HashMap<String, Vec<(String, String)>> = HashMap::new();
+                collect_conflicting_packages(&derivation_tree, &mut conflicting_packages, &mut from_dep_of);
 
                 wrap_format!("Unable to find compatible versions for \
 the version constraints in your gleam.toml. \
 The conflicting packages are:
 
 {}
+{}
 ",
-                    conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n"))
+                    conflicting_packages.into_iter().sorted().join("\n"),
+                from_dep_of.into_iter().map(|(dependency, conflicts)|
+                    format!("- Conflict with {dependency} package\n{}", conflicts.into_iter().map(|(conflict,
+                        version)| format!("    - {} requires {} version {}", conflict, dependency, version)).join("\n")
+                )).join("\n"))
             }
 
             ResolutionError::ErrorRetrievingDependencies {
