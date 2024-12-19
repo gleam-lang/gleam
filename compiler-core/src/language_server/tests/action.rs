@@ -68,6 +68,7 @@ const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
 const DESUGAR_USE_EXPRESSION: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
+const EXTRACT_VARIABLE: &str = "Extract variable";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -3788,5 +3789,173 @@ fn no_code_action_for_exhaustive_let_to_case() {
   first
 }"#,
         find_position_of("let").select_until(find_position_of("=")),
+    );
+}
+
+#[test]
+fn extract_variable() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  list.map([1, 2, 3], int.add(1, _))
+}"#,
+        find_position_of("[1").select_until(find_position_of("2"))
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_a_variable() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    let z = 1
+    let a = [1, 2, z]
+}"#,
+        find_position_of("z").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_2() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  list.map([1, 2, 3], int.add(1, _))
+}"#,
+        find_position_of("int.").select_until(find_position_of("add"))
+    );
+}
+
+#[test]
+fn extract_variable_from_capture_arguments() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  int.add(1, _)
+}"#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_from_capture_arguments_2() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  int.add(11, _)
+}"#,
+        find_position_of("11").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_3() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  list.map([1, 2, 3], todo, todo)
+}"#,
+        find_position_of("todo")
+            .nth_occurrence(2)
+            .select_until(find_position_of("todo)").under_last_char())
+    );
+}
+
+#[test]
+fn extract_variable_inside_multiline_function_call() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  list.map(
+    [1, 2, 3],
+    int.add(1, _),
+  )
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_case_branch() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    case wibble {
+      _ -> [1, 2, 3]
+    }
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_multiline_case_subject_branch() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    case
+        list.map(
+          [1, 2, 3],
+          int.add(1, _)
+        )
+    {
+      _ -> todo
+    }
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_use() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    use <- wibble([1, 2, 3])
+    todo
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_inside_use_body() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    use <- wibble(todo)
+    list.map([1, 2, 3], int.add(1, _))
+    todo
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_multiline_use() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    use <- wibble(
+        [1, 2, 3]
+    )
+    todo
+}"#,
+        find_position_of("[1").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_in_block() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+  {
+    todo
+    wibble([1, 2, 3])
+    todo
+  }
+}"#,
+        find_position_of("2").select_until(find_position_of("3"))
     );
 }
