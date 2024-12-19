@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError};
 
-use crate::{Error, Result};
+use crate::{manifest, Error, Result};
 
 use ecow::EcoString;
 use hexpm::{
@@ -17,7 +17,7 @@ pub type PackageVersions = HashMap<String, Version>;
 type PubgrubRange = pubgrub::range::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
-    package_fetcher: Box<dyn PackageFetcher>,
+    package_fetcher: &dyn PackageFetcher,
     provided_packages: HashMap<EcoString, hexpm::Package>,
     root_name: EcoString,
     dependencies: Requirements,
@@ -61,6 +61,61 @@ where
     .collect();
 
     Ok(packages)
+}
+
+/**
+* Used to compare 2 versions of a package.
+*/
+pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
+
+fn resolve_major_versions(
+    package_fetcher: &dyn PackageFetcher,
+    versions: PackageVersions,
+) -> PackageVersionDiffs {
+    versions
+        .iter()
+        .filter_map(|(package, version)| {
+            let Ok(hexpackage) = package_fetcher.get_dependencies(package) else {
+                return None;
+            };
+
+            let latest = hexpackage
+                .releases
+                .iter()
+                .map(|release| &release.version)
+                .filter(|version| !version.is_pre())
+                .max()?;
+
+            if latest.major <= version.major {
+                return None;
+            }
+
+            Some((package.to_string(), (version.clone(), latest.clone())))
+        })
+        .collect()
+}
+
+/// Check for major version updates for direct dependencies that are being blocked by some version
+/// constraints.
+pub fn check_for_major_version_updates(
+    manifest: &manifest::Manifest,
+    package_fetcher: &dyn PackageFetcher,
+) -> HashMap<String, (Version, Version)> {
+    // get the resolved versions of the direct dependencies to check for major
+    // version updates.
+    let versions = manifest
+        .packages
+        .iter()
+        .filter(|manifest_package| {
+            manifest
+                .requirements
+                .iter()
+                .any(|(required_pkg, _)| manifest_package.name == *required_pkg)
+        })
+        .map(|manifest_pkg| (manifest_pkg.name.to_string(), manifest_pkg.version.clone()))
+        .collect();
+
+    resolve_major_versions(package_fetcher, versions)
 }
 
 // If the string would parse to an exact version then return the version
@@ -147,7 +202,7 @@ pub trait PackageFetcher {
 
 struct DependencyProvider<'a> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
-    remote: Box<dyn PackageFetcher>,
+    remote: &'a dyn PackageFetcher,
     locked: &'a HashMap<EcoString, Version>,
     // Map of packages where an exact version was requested
     // We need this because by default pubgrub checks exact version by checking if a version is between the exact
@@ -158,7 +213,7 @@ struct DependencyProvider<'a> {
 
 impl<'a> DependencyProvider<'a> {
     fn new(
-        remote: Box<dyn PackageFetcher>,
+        remote: &'a dyn PackageFetcher,
         mut packages: HashMap<EcoString, hexpm::Package>,
         root: hexpm::Package,
         locked: &'a HashMap<EcoString, Version>,
@@ -293,6 +348,11 @@ impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyPro
 
 #[cfg(test)]
 mod tests {
+    use crate::{
+        manifest::{Base16Checksum, ManifestPackage, ManifestPackageSource},
+        requirement,
+    };
+
     use super::*;
 
     struct Remote {
@@ -471,14 +531,87 @@ mod tests {
             },
         );
 
+        let simple_deps_for_major_version_check = vec![
+            (
+                "direct_pkg_with_major_version",
+                vec![
+                    ("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                ],
+            ),
+            (
+                "depends_on_old_version_of_direct_pkg",
+                vec![(
+                    "0.1.0",
+                    vec![("direct_pkg_with_major_version", ">= 0.1.0 and < 0.3.0")],
+                )],
+            ),
+            (
+                "this_pkg_depends_on_indirect_pkg",
+                vec![(
+                    "0.1.0",
+                    vec![("indirect_pkg_with_major_version", ">= 0.1.0 and < 1.0.0")],
+                )],
+            ),
+            (
+                "indirect_pkg_with_major_version",
+                vec![
+                    ("0.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.0.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                    ("1.1.0", vec![("gleam_stdlib", ">= 0.1.0 and < 0.3.0")]),
+                ],
+            ),
+        ];
+
+        insert_simplified_deps(simple_deps_for_major_version_check, &mut deps);
+
         Box::new(Remote { deps })
+    }
+
+    fn insert_simplified_deps(
+        simple_deps: Vec<(&str, Vec<(&str, Vec<(&str, &str)>)>)>,
+        deps: &mut HashMap<String, hexpm::Package>,
+    ) {
+        for (name, releases) in simple_deps {
+            let _ = deps.insert(
+                name.to_string(),
+                hexpm::Package {
+                    name: name.to_string(),
+                    repository: "hexpm".into(),
+                    releases: releases
+                        .into_iter()
+                        .map(|(version, requirements)| Release {
+                            version: Version::try_from(version).unwrap(),
+                            requirements: requirements
+                                .into_iter()
+                                .map(|(package, range)| {
+                                    (
+                                        package.into(),
+                                        Dependency {
+                                            app: None,
+                                            optional: true,
+                                            repository: None,
+                                            requirement: Range::new(range.into()),
+                                        },
+                                    )
+                                })
+                                .collect(),
+                            retirement_status: None,
+                            outer_checksum: vec![1, 2, 3],
+                            meta: (),
+                        })
+                        .collect(),
+                },
+            );
+        }
     }
 
     #[test]
     fn resolution_with_locked() {
         let locked_stdlib = ("gleam_stdlib".into(), Version::parse("0.1.0").unwrap());
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -496,7 +629,7 @@ mod tests {
     #[test]
     fn resolution_without_deps() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![].into_iter(),
@@ -509,7 +642,7 @@ mod tests {
     #[test]
     fn resolution_1_dep() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -527,7 +660,7 @@ mod tests {
     #[test]
     fn resolution_with_nested_deps() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -548,7 +681,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("package_with_optional".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -569,7 +702,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps_explicitly_provided() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![
@@ -597,7 +730,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps_incompatible() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![
@@ -613,7 +746,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps_required_by_nested_deps() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![
@@ -645,7 +778,7 @@ mod tests {
     #[test]
     fn resolution_locked_to_older_version() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
@@ -666,7 +799,7 @@ mod tests {
     #[test]
     fn resolution_retired_versions_not_used_by_default() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
@@ -688,7 +821,7 @@ mod tests {
     #[test]
     fn resolution_retired_versions_can_be_used_if_locked() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
@@ -712,7 +845,7 @@ mod tests {
     #[test]
     fn resolution_prerelease_can_be_selected() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
@@ -733,7 +866,7 @@ mod tests {
     #[test]
     fn resolution_exact_prerelease_can_be_selected() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
@@ -754,7 +887,7 @@ mod tests {
     #[test]
     fn resolution_not_found_dep() {
         let _ = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -766,7 +899,7 @@ mod tests {
     #[test]
     fn resolution_no_matching_version() {
         let _ = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
@@ -778,7 +911,7 @@ mod tests {
     #[test]
     fn resolution_locked_version_doesnt_satisfy_requirements() {
         let err = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
@@ -800,7 +933,7 @@ mod tests {
     #[test]
     fn resolution_with_exact_dep() {
         let result = resolve_versions(
-            make_remote(),
+            &*make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
@@ -831,5 +964,91 @@ mod tests {
         );
         assert_eq!(parse_exact_version("~> 1.0.0"), None);
         assert_eq!(parse_exact_version(">= 1.0.0"), None);
+    }
+
+    #[test]
+    fn resolve_major_version_upgrades() {
+        let manifest = manifest::Manifest {
+            requirements: vec![
+                (
+                    EcoString::from("package_depends_on_indirect_pkg"),
+                    requirement::Requirement::Hex {
+                        version: Range::new("> 0.1.0 and <= 1.0.0".into()),
+                    },
+                ),
+                (
+                    EcoString::from("direct_pkg_with_major_version"),
+                    requirement::Requirement::Hex {
+                        version: Range::new("> 0.1.0 and <= 2.0.0".into()),
+                    },
+                ),
+                (
+                    EcoString::from("depends_on_old_version_of_direct_pkg"),
+                    requirement::Requirement::Hex {
+                        version: Range::new("> 0.1.0 and <= 1.0.0".into()),
+                    },
+                ),
+            ]
+            .into_iter()
+            .collect(),
+            packages: vec![
+                ManifestPackage {
+                    name: "direct_pkg_with_major_version".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+                ManifestPackage {
+                    name: "depends_on_old_version_of_direct_pkg".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec!["direct_pkg_with_major_version".into()],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+                ManifestPackage {
+                    name: "pkg_depends_on_indirect_pkg".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec!["indirect_pkg_with_major_version".into()],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+                ManifestPackage {
+                    name: "indirect_pkg_with_major_version".into(),
+                    version: Version::parse("0.1.0").unwrap(),
+                    build_tools: ["gleam".into()].into(),
+                    otp_app: None,
+                    requirements: vec![],
+                    source: ManifestPackageSource::Hex {
+                        outer_checksum: Base16Checksum(vec![1, 2, 3]),
+                    },
+                },
+            ],
+        };
+        let result = check_for_major_version_updates(&manifest, &*make_remote());
+
+        // indirect package with major version will not be in the result even though a major
+        // version of it is available
+        assert_eq!(
+            result,
+            vec![(
+                "direct_pkg_with_major_version".into(),
+                (
+                    Version::try_from("0.1.0").unwrap(),
+                    Version::try_from("1.1.0").unwrap()
+                )
+            ),]
+            .into_iter()
+            .collect()
+        );
     }
 }
