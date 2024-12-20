@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{NullTelemetry, Target},
-    error::{parse_linux_distribution, Distro, Error, FileIoAction, FileKind, OS},
+    error::{parse_os, Error, FileIoAction, FileKind, OS},
     io::{
         BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
         OutputFile, ReadDir, Stdio, WrappedReader,
@@ -55,25 +55,17 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
 }
 
 pub fn get_os() -> OS {
-    match std::env::consts::OS {
-        "macos" => OS::MacOS,
-        "windows" => OS::Windows,
-        "linux" => {
-            let distro = get_linux_distribution();
-            OS::Linux(distro)
-        }
-        _ => OS::Other,
-    }
+    parse_os(std::env::consts::OS, get_linux_distro_str().as_str())
 }
 
-pub fn get_linux_distribution() -> Distro {
+pub fn get_linux_distro_str() -> String {
     let path = Utf8Path::new("/etc/os-release");
     if std::env::consts::OS != "linux" || !path.exists() {
-        return Distro::Other;
+        return "other".to_string();
     }
     let os_release = read(path);
     if os_release.is_err() {
-        return Distro::Other;
+        return "other".to_string();
     }
     let os_release = os_release.unwrap_or_default();
     let distro = os_release.lines().find(|line| line.starts_with("ID="));
@@ -83,9 +75,9 @@ pub fn get_linux_distribution() -> Distro {
             .nth(1)
             .unwrap_or("other")
             .replace("\"", "");
-        return parse_linux_distribution(&id);
+        return id;
     }
-    Distro::Other
+    "other".to_string()
 }
 
 /// A `FileWriter` implementation that writes to the file system.
