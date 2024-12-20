@@ -151,11 +151,7 @@ pub enum Error {
     Gzip(String),
 
     #[error("shell program `{program}` not found")]
-    ShellProgramNotFound {
-        program: String,
-        os: OS,
-        distro: Distro,
-    },
+    ShellProgramNotFound { program: String, os: OS },
 
     #[error("shell program `{program}` failed")]
     ShellCommand {
@@ -350,24 +346,12 @@ impl SmallVersion {
         }
     }
 }
-
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
 pub enum OS {
-    Linux,
+    Linux(Distro),
     MacOS,
     Windows,
     Other,
-}
-
-impl From<&str> for OS {
-    fn from(env_os: &str) -> Self {
-        match env_os {
-            "linux" => OS::Linux,
-            "macos" => OS::MacOS,
-            "windows" => OS::Windows,
-            _ => OS::Other,
-        }
-    }
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -377,13 +361,20 @@ pub enum Distro {
     Other,
 }
 
-impl From<&str> for Distro {
-    fn from(distro_id: &str) -> Self {
-        match distro_id {
-            "ubuntu" => Distro::Ubuntu,
-            "debian" => Distro::Debian,
-            _ => Distro::Other,
-        }
+pub fn parse_os(os: &str, distro: &str) -> OS {
+    match os {
+        "macos" => OS::MacOS,
+        "windows" => OS::Windows,
+        "linux" => OS::Linux(parse_linux_distribution(distro)),
+        _ => OS::Other,
+    }
+}
+
+pub fn parse_linux_distribution(distro: &str) -> Distro {
+    match distro {
+        "ubuntu" => Distro::Ubuntu,
+        "debian" => Distro::Debian,
+        _ => Distro::Other,
     }
 }
 
@@ -1060,7 +1051,7 @@ your app.src file \"{app_ver}\"."
                 }]
             }
 
-            Error::ShellProgramNotFound { program , os, distro } => {
+            Error::ShellProgramNotFound { program , os } => {
                 let mut text = format!("The program `{program}` was not found. Is it installed?\n");
 
                 match program.as_str() {
@@ -1117,7 +1108,7 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
                             _ => (),
                         }
                     }
-                    OS::Linux => {
+                    OS::Linux(distro) => {
                         fn apt_install(program: &str) -> String {
                             format!("\nYou can install {} via apt: sudo apt install {}", program, program)
                         }

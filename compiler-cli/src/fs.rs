@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{NullTelemetry, Target},
-    error::{Distro, Error, FileIoAction, FileKind, OS},
+    error::{parse_linux_distribution, Distro, Error, FileIoAction, FileKind, OS},
     io::{
         BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
         OutputFile, ReadDir, Stdio, WrappedReader,
@@ -54,32 +54,38 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
     })
 }
 
-#[inline]
 pub fn get_os() -> OS {
-    OS::from(std::env::consts::OS)
+    match std::env::consts::OS {
+        "macos" => OS::MacOS,
+        "windows" => OS::Windows,
+        "linux" => {
+            let distro = get_linux_distribution();
+            OS::Linux(distro)
+        }
+        _ => OS::Other,
+    }
 }
 
-// Return the distro enum if /etc/os-release exists, otherwise return Other
-pub fn get_os_distro() -> Distro {
-    if let OS::Linux = get_os() {
-        let os_release = std::fs::read_to_string("/etc/os-release");
-        match os_release {
-            Ok(release) => {
-                let mut distro = Distro::Other;
-                for line in release.lines() {
-                    if line.starts_with("ID=") {
-                        let distro_id = line.split('=').nth(1).unwrap_or("other");
-                        distro = Distro::from(distro_id);
-                        break;
-                    }
-                }
-                distro
-            }
-            Err(_) => Distro::Other,
-        }
-    } else {
-        Distro::Other
+pub fn get_linux_distribution() -> Distro {
+    let path = Utf8Path::new("/etc/os-release");
+    if std::env::consts::OS != "linux" || !path.exists() {
+        return Distro::Other;
     }
+    let os_release = read(path);
+    if os_release.is_err() {
+        return Distro::Other;
+    }
+    let os_release = os_release.unwrap_or_default();
+    let distro = os_release.lines().find(|line| line.starts_with("ID="));
+    if let Some(distro) = distro {
+        let id = distro
+            .split('=')
+            .nth(1)
+            .unwrap_or("other")
+            .replace("\"", "");
+        return parse_linux_distribution(&id);
+    }
+    Distro::Other
 }
 
 /// A `FileWriter` implementation that writes to the file system.
@@ -212,7 +218,6 @@ impl CommandExecutor for ProjectIO {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: program.to_string(),
                     os: get_os(),
-                    distro: get_os_distro(),
                 },
 
                 other => Error::ShellCommand {
