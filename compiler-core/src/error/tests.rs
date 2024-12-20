@@ -9,36 +9,28 @@ fn test_shell_program_not_found_error() {
 
     for cmd in &cmds {
         for os in &oses {
-            let os_enum = OS::from(*os);
-            match os_enum {
-                OS::MacOS | OS::Windows => {
+            if os != &"linux" {
+                let err = Error::ShellProgramNotFound {
+                    program: cmd.to_string(),
+                    os: parse_os(os, "other"),
+                }
+                .to_diagnostics();
+                assert_snapshot!(
+                    format!("shell_program_not_found_{cmd}_{os}_other"),
+                    err[0].text
+                );
+            } else {
+                for distro in &distros {
                     let err = Error::ShellProgramNotFound {
                         program: cmd.to_string(),
-                        os: os_enum,
-                        distro: Distro::Other,
+                        os: parse_os(os, distro),
                     }
                     .to_diagnostics();
                     assert_snapshot!(
-                        format!("shell_program_not_found_{cmd}_{os}_other"),
+                        format!("shell_program_not_found_{cmd}_{os}_{distro}"),
                         err[0].text
                     );
                 }
-                OS::Linux => {
-                    for distro in &distros {
-                        let distro_enum = Distro::from(*distro);
-                        let err = Error::ShellProgramNotFound {
-                            program: cmd.to_string(),
-                            os: os_enum,
-                            distro: distro_enum,
-                        }
-                        .to_diagnostics();
-                        assert_snapshot!(
-                            format!("shell_program_not_found_{cmd}_{os}_{distro}"),
-                            err[0].text
-                        );
-                    }
-                }
-                _ => (),
             }
         }
     }

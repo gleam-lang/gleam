@@ -4,6 +4,8 @@ use gleam_core::{
     paths, Result,
 };
 
+use crate::fs::get_os;
+
 use std::{
     collections::HashSet,
     io::{self, BufRead, BufReader, Write},
@@ -12,8 +14,6 @@ use std::{
 
 use camino::{Utf8Path, Utf8PathBuf};
 use itertools::Itertools;
-
-use crate::fs::{get_os, get_os_distro};
 
 #[derive(Debug)]
 struct BeamCompilerInner {
@@ -114,7 +114,6 @@ impl BeamCompiler {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: "escript".into(),
                     os: get_os(),
-                    distro: get_os_distro(),
                 },
                 other => Error::ShellCommand {
                     program: "escript".into(),
