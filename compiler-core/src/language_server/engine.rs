@@ -33,8 +33,8 @@ use super::{
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
-        ExtractVariable, FillInMissingLabelledArgs, LabelShorthandSyntax, LetAssertToCase,
-        RedundantTupleInCaseSubject, TurnIntoUse,
+        ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs, LabelShorthandSyntax,
+        LetAssertToCase, RedundantTupleInCaseSubject, TurnIntoUse,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
@@ -332,6 +332,7 @@ where
             actions.extend(FillInMissingLabelledArgs::new(module, &lines, &params).code_actions());
             actions.extend(DesugarUse::new(module, &lines, &params).code_actions());
             actions.extend(TurnIntoUse::new(module, &lines, &params).code_actions());
+            actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             Ok(if actions.is_empty() {

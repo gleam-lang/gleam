@@ -1,4 +1,4 @@
-use std::{iter, sync::Arc};
+use std::{collections::HashSet, iter, sync::Arc};
 
 use crate::{
     ast::{
@@ -19,7 +19,7 @@ use crate::{
     },
     Error,
 };
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
@@ -2727,5 +2727,119 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         if within(self.params.range, invalid_range) {
             self.selected_expression = None;
         }
+    }
+}
+
+/// Builder for code action to apply the "expand function capture" action.
+///
+pub struct ExpandFunctionCapture<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    location: Option<(SrcSpan, SrcSpan, VariablesNames)>,
+}
+
+impl<'a> ExpandFunctionCapture<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            location: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some((function, hole, names)) = self.location else {
+            return vec![];
+        };
+
+        let name = names.first_available_name("value");
+        self.edits.replace(hole, name.clone().into());
+        self.edits.insert(function.end, " }".into());
+        self.edits.insert(function.start, format!("fn({name}) {{ "));
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Expand function capture")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [ast::TypedArg],
+        body: &'ast [TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        let fn_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, fn_range) && kind.is_capture() {
+            if let [arg] = args {
+                self.location = Some((
+                    *location,
+                    arg.location,
+                    VariablesNames::from_statements(body),
+                ));
+            }
+        }
+
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation)
+    }
+}
+
+struct VariablesNames {
+    names: HashSet<EcoString>,
+}
+
+impl VariablesNames {
+    fn from_statements(statements: &[TypedStatement]) -> Self {
+        let mut variables = Self {
+            names: HashSet::new(),
+        };
+
+        for statement in statements {
+            variables.visit_typed_statement(statement);
+        }
+        variables
+    }
+
+    fn first_available_name(&self, name: &str) -> EcoString {
+        let mut i = 0;
+        loop {
+            let name = if i == 0 {
+                EcoString::from(name)
+            } else {
+                eco_format!("{name}{i}")
+            };
+
+            if !self.names.contains(&name) {
+                return name;
+            }
+            i += 1;
+        }
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for VariablesNames {
+    fn visit_typed_expr_var(
+        &mut self,
+        _location: &'ast SrcSpan,
+        _constructor: &'ast type_::ValueConstructor,
+        name: &'ast EcoString,
+    ) {
+        let _ = self.names.insert(name.clone());
     }
 }

@@ -69,6 +69,7 @@ const ADD_ANNOTATIONS: &str = "Add type annotations";
 const DESUGAR_USE_EXPRESSION: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
+const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -3957,5 +3958,40 @@ fn extract_variable_in_block() {
   }
 }"#,
         find_position_of("2").select_until(find_position_of("3"))
+    );
+}
+
+#[test]
+fn expand_function_capture() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        r#"pub fn main() {
+  wibble(_, 1)
+}"#,
+        find_position_of("_").to_selection()
+    );
+}
+
+#[test]
+fn expand_function_capture_2() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        r#"pub fn main() {
+  wibble(1, _)
+}"#,
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn expand_function_capture_does_not_shadow_variables() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        r#"pub fn main() {
+  let value = 1
+  let value1 = 2
+  wibble(value, _, value1)
+}"#,
+        find_position_of("wibble").to_selection()
     );
 }
