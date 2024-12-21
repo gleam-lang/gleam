@@ -2605,10 +2605,16 @@ pub struct ExtractVariable<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    inside_capture_body: bool,
+    position: Option<ExtractVariablePosition>,
     selected_expression: Option<SrcSpan>,
     statement_before_selected_expression: Option<SrcSpan>,
     latest_statement: Option<SrcSpan>,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone)]
+enum ExtractVariablePosition {
+    InsideCaptureBody,
+    TopLevelStatement,
 }
 
 impl<'a> ExtractVariable<'a> {
@@ -2621,7 +2627,7 @@ impl<'a> ExtractVariable<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            inside_capture_body: false,
+            position: None,
             selected_expression: None,
             latest_statement: None,
             statement_before_selected_expression: None,
@@ -2669,21 +2675,50 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         // A capture body is comprised of just a single expression statement
         // that is inserted by the compiler, we don't really want to put
         // anything before that; so in this case we avoid tracking it.
-        if !self.inside_capture_body {
+        if self.position != Some(ExtractVariablePosition::InsideCaptureBody) {
             self.latest_statement = Some(stmt.location());
         }
+
+        let previous_position = self.position;
+        self.position = Some(ExtractVariablePosition::TopLevelStatement);
         ast::visit::visit_typed_statement(self, stmt);
+        self.position = previous_position;
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
-        if within(self.params.range, expr_range) {
+
+        // If the expression is a top level statement we don't want to extract
+        // it into a variable. It would mean we would turn this:
+        //
+        // ```gleam
+        // pub fn main() {
+        //   let wibble = 1
+        //   //           ^ cursor here
+        // }
+        //
+        // // into:
+        //
+        // pub fn main() {
+        //   let value = 1
+        //   let wibble = value
+        // }
+        // ```
+        //
+        // Not all that useful!
+        //
+        if self.position != Some(ExtractVariablePosition::TopLevelStatement)
+            && within(self.params.range, expr_range)
+        {
             self.selected_expression = Some(expr_location);
             self.statement_before_selected_expression = self.latest_statement;
         }
 
+        let previous_position = self.position;
+        self.position = None;
         ast::visit::visit_typed_expr(self, expr);
+        self.position = previous_position;
     }
 
     fn visit_typed_expr_fn(
@@ -2695,15 +2730,18 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        self.inside_capture_body = match kind {
+        let previous_position = self.position;
+        self.position = match kind {
             // If a fn is a capture `int.wibble(1, _)` its body will consist of
             // just a single expression statement. When visiting we must record
             // we're inside a capture body.
-            FunctionLiteralKind::Capture => true,
-            FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => false,
+            FunctionLiteralKind::Capture => Some(ExtractVariablePosition::InsideCaptureBody),
+            FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => {
+                self.position
+            }
         };
         ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
-        self.inside_capture_body = false;
+        self.position = previous_position;
     }
 
     // We don't want to offer the action if the cursor is over a variable
