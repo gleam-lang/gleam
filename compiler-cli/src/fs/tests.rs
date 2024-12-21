@@ -99,3 +99,47 @@ fn is_gleam_path_test() {
         Utf8Path::new("/some-prefix/")
     ));
 }
+
+#[test]
+fn extract_distro_id_test() {
+    let os_release = "
+PRETTY_NAME=\"Debian GNU/Linux 12 (bookworm)\"
+NAME=\"Debian GNU/Linux\"
+VERSION_ID=\"12\"
+VERSION=\"12 (bookworm)\"
+VERSION_CODENAME=bookworm
+ID=debian
+HOME_URL=\"https://www.debian.org/\"
+";
+    assert_eq!(super::extract_distro_id(os_release.to_string()), "debian");
+
+    let os_release = "
+VERSION_CODENAME=jammy
+ID=ubuntu
+ID_LIKE=debian
+HOME_URL=\"https://www.ubuntu.com/\"
+";
+    assert_eq!(super::extract_distro_id(os_release.to_string()), "ubuntu");
+
+    assert_eq!(super::extract_distro_id("".to_string()), "");
+    assert_eq!(super::extract_distro_id("\n".to_string()), "");
+    assert_eq!(super::extract_distro_id("ID=".to_string()), "");
+    assert_eq!(super::extract_distro_id("ID= ".to_string()), " ");
+    assert_eq!(
+        super::extract_distro_id("ID= space test ".to_string()),
+        " space test "
+    );
+    assert_eq!(super::extract_distro_id("id=ubuntu".to_string()), "");
+    assert_eq!(
+        super::extract_distro_id("NAME=\"Debian\"\nID=debian".to_string()),
+        "debian"
+    );
+    assert_eq!(
+        super::extract_distro_id("\n\nNAME=\n\n\nID=test123\n".to_string()),
+        "test123"
+    );
+    assert_eq!(
+        super::extract_distro_id("\nID=\"id first\"\nID=another_id".to_string()),
+        "id first"
+    );
+}
