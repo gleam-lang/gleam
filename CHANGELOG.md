@@ -189,6 +189,25 @@
 - The language server now provides an action to extract a value into a variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The Language Server now suggests a code action to expand a function capture
+  into the equivalent anonymous function. For example, this snippet of code:
+
+  ```gleam
+  pub fn main() {
+    list.map([1, 2, 3], int.add(_, 11))
+  }
+  ```
+
+  Will be turned into:
+
+  ```gleam
+  pub fn main() {
+    list.map([1, 2, 3], fn(value) { int.add(value, 11) })
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 - The formatter now adds a `todo` inside empty blocks.
