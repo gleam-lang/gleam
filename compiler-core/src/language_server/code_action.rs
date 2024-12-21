@@ -2711,8 +2711,16 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         if self.position != Some(ExtractVariablePosition::TopLevelStatement)
             && within(self.params.range, expr_range)
         {
-            self.selected_expression = Some(expr_location);
-            self.statement_before_selected_expression = self.latest_statement;
+            match expr {
+                // We don't extract variables, they're already good.
+                // And we don't extract module selects by themselves but always
+                // want to consider those as part of a function call.
+                TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
+                _ => {
+                    self.selected_expression = Some(expr_location);
+                    self.statement_before_selected_expression = self.latest_statement;
+                }
+            }
         }
 
         let previous_position = self.position;
@@ -2742,20 +2750,6 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         };
         ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
         self.position = previous_position;
-    }
-
-    // We don't want to offer the action if the cursor is over a variable
-    // already!
-    fn visit_typed_expr_var(
-        &mut self,
-        location: &'ast SrcSpan,
-        _constructor: &'ast type_::ValueConstructor,
-        _name: &'ast EcoString,
-    ) {
-        let var_range = self.edits.src_span_to_lsp_range(*location);
-        if within(self.params.range, var_range) {
-            self.selected_expression = None;
-        }
     }
 
     // We don't want to offer the action if the cursor is over some invalid
