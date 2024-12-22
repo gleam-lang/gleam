@@ -1052,7 +1052,43 @@ your app.src file \"{app_ver}\"."
             }
 
             Error::ShellProgramNotFound { program , os } => {
-                let mut text = format!("The program `{program}` was not found. Is it installed?\n");
+                let mut text = format!("The program `{program}` was not found. Is it installed?");
+
+                match os {
+                    OS::MacOS => {
+                        fn brew_install(name: &str, pkg: &str) -> String {
+                            format!("\n\nYou can install {} via homebrew: brew install {}", name, pkg)
+                        }
+                        match program.as_str() {
+                            "erl" | "erlc" | "escript" => text.push_str(&brew_install("Erlang", "erlang")),
+                            "rebar3" => text.push_str(&brew_install("Rebar3", "rebar3")),
+                            "deno" => text.push_str(&brew_install("Deno", "deno")),
+                            "elixir" => text.push_str(&brew_install("Elixir", "elixir")),
+                            "node" => text.push_str(&brew_install("Node.js", "node")),
+                            "bun" => text.push_str(&brew_install("Bun", "oven-sh/bun/bun")),
+                            "git" => text.push_str(&brew_install("Git", "git")),
+                            _ => (),
+                        }
+                    }
+                    OS::Linux(distro) => {
+                        fn apt_install(name: &str, pkg: &str) -> String {
+                            format!("\n\nYou can install {} via apt: sudo apt install {}", name, pkg)
+                        }
+                        match distro {
+                            Distro::Ubuntu | Distro::Debian => {
+                                match program.as_str() {
+                                    "elixir" => text.push_str(&apt_install("Elixir", "elixir")),
+                                    "git" => text.push_str(&apt_install("Git", "git")),
+                                    _ => (),
+                                }
+                            }
+                            Distro::Other => (),
+                        }
+                    }
+                    _ => (),
+                }
+
+                text.push('\n');
 
                 match program.as_str() {
                     "erl" | "erlc" | "escript" => text.push_str(
@@ -1090,39 +1126,6 @@ https://bun.sh/docs/installation/",
 Documentation for installing Git can be viewed here:
 https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
                     ),
-                    _ => (),
-                }
-                match os {
-                    OS::MacOS => {
-                        fn brew_install(program: &str) -> String {
-                            format!("\nYou can install {} via homebrew: brew install {}", program, program)
-                        }
-                        match program.as_str() {
-                            "erl" | "erlc" | "escript" => text.push_str(&brew_install("erlang")),
-                            "rebar3" => text.push_str(&brew_install("rebar3")),
-                            "deno" => text.push_str(&brew_install("deno")),
-                            "elixir" => text.push_str(&brew_install("elixir")),
-                            "node" => text.push_str(&brew_install("node")),
-                            "bun" => text.push_str(&brew_install("oven-sh/bun/bun")),
-                            "git" => text.push_str(&brew_install("git")),
-                            _ => (),
-                        }
-                    }
-                    OS::Linux(distro) => {
-                        fn apt_install(program: &str) -> String {
-                            format!("\nYou can install {} via apt: sudo apt install {}", program, program)
-                        }
-                        match distro {
-                            Distro::Ubuntu | Distro::Debian => {
-                                match program.as_str() {
-                                    "elixir" => text.push_str(&apt_install("elixir")),
-                                    "git" => text.push_str(&apt_install("git")),
-                                    _ => (),
-                                }
-                            }
-                            Distro::Other => (),
-                        }
-                    }
                     _ => (),
                 }
 

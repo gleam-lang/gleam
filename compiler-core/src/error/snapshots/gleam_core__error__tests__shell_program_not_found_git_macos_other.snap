@@ -4,6 +4,7 @@ expression: "err[0].text"
 ---
 The program `git` was not found. Is it installed?
 
+You can install Git via homebrew: brew install git
+
 Documentation for installing Git can be viewed here:
 https://git-scm.com/book/en/v2/Getting-Started-Installing-Git
-You can install git via homebrew: brew install git
