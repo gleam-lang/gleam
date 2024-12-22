@@ -4,8 +4,9 @@ use std::sync::OnceLock;
 use async_trait::async_trait;
 use gleam_core::{Error, Result};
 use http::{Request, Response};
+use reqwest::{Certificate, Client};
 
-static REQWEST_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
+static REQWEST_CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct HttpClient;
@@ -27,7 +28,7 @@ impl gleam_core::io::HttpClient for HttpClient {
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
         let mut response = REQWEST_CLIENT
-            .get_or_init(reqwest::Client::new)
+            .get_or_init(init_client)
             .execute(request)
             .await
             .map_err(Error::http)?;
@@ -41,4 +42,22 @@ impl gleam_core::io::HttpClient for HttpClient {
             .body(response.bytes().await.map_err(Error::http)?.to_vec())
             .map_err(Error::http)
     }
+}
+
+fn init_client() -> Client {
+    match get_certificate() {
+        Ok(cert) => Client::builder()
+            .add_root_certificate(cert)
+            .build()
+            .expect("Unable to build reqwest client with certificate"),
+        _ => Client::new(),
+    }
+}
+
+fn get_certificate() -> Result<Certificate, Box<dyn std::error::Error>> {
+    let certificate_path = std::env::var("GLEAM_CACERTS_PATH")?;
+    let certificate_bytes = std::fs::read(&certificate_path)?;
+    let certificate = Certificate::from_pem(&certificate_bytes)?;
+
+    Ok(certificate)
 }
