@@ -4,5 +4,5 @@ expression: "err[0].text"
 ---
 The program `rebar3` was not found. Is it installed?
 
-Documentation for installing rebar3 can be viewed here:
+Documentation for installing Rebar3 can be viewed here:
 https://rebar3.org/docs/getting-started/
