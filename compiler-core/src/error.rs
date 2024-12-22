@@ -1098,7 +1098,7 @@ https://gleam.run/getting-started/installing/",
                     ),
                     "rebar3" => text.push_str(
                         "
-Documentation for installing rebar3 can be viewed here:
+Documentation for installing Rebar3 can be viewed here:
 https://rebar3.org/docs/getting-started/",
                     ),
                     "deno" => text.push_str(
@@ -1118,7 +1118,7 @@ https://nodejs.org/en/download/package-manager/all/",
                     ),
                     "bun" => text.push_str(
                         "
-Documentation for installing bun can be viewed here:
+Documentation for installing Bun can be viewed here:
 https://bun.sh/docs/installation/",
                     ),
                     "git" => text.push_str(
