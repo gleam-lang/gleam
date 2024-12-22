@@ -402,9 +402,9 @@ impl<'ast> ast::visit::Visit<'ast> for LetAssertToCase<'_> {
         let uri = &self.params.text_document.uri;
 
         CodeActionBuilder::new("Convert to case")
-            .kind(CodeActionKind::REFACTOR)
+            .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(uri.clone(), vec![TextEdit { range, new_text }])
-            .preferred(true)
+            .preferred(false)
             .push_to(&mut self.actions);
     }
 }
@@ -763,9 +763,9 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 
             let mut action = Vec::with_capacity(1);
             CodeActionBuilder::new("Fill labels")
-                .kind(CodeActionKind::REFACTOR)
+                .kind(CodeActionKind::QUICKFIX)
                 .changes(self.params.text_document.uri.clone(), self.edits.edits)
-                .preferred(false)
+                .preferred(true)
                 .push_to(&mut action);
             return action;
         }
@@ -1228,7 +1228,7 @@ impl<'a> AddAnnotations<'a> {
         CodeActionBuilder::new(title)
             .kind(CodeActionKind::REFACTOR)
             .changes(uri.clone(), self.edits.edits)
-            .preferred(true)
+            .preferred(false)
             .push_to(actions);
     }
 }
@@ -2662,7 +2662,7 @@ impl<'a> ExtractVariable<'a> {
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract variable")
-            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .kind(CodeActionKind::REFACTOR_EXTRACT)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
             .push_to(&mut action);
