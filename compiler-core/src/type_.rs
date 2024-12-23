@@ -264,6 +264,16 @@ impl Type {
         }
     }
 
+    pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Self>>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } => Some((module.clone(), name.clone(), args.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_information(),
+            _ => None,
+        }
+    }
+
     pub fn set_custom_type_variant(&mut self, index: u16) {
         match self {
             Type::Named {
@@ -1005,6 +1015,13 @@ impl TypeVar {
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Type>>)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_information(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }
