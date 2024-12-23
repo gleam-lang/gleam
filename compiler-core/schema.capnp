@@ -30,6 +30,7 @@ struct Module {
   srcPath @7 :Text;
   isInternal @8 :Bool;
   requiredVersion @9 :Version;
+  containsEcho @10 :Bool;
 }
 
 struct Version {

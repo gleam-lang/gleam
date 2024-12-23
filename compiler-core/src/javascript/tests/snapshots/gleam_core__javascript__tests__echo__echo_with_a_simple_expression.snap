@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo 1\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  echo 1
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+  CustomType as $CustomType,
+} from "../gleam.mjs";
+
+export function main() {
+  return echo(1, "", 3);
+}
+
+// ...omitted code from `templates/echo.mjs`...
