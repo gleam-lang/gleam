@@ -3010,6 +3010,7 @@ fn {name}() -> {decoder_type}({type_name}) {{
         );
 
         self.edits.insert(custom_type.end_position, function);
+        maybe_import(&mut self.edits, self.module, DECODE_MODULE);
 
         CodeActionBuilder::new("Generate dynamic decoder")
             .kind(CodeActionKind::REFACTOR)
@@ -3020,4 +3021,26 @@ fn {name}() -> {decoder_type}({type_name}) {{
             )
             .push_to(self.actions);
     }
+}
+
+fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
+    if module.ast.names.is_imported(module_name) {
+        return;
+    }
+
+    let first_import_pos = position_of_first_definition_if_import(module, edits.line_numbers);
+    let first_is_import = first_import_pos.is_some();
+    let import_location = first_import_pos.unwrap_or_default();
+    let after_import_newlines = add_newlines_after_import(
+        import_location,
+        first_is_import,
+        edits.line_numbers,
+        &module.code,
+    );
+
+    edits.edits.push(get_import_edit(
+        import_location,
+        module_name,
+        &after_import_newlines,
+    ));
 }
