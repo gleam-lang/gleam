@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport gleam/option\n\npub type Wibble(value) {\n  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))\n}\n    "
+---
+----- BEFORE ACTION
+
+import gleam/option
+
+pub type Wibble(value) {
+    ↑                   
+  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))
+}
+    
+
+
+----- AFTER ACTION
+
+import gleam/option
+
+pub type Wibble(value) {
+  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))
+}
+
+fn wibble_decoder() -> decode.Decoder(Wibble) {
+  use counter <- decode.field("counter", decode.int)
+  use values <- decode.field("values", todo as "Decoder for List(value)")
+  use next <- decode.field("next", todo as "Decoder for Wibble(value)")
+  use message <- decode.field("message", todo as "Decoder for option.Option(String)")
+
+  decode.success(Wibble(counter:, values:, next:, message:))
+}

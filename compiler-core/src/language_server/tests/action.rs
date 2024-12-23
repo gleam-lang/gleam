@@ -70,6 +70,7 @@ const DESUGAR_USE_EXPRESSION: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
+const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4032,5 +4033,23 @@ fn expand_function_capture_does_not_shadow_variables() {
   wibble(value, _, value1)
 }"#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder() {
+    let src = "
+import gleam/option
+
+pub type Wibble(value) {
+  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))
+}
+    ";
+
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_module("gleam/option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("type").to_selection()
     );
 }
