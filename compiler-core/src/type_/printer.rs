@@ -246,6 +246,10 @@ impl Names {
 
         NameContextInformation::Unimported(name.as_str())
     }
+
+    pub fn is_imported(&self, module: &str) -> bool {
+        self.imported_modules.contains_key(module)
+    }
 }
 
 #[derive(Debug)]

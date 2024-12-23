@@ -61,7 +61,7 @@ pub fn add_newlines_after_import(
 
 pub fn get_import_edit(
     import_location: Position,
-    module_full_name: &EcoString,
+    module_full_name: &str,
     insert_newlines: &Newlines,
 ) -> TextEdit {
     let new_lines = match insert_newlines {
