@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport gleam/dynamic/decode as dyn_dec\n\npub type Wibble {\n  Wibble(a: Int, b: Float, c: String)\n}\n"
+---
+----- BEFORE ACTION
+
+import gleam/dynamic/decode as dyn_dec
+
+pub type Wibble {
+    ↑            
+  Wibble(a: Int, b: Float, c: String)
+}
+
+
+----- AFTER ACTION
+
+import gleam/dynamic/decode as dyn_dec
+
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+}
+
+fn wibble_decoder() -> dyn_dec.Decoder(Wibble) {
+  use a <- dyn_dec.field("a", dyn_dec.int)
+  use b <- dyn_dec.field("b", dyn_dec.float)
+  use c <- dyn_dec.field("c", dyn_dec.string)
+
+  dyn_dec.success(Wibble(a:, b:, c:))
+}

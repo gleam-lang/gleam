@@ -53,9 +53,9 @@ use crate::type_::Type;
 
 use super::{
     untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
-    TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant,
-    TypedPattern, TypedPatternBitArraySegment, TypedStatement, TypedUse,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedCustomType,
+    TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
+    TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedStatement, TypedUse,
 };
 
 pub trait Visit<'ast> {
@@ -73,6 +73,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
         visit_typed_module_constant(self, constant);
+    }
+
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
+        visit_typed_custom_type(self, custom_type);
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -493,7 +497,7 @@ where
     match def {
         Definition::Function(fun) => v.visit_typed_function(fun),
         Definition::TypeAlias(_typealias) => { /* TODO */ }
-        Definition::CustomType(_custom_type) => { /* TODO */ }
+        Definition::CustomType(custom_type) => v.visit_typed_custom_type(custom_type),
         Definition::Import(_import) => { /* TODO */ }
         Definition::ModuleConstant(constant) => v.visit_typed_module_constant(constant),
     }
@@ -591,6 +595,12 @@ where
 }
 
 pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_custom_type<'a, V>(_v: &mut V, _custom_type: &'a TypedCustomType)
 where
     V: Visit<'a> + ?Sized,
 {

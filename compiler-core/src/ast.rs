@@ -729,6 +729,7 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
 }
 
 pub type UntypedCustomType = CustomType<()>;
+pub type TypedCustomType = CustomType<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A newly defined type with one or more constructors.

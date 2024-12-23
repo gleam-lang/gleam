@@ -70,6 +70,7 @@ const DESUGAR_USE_EXPRESSION: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
+const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4032,5 +4033,90 @@ fn expand_function_capture_does_not_shadow_variables() {
   wibble(value, _, value1)
 }"#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        "
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)
+}
+",
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_complex_types() {
+    let src = "
+import gleam/option
+import gleam/dynamic
+import gleam/dict
+
+pub type Something
+
+pub type Wibble(value) {
+  Wibble(
+    maybe: option.Option(Something),
+    map: dict.Dict(String, List(value)),
+    unknown: List(dynamic.Dynamic),
+  )
+}
+";
+
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src)
+            .add_module("gleam/option", "pub type Option(a)")
+            .add_module("gleam/dynamic", "pub type Dynamic")
+            .add_module("gleam/dict", "pub type Dict(k, v)"),
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
+fn generate_dynamic_decoder_already_imported_module() {
+    let src = "
+import gleam/dynamic/decode as dyn_dec
+
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+}
+";
+
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_module("gleam/dynamic/decode", "pub type Decoder(a)"),
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_generate_dynamic_decoder_for_multi_variant_type() {
+    assert_no_code_actions!(
+        GENERATE_DYNAMIC_DECODER,
+        "
+pub type Wibble {
+  Wibble(wibble: Int)
+  Wobble(wobble: Float)
+}
+",
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_generate_dynamic_decoder_for_type_without_labels() {
+    assert_no_code_actions!(
+        GENERATE_DYNAMIC_DECODER,
+        "
+pub type Wibble {
+  Wibble(Int, Int, String)
+}
+",
+        find_position_of("type").to_selection()
     );
 }

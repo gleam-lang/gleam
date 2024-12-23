@@ -17,9 +17,10 @@ use crate::{
         printer::Printer,
         FieldMap, ModuleValueConstructor, Type, TypedCallArg,
     },
-    Error,
+    Error, STDLIB_PACKAGE_NAME,
 };
 use ecow::{eco_format, EcoString};
+use heck::ToSnakeCase;
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
@@ -2874,4 +2875,201 @@ impl<'ast> ast::visit::Visit<'ast> for VariablesNames {
     ) {
         let _ = self.names.insert(name.clone());
     }
+}
+
+/// Builder for code action to apply the "generate dynamic decoder action.
+///
+pub struct GenerateDynamicDecoder<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    printer: Printer<'a>,
+    actions: &'a mut Vec<CodeAction>,
+}
+
+const DECODE_MODULE: &str = "gleam/dynamic/decode";
+
+impl<'a> GenerateDynamicDecoder<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        actions: &'a mut Vec<CodeAction>,
+    ) -> Self {
+        let printer = Printer::new(&module.ast.names);
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            printer,
+            actions,
+        }
+    }
+
+    pub fn code_actions(&mut self) {
+        self.visit_typed_module(&self.module.ast);
+    }
+
+    fn decoder_for(&mut self, type_: &Type) -> EcoString {
+        let module_name = self.printer.print_module(DECODE_MODULE);
+        if type_.is_bit_array() {
+            eco_format!("{module_name}.bit_array")
+        } else if type_.is_bool() {
+            eco_format!("{module_name}.bool")
+        } else if type_.is_float() {
+            eco_format!("{module_name}.float")
+        } else if type_.is_int() {
+            eco_format!("{module_name}.int")
+        } else if type_.is_string() {
+            eco_format!("{module_name}.string")
+        } else {
+            let type_information = type_.named_type_information();
+            let type_information = type_information.as_ref().map(|(module, name, arguments)| {
+                (module.as_str(), name.as_str(), arguments.as_slice())
+            });
+
+            match type_information {
+                Some(("gleam/dynamic", "Dynamic", _)) => eco_format!("{module_name}.dynamic"),
+                Some(("gleam", "List", [element])) => {
+                    eco_format!("{module_name}.list({})", self.decoder_for(element))
+                }
+                Some(("gleam/option", "Option", [some])) => {
+                    eco_format!("{module_name}.optional({})", self.decoder_for(some))
+                }
+                Some(("gleam/dict", "Dict", [key, value])) => {
+                    eco_format!(
+                        "{module_name}.dict({}, {})",
+                        self.decoder_for(key),
+                        self.decoder_for(value)
+                    )
+                }
+                _ => eco_format!(
+                    r#"todo as "Decoder for {}""#,
+                    self.printer.print_type(type_)
+                ),
+            }
+        }
+    }
+
+    fn decode_field(&mut self, field: &RecordField<'_>) -> EcoString {
+        let decoder = self.decoder_for(field.type_);
+
+        eco_format!(
+            r#"use {name} <- {module}.field("{name}", {decoder})"#,
+            name = field.label,
+            module = self.printer.print_module(DECODE_MODULE)
+        )
+    }
+}
+
+struct RecordField<'a> {
+    label: &'a str,
+    type_: &'a Type,
+}
+
+impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let range = self.edits.src_span_to_lsp_range(custom_type.location);
+        if !overlaps(self.params.range, range) {
+            return;
+        }
+
+        // For now, we only generate dynamic decoders for types with one variant.
+        let constructor = match custom_type.constructors.as_slice() {
+            [constructor] => constructor,
+            _ => return,
+        };
+
+        let name = eco_format!("{}_decoder", custom_type.name.to_snake_case());
+
+        let Some(fields): Option<Vec<_>> = constructor
+            .arguments
+            .iter()
+            .map(|argument| {
+                Some(RecordField {
+                    label: argument.label.as_ref().map(|(_, name)| name.as_str())?,
+                    type_: &argument.type_,
+                })
+            })
+            .collect()
+        else {
+            return;
+        };
+
+        let field_decoders: Vec<_> = fields
+            .iter()
+            .map(|field| self.decode_field(field))
+            .collect();
+
+        let decoder_type = self.printer.print_type(&Type::Named {
+            publicity: ast::Publicity::Public,
+            package: STDLIB_PACKAGE_NAME.into(),
+            module: DECODE_MODULE.into(),
+            name: "Decoder".into(),
+            args: vec![],
+            inferred_variant: None,
+        });
+        let decode_module = self.printer.print_module(DECODE_MODULE);
+
+        let mut field_names = fields.iter().map(|field| field.label);
+        let parameters = match custom_type.parameters.len() {
+            0 => EcoString::new(),
+            _ => eco_format!(
+                "({})",
+                custom_type
+                    .parameters
+                    .iter()
+                    .map(|(_, name)| name)
+                    .join(", ")
+            ),
+        };
+
+        let function = format!(
+            "
+
+fn {name}() -> {decoder_type}({type_name}{parameters}) {{
+  {decoders}
+
+  {decode_module}.success({constructor_name}({fields}:))
+}}",
+            decoders = field_decoders.join("\n  "),
+            type_name = custom_type.name,
+            constructor_name = constructor.name,
+            fields = field_names.join(":, ")
+        );
+
+        self.edits.insert(custom_type.end_position, function);
+        maybe_import(&mut self.edits, self.module, DECODE_MODULE);
+
+        CodeActionBuilder::new("Generate dynamic decoder")
+            .kind(CodeActionKind::REFACTOR)
+            .preferred(false)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .push_to(self.actions);
+    }
+}
+
+fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
+    if module.ast.names.is_imported(module_name) {
+        return;
+    }
+
+    let first_import_pos = position_of_first_definition_if_import(module, edits.line_numbers);
+    let first_is_import = first_import_pos.is_some();
+    let import_location = first_import_pos.unwrap_or_default();
+    let after_import_newlines = add_newlines_after_import(
+        import_location,
+        first_is_import,
+        edits.line_numbers,
+        &module.code,
+    );
+
+    edits.edits.push(get_import_edit(
+        import_location,
+        module_name,
+        &after_import_newlines,
+    ));
 }

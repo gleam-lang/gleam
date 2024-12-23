@@ -211,6 +211,34 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now suggests a code action to generate a dynamic decoder
+  for a custom type. For example, this code:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+  ```
+
+  Will become:
+
+  ```gleam
+  import gleam/dynamic/decode
+
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  fn person_decoder() -> decode.Decoder(Person) {
+    use name <- decode.field("name", decode.string)
+    use age <- decode.field("age", decode.int)
+
+    decode.success(Person(name:, age:))
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - The formatter now adds a `todo` inside empty blocks.

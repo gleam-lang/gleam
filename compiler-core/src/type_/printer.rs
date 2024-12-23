@@ -246,6 +246,10 @@ impl Names {
 
         NameContextInformation::Unimported(name.as_str())
     }
+
+    pub fn is_imported(&self, module: &str) -> bool {
+        self.imported_modules.contains_key(module)
+    }
 }
 
 #[derive(Debug)]
@@ -316,6 +320,14 @@ impl<'a> Printer<'a> {
         let mut buffer = EcoString::new();
         self.print(type_, &mut buffer, PrintMode::Normal);
         buffer
+    }
+
+    pub fn print_module(&self, module: &str) -> EcoString {
+        if let Some(module) = self.names.imported_modules.get(module) {
+            module.clone()
+        } else {
+            module.split("/").last().unwrap_or(module).into()
+        }
     }
 
     pub fn print_type_without_aliases(&mut self, type_: &Type) -> EcoString {
