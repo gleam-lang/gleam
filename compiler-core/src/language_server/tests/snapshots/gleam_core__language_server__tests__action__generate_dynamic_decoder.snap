@@ -1,32 +1,28 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "\nimport gleam/option\n\npub type Wibble(value) {\n  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))\n}\n    "
+expression: "\npub type Person {\n  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)\n}\n"
 ---
 ----- BEFORE ACTION
 
-import gleam/option
-
-pub type Wibble(value) {
-    ↑                   
-  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))
+pub type Person {
+    ↑            
+  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)
 }
-    
 
 
 ----- AFTER ACTION
-
 import gleam/dynamic/decode
-import gleam/option
 
-pub type Wibble(value) {
-  Wibble(counter: Int, values: List(value), next: Wibble(value), message: option.Option(String))
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)
 }
 
-fn wibble_decoder() -> decode.Decoder(Wibble) {
-  use counter <- decode.field("counter", decode.int)
-  use values <- decode.field("values", todo as "Decoder for List(value)")
-  use next <- decode.field("next", todo as "Decoder for Wibble(value)")
-  use message <- decode.field("message", todo as "Decoder for option.Option(String)")
+fn person_decoder() -> decode.Decoder(Person) {
+  use name <- decode.field("name", decode.string)
+  use age <- decode.field("age", decode.int)
+  use height <- decode.field("height", decode.float)
+  use is_cool <- decode.field("is_cool", decode.bool)
+  use brain <- decode.field("brain", decode.bit_array)
 
-  decode.success(Wibble(counter:, values:, next:, message:))
+  decode.success(Person(name:, age:, height:, is_cool:, brain:))
 }

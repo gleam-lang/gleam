@@ -2922,8 +2922,6 @@ impl<'a> GenerateDynamicDecoder<'a> {
             eco_format!("{module_name}.int")
         } else if type_.is_string() {
             eco_format!("{module_name}.string")
-        } else if type_.named_type_name() == Some(("gleam/dynamic".into(), "Dynamic".into())) {
-            eco_format!("{module_name}.dynamic")
         } else {
             let type_information = type_.named_type_information();
             let type_information = type_information.as_ref().map(|(module, name, arguments)| {
