@@ -2945,7 +2945,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
                         self.decoder_for(value)
                     )
                 }
-                Some(_) | None => eco_format!(
+                _ => eco_format!(
                     r#"todo as "Decoder for {}""#,
                     self.printer.print_type(type_)
                 ),
@@ -3014,11 +3014,22 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
         let decode_module = self.printer.print_module(DECODE_MODULE);
 
         let mut field_names = fields.iter().map(|field| field.label);
+        let parameters = match custom_type.parameters.len() {
+            0 => EcoString::new(),
+            _ => eco_format!(
+                "({})",
+                custom_type
+                    .parameters
+                    .iter()
+                    .map(|(_, name)| name)
+                    .join(", ")
+            ),
+        };
 
         let function = format!(
             "
 
-fn {name}() -> {decoder_type}({type_name}) {{
+fn {name}() -> {decoder_type}({type_name}{parameters}) {{
   {decoders}
 
   {decode_module}.success({constructor_name}({fields}:))
