@@ -2912,7 +2912,6 @@ impl<'a> GenerateDynamicDecoder<'a> {
 
     fn decoder_for(&mut self, type_: &Type) -> EcoString {
         let module_name = self.printer.print_module(DECODE_MODULE);
-        // TODO: List, Dict and Option
         if type_.is_bit_array() {
             eco_format!("{module_name}.bit_array")
         } else if type_.is_bool() {
@@ -2926,10 +2925,31 @@ impl<'a> GenerateDynamicDecoder<'a> {
         } else if type_.named_type_name() == Some(("gleam/dynamic".into(), "Dynamic".into())) {
             eco_format!("{module_name}.dynamic")
         } else {
-            eco_format!(
-                r#"todo as "Decoder for {}""#,
-                self.printer.print_type(type_)
-            )
+            let type_information = type_.named_type_information();
+            let type_information = type_information.as_ref().map(|(module, name, arguments)| {
+                (module.as_str(), name.as_str(), arguments.as_slice())
+            });
+
+            match type_information {
+                Some(("gleam/dynamic", "Dynamic", _)) => eco_format!("{module_name}.dynamic"),
+                Some(("gleam", "List", [element])) => {
+                    eco_format!("{module_name}.list({})", self.decoder_for(element))
+                }
+                Some(("gleam/option", "Option", [some])) => {
+                    eco_format!("{module_name}.optional({})", self.decoder_for(some))
+                }
+                Some(("gleam/dict", "Dict", [key, value])) => {
+                    eco_format!(
+                        "{module_name}.dict({}, {})",
+                        self.decoder_for(key),
+                        self.decoder_for(value)
+                    )
+                }
+                Some(_) | None => eco_format!(
+                    r#"todo as "Decoder for {}""#,
+                    self.printer.print_type(type_)
+                ),
+            }
         }
     }
 
