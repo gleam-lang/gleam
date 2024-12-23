@@ -1,4 +1,5 @@
 use std::{
+    cell::RefCell,
     collections::{HashMap, HashSet},
     time::Instant,
 };
@@ -36,12 +37,15 @@ use crate::{
 
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher: Box<dyn dependency::PackageFetcher> =
+        PackageFetcher::boxed(runtime.handle().clone());
     let project = fs::get_project_root(fs::get_current_directory()?)?;
     let paths = ProjectPaths::new(project);
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,
         runtime.handle().clone(),
+        &*package_fetcher,
         Mode::Dev,
         &config,
         &cli::Reporter::new(),
@@ -251,11 +255,14 @@ pub fn download<Telem: Telemetry>(
 
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
+    let package_fetcher: Box<dyn dependency::PackageFetcher> =
+        PackageFetcher::boxed(runtime.handle().clone());
 
     // Determine what versions we need
     let (manifest_updated, manifest) = get_manifest(
         paths,
         runtime.handle().clone(),
+        &*package_fetcher,
         mode,
         &config,
         &telemetry,
@@ -285,7 +292,69 @@ pub fn download<Telem: Telemetry>(
     }
     LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
+    let major_versions_available =
+        dependency::check_for_major_version_updates(&manifest, &*package_fetcher);
+    if !major_versions_available.is_empty() {
+        eprintln!(
+            "{}",
+            pretty_print_major_versions_available(major_versions_available)
+        );
+    }
+
     Ok(manifest)
+}
+
+fn pretty_print_major_versions_available(versions: dependency::PackageVersionDiffs) -> String {
+    let total_lines = versions.len() + 3;
+    let versions = versions
+        .iter()
+        .map(|(name, (v1, v2))| (name, v1.to_string(), v2.to_string()))
+        .sorted();
+
+    let longest_parts = versions.clone().fold(
+        (0, 0, 0),
+        |(max_name, max_curr, max_major), (name, curr, major)| {
+            (
+                max_name.max(name.len()),
+                max_curr.max(curr.len()),
+                max_major.max(major.len()),
+            )
+        },
+    );
+
+    let (longest_package_name_length, longest_current_version_length, longest_major_version_length) =
+        longest_parts;
+
+    let mut output_string = String::with_capacity(
+        (longest_package_name_length
+            + longest_current_version_length
+            + longest_major_version_length
+            + 5)
+            * total_lines,
+    );
+
+    output_string
+        .push_str("\nHint: the following dependencies have new major versions available:\n\n");
+    for (name, v1, v2) in versions {
+        let name_padding = " ".repeat(longest_package_name_length - name.len());
+        let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
+
+        output_string.push_str(
+            &[
+                name,
+                &name_padding,
+                " ",
+                &v1.to_string(),
+                &curr_ver_padding,
+                " -> ",
+                &v2.to_string(),
+                "\n",
+            ]
+            .concat(),
+        );
+    }
+
+    output_string
 }
 
 async fn add_missing_packages<Telem: Telemetry>(
@@ -451,9 +520,10 @@ impl LocalPackages {
     }
 }
 
-fn get_manifest<Telem: Telemetry>(
+fn get_manifest<'a, Telem: Telemetry>(
     paths: &ProjectPaths,
     runtime: tokio::runtime::Handle,
+    package_fetcher: &'a dyn dependency::PackageFetcher,
     mode: Mode,
     config: &PackageConfig,
     telemetry: &Telem,
@@ -475,7 +545,16 @@ fn get_manifest<Telem: Telemetry>(
     };
 
     if should_resolve {
-        let manifest = resolve_versions(runtime, mode, paths, config, None, telemetry, Vec::new())?;
+        let manifest = resolve_versions(
+            runtime,
+            package_fetcher,
+            mode,
+            paths,
+            config,
+            None,
+            telemetry,
+            Vec::new(),
+        )?;
         return Ok((true, manifest));
     }
 
@@ -496,6 +575,7 @@ fn get_manifest<Telem: Telemetry>(
         tracing::debug!("manifest_outdated");
         let manifest = resolve_versions(
             runtime,
+            package_fetcher,
             mode,
             paths,
             config,
@@ -651,6 +731,7 @@ impl PartialEq for ProvidedPackageSource {
 
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
+    package_fetcher: &dyn dependency::PackageFetcher,
     mode: Mode,
     project_paths: &ProjectPaths,
     config: &PackageConfig,
@@ -697,7 +778,7 @@ fn resolve_versions<Telem: Telemetry>(
         .collect();
 
     let resolved = dependency::resolve_versions(
-        PackageFetcher::boxed(runtime.clone()),
+        package_fetcher,
         provided_hex_packages,
         config.name.clone(),
         root_requirements.into_iter(),
@@ -937,6 +1018,7 @@ async fn lookup_package(
 }
 
 struct PackageFetcher {
+    runtime_cache: RefCell<HashMap<String, hexpm::Package>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
 }
@@ -944,9 +1026,18 @@ struct PackageFetcher {
 impl PackageFetcher {
     pub fn boxed(runtime: tokio::runtime::Handle) -> Box<Self> {
         Box::new(Self {
+            runtime_cache: RefCell::new(HashMap::new()),
             runtime,
             http: HttpClient::new(),
         })
+    }
+
+    /// Caches the result of `get_dependencies` so that we don't need to make a network request.
+    /// Currently dependencies are fetched during initial version resolution, and then during check
+    /// for major version availability.
+    fn cache_package(&self, package: &str, result: hexpm::Package) {
+        let mut runtime_cache = self.runtime_cache.borrow_mut();
+        let _ = runtime_cache.insert(package.to_string(), result);
     }
 }
 
@@ -981,6 +1072,15 @@ impl dependency::PackageFetcher for PackageFetcher {
         &self,
         package: &str,
     ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+        {
+            let runtime_cache = self.runtime_cache.borrow();
+            let result = runtime_cache.get(package);
+
+            if let Some(result) = result {
+                return Ok(result.clone());
+            }
+        }
+
         tracing::debug!(package = package, "looking_up_hex_package");
         let config = hexpm::Config::new();
         let request = hexpm::get_package_request(package, None, &config);
@@ -990,7 +1090,10 @@ impl dependency::PackageFetcher for PackageFetcher {
             .map_err(Box::new)?;
 
         match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(a) => Ok(a),
+            Ok(a) => {
+                self.cache_package(package, a.clone());
+                Ok(a)
+            }
             Err(e) => match e {
                 hexpm::ApiError::NotFound => {
                     Err(format!("I couldn't find a package called `{}`", package).into())
