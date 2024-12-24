@@ -544,3 +544,10 @@ fn ensure_search_data_matches_exdocs_search_data_model_specification() {
         assert!(item.contains_key("ref"));
     }
 }
+
+#[test]
+fn output_of_search_data_json() {
+    let data = create_sample_search_data();
+    let json = serde_to_string(&data).unwrap();
+    insta::assert_snapshot!(json);
+}
