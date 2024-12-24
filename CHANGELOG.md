@@ -81,6 +81,10 @@
 - Print better error messages when shell commands used by compiler cannot be found.
   ([wheatfox](https://github.com/enkerewpo))
 
+- On the JavaScript target, bit array expressions and patterns no longer need to
+  be byte aligned, and the `bits` segment type is now supported in patterns.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Build tool
 
 - Improved the error message you get when trying to add a package that doesn't
