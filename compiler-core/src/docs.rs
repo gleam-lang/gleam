@@ -152,8 +152,8 @@ pub fn generate_html<IO: FileSystemReader>(
             type_: SearchItemType::Page,
             parent_title: config.name.to_string(),
             title: config.name.to_string(),
-            doc: content,
-            ref_: page.path.to_string(),
+            content,
+            reference: page.path.to_string(),
         })
     }
 
@@ -218,14 +218,14 @@ pub fn generate_html<IO: FileSystemReader>(
                 type_: SearchItemType::Type,
                 parent_title: module.name.to_string(),
                 title: type_.name.to_string(),
-                doc: format!(
+                content: format!(
                     "{}\n{}\n{}\n{}",
                     type_.definition,
                     type_.text_documentation,
                     constructors,
                     import_synonyms(&module.name, type_.name)
                 ),
-                ref_: format!("{}.html#{}", module.name, type_.name),
+                reference: format!("{}.html#{}", module.name, type_.name),
             })
         });
         constants.iter().for_each(|constant| {
@@ -233,13 +233,13 @@ pub fn generate_html<IO: FileSystemReader>(
                 type_: SearchItemType::Constant,
                 parent_title: module.name.to_string(),
                 title: constant.name.to_string(),
-                doc: format!(
+                content: format!(
                     "{}\n{}\n{}",
                     constant.definition,
                     constant.text_documentation,
                     import_synonyms(&module.name, constant.name)
                 ),
-                ref_: format!("{}.html#{}", module.name, constant.name),
+                reference: format!("{}.html#{}", module.name, constant.name),
             })
         });
         functions.iter().for_each(|function| {
@@ -247,21 +247,21 @@ pub fn generate_html<IO: FileSystemReader>(
                 type_: SearchItemType::Function,
                 parent_title: module.name.to_string(),
                 title: function.name.to_string(),
-                doc: format!(
+                content: format!(
                     "{}\n{}\n{}",
                     function.signature,
                     function.text_documentation,
                     import_synonyms(&module.name, function.name)
                 ),
-                ref_: format!("{}.html#{}", module.name, function.name),
+                reference: format!("{}.html#{}", module.name, function.name),
             })
         });
         search_items.push(SearchItem {
             type_: SearchItemType::Module,
             parent_title: module.name.to_string(),
             title: module.name.to_string(),
-            doc: documentation_content,
-            ref_: format!("{}.html", module.name),
+            content: documentation_content,
+            reference: format!("{}.html", module.name),
         });
 
         let page_title = format!("{} · {} · v{}", name, config.name, config.version);
@@ -372,7 +372,7 @@ pub fn generate_html<IO: FileSystemReader>(
 
     let search_data_json = serde_to_string(&SearchData {
         items: escape_html_contents(search_items),
-        proglang: SearchProgLang::Gleam,
+        programming_language: SearchProgrammingLanguage::Gleam,
     })
     .expect("search index serialization");
 
@@ -524,8 +524,8 @@ fn escape_html_contents(indexes: Vec<SearchItem>) -> Vec<SearchItem> {
             type_: idx.type_,
             parent_title: idx.parent_title,
             title: idx.title,
-            doc: escape_html_content(idx.doc),
-            ref_: idx.ref_,
+            content: escape_html_content(idx.content),
+            reference: idx.reference,
         })
         .collect::<Vec<SearchItem>>()
 }
@@ -839,7 +839,8 @@ struct ModuleTemplate<'a> {
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 struct SearchData {
     items: Vec<SearchItem>,
-    proglang: SearchProgLang,
+    #[serde(rename = "proglang")]
+    programming_language: SearchProgrammingLanguage,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -849,9 +850,10 @@ struct SearchItem {
     #[serde(rename = "parentTitle")]
     parent_title: String,
     title: String,
-    doc: String,
+    #[serde(rename = "doc")]
+    content: String,
     #[serde(rename = "ref")]
-    ref_: String,
+    reference: String,
 }
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
@@ -866,7 +868,7 @@ enum SearchItemType {
 
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 #[serde(rename_all = "lowercase")]
-enum SearchProgLang {
+enum SearchProgrammingLanguage {
     // Elixir,
     // Erlang,
     Gleam,
