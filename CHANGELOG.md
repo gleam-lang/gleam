@@ -111,6 +111,11 @@
   with a local password, reducing risk of your Hex password being compromised.
   ([Louis Pilfold](https://github.com/lpil))
 
+- HexDocs documentation of Gleam packages now uses the ExDocs search data model,
+  allowing for global indexing of Gleam packages in HexDocs, and
+  making Gleam packages discoverable through global search of HexDocs.
+  ([Diemo Gebhardt](https://github.com/diemogebhardt))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
