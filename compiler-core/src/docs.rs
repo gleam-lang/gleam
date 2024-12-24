@@ -517,6 +517,14 @@ fn escape_html_content(it: String) -> String {
         .replace('\'', "&#39;")
 }
 
+#[test]
+fn escape_html_content_test() {
+    assert_eq!(
+        escape_html_content("&<>\"'".to_string()),
+        "&amp;&lt;&gt;&quot;&#39;"
+    );
+}
+
 fn escape_html_contents(indexes: Vec<SearchItem>) -> Vec<SearchItem> {
     indexes
         .into_iter()
