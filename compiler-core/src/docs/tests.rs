@@ -551,3 +551,11 @@ fn output_of_search_data_json() {
     let json = serde_to_string(&data).unwrap();
     insta::assert_snapshot!(json);
 }
+
+#[test]
+fn output_of_search_data_js() {
+    let data = create_sample_search_data();
+    let json = serde_to_string(&data).unwrap();
+    let json_wrapped_in_js = format!("window.Gleam.initSearch({});", json);
+    insta::assert_snapshot!(json_wrapped_in_js);
+}
