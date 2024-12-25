@@ -363,7 +363,7 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    // lunr.min.js, search-data.js, search-data.json and index.js
+    // lunr.min.js, search-data.js, search_data.json and index.js
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("js/lunr.min.js"),
@@ -382,7 +382,7 @@ pub fn generate_html<IO: FileSystemReader>(
     });
 
     files.push(OutputFile {
-        path: Utf8PathBuf::from("search-data.json"),
+        path: Utf8PathBuf::from("search_data.json"),
         content: Content::Text(search_data_json.to_string()),
     });
 
