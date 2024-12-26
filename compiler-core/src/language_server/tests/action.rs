@@ -4108,6 +4108,22 @@ pub type Wibble {
 }
 
 #[test]
+fn generate_dynamic_decoder_recursive_type() {
+    let src = "
+import gleam/option
+
+pub type LinkedList {
+  LinkedList(value: Int, next: option.Option(LinkedList))
+}
+";
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        TestProject::for_source(src).add_module("gleam/option", "pub type Option(a)"),
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_dynamic_decoder_for_multi_variant_type() {
     assert_no_code_actions!(
         GENERATE_DYNAMIC_DECODER,

@@ -2942,7 +2942,11 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             return;
         };
 
-        let mut decoder_printer = DecoderPrinter::new(&self.module.ast.names);
+        let mut decoder_printer = DecoderPrinter::new(
+            &self.module.ast.names,
+            custom_type.name.clone(),
+            self.module.name.clone(),
+        );
 
         let decoders = fields
             .iter()
@@ -3023,6 +3027,10 @@ fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
 
 struct DecoderPrinter<'a> {
     printer: Printer<'a>,
+    /// The name of the root type we are printing a decoder for
+    type_name: EcoString,
+    /// The module name of the root type we are printing a decoder for
+    type_module: EcoString,
 }
 
 struct RecordField<'a> {
@@ -3069,8 +3077,10 @@ impl<'a> RecordLabel<'a> {
 }
 
 impl<'a> DecoderPrinter<'a> {
-    fn new(names: &'a Names) -> Self {
+    fn new(names: &'a Names, type_name: EcoString, type_module: EcoString) -> Self {
         Self {
+            type_name,
+            type_module,
             printer: Printer::new(names),
         }
     }
@@ -3131,6 +3141,9 @@ impl<'a> DecoderPrinter<'a> {
                         self.decoder_for(key, indent),
                         self.decoder_for(value, indent)
                     )
+                }
+                Some((module, name, _)) if module == self.type_module && name == self.type_name => {
+                    eco_format!("{}_decoder()", name.to_snake_case())
                 }
                 _ => eco_format!(
                     r#"todo as "Decoder for {}""#,
