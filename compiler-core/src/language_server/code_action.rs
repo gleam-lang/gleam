@@ -3043,7 +3043,7 @@ enum RecordLabel<'a> {
     Unlabeled(usize),
 }
 
-impl<'a> RecordLabel<'a> {
+impl RecordLabel<'_> {
     fn field_key(&self) -> EcoString {
         match self {
             RecordLabel::Labeled(label) => eco_format!("\"{label}\""),
@@ -3059,7 +3059,7 @@ impl<'a> RecordLabel<'a> {
             RecordLabel::Unlabeled(mut index) => {
                 let mut characters = Vec::new();
                 let alphabet_length = 26;
-                let alphabet_offset = 'a' as u8;
+                let alphabet_offset = b'a';
                 loop {
                     let alphabet_index = (index % alphabet_length) as u8;
                     characters.push((alphabet_offset + alphabet_index) as char);
