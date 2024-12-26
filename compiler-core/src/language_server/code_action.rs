@@ -14,7 +14,7 @@ use crate::{
     type_::{
         self,
         error::{ModuleSuggestion, VariableOrigin},
-        printer::Printer,
+        printer::{Names, Printer},
         FieldMap, ModuleValueConstructor, Type, TypedCallArg,
     },
     Error, STDLIB_PACKAGE_NAME,
@@ -2909,62 +2909,6 @@ impl<'a> GenerateDynamicDecoder<'a> {
     pub fn code_actions(&mut self) {
         self.visit_typed_module(&self.module.ast);
     }
-
-    fn decoder_for(&mut self, type_: &Type) -> EcoString {
-        let module_name = self.printer.print_module(DECODE_MODULE);
-        if type_.is_bit_array() {
-            eco_format!("{module_name}.bit_array")
-        } else if type_.is_bool() {
-            eco_format!("{module_name}.bool")
-        } else if type_.is_float() {
-            eco_format!("{module_name}.float")
-        } else if type_.is_int() {
-            eco_format!("{module_name}.int")
-        } else if type_.is_string() {
-            eco_format!("{module_name}.string")
-        } else {
-            let type_information = type_.named_type_information();
-            let type_information = type_information.as_ref().map(|(module, name, arguments)| {
-                (module.as_str(), name.as_str(), arguments.as_slice())
-            });
-
-            match type_information {
-                Some(("gleam/dynamic", "Dynamic", _)) => eco_format!("{module_name}.dynamic"),
-                Some(("gleam", "List", [element])) => {
-                    eco_format!("{module_name}.list({})", self.decoder_for(element))
-                }
-                Some(("gleam/option", "Option", [some])) => {
-                    eco_format!("{module_name}.optional({})", self.decoder_for(some))
-                }
-                Some(("gleam/dict", "Dict", [key, value])) => {
-                    eco_format!(
-                        "{module_name}.dict({}, {})",
-                        self.decoder_for(key),
-                        self.decoder_for(value)
-                    )
-                }
-                _ => eco_format!(
-                    r#"todo as "Decoder for {}""#,
-                    self.printer.print_type(type_)
-                ),
-            }
-        }
-    }
-
-    fn decode_field(&mut self, field: &RecordField<'_>) -> EcoString {
-        let decoder = self.decoder_for(field.type_);
-
-        eco_format!(
-            r#"use {name} <- {module}.field("{name}", {decoder})"#,
-            name = field.label,
-            module = self.printer.print_module(DECODE_MODULE)
-        )
-    }
-}
-
-struct RecordField<'a> {
-    label: &'a str,
-    type_: &'a Type,
 }
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
@@ -2987,7 +2931,9 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             .iter()
             .map(|argument| {
                 Some(RecordField {
-                    label: argument.label.as_ref().map(|(_, name)| name.as_str())?,
+                    label: RecordLabel::Labeled(
+                        argument.label.as_ref().map(|(_, name)| name.as_str())?,
+                    ),
                     type_: &argument.type_,
                 })
             })
@@ -2996,10 +2942,12 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             return;
         };
 
-        let field_decoders: Vec<_> = fields
+        let mut decoder_printer = DecoderPrinter::new(&self.module.ast.names);
+
+        let decoders = fields
             .iter()
-            .map(|field| self.decode_field(field))
-            .collect();
+            .map(|field| decoder_printer.decode_field(field, 2))
+            .join("\n");
 
         let decoder_type = self.printer.print_type(&Type::Named {
             publicity: ast::Publicity::Public,
@@ -3011,7 +2959,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
         });
         let decode_module = self.printer.print_module(DECODE_MODULE);
 
-        let mut field_names = fields.iter().map(|field| field.label);
+        let mut field_names = fields.iter().map(|field| field.label.variable_name());
         let parameters = match custom_type.parameters.len() {
             0 => EcoString::new(),
             _ => eco_format!(
@@ -3028,11 +2976,10 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             "
 
 fn {name}() -> {decoder_type}({type_name}{parameters}) {{
-  {decoders}
+{decoders}
 
   {decode_module}.success({constructor_name}({fields}:))
 }}",
-            decoders = field_decoders.join("\n  "),
             type_name = custom_type.name,
             constructor_name = constructor.name,
             fields = field_names.join(":, ")
@@ -3072,4 +3019,136 @@ fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
         module_name,
         &after_import_newlines,
     ));
+}
+
+struct DecoderPrinter<'a> {
+    printer: Printer<'a>,
+}
+
+struct RecordField<'a> {
+    label: RecordLabel<'a>,
+    type_: &'a Type,
+}
+
+enum RecordLabel<'a> {
+    Labeled(&'a str),
+    Unlabeled(usize),
+}
+
+impl<'a> RecordLabel<'a> {
+    fn field_key(&self) -> EcoString {
+        match self {
+            RecordLabel::Labeled(label) => eco_format!("\"{label}\""),
+            RecordLabel::Unlabeled(index) => {
+                eco_format!("{index}")
+            }
+        }
+    }
+
+    fn variable_name(&self) -> EcoString {
+        match self {
+            RecordLabel::Labeled(label) => (*label).into(),
+            RecordLabel::Unlabeled(mut index) => {
+                let mut name = EcoString::new();
+                let alphabet_length = 26;
+                let alphabet_offset = 'a' as u8;
+                loop {
+                    let alphabet_index = (index % alphabet_length) as u8;
+                    name.push((alphabet_offset + alphabet_index) as char);
+                    index /= alphabet_length;
+
+                    if index == 0 {
+                        break;
+                    }
+                    index -= 1;
+                }
+                name
+            }
+        }
+    }
+}
+
+impl<'a> DecoderPrinter<'a> {
+    fn new(names: &'a Names) -> Self {
+        Self {
+            printer: Printer::new(names),
+        }
+    }
+
+    fn decoder_for(&mut self, type_: &Type, indent: usize) -> EcoString {
+        let module_name = self.printer.print_module(DECODE_MODULE);
+        if type_.is_bit_array() {
+            eco_format!("{module_name}.bit_array")
+        } else if type_.is_bool() {
+            eco_format!("{module_name}.bool")
+        } else if type_.is_float() {
+            eco_format!("{module_name}.float")
+        } else if type_.is_int() {
+            eco_format!("{module_name}.int")
+        } else if type_.is_string() {
+            eco_format!("{module_name}.string")
+        } else if let Some(types) = type_.tuple_types() {
+            let fields = types
+                .iter()
+                .enumerate()
+                .map(|(index, type_)| RecordField {
+                    type_,
+                    label: RecordLabel::Unlabeled(index),
+                })
+                .collect_vec();
+            let decoders = fields
+                .iter()
+                .map(|field| self.decode_field(field, indent + 2))
+                .join("\n");
+            let mut field_names = fields.iter().map(|field| field.label.variable_name());
+
+            eco_format!(
+                "{{
+{decoders}
+
+{indent}  {module_name}.success(#({fields}))
+{indent}}}",
+                fields = field_names.join(", "),
+                indent = " ".repeat(indent)
+            )
+        } else {
+            let type_information = type_.named_type_information();
+            let type_information = type_information.as_ref().map(|(module, name, arguments)| {
+                (module.as_str(), name.as_str(), arguments.as_slice())
+            });
+
+            match type_information {
+                Some(("gleam/dynamic", "Dynamic", _)) => eco_format!("{module_name}.dynamic"),
+                Some(("gleam", "List", [element])) => {
+                    eco_format!("{module_name}.list({})", self.decoder_for(element, indent))
+                }
+                Some(("gleam/option", "Option", [some])) => {
+                    eco_format!("{module_name}.optional({})", self.decoder_for(some, indent))
+                }
+                Some(("gleam/dict", "Dict", [key, value])) => {
+                    eco_format!(
+                        "{module_name}.dict({}, {})",
+                        self.decoder_for(key, indent),
+                        self.decoder_for(value, indent)
+                    )
+                }
+                _ => eco_format!(
+                    r#"todo as "Decoder for {}""#,
+                    self.printer.print_type(type_)
+                ),
+            }
+        }
+    }
+
+    fn decode_field(&mut self, field: &RecordField<'_>, indent: usize) -> EcoString {
+        let decoder = self.decoder_for(field.type_, indent);
+
+        eco_format!(
+            r#"{indent}use {variable} <- {module}.field({field}, {decoder})"#,
+            indent = " ".repeat(indent),
+            variable = field.label.variable_name(),
+            field = field.label.field_key(),
+            module = self.printer.print_module(DECODE_MODULE)
+        )
+    }
 }
