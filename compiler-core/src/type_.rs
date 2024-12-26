@@ -179,6 +179,7 @@ impl Type {
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
             Self::Tuple { elems } => Some(elems.clone()),
+            Self::Var { type_, .. } => type_.borrow().tuple_types(),
             _ => None,
         }
     }
@@ -930,6 +931,13 @@ impl TypeVar {
     pub fn return_type(&self) -> Option<Arc<Type>> {
         match self {
             Self::Link { type_ } => type_.return_type(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn tuple_types(&self) -> Option<Vec<Arc<Type>>> {
+        match self {
+            Self::Link { type_ } => type_.tuple_types(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }
