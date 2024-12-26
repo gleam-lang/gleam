@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(tuple: #(Int, Float, #(String, Bool)))\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble(tuple: #(Int, Float, #(String, Bool)))
+}
+
+
+----- AFTER ACTION
+import gleam/dynamic/decode
+
+pub type Wibble {
+  Wibble(tuple: #(Int, Float, #(String, Bool)))
+}
+
+fn wibble_decoder() -> decode.Decoder(Wibble) {
+  use tuple <- decode.field("tuple", {
+    use a <- decode.field(0, decode.int)
+    use b <- decode.field(1, decode.float)
+    use c <- decode.field(2, {
+      use a <- decode.field(0, decode.string)
+      use b <- decode.field(1, decode.bool)
+
+      decode.success(#(a, b))
+    })
+
+    decode.success(#(a, b, c))
+  })
+
+  decode.success(Wibble(tuple:))
+}

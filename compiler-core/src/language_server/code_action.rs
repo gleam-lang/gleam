@@ -3049,12 +3049,12 @@ impl<'a> RecordLabel<'a> {
         match self {
             RecordLabel::Labeled(label) => (*label).into(),
             RecordLabel::Unlabeled(mut index) => {
-                let mut name = EcoString::new();
+                let mut characters = Vec::new();
                 let alphabet_length = 26;
                 let alphabet_offset = 'a' as u8;
                 loop {
                     let alphabet_index = (index % alphabet_length) as u8;
-                    name.push((alphabet_offset + alphabet_index) as char);
+                    characters.push((alphabet_offset + alphabet_index) as char);
                     index /= alphabet_length;
 
                     if index == 0 {
@@ -3062,7 +3062,7 @@ impl<'a> RecordLabel<'a> {
                     }
                     index -= 1;
                 }
-                name
+                characters.into_iter().rev().collect()
             }
         }
     }

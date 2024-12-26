@@ -4095,6 +4095,19 @@ pub type Wibble {
 }
 
 #[test]
+fn generate_dynamic_decoder_tuple() {
+    assert_code_action!(
+        GENERATE_DYNAMIC_DECODER,
+        "
+pub type Wibble {
+  Wibble(tuple: #(Int, Float, #(String, Bool)))
+}
+",
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_dynamic_decoder_for_multi_variant_type() {
     assert_no_code_actions!(
         GENERATE_DYNAMIC_DECODER,
