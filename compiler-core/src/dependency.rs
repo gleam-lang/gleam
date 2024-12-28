@@ -17,7 +17,7 @@ pub type PackageVersions = HashMap<String, Version>;
 type PubgrubRange = pubgrub::range::Range<Version>;
 
 pub fn resolve_versions<Requirements>(
-    package_fetcher: &dyn PackageFetcher,
+    package_fetcher: &impl PackageFetcher,
     provided_packages: HashMap<EcoString, hexpm::Package>,
     root_name: EcoString,
     dependencies: Requirements,
@@ -69,7 +69,7 @@ where
 pub type PackageVersionDiffs = HashMap<String, (Version, Version)>;
 
 fn resolve_major_versions(
-    package_fetcher: &dyn PackageFetcher,
+    package_fetcher: &impl PackageFetcher,
     versions: PackageVersions,
 ) -> PackageVersionDiffs {
     versions
@@ -99,7 +99,7 @@ fn resolve_major_versions(
 /// constraints.
 pub fn check_for_major_version_updates(
     manifest: &manifest::Manifest,
-    package_fetcher: &dyn PackageFetcher,
+    package_fetcher: &impl PackageFetcher,
 ) -> HashMap<String, (Version, Version)> {
     // get the resolved versions of the direct dependencies to check for major
     // version updates.
@@ -200,9 +200,9 @@ pub trait PackageFetcher {
     fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, Box<dyn StdError>>;
 }
 
-struct DependencyProvider<'a> {
+struct DependencyProvider<'a, T: PackageFetcher> {
     packages: RefCell<HashMap<EcoString, hexpm::Package>>,
-    remote: &'a dyn PackageFetcher,
+    remote: &'a T,
     locked: &'a HashMap<EcoString, Version>,
     // Map of packages where an exact version was requested
     // We need this because by default pubgrub checks exact version by checking if a version is between the exact
@@ -211,9 +211,12 @@ struct DependencyProvider<'a> {
     optional_dependencies: RefCell<HashMap<EcoString, pubgrub::range::Range<Version>>>,
 }
 
-impl<'a> DependencyProvider<'a> {
+impl<'a, T> DependencyProvider<'a, T>
+where
+    T: PackageFetcher,
+{
     fn new(
-        remote: &'a dyn PackageFetcher,
+        remote: &'a T,
         mut packages: HashMap<EcoString, hexpm::Package>,
         root: hexpm::Package,
         locked: &'a HashMap<EcoString, Version>,
@@ -262,7 +265,10 @@ impl<'a> DependencyProvider<'a> {
 
 type PackageName = String;
 
-impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'_> {
+impl<T> pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'_, T>
+where
+    T: PackageFetcher,
+{
     fn choose_package_version<Name: Borrow<PackageName>, Ver: Borrow<PubgrubRange>>(
         &self,
         potential_packages: impl Iterator<Item = (Name, Ver)>,
@@ -368,7 +374,7 @@ mod tests {
         }
     }
 
-    fn make_remote() -> Box<Remote> {
+    fn make_remote() -> Remote {
         let mut deps = HashMap::new();
         let _ = deps.insert(
             "gleam_stdlib".into(),
@@ -566,7 +572,7 @@ mod tests {
 
         insert_simplified_deps(simple_deps_for_major_version_check, &mut deps);
 
-        Box::new(Remote { deps })
+        Remote { deps }
     }
 
     fn insert_simplified_deps(
@@ -611,7 +617,7 @@ mod tests {
     fn resolution_with_locked() {
         let locked_stdlib = ("gleam_stdlib".into(), Version::parse("0.1.0").unwrap());
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -629,7 +635,7 @@ mod tests {
     #[test]
     fn resolution_without_deps() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![].into_iter(),
@@ -642,7 +648,7 @@ mod tests {
     #[test]
     fn resolution_1_dep() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -660,7 +666,7 @@ mod tests {
     #[test]
     fn resolution_with_nested_deps() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -681,7 +687,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("package_with_optional".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -702,7 +708,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps_explicitly_provided() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![
@@ -730,7 +736,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps_incompatible() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![
@@ -746,7 +752,7 @@ mod tests {
     #[test]
     fn resolution_with_optional_deps_required_by_nested_deps() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![
@@ -778,7 +784,7 @@ mod tests {
     #[test]
     fn resolution_locked_to_older_version() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.1.0".into()))].into_iter(),
@@ -799,7 +805,7 @@ mod tests {
     #[test]
     fn resolution_retired_versions_not_used_by_default() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
@@ -821,7 +827,7 @@ mod tests {
     #[test]
     fn resolution_retired_versions_can_be_used_if_locked() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("package_with_retired".into(), Range::new("> 0.0.0".into()))].into_iter(),
@@ -845,7 +851,7 @@ mod tests {
     #[test]
     fn resolution_prerelease_can_be_selected() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("~> 0.3.0-rc1".into()))].into_iter(),
@@ -866,7 +872,7 @@ mod tests {
     #[test]
     fn resolution_exact_prerelease_can_be_selected() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_otp".into(), Range::new("0.3.0-rc1".into()))].into_iter(),
@@ -887,7 +893,7 @@ mod tests {
     #[test]
     fn resolution_not_found_dep() {
         let _ = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("unknown".into(), Range::new("~> 0.1".into()))].into_iter(),
@@ -899,7 +905,7 @@ mod tests {
     #[test]
     fn resolution_no_matching_version() {
         let _ = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 99.0".into()))].into_iter(),
@@ -911,7 +917,7 @@ mod tests {
     #[test]
     fn resolution_locked_version_doesnt_satisfy_requirements() {
         let err = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
@@ -933,7 +939,7 @@ mod tests {
     #[test]
     fn resolution_with_exact_dep() {
         let result = resolve_versions(
-            &*make_remote(),
+            &make_remote(),
             HashMap::new(),
             "app".into(),
             vec![("gleam_stdlib".into(), Range::new("0.1.0".into()))].into_iter(),
@@ -1034,7 +1040,7 @@ mod tests {
                 },
             ],
         };
-        let result = check_for_major_version_updates(&manifest, &*make_remote());
+        let result = check_for_major_version_updates(&manifest, &make_remote());
 
         // indirect package with major version will not be in the result even though a major
         // version of it is available
