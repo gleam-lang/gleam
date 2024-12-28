@@ -246,7 +246,14 @@ impl MakeLocker for ProjectIO {
 
 impl DownloadDependencies for ProjectIO {
     fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest> {
-        crate::dependencies::download(paths, NullTelemetry, None, Vec::new(), UseManifest::Yes)
+        crate::dependencies::download(
+            paths,
+            NullTelemetry,
+            None,
+            Vec::new(),
+            UseManifest::Yes,
+            false,
+        )
     }
 }
 

@@ -89,6 +89,7 @@ fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
         Mode::Dev,
         UseManifest::Yes,
         cli::Reporter::new(),
+        false,
     );
     let (_, manifest) = dependency_manager.get_manifest(&paths, &config, Vec::new())?;
     Ok((project, config, manifest))
@@ -219,6 +220,7 @@ pub fn update(packages: Vec<String>) -> Result<()> {
         None,
         packages.into_iter().map(EcoString::from).collect(),
         use_manifest,
+        true,
     )?;
 
     Ok(())
@@ -355,6 +357,8 @@ pub fn download<Telem: Telemetry>(
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
     use_manifest: UseManifest,
+    // If true we check for major version updates and print them to the console.
+    check_major_versions: bool,
 ) -> Result<Manifest> {
     let mode = Mode::Dev;
 
@@ -368,6 +372,7 @@ pub fn download<Telem: Telemetry>(
         mode,
         use_manifest,
         telemetry,
+        check_major_versions,
     );
 
     dependency_manager.download(paths, new_package, packages_to_update)
@@ -631,6 +636,7 @@ struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
     mode: Mode,
     use_manifest: UseManifest,
     telemetry: Telem,
+    check_major_versions: bool,
 }
 
 impl<Telem: Telemetry, P> DependencyManager<Telem, P>
@@ -643,6 +649,7 @@ where
         mode: Mode,
         use_manifest: UseManifest,
         telemetry: Telem,
+        check_major_versions: bool,
     ) -> Self {
         Self {
             runtime,
@@ -650,6 +657,7 @@ where
             mode,
             use_manifest,
             telemetry,
+            check_major_versions,
         }
     }
 
@@ -757,13 +765,15 @@ where
         }
         LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
-        let major_versions_available =
-            dependency::check_for_major_version_updates(&manifest, &self.package_fetcher);
-        if !major_versions_available.is_empty() {
-            eprintln!(
-                "{}",
-                pretty_print_major_versions_available(major_versions_available)
-            );
+        if self.check_major_versions {
+            let major_versions_available =
+                dependency::check_for_major_version_updates(&manifest, &self.package_fetcher);
+            if !major_versions_available.is_empty() {
+                eprintln!(
+                    "{}",
+                    pretty_print_major_versions_available(major_versions_available)
+                );
+            }
         }
 
         Ok(manifest)
