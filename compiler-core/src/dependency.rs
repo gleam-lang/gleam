@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError};
+use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError, rc::Rc};
 
 use crate::{manifest, Error, Result};
 
@@ -197,7 +197,7 @@ but it is locked to {locked_version}, which is incompatible.",
 }
 
 pub trait PackageFetcher {
-    fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, Box<dyn StdError>>;
+    fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, Box<dyn StdError>>;
 }
 
 struct DependencyProvider<'a, T: PackageFetcher> {
@@ -247,7 +247,9 @@ where
     ) -> Result<(), Box<dyn StdError>> {
         let mut packages = self.packages.borrow_mut();
         if packages.get(name).is_none() {
-            let mut package = self.remote.get_dependencies(name)?;
+            let package = self.remote.get_dependencies(name)?;
+            // mut (therefore clone) is required here in order to sort the releases
+            let mut package = (*package).clone();
             // Sort the packages from newest to oldest, pres after all others
             package.releases.sort_by(|a, b| a.version.cmp(&b.version));
             package.releases.reverse();
@@ -362,14 +364,14 @@ mod tests {
     use super::*;
 
     struct Remote {
-        deps: HashMap<String, hexpm::Package>,
+        deps: HashMap<String, Rc<hexpm::Package>>,
     }
 
     impl PackageFetcher for Remote {
-        fn get_dependencies(&self, package: &str) -> Result<hexpm::Package, Box<dyn StdError>> {
+        fn get_dependencies(&self, package: &str) -> Result<Rc<hexpm::Package>, Box<dyn StdError>> {
             self.deps
                 .get(package)
-                .cloned()
+                .map(Rc::clone)
                 .ok_or(Box::new(hexpm::ApiError::NotFound))
         }
     }
@@ -411,7 +413,8 @@ mod tests {
                         meta: (),
                     },
                 ],
-            },
+            }
+            .into(),
         );
         let _ = deps.insert(
             "gleam_otp".into(),
@@ -484,7 +487,8 @@ mod tests {
                         meta: (),
                     },
                 ],
-            },
+            }
+            .into(),
         );
         let _ = deps.insert(
             "package_with_retired".into(),
@@ -510,7 +514,8 @@ mod tests {
                         meta: (),
                     },
                 ],
-            },
+            }
+            .into(),
         );
 
         let _ = deps.insert(
@@ -534,7 +539,8 @@ mod tests {
                     outer_checksum: vec![1, 2, 3],
                     meta: (),
                 }],
-            },
+            }
+            .into(),
         );
 
         let simple_deps_for_major_version_check = vec![
@@ -577,7 +583,7 @@ mod tests {
 
     fn insert_simplified_deps(
         simple_deps: Vec<(&str, Vec<(&str, Vec<(&str, &str)>)>)>,
-        deps: &mut HashMap<String, hexpm::Package>,
+        deps: &mut HashMap<String, Rc<hexpm::Package>>,
     ) {
         for (name, releases) in simple_deps {
             let _ = deps.insert(
@@ -608,7 +614,8 @@ mod tests {
                             meta: (),
                         })
                         .collect(),
-                },
+                }
+                .into(),
             );
         }
     }
