@@ -85,11 +85,9 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     let dependency_manager = DependencyManager::new(
         runtime.handle().clone(),
         package_fetcher,
-        Mode::Dev,
-        UseManifest::Yes,
         cli::Reporter::new(),
-        false,
-    );
+    )
+    .should_use_manifest();
     let (_, manifest) = dependency_manager.get_manifest(&paths, &config, Vec::new())?;
     Ok((config, manifest))
 }
@@ -364,14 +362,11 @@ pub fn download<Telem: Telemetry>(
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
-    let dependency_manager = DependencyManager::new(
-        runtime.handle().clone(),
-        package_fetcher,
-        mode,
-        use_manifest,
-        telemetry,
-        check_major_versions,
-    );
+    let dependency_manager =
+        DependencyManager::new(runtime.handle().clone(), package_fetcher, telemetry)
+            .with_use_manifest(use_manifest)
+            .with_mode(mode)
+            .with_check_major_versions(check_major_versions);
 
     dependency_manager.download(paths, new_package, packages_to_update)
 }
@@ -658,22 +653,35 @@ impl<Telem: Telemetry, P> DependencyManager<Telem, P>
 where
     P: dependency::PackageFetcher,
 {
-    pub fn new(
-        runtime: tokio::runtime::Handle,
-        package_fetcher: P,
-        mode: Mode,
-        use_manifest: UseManifest,
-        telemetry: Telem,
-        check_major_versions: bool,
-    ) -> Self {
+    pub fn new(runtime: tokio::runtime::Handle, package_fetcher: P, telemetry: Telem) -> Self {
         Self {
             runtime,
             package_fetcher,
-            mode,
-            use_manifest,
+            mode: Mode::Dev,
+            use_manifest: UseManifest::No,
             telemetry,
-            check_major_versions,
+            check_major_versions: false,
         }
+    }
+
+    fn with_use_manifest(mut self, use_manifest: UseManifest) -> Self {
+        self.use_manifest = use_manifest;
+        self
+    }
+
+    fn with_mode(mut self, mode: Mode) -> Self {
+        self.mode = mode;
+        self
+    }
+
+    fn with_check_major_versions(mut self, check_major_versions: bool) -> Self {
+        self.check_major_versions = check_major_versions;
+        self
+    }
+
+    fn should_use_manifest(mut self) -> Self {
+        self.use_manifest = UseManifest::Yes;
+        self
     }
 
     fn get_manifest(
