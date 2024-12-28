@@ -749,6 +749,7 @@ fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
         None,
         Vec::new(),
         UseManifest::Yes,
+        true,
     )?;
     Ok(())
 }
