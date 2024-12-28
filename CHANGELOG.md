@@ -111,6 +111,12 @@
   with a local password, reducing risk of your Hex password being compromised.
   ([Louis Pilfold](https://github.com/lpil))
 
+- The build tool now sets the `REBAR_SKIP_PROJECT_PLUGINS` environment variable
+  when using rebar3 to compile Erlang dependencies. With future versions of
+  rebar3 this will cause it to skip project plugins, significantly reducing the
+  amount of code it'll need to download and compile, improving compile times.
+  ([Tristan Sloughter](https://github.com/tsloughter))
+
 ### Language Server
 
 - The language server now provides type information when hovering over argument
