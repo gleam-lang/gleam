@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4070
 expression: "\nimport gleam/option\nimport gleam/dynamic\nimport gleam/dict\n\npub type Something\n\npub type Wibble(value) {\n  Wibble(\n    maybe: option.Option(Something),\n    map: dict.Dict(String, List(value)),\n    unknown: List(dynamic.Dynamic),\n  )\n}\n"
 ---
 ----- BEFORE ACTION
@@ -41,6 +42,5 @@ fn wibble_decoder() -> decode.Decoder(Wibble(value)) {
   use maybe <- decode.field("maybe", decode.optional(todo as "Decoder for Something"))
   use map <- decode.field("map", decode.dict(decode.string, decode.list(todo as "Decoder for value")))
   use unknown <- decode.field("unknown", decode.list(decode.dynamic))
-
   decode.success(Wibble(maybe:, map:, unknown:))
 }

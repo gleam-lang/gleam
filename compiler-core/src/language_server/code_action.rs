@@ -2981,7 +2981,6 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
 
 fn {name}() -> {decoder_type}({type_name}{parameters}) {{
 {decoders}
-
   {decode_module}.success({constructor_name}({fields}:))
 }}",
             type_name = custom_type.name,

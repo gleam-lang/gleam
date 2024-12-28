@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4041
 expression: "\npub type Person {\n  Person(name: String, age: Int, height: Float, is_cool: Bool, brain: BitArray)\n}\n"
 ---
 ----- BEFORE ACTION
@@ -23,6 +24,5 @@ fn person_decoder() -> decode.Decoder(Person) {
   use height <- decode.field("height", decode.float)
   use is_cool <- decode.field("is_cool", decode.bool)
   use brain <- decode.field("brain", decode.bit_array)
-
   decode.success(Person(name:, age:, height:, is_cool:, brain:))
 }

@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4099
 expression: "\npub type Wibble {\n  Wibble(tuple: #(Int, Float, #(String, Bool)))\n}\n"
 ---
 ----- BEFORE ACTION
@@ -30,6 +31,5 @@ fn wibble_decoder() -> decode.Decoder(Wibble) {
 
     decode.success(#(a, b, c))
   })
-
   decode.success(Wibble(tuple:))
 }

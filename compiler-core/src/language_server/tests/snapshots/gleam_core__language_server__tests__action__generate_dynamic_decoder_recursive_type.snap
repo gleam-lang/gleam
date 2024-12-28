@@ -1,5 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4119
 expression: "\nimport gleam/option\n\npub type LinkedList {\n  LinkedList(value: Int, next: option.Option(LinkedList))\n}\n"
 ---
 ----- BEFORE ACTION
@@ -24,6 +25,5 @@ pub type LinkedList {
 fn linked_list_decoder() -> decode.Decoder(LinkedList) {
   use value <- decode.field("value", decode.int)
   use next <- decode.field("next", decode.optional(linked_list_decoder()))
-
   decode.success(LinkedList(value:, next:))
 }
