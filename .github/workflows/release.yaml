@@ -62,7 +62,7 @@ jobs:
         uses: clechasseur/rs-cargo@v2
         with:
           command: build
-          args: --release --target ${{ matrix.target }}
+          args: --release --target ${{ matrix.target }} --force
           use-cross: ${{ matrix.use-cross }}
 
       - name: Verify binary architecture
