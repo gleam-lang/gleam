@@ -17,7 +17,7 @@ use crate::{
 
 pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
     let paths = crate::find_project_paths()?;
-    crate::dependencies::download(&paths, telemetry, None, Vec::new(), UseManifest::Yes)
+    crate::dependencies::download(&paths, telemetry, None, Vec::new(), UseManifest::Yes, false)
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
