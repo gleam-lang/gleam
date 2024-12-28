@@ -2,6 +2,7 @@ use std::{
     cell::RefCell,
     collections::{HashMap, HashSet},
     process::Command,
+    rc::Rc,
     time::Instant,
 };
 
@@ -1330,7 +1331,7 @@ async fn lookup_package(
 }
 
 struct PackageFetcher {
-    runtime_cache: RefCell<HashMap<String, hexpm::Package>>,
+    runtime_cache: RefCell<HashMap<String, Rc<hexpm::Package>>>,
     runtime: tokio::runtime::Handle,
     http: HttpClient,
 }
@@ -1347,7 +1348,7 @@ impl PackageFetcher {
     /// Caches the result of `get_dependencies` so that we don't need to make a network request.
     /// Currently dependencies are fetched during initial version resolution, and then during check
     /// for major version availability.
-    fn cache_package(&self, package: &str, result: hexpm::Package) {
+    fn cache_package(&self, package: &str, result: Rc<hexpm::Package>) {
         let mut runtime_cache = self.runtime_cache.borrow_mut();
         let _ = runtime_cache.insert(package.to_string(), result);
     }
@@ -1383,7 +1384,7 @@ impl dependency::PackageFetcher for PackageFetcher {
     fn get_dependencies(
         &self,
         package: &str,
-    ) -> Result<hexpm::Package, Box<dyn std::error::Error>> {
+    ) -> Result<Rc<hexpm::Package>, Box<dyn std::error::Error>> {
         {
             let runtime_cache = self.runtime_cache.borrow();
             let result = runtime_cache.get(package);
@@ -1402,9 +1403,11 @@ impl dependency::PackageFetcher for PackageFetcher {
             .map_err(Box::new)?;
 
         match hexpm::get_package_response(response, HEXPM_PUBLIC_KEY) {
-            Ok(a) => {
-                self.cache_package(package, a.clone());
-                Ok(a)
+            Ok(pkg) => {
+                let pkg = Rc::new(pkg);
+                let pkg_ref = Rc::clone(&pkg);
+                self.cache_package(package, pkg);
+                Ok(pkg_ref)
             }
             Err(e) => match e {
                 hexpm::ApiError::NotFound => {
