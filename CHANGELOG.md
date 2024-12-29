@@ -291,6 +291,10 @@
   when it should have.
   ([Jiangda Wang](https://github.com/Frank-III))
 
+- Fixed a bug where `gleam new` would generate the github `test` workflow
+  configuration with incompatible Erlang OTP and Elixir versions.
+  ([John Strunk](https://github.com/jrstrunk))
+
 ## v1.6.1 - 2024-11-19
 
 ### Bug fixed
