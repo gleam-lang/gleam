@@ -24,6 +24,10 @@
   code for use expressions ending with a trailing comma.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where floats outside of Erlang's floating point range were not
+  causing errors.
+  ([shayan](https://github.com/massivefermion))
+
 - Fixed a bug where build tool could fail to add new dependencies when
   dependencies with optional dependencies are present in the manifest.
   ([Louis Pilfold](https://github.com/lpil))

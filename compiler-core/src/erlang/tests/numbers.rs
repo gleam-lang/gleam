@@ -43,22 +43,12 @@ pub fn main() {
 fn numbers_with_scientific_notation() {
     assert_erl!(
         r#"
-const i = 100.001e523
-const j = -100.001e-523
-
-const k = 100.001e1_230
-const l = -100.001e-1_230
-
-const m = 100.001e123_456_789
-const n = -100.001e-123_456_789
+const i = 100.001e223
+const j = -100.001e-223
 
 pub fn main() {
   i
   j
-  k
-  l
-  m
-  n
 }
 "#
     );
