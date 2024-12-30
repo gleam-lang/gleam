@@ -133,7 +133,8 @@ export class BitArray {
   sliceAfter(index) {
     const buffer = new Uint8Array(
       this.buffer.buffer,
-      this.buffer.byteOffset + index
+      this.buffer.byteOffset + index,
+      this.buffer.byteLength - index
     );
     return new BitArray(buffer);
   }
