@@ -492,9 +492,21 @@ impl Error {
             }
 
             ResolutionError::Failure(err) => {
-                let msg =
-                    format!("An unrecoverable error happened while solving dependencies: {err}");
-                Error::DependencyResolutionFailed(msg)
+                // TODO: something better than looking in err string
+                let default_msg = format!("Dependency resolution was cancelled. {err}");
+                if err.contains(", but it is locked to") {
+                    // first word is package name
+                    match err.split_whitespace().next() {
+                        Some(pkg) => Error::DependencyResolutionFailedWithLocked {
+                            error: format!("Unable to find compatible versions due to package versions locked by manifest.toml.\n\
+                             Consider unlocking the responsible locked package(s) :\n{}", pkg),
+                            locked_conflicts: vec![pkg.into()],
+                        },
+                        None => Error::DependencyResolutionFailed("no pkg".to_string()),
+                    }
+                } else {
+                    Error::DependencyResolutionFailed(default_msg)
+                }
             }
         }
     }

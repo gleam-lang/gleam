@@ -130,6 +130,8 @@ where
                     .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {e}")))?
                     .contains(locked_version);
                 if !compatible {
+                    // see [`crate::error::dependency_resolution_failed`] when
+                    // changing this error's text fmt
                     return Err(ResolutionError::Failure(format!(
                         "{name} is specified with the requirement `{range}`, \
 but it is locked to {locked_version}, which is incompatible.",
@@ -790,11 +792,17 @@ mod tests {
         .unwrap_err();
 
         match err {
-        Error::DependencyResolutionFailed(msg) => assert_eq!(
-            msg,
-            "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
-        ),
-        _ => panic!("wrong error: {err}"),
+            Error::DependencyResolutionFailedWithLocked {
+                error,
+                locked_conflicts,
+            } => {
+                assert_eq!(
+                    error,
+                    format!("Unable to find compatible versions due to package versions locked by manifest.toml.\n\
+                             Consider unlocking the responsible locked package(s) :\n{}", locked_conflicts[0]),
+                );
+            }
+            _ => panic!("wrong error: {err}"),
         }
     }
 
