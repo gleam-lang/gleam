@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- Fixed a bug on JavaScript where a trailing `:bytes` segment would give the
+  wrong pattern match result for a sliced bit array.
+
 ## 1.7.0-rc1 - 2024-12-29
 
 ### Compiler
