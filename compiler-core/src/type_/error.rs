@@ -582,6 +582,10 @@ pub enum Error {
     DeprecatedVariantOnDeprecatedType {
         location: SrcSpan,
     },
+
+    ErlangFloatUnsafe {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -1040,7 +1044,8 @@ impl Error {
             | Error::UseFnIncorrectArity { location, .. }
             | Error::BadName { location, .. }
             | Error::AllVariantsDeprecated { location }
-            | Error::DeprecatedVariantOnDeprecatedType { location } => location.start,
+            | Error::DeprecatedVariantOnDeprecatedType { location }
+            | Error::ErlangFloatUnsafe { location } => location.start,
             Error::UnknownLabels { unknown, .. } => {
                 unknown.iter().map(|(_, s)| s.start).min().unwrap_or(0)
             }
@@ -1679,5 +1684,27 @@ pub fn check_javascript_int_safety(int_value: &BigInt, location: SrcSpan, proble
 
     if *int_value < js_min_safe_integer.into() || *int_value > js_max_safe_integer.into() {
         problems.warning(Warning::JavaScriptIntUnsafe { location });
+    }
+}
+
+/// When targeting Erlang, adds an error if the given Float value is outside the range
+/// -1.7976931348623157e308 to 1.7976931348623157e308 which is the allowed range for
+/// Erlang's floating point numbers
+///
+pub fn check_erlang_float_safety(
+    string_value: &EcoString,
+    location: SrcSpan,
+    problems: &mut Problems,
+) {
+    let erl_min_float = -1.7976931348623157e308f64;
+    let erl_max_float = 1.7976931348623157e308f64;
+
+    let float_value: f64 = string_value
+        .replace("_", "")
+        .parse()
+        .expect("Unable to parse string to floating point value");
+
+    if float_value < erl_min_float || float_value > erl_max_float {
+        problems.error(Error::ErlangFloatUnsafe { location });
     }
 }

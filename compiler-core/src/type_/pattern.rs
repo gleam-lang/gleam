@@ -483,6 +483,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
             Pattern::Float { location, value } => {
                 unify(type_, float()).map_err(|e| convert_unify_error(e, location))?;
+
+                if self.environment.target == Target::Erlang
+                    && !self.implementations.uses_erlang_externals
+                {
+                    check_erlang_float_safety(&value, location, self.problems)
+                }
+
                 Ok(Pattern::Float { location, value })
             }
 

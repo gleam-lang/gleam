@@ -7,6 +7,9 @@
 - Fixed a bug on JavaScript where a trailing `:bytes` segment would give the
   wrong pattern match result for a sliced bit array.
 
+- Fixed a bug where floats outside of Erlang's floating point range were not
+  causing errors.
+
 ## 1.7.0-rc1 - 2024-12-29
 
 ### Compiler

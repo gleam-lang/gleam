@@ -1437,6 +1437,27 @@ The error from the encryption library was:
                 .iter()
                 .map(|error| {
                     match error {
+                TypeError::ErlangFloatUnsafe {
+                     location,  ..
+                } => Diagnostic {
+                        title: "Float is outside Erlang's floating point range".into(),
+                        text: wrap("This float value is too large to be represented by \
+Erlang's floating point type. To avoid this error float values must be in the range \
+-1.7976931348623157e308f64 - 1.7976931348623157e308f64."),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: None,
+                                span: *location,
+                            },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
+
                 TypeError::SrcImportingTest {
                     location,
                     src_module,
@@ -3874,7 +3895,7 @@ or you can publish it using a different version number"),
                 level: Level::Error,
                 location: None,
                 hint: Some("Please add the --replace flag if you want to replace the release.".into()),
-            }],
+            }]
         }
     }
 }
