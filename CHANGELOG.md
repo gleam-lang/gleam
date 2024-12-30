@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 1.7.0-rc2 - 2024-12-30
 
 ### Compiler
 
