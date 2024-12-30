@@ -2655,3 +2655,18 @@ todo
 "#
     );
 }
+
+#[test]
+fn out_of_range_erlang_float() {
+    assert_error!(r#"1.8e308"#);
+}
+
+#[test]
+fn out_of_range_erlang_float_in_pattern() {
+    assert_error!(r#"let assert [1.8e308, b] = [x, y]"#);
+}
+
+#[test]
+fn out_of_range_erlang_float_in_const() {
+    assert_module_error!(r#"const x = 1.8e308"#);
+}

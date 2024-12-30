@@ -327,7 +327,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             UntypedExpr::Float {
                 location, value, ..
-            } => Ok(self.infer_float(value, location)),
+            } => {
+                if self.environment.target == Target::Erlang
+                    && !self.current_function_definition.has_erlang_external
+                {
+                    check_erlang_float_safety(&value, location, self.problems)
+                }
+
+                Ok(self.infer_float(value, location))
+            }
 
             UntypedExpr::String {
                 location, value, ..
@@ -2861,7 +2869,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             Constant::Float {
                 location, value, ..
-            } => Ok(Constant::Float { location, value }),
+            } => {
+                if self.environment.target == Target::Erlang {
+                    check_erlang_float_safety(&value, location, self.problems)
+                }
+
+                Ok(Constant::Float { location, value })
+            }
 
             Constant::String {
                 location, value, ..

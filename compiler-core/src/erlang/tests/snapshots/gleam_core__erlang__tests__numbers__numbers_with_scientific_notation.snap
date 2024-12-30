@@ -1,25 +1,16 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
-expression: "\nconst i = 100.001e523\nconst j = -100.001e-523\n\nconst k = 100.001e1_230\nconst l = -100.001e-1_230\n\nconst m = 100.001e123_456_789\nconst n = -100.001e-123_456_789\n\npub fn main() {\n  i\n  j\n  k\n  l\n  m\n  n\n}\n"
+expression: "\nconst i = 100.001e223\nconst j = -100.001e-223\n\npub fn main() {\n  i\n  j\n}\n"
+snapshot_kind: text
 ---
 ----- SOURCE CODE
 
-const i = 100.001e523
-const j = -100.001e-523
-
-const k = 100.001e1_230
-const l = -100.001e-1_230
-
-const m = 100.001e123_456_789
-const n = -100.001e-123_456_789
+const i = 100.001e223
+const j = -100.001e-223
 
 pub fn main() {
   i
   j
-  k
-  l
-  m
-  n
 }
 
 
@@ -29,12 +20,8 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 11).
+-file("/root/project/test/my/mod.gleam", 5).
 -spec main() -> float().
 main() ->
-    100.001e523,
-    -100.001e-523,
-    100.001e1230,
-    -100.001e-1230,
-    100.001e123456789,
-    -100.001e-123456789.
+    100.001e223,
+    -100.001e-223.
