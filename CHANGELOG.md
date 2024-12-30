@@ -113,6 +113,11 @@
 
   ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
 
+- HexDocs documentation of Gleam packages now uses the ExDocs search data model,
+  allowing for global indexing of Gleam packages in HexDocs, and
+  making Gleam packages discoverable through global search of HexDocs.
+  ([Diemo Gebhardt](https://github.com/diemogebhardt))
+
 ### Language server
 
 - The language server can now generate the definition of functions that do not
