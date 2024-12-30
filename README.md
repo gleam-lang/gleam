@@ -82,7 +82,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/chazwatkins">Chaz Watkins</a> -
   <a href="https://github.com/choonkeat">Chew Choon Keat</a> -
   <a href="https://github.com/ceedon">Chris Donnelly</a> -
-  <a href="https://github.com/chaynes3">Chris Haynes</a> -
   <a href="https://github.com/Morzaram">Chris King</a> -
   <a href="https://github.com/chrislloyd">Chris Lloyd</a> -
   <a href="https://github.com/utilForever">Chris Ohk</a> -
@@ -119,6 +118,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/dmmulroy">Dillon Mulroy</a> -
   <a href="https://github.com/gothy">Dima Utkin</a> -
   <a href="https://github.com/poroh">Dmitry Poroh</a> -
+  <a href="https://github.com/DoctorCobweb">DoctorCobweb</a> -
   <a href="https://github.com/floodfx">Donnie Flood</a> -
   <a href="https://github.com/ds2600">ds2600</a> -
   <a href="https://github.com/ducdetronquito">ducdetronquito</a> -
