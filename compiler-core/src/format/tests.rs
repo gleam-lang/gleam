@@ -6378,3 +6378,17 @@ fn function_capture_formatted_like_regular_calls_inside_a_long_list() {
 "#
     );
 }
+
+#[test]
+fn function_capture_formatted_like_regular_calls_in_a_pipe() {
+    assert_format!(
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> list.fold(from: 1, over: _, with: fn(a, b) {
+    // a comment!
+    a + b
+  })
+}
+"#
+    );
+}
