@@ -6348,6 +6348,19 @@ fn function_capture_formatted_like_regular_calls_2() {
 }
 
 #[test]
+fn function_capture_formatted_like_regular_calls_3() {
+    assert_format!(
+        r#"pub fn main() {
+  list.fold(my_list, _, fn(a) {
+    io.print("Meh")
+    io.print("Meh")
+  })
+}
+"#
+    );
+}
+
+#[test]
 fn function_capture_formatted_like_regular_calls_inside_a_long_list() {
     assert_format!(
         r#"pub fn main() {
