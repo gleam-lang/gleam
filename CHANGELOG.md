@@ -246,7 +246,6 @@
   fn person_decoder() -> decode.Decoder(Person) {
     use name <- decode.field("name", decode.string)
     use age <- decode.field("age", decode.int)
-
     decode.success(Person(name:, age:))
   }
   ```
