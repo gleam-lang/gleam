@@ -436,7 +436,7 @@ impl Error {
 
                 if !locked_conflicts.is_empty() {
                     Error::DependencyResolutionFailedWithLocked {
-                        error: wrap_format!(
+                        error: format!(
                             "Unable to find compatible versions due to package versions locked by manifest.toml.\n\
                              Consider unlocking the responsible locked package(s) :\n{}",
                             locked_conflicts.iter().map(|s| format!("- {s}")).join("\n")
@@ -445,7 +445,7 @@ impl Error {
                     }
                 } else {
                     Error::DependencyResolutionFailed(
-                        wrap_format!(
+                        format!(
                             "Unable to find compatible versions for the version constraints in your gleam.toml.\n\
                              The conflicting packages are:\n{}",
                             conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n")
@@ -492,14 +492,13 @@ impl Error {
             }
 
             ResolutionError::Failure(err) => {
-                // TODO: something better than looking in err string
                 let default_msg = format!("Dependency resolution was cancelled. {err}");
                 if err.contains(", but it is locked to") {
                     // first word is package name
                     match err.split_whitespace().next() {
                         Some(pkg) => Error::DependencyResolutionFailedWithLocked {
                             error: format!("Unable to find compatible versions due to package versions locked by manifest.toml.\n\
-                             Consider unlocking the responsible locked package(s) :\n{}", pkg),
+                             Consider unlocking the responsible locked package(s) :\n- {}", pkg),
                             locked_conflicts: vec![pkg.into()],
                         },
                         None => Error::DependencyResolutionFailed("no pkg".to_string()),
