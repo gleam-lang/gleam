@@ -1,5 +1,12 @@
 # Changelog
 
+## Unreleased
+
+### Formatter
+
+- Function captures are now formatted like regular function calls.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## 1.7.0-rc2 - 2024-12-30
 
 ### Compiler
