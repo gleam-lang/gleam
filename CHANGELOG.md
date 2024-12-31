@@ -8,7 +8,7 @@
   wrong pattern match result for a sliced bit array.
 
 - Fixed a bug where floats outside of Erlang's floating point range were not
-  causing errors.
+  causing errors.([shayan](https://github.com/massivefermion))
 
 ## 1.7.0-rc1 - 2024-12-29
 
