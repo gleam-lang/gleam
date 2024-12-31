@@ -14,6 +14,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
 use crate::parse::SpannedString;
+use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
@@ -728,6 +729,7 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
 }
 
 pub type UntypedCustomType = CustomType<()>;
+pub type TypedCustomType = CustomType<Arc<Type>>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 /// A newly defined type with one or more constructors.
@@ -1705,6 +1707,7 @@ pub enum Pattern<Type> {
         location: SrcSpan,
         name: EcoString,
         type_: Type,
+        origin: VariableOrigin,
     },
 
     /// A reference to a variable in a bit array. This is always a variable

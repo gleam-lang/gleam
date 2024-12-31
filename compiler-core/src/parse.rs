@@ -68,6 +68,7 @@ use crate::ast::{
 use crate::build::Target;
 use crate::error::wrap;
 use crate::parse::extra::ModuleExtra;
+use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
 use crate::type_::Deprecation;
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
@@ -1123,6 +1124,7 @@ where
                             )
                         }
                         _ => Pattern::Variable {
+                            origin: VariableOrigin::Variable(name.clone()),
                             location: SrcSpan { start, end },
                             name,
                             type_: (),
@@ -1777,6 +1779,7 @@ where
                         location: SrcSpan { start, end },
                         label: Some(name.clone()),
                         value: UntypedPattern::Variable {
+                            origin: VariableOrigin::LabelShorthand(name.clone()),
                             name,
                             location: SrcSpan { start, end },
                             type_: (),

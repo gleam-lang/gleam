@@ -23,6 +23,9 @@ expression: "\nlet a = \"inner 'quotes'\"\n"
                 },
                 name: "a",
                 type_: (),
+                origin: Variable(
+                    "a",
+                ),
             },
             kind: Let,
             annotation: None,

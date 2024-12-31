@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let value = 1\n  let value1 = 2\n  wibble(value, _, value1)\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let value = 1
+  let value1 = 2
+  wibble(value, _, value1)
+  ↑                       
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  let value = 1
+  let value1 = 2
+  fn(value2) { wibble(value, value2, value1) }
+}

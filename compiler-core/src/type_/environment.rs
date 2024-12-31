@@ -137,8 +137,9 @@ pub enum EntityKind {
     ImportedValue,
     PrivateType,
     Variable {
-        /// How the variable could be rewritten to ignore it when unused
-        how_to_ignore: Option<EcoString>,
+        /// The origin of the variable so we know how it could be
+        /// rewritten to ignore it when unused.
+        origin: VariableOrigin,
     },
 }
 
@@ -693,10 +694,7 @@ impl Environment<'_> {
                     location,
                 },
                 EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::Variable { how_to_ignore } => Warning::UnusedVariable {
-                    location,
-                    how_to_ignore,
-                },
+                EntityKind::Variable { origin } => Warning::UnusedVariable { location, origin },
             };
 
             problems.warning(warning);

@@ -438,6 +438,12 @@ assertEqual(
   new BitArray(new Uint8Array([1, 2, 3])).sliceAfter(1),
   new BitArray(new Uint8Array([2, 3])),
 );
+assertEqual(
+  new BitArray(new Uint8Array([1, 2, 3, 4, 5]))
+    .binaryFromSlice(1, 4)
+    .sliceAfter(1),
+  new BitArray(new Uint8Array([3, 4]))
+);
 
 // sizedInt()
 

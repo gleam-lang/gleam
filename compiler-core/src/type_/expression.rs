@@ -2434,6 +2434,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location: record_location,
                 name: RECORD_UPDATE_VARIABLE.into(),
                 type_: record_type.clone(),
+                origin: VariableOrigin::Generated,
             },
             annotation: None,
             kind: AssignmentKind::Generated,
@@ -3654,7 +3655,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             body_typer.environment.init_usage(
                                 name.clone(),
                                 EntityKind::Variable {
-                                    how_to_ignore: Some(format!("_{name}").into()),
+                                    origin: VariableOrigin::Variable(name.clone()),
                                 },
                                 arg.location,
                                 body_typer.problems,

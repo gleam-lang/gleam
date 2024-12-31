@@ -362,6 +362,7 @@ where
             ("ERL_LIBS", "../*/ebin".into()),
             ("REBAR_BARE_COMPILER_OUTPUT_DIR", package_build.to_string()),
             ("REBAR_PROFILE", "prod".into()),
+            ("REBAR_SKIP_PROJECT_PLUGINS", "true".into()),
             ("TERM", "dumb".into()),
         ];
         let args = [

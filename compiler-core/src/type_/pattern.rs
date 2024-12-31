@@ -58,6 +58,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         name: &str,
         type_: Arc<Type>,
         location: SrcSpan,
+        origin: VariableOrigin,
     ) -> Result<(), UnifyError> {
         self.check_name_case(location, &EcoString::from(name), Named::Variable);
 
@@ -66,9 +67,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register usage for the unused variable detection
                 self.environment.init_usage(
                     name.into(),
-                    EntityKind::Variable {
-                        how_to_ignore: Some(format!("_{name}").into()),
-                    },
+                    EntityKind::Variable { origin },
                     location,
                     self.problems,
                 );
@@ -351,14 +350,20 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             }
             Pattern::Invalid { location, .. } => Ok(Pattern::Invalid { type_, location }),
 
-            Pattern::Variable { name, location, .. } => {
-                self.insert_variable(&name, type_.clone(), location)
+            Pattern::Variable {
+                name,
+                location,
+                origin,
+                ..
+            } => {
+                self.insert_variable(&name, type_.clone(), location, origin.clone())
                     .map_err(|e| convert_unify_error(e, location))?;
 
                 Ok(Pattern::Variable {
                     type_,
                     name,
                     location,
+                    origin,
                 })
             }
 
@@ -404,14 +409,24 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 // The left hand side may assign a variable, which is the prefix of the string
                 if let Some((left, left_location)) = &left_side_assignment {
-                    self.insert_variable(left.as_ref(), string(), *left_location)
-                        .map_err(|e| convert_unify_error(e, location))?;
+                    self.insert_variable(
+                        left.as_ref(),
+                        string(),
+                        *left_location,
+                        VariableOrigin::AssignmentPattern,
+                    )
+                    .map_err(|e| convert_unify_error(e, location))?;
                 }
 
                 // The right hand side may assign a variable, which is the suffix of the string
                 if let AssignName::Variable(right) = &right_side_assignment {
-                    self.insert_variable(right.as_ref(), string(), right_location)
-                        .map_err(|e| convert_unify_error(e, location))?;
+                    self.insert_variable(
+                        right.as_ref(),
+                        string(),
+                        right_location,
+                        VariableOrigin::Variable(right.clone()),
+                    )
+                    .map_err(|e| convert_unify_error(e, location))?;
                 } else if let AssignName::Discard(right) = &right_side_assignment {
                     self.check_name_case(right_location, right, Named::Discard);
                 };
@@ -432,8 +447,13 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 location,
             } => {
                 let pattern = self.unify(*pattern, type_, subject_variable)?;
-                self.insert_variable(&name, pattern.type_().clone(), location)
-                    .map_err(|e| convert_unify_error(e, pattern.location()))?;
+                self.insert_variable(
+                    &name,
+                    pattern.type_().clone(),
+                    location,
+                    VariableOrigin::AssignmentPattern,
+                )
+                .map_err(|e| convert_unify_error(e, pattern.location()))?;
                 Ok(Pattern::Assign {
                     name,
                     pattern: Box::new(pattern),

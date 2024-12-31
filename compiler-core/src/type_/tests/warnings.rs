@@ -2948,3 +2948,44 @@ fn each(list, _fun) { list }
 "#
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3425
+fn unused_variable_assignment_pattern() {
+    assert_warning!(
+        "
+type Wibble {
+  Wibble(a: Int, b: Int)
+}
+
+pub fn main() {
+  let Wibble(a:, ..) as w = Wibble(1, 2)
+  a
+}
+"
+    );
+}
+
+#[test]
+fn unused_variable_string_prefix_pattern() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let assert "hello" as hello <> rest = "hello, world"
+  rest
+}
+"#
+    );
+}
+
+#[test]
+fn unused_variable_string_prefix_pattern2() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let assert "hello" as hello <> rest = "hello, world"
+  hello
+}
+"#
+    );
+}

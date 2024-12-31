@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{NullTelemetry, Target},
-    error::{Error, FileIoAction, FileKind},
+    error::{parse_os, Error, FileIoAction, FileKind, OS},
     io::{
         BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
         OutputFile, ReadDir, Stdio, WrappedReader,
@@ -52,6 +52,32 @@ pub fn get_project_root(path: Utf8PathBuf) -> Result<Utf8PathBuf, Error> {
     walk(path.clone()).ok_or(Error::UnableToFindProjectRoot {
         path: path.to_string(),
     })
+}
+
+pub fn get_os() -> OS {
+    parse_os(std::env::consts::OS, get_distro_str().as_str())
+}
+
+// try to extract the distro id from /etc/os-release
+pub fn extract_distro_id(os_release: String) -> String {
+    let distro = os_release.lines().find(|line| line.starts_with("ID="));
+    if let Some(distro) = distro {
+        let id = distro.split('=').nth(1).unwrap_or("").replace("\"", "");
+        return id;
+    }
+    "".to_string()
+}
+
+pub fn get_distro_str() -> String {
+    let path = Utf8Path::new("/etc/os-release");
+    if std::env::consts::OS != "linux" || !path.exists() {
+        return "other".to_string();
+    }
+    let os_release = read(path);
+    match os_release {
+        Ok(os_release) => extract_distro_id(os_release),
+        Err(_) => "other".to_string(),
+    }
 }
 
 /// A `FileWriter` implementation that writes to the file system.
@@ -183,6 +209,7 @@ impl CommandExecutor for ProjectIO {
             Err(error) => Err(match error.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: program.to_string(),
+                    os: get_os(),
                 },
 
                 other => Error::ShellCommand {

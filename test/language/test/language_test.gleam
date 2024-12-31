@@ -1021,6 +1021,14 @@ fn bit_array_tests() -> List(Test) {
           _ -> False
         })
       }),
+    "pattern match using `:bytes` on a sliced bit array"
+      |> example(fn() {
+        assert_equal(<<3, 4>>, {
+          let assert <<_, b:bytes-3, _>> = <<1, 2, 3, 4, 5>>
+          let assert <<_, rest:bytes>> = b
+          rest
+        })
+      }),
   ]
 }
 

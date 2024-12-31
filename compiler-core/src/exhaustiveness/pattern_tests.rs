@@ -1,6 +1,6 @@
 use crate::{
     ast::{SrcSpan, TypedPattern},
-    type_,
+    type_::{self, error::VariableOrigin},
 };
 
 use super::pattern::*;
@@ -77,6 +77,7 @@ fn register_variable() {
         location: SrcSpan::new(123, 456),
         name: "wibble".into(),
         type_: type_::int(),
+        origin: VariableOrigin::Variable("wibble".into()),
     };
     let id = patterns.register(&input);
     assert_eq!(

@@ -14,10 +14,16 @@ use camino::Utf8PathBuf;
 use ecow::EcoString;
 use itertools::Itertools;
 
+#[derive(Default)]
+struct CompileWithMarkdownPagesOpts {
+    hex_publish: Option<DocContext>,
+}
+
 fn compile_with_markdown_pages(
     config: PackageConfig,
     modules: Vec<(&str, &str)>,
     markdown_pages: Vec<(&str, &str)>,
+    opts: CompileWithMarkdownPagesOpts,
 ) -> EcoString {
     let fs = InMemoryFileSystem::new();
     for (name, src) in modules {
@@ -83,7 +89,11 @@ fn compile_with_markdown_pages(
         &docs_pages,
         pages_fs,
         SystemTime::UNIX_EPOCH,
-        DocContext::HexPublish,
+        if let Some(doc_context) = opts.hex_publish {
+            doc_context
+        } else {
+            DocContext::HexPublish
+        },
     )
     .into_iter()
     .filter(|file| file.path.extension() == Some("html"))
@@ -103,12 +113,18 @@ fn compile_with_markdown_pages(
 }
 
 pub fn compile(config: PackageConfig, modules: Vec<(&str, &str)>) -> EcoString {
-    compile_with_markdown_pages(config, modules, vec![])
+    compile_with_markdown_pages(
+        config,
+        modules,
+        vec![],
+        CompileWithMarkdownPagesOpts::default(),
+    )
 }
 
 #[test]
 fn hello_docs() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         r#"
@@ -124,7 +140,8 @@ pub fn one() {
 // https://github.com/gleam-lang/gleam/issues/2347
 #[test]
 fn tables() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         r#"
@@ -144,7 +161,8 @@ pub fn one() {
 // https://github.com/gleam-lang/gleam/issues/2202
 #[test]
 fn long_function_wrapping() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         r#"
@@ -170,7 +188,8 @@ pub fn lazy_or(first: Option(a), second: fn() -> Option(a)) -> Option(a) {
 
 #[test]
 fn internal_definitions_are_not_included() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         r#"
@@ -193,7 +212,8 @@ pub fn one() { 1 }
 // https://github.com/gleam-lang/gleam/issues/2561
 #[test]
 fn discarded_arguments_are_not_shown() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![("app.gleam", "pub fn discard(_discarded: a) -> Int { 1 }")];
     insta::assert_snapshot!(compile(config, modules));
 }
@@ -201,7 +221,8 @@ fn discarded_arguments_are_not_shown() {
 // https://github.com/gleam-lang/gleam/issues/2631
 #[test]
 fn docs_of_a_type_constructor_are_not_used_by_the_following_function() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         r#"
@@ -220,7 +241,8 @@ pub fn main() { todo }
 
 #[test]
 fn markdown_code_from_standalone_pages_is_not_trimmed() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let pages = vec![(
         "one",
         "
@@ -231,12 +253,18 @@ pub fn indentation_test() {
 }
 ```",
     )];
-    insta::assert_snapshot!(compile_with_markdown_pages(config, vec![], pages));
+    insta::assert_snapshot!(compile_with_markdown_pages(
+        config,
+        vec![],
+        pages,
+        CompileWithMarkdownPagesOpts::default()
+    ));
 }
 
 #[test]
 fn markdown_code_from_function_comment_is_trimmed() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         "
@@ -256,7 +284,8 @@ pub fn indentation_test() {
 
 #[test]
 fn markdown_code_from_module_comment_is_trimmed() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         "
@@ -273,7 +302,8 @@ fn markdown_code_from_module_comment_is_trimmed() {
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_constant() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         "
@@ -289,7 +319,8 @@ pub const wobble = 1
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_type() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         "
@@ -308,7 +339,8 @@ pub type Wibble {
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_function() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         "
@@ -324,7 +356,8 @@ pub fn wobble(arg) {}
 
 #[test]
 fn doc_for_commented_definitions_is_not_included_in_next_type_alias() {
-    let config = PackageConfig::default();
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     let modules = vec![(
         "app.gleam",
         "
@@ -341,6 +374,7 @@ pub type Wibble = Int
 #[test]
 fn source_link_for_github_repository() {
     let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     config.repository = Repository::GitHub {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
@@ -355,6 +389,7 @@ fn source_link_for_github_repository() {
 #[test]
 fn source_link_for_github_repository_with_path() {
     let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
     config.repository = Repository::GitHub {
         user: "wibble".to_string(),
         repo: "wobble".to_string(),
@@ -364,5 +399,85 @@ fn source_link_for_github_repository_with_path() {
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
     assert!(compile(config, modules).contains(
         "https://github.com/wibble/wobble/blob/v0.1.0/path/to/package/src/app.gleam#L1-L1"
+    ));
+}
+
+#[test]
+fn canonical_link() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
+    let modules = vec![
+        (
+            "app.gleam",
+            r#"
+/// Here is some documentation
+pub fn one() {
+  1
+}
+"#,
+        ),
+        (
+            "gleam/otp/actor.gleam",
+            r#"
+/// Here is some documentation
+pub fn one() {
+  1
+}
+"#,
+        ),
+    ];
+
+    let pages = vec![(
+        "LICENSE",
+        r#"
+# LICENSE
+    "#,
+    )];
+    insta::assert_snapshot!(compile_with_markdown_pages(
+        config,
+        modules,
+        pages,
+        CompileWithMarkdownPagesOpts::default()
+    ));
+}
+
+#[test]
+fn no_hex_publish() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
+    let modules = vec![
+        (
+            "app.gleam",
+            r#"
+/// Here is some documentation
+pub fn one() {
+  1
+}
+"#,
+        ),
+        (
+            "gleam/otp/actor.gleam",
+            r#"
+/// Here is some documentation
+pub fn one() {
+  1
+}
+"#,
+        ),
+    ];
+
+    let pages = vec![(
+        "LICENSE",
+        r#"
+# LICENSE
+    "#,
+    )];
+    insta::assert_snapshot!(compile_with_markdown_pages(
+        config,
+        modules,
+        pages,
+        CompileWithMarkdownPagesOpts {
+            hex_publish: Some(DocContext::Build)
+        }
     ));
 }

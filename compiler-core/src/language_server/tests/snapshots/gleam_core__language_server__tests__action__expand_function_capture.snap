@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  wibble(_, 1)\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  wibble(_, 1)
+         ↑    
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  fn(value) { wibble(value, 1) }
+}

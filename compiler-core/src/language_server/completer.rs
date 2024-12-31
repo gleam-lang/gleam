@@ -18,8 +18,9 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        self, collapse_links, pretty::Printer, FieldMap, ModuleInterface, PreludeType,
-        RecordAccessor, Type, TypeConstructor, ValueConstructorVariant, PRELUDE_MODULE_NAME,
+        self, collapse_links, error::VariableOrigin, pretty::Printer, FieldMap, ModuleInterface,
+        PreludeType, RecordAccessor, Type, TypeConstructor, ValueConstructorVariant,
+        PRELUDE_MODULE_NAME,
     },
     Result,
 };
@@ -71,6 +72,8 @@ fn sort_text(kind: CompletionKind, label: &str) -> String {
 enum TypeCompletionForm {
     // The type completion is for an unqualified import.
     UnqualifiedImport,
+    // The type completion is for an unqualified import within braces.
+    UnqualifiedImportWithinBraces,
     Default,
 }
 
@@ -210,10 +213,15 @@ where
             let importing_module_name = src.get(6..dot_index)?.trim();
             let importing_module: &ModuleInterface =
                 self.compiler.get_module_interface(importing_module_name)?;
+            let within_braces = match src.get(dot_index + 1..) {
+                Some(x) => x.trim_start().starts_with('{'),
+                None => false,
+            };
 
-            Some(Ok(Some(
-                self.unqualified_completions_from_module(importing_module),
-            )))
+            Some(Ok(Some(self.unqualified_completions_from_module(
+                importing_module,
+                within_braces,
+            ))))
         } else {
             // Find where to start and end the import completion
             let start = self.src_line_numbers.line_and_column_number(start_of_line);
@@ -232,6 +240,7 @@ where
     pub fn unqualified_completions_from_module(
         &'a self,
         module_being_imported_from: &'a ModuleInterface,
+        within_braces: bool,
     ) -> Vec<CompletionItem> {
         let insert_range = self.get_phrase_surrounding_completion_for_import();
         let mut completions = vec![];
@@ -275,7 +284,11 @@ where
                 name,
                 type_,
                 insert_range,
-                TypeCompletionForm::UnqualifiedImport,
+                if within_braces {
+                    TypeCompletionForm::UnqualifiedImportWithinBraces
+                } else {
+                    TypeCompletionForm::UnqualifiedImport
+                },
                 CompletionKind::ImportedModule,
             ));
         }
@@ -873,7 +886,8 @@ fn type_completion(
         text_edit: Some(CompletionTextEdit::Edit(TextEdit {
             range: insert_range,
             new_text: match include_type_in_completion {
-                TypeCompletionForm::UnqualifiedImport => format!("type {label}"),
+                TypeCompletionForm::UnqualifiedImport => format!("{{type {label}}}"),
+                TypeCompletionForm::UnqualifiedImportWithinBraces => format!("type {label}"),
                 TypeCompletionForm::Default => label.clone(),
             },
         })),
@@ -1070,6 +1084,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
         _: &'ast ast::SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
     ) {
         self.push_completion(name, type_.clone());
     }

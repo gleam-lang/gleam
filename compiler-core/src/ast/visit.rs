@@ -40,7 +40,10 @@
 
 use crate::{
     analyse::Inferred,
-    type_::{ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor},
+    type_::{
+        error::VariableOrigin, ModuleValueConstructor, PatternConstructor, TypedCallArg,
+        ValueConstructor,
+    },
 };
 use std::sync::Arc;
 
@@ -50,9 +53,9 @@ use crate::type_::Type;
 
 use super::{
     untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedDefinition,
-    TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant,
-    TypedPattern, TypedPatternBitArraySegment, TypedStatement, TypedUse,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedCustomType,
+    TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
+    TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedStatement, TypedUse,
 };
 
 pub trait Visit<'ast> {
@@ -70,6 +73,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_module_constant(&mut self, constant: &'ast TypedModuleConstant) {
         visit_typed_module_constant(self, constant);
+    }
+
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast TypedCustomType) {
+        visit_typed_custom_type(self, custom_type);
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -332,8 +339,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
+        origin: &'ast VariableOrigin,
     ) {
-        visit_typed_pattern_variable(self, location, name, type_);
+        visit_typed_pattern_variable(self, location, name, type_, origin);
     }
 
     fn visit_typed_pattern_var_usage(
@@ -489,7 +497,7 @@ where
     match def {
         Definition::Function(fun) => v.visit_typed_function(fun),
         Definition::TypeAlias(_typealias) => { /* TODO */ }
-        Definition::CustomType(_custom_type) => { /* TODO */ }
+        Definition::CustomType(custom_type) => v.visit_typed_custom_type(custom_type),
         Definition::Import(_import) => { /* TODO */ }
         Definition::ModuleConstant(constant) => v.visit_typed_module_constant(constant),
     }
@@ -587,6 +595,12 @@ where
 }
 
 pub fn visit_typed_module_constant<'a, V>(_v: &mut V, _constant: &'a TypedModuleConstant)
+where
+    V: Visit<'a> + ?Sized,
+{
+}
+
+pub fn visit_typed_custom_type<'a, V>(_v: &mut V, _custom_type: &'a TypedCustomType)
 where
     V: Visit<'a> + ?Sized,
 {
@@ -1105,7 +1119,8 @@ where
             location,
             name,
             type_,
-        } => v.visit_typed_pattern_variable(location, name, type_),
+            origin,
+        } => v.visit_typed_pattern_variable(location, name, type_, origin),
         Pattern::VarUsage {
             location,
             name,
@@ -1191,6 +1206,7 @@ pub fn visit_typed_pattern_variable<'a, V>(
     _location: &'a SrcSpan,
     _name: &'a EcoString,
     _type: &'a Arc<Type>,
+    _origin: &'a VariableOrigin,
 ) where
     V: Visit<'a> + ?Sized,
 {

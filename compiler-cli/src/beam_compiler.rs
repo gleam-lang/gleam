@@ -4,6 +4,8 @@ use gleam_core::{
     paths, Result,
 };
 
+use crate::fs::get_os;
+
 use std::{
     collections::HashSet,
     io::{self, BufRead, BufReader, Write},
@@ -111,6 +113,7 @@ impl BeamCompiler {
             .map_err(|e| match e.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
                     program: "escript".into(),
+                    os: get_os(),
                 },
                 other => Error::ShellCommand {
                     program: "escript".into(),

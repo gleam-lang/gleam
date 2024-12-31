@@ -1,3 +1,4 @@
 cases/*/build
 cases/*/manifest.toml
+support/*/build
 support/*/manifest.toml

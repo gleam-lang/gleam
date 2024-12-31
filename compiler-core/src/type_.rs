@@ -179,6 +179,7 @@ impl Type {
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
             Self::Tuple { elems } => Some(elems.clone()),
+            Self::Var { type_, .. } => type_.borrow().tuple_types(),
             _ => None,
         }
     }
@@ -260,6 +261,16 @@ impl Type {
         match self {
             Self::Named { module, name, .. } => Some((module.clone(), name.clone())),
             Self::Var { type_ } => type_.borrow().named_type_name(),
+            _ => None,
+        }
+    }
+
+    pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Self>>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } => Some((module.clone(), name.clone(), args.clone())),
+            Self::Var { type_ } => type_.borrow().named_type_information(),
             _ => None,
         }
     }
@@ -924,6 +935,13 @@ impl TypeVar {
         }
     }
 
+    pub fn tuple_types(&self) -> Option<Vec<Arc<Type>>> {
+        match self {
+            Self::Link { type_ } => type_.tuple_types(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
     pub fn constructor_types(&self) -> Option<Vec<Arc<Type>>> {
         match self {
             Self::Link { type_ } => type_.constructor_types(),
@@ -1005,6 +1023,13 @@ impl TypeVar {
     pub fn named_type_name(&self) -> Option<(EcoString, EcoString)> {
         match self {
             Self::Link { type_ } => type_.named_type_name(),
+            Self::Unbound { .. } | Self::Generic { .. } => None,
+        }
+    }
+
+    pub fn named_type_information(&self) -> Option<(EcoString, EcoString, Vec<Arc<Type>>)> {
+        match self {
+            Self::Link { type_ } => type_.named_type_information(),
             Self::Unbound { .. } | Self::Generic { .. } => None,
         }
     }

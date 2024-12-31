@@ -19,7 +19,7 @@ const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.44.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
 const ERLANG_OTP_VERSION: &str = "27.1.2";
 const REBAR3_VERSION: &str = "3";
-const ELIXIR_VERSION: &str = "1.15.4";
+const ELIXIR_VERSION: &str = "1";
 
 #[derive(
     Debug, Serialize, Deserialize, Display, EnumString, VariantNames, ValueEnum, Clone, Copy,

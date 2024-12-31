@@ -7,3 +7,4 @@
 erl_crash.dump
 *.lock
 node_modules/
+compiler-cli/build/
