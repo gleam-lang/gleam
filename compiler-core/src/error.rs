@@ -1443,7 +1443,7 @@ The error from the encryption library was:
                         title: "Float is outside Erlang's floating point range".into(),
                         text: wrap("This float value is too large to be represented by \
 Erlang's floating point type. To avoid this error float values must be in the range \
--1.7976931348623157e308f64 - 1.7976931348623157e308f64."),
+-1.7976931348623157e308 - 1.7976931348623157e308."),
                     hint: None,
                     level: Level::Error,
                     location: Some(Location {
