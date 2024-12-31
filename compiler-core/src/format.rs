@@ -71,6 +71,12 @@ impl<'a> Intermediate<'a> {
     }
 }
 
+#[derive(Debug)]
+enum FnCapturePosition {
+    RightHandSideOfPipe,
+    EverywhereElse,
+}
+
 /// Hayleigh's bane
 #[derive(Debug, Clone, Default)]
 pub struct Formatter<'a> {
@@ -966,7 +972,9 @@ impl<'comments> Formatter<'comments> {
 
             UntypedExpr::NegateBool { value, .. } => self.negate_bool(value),
 
-            UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => self.fn_capture(body),
+            UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
+                self.fn_capture(body, FnCapturePosition::EverywhereElse)
+            }
 
             UntypedExpr::Fn {
                 return_annotation,
@@ -1459,15 +1467,8 @@ impl<'comments> Formatter<'comments> {
             let comments = self.pop_comments(expr.location().start);
             let doc = match expr {
                 UntypedExpr::Fn { kind, body, .. } if kind.is_capture() => {
-                    let body = match body.first() {
-                        Statement::Expression(expression) => expression,
-                        Statement::Assignment(_) | Statement::Use(_) => {
-                            unreachable!("Non expression capture body")
-                        }
-                    };
-                    self.pipe_capture_right_hand_side(body)
+                    self.fn_capture(body, FnCapturePosition::RightHandSideOfPipe)
                 }
-
                 _ => self.expr(expr),
             };
             let doc = if nest_pipe { doc.nest(INDENT) } else { doc };
@@ -1489,74 +1490,80 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
-    fn pipe_capture_right_hand_side<'a>(&mut self, fun: &'a UntypedExpr) -> Document<'a> {
-        let (fun, args) = match fun {
-            UntypedExpr::Call {
-                fun,
-                arguments: args,
-                ..
-            } => (fun, args),
-            _ => panic!("Function capture found not to have a function call body when formatting"),
-        };
-
-        let hole_in_first_position = matches!(
-            args.first(),
-            Some(CallArg {
-                value: UntypedExpr::Var { name, .. },
-                ..
-            }) if name == CAPTURE_VARIABLE
-        );
-        let first_argument_is_labelled = args.first().is_some_and(|arg| arg.label.is_some());
-        let arity = args.len();
-
-        // If the first argument is labelled, we don't remove it as the label adds
-        // extra information and could be used to make code more readable.
-        if hole_in_first_position && args.len() == 1 && !first_argument_is_labelled {
-            // x |> fun(_)
-            self.expr(fun)
-        } else if hole_in_first_position && !first_argument_is_labelled {
-            // x |> fun(_, 2, 3)
-            let args = args
-                .iter()
-                .skip(1)
-                .map(|a| self.call_arg(a, arity))
-                .collect_vec();
-            self.expr(fun)
-                .append(self.wrap_args(args, fun.location().end).group())
-        } else {
-            // x |> fun(1, _, 3)
-            let args = args.iter().map(|a| self.call_arg(a, arity)).collect_vec();
-            self.expr(fun)
-                .append(self.wrap_args(args, fun.location().end).group())
-        }
-    }
-
-    fn fn_capture<'a>(&mut self, call: &'a [UntypedStatement]) -> Document<'a> {
+    fn fn_capture<'a>(
+        &mut self,
+        call: &'a [UntypedStatement],
+        position: FnCapturePosition,
+    ) -> Document<'a> {
         // The body of a capture being multiple statements shouldn't be possible...
         if call.len() != 1 {
             panic!("Function capture found not to have a single statement call");
         }
 
-        match call.first() {
-            Some(Statement::Expression(UntypedExpr::Call {
-                fun,
-                arguments: args,
-                location,
-                ..
-            })) => {
+        let Some(Statement::Expression(UntypedExpr::Call {
+            fun,
+            arguments,
+            location,
+        })) = call.first()
+        else {
+            // The body of a capture being not a fn shouldn't be possible...
+            panic!("Function capture body found not to be a call in the formatter")
+        };
+
+        match (position, arguments.as_slice()) {
+            // The capture is on the right hand side of a pipe and it only has
+            // an unlabelled hole:
+            //
+            //     wibble |> wobble(_)
+            //
+            // We want it to become:
+            //
+            //     wibble |> wobble
+            //
+            (FnCapturePosition::RightHandSideOfPipe, [arg])
+                if arg.is_capture_hole() && arg.label.is_none() =>
+            {
+                self.expr(fun)
+            }
+
+            // The capture is on the right hand side of a pipe and its first
+            // argument it an unlabelled capture hole:
+            //
+            //     wibble |> wobble(_, woo)
+            //
+            // We want it to become:
+            //
+            //     wibble |> wobble(woo)
+            //
+            (FnCapturePosition::RightHandSideOfPipe, [arg, rest @ ..])
+                if arg.is_capture_hole() && arg.label.is_none() =>
+            {
                 let expr = self.expr(fun);
-                let arity = args.len();
+                let arity = rest.len();
                 self.append_inlinable_wrapped_args(
                     expr,
-                    args,
+                    rest,
                     location,
                     |arg| &arg.value,
                     |self_, arg| self_.call_arg(arg, arity),
                 )
             }
 
-            // The body of a capture being not a fn shouldn't be possible...
-            _ => panic!("Function capture body found not to be a call in the formatter"),
+            // In all other cases we print it like a regular function call
+            // without changing it.
+            //
+            (FnCapturePosition::RightHandSideOfPipe, arguments)
+            | (FnCapturePosition::EverywhereElse, arguments) => {
+                let expr = self.expr(fun);
+                let arity = arguments.len();
+                self.append_inlinable_wrapped_args(
+                    expr,
+                    arguments,
+                    location,
+                    |arg| &arg.value,
+                    |self_, arg| self_.call_arg(arg, arity),
+                )
+            }
         }
     }
 
