@@ -1544,24 +1544,15 @@ impl<'comments> Formatter<'comments> {
                 location,
                 ..
             })) => {
+                let expr = self.expr(fun);
                 let arity = args.len();
-                match args.as_slice() {
-                    [first, second]
-                        if is_breakable_expr(&second.value) && first.is_capture_hole() =>
-                    {
-                        self.expr(fun)
-                            .append("(_, ")
-                            .append(self.call_arg(second, arity))
-                            .append(")")
-                            .group()
-                    }
-
-                    _ => {
-                        let args = args.iter().map(|a| self.call_arg(a, arity)).collect_vec();
-                        self.expr(fun)
-                            .append(self.wrap_args(args, location.end).group())
-                    }
-                }
+                self.append_inlinable_wrapped_args(
+                    expr,
+                    args,
+                    location,
+                    |arg| &arg.value,
+                    |self_, arg| self_.call_arg(arg, arity),
+                )
             }
 
             // The body of a capture being not a fn shouldn't be possible...
@@ -2916,19 +2907,6 @@ pub fn comments_before<'a>(
         popped,
         comments.get(end_comments..).expect("in bounds"),
         empty_lines.get(end_empty_lines..).expect("in bounds"),
-    )
-}
-
-fn is_breakable_expr(expr: &UntypedExpr) -> bool {
-    matches!(
-        expr,
-        UntypedExpr::Fn { .. }
-            | UntypedExpr::Block { .. }
-            | UntypedExpr::Call { .. }
-            | UntypedExpr::Case { .. }
-            | UntypedExpr::List { .. }
-            | UntypedExpr::Tuple { .. }
-            | UntypedExpr::BitArray { .. }
     )
 }
 
