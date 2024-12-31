@@ -720,7 +720,7 @@ to unlock and try again?",
 
             if should_try_unlock {
                 // unlock pkgs
-                unlock_packages(&mut locked, &locked_conflicts, manifest)?;
+                unlock_packages(&mut locked, locked_conflicts, manifest)?;
 
                 // try again
                 dependency::resolve_versions(
