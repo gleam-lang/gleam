@@ -7,6 +7,9 @@
 - Function captures are now formatted like regular function calls.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Record updates are now formatted like function calls.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where the "convert from use" code action would generate invalid
