@@ -1334,6 +1334,12 @@ impl UntypedRecordUpdateArg {
     }
 }
 
+impl HasLocation for UntypedRecordUpdateArg {
+    fn location(&self) -> SrcSpan {
+        self.location.clone()
+    }
+}
+
 pub type MultiPattern<Type> = Vec<Pattern<Type>>;
 
 pub type UntypedMultiPattern = MultiPattern<()>;

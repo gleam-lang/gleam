@@ -77,6 +77,24 @@ enum FnCapturePosition {
     EverywhereElse,
 }
 
+#[derive(Debug)]
+/// One of the pieces making a record update arg list: it could be the starting
+/// record being updated, or one of the subsequent arguments.
+///
+enum RecordUpdatePiece<'a> {
+    Record(&'a RecordBeingUpdated),
+    Argument(&'a UntypedRecordUpdateArg),
+}
+
+impl HasLocation for RecordUpdatePiece<'_> {
+    fn location(&self) -> SrcSpan {
+        match self {
+            RecordUpdatePiece::Record(record) => record.location,
+            RecordUpdatePiece::Argument(arg) => arg.location,
+        }
+    }
+}
+
 /// Hayleigh's bane
 #[derive(Debug, Clone, Default)]
 pub struct Formatter<'a> {
@@ -1264,10 +1282,10 @@ impl<'comments> Formatter<'comments> {
     // resulting document will try to first split that before splitting all the
     // other arguments.
     // This is used for function calls and tuples.
-    fn append_inlinable_wrapped_args<'a, T, ToExpr, ToDoc>(
+    fn append_inlinable_wrapped_args<'a, 'b, T, ToExpr, ToDoc>(
         &mut self,
         doc: Document<'a>,
-        values: &'a [T],
+        values: &'b [T],
         location: &SrcSpan,
         to_expr: ToExpr,
         to_doc: ToDoc,
@@ -1275,7 +1293,7 @@ impl<'comments> Formatter<'comments> {
     where
         T: HasLocation,
         ToExpr: Fn(&T) -> &UntypedExpr,
-        ToDoc: Fn(&mut Self, &'a T) -> Document<'a>,
+        ToDoc: Fn(&mut Self, &'b T) -> Document<'a>,
     {
         match init_and_last(values) {
             Some((initial_values, last_value))
@@ -1355,18 +1373,27 @@ impl<'comments> Formatter<'comments> {
         args: &'a [UntypedRecordUpdateArg],
         location: &SrcSpan,
     ) -> Document<'a> {
-        use std::iter::once;
-        let constructor_doc = self.expr(constructor);
-        let comments = self.pop_comments(record.base.location().start);
-        let spread_doc = commented("..".to_doc().append(self.expr(&record.base)), comments);
-        let arg_docs = args
-            .iter()
-            .map(|a| self.record_update_arg(a).group())
+        let constructor_doc: Document<'a> = self.expr(constructor);
+        let pieces = std::iter::once(RecordUpdatePiece::Record(record))
+            .chain(args.iter().map(RecordUpdatePiece::Argument))
             .collect_vec();
-        let all_arg_docs = once(spread_doc).chain(arg_docs);
-        constructor_doc
-            .append(self.wrap_args(all_arg_docs, location.end))
-            .group()
+
+        self.append_inlinable_wrapped_args(
+            constructor_doc,
+            &pieces,
+            location,
+            |arg| match arg {
+                RecordUpdatePiece::Argument(arg) => &arg.value,
+                RecordUpdatePiece::Record(record) => record.base.as_ref(),
+            },
+            |this, arg| match arg {
+                RecordUpdatePiece::Argument(arg) => this.record_update_arg(arg),
+                RecordUpdatePiece::Record(record) => {
+                    let comments = this.pop_comments(record.base.location().start);
+                    commented("..".to_doc().append(this.expr(&record.base)), comments)
+                }
+            },
+        )
     }
 
     pub fn bin_op<'a>(
@@ -1790,7 +1817,8 @@ impl<'comments> Formatter<'comments> {
                     .as_str()
                     .to_doc()
                     .append(": ")
-                    .append(self.expr(&arg.value));
+                    .append(self.expr(&arg.value))
+                    .group();
 
                 if arg.value.is_binop() || arg.value.is_pipeline() {
                     commented(doc, comments).nest(INDENT)
