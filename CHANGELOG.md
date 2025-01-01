@@ -115,7 +115,7 @@
   consumers.
   ([Aleksei Gurianov](https://github.com/guria))
 
-- New projects now require `gleam_stdlib` v0.44.0.
+- New projects now require `gleam_stdlib` v0.51.0.
   ([Louis Pilfold](https://github.com/lpil))
 
 - `gleam remove` no longer requires a network connection.

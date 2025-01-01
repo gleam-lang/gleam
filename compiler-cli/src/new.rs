@@ -15,7 +15,7 @@ mod tests;
 
 use crate::{fs::get_current_directory, NewOptions};
 
-const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.44.0 and < 2.0.0";
+const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.51.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
 const ERLANG_OTP_VERSION: &str = "27.1.2";
 const REBAR3_VERSION: &str = "3";
