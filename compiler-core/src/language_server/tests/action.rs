@@ -3417,6 +3417,82 @@ fn wibble(n, m, f) {
 }
 
 #[test]
+fn desugar_use_with_labels() {
+    let src = r#"
+pub fn main() {
+  use a <- wibble(one: 1, two: 2)
+  todo
+}
+
+fn wibble(one _, two _, three f) {
+    f(1)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").to_selection(),
+    );
+}
+
+#[test]
+fn desugar_use_with_labels_2() {
+    let src = r#"
+pub fn main() {
+  use a <- wibble(1, two: 2)
+  todo
+}
+
+fn wibble(one _, two _, three f) {
+    f(1)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").to_selection(),
+    );
+}
+
+#[test]
+fn desugar_use_with_labels_3() {
+    let src = r#"
+pub fn main() {
+  use a <- wibble(1, three: 3)
+  todo
+}
+
+fn wibble(one _, two f, three _) {
+    f(1)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").to_selection(),
+    );
+}
+
+#[test]
+fn desugar_use_with_labels_4() {
+    let src = r#"
+pub fn main() {
+  use a <- wibble(two: 2, three: 3)
+  todo
+}
+
+fn wibble(one f, two _, three _) {
+    f(1)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("todo").to_selection(),
+    );
+}
+
+#[test]
 fn turn_call_into_use_with_single_line_body() {
     let src = r#"
 pub fn main() {
