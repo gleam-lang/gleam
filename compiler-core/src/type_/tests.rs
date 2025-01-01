@@ -3025,3 +3025,17 @@ pub fn main() {
         vec![("main", "fn() -> Int")]
     );
 }
+
+#[test]
+fn private_types_not_available_in_other_modules() {
+    assert_with_module_error!(
+        ("wibble", "type Wibble"),
+        "
+import wibble
+
+type Wibble {
+  Wibble(wibble.Wibble)
+}
+"
+    );
+}

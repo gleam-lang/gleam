@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests.rs
+expression: "\nimport wibble\n\ntype Wibble {\n  Wibble(wibble.Wibble)\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+type Wibble
+
+-- main.gleam
+
+import wibble
+
+type Wibble {
+  Wibble(wibble.Wibble)
+}
+
+
+----- ERROR
+error: Unknown module type
+  ┌─ /src/one/two.gleam:5:10
+  │
+5 │   Wibble(wibble.Wibble)
+  │          ^^^^^^^^^^^^^
+
+The module `wibble` does not have a `Wibble` type.
