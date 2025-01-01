@@ -350,7 +350,7 @@ impl Environment<'_> {
         module_alias: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
-        let t = match module_alias {
+        match module_alias {
             None => self
                 .module_types
                 .get(name)
@@ -369,19 +369,16 @@ impl Environment<'_> {
                 })?;
                 let _ = self.unused_modules.remove(module_name);
                 let _ = self.unused_module_aliases.remove(module_name);
-                module
-                    .types
-                    .get(name)
-                    .ok_or_else(|| UnknownTypeConstructorError::ModuleType {
+                module.get_public_type(name).ok_or_else(|| {
+                    UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
                         module_name: module.name.clone(),
                         type_constructors: module.public_type_names(),
                         imported_type_as_value: false,
-                    })
+                    }
+                })
             }
-        }?;
-
-        Ok(t)
+        }
     }
 
     fn unknown_type_hint(&self, type_name: &EcoString) -> UnknownTypeHint {
