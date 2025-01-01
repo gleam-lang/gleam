@@ -7,6 +7,12 @@
 - Function captures are now formatted like regular function calls.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+### Bug fixed
+
+- Fixed a bug where the "convert from use" code action would generate invalid
+  code with labelled arguments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## 1.7.0-rc2 - 2024-12-30
 
 ### Compiler
