@@ -21,7 +21,6 @@ use crate::{
 };
 use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
-use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
 
@@ -705,6 +704,7 @@ pub struct FillInMissingLabelledArgs<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
+    use_right_hand_side_location: Option<SrcSpan>,
     selected_call: Option<(SrcSpan, &'a FieldMap, &'a [TypedCallArg])>,
 }
 
@@ -718,6 +718,7 @@ impl<'a> FillInMissingLabelledArgs<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
+            use_right_hand_side_location: None,
             selected_call: None,
         }
     }
@@ -726,41 +727,63 @@ impl<'a> FillInMissingLabelledArgs<'a> {
         self.visit_typed_module(&self.module.ast);
 
         if let Some((call_location, field_map, args)) = self.selected_call {
-            let mut missing_labels = field_map
-                .fields
-                .iter()
-                .map(|(l, i)| (i, l))
-                .collect::<HashMap<_, _>>();
+            let is_use_call = args.iter().any(|arg| arg.is_use_implicit_callback());
+            let missing_labels = field_map.missing_labels(args);
 
-            for arg in args.iter() {
-                match arg.implicit {
-                    Some(ImplicitCallArgOrigin::Use | ImplicitCallArgOrigin::IncorrectArityUse) => {
-                        _ = missing_labels.remove(&(field_map.arity - 1))
-                    }
-                    Some(ImplicitCallArgOrigin::Pipe) => _ = missing_labels.remove(&0),
-                    // We do not support this action for functions that have
-                    // already been explicitly supplied an argument!
-                    Some(
-                        ImplicitCallArgOrigin::PatternFieldSpread
-                        | ImplicitCallArgOrigin::RecordUpdate,
-                    )
-                    | None => return vec![],
-                }
-            }
+            // If we're applying the code action to a use call, then we know
+            // that the last missing argument is going to be implicitly inserted
+            // by the compiler, so in that case we don't want to also add that
+            // last label to the completions.
+            let missing_labels = missing_labels.iter().peekable();
+            let mut missing_labels = if is_use_call {
+                missing_labels.dropping_back(1)
+            } else {
+                missing_labels
+            };
 
             // If we couldn't find any missing label to insert we just return.
-            if missing_labels.is_empty() {
+            if missing_labels.peek().is_none() {
                 return vec![];
             }
 
-            self.edits.insert(
-                call_location.end - 1,
-                missing_labels
-                    .iter()
-                    .sorted_by_key(|(position, _label)| *position)
-                    .map(|(_, label)| format!("{label}: todo"))
-                    .join(", "),
-            );
+            // Now we need to figure out if there's a comma at the end of the
+            // arguments list:
+            //
+            //   call(one, |)
+            //             ^ Cursor here, with a comma behind
+            //
+            //   call(one|)
+            //           ^ Cursor here, no comma behind, we'll have to add one!
+            //
+            let label_insertion_start = call_location.end - 1;
+            let has_comma_after_last_argument =
+                if let Some(last_arg) = args.iter().filter(|arg| !arg.is_implicit()).last() {
+                    self.module
+                        .code
+                        .get(last_arg.location.end as usize..=label_insertion_start as usize)
+                        .is_some_and(|text| text.contains(','))
+                } else {
+                    false
+                };
+
+            let labels_list = missing_labels
+                .map(|label| format!("{label}: todo"))
+                .join(", ");
+
+            let has_no_explicit_arguments = args
+                .iter()
+                .filter(|arg| !arg.is_implicit())
+                .peekable()
+                .peek()
+                .is_none();
+
+            let labels_list = if has_no_explicit_arguments || has_comma_after_last_argument {
+                labels_list
+            } else {
+                format!(", {labels_list}")
+            };
+
+            self.edits.insert(label_insertion_start, labels_list);
 
             let mut action = Vec::with_capacity(1);
             CodeActionBuilder::new("Fill labels")
@@ -776,6 +799,16 @@ impl<'a> FillInMissingLabelledArgs<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
+    fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
+        // If we're adding labels to a use call the correct location of the
+        // function we need to add labels to is `use_right_hand_side_location`.
+        // So we store it for when we're typing the use call.
+        let previous = self.use_right_hand_side_location;
+        self.use_right_hand_side_location = Some(use_.right_hand_side_location);
+        ast::visit::visit_typed_use(self, use_);
+        self.use_right_hand_side_location = previous;
+    }
+
     fn visit_typed_expr_call(
         &mut self,
         location: &'ast SrcSpan,
@@ -789,14 +822,18 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
         }
 
         if let Some(field_map) = fun.field_map() {
-            self.selected_call = Some((*location, field_map, args))
+            let location = self.use_right_hand_side_location.unwrap_or(*location);
+            self.selected_call = Some((location, field_map, args))
         }
 
         // We only want to take into account the innermost function call
         // containing the current selection so we can't stop at the first call
         // we find (the outermost one) and have to keep traversing it in case
         // we're inside a nested call.
-        ast::visit::visit_typed_expr_call(self, location, type_, fun, args)
+        let previous = self.use_right_hand_side_location;
+        self.use_right_hand_side_location = None;
+        ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+        self.use_right_hand_side_location = previous;
     }
 }
 
