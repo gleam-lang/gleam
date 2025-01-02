@@ -7,11 +7,14 @@
 - Function captures are now formatted like regular function calls.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-### Bug fixed
+### Bug fixes
 
 - Fixed a bug where the "convert from use" code action would generate invalid
   code with labelled arguments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where private types would be allowed to be used in other modules.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## 1.7.0-rc2 - 2024-12-30
 
