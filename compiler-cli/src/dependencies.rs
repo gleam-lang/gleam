@@ -649,6 +649,23 @@ impl PartialEq for ProvidedPackageSource {
     }
 }
 
+// Estimates whether the CLI is ran in a CI environment for use in silencing
+// certain CLI dialogues.
+fn is_ci_env() -> bool {
+    let ci_vars = [
+        "CI",
+        "TRAVIS",
+        "CIRCLECI",
+        "GITHUB_ACTIONS",
+        "GITLAB_CI",
+        "JENKINS_URL",
+        "TF_BUILD",
+        "BITBUCKET_COMMIT",
+    ];
+
+    ci_vars.iter().any(|var| std::env::var_os(*var).is_some())
+}
+
 fn resolve_versions<Telem: Telemetry>(
     runtime: tokio::runtime::Handle,
     mode: Mode,
@@ -711,7 +728,10 @@ fn resolve_versions<Telem: Telemetry>(
                 ref locked_conflicts,
             },
         ) => {
-            // TODO: provide more error context
+            if !is_ci_env() {
+                return Err(e.clone());
+            }
+
             let should_try_unlock = cli::confirm(
                 "\nSome of these dependencies are locked to specific versions. It may
 be possible to find a solution if they are unlocked, would you like
