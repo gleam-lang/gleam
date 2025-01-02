@@ -146,6 +146,61 @@ impl FieldMap {
             .sorted()
             .collect()
     }
+
+    /// This returns an array of the labels that are unused given an argument
+    /// list.
+    /// The unused labels are in the order they are expected to be passed in
+    /// to a call using those.
+    ///
+    /// ## Examples
+    ///
+    /// ```gleam
+    /// pub fn wibble(label1 a, label2 b, label3 c) { todo }
+    ///
+    /// wibble(1, label3: 2) // -> unused labels: [label2]
+    /// ```
+    ///
+    pub fn missing_labels<A: std::fmt::Debug>(&self, args: &[CallArg<A>]) -> Vec<EcoString> {
+        let mut arg_position_to_label = self
+            .fields
+            .iter()
+            .map(|(label, position)| (position, label.clone()))
+            .collect::<HashMap<_, _>>();
+
+        // We first get rid of all the labels taken by the positional arguments
+        // that have been supplied.
+        let mut position = 0;
+        for arg in args {
+            if arg.label.is_none() && !arg.is_use_implicit_callback() {
+                let _ = arg_position_to_label.remove(&position);
+                position += 1;
+            } else {
+                // As soon as we find an unlabelled argument we break out of the
+                // loop, we know that now there's only going to be labelled
+                // arguments
+                break;
+            }
+        }
+
+        let mut arg_label_to_position = arg_position_to_label
+            .iter()
+            .map(|(position, label)| (label.clone(), position))
+            .collect::<HashMap<_, _>>();
+
+        // Now we're just left with labelled args, we remove those from the
+        // remaining labels.
+        for arg in args.iter().skip(position as usize) {
+            if let Some(label) = &arg.label {
+                let _ = arg_label_to_position.remove(label);
+            }
+        }
+
+        arg_label_to_position
+            .iter()
+            .sorted_by_key(|(_, position)| *position)
+            .map(|(label, _position)| label.clone())
+            .collect_vec()
+    }
 }
 
 #[derive(Debug)]

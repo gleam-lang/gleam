@@ -788,17 +788,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillInMissingLabelledArgs<'ast> {
             return;
         }
 
-        let field_map = match fun {
-            TypedExpr::Var { constructor, .. } => constructor.field_map(),
-            TypedExpr::ModuleSelect { constructor, .. } => match constructor {
-                ModuleValueConstructor::Record { field_map, .. }
-                | ModuleValueConstructor::Fn { field_map, .. } => field_map.as_ref(),
-                ModuleValueConstructor::Constant { .. } => None,
-            },
-            _ => None,
-        };
-
-        if let Some(field_map) = field_map {
+        if let Some(field_map) = fun.field_map() {
             self.selected_call = Some((*location, field_map, args))
         }
 
@@ -2224,15 +2214,40 @@ impl<'a> DesugarUse<'a> {
             return vec![];
         };
 
-        let TypedExpr::Call { args, .. } = use_.call.as_ref() else {
+        let TypedExpr::Call { args, fun, .. } = use_.call.as_ref() else {
             return vec![];
         };
 
+        // If the use callback we're desugaring is using labels, that means we
+        // have to add the last argument's label when writing the callback;
+        // otherwise, it would result in invalid code.
+        //
+        //     use acc, item <- list.fold(over: list, from: 1)
+        //     todo
+        //
+        // Needs to be rewritten as:
+        //
+        //     list.fold(over: list, from: 1, with: fn(acc, item) { ... })
+        //                                    ^^^^^ We cannot forget to add this label back!
+        //
+        let callback_label = if args.iter().any(|arg| arg.label.is_some()) {
+            fun.field_map()
+                .and_then(|field_map| field_map.missing_labels(args).last().cloned())
+                .map(|label| eco_format!("{label}: "))
+                .unwrap_or(EcoString::from(""))
+        } else {
+            EcoString::from("")
+        };
+
+        // The use callback is not necessarily the last argumen. If you have the
+        // following function: `wibble(a a, b b) { todo }`
+        // And use it like this: `use <- wibble(b: 1)`, the first argument `a`
+        // is going to be the use callback, not the last one!
         let Some(CallArg {
             implicit: Some(ImplicitCallArgOrigin::Use),
             value: TypedExpr::Fn { body, type_, .. },
             ..
-        }) = args.last()
+        }) = args.iter().find(|arg| arg.is_use_implicit_callback())
         else {
             return vec![];
         };
@@ -2283,9 +2298,9 @@ impl<'a> DesugarUse<'a> {
                 // the implicit fn expression then we need to put a comma after
                 // the last argument.
                 if use_rhs_function_has_some_explicit_args {
-                    format!(", fn({}) {{", assignments)
+                    format!(", {callback_label}fn({assignments}) {{")
                 } else {
-                    format!("fn({}) {{", assignments)
+                    format!("{callback_label}fn({assignments}) {{")
                 },
             )
         } else {
@@ -2374,6 +2389,7 @@ pub struct TurnIntoUse<'a> {
 
 /// All the locations we'll need to transform a function call into a use
 /// expression.
+///
 struct CallLocations {
     call_span: SrcSpan,
     called_function_span: SrcSpan,

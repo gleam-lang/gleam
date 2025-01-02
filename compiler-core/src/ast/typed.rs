@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use type_::TypedCallArg;
+use type_::{FieldMap, TypedCallArg};
 
 use super::*;
 use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
@@ -688,6 +688,38 @@ impl TypedExpr {
 
             TypedExpr::Block { statements, .. } => statements.last().last_location(),
             TypedExpr::Fn { body, .. } => body.last().last_location(),
+        }
+    }
+
+    pub fn field_map(&self) -> Option<&FieldMap> {
+        match self {
+            TypedExpr::Int { .. }
+            | TypedExpr::Float { .. }
+            | TypedExpr::String { .. }
+            | TypedExpr::Block { .. }
+            | TypedExpr::Pipeline { .. }
+            | TypedExpr::Fn { .. }
+            | TypedExpr::List { .. }
+            | TypedExpr::Call { .. }
+            | TypedExpr::BinOp { .. }
+            | TypedExpr::Case { .. }
+            | TypedExpr::RecordAccess { .. }
+            | TypedExpr::Tuple { .. }
+            | TypedExpr::TupleIndex { .. }
+            | TypedExpr::Todo { .. }
+            | TypedExpr::Panic { .. }
+            | TypedExpr::BitArray { .. }
+            | TypedExpr::RecordUpdate { .. }
+            | TypedExpr::NegateBool { .. }
+            | TypedExpr::NegateInt { .. }
+            | TypedExpr::Invalid { .. } => None,
+
+            TypedExpr::Var { constructor, .. } => constructor.field_map(),
+            TypedExpr::ModuleSelect { constructor, .. } => match constructor {
+                ModuleValueConstructor::Record { field_map, .. }
+                | ModuleValueConstructor::Fn { field_map, .. } => field_map.as_ref(),
+                ModuleValueConstructor::Constant { .. } => None,
+            },
         }
     }
 }
