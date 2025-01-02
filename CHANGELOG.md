@@ -2,7 +2,7 @@
 
 ## 1.7.0-rc3 - 2025-12-02
 
-### Language Server
+### Language server
 
 - The language server can now fill in the labels of any function call, even when
   only some of the arguments are provided. For example:
