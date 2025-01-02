@@ -1336,7 +1336,7 @@ impl UntypedRecordUpdateArg {
 
 impl HasLocation for UntypedRecordUpdateArg {
     fn location(&self) -> SrcSpan {
-        self.location.clone()
+        self.location
     }
 }
 
