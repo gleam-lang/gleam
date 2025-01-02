@@ -936,8 +936,8 @@ pub type Wibble { Wibble(arg1: Int, arg2: Int) }
 }
 
 #[test]
-fn fill_in_labelled_args_only_works_if_function_has_no_explicit_arguments_yet() {
-    assert_no_code_actions!(
+fn fill_in_labelled_args_with_some_arguments_already_supplied() {
+    assert_code_action!(
         FILL_LABELS,
         r#"
 pub fn main() {
@@ -951,8 +951,8 @@ pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
 }
 
 #[test]
-fn fill_in_labelled_args_only_works_if_function_has_no_explicit_arguments_yet_2() {
-    assert_no_code_actions!(
+fn fill_in_labelled_args_with_some_arguments_already_supplied_2() {
+    assert_code_action!(
         FILL_LABELS,
         r#"
 pub fn main() {
@@ -960,6 +960,21 @@ pub fn main() {
 }
 
 pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
+ "#,
+        find_position_of("wibble(").to_selection(),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_with_some_arguments_already_supplied_3() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  wibble(1, arg3: 2)
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2, arg3 arg3) { Nil }
  "#,
         find_position_of("wibble(").to_selection(),
     );
@@ -1036,11 +1051,44 @@ fn fill_in_labelled_args_works_with_use() {
         r#"
 pub fn main() {
   use <- wibble()
+  todo
 }
 
 pub fn wibble(arg1 arg1, arg2 arg2) { Nil }
  "#,
         find_position_of("wibble(").select_until(find_position_of("wibble()").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_use_2() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  use <- wibble(arg1: 1)
+  todo
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2, arg3 arg3) { Nil }
+ "#,
+        find_position_of("wibble(").select_until(find_position_of("1").under_last_char()),
+    );
+}
+
+#[test]
+fn fill_in_labelled_args_works_with_use_3() {
+    assert_code_action!(
+        FILL_LABELS,
+        r#"
+pub fn main() {
+  use <- wibble(arg2: 2)
+  todo
+}
+
+pub fn wibble(arg1 arg1, arg2 arg2, arg3 arg3) { Nil }
+ "#,
+        find_position_of("wibble(").select_until(find_position_of("2").under_last_char()),
     );
 }
 

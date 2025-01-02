@@ -168,15 +168,6 @@ pub enum CallKind {
         last_statement_location: SrcSpan,
     },
 }
-impl CallKind {
-    #[must_use]
-    fn is_use_call(&self) -> bool {
-        match self {
-            CallKind::Function => false,
-            CallKind::Use { .. } => true,
-        }
-    }
-}
 
 /// This is used to tell apart regular call arguments and the callback that is
 /// implicitly passed to a `use` function call.
@@ -3400,7 +3391,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                                 ignored_labelled_args = args
                                     .iter()
                                     .skip_while(|arg| arg.label.is_none())
-                                    .map(|arg| (arg.label.clone(), arg.location))
+                                    .map(|arg| (arg.label.clone(), arg.location, arg.implicit))
                                     .collect_vec();
                                 let args_to_keep = first_labelled_arg.unwrap_or(args.len());
                                 (
@@ -3520,21 +3511,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         //
         // So now what we want to do is add back those labelled arguments to
         // make sure the LS can still see that those were explicitly supplied.
-        //
-        // For use calls we've already filled in the gaps with values so we
-        // don't care about adding any label back.
-        if !kind.is_use_call() {
-            for (label, location) in ignored_labelled_args {
-                typed_args.push(CallArg {
-                    label,
-                    value: TypedExpr::Invalid {
-                        location,
-                        type_: self.new_unbound_var(),
-                    },
-                    implicit: None,
+        for (label, location, implicit) in ignored_labelled_args {
+            typed_args.push(CallArg {
+                label,
+                value: TypedExpr::Invalid {
                     location,
-                })
-            }
+                    type_: self.new_unbound_var(),
+                },
+                implicit,
+                location,
+            })
         }
 
         // We don't want to emit a warning for unreachable function call if the
