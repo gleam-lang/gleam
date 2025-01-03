@@ -730,6 +730,7 @@ impl TypedExpr {
             | TypedExpr::TupleIndex { .. }
             | TypedExpr::Todo { .. }
             | TypedExpr::Panic { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::BitArray { .. }
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
