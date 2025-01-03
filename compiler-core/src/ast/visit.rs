@@ -55,7 +55,8 @@ use super::{
     untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
     SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause, TypedCustomType,
     TypedDefinition, TypedExpr, TypedExprBitArraySegment, TypedFunction, TypedModule,
-    TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedStatement, TypedUse,
+    TypedModuleConstant, TypedPattern, TypedPatternBitArraySegment, TypedPipelineAssignment,
+    TypedStatement, TypedUse,
 };
 
 pub trait Visit<'ast> {
@@ -81,6 +82,15 @@ pub trait Visit<'ast> {
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         visit_typed_expr(self, expr);
+    }
+
+    fn visit_typed_expr_echo(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        expression: &'ast Option<Box<TypedExpr>>,
+    ) {
+        visit_typed_expr_echo(self, location, type_, expression);
     }
 
     fn visit_typed_expr_int(
@@ -121,7 +131,7 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_pipeline(
         &mut self,
         location: &'ast SrcSpan,
-        assignments: &'ast [TypedAssignment],
+        assignments: &'ast [TypedPipelineAssignment],
         finally: &'ast TypedExpr,
     ) {
         visit_typed_expr_pipeline(self, location, assignments, finally);
@@ -300,6 +310,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
         visit_typed_use(self, use_);
+    }
+
+    fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {
+        visit_typed_pipeline_assignment(self, assignment);
     }
 
     fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
@@ -735,6 +749,11 @@ where
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
         TypedExpr::Invalid { location, type_ } => v.visit_typed_expr_invalid(location, type_),
+        TypedExpr::Echo {
+            location,
+            expression,
+            type_,
+        } => v.visit_typed_expr_echo(location, type_, expression),
     }
 }
 
@@ -783,16 +802,23 @@ pub fn visit_typed_expr_block<'a, V>(
 pub fn visit_typed_expr_pipeline<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    assignments: &'a [TypedAssignment],
+    assignments: &'a [TypedPipelineAssignment],
     finally: &'a TypedExpr,
 ) where
     V: Visit<'a> + ?Sized,
 {
     for assignment in assignments {
-        v.visit_typed_assignment(assignment);
+        v.visit_typed_pipeline_assignment(assignment);
     }
 
     v.visit_typed_expr(finally);
+}
+
+pub fn visit_typed_pipeline_assignment<'a, V>(v: &mut V, assignment: &'a TypedPipelineAssignment)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&assignment.value);
 }
 
 pub fn visit_typed_expr_var<'a, V>(
@@ -950,6 +976,19 @@ pub fn visit_typed_expr_todo<'a, V>(
 {
     if let Some(message) = message {
         v.visit_typed_expr(message);
+    }
+}
+
+fn visit_typed_expr_echo<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _type_: &'a Arc<Type>,
+    expression: &'a Option<Box<TypedExpr>>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    if let Some(expression) = expression {
+        v.visit_typed_expr(expression)
     }
 }
 
