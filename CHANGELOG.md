@@ -27,6 +27,9 @@
   wrong pattern match result for a sliced bit array.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where floats outside of Erlang's floating point range were not
+  causing errors.([shayan](https://github.com/massivefermion))
+
 ## 1.7.0-rc1 - 2024-12-29
 
 ### Compiler
