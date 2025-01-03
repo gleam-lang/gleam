@@ -22,13 +22,11 @@ fn go() {
 function go() {
   let x = (() => {
     1;
-    return (() => {
-      2;
-      let $ = true;
-      {
-        return 3;
-      }
-    })();
+    2;
+    let $ = true;
+    {
+      return 3;
+    }
   })();
   return x;
 }
