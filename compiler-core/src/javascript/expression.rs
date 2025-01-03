@@ -511,7 +511,12 @@ impl<'module> Generator<'module> {
     }
 
     fn block<'a>(&mut self, statements: &'a Vec1<TypedStatement>) -> Output<'a> {
-        if statements.len() == 1 {
+        if self.scope_position.is_tail() {
+            // If the block is in tail position there's no need to wrap it in an
+            // immediately invoked function expression; we can just return its
+            // last expression.
+            self.statements(statements)
+        } else if statements.len() == 1 {
             match statements.first() {
                 Statement::Expression(expression) => self.child_expression(expression),
 

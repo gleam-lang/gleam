@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+expression: "\nfn b() {\n  let x = 1\n  {\n    let x = 2\n    x + 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn b() {
+  let x = 1
+  {
+    let x = 2
+    x + 1
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function b() {
+  let x = 1;
+  let x$1 = 2;
+  return x$1 + 1;
+}

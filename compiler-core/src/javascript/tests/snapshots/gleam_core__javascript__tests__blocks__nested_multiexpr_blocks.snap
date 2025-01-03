@@ -20,10 +20,8 @@ fn go() {
 function go() {
   let x = (() => {
     1;
-    return (() => {
-      2;
-      return 3;
-    })();
+    2;
+    return 3;
   })();
   return x;
 }
