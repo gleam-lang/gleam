@@ -1880,14 +1880,16 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn pipeline<'a>(
-    assignments: &'a [TypedAssignment],
+    assignments: &'a [TypedPipelineAssignment],
     finally: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut documents = Vec::with_capacity((assignments.len() + 1) * 3);
 
     for a in assignments {
-        documents.push(assignment(a, env));
+        let body = maybe_block_expr(&a.value, env).group();
+        let name = env.next_local_var_name(&a.name);
+        documents.push(docvec![name, " = ", body]);
         documents.push(','.to_doc());
         documents.push(line());
     }
