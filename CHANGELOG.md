@@ -21,7 +21,7 @@
 
 ## 1.7.0-rc2 - 2024-12-30
 
-### Compiler
+### Bug fixes
 
 - Fixed a bug on JavaScript where a trailing `:bytes` segment would give the
   wrong pattern match result for a sliced bit array.
@@ -287,7 +287,7 @@
   Resolves versioned pages to point to latest page for search engines.
   ([Dave Lage](https://github.com/rockerBOO))
 
-### Bug fixed
+### Bug fixes
 
 - The compiler now throws an error when a float literal ends with an `e` and
   is missing an exponent.
@@ -358,7 +358,7 @@
 
 ## v1.6.1 - 2024-11-19
 
-### Bug fixed
+### Bug fixes
 
 - Fixed a bug where `gleam update` would fail to update versions.
   ([Jason Sipula](https://github.com/SnakeDoc))
