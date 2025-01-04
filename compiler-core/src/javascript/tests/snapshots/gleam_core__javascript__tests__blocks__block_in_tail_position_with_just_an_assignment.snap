@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/javascript/tests/blocks.rs
-assertion_line: 251
 expression: "\nfn b() {\n  let x = 1\n  {\n    let x = x\n  }\n}\n"
 ---
 ----- SOURCE CODE
