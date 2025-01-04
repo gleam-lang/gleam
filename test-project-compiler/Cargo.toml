@@ -1,6 +1,6 @@
 [package]
 name = "test-project-compiler"
-version = "1.7.0-rc3"
+version = "1.7.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
 edition = "2021"
 license = "Apache-2.0"
