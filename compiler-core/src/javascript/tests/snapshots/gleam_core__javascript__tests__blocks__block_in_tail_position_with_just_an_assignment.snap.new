@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+assertion_line: 251
+expression: "\nfn b() {\n  let x = 1\n  {\n    let x = x\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn b() {
+  let x = 1
+  {
+    let x = x
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function b() {
+  let x = 1;
+  let x$1 = x;
+  return x$1;
+}
