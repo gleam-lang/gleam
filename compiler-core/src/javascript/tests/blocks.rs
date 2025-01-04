@@ -245,3 +245,17 @@ fn b() {
 "#
     );
 }
+
+#[test]
+fn block_in_tail_position_with_just_an_assignment() {
+    assert_js!(
+        r#"
+fn b() {
+  let x = 1
+  {
+    let x = x
+  }
+}
+"#
+    );
+}
