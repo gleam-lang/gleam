@@ -5,7 +5,6 @@
 <p align="center">
   <a href="https://github.com/gleam-lang/gleam/releases"><img src="https://img.shields.io/github/release/gleam-lang/gleam" alt="GitHub release"></a>
   <a href="https://discord.gg/Fm8Pwmy"><img src="https://img.shields.io/discord/768594524158427167?color=blue" alt="Discord chat"></a>
-  <a><img src="https://github.com/gleam-lang/gleam/workflows/ci/badge.svg?branch=main"></a>
 </p>
 
 <!-- A spacer -->
@@ -33,7 +32,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/adam-wyluda">Adam Wyłuda</a> -
   <a href="https://github.com/thebugcatcher">Adi Iyengar</a> -
   <a href="https://github.com/amouat">Adrian Mouat</a> -
-  <a href="https://github.com/wiseodd">Agustinus Kristiadi</a> -
   <a href="https://github.com/JitPackJoyride">Ajit Krishna</a> -
   <a href="https://github.com/Guria">Aleksei Gurianov</a> -
   <a href="https://alembic.com.au">Alembic</a> -
@@ -238,8 +236,8 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/lamdor">Luke Amdor</a> -
   <a href="https://github.com/2kool4idkwhat">Luna</a> -
   <a href="https://github.com/manuel-rubio">Manuel Rubio</a> -
+  <a href="https://github.com/ideaMarcos">Marcos</a> -
   <a href="https://github.com/marcusandre">marcusandre</a> -
-  <a href="https://github.com/ideaMarcos">Marcøs</a> -
   <a href="https://github.com/AYM1607">Mariano Uvalle</a> -
   <a href="https://github.com/mariuskalvo">Marius Kalvø</a> -
   <a href="https://github.com/markholmes">Mark Holmes</a> -
@@ -263,6 +261,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/stunthamster">Michael Duffy</a> -
   <a href="https://github.com/michaeljones">Michael Jones</a> -
   <a href="https://github.com/monocursive">Michael Mazurczak</a> -
+  <a href="https://github.com/michallepicki">Michał Łępicki</a> -
   <a href="https://github.com/karlsson">Mikael Karlsson</a> -
   <a href="https://liberapay.com/Daybowbow/">Mike</a> -
   <a href="https://github.com/mroach">Mike Roach</a> -
@@ -281,7 +280,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/NicklasXYZ">Nicklas Sindlev Andersen</a> -
   <a href="https://github.com/NicoVIII">NicoVIII</a> -
   <a href="https://github.com/mrniket">Niket Shah</a> -
-  <a href="https://github.com/l1f">Ninaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</a> -
+  <a href="https://github.com/ninanomenon">Ninaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa</a> -
   <a href="http://www.ninefx.com">NineFX</a> -
   <a href="https://github.com/nomio">Nomio</a> -
   <a href="https://github.com/oceanlewis">Ocean</a> -
