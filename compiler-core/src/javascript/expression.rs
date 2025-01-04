@@ -490,13 +490,15 @@ impl<'module> Generator<'module> {
 
     fn pipeline<'a>(
         &mut self,
-        assignments: &'a [TypedAssignment],
+        assignments: &'a [TypedPipelineAssignment],
         finally: &'a TypedExpr,
     ) -> Output<'a> {
         let count = assignments.len();
         let mut documents = Vec::with_capacity((count + 1) * 2);
         for assignment in assignments.iter() {
-            documents.push(self.not_in_tail_position(|gen| gen.assignment(assignment))?);
+            documents.push(self.not_in_tail_position(|gen| {
+                gen.simple_variable_assignment(&assignment.name, &assignment.value)
+            })?);
             documents.push(line());
         }
         documents.push(self.expression(finally)?);
@@ -549,6 +551,24 @@ impl<'module> Generator<'module> {
         }
     }
 
+    fn simple_variable_assignment<'a>(
+        &mut self,
+        name: &'a EcoString,
+        value: &'a TypedExpr,
+    ) -> Output<'a> {
+        // Subject must be rendered before the variable for variable numbering
+        let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+        let js_name = self.next_local_var(name);
+        let assignment = docvec!["let ", js_name.clone(), " = ", subject, ";"];
+        let assignment = if self.scope_position.is_tail() {
+            docvec![assignment, line(), "return ", js_name, ";"]
+        } else {
+            assignment
+        };
+
+        return Ok(assignment.force_break());
+    }
+
     fn assignment<'a>(&mut self, assignment: &'a TypedAssignment) -> Output<'a> {
         let TypedAssignment {
             pattern,
@@ -561,25 +581,7 @@ impl<'module> Generator<'module> {
         // If it is a simple assignment to a variable we can generate a normal
         // JS assignment
         if let TypedPattern::Variable { name, .. } = pattern {
-            // Subject must be rendered before the variable for variable numbering
-            let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-            let js_name = self.next_local_var(name);
-            return Ok(if self.scope_position.is_tail() {
-                docvec![
-                    "let ",
-                    js_name.clone(),
-                    " = ",
-                    subject,
-                    ";",
-                    line(),
-                    "return ",
-                    js_name,
-                    ";"
-                ]
-            } else {
-                docvec!["let ", js_name, " = ", subject, ";"]
-            }
-            .force_break());
+            return self.simple_variable_assignment(name, value);
         }
 
         // Otherwise we need to compile the patterns
