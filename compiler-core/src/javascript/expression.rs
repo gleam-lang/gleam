@@ -566,7 +566,7 @@ impl<'module> Generator<'module> {
             assignment
         };
 
-        return Ok(assignment.force_break());
+        Ok(assignment.force_break())
     }
 
     fn assignment<'a>(&mut self, assignment: &'a TypedAssignment) -> Output<'a> {
