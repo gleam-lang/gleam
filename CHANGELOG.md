@@ -1,6 +1,10 @@
 # Changelog
 
-## 1.7.0-rc3 - 2025-12-02
+## 1.7.0 - 2025-01-05
+
+Happy birthday Louis! 🎁
+
+## 1.7.0-rc3 - 2025-01-02
 
 ### Formatter
 
