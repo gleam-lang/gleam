@@ -35,7 +35,19 @@ expression: "./cases/imported_record_constructors"
 
 -export([accessors/1, destructure_qualified/1, destructure_qualified_aliased/1, destructure_unqualified/1, destructure_aliased/1, update_qualified/1, update_qualified_aliased/1, update_unqualified/1, update_aliased/1, qualified_fn_a/0, qualified_fn_b/0, qualified_aliased_fn_a/0, qualified_aliased_fn_b/0, unqualified_fn_a/0, unqualified_fn_b/0, aliased_fn_a/0, aliased_fn_b/0]).
 
+-if(?OTP_RELEASE >= 27).
+-define(MODULEDOC(Str), -moduledoc(Str)).
+-define(DOC(Str), -doc(Str)).
+-else.
+-define(MODULEDOC(Str), -compile([])).
+-define(DOC(Str), -compile([])).
+-endif.
+
 -file("src/two.gleam", 58).
+?DOC(
+    " For these statements we use the accessors for the record from the other\n"
+    " module\n"
+).
 -spec accessors(one@one:user()) -> {binary(), integer()}.
 accessors(User) ->
     Name = erlang:element(2, User),
@@ -43,6 +55,7 @@ accessors(User) ->
     {Name, Score}.
 
 -file("src/two.gleam", 65).
+?DOC(" For these statements we use destructure the record\n").
 -spec destructure_qualified(one@one:user()) -> {binary(), integer()}.
 destructure_qualified(User) ->
     {user, Name, Score} = User,
@@ -67,6 +80,7 @@ destructure_aliased(User) ->
     {Name, Score}.
 
 -file("src/two.gleam", 86).
+?DOC(" For these statements we use update the record\n").
 -spec update_qualified(one@one:user()) -> one@one:user().
 update_qualified(User) ->
     _record = User,
