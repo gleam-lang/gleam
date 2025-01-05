@@ -230,6 +230,10 @@ fn module_document<'a>(
         }
     }
 
+    // We're going to need the documentation directives if any of the module's
+    // functions need it, or if the module has a module comment that we want to
+    // include in the generated Erlang source.
+    let needs_function_docs = needs_function_docs || !module.documentation.is_empty();
     let documentation_directive = if needs_function_docs {
         "-if(?OTP_RELEASE >= 27).
 -define(MODULEDOC(Str), -moduledoc(Str)).
