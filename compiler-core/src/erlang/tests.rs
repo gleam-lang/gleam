@@ -1,6 +1,9 @@
+use std::time::SystemTime;
+
 use camino::Utf8PathBuf;
 
 use crate::analyse::TargetSupport;
+use crate::build;
 use crate::config::PackageConfig;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::warning::WarningEmitter;
@@ -92,10 +95,27 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
         target_support: TargetSupport::NotEnforced,
         package_config: &config,
     }
-    .infer_module(ast, line_numbers, path)
+    .infer_module(ast, line_numbers, path.clone())
     .expect("should successfully infer root Erlang");
+
+    // After building everything we still need to attach the module comments, to
+    // do that we're reusing the `attach_doc_and_module_comments` that's used
+    // for the real thing. We just have to make a placeholder module wrapping
+    // the parsed ast and call the function!
+    let mut built_module = build::Module {
+        name: "my/mod".into(),
+        code: src.into(),
+        mtime: SystemTime::UNIX_EPOCH,
+        input_path: path,
+        origin: Origin::Src,
+        ast,
+        extra: parsed.extra,
+        dependencies: vec![],
+    };
+    built_module.attach_doc_and_module_comments();
+
     let line_numbers = LineNumbers::new(src);
-    module(&ast, &line_numbers).unwrap()
+    module(&built_module.ast, &line_numbers).unwrap()
 }
 
 #[macro_export]
