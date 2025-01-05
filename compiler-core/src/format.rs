@@ -9,9 +9,12 @@ use crate::{
     build::Target,
     docvec,
     io::Utf8Writer,
-    parse::extra::{Comment, ModuleExtra},
-    parse::SpannedString,
+    parse::{
+        extra::{Comment, ModuleExtra},
+        SpannedString,
+    },
     pretty::{self, *},
+    sourcemap::SourceMapEmitter,
     type_::{self, Type},
     warning::WarningEmitter,
     Error, Result,
@@ -36,7 +39,7 @@ pub fn pretty(writer: &mut impl Utf8Writer, src: &EcoString, path: &Utf8Path) ->
     let intermediate = Intermediate::from_extra(&parsed.extra, src);
     Formatter::with_comments(&intermediate)
         .module(&parsed.module)
-        .pretty_print(80, writer)
+        .pretty_print(80, writer, &mut SourceMapEmitter::null())
 }
 
 pub(crate) struct Intermediate<'a> {

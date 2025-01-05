@@ -49,6 +49,8 @@ num-bigint = "0.4.6"
 num-traits = "0.2.19"
 # Encryption
 age = { version = "0.11", features = ["armor"] }
+# Sourcemap generation
+sourcemap = "9"
 
 async-trait.workspace = true
 base16.workspace = true
