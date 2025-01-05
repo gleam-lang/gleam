@@ -244,12 +244,19 @@ fn module_document<'a>(
         nil()
     };
 
+    let module_doc = if module.documentation.is_empty() {
+        nil()
+    } else {
+        doc_attribute(DocCommentKind::Module, &module.documentation).append(lines(2))
+    };
+
     let module = docvec![
         header,
         "-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).",
         lines(2),
         exports,
         documentation_directive,
+        module_doc,
         type_defs,
         join(statements, lines(2)),
     ];
@@ -450,9 +457,15 @@ fn module_function<'a>(
     let attributes = file_attribute;
     let attributes = if let Some((_, documentation)) = &function.documentation {
         env.needs_function_docs = true;
+        let doc_lines = documentation
+            .trim_end()
+            .split('\n')
+            .map(EcoString::from)
+            .collect_vec();
+
         attributes
             .append(line())
-            .append(doc_attribute(documentation))
+            .append(doc_attribute(DocCommentKind::Function, &doc_lines))
     } else {
         attributes
     };
@@ -482,23 +495,29 @@ fn file_attribute<'a>(
     docvec!["-file(\"", path, "\", ", line, ")."]
 }
 
-fn doc_attribute<'a>(documentation: &EcoString) -> Document<'a> {
-    let lines = documentation
-        .trim_end()
-        .split('\n')
-        .map(|line| {
-            let line = line.replace("\\", "\\\\").replace("\"", "\\\"");
-            docvec!["\"", EcoString::from(line), "\\n\""]
-        })
-        .collect_vec();
+enum DocCommentKind {
+    Module,
+    Function,
+}
 
-    let is_multiline_doc_comment = lines.len() > 1;
-    let documentation = join(lines, line());
+fn doc_attribute<'a>(kind: DocCommentKind, doc_lines: &[EcoString]) -> Document<'a> {
+    let prefix = match kind {
+        DocCommentKind::Module => "?MODULEDOC",
+        DocCommentKind::Function => "?DOC",
+    };
+    let is_multiline_doc_comment = doc_lines.len() > 1;
+    let doc_lines = join(
+        doc_lines.iter().map(|line| {
+            let line = line.replace("\\", "\\\\").replace("\"", "\\\"");
+            docvec!["\"", line, "\\n\""]
+        }),
+        line(),
+    );
     if is_multiline_doc_comment {
-        let nested_documentation = docvec![line(), documentation].nest(INDENT);
-        docvec!["?DOC(", nested_documentation, line(), ")."]
+        let nested_documentation = docvec![line(), doc_lines].nest(INDENT);
+        docvec![prefix, "(", nested_documentation, line(), ")."]
     } else {
-        docvec!["?DOC(", documentation, ")."]
+        docvec![prefix, "(", doc_lines, ")."]
     }
 }
 
