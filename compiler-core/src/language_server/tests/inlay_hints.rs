@@ -1,6 +1,6 @@
 use crate::language_server::{
     configuration::{Configuration, InlayHintsConfig},
-    tests::{setup_engine, LanguageServerTestIO},
+    tests::{setup_engine, LanguageServerTestIO, TestProject},
 };
 use lsp_types::{InlayHintParams, Position, Range};
 
@@ -186,7 +186,7 @@ fn inlay_hints_for_config(src: &str, user_config: Configuration) -> String {
     assert!(response.result.is_ok());
 
     let params = InlayHintParams {
-        text_document: super::TestProject::build_path(),
+        text_document: TestProject::build_path(),
         work_done_progress_params: Default::default(),
         range: Range::new(
             Position::new(0, 0),

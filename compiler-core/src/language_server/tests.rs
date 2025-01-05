@@ -528,14 +528,14 @@ impl<'a> TestProject<'a> {
         engine
     }
 
-    fn build_path() -> TextDocumentIdentifier {
+    pub fn build_path() -> TextDocumentIdentifier {
         let path = Utf8PathBuf::from(if cfg!(target_family = "windows") {
             r"\\?\C:\src\app.gleam"
         } else {
             "/src/app.gleam"
         });
 
-        let url = Url::from_file_path(path).expect("valid path");
+        let url = Url::from_file_path(path).unwrap();
 
         TextDocumentIdentifier::new(url)
     }
