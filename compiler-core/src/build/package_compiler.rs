@@ -182,10 +182,14 @@ where
             incomplete_modules,
         );
 
-        let modules = match outcome {
+        let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
             Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
         };
+
+        for mut module in modules.iter_mut() {
+            module.attach_doc_and_module_comments();
+        }
 
         tracing::debug!("performing_code_generation");
 
