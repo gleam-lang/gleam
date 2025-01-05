@@ -11,6 +11,6 @@ const one = 1
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines\n",
+        "```gleam\nInt\n```\n Exciting documentation\n Maybe even multiple lines",
     ),
 )
