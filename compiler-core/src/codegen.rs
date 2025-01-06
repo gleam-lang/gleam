@@ -266,7 +266,7 @@ impl<'a> JavaScript<'a> {
             &module.ast,
             &line_numbers,
             &module.input_path,
-            &self.project_root,
+            self.project_root,
             &module.code,
             self.target_support,
             self.typescript,
