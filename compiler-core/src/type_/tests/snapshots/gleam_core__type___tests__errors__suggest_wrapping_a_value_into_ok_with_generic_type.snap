@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn first(list: List(a)) -> Result(a, Nil) {\n  case list {\n    [] -> Error(Nil)\n    [first, ..rest] -> first\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn first(list: List(a)) -> Result(a, Nil) {
+  case list {
+    [] -> Error(Nil)
+    [first, ..rest] -> first
+  }
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:5
+  │
+5 │     [first, ..rest] -> first
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+This case clause was found to return a different type than the previous
+one, but all case clauses must return the same type.
+
+Expected type:
+
+    Result(a, Nil)
+
+Found type:
+
+    a

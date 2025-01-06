@@ -138,6 +138,18 @@ impl Type {
         }
     }
 
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } if "Result" == name && is_prelude_module(module) => {
+                Some((args.first().cloned()?, args.get(1).cloned()?))
+            }
+            Self::Var { type_ } => type_.borrow().result_types(),
+            Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
+        }
+    }
+
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_unbound(),
@@ -431,6 +443,90 @@ impl Type {
         match self {
             Self::Fn { args, .. } => Some(args.len()),
             _ => None,
+        }
+    }
+
+    #[must_use]
+    /// Returns `true` is the two types are the same. This differs from the
+    /// standard `Eq` implementation as it also follows all links to check if
+    /// two types are really the same.
+    ///
+    pub fn same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Type::Named { .. }, Type::Fn { .. } | Type::Tuple { .. }) => false,
+            (one @ Type::Named { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (Type::Named { .. }, Type::Named { .. }) => self == other,
+
+            (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
+            (one @ Type::Fn { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (
+                Type::Fn { args, retrn },
+                Type::Fn {
+                    args: other_args,
+                    retrn: other_retrn,
+                },
+            ) => {
+                args.len() == other_args.len()
+                    && args
+                        .iter()
+                        .zip(other_args)
+                        .all(|(one, other)| one.same_as(other))
+                    && retrn.same_as(other_retrn)
+            }
+
+            (Type::Var { type_ }, other) => type_.as_ref().borrow().same_as_other_type(other),
+
+            (Type::Tuple { .. }, Type::Fn { .. } | Type::Named { .. }) => false,
+            (one @ Type::Tuple { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (Type::Tuple { elems }, Type::Tuple { elems: other_elems }) => {
+                elems.len() == other_elems.len()
+                    && elems
+                        .iter()
+                        .zip(other_elems)
+                        .all(|(one, other)| one.same_as(other))
+            }
+        }
+    }
+}
+
+impl TypeVar {
+    #[must_use]
+    fn same_as_other_type(&self, other: &Type) -> bool {
+        match (self, other) {
+            (TypeVar::Unbound { .. }, _) => true,
+            (TypeVar::Link { type_ }, other) => type_.same_as(other),
+
+            (
+                TypeVar::Generic { .. },
+                Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. },
+            ) => false,
+
+            (one @ TypeVar::Generic { .. }, Type::Var { type_ }) => {
+                one.same_as(&type_.as_ref().borrow())
+            }
+        }
+    }
+
+    #[must_use]
+    fn same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TypeVar::Unbound { .. }, _) | (_, TypeVar::Unbound { .. }) => true,
+            (TypeVar::Link { type_ }, TypeVar::Link { type_: other_type }) => {
+                type_.same_as(other_type)
+            }
+            (TypeVar::Link { type_ }, other @ TypeVar::Generic { .. }) => {
+                other.same_as_other_type(type_)
+            }
+            (TypeVar::Generic { id }, TypeVar::Generic { id: other_id }) => id == other_id,
+            (one @ TypeVar::Generic { .. }, TypeVar::Link { type_ }) => {
+                one.same_as_other_type(type_)
+            }
         }
     }
 }
@@ -966,6 +1062,13 @@ impl TypeVar {
     pub fn result_ok_type(&self) -> Option<Arc<Type>> {
         match self {
             TypeVar::Link { type_ } => type_.result_ok_type(),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+        }
+    }
+
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            TypeVar::Link { type_ } => type_.result_types(),
             TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
         }
     }
