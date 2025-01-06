@@ -22,7 +22,6 @@ error: Type mismatch
 5 │ ╭     _ -> {
 6 │ │       todo
 7 │ │       1
-  │ │       ^ Did you mean to wrap this in an `Ok`?
 8 │ │     }
   │ ╰─────^
 
