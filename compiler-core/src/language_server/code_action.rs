@@ -2239,15 +2239,16 @@ impl<'a> DesugarUse<'a> {
             EcoString::from("")
         };
 
-        // The use callback is not necessarily the last argumen. If you have the
-        // following function: `wibble(a a, b b) { todo }`
+        // The use callback is not necessarily the last argument. If you have
+        // the following function: `wibble(a a, b b) { todo }`
         // And use it like this: `use <- wibble(b: 1)`, the first argument `a`
         // is going to be the use callback, not the last one!
+        let use_callback = args.iter().find(|arg| arg.is_use_implicit_callback());
         let Some(CallArg {
             implicit: Some(ImplicitCallArgOrigin::Use),
             value: TypedExpr::Fn { body, type_, .. },
             ..
-        }) = args.iter().find(|arg| arg.is_use_implicit_callback())
+        }) = use_callback
         else {
             return vec![];
         };
@@ -2273,12 +2274,37 @@ impl<'a> DesugarUse<'a> {
         });
 
         let use_line_end = use_.right_hand_side_location.end;
-        let use_rhs_function_has_some_explicit_args = args.len() > 1;
+        let use_rhs_function_has_some_explicit_args = args
+            .iter()
+            .filter(|arg| !arg.is_use_implicit_callback())
+            .peekable()
+            .peek()
+            .is_some();
+
         let use_rhs_function_ends_with_closed_parentheses = self
             .module
             .code
             .get(use_line_end as usize - 1..use_line_end as usize)
             == Some(")");
+
+        let last_explicit_arg = args.iter().filter(|arg| !arg.is_implicit()).last();
+        let last_arg_end = last_explicit_arg.map_or(use_line_end - 1, |arg| arg.location.end);
+
+        // This is the piece of code between the end of the last argument and
+        // the end of the use_expression:
+        //
+        //   use <- wibble(a, b,    )
+        //                     ^^^^^ This piece right here, from `,` included
+        //                           up to `)` excluded.
+        //
+        let text_after_last_argument = self
+            .module
+            .code
+            .get(last_arg_end as usize..use_line_end as usize - 1);
+        let use_rhs_has_comma_after_last_argument =
+            text_after_last_argument.is_some_and(|code| code.contains(','));
+        let needs_space_before_callback =
+            text_after_last_argument.is_some_and(|code| !code.is_empty() && !code.ends_with(' '));
 
         if use_rhs_function_ends_with_closed_parentheses {
             // If the function on the right hand side of use ends with a closed
@@ -2289,6 +2315,7 @@ impl<'a> DesugarUse<'a> {
             //                   ^ To add the fn() we need to first remove this
             //
             // So here we write over the last closed parentheses to remove it.
+            let callback_start = format!("{callback_label}fn({assignments}) {{");
             self.edits.replace(
                 SrcSpan {
                     start: use_line_end - 1,
@@ -2297,10 +2324,13 @@ impl<'a> DesugarUse<'a> {
                 // If the function on the rhs of use has other orguments besides
                 // the implicit fn expression then we need to put a comma after
                 // the last argument.
-                if use_rhs_function_has_some_explicit_args {
-                    format!(", {callback_label}fn({assignments}) {{")
+                if use_rhs_function_has_some_explicit_args && !use_rhs_has_comma_after_last_argument
+                {
+                    format!(", {callback_start}")
+                } else if needs_space_before_callback {
+                    format!(" {callback_start}")
                 } else {
-                    format!("{callback_label}fn({assignments}) {{")
+                    callback_start.to_string()
                 },
             )
         } else {

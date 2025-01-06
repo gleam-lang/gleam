@@ -3493,6 +3493,92 @@ fn wibble(one f, two _, three _) {
 }
 
 #[test]
+// https://github.com/gleam-lang/gleam/issues/4149
+fn desugar_use_with_trailing_comma() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(1, 2,)
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(todo, todo)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
+
+#[test]
+fn desugar_use_with_trailing_comma_2() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(
+    1,
+    2,
+  )
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(todo, todo)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
+
+#[test]
+fn desugar_use_with_trailing_comma_and_label() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(
+    1,
+    wibble: 2,
+  )
+  todo
+}
+
+fn wibble(n, wibble m, wobble f) {
+    f(todo, todo)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
+
+#[test]
+fn desugar_use_multiline_with_no_trailing_comma() {
+    let src = r#"
+pub fn main() {
+  use a, b <- wibble(
+    1,
+    2
+  )
+  todo
+}
+
+fn wibble(n, m, f) {
+    f(todo, todo)
+}
+"#;
+    assert_code_action!(
+        DESUGAR_USE_EXPRESSION,
+        TestProject::for_source(src),
+        find_position_of("<-").select_until(find_position_of("wibble")),
+    );
+}
+
+#[test]
 fn turn_call_into_use_with_single_line_body() {
     let src = r#"
 pub fn main() {
