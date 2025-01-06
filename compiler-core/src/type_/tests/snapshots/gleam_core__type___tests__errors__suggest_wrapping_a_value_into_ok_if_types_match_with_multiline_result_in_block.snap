@@ -21,14 +21,13 @@ fn add_1(n: Int) { n + 1 }
 ----- ERROR
 error: Type mismatch
   ┌─ /src/one/two.gleam:5:5
-  │    
-5 │ ╭       _ -> {
-6 │ │         todo
-7 │ │ ╭       1
-8 │ │ │       |> add_1
-  │ │ ╰──────────────^ Did you mean to wrap this in an `Ok`?
-9 │ │       }
-  │ ╰───────^
+  │  
+5 │ ╭     _ -> {
+6 │ │       todo
+7 │ │       1
+8 │ │       |> add_1
+9 │ │     }
+  │ ╰─────^
 
 This case clause was found to return a different type than the previous
 one, but all case clauses must return the same type.
