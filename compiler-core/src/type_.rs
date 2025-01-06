@@ -499,15 +499,7 @@ impl TypeVar {
     #[must_use]
     fn same_as_other_type(&self, other: &Type) -> bool {
         match (self, other) {
-            (
-                TypeVar::Unbound { .. },
-                Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. },
-            ) => false,
-
-            (one @ TypeVar::Unbound { .. }, Type::Var { type_ }) => {
-                one.same_as(&type_.as_ref().borrow())
-            }
-
+            (TypeVar::Unbound { .. }, _) => true,
             (TypeVar::Link { type_ }, other) => type_.same_as(other),
 
             (
@@ -524,24 +516,14 @@ impl TypeVar {
     #[must_use]
     fn same_as(&self, other: &Self) -> bool {
         match (self, other) {
-            (TypeVar::Unbound { id }, TypeVar::Unbound { id: other_id }) => id == other_id,
-            (TypeVar::Unbound { .. }, TypeVar::Generic { .. }) => false,
-            (one @ TypeVar::Unbound { .. }, TypeVar::Link { type_ }) => {
-                one.same_as_other_type(type_)
-            }
-
+            (TypeVar::Unbound { .. }, _) | (_, TypeVar::Unbound { .. }) => true,
             (TypeVar::Link { type_ }, TypeVar::Link { type_: other_type }) => {
                 type_.same_as(other_type)
-            }
-            (TypeVar::Link { type_ }, other @ TypeVar::Unbound { .. }) => {
-                other.same_as_other_type(type_)
             }
             (TypeVar::Link { type_ }, other @ TypeVar::Generic { .. }) => {
                 other.same_as_other_type(type_)
             }
-
             (TypeVar::Generic { id }, TypeVar::Generic { id: other_id }) => id == other_id,
-            (TypeVar::Generic { .. }, TypeVar::Unbound { .. }) => false,
             (one @ TypeVar::Generic { .. }, TypeVar::Link { type_ }) => {
                 one.same_as_other_type(type_)
             }
