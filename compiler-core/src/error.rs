@@ -2016,19 +2016,11 @@ But function expects:
                         // if the error could be resolved just by wrapping the value in an `Ok`
                         // or `Error` we want to add an additional label with this hint below the
                         // offending value.
-                        Some(UnifyErrorSituation::CaseClauseMismatch { clause_location }) =>
-                            match hint_wrap_value_in_result(expected, given) {
-                                None => (clause_location, None, vec![]),
-                                Some(hint) => {
-                                    let label = Label { text: Some(hint), span: *location };
-                                    let extra_labels = vec![ExtraLabel { src_info: None, label }];
-                                    (clause_location, None, extra_labels)
-                                }
-                            },
+                        Some(UnifyErrorSituation::CaseClauseMismatch{ clause_location }) => (clause_location, None, vec![]),
                         // In all other cases we just highlight the offending expression, optionally
                         // adding the wrapping hint if it makes sense.
                         Some(_) | None =>
-                            (location, hint_wrap_value_in_result(expected, given), vec![]),
+                            (location, hint_wrap_value_in_result(expected, given), vec![])
                     };
 
                     Diagnostic {

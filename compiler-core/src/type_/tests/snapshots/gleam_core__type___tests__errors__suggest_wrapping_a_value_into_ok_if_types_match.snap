@@ -18,8 +18,6 @@ error: Type mismatch
   │
 5 │     _ -> 1
   │     ^^^^^^
-  │          │
-  │          Did you mean to wrap this in an `Ok`?
 
 This case clause was found to return a different type than the previous
 one, but all case clauses must return the same type.
