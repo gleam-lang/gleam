@@ -66,7 +66,7 @@ const ASSIGN_UNUSED_RESULT: &str = "Assign unused Result value to `_`";
 const ADD_MISSING_PATTERNS: &str = "Add missing patterns";
 const ADD_ANNOTATION: &str = "Add type annotation";
 const ADD_ANNOTATIONS: &str = "Add type annotations";
-const DESUGAR_USE_EXPRESSION: &str = "Convert from `use`";
+const CONVERT_FROM_USE: &str = "Convert from `use`";
 const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
@@ -3239,7 +3239,7 @@ pub fn main() {
 */
 
 #[test]
-fn desugar_use_expression_with_no_parens() {
+fn convert_from_use_expression_with_no_parens() {
     let src = r#"
 pub fn main() {
   use <- wibble
@@ -3252,14 +3252,14 @@ fn wibble(f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("use").select_until(find_position_of("todo")),
     );
 }
 
 #[test]
-fn desugar_use_expression_with_empty_parens() {
+fn convert_from_use_expression_with_empty_parens() {
     let src = r#"
 pub fn main() {
   use <- wibble()
@@ -3272,14 +3272,14 @@ fn wibble(f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("use").to_selection(),
     );
 }
 
 #[test]
-fn desugar_use_expression_with_parens_and_other_args() {
+fn convert_from_use_expression_with_parens_and_other_args() {
     let src = r#"
 pub fn main() {
   use <- wibble(1, 2)
@@ -3292,14 +3292,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("wibble").select_until(find_position_of("1")),
     );
 }
 
 #[test]
-fn desugar_use_expression_with_single_pattern() {
+fn convert_from_use_expression_with_single_pattern() {
     let src = r#"
 pub fn main() {
   use a <- wibble(1, 2)
@@ -3312,14 +3312,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").to_selection(),
     );
 }
 
 #[test]
-fn desugar_use_expression_with_multiple_patterns() {
+fn convert_from_use_expression_with_multiple_patterns() {
     let src = r#"
 pub fn main() {
   use a, b <- wibble(1, 2)
@@ -3332,7 +3332,7 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").nth_occurrence(2).to_selection(),
     );
@@ -3352,7 +3352,7 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").under_last_char().to_selection(),
     );
@@ -3372,14 +3372,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
 
 #[test]
-fn desugar_use_expression_with_type_annotations() {
+fn convert_from_use_expression_with_type_annotations() {
     let src = r#"
 pub fn main() {
   use a: Int, b: Int <- wibble(1, 2)
@@ -3391,14 +3391,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
 
 #[test]
-fn desugar_use_expression_doesnt_work_with_complex_patterns() {
+fn convert_from_use_expression_doesnt_work_with_complex_patterns() {
     let src = r#"
 pub fn main() {
   use #(a, b), 1 <- wibble(1, 2)
@@ -3410,14 +3410,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_no_code_actions!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
 
 #[test]
-fn desugar_use_with_labels() {
+fn convert_from_use_with_labels() {
     let src = r#"
 pub fn main() {
   use a <- wibble(one: 1, two: 2)
@@ -3429,14 +3429,14 @@ fn wibble(one _, two _, three f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").to_selection(),
     );
 }
 
 #[test]
-fn desugar_use_with_labels_2() {
+fn convert_from_use_with_labels_2() {
     let src = r#"
 pub fn main() {
   use a <- wibble(1, two: 2)
@@ -3448,14 +3448,14 @@ fn wibble(one _, two _, three f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").to_selection(),
     );
 }
 
 #[test]
-fn desugar_use_with_labels_3() {
+fn convert_from_use_with_labels_3() {
     let src = r#"
 pub fn main() {
   use a <- wibble(1, three: 3)
@@ -3467,14 +3467,14 @@ fn wibble(one _, two f, three _) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").to_selection(),
     );
 }
 
 #[test]
-fn desugar_use_with_labels_4() {
+fn convert_from_use_with_labels_4() {
     let src = r#"
 pub fn main() {
   use a <- wibble(two: 2, three: 3)
@@ -3486,7 +3486,7 @@ fn wibble(one f, two _, three _) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("todo").to_selection(),
     );
@@ -3494,7 +3494,7 @@ fn wibble(one f, two _, three _) {
 
 #[test]
 // https://github.com/gleam-lang/gleam/issues/4149
-fn desugar_use_with_trailing_comma() {
+fn convert_from_use_with_trailing_comma() {
     let src = r#"
 pub fn main() {
   use a, b <- wibble(1, 2,)
@@ -3506,14 +3506,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
 
 #[test]
-fn desugar_use_with_trailing_comma_2() {
+fn convert_from_use_with_trailing_comma_2() {
     let src = r#"
 pub fn main() {
   use a, b <- wibble(
@@ -3528,14 +3528,14 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
 
 #[test]
-fn desugar_use_with_trailing_comma_and_label() {
+fn convert_from_use_with_trailing_comma_and_label() {
     let src = r#"
 pub fn main() {
   use a, b <- wibble(
@@ -3550,14 +3550,14 @@ fn wibble(n, wibble m, wobble f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
 }
 
 #[test]
-fn desugar_use_multiline_with_no_trailing_comma() {
+fn convert_from_use_multiline_with_no_trailing_comma() {
     let src = r#"
 pub fn main() {
   use a, b <- wibble(
@@ -3572,7 +3572,7 @@ fn wibble(n, m, f) {
 }
 "#;
     assert_code_action!(
-        DESUGAR_USE_EXPRESSION,
+        CONVERT_FROM_USE,
         TestProject::for_source(src),
         find_position_of("<-").select_until(find_position_of("wibble")),
     );
