@@ -2017,26 +2017,18 @@ But function expects:
                         // or `Error` we want to add an additional label with this hint below the
                         // offending value.
                         Some(UnifyErrorSituation::CaseClauseMismatch { clause_location }) =>
-                            match hint_wrap_value_into_result(expected, given) {
+                            match hint_wrap_value_in_result(expected, given) {
                                 None => (clause_location, None, vec![]),
-                                Some(hint) => (
-                                    clause_location,
-                                    None,
-                                    vec![
-                                        ExtraLabel {
-                                            src_info: None,
-                                            label: Label {
-                                                text: Some(hint),
-                                                span: *location,
-                                            }
-                                        },
-                                    ],
-                                )
+                                Some(hint) => {
+                                    let label = Label { text: Some(hint), span: *location };
+                                    let extra_labels = vec![ExtraLabel { src_info: None, label }];
+                                    (clause_location, None, extra_labels)
+                                }
                             },
                         // In all other cases we just highlight the offending expression, optionally
                         // adding the wrapping hint if it makes sense.
                         Some(_) | None =>
-                            (location, hint_wrap_value_into_result(expected, given), vec![]),
+                            (location, hint_wrap_value_in_result(expected, given), vec![]),
                     };
 
                     Diagnostic {
@@ -4047,7 +4039,7 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
     }
 }
 
-fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
+fn hint_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
     let expected = collapse_links(expected.clone());
     let (expected_ok_type, expected_error_type) = expected.result_types()?;
 
