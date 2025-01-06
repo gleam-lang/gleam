@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
+use crate::type_::collapse_links;
 use crate::type_::error::{
     MissingAnnotation, ModuleValueUsageContext, Named, UnknownField, UnknownTypeHint,
     UnsafeRecordUpdateReason,
@@ -21,6 +22,7 @@ use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 use termcolor::Buffer;
 use thiserror::Error;
 use vec1::Vec1;
@@ -4055,30 +4057,6 @@ fn hint_wrap_value_into_result(expected: &Arc<Type>, given: &Arc<Type>) -> Optio
         Some("Did you mean to wrap this in an `Error`?".into())
     } else {
         None
-    }
-}
-
-fn hint_unwrap_result(
-    expected: &Arc<Type>,
-    given: &Arc<Type>,
-    printer: &mut Printer<'_>,
-) -> Option<String> {
-    // If the got type is `Result(a, _)` and the expected one is
-    // `a` then we can display the hint.
-    let wrapped_type = given.result_ok_type()?;
-    if !wrapped_type.same_as(expected) {
-        None
-    } else {
-        Some(wrap_format!(
-            "If you want to get a `{}` out of a `{}` you can pattern match on it:
-
-    case result {{
-      Ok(value) -> todo
-      Error(error) -> todo
-    }}",
-            printer.print_type(expected),
-            printer.print_type(given),
-        ))
     }
 }
 
