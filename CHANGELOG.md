@@ -39,6 +39,36 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now suggests a code action to pattern match on a
+  function's argument. For example:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(pokedex_number: Int, name: String)
+  }
+
+  pub fn to_string(pokemon: Pokemon) {
+    //             ^ If you put your cursor over the argument
+    todo
+  }
+  ```
+
+  Triggering the code action on the `pokemon` argument will generate the
+  following code for you:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(pokedex_number: Int, name: String)
+  }
+
+  pub fn to_string(pokemon: Pokemon) {
+    let Pokemon(pokedex_number:, name:) = pokemon
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
