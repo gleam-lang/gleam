@@ -2180,7 +2180,7 @@ impl<A> BitArrayOption<A> {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, serde::Serialize, serde::Deserialize)]
 pub enum TodoKind {
     Keyword,
-    EmptyFunction,
+    EmptyFunction { function_location: SrcSpan },
     IncompleteUse,
     EmptyBlock,
 }

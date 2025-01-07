@@ -375,7 +375,7 @@ A block must always contain at least one expression.",
                             );
                             "Incomplete block"
                         }
-                        TodoKind::EmptyFunction => "Unimplemented function",
+                        TodoKind::EmptyFunction { .. } => "Unimplemented function",
                         TodoKind::IncompleteUse => {
                             text.push_str(
                                 "
