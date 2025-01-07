@@ -1895,7 +1895,7 @@ where
                             function_location: SrcSpan { start, end }
                         },
                         location: SrcSpan {
-                            start: left_brace_start,
+                            start: left_brace_start + 1,
                             end: right_brace_end
                         },
                         message: None,
