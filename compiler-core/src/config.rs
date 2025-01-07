@@ -1,3 +1,4 @@
+mod stale_package_remover;
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
 use crate::manifest::Manifest;
@@ -10,7 +11,7 @@ use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{self, Version};
 use http::Uri;
 use serde::Deserialize;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
 
@@ -184,7 +185,12 @@ impl PackageConfig {
         match manifest {
             None => Ok(HashMap::new()),
             Some(manifest) => {
-                StalePackageRemover::fresh_and_locked(&self.all_direct_dependencies()?, manifest)
+                let requirements = self.all_direct_dependencies()?;
+                let fresh_and_locked = stale_package_remover::StalePackageRemover::fresh_and_locked(
+                    &requirements,
+                    manifest,
+                );
+                Ok(fresh_and_locked)
             }
         }
     }
@@ -232,78 +238,6 @@ impl PackageConfig {
                     gleam_version: COMPILER_VERSION.to_string(),
                 });
             }
-        }
-        Ok(())
-    }
-}
-
-#[derive(Debug)]
-struct StalePackageRemover<'a> {
-    // These are the packages for which the requirement or their parents
-    // requirement has not changed.
-    fresh: HashSet<&'a str>,
-    locked: HashMap<EcoString, &'a Vec<EcoString>>,
-}
-
-impl<'a> StalePackageRemover<'a> {
-    pub fn fresh_and_locked(
-        requirements: &'a HashMap<EcoString, Requirement>,
-        manifest: &'a Manifest,
-    ) -> Result<HashMap<EcoString, Version>> {
-        let locked = manifest
-            .packages
-            .iter()
-            .map(|p| (p.name.clone(), &p.requirements))
-            .collect();
-        Self {
-            fresh: HashSet::new(),
-            locked,
-        }
-        .run(requirements, manifest)
-    }
-
-    fn run(
-        &mut self,
-        requirements: &'a HashMap<EcoString, Requirement>,
-        manifest: &'a Manifest,
-    ) -> Result<HashMap<EcoString, Version>> {
-        // Record all the requirements that have not changed
-        for (name, requirement) in requirements {
-            if manifest.requirements.get(name) != Some(requirement) {
-                continue; // This package has changed, don't record it
-            }
-
-            // Recursively record the package and its deps as being fresh
-            self.record_tree_fresh(name)?;
-        }
-
-        // Return all the previously resolved packages that have not been
-        // recorded as fresh
-        Ok(manifest
-            .packages
-            .iter()
-            .filter(|package| {
-                let new = requirements.contains_key(package.name.as_str())
-                    && !manifest.requirements.contains_key(package.name.as_str());
-                let fresh = self.fresh.contains(package.name.as_str());
-                let locked = !new && fresh;
-                if !locked {
-                    tracing::info!(name = package.name.as_str(), "unlocking_stale_package");
-                }
-                locked
-            })
-            .map(|package| (package.name.clone(), package.version.clone()))
-            .collect())
-    }
-
-    fn record_tree_fresh(&mut self, name: &'a str) -> Result<()> {
-        // Record the top level package
-        let _ = self.fresh.insert(name);
-
-        let deps = self.locked.get(name).ok_or(Error::CorruptManifest)?;
-        // Record each of its deps recursively
-        for package in *deps {
-            self.record_tree_fresh(package)?;
         }
         Ok(())
     }
