@@ -3422,9 +3422,21 @@ where
                     return;
                 };
 
-                let insert_at = fun.body.first().location().start;
+                let first_statement_location = fun.body.first().location();
+                let first_statement_range =
+                    self.edits.src_span_to_lsp_range(first_statement_location);
+
+                let assignment = if function_range.start.line == first_statement_range.start.line {
+                    format!("\n  let {pattern} = {arg_name}\n")
+                } else {
+                    format!(
+                        "let {pattern} = {arg_name}\n{}",
+                        " ".repeat(first_statement_range.start.character as usize)
+                    )
+                };
+
                 self.edits
-                    .insert(insert_at, format!("let {pattern} = {arg_name}\n"));
+                    .insert(first_statement_location.start, assignment);
                 return;
             }
         }
