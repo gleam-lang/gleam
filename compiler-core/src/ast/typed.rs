@@ -200,7 +200,9 @@ impl TypedExpr {
                 // We don't want to match on todos that were implicitly inserted
                 // by the compiler as it would result in confusing suggestions
                 // from the LSP.
-                TodoKind::EmptyFunction | TodoKind::EmptyBlock | TodoKind::IncompleteUse => None,
+                TodoKind::EmptyFunction { .. } | TodoKind::EmptyBlock | TodoKind::IncompleteUse => {
+                    None
+                }
             },
 
             Self::Pipeline {

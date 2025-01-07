@@ -422,9 +422,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let type_ = self.new_unbound_var();
 
         // Emit a warning that there is a todo in the code.
+        let warning_location = match kind {
+            TodoKind::Keyword | TodoKind::IncompleteUse | TodoKind::EmptyBlock => location,
+            TodoKind::EmptyFunction { function_location } => function_location,
+        };
         self.problems.warning(Warning::Todo {
             kind,
-            location,
+            location: warning_location,
             type_: type_.clone(),
         });
 
