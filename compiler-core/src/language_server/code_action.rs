@@ -9,6 +9,7 @@ use crate::{
         TypedUse,
     },
     build::{Located, Module},
+    io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::extra::ModuleExtra,
     type_::{
@@ -25,6 +26,7 @@ use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
 
 use super::{
+    compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
     src_span_to_lsp_range,
@@ -3249,5 +3251,251 @@ impl<'a> DecoderPrinter<'a> {
             field = field.label.field_key(),
             module = self.printer.print_module(DECODE_MODULE)
         )
+    }
+}
+
+/// Builder for code action to destructure a function argument:
+///
+/// ```gleam
+/// pub fn wibble(arg: Wibble) {
+/// //             ^ Cursor here
+/// }
+///
+/// // Adds this to the top of the function:
+///
+/// pub fn wibble(arg: Wibble) {
+///   let Wibble(label1:, label2:) = arg
+/// }
+/// ```
+///
+pub struct DestructureFunctionArgument<'a, A> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    compiler: &'a LspProjectCompiler<A>,
+    edits: TextEdits<'a>,
+}
+
+impl<'a, IO> DestructureFunctionArgument<'a, IO>
+where
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
+{
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        compiler: &'a LspProjectCompiler<IO>,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            compiler,
+            edits: TextEdits::new(line_numbers),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+        if self.edits.edits.is_empty() {
+            return vec![];
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Destructure argument")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    /// Will produce a pattern that can be used on the left hand side of a let
+    /// assignment to destructure a value of the given type. For example given this
+    /// type:
+    ///
+    /// ```gleam
+    /// pub type Wibble {
+    ///   Wobble(Int, label: String)
+    /// }
+    /// ```
+    ///
+    /// The produced pattern will look like this: `Wobble(value_0, label:)`.
+    /// The pattern will use the correct qualified/unqualified name for the
+    /// constructor if it comes from another package.
+    ///
+    /// Be careful how:
+    /// - If the type is internal this function will return `None`.
+    /// - If the type has multiple constructors, it won't be safe to use
+    ///   in a let binding and this function will return `None`.
+    ///
+    fn type_to_destructure_pattern(&mut self, type_: &Type) -> Option<EcoString> {
+        match type_ {
+            Type::Fn { .. } | Type::Var { .. } => None,
+            Type::Named {
+                module: type_module,
+                name: type_name,
+                ..
+            } => self.named_type_to_destructure_pattern(type_module, type_name),
+            Type::Tuple { elems } => Some(eco_format!(
+                "#({})",
+                (0..elems.len() as u32)
+                    .map(|i| format!("value_{i}"))
+                    .join(", ")
+            )),
+        }
+    }
+
+    fn named_type_to_destructure_pattern(
+        &self,
+        type_module: &EcoString,
+        type_name: &EcoString,
+    ) -> Option<EcoString> {
+        let constructors = get_type_constructors(self.compiler, type_module, type_name);
+
+        // If there's more than a constructor it's not safe to
+        // destructure it with a let binding.
+        let [constructor] = constructors.as_slice() else {
+            return None;
+        };
+
+        let type_::ValueConstructorVariant::Record {
+            name: constructor_name,
+            arity: constructor_arity,
+            field_map,
+            ..
+        } = &constructor.variant
+        else {
+            // The constructor should always be a record, in case it's not
+            // there's not much we can do and just fail.
+            return None;
+        };
+
+        let index_to_label = match field_map {
+            None => HashMap::new(),
+            Some(field_map) => field_map
+                .fields
+                .iter()
+                .map(|(label, index)| (index, label))
+                .collect::<HashMap<_, _>>(),
+        };
+
+        let mut pattern = pretty_constructor_name(self.module, type_module, constructor_name)?;
+
+        if *constructor_arity == 0 {
+            return Some(pattern);
+        }
+
+        pattern.push('(');
+        let args = (0..*constructor_arity as u32)
+            .map(|i| match index_to_label.get(&i) {
+                Some(label) => format!("{label}:"),
+                None => format!("value_{i}"),
+            })
+            .join(", ");
+        pattern.push_str(&args);
+        pattern.push(')');
+        Some(pattern)
+    }
+}
+
+impl<'ast, IO> ast::visit::Visit<'ast> for DestructureFunctionArgument<'ast, IO>
+where
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
+{
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        // If we're not inside the function there's no point in exploring its
+        // ast further.
+        let function_range = self.edits.src_span_to_lsp_range(fun.location);
+        if !within(self.params.range, function_range) {
+            return;
+        }
+
+        for arg in &fun.arguments {
+            // If the cursor is placed on one of the arguments, then we can try
+            // and generate code for that one.
+            let arg_range = self.edits.src_span_to_lsp_range(arg.location);
+            if within(self.params.range, arg_range) {
+                let Some(arg_name) = arg.get_variable_name() else {
+                    return;
+                };
+
+                let Some(pattern) = self.type_to_destructure_pattern(arg.type_.as_ref()) else {
+                    return;
+                };
+
+                let insert_at = fun.body.first().location().start;
+                self.edits
+                    .insert(insert_at, format!("let {pattern} = {arg_name}\n"));
+                return;
+            }
+        }
+
+        // If the cursor is not on any of the function arguments then we keep
+        // exploring the function body as we might want to destructure the
+        // argument of an expression function!
+        ast::visit::visit_typed_function(self, fun);
+    }
+}
+
+/// Given a type and its module, returns a list of its *importable*
+/// constructors.
+///
+/// Since this focuses just on importable constructors, if either the module or
+/// the type are internal the returned array will be empty!
+///
+fn get_type_constructors<'a, 'b, IO>(
+    compiler: &'a LspProjectCompiler<IO>,
+    type_module: &'b EcoString,
+    type_name: &'b EcoString,
+) -> Vec<&'a type_::ValueConstructor>
+where
+    IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
+{
+    let Some(module_interface) = compiler.get_module_interface(type_module) else {
+        return vec![];
+    };
+    if module_interface.is_internal {
+        return vec![];
+    }
+    let Some(constructors) = module_interface.types_value_constructors.get(type_name) else {
+        return vec![];
+    };
+
+    constructors
+        .variants
+        .iter()
+        .filter_map(|variant| {
+            let constructor = module_interface.get_public_value(&variant.name)?;
+            if constructor.publicity.is_importable() {
+                Some(constructor)
+            } else {
+                None
+            }
+        })
+        .collect_vec()
+}
+
+/// Returns a pretty printed record constructor name, the way it would be used
+/// inside the given `module` (with the correct name and qualification).
+///
+/// If the constructor cannot be used inside the module because it's not
+/// imported, then this function will return `None`.
+///
+fn pretty_constructor_name(
+    module: &Module,
+    constructor_module: &EcoString,
+    constructor_name: &EcoString,
+) -> Option<EcoString> {
+    match module
+        .ast
+        .names
+        .named_constructor(constructor_module, constructor_name)
+    {
+        type_::printer::NameContextInformation::Unimported(_) => None,
+        type_::printer::NameContextInformation::Unqualified(constructor_name) => {
+            Some(eco_format!("{constructor_name}"))
+        }
+        type_::printer::NameContextInformation::Qualified(module_name, constructor_name) => {
+            Some(eco_format!("{module_name}.{constructor_name}"))
+        }
     }
 }
