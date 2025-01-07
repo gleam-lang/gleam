@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main(tuple: #()) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main(tuple: #()) {
+            ↑            
+  todo
+}
+
+
+----- AFTER ACTION
+
+pub fn main(tuple: #()) {
+  let #() = tuple
+  todo
+}

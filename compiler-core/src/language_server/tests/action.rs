@@ -71,6 +71,7 @@ const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
+const DESTRUCTURE_ARGUMENT: &str = "Destructure argument";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4357,5 +4358,234 @@ pub type Wibble {
 }
 ",
         find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_empty_tuple() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "
+pub fn main(tuple: #()) {
+  todo
+}
+",
+        find_position_of("tuple").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_single_item_tuple() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "
+pub fn main(tuple: #(Int)) {
+  todo
+}
+",
+        find_position_of(":").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_multi_item_tuple() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "
+pub fn main(tuple: #(Int, String, Bool)) {
+  todo
+}
+",
+        find_position_of("tuple").select_until(find_position_of("Int"))
+    );
+}
+
+#[test]
+fn destructure_argument_not_available_for_types_with_multiple_constructors() {
+    assert_no_code_actions!(
+        DESTRUCTURE_ARGUMENT,
+        "
+pub type CannotBeDestructured {
+  One
+  Two
+}
+
+pub fn main(arg: CannotBeDestructured) {
+  todo
+}
+",
+        find_position_of("arg").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_uses_label_shorthand_syntax_for_labelled_arguments() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "
+pub type Wibble {
+  Wobble(Int, String, i_want_to_see_this: String, and_this: Bool)
+}
+
+pub fn main(arg: Wibble) {
+  todo
+}
+",
+        find_position_of("arg").select_until(find_position_of("Wibble").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn destructure_argument_will_use_qualified_name() {
+    let src = "
+import wibble
+
+pub fn main(arg: wibble.Wibble) {
+  todo
+}
+";
+
+    let dep = "
+pub type Wibble {
+  ThisShouldBeQualified(label: Int)
+}
+";
+
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        TestProject::for_source(src).add_module("wibble", dep),
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_will_use_unqualified_name() {
+    let src = "
+import wibble.{ThisShouldBeUnqualified}
+
+pub fn main(arg: wibble.Wibble) {
+  todo
+}
+";
+
+    let dep = "
+pub type Wibble {
+  ThisShouldBeUnqualified(label: Int)
+}
+";
+
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        TestProject::for_source(src).add_module("wibble", dep),
+        find_position_of("Wibble").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_will_use_aliased_constructor_name() {
+    let src = "
+import wibble.{Wobble as IWantToSeeThisName}
+
+pub fn main(arg: wibble.Wibble) {
+  todo
+}
+";
+
+    let dep = "
+pub type Wibble {
+  Wobble(label: Int)
+}
+";
+
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        TestProject::for_source(src).add_module("wibble", dep),
+        find_position_of("arg").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_will_use_aliased_module_name() {
+    let src = "
+import wibble as i_want_to_see_this_name
+
+pub fn main(arg: i_want_to_see_this_name.Wibble) {
+  todo
+}
+";
+
+    let dep = "
+pub type Wibble {
+  Wobble(label: Int)
+}
+";
+
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        TestProject::for_source(src).add_dep_module("wibble", dep),
+        find_position_of("arg").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_not_available_for_internal_type() {
+    let src = "
+import wibble
+
+pub fn main(arg: wobble.Wibble) {
+  todo
+}
+";
+
+    let dep = "
+@internal
+pub type Wibble {
+  Wobble(label: Int)
+}
+";
+
+    assert_no_code_actions!(
+        DESTRUCTURE_ARGUMENT,
+        TestProject::for_source(src).add_module("wibble", dep),
+        find_position_of("arg").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_available_for_internal_type_defined_in_current_module() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "
+@internal
+pub type Wibble {
+  Wobble(label: Int)
+}
+
+pub fn main(arg: Wibble) {
+  todo
+}
+",
+        find_position_of("arg").select_until(find_position_of("Wibble").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn destructure_argument_preserves_indentation_of_statement_following_inserted_let() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "pub fn main(arg: #(Int, String)) {
+  todo
+//^^^^ This should still have two spaces of indentation!
+}",
+        find_position_of("arg").to_selection()
+    );
+}
+
+#[test]
+fn destructure_argument_nicely_formats_code_when_used_on_function_with_empty_body() {
+    assert_code_action!(
+        DESTRUCTURE_ARGUMENT,
+        "pub fn main(arg: #(Int, String)) {}",
+        find_position_of("arg").to_selection()
     );
 }

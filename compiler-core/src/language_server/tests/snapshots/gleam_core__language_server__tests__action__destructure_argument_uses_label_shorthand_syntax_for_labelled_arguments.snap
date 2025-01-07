@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wobble(Int, String, i_want_to_see_this: String, and_this: Bool)\n}\n\npub fn main(arg: Wibble) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wobble(Int, String, i_want_to_see_this: String, and_this: Bool)
+}
+
+pub fn main(arg: Wibble) {
+            ▔▔▔▔▔↑        
+  todo
+}
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wobble(Int, String, i_want_to_see_this: String, and_this: Bool)
+}
+
+pub fn main(arg: Wibble) {
+  let Wobble(value_0, value_1, i_want_to_see_this:, and_this:) = arg
+  todo
+}

@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main(arg: #(Int, String)) {\n  todo\n//^^^^ This should still have two spaces of indentation!\n}"
+---
+----- BEFORE ACTION
+pub fn main(arg: #(Int, String)) {
+            ↑                     
+  todo
+//^^^^ This should still have two spaces of indentation!
+}
+
+
+----- AFTER ACTION
+pub fn main(arg: #(Int, String)) {
+  let #(value_0, value_1) = arg
+  todo
+//^^^^ This should still have two spaces of indentation!
+}
