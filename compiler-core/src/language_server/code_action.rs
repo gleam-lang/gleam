@@ -3085,8 +3085,12 @@ fn {name}() -> {decoder_type}({type_name}{parameters}) {{
     }
 }
 
+/// If `module_name` is not already imported inside `module`, adds an edit to
+/// add that import.
+/// This function also makes sure not to import a module in itself.
+///
 fn maybe_import(edits: &mut TextEdits<'_>, module: &Module, module_name: &str) {
-    if module.ast.names.is_imported(module_name) {
+    if module.ast.names.is_imported(module_name) || module.name == module_name {
         return;
     }
 
