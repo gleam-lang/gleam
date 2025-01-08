@@ -3268,14 +3268,14 @@ impl<'a> DecoderPrinter<'a> {
 /// }
 /// ```
 ///
-pub struct DestructureFunctionArgument<'a, A> {
+pub struct PatternMatchOnArgument<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
     edits: TextEdits<'a>,
 }
 
-impl<'a, IO> DestructureFunctionArgument<'a, IO>
+impl<'a, IO> PatternMatchOnArgument<'a, IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
@@ -3300,7 +3300,7 @@ where
         }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Destructure argument")
+        CodeActionBuilder::new("Pattern match on argument")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -3400,7 +3400,7 @@ where
     }
 }
 
-impl<'ast, IO> ast::visit::Visit<'ast> for DestructureFunctionArgument<'ast, IO>
+impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnArgument<'ast, IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
