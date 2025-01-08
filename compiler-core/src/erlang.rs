@@ -528,7 +528,7 @@ fn hidden_module_doc<'a>() -> Document<'a> {
     doc_attribute(DocCommentKind::Module, DocCommentContent::False)
 }
 
-fn module_doc<'a, 'b>(content: &'a Vec<EcoString>) -> Document<'b> {
+fn module_doc<'a>(content: &Vec<EcoString>) -> Document<'a> {
     doc_attribute(DocCommentKind::Module, DocCommentContent::String(content))
 }
 
@@ -536,11 +536,11 @@ fn hidden_function_doc<'a>() -> Document<'a> {
     doc_attribute(DocCommentKind::Function, DocCommentContent::False)
 }
 
-fn function_doc<'a, 'b>(content: &'a Vec<EcoString>) -> Document<'b> {
+fn function_doc<'a>(content: &Vec<EcoString>) -> Document<'a> {
     doc_attribute(DocCommentKind::Function, DocCommentContent::String(content))
 }
 
-fn doc_attribute<'a, 'b>(kind: DocCommentKind, content: DocCommentContent<'b>) -> Document<'a> {
+fn doc_attribute<'a>(kind: DocCommentKind, content: DocCommentContent<'_>) -> Document<'a> {
     let prefix = match kind {
         DocCommentKind::Module => "?MODULEDOC",
         DocCommentKind::Function => "?DOC",
