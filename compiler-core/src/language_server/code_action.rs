@@ -3335,6 +3335,9 @@ where
                 name: type_name,
                 ..
             } => self.named_type_to_destructure_pattern(type_module, type_name),
+            // We don't want to suggest this action for empty tuple as it
+            // doesn't make a lot of sense to match on those.
+            Type::Tuple { elems } if elems.is_empty() => None,
             Type::Tuple { elems } => Some(eco_format!(
                 "#({})",
                 (0..elems.len() as u32)
