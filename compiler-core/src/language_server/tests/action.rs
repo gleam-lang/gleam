@@ -4363,7 +4363,7 @@ pub type Wibble {
 
 #[test]
 fn destructure_argument_empty_tuple() {
-    assert_code_action!(
+    assert_no_code_actions!(
         DESTRUCTURE_ARGUMENT,
         "
 pub fn main(tuple: #()) {
