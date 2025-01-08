@@ -3398,12 +3398,21 @@ where
         }
 
         pattern.push('(');
-        let args = (0..*constructor_arity as u32)
-            .map(|i| match index_to_label.get(&i) {
-                Some(label) => format!("{label}:"),
-                None => format!("value_{i}"),
-            })
-            .join(", ");
+        let args = if *constructor_arity <= 1 && index_to_label.get(&0).is_none() {
+            // If there's a single argument and its not labelled we don't add a
+            // number suffix to it and just call it "value".
+            String::from("value")
+        } else {
+            // Otherwise all unlabelled arguments will be called "value_<n>".
+            // Labelled arguments, on the other hand, will always use the
+            // shorthand syntax.
+            (0..*constructor_arity as u32)
+                .map(|i| match index_to_label.get(&i) {
+                    Some(label) => format!("{label}:"),
+                    None => format!("value_{i}"),
+                })
+                .join(", ")
+        };
         pattern.push_str(&args);
         pattern.push(')');
         Some(pattern)

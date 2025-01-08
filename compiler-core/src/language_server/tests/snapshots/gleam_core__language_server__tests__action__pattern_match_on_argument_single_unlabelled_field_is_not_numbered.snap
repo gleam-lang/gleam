@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(Int)\n}\n\npub fn main(arg: Wibble) {}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn main(arg: Wibble) {}
+               ↑           
+
+
+----- AFTER ACTION
+
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn main(arg: Wibble) {
+  let Wibble(value) = arg
+}

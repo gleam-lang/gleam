@@ -4606,3 +4606,18 @@ fn pattern_match_on_argument_nicely_formats_code_when_used_on_function_with_empt
         find_position_of("arg").to_selection()
     );
 }
+
+#[test]
+fn pattern_match_on_argument_single_unlabelled_field_is_not_numbered() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(Int)
+}
+
+pub fn main(arg: Wibble) {}
+",
+        find_position_of(":").to_selection()
+    );
+}
