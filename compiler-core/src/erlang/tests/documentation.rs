@@ -79,3 +79,13 @@ fn backslashes_are_escaped_in_module_comment() {
 pub fn main() { 1 }"#
     );
 }
+
+#[test]
+fn internal_function_has_no_documentation() {
+    assert_erl!(
+        r#"
+/// hidden!
+@internal
+pub fn main() { 1 }"#
+    );
+}
