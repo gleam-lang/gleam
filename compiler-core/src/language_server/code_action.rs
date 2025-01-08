@@ -5,7 +5,7 @@ use crate::{
         self,
         visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        SrcSpan, TodoKind, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
+        SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
         TypedStatement, TypedUse,
     },
     build::{Located, Module},
@@ -1184,7 +1184,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -1337,7 +1337,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -1683,7 +1683,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -1908,7 +1908,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -2107,7 +2107,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -2587,7 +2587,7 @@ impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -2822,7 +2822,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -2901,7 +2901,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
-        args: &'ast [ast::TypedArg],
+        args: &'ast [TypedArg],
         body: &'ast [TypedStatement],
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
@@ -3274,7 +3274,23 @@ pub struct PatternMatchOnArgument<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
+    selected_value: Option<PatternMatchedValue<'a>>,
     edits: TextEdits<'a>,
+}
+
+pub enum PatternMatchedValue<'a> {
+    FunctionArgument {
+        /// The argument being pattern matched on.
+        ///
+        arg: &'a TypedArg,
+        /// The body of the function inside which we're inserting the pattern
+        /// matching.
+        ///
+        function_body: &'a Vec1<TypedStatement>,
+        /// The range of the entire function holding the argument.
+        ///
+        function_range: Range,
+    },
 }
 
 impl<'a, IO> PatternMatchOnArgument<'a, IO>
@@ -3291,12 +3307,23 @@ where
             module,
             params,
             compiler,
+            selected_value: None,
             edits: TextEdits::new(line_numbers),
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
+
+        match self.selected_value {
+            Some(PatternMatchedValue::FunctionArgument {
+                arg,
+                function_body,
+                function_range,
+            }) => self.match_on_function_argument(arg, function_body, function_range),
+            None => (),
+        }
+
         if self.edits.edits.is_empty() {
             return vec![];
         }
@@ -3308,6 +3335,73 @@ where
             .preferred(false)
             .push_to(&mut action);
         action
+    }
+
+    fn match_on_function_argument(
+        &mut self,
+        arg: &TypedArg,
+        function_body: &Vec1<TypedStatement>,
+        function_range: Range,
+    ) {
+        let Some(arg_name) = arg.get_variable_name() else {
+            return;
+        };
+
+        let Some(patterns) = self.type_to_destructure_patterns(arg.type_.as_ref()) else {
+            return;
+        };
+
+        let first_statement_location = function_body.first().location();
+        let first_statement_range = self.edits.src_span_to_lsp_range(first_statement_location);
+
+        // If we're trying to insert the pattern matching on the same
+        // line as the one where the function is defined we will want to
+        // put it on a new line instead. So in that case the nesting will
+        // be the default 2 spaces.
+        let needs_newline = function_range.start.line == first_statement_range.start.line;
+        let nesting = if needs_newline {
+            String::from("  ")
+        } else {
+            " ".repeat(first_statement_range.start.character as usize)
+        };
+
+        let pattern_matching = if patterns.len() == 1 {
+            let pattern = patterns.first();
+            format!("let {pattern} = {arg_name}")
+        } else {
+            let patterns = patterns
+                .iter()
+                .map(|p| format!("  {nesting}{p} -> todo"))
+                .join("\n");
+            format!("case {arg_name} {{\n{patterns}\n{nesting}}}")
+        };
+
+        let pattern_matching = if needs_newline {
+            format!("\n{nesting}{pattern_matching}")
+        } else {
+            pattern_matching
+        };
+
+        let has_empty_body = match function_body.as_slice() {
+            []
+            | [ast::Statement::Expression(TypedExpr::Todo {
+                kind: TodoKind::EmptyFunction { .. },
+                ..
+            })] => true,
+            [_] | [_, ..] => false,
+        };
+
+        // If the pattern matching is added to a function with an empty
+        // body then we do not add any nesting after it, or we would be
+        // increasing the nesting of the closing `}`!
+        let pattern_matching = if has_empty_body {
+            format!("{pattern_matching}\n")
+        } else {
+            format!("{pattern_matching}\n{nesting}")
+        };
+
+        self.edits
+            .insert(first_statement_location.start, pattern_matching);
     }
 
     /// Will produce a pattern that can be used on the left hand side of a let
@@ -3432,70 +3526,16 @@ where
             return;
         }
 
-        let has_empty_body = match fun.body.as_slice() {
-            [ast::Statement::Expression(TypedExpr::Todo {
-                kind: TodoKind::EmptyFunction { .. },
-                ..
-            })] => true,
-            [] | [_] | [_, ..] => false,
-        };
-
         for arg in &fun.arguments {
             // If the cursor is placed on one of the arguments, then we can try
             // and generate code for that one.
             let arg_range = self.edits.src_span_to_lsp_range(arg.location);
             if within(self.params.range, arg_range) {
-                let Some(arg_name) = arg.get_variable_name() else {
-                    return;
-                };
-
-                let Some(patterns) = self.type_to_destructure_patterns(arg.type_.as_ref()) else {
-                    return;
-                };
-
-                let first_statement_location = fun.body.first().location();
-                let first_statement_range =
-                    self.edits.src_span_to_lsp_range(first_statement_location);
-
-                // If we're trying to insert the pattern matching on the same
-                // line as the one where the function is defined we will want to
-                // put it on a new line instead. So in that case the nesting will
-                // be the default 2 spaces.
-                let needs_newline = function_range.start.line == first_statement_range.start.line;
-                let nesting = if needs_newline {
-                    String::from("  ")
-                } else {
-                    " ".repeat(first_statement_range.start.character as usize)
-                };
-
-                let pattern_matching = if patterns.len() == 1 {
-                    let pattern = patterns.first();
-                    format!("let {pattern} = {arg_name}")
-                } else {
-                    let patterns = patterns
-                        .iter()
-                        .map(|p| format!("  {nesting}{p} -> todo"))
-                        .join("\n");
-                    format!("case {arg_name} {{\n{patterns}\n{nesting}}}")
-                };
-
-                let pattern_matching = if needs_newline {
-                    format!("\n{nesting}{pattern_matching}")
-                } else {
-                    pattern_matching
-                };
-
-                // If the pattern matching is added to a function with an empty
-                // body then we do not add any nesting after it, or we would be
-                // increasing the nesting of the closing `}`!
-                let pattern_matching = if has_empty_body {
-                    format!("{pattern_matching}\n")
-                } else {
-                    format!("{pattern_matching}\n{nesting}")
-                };
-
-                self.edits
-                    .insert(first_statement_location.start, pattern_matching);
+                self.selected_value = Some(PatternMatchedValue::FunctionArgument {
+                    arg,
+                    function_body: &fun.body,
+                    function_range,
+                });
                 return;
             }
         }
