@@ -2377,13 +2377,6 @@ impl TypedStatement {
         }
     }
 
-    pub fn is_non_pipe_expression(&self) -> bool {
-        match self {
-            Statement::Expression(expression) => !expression.is_pipeline(),
-            _ => false,
-        }
-    }
-
     pub fn location(&self) -> SrcSpan {
         match self {
             Statement::Expression(expression) => expression.location(),

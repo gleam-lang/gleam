@@ -50,3 +50,8 @@
 - Fixed a bug where build tool could fail to add new dependencies when
   dependencies with optional dependencies are present in the manifest.
   ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where a block expression containing a singular record update would
+  produce invalid erlang.
+  ([yoshi](https://github.com/joshi-monster))
+  

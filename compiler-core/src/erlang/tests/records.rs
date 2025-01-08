@@ -383,3 +383,20 @@ pub fn main() {
 }"
     );
 }
+
+#[test]
+fn nested_record_update_with_blocks() {
+    assert_erl!(
+        "pub type A { A(b: B) }
+pub type B { B(c: C) }
+pub type C { C(val: Int) }
+
+pub fn main(a: A) {
+    A(..a, b: {
+        B(..a.b, c: {
+            C(..a.b.c, val: 0)
+        })
+    })
+}"
+    )
+}
