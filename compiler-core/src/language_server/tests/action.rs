@@ -4401,18 +4401,35 @@ pub fn main(tuple: #(Int, String, Bool)) {
 }
 
 #[test]
-fn pattern_match_on_argument_not_available_for_types_with_multiple_constructors() {
-    assert_no_code_actions!(
+fn pattern_match_on_argument_uses_case_with_multiple_constructors() {
+    assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "
 pub type CannotBeDestructured {
-  One
-  Two
+  One(one: String)
+  Two(two: Int)
 }
 
 pub fn main(arg: CannotBeDestructured) {
   todo
 }
+",
+        find_position_of("arg").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
+) {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type CannotBeDestructured {
+  One(one: String)
+  Two(two: Int)
+}
+
+pub fn main(arg: CannotBeDestructured) {}
 ",
         find_position_of("arg").to_selection()
     );

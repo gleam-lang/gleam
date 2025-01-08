@@ -5,8 +5,8 @@ use crate::{
         self,
         visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        SrcSpan, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern, TypedStatement,
-        TypedUse,
+        SrcSpan, TodoKind, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
+        TypedStatement, TypedUse,
     },
     build::{Located, Module},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -16,7 +16,7 @@ use crate::{
         self,
         error::{ModuleSuggestion, VariableOrigin},
         printer::{Names, Printer},
-        FieldMap, ModuleValueConstructor, Type, TypedCallArg,
+        FieldMap, ModuleValueConstructor, Type, TypedCallArg, ValueConstructor,
     },
     Error, STDLIB_PACKAGE_NAME,
 };
@@ -24,6 +24,7 @@ use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
+use vec1::{vec1, Vec1};
 
 use super::{
     compiler::LspProjectCompiler,
@@ -1955,7 +1956,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
     fn visit_typed_expr_var(
         &mut self,
         location: &'ast SrcSpan,
-        constructor: &'ast type_::ValueConstructor,
+        constructor: &'ast ValueConstructor,
         name: &'ast EcoString,
     ) {
         let range = src_span_to_lsp_range(*location, &self.line_numbers);
@@ -2154,7 +2155,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     fn visit_typed_expr_var(
         &mut self,
         location: &'ast SrcSpan,
-        constructor: &'ast type_::ValueConstructor,
+        constructor: &'ast ValueConstructor,
         name: &'ast EcoString,
     ) {
         let UnqualifiedConstructor {
@@ -2955,7 +2956,7 @@ impl<'ast> ast::visit::Visit<'ast> for VariablesNames {
     fn visit_typed_expr_var(
         &mut self,
         _location: &'ast SrcSpan,
-        _constructor: &'ast type_::ValueConstructor,
+        _constructor: &'ast ValueConstructor,
         name: &'ast EcoString,
     ) {
         let _ = self.names.insert(name.clone());
@@ -3327,42 +3328,50 @@ where
     /// - If the type has multiple constructors, it won't be safe to use
     ///   in a let binding and this function will return `None`.
     ///
-    fn type_to_destructure_pattern(&mut self, type_: &Type) -> Option<EcoString> {
+    fn type_to_destructure_patterns(&mut self, type_: &Type) -> Option<Vec1<EcoString>> {
         match type_ {
             Type::Fn { .. } | Type::Var { .. } => None,
             Type::Named {
                 module: type_module,
                 name: type_name,
                 ..
-            } => self.named_type_to_destructure_pattern(type_module, type_name),
+            } => {
+                let patterns = get_type_constructors(self.compiler, type_module, type_name)
+                    .iter()
+                    .filter_map(|c| self.record_constructor_to_destructure_pattern(c))
+                    .collect_vec();
+
+                Vec1::try_from_vec(patterns).ok()
+            }
             // We don't want to suggest this action for empty tuple as it
             // doesn't make a lot of sense to match on those.
             Type::Tuple { elems } if elems.is_empty() => None,
-            Type::Tuple { elems } => Some(eco_format!(
+            Type::Tuple { elems } => Some(vec1![eco_format!(
                 "#({})",
                 (0..elems.len() as u32)
                     .map(|i| format!("value_{i}"))
                     .join(", ")
-            )),
+            )]),
         }
     }
 
-    fn named_type_to_destructure_pattern(
+    /// Given the value constructor of a record, returns a string with the
+    /// pattern used to match on that specific variant.
+    ///
+    /// Note how:
+    /// - If the constructor is internal to another module or comes from another
+    ///   module, then this returns `None` since one cannot pattern match on it.
+    /// - If the provided `ValueConstructor` is not a record constructor this
+    ///   will return `None`.
+    ///
+    fn record_constructor_to_destructure_pattern(
         &self,
-        type_module: &EcoString,
-        type_name: &EcoString,
+        constructor: &ValueConstructor,
     ) -> Option<EcoString> {
-        let constructors = get_type_constructors(self.compiler, type_module, type_name);
-
-        // If there's more than a constructor it's not safe to
-        // destructure it with a let binding.
-        let [constructor] = constructors.as_slice() else {
-            return None;
-        };
-
         let type_::ValueConstructorVariant::Record {
             name: constructor_name,
             arity: constructor_arity,
+            module: constructor_module,
             field_map,
             ..
         } = &constructor.variant
@@ -3381,7 +3390,8 @@ where
                 .collect::<HashMap<_, _>>(),
         };
 
-        let mut pattern = pretty_constructor_name(self.module, type_module, constructor_name)?;
+        let mut pattern =
+            pretty_constructor_name(self.module, constructor_module, constructor_name)?;
 
         if *constructor_arity == 0 {
             return Some(pattern);
@@ -3412,6 +3422,14 @@ where
             return;
         }
 
+        let has_empty_body = match fun.body.as_slice() {
+            [ast::Statement::Expression(TypedExpr::Todo {
+                kind: TodoKind::EmptyFunction { .. },
+                ..
+            })] => true,
+            [] | [_] | [_, ..] => false,
+        };
+
         for arg in &fun.arguments {
             // If the cursor is placed on one of the arguments, then we can try
             // and generate code for that one.
@@ -3421,7 +3439,7 @@ where
                     return;
                 };
 
-                let Some(pattern) = self.type_to_destructure_pattern(arg.type_.as_ref()) else {
+                let Some(patterns) = self.type_to_destructure_patterns(arg.type_.as_ref()) else {
                     return;
                 };
 
@@ -3429,17 +3447,45 @@ where
                 let first_statement_range =
                     self.edits.src_span_to_lsp_range(first_statement_location);
 
-                let assignment = if function_range.start.line == first_statement_range.start.line {
-                    format!("\n  let {pattern} = {arg_name}\n")
+                // If we're trying to insert the pattern matching on the same
+                // line as the one where the function is defined we will want to
+                // put it on a new line instead. So in that case the nesting will
+                // be the default 2 spaces.
+                let needs_newline = function_range.start.line == first_statement_range.start.line;
+                let nesting = if needs_newline {
+                    String::from("  ")
                 } else {
-                    format!(
-                        "let {pattern} = {arg_name}\n{}",
-                        " ".repeat(first_statement_range.start.character as usize)
-                    )
+                    " ".repeat(first_statement_range.start.character as usize)
+                };
+
+                let pattern_matching = if patterns.len() == 1 {
+                    let pattern = patterns.first();
+                    format!("let {pattern} = {arg_name}")
+                } else {
+                    let patterns = patterns
+                        .iter()
+                        .map(|p| format!("  {nesting}{p} -> todo"))
+                        .join("\n");
+                    format!("case {arg_name} {{\n{patterns}\n{nesting}}}")
+                };
+
+                let pattern_matching = if needs_newline {
+                    format!("\n{nesting}{pattern_matching}")
+                } else {
+                    pattern_matching
+                };
+
+                // If the pattern matching is added to a function with an empty
+                // body then we do not add any nesting after it, or we would be
+                // increasing the nesting of the closing `}`!
+                let pattern_matching = if has_empty_body {
+                    format!("{pattern_matching}\n")
+                } else {
+                    format!("{pattern_matching}\n{nesting}")
                 };
 
                 self.edits
-                    .insert(first_statement_location.start, assignment);
+                    .insert(first_statement_location.start, pattern_matching);
                 return;
             }
         }
@@ -3461,7 +3507,7 @@ fn get_type_constructors<'a, 'b, IO>(
     compiler: &'a LspProjectCompiler<IO>,
     type_module: &'b EcoString,
     type_name: &'b EcoString,
-) -> Vec<&'a type_::ValueConstructor>
+) -> Vec<&'a ValueConstructor>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
