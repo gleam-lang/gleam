@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/erlang/tests/records.rs
+expression: "pub type A { A(b: B) }\npub type B { B(c: C) }\npub type C { C(val: Int) }\n\npub fn main(a: A) {\n    A(..a, b: {\n        B(..a.b, c: {\n            C(..a.b.c, val: 0)\n        })\n    })\n}"
+---
+----- SOURCE CODE
+pub type A { A(b: B) }
+pub type B { B(c: C) }
+pub type C { C(val: Int) }
+
+pub fn main(a: A) {
+    A(..a, b: {
+        B(..a.b, c: {
+            C(..a.b.c, val: 0)
+        })
+    })
+}
+
+----- COMPILED ERLANG
+-module(my@mod).
+-compile([no_auto_import, nowarn_unused_vars, nowarn_unused_function, nowarn_nomatch]).
+
+-export([main/1]).
+-export_type([a/0, b/0, c/0]).
+
+-type a() :: {a, b()}.
+
+-type b() :: {b, c()}.
+
+-type c() :: {c, integer()}.
+
+-file("/root/project/test/my/mod.gleam", 5).
+-spec main(a()) -> a().
+main(A) ->
+    _record = A,
+    {a,
+        begin
+            _record@1 = erlang:element(2, A),
+            {b,
+                begin
+                    _record@2 = erlang:element(2, erlang:element(2, A)),
+                    {c, 0}
+                end}
+        end}.

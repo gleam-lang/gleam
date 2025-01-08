@@ -944,8 +944,12 @@ where
 }
 
 fn block<'a>(statements: &'a Vec1<TypedStatement>, env: &mut Env<'a>) -> Document<'a> {
-    if statements.len() == 1 && statements.first().is_non_pipe_expression() {
-        return docvec!['(', statement(statements.first(), env), ')'];
+    if statements.len() == 1 {
+        if let Statement::Expression(expression) = statements.first() {
+            if !needs_begin_end_wrapping(expression) {
+                return docvec!['(', expr(expression, env), ')'];
+            }
+        }
     }
 
     let vars = env.current_scope_vars.clone();
