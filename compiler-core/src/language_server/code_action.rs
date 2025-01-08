@@ -22,6 +22,7 @@ use crate::{
 };
 use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
+use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
 use vec1::{vec1, Vec1};
