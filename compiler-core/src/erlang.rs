@@ -222,19 +222,31 @@ fn module_document<'a>(
     let mut needs_function_docs = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
     for definition in module.definitions.iter() {
-        if let Some((statement_document, env)) =
-            module_statement(definition, &module.name, line_numbers, &src_path)
-        {
+        if let Some((statement_document, env)) = module_statement(
+            definition,
+            &module.name,
+            module.type_info.is_internal,
+            line_numbers,
+            &src_path,
+        ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
             statements.push(statement_document);
         }
     }
 
+    let module_doc = if module.type_info.is_internal {
+        Some(hidden_module_doc().append(lines(2)))
+    } else if module.documentation.is_empty() {
+        None
+    } else {
+        Some(module_doc(&module.documentation).append(lines(2)))
+    };
+
     // We're going to need the documentation directives if any of the module's
     // functions need it, or if the module has a module comment that we want to
-    // include in the generated Erlang source.
-    let needs_function_docs = needs_function_docs || !module.documentation.is_empty();
-    let documentation_directive = if needs_function_docs {
+    // include in the generated Erlang source, or if the module is internal.
+    let needs_doc_directive = needs_function_docs || module_doc.is_some();
+    let documentation_directive = if needs_doc_directive {
         "-if(?OTP_RELEASE >= 27).
 -define(MODULEDOC(Str), -moduledoc(Str)).
 -define(DOC(Str), -doc(Str)).
@@ -246,12 +258,6 @@ fn module_document<'a>(
             .append(lines(2))
     } else {
         nil()
-    };
-
-    let module_doc = if module.documentation.is_empty() {
-        nil()
-    } else {
-        doc_attribute(DocCommentKind::Module, &module.documentation).append(lines(2))
     };
 
     let module = docvec![
@@ -386,6 +392,7 @@ fn register_imports(
 fn module_statement<'a>(
     statement: &'a TypedDefinition,
     module: &'a str,
+    is_internal_module: bool,
     line_numbers: &'a LineNumbers,
     src_path: &EcoString,
 ) -> Option<(Document<'a>, Env<'a>)> {
@@ -395,15 +402,20 @@ fn module_statement<'a>(
         | Definition::Import(Import { .. })
         | Definition::ModuleConstant(ModuleConstant { .. }) => None,
 
-        Definition::Function(function) => {
-            module_function(function, module, line_numbers, src_path.clone())
-        }
+        Definition::Function(function) => module_function(
+            function,
+            module,
+            is_internal_module,
+            line_numbers,
+            src_path.clone(),
+        ),
     }
 }
 
 fn module_function<'a>(
     function: &'a TypedFunction,
     module: &'a str,
+    is_internal_module: bool,
     line_numbers: &'a LineNumbers,
     src_path: EcoString,
 ) -> Option<(Document<'a>, Env<'a>)> {
@@ -459,17 +471,20 @@ fn module_function<'a>(
         .unwrap_or_else(|| statement_sequence(&function.body, &mut env));
 
     let attributes = file_attribute;
-    let attributes = if let Some((_, documentation)) = &function.documentation {
+    let attributes = if is_internal_module || function.publicity.is_internal() {
+        // If a function is marked as internal or comes from an internal module
+        // we want to hide its documentation in the Erlang shell!
+        // So the doc directive will look like this: `-doc(false).`
+        env.needs_function_docs = true;
+        docvec![attributes, line(), hidden_function_doc()]
+    } else if let Some((_, documentation)) = &function.documentation {
         env.needs_function_docs = true;
         let doc_lines = documentation
             .trim_end()
             .split('\n')
             .map(EcoString::from)
             .collect_vec();
-
-        attributes
-            .append(line())
-            .append(doc_attribute(DocCommentKind::Function, &doc_lines))
+        docvec![attributes, line(), function_doc(&doc_lines)]
     } else {
         attributes
     };
@@ -504,24 +519,51 @@ enum DocCommentKind {
     Function,
 }
 
-fn doc_attribute<'a>(kind: DocCommentKind, doc_lines: &[EcoString]) -> Document<'a> {
+enum DocCommentContent<'a> {
+    String(&'a Vec<EcoString>),
+    False,
+}
+
+fn hidden_module_doc<'a>() -> Document<'a> {
+    doc_attribute(DocCommentKind::Module, DocCommentContent::False)
+}
+
+fn module_doc<'a, 'b>(content: &'a Vec<EcoString>) -> Document<'b> {
+    doc_attribute(DocCommentKind::Module, DocCommentContent::String(content))
+}
+
+fn hidden_function_doc<'a>() -> Document<'a> {
+    doc_attribute(DocCommentKind::Function, DocCommentContent::False)
+}
+
+fn function_doc<'a, 'b>(content: &'a Vec<EcoString>) -> Document<'b> {
+    doc_attribute(DocCommentKind::Function, DocCommentContent::String(content))
+}
+
+fn doc_attribute<'a, 'b>(kind: DocCommentKind, content: DocCommentContent<'b>) -> Document<'a> {
     let prefix = match kind {
         DocCommentKind::Module => "?MODULEDOC",
         DocCommentKind::Function => "?DOC",
     };
-    let is_multiline_doc_comment = doc_lines.len() > 1;
-    let doc_lines = join(
-        doc_lines.iter().map(|line| {
-            let line = line.replace("\\", "\\\\").replace("\"", "\\\"");
-            docvec!["\"", line, "\\n\""]
-        }),
-        line(),
-    );
-    if is_multiline_doc_comment {
-        let nested_documentation = docvec![line(), doc_lines].nest(INDENT);
-        docvec![prefix, "(", nested_documentation, line(), ")."]
-    } else {
-        docvec![prefix, "(", doc_lines, ")."]
+
+    match content {
+        DocCommentContent::False => prefix.to_doc().append("(false)."),
+        DocCommentContent::String(doc_lines) => {
+            let is_multiline_doc_comment = doc_lines.len() > 1;
+            let doc_lines = join(
+                doc_lines.iter().map(|line| {
+                    let line = line.replace("\\", "\\\\").replace("\"", "\\\"");
+                    docvec!["\"", line, "\\n\""]
+                }),
+                line(),
+            );
+            if is_multiline_doc_comment {
+                let nested_documentation = docvec![line(), doc_lines].nest(INDENT);
+                docvec![prefix, "(", nested_documentation, line(), ")."]
+            } else {
+                docvec![prefix, "(", doc_lines, ")."]
+            }
+        }
     }
 }
 
