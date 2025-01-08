@@ -71,7 +71,7 @@ const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
-const DESTRUCTURE_ARGUMENT: &str = "Destructure argument";
+const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4362,9 +4362,9 @@ pub type Wibble {
 }
 
 #[test]
-fn destructure_argument_empty_tuple() {
+fn pattern_match_on_argument_empty_tuple() {
     assert_no_code_actions!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "
 pub fn main(tuple: #()) {
   todo
@@ -4375,9 +4375,9 @@ pub fn main(tuple: #()) {
 }
 
 #[test]
-fn destructure_argument_single_item_tuple() {
+fn pattern_match_on_argument_single_item_tuple() {
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "
 pub fn main(tuple: #(Int)) {
   todo
@@ -4388,9 +4388,9 @@ pub fn main(tuple: #(Int)) {
 }
 
 #[test]
-fn destructure_argument_multi_item_tuple() {
+fn pattern_match_on_argument_multi_item_tuple() {
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "
 pub fn main(tuple: #(Int, String, Bool)) {
   todo
@@ -4401,9 +4401,9 @@ pub fn main(tuple: #(Int, String, Bool)) {
 }
 
 #[test]
-fn destructure_argument_not_available_for_types_with_multiple_constructors() {
+fn pattern_match_on_argument_not_available_for_types_with_multiple_constructors() {
     assert_no_code_actions!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "
 pub type CannotBeDestructured {
   One
@@ -4419,9 +4419,9 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn destructure_argument_uses_label_shorthand_syntax_for_labelled_arguments() {
+fn pattern_match_on_argument_uses_label_shorthand_syntax_for_labelled_arguments() {
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "
 pub type Wibble {
   Wobble(Int, String, i_want_to_see_this: String, and_this: Bool)
@@ -4436,7 +4436,7 @@ pub fn main(arg: Wibble) {
 }
 
 #[test]
-fn destructure_argument_will_use_qualified_name() {
+fn pattern_match_on_argument_will_use_qualified_name() {
     let src = "
 import wibble
 
@@ -4452,14 +4452,14 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         TestProject::for_source(src).add_module("wibble", dep),
         find_position_of("wibble").nth_occurrence(2).to_selection()
     );
 }
 
 #[test]
-fn destructure_argument_will_use_unqualified_name() {
+fn pattern_match_on_argument_will_use_unqualified_name() {
     let src = "
 import wibble.{ThisShouldBeUnqualified}
 
@@ -4475,14 +4475,14 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         TestProject::for_source(src).add_module("wibble", dep),
         find_position_of("Wibble").to_selection()
     );
 }
 
 #[test]
-fn destructure_argument_will_use_aliased_constructor_name() {
+fn pattern_match_on_argument_will_use_aliased_constructor_name() {
     let src = "
 import wibble.{Wobble as IWantToSeeThisName}
 
@@ -4498,14 +4498,14 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         TestProject::for_source(src).add_module("wibble", dep),
         find_position_of("arg").to_selection()
     );
 }
 
 #[test]
-fn destructure_argument_will_use_aliased_module_name() {
+fn pattern_match_on_argument_will_use_aliased_module_name() {
     let src = "
 import wibble as i_want_to_see_this_name
 
@@ -4521,14 +4521,14 @@ pub type Wibble {
 ";
 
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         TestProject::for_source(src).add_dep_module("wibble", dep),
         find_position_of("arg").to_selection()
     );
 }
 
 #[test]
-fn destructure_argument_not_available_for_internal_type() {
+fn pattern_match_on_argument_not_available_for_internal_type() {
     let src = "
 import wibble
 
@@ -4545,16 +4545,16 @@ pub type Wibble {
 ";
 
     assert_no_code_actions!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         TestProject::for_source(src).add_module("wibble", dep),
         find_position_of("arg").to_selection()
     );
 }
 
 #[test]
-fn destructure_argument_available_for_internal_type_defined_in_current_module() {
+fn pattern_match_on_argument_available_for_internal_type_defined_in_current_module() {
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "
 @internal
 pub type Wibble {
@@ -4570,9 +4570,9 @@ pub fn main(arg: Wibble) {
 }
 
 #[test]
-fn destructure_argument_preserves_indentation_of_statement_following_inserted_let() {
+fn pattern_match_on_argument_preserves_indentation_of_statement_following_inserted_let() {
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "pub fn main(arg: #(Int, String)) {
   todo
 //^^^^ This should still have two spaces of indentation!
@@ -4582,9 +4582,9 @@ fn destructure_argument_preserves_indentation_of_statement_following_inserted_le
 }
 
 #[test]
-fn destructure_argument_nicely_formats_code_when_used_on_function_with_empty_body() {
+fn pattern_match_on_argument_nicely_formats_code_when_used_on_function_with_empty_body() {
     assert_code_action!(
-        DESTRUCTURE_ARGUMENT,
+        PATTERN_MATCH_ON_ARGUMENT,
         "pub fn main(arg: #(Int, String)) {}",
         find_position_of("arg").to_selection()
     );

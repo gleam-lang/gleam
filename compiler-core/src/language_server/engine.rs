@@ -33,7 +33,7 @@ use super::{
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder,
-        DestructureFunctionArgument, DesugarUse, ExpandFunctionCapture, ExtractVariable,
+        PatternMatchOnArgument, DesugarUse, ExpandFunctionCapture, ExtractVariable,
         FillInMissingLabelledArgs, GenerateDynamicDecoder, LabelShorthandSyntax, LetAssertToCase,
         RedundantTupleInCaseSubject, TurnIntoUse,
     },
@@ -336,7 +336,7 @@ where
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(
-                DestructureFunctionArgument::new(module, &lines, &params, &this.compiler)
+                PatternMatchOnArgument::new(module, &lines, &params, &this.compiler)
                     .code_actions(),
             );
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
