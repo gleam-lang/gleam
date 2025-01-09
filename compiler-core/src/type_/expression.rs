@@ -3504,14 +3504,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = match self.infer_call_argument(value, type_.clone(), argument_kind) {
-                    Ok(value) => value,
-                    Err(e) => {
-                        self.problems.error(e);
-                        self.error_expr(location)
-                    }
-                };
-
+                let value = self.infer_call_argument(value, type_.clone(), argument_kind);
                 CallArg {
                     label,
                     value,
@@ -3556,10 +3549,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         value: UntypedExpr,
         type_: Arc<Type>,
         kind: ArgumentKind,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let type_ = collapse_links(type_);
 
-        let value = match (&*type_, value) {
+        let value_location = value.location();
+        let result = match (&*type_, value) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
@@ -3591,11 +3585,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Otherwise just perform normal type inference.
             (_, value) => self.infer(value),
-        }?;
+        };
 
-        unify(type_, value.type_())
-            .map_err(|e| convert_unify_call_error(e, value.location(), kind))?;
-        Ok(value)
+        match result {
+            Err(error) => {
+                // If we couldn't infer the value, we record the error and
+                // return an invalid expression with the type we were expecting
+                // to see.
+                self.problems.error(error);
+                TypedExpr::Invalid {
+                    location: value_location,
+                    type_,
+                }
+            }
+            Ok(value) => match unify(type_.clone(), value.type_()) {
+                Ok(_) => value,
+                Err(error) => {
+                    // If we couldn't unify it, we record the error and return
+                    // an invalid expression with the type we infered for the
+                    // value.
+                    let location = value.location();
+                    let error = convert_unify_call_error(error, location, kind);
+                    self.problems.error(error);
+                    TypedExpr::Invalid {
+                        location,
+                        type_: value.type_(),
+                    }
+                }
+            },
+        }
     }
 
     pub fn do_infer_fn(
