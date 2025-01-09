@@ -2296,7 +2296,7 @@ impl<'a> DesugarUse<'a> {
 
         // If there's arguments on the left hand side of the function we extract
         // those so we can paste them back as the anonymous function arguments.
-        let assignments = if type_.fn_arity().map_or(false, |arity| arity >= 1) {
+        let assignments = if type_.fn_arity().is_some_and(|arity| arity >= 1) {
             let assignments_range =
                 use_.assignments_location.start as usize..use_.assignments_location.end as usize;
             self.module
