@@ -34,8 +34,8 @@ use super::{
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
         ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs, GenerateDynamicDecoder,
-        LabelShorthandSyntax, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        TurnIntoUse,
+        GenerateFunction, LabelShorthandSyntax, LetAssertToCase, PatternMatchOnValue,
+        RedundantTupleInCaseSubject, TurnIntoUse,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
@@ -335,6 +335,7 @@ where
             actions.extend(TurnIntoUse::new(module, &lines, &params).code_actions());
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
+            actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
             actions.extend(
                 PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
             );
