@@ -132,21 +132,21 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     let type_printer = TypePrinter::new("").var_as_any();
     let fields = fields.iter().map(move |(name, type_)| {
         let type_ = type_printer.print(type_);
-        docvec!(atom_string((*name).to_string()), " :: ", type_.group())
+        docvec![atom_string((*name).to_string()), " :: ", type_.group()]
     });
     let fields = break_("", "")
         .append(join(fields, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .group();
-    docvec!(
+    docvec![
         "-record(",
         atom_string(name.to_string()),
         ", {",
         fields,
         "}).",
         line()
-    )
+    ]
     .to_pretty_string(MAX_COLUMNS)
 }
 
@@ -1129,7 +1129,7 @@ fn let_assert<'a>(
     let mut vars: Vec<&str> = vec![];
     let body = maybe_block_expr(value, env);
     let (subject_var, subject_definition) = if value.is_var() {
-        (body, docvec![])
+        (body, nil())
     } else {
         let var = env.next_local_var_name(ASSERT_SUBJECT_VARIABLE);
         let definition = docvec![var.clone(), " = ", body, ",", line()];

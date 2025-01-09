@@ -157,14 +157,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         concat(self.path.iter().map(|segment| match segment {
             Index::Int(i) => eco_format!("[{i}]").to_doc(),
             // TODO: escape string if needed
-            Index::String(s) => docvec!(".", maybe_escape_property_doc(s)),
-            Index::ByteAt(i) => docvec!(".byteAt(", i, ")"),
+            Index::String(s) => docvec![".", maybe_escape_property_doc(s)],
+            Index::ByteAt(i) => docvec![".byteAt(", i, ")"],
             Index::IntFromSlice {
                 start,
                 end,
                 endianness,
                 is_signed,
-            } => docvec!(
+            } => docvec![
                 ".intFromSlice(",
                 start,
                 ", ",
@@ -174,12 +174,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 ", ",
                 bool(*is_signed),
                 ")"
-            ),
+            ],
             Index::FloatFromSlice {
                 start,
                 end,
                 endianness,
-            } => docvec!(
+            } => docvec![
                 ".floatFromSlice(",
                 start,
                 ", ",
@@ -187,12 +187,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 ", ",
                 bool(endianness.is_big()),
                 ")"
-            ),
+            ],
             Index::BinaryFromSlice(start, end) => {
-                docvec!(".binaryFromSlice(", start, ", ", end, ")")
+                docvec![".binaryFromSlice(", start, ", ", end, ")"]
             }
-            Index::SliceAfter(i) => docvec!(".sliceAfter(", i, ")"),
-            Index::StringPrefixSlice(i) => docvec!(".slice(", i, ")"),
+            Index::SliceAfter(i) => docvec![".sliceAfter(", i, ")"],
+            Index::StringPrefixSlice(i) => docvec![".slice(", i, ")"],
         }))
     }
 
@@ -254,7 +254,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             | ClauseGuard::RemainderInt { .. }
             | ClauseGuard::Or { .. }
             | ClauseGuard::And { .. }
-            | ClauseGuard::ModuleSelect { .. } => Ok(docvec!("(", self.guard(guard)?, ")")),
+            | ClauseGuard::ModuleSelect { .. } => Ok(docvec!["(", self.guard(guard)?, ")"]),
         }
     }
 
@@ -263,13 +263,13 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " === ", right)
+                docvec![left, " === ", right]
             }
 
             ClauseGuard::NotEquals { left, right, .. } if is_js_scalar(left.type_()) => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " !== ", right)
+                docvec![left, " !== ", right]
             }
 
             ClauseGuard::Equals { left, right, .. } => {
@@ -289,70 +289,70 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " > ", right)
+                docvec![left, " > ", right]
             }
 
             ClauseGuard::GtEqFloat { left, right, .. }
             | ClauseGuard::GtEqInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " >= ", right)
+                docvec![left, " >= ", right]
             }
 
             ClauseGuard::LtFloat { left, right, .. } | ClauseGuard::LtInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " < ", right)
+                docvec![left, " < ", right]
             }
 
             ClauseGuard::LtEqFloat { left, right, .. }
             | ClauseGuard::LtEqInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " <= ", right)
+                docvec![left, " <= ", right]
             }
 
             ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " + ", right)
+                docvec![left, " + ", right]
             }
 
             ClauseGuard::SubFloat { left, right, .. } | ClauseGuard::SubInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " - ", right)
+                docvec![left, " - ", right]
             }
 
             ClauseGuard::MultFloat { left, right, .. }
             | ClauseGuard::MultInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " * ", right)
+                docvec![left, " * ", right]
             }
 
             ClauseGuard::DivFloat { left, right, .. } | ClauseGuard::DivInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " / ", right)
+                docvec![left, " / ", right]
             }
 
             ClauseGuard::RemainderInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " % ", right)
+                docvec![left, " % ", right]
             }
 
             ClauseGuard::Or { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " || ", right)
+                docvec![left, " || ", right]
             }
 
             ClauseGuard::And { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec!(left, " && ", right)
+                docvec![left, " && ", right]
             }
 
             ClauseGuard::Var { name, .. } => self
@@ -360,24 +360,24 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 .unwrap_or_else(|| self.local_var(name)),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
-                docvec!(self.guard(tuple)?, "[", index, "]")
+                docvec![self.guard(tuple)?, "[", index, "]"]
             }
 
             ClauseGuard::FieldAccess {
                 label, container, ..
             } => {
-                docvec!(
+                docvec![
                     self.guard(container)?,
                     ".",
                     maybe_escape_property_doc(label)
-                )
+                ]
             }
 
             ClauseGuard::ModuleSelect {
                 module_alias,
                 label,
                 ..
-            } => docvec!("$", module_alias, ".", label),
+            } => docvec!["$", module_alias, ".", label],
 
             ClauseGuard::Not { expression, .. } => {
                 docvec!["!", self.guard(expression)?]
@@ -525,7 +525,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     let var = self.next_local_var(left);
                     self.assignments.push(Assignment {
                         subject: expression::string(left_side_string),
-                        path: docvec![],
+                        path: nil(),
                         name: left,
                         var,
                     });

@@ -283,7 +283,7 @@ impl<'comments> Formatter<'comments> {
     fn imports<'a>(&mut self, imports: Vec<&'a TargetedDefinition>) -> Vec<Document<'a>> {
         let mut import_groups_docs = vec![];
         let mut current_group = vec![];
-        let mut current_group_delimiter = docvec!();
+        let mut current_group_delimiter = nil();
 
         for import in imports {
             let start = import.definition.location().start;
@@ -310,7 +310,7 @@ impl<'comments> Formatter<'comments> {
 
                 let comments = self.pop_comments(start);
                 let _ = self.pop_empty_lines(start);
-                current_group_delimiter = printed_comments(comments, true).unwrap_or(docvec!());
+                current_group_delimiter = printed_comments(comments, true).unwrap_or(nil());
             }
             // Lastly we add the import to the group.
             current_group.push(import);
@@ -1083,7 +1083,7 @@ impl<'comments> Formatter<'comments> {
         match lines.as_slice() {
             [] | [_] => string.to_doc().surround("\"", "\""),
             [first_line, lines @ ..] => {
-                let mut doc = docvec!("\"", first_line);
+                let mut doc = docvec!["\"", first_line];
                 for line in lines {
                     doc = doc
                         .append(pretty::line().set_nesting(0))
@@ -1353,8 +1353,8 @@ impl<'comments> Formatter<'comments> {
         // Otherwise those would be moved out of the case expression.
         let comments = self.pop_comments(location.end);
         let closing_bracket = match printed_comments(comments, false) {
-            None => docvec!(line(), "}"),
-            Some(comment) => docvec!(line(), comment)
+            None => docvec![line(), "}"],
+            Some(comment) => docvec![line(), comment]
                 .nest(INDENT)
                 .append(line())
                 .append("}"),
@@ -2564,9 +2564,9 @@ impl<'comments> Formatter<'comments> {
         // Otherwise those would be moved out of the call.
         let comments = self.pop_comments(location.end);
         let closing_parens = match printed_comments(comments, false) {
-            None => docvec!(break_(",", ""), ")"),
+            None => docvec![break_(",", ""), ")"],
             Some(comment) => {
-                docvec!(break_(",", "").nest(INDENT), comment, line(), ")").force_break()
+                docvec![break_(",", "").nest(INDENT), comment, line(), ")"].force_break()
             }
         };
 
