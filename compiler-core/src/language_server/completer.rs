@@ -8,6 +8,7 @@ use lsp_types::{
     TextEdit,
 };
 use strum::IntoEnumIterator;
+use vec1::Vec1;
 
 use crate::{
     ast::{
@@ -1070,7 +1071,7 @@ impl<'ast> ast::visit::Visit<'ast> for LocalCompletion<'_> {
         _: &'ast Arc<Type>,
         _: &'ast FunctionLiteralKind,
         args: &'ast [ast::TypedArg],
-        body: &'ast [ast::TypedStatement],
+        body: &'ast Vec1<ast::TypedStatement>,
         _: &'ast Option<ast::TypeAst>,
     ) {
         self.visit_fn_args(args);
