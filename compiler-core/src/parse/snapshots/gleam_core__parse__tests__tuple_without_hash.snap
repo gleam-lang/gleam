@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/parse/tests.rs
 expression: "\npub fn main() {\n    let triple = (1, 2.2, \"three\")\n    io.debug(triple)\n    let (a, *, *) = triple\n    io.debug(a)\n    io.debug(triple.1)\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

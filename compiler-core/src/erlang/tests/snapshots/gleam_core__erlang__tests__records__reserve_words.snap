@@ -1,5 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests/records.rs
-expression: "record_definition(\"div\",\n    &[(\"receive\", type_::int()), (\"catch\", type_::tuple(vec![])),\n                (\"unreserved\", type_::tuple(vec![]))])"
+expression: "record_definition(\"div\",\n&[(\"receive\", type_::int()), (\"catch\", type_::tuple(vec![])),\n(\"unreserved\", type_::tuple(vec![]))])"
 ---
 -record('div', {'receive' :: integer(), 'catch' :: {}, unreserved :: {}}).

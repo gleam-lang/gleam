@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1085
 expression: "//// Main package\n//// documentation!\n\nimport gleam\n\npub fn main() {\n  0\n}"
 ---
 //// Main package

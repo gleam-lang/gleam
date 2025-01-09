@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/erlang/tests.rs
-assertion_line: 944
 expression: "pub fn main() { Nil }"
 ---
 -module(my@mod).

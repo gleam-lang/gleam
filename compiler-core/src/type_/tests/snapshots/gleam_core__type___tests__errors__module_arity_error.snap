@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "fn go(x: List(a, b)) -> Int { 1 }"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 fn go(x: List(a, b)) -> Int { 1 }

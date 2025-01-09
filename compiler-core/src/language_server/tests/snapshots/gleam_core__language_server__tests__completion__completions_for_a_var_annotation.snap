@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1229
 expression: "\npub fn main() {\n  let wibble: Int = 7\n}\n"
 ---
 pub fn main() {

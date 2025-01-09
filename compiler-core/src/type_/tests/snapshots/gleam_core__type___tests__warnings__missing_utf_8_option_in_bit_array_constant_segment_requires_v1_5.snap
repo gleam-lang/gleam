@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
 expression: "pub const bits = <<\"hello\">>"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 pub const bits = <<"hello">>

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 4070
 expression: "\nimport gleam/option\nimport gleam/dynamic\nimport gleam/dict\n\npub type Something\n\npub type Wibble(value) {\n  Wibble(\n    maybe: option.Option(Something),\n    map: dict.Dict(String, List(value)),\n    unknown: List(dynamic.Dynamic),\n  )\n}\n"
 ---
 ----- BEFORE ACTION

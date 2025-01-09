@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 4099
 expression: "\npub type Wibble {\n  Wibble(tuple: #(Int, Float, #(String, Bool)))\n}\n"
 ---
 ----- BEFORE ACTION

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 4090
 expression: "\nimport gleam/dynamic/decode as dyn_dec\n\npub type Wibble {\n  Wibble(a: Int, b: Float, c: String)\n}\n"
 ---
 ----- BEFORE ACTION
