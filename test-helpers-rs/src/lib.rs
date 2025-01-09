@@ -5,7 +5,7 @@ use gleam_core::{
 };
 use itertools::Itertools;
 use regex::Regex;
-use std::{collections::HashMap, fmt::Write, sync::OnceLock};
+use std::{collections::HashMap, fmt::Write, sync::LazyLock};
 
 #[derive(Debug)]
 pub struct TestCompileOutput {
@@ -45,9 +45,6 @@ impl TestCompileOutput {
 
                 Content::Text(text) => {
                     let text = FILE_LINE_REGEX
-                        .get_or_init(|| {
-                            Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex")
-                        })
                         .replace_all(text, |caps: &regex::Captures| {
                             let path = caps
                                 .get(1)
@@ -95,7 +92,8 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
     fs
 }
 
-static FILE_LINE_REGEX: OnceLock<Regex> = OnceLock::new();
+static FILE_LINE_REGEX: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"-file\("([^"]+)", (\d+)\)\."#).expect("Invalid regex"));
 
 pub fn normalise_diagnostic(text: &str) -> String {
     // There is an extra ^ on Windows in some error messages' code
