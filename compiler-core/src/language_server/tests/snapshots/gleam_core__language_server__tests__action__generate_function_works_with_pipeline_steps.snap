@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  [1, 2, 3]\n  |> sum\n  |> int_to_string\n}\n\nfn int_to_string(n: Int) -> String {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  [1, 2, 3]
+  |> sum
+     ↑  
+  |> int_to_string
+}
+
+fn int_to_string(n: Int) -> String {
+  todo
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  [1, 2, 3]
+  |> sum
+  |> int_to_string
+}
+
+fn sum(list: List(Int)) -> Int {
+  todo
+}
+
+fn int_to_string(n: Int) -> String {
+  todo
+}

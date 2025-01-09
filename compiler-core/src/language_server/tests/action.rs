@@ -4689,3 +4689,45 @@ fn map(list: List(a), fun: fn(a) -> b) { todo }
         find_position_of("tuple").to_selection()
     );
 }
+
+#[test]
+fn generate_function_works_with_pipeline_steps() {
+    assert_code_action!(
+        "Generate function",
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> sum
+  |> int_to_string
+}
+
+fn int_to_string(n: Int) -> String {
+  todo
+}
+",
+        find_position_of("sum").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_works_with_pipeline_steps_1() {
+    assert_code_action!(
+        "Generate function",
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(int_to_string)
+  |> join
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {
+  todo
+}
+
+fn join(n: List(String)) -> String {
+  todo
+}
+",
+        find_position_of("int_to_string").to_selection()
+    );
+}

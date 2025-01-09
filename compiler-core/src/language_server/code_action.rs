@@ -11,7 +11,7 @@ use crate::{
     build::{Located, Module},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
-    parse::extra::ModuleExtra,
+    parse::{extra::ModuleExtra, lexer::str_to_keyword},
     type_::{
         self,
         error::{ModuleSuggestion, VariableOrigin},
@@ -3758,4 +3758,131 @@ fn pretty_constructor_name(
             Some(eco_format!("{module_name}.{constructor_name}"))
         }
     }
+}
+
+/// .
+///
+pub struct GenerateFunction<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    last_visited_function_end: Option<u32>,
+    function_to_generate: Option<FunctionToGenerate<'a>>,
+}
+
+struct FunctionToGenerate<'a> {
+    name: &'a str,
+    arguments_types: Vec<Arc<Type>>,
+    return_type: Arc<Type>,
+    previous_function_end: Option<u32>,
+}
+
+impl<'a> GenerateFunction<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            last_visited_function_end: None,
+            function_to_generate: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(FunctionToGenerate {
+            name,
+            arguments_types,
+            previous_function_end: Some(insert_at),
+            return_type,
+        }) = self.function_to_generate
+        else {
+            return vec![];
+        };
+
+        let mut printer = Printer::new(&self.module.ast.names);
+        let args = if let [arg_type] = arguments_types.as_slice() {
+            let arg_name = arg_type
+                .named_type_name()
+                .map(|(_type_module, type_name)| type_name.to_snake_case())
+                .filter(|name| is_valid_function_name(name))
+                .unwrap_or(String::from("arg"));
+
+            format!("{arg_name}: {}", printer.print_type(arg_type))
+        } else {
+            arguments_types
+                .iter()
+                .enumerate()
+                .map(|(index, arg_type)| {
+                    let type_ = printer.print_type(arg_type);
+                    format!("arg_{}: {}", index + 1, type_)
+                })
+                .join(", ")
+        };
+        let return_type = printer.print_type(&return_type);
+
+        self.edits.insert(
+            insert_at,
+            format!("\n\nfn {name}({args}) -> {return_type} {{\n  todo\n}}"),
+        );
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Generate function")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        println!("{:#?}", fun.body);
+        self.last_visited_function_end = Some(fun.end_position);
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
+        let invalid_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, invalid_range) {
+            let name_range = location.start as usize..location.end as usize;
+            let candidate_name = self.module.code.get(name_range);
+            match (candidate_name, type_.fn_types()) {
+                (None, _) | (_, None) => return,
+                (Some(name), _) if !is_valid_function_name(name) => return,
+                (Some(name), Some((arguments_types, return_type))) => {
+                    self.function_to_generate = Some(FunctionToGenerate {
+                        name,
+                        arguments_types,
+                        return_type,
+                        previous_function_end: self.last_visited_function_end,
+                    })
+                }
+            }
+        }
+
+        ast::visit::visit_typed_expr_invalid(self, location, type_);
+    }
+}
+
+#[must_use]
+fn is_valid_function_name(name: &str) -> bool {
+    if !name.starts_with(|char: char| char.is_ascii_lowercase()) {
+        return false;
+    }
+
+    for char in name.chars() {
+        let is_valid_char = char.is_ascii_digit() || char.is_ascii_lowercase() || char == '_';
+        if !is_valid_char {
+            return false;
+        }
+    }
+
+    str_to_keyword(name).is_none()
 }
