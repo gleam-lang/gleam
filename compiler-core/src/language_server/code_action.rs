@@ -16,7 +16,7 @@ use crate::{
         self,
         error::{ModuleSuggestion, VariableOrigin},
         printer::{Names, Printer},
-        FieldMap, ModuleValueConstructor, Type, TypedCallArg, ValueConstructor,
+        FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
     },
     Error, STDLIB_PACKAGE_NAME,
 };
@@ -3283,10 +3283,10 @@ pub enum PatternMatchedValue<'a> {
         /// The argument being pattern matched on.
         ///
         arg: &'a TypedArg,
-        /// The body of the function inside which we're inserting the pattern
-        /// matching.
+        /// The first statement inside the function body. Used to correctly
+        /// position the inserted pattern matching.
         ///
-        function_body: &'a Vec1<TypedStatement>,
+        first_statement: &'a TypedStatement,
         /// The range of the entire function holding the argument.
         ///
         function_range: Range,
@@ -3326,7 +3326,7 @@ where
         let action_title = match self.selected_value {
             Some(PatternMatchedValue::FunctionArgument {
                 arg,
-                function_body,
+                first_statement: function_body,
                 function_range,
             }) => {
                 self.match_on_function_argument(arg, function_body, function_range);
@@ -3359,18 +3359,18 @@ where
     fn match_on_function_argument(
         &mut self,
         arg: &TypedArg,
-        function_body: &Vec1<TypedStatement>,
+        first_statement: &TypedStatement,
         function_range: Range,
     ) {
         let Some(arg_name) = arg.get_variable_name() else {
             return;
         };
 
-        let Some(patterns) = self.type_to_destructure_patterns(arg.type_.as_ref()) else {
+        let Some(patterns) = self.type_to_destructure_patterns(dbg!(arg.type_.as_ref())) else {
             return;
         };
 
-        let first_statement_location = function_body.first().location();
+        let first_statement_location = first_statement.location();
         let first_statement_range = self.edits.src_span_to_lsp_range(first_statement_location);
 
         // If we're trying to insert the pattern matching on the same
@@ -3401,13 +3401,12 @@ where
             pattern_matching
         };
 
-        let has_empty_body = match function_body.as_slice() {
-            []
-            | [ast::Statement::Expression(TypedExpr::Todo {
+        let has_empty_body = match first_statement {
+            ast::Statement::Expression(TypedExpr::Todo {
                 kind: TodoKind::EmptyFunction { .. },
                 ..
-            })] => true,
-            [_] | [_, ..] => false,
+            }) => true,
+            _ => false,
         };
 
         // If the pattern matching is added to a function with an empty
@@ -3474,7 +3473,8 @@ where
     ///
     fn type_to_destructure_patterns(&mut self, type_: &Type) -> Option<Vec1<EcoString>> {
         match type_ {
-            Type::Fn { .. } | Type::Var { .. } => None,
+            Type::Fn { .. } => None,
+            Type::Var { type_ } => self.type_var_to_destructure_patterns(&type_.borrow()),
             Type::Named {
                 module: type_module,
                 name: type_name,
@@ -3497,6 +3497,13 @@ where
                     .map(|i| format!("value_{i}"))
                     .join(", ")
             )]),
+        }
+    }
+
+    fn type_var_to_destructure_patterns(&mut self, type_var: &TypeVar) -> Option<Vec1<EcoString>> {
+        match type_var {
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+            TypeVar::Link { type_ } => self.type_to_destructure_patterns(type_),
         }
     }
 
@@ -3587,7 +3594,7 @@ where
             if within(self.params.range, arg_range) {
                 self.selected_value = Some(PatternMatchedValue::FunctionArgument {
                     arg,
-                    function_body: &fun.body,
+                    first_statement: fun.body.first(),
                     function_range,
                 });
                 return;
@@ -3598,6 +3605,45 @@ where
         // exploring the function body as we might want to destructure the
         // argument of an expression function!
         ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [TypedArg],
+        body: &'ast [TypedStatement],
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        // If we're not inside the function there's no point in exploring its
+        // ast further.
+        let function_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, function_range) {
+            return;
+        }
+
+        for arg in args {
+            // If the cursor is placed on one of the arguments, then we can try
+            // and generate code for that one.
+            let arg_range = self.edits.src_span_to_lsp_range(arg.location);
+            if within(self.params.range, arg_range) {
+                let Some(first_statement) = body.first() else {
+                    return;
+                };
+                self.selected_value = Some(PatternMatchedValue::FunctionArgument {
+                    arg,
+                    first_statement,
+                    function_range,
+                });
+                return;
+            }
+        }
+
+        // If the cursor is not on any of the function arguments then we keep
+        // exploring the function body as we might want to destructure the
+        // argument of an expression function!
+        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
     }
 
     fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
