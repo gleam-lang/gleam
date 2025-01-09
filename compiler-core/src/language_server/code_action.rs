@@ -3431,10 +3431,11 @@ where
                 name: type_name,
                 ..
             } => {
-                let patterns = get_type_constructors(self.compiler, type_module, type_name)
-                    .iter()
-                    .filter_map(|c| self.record_constructor_to_destructure_pattern(c))
-                    .collect_vec();
+                let patterns =
+                    get_type_constructors(self.compiler, &self.module.name, type_module, type_name)
+                        .iter()
+                        .filter_map(|c| self.record_constructor_to_destructure_pattern(c))
+                        .collect_vec();
 
                 Vec1::try_from_vec(patterns).ok()
             }
@@ -3555,6 +3556,7 @@ where
 ///
 fn get_type_constructors<'a, 'b, IO>(
     compiler: &'a LspProjectCompiler<IO>,
+    current_module: &'b EcoString,
     type_module: &'b EcoString,
     type_name: &'b EcoString,
 ) -> Vec<&'a ValueConstructor>
@@ -3564,7 +3566,10 @@ where
     let Some(module_interface) = compiler.get_module_interface(type_module) else {
         return vec![];
     };
-    if module_interface.is_internal {
+    // If the type is in an internal module that is not the current one, we
+    // cannot use its constructors!
+    let outside_of_current_module = *current_module != module_interface.name;
+    if outside_of_current_module && module_interface.is_internal {
         return vec![];
     }
     let Some(constructors) = module_interface.types_value_constructors.get(type_name) else {
@@ -3576,7 +3581,11 @@ where
         .iter()
         .filter_map(|variant| {
             let constructor = module_interface.get_public_value(&variant.name)?;
-            if constructor.publicity.is_importable() {
+            if constructor.publicity.is_public() {
+                Some(constructor)
+            } else if constructor.publicity.is_internal() && !outside_of_current_module {
+                // An internal constructor can only be used from within its own
+                // module, otherwise we don't suggest any action.
                 Some(constructor)
             } else {
                 None
