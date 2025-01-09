@@ -3291,6 +3291,14 @@ pub enum PatternMatchedValue<'a> {
         ///
         function_range: Range,
     },
+    LetVariable {
+        variable_name: &'a EcoString,
+        variable_type: &'a Arc<Type>,
+        /// The location of the entire let assignment the variable is part of,
+        /// so that we can add the pattern matching _after_ it.
+        ///
+        assignment_location: SrcSpan,
+    },
 }
 
 impl<'a, IO> PatternMatchOnArgument<'a, IO>
@@ -3315,21 +3323,32 @@ where
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        match self.selected_value {
+        let action_title = match self.selected_value {
             Some(PatternMatchedValue::FunctionArgument {
                 arg,
                 function_body,
                 function_range,
-            }) => self.match_on_function_argument(arg, function_body, function_range),
-            None => (),
-        }
+            }) => {
+                self.match_on_function_argument(arg, function_body, function_range);
+                "Pattern match on argument"
+            }
+            Some(PatternMatchedValue::LetVariable {
+                variable_name,
+                variable_type,
+                assignment_location,
+            }) => {
+                self.match_on_let_variable(variable_name, variable_type, assignment_location);
+                "Pattern match on variable"
+            }
+            None => return vec![],
+        };
 
         if self.edits.edits.is_empty() {
             return vec![];
         }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Pattern match on argument")
+        CodeActionBuilder::new(action_title)
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -3402,6 +3421,36 @@ where
 
         self.edits
             .insert(first_statement_location.start, pattern_matching);
+    }
+
+    fn match_on_let_variable(
+        &mut self,
+        variable_name: &EcoString,
+        variable_type: &Arc<Type>,
+        assignment_location: SrcSpan,
+    ) {
+        let Some(patterns) = self.type_to_destructure_patterns(variable_type.as_ref()) else {
+            return;
+        };
+
+        let assignment_range = self.edits.src_span_to_lsp_range(assignment_location);
+        let nesting = " ".repeat(assignment_range.start.character as usize);
+
+        let pattern_matching = if patterns.len() == 1 {
+            let pattern = patterns.first();
+            format!("let {pattern} = {variable_name}")
+        } else {
+            let patterns = patterns
+                .iter()
+                .map(|p| format!("  {nesting}{p} -> todo"))
+                .join("\n");
+            format!("case {variable_name} {{\n{patterns}\n{nesting}}}")
+        };
+
+        self.edits.insert(
+            assignment_location.end,
+            format!("\n{nesting}{pattern_matching}"),
+        );
     }
 
     /// Will produce a pattern that can be used on the left hand side of a let
@@ -3522,7 +3571,11 @@ where
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // If we're not inside the function there's no point in exploring its
         // ast further.
-        let function_range = self.edits.src_span_to_lsp_range(fun.location);
+        let function_span = SrcSpan {
+            start: fun.location.start,
+            end: fun.end_position,
+        };
+        let function_range = self.edits.src_span_to_lsp_range(function_span);
         if !within(self.params.range, function_range) {
             return;
         }
@@ -3545,6 +3598,30 @@ where
         // exploring the function body as we might want to destructure the
         // argument of an expression function!
         ast::visit::visit_typed_function(self, fun);
+    }
+
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        if let Pattern::Variable {
+            name,
+            location,
+            type_,
+            ..
+        } = &assignment.pattern
+        {
+            let variable_range = self.edits.src_span_to_lsp_range(*location);
+            if within(self.params.range, variable_range) {
+                self.selected_value = Some(PatternMatchedValue::LetVariable {
+                    variable_name: name,
+                    variable_type: type_,
+                    assignment_location: assignment.location,
+                });
+                // If we've found the variable to pattern match on, there's no
+                // point in keeping traversing the AST.
+                return;
+            }
+        }
+
+        ast::visit::visit_typed_assignment(self, assignment);
     }
 }
 

@@ -72,6 +72,7 @@ const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
+const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4619,5 +4620,72 @@ pub type Wibble {
 pub fn main(arg: Wibble) {}
 ",
         find_position_of(":").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_let_assignment() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub fn main() {
+  let var = #(1, 2)
+}
+",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_let_assignment_with_multiple_constructors() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+pub type Wibble {
+  Wobble
+  Woo
+}
+
+pub fn main() {
+  let var = Woo
+  todo
+}
+",
+        find_position_of("var").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_works_on_fn_arguments() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub fn main() {
+  [#(1, 2)]
+  |> map(fn(tuple) {})
+}
+
+fn map(list: List(a), fun: fn(a) -> b) { todo }
+",
+        find_position_of("tuple").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_works_on_nested_fn_arguments() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub fn main() {
+  map([[#(1, 2)]], fn(list) {
+    map(list, fn(tuple) {
+      todo
+    })
+  })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) { todo }
+",
+        find_position_of("tuple").to_selection()
     );
 }
