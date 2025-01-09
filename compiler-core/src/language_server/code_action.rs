@@ -3255,8 +3255,37 @@ impl<'a> DecoderPrinter<'a> {
 
 /// Builder for code action to pattern match on things like (anonymous) function
 /// arguments or variables.
+/// For example:
 ///
-pub struct PatternMatchOnArgument<'a, A> {
+/// ```gleam
+/// pub fn wibble(arg: #(key, value)) {
+/// //            ^ [pattern match on argument]
+/// }
+///
+/// // Generates
+///
+/// pub fn wibble(arg: #(key, value)) {
+///   let #(value_0, value_1) = arg
+/// }
+/// ```
+///
+/// Another example with variables:
+///
+/// ```gleam
+/// pub fn main() {
+///   let pair = #(1, 3)
+///   //   ^ [pattern match on value]
+/// }
+///
+/// // Generates
+///
+/// pub fn main() {
+///   let pair = #(1, 3)
+///   let #(value_0, value_1) = pair
+/// }
+/// ```
+///
+pub struct PatternMatchOnValue<'a, A> {
     module: &'a Module,
     params: &'a CodeActionParams,
     compiler: &'a LspProjectCompiler<A>,
@@ -3292,7 +3321,7 @@ pub enum PatternMatchedValue<'a> {
     },
 }
 
-impl<'a, IO> PatternMatchOnArgument<'a, IO>
+impl<'a, IO> PatternMatchOnValue<'a, IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
@@ -3562,7 +3591,7 @@ where
     }
 }
 
-impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnArgument<'ast, IO>
+impl<'ast, IO> ast::visit::Visit<'ast> for PatternMatchOnValue<'ast, IO>
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
