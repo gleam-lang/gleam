@@ -4,6 +4,11 @@
 
 ### Compiler
 
+- Pipelines are now fault tolerant. A type error in the middle of a pipeline
+  won't stop the compiler from figuring out the types of the remaining pieces,
+  enabling the language server to show better suggestions for incomplete pipes.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Improved code generation for blocks in tail position on the Javascript target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
@@ -120,4 +125,3 @@
 - Fixed a bug where a block expression containing a singular record update would
   produce invalid erlang.
   ([yoshi](https://github.com/joshi-monster))
-
