@@ -120,12 +120,12 @@ impl<'module> Generator<'module> {
             let var = maybe_escape_identifier_doc(name);
             docvec!["let ", var, " = loop$", name, ";", line()]
         }));
-        Ok(docvec!(
+        Ok(docvec![
             "while (true) {",
-            docvec!(line(), loop_assignments, body).nest(INDENT),
+            docvec![line(), loop_assignments, body].nest(INDENT),
             line(),
             "}"
-        ))
+        ])
     }
 
     fn statement<'a>(&mut self, statement: &'a TypedStatement) -> Output<'a> {
@@ -222,7 +222,7 @@ impl<'module> Generator<'module> {
     }
 
     fn negate_with<'a>(&mut self, with: &'static str, value: &'a TypedExpr) -> Output<'a> {
-        self.not_in_tail_position(|gen| Ok(docvec!(with, gen.wrap_expression(value)?)))
+        self.not_in_tail_position(|gen| Ok(docvec![with, gen.wrap_expression(value)?]))
     }
 
     fn bit_array<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
@@ -253,7 +253,7 @@ impl<'module> Generator<'module> {
 
                         (Some(size_value), _) if size_value == 8.into() => Ok(value),
 
-                        (Some(size_value), _) if size_value <= 0.into() => Ok(docvec![]),
+                        (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
 
                         _ => {
                             self.tracker.sized_integer_segment_used = true;
@@ -436,7 +436,7 @@ impl<'module> Generator<'module> {
             // Here the document is a return statement: `return <expr>;`
             document
         } else {
-            docvec!("(", document, ")")
+            docvec!["(", document, ")"]
         })
     }
 
@@ -614,7 +614,7 @@ impl<'module> Generator<'module> {
         // If there is a subject name given create a variable to hold it for
         // use in patterns
         let doc = match subject_assignment {
-            Some(name) => docvec!("let ", name, " = ", value, ";", line(), compiled),
+            Some(name) => docvec!["let ", name, " = ", value, ";", line(), compiled],
             None => compiled,
         };
 
@@ -669,7 +669,7 @@ impl<'module> Generator<'module> {
                     let assignments = gen
                         .expression_generator
                         .pattern_take_assignments_doc(&mut compiled);
-                    docvec!(assignments, line(), consequence)
+                    docvec![assignments, line(), consequence]
                 } else {
                     consequence
                 };
@@ -683,14 +683,14 @@ impl<'module> Generator<'module> {
                     // render just the body as the case does nothing
                     // A block is used as it could declare variables still.
                     doc.append("{")
-                        .append(docvec!(line(), body).nest(INDENT))
+                        .append(docvec![line(), body].nest(INDENT))
                         .append(line())
                         .append("}")
                 } else if is_final_clause {
                     // If this is the final clause and there are no checks then we can
                     // render `else` instead of `else if (...)`
                     doc.append(" else {")
-                        .append(docvec!(line(), body).nest(INDENT))
+                        .append(docvec![line(), body].nest(INDENT))
                         .append(line())
                         .append("}")
                 } else {
@@ -704,7 +704,7 @@ impl<'module> Generator<'module> {
                             .pattern_take_checks_doc(&mut compiled, true),
                     )
                     .append(") {")
-                    .append(docvec!(line(), body).nest(INDENT))
+                    .append(docvec![line(), body].nest(INDENT))
                     .append(line())
                     .append("}")
                 };
@@ -719,7 +719,7 @@ impl<'module> Generator<'module> {
             .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
             .map(|(name, value)| {
                 let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
-                Ok(docvec!("let ", name, " = ", value, ";", line()))
+                Ok(docvec!["let ", name, " = ", value, ";", line()])
             })
             .try_collect()?;
 
@@ -830,7 +830,7 @@ impl<'module> Generator<'module> {
                     let is_fn_literal = matches!(fun, TypedExpr::Fn { .. });
                     let fun = gen.wrap_expression(fun)?;
                     if is_fn_literal {
-                        Ok(docvec!("(", fun, ")"))
+                        Ok(docvec!["(", fun, ")"])
                     } else {
                         Ok(fun)
                     }
@@ -868,18 +868,18 @@ impl<'module> Generator<'module> {
         self.current_scope_vars = scope;
         std::mem::swap(&mut self.function_name, &mut name);
 
-        Ok(docvec!(
-            docvec!(
+        Ok(docvec![
+            docvec![
                 fun_args(arguments, false),
                 " => {",
                 break_("", " "),
                 result?
-            )
+            ]
             .nest(INDENT)
             .append(break_("", " "))
             .group(),
             "}",
-        ))
+        ])
     }
 
     fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
@@ -939,21 +939,21 @@ impl<'module> Generator<'module> {
         let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.int_division_used = true;
-        Ok(docvec!("divideInt", wrap_args([left, right])))
+        Ok(docvec!["divideInt", wrap_args([left, right])])
     }
 
     fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.int_remainder_used = true;
-        Ok(docvec!("remainderInt", wrap_args([left, right])))
+        Ok(docvec!["remainderInt", wrap_args([left, right])])
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
         self.tracker.float_division_used = true;
-        Ok(docvec!("divideFloat", wrap_args([left, right])))
+        Ok(docvec!["divideFloat", wrap_args([left, right])])
     }
 
     fn equal<'a>(
@@ -967,7 +967,7 @@ impl<'module> Generator<'module> {
             let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
             let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
             let operator = if should_be_equal { " === " } else { " !== " };
-            return Ok(docvec!(left_doc, operator, right_doc));
+            return Ok(docvec![left_doc, operator, right_doc]);
         }
 
         // Other types must be compared using structural equality
@@ -991,7 +991,7 @@ impl<'module> Generator<'module> {
         } else {
             "!isEqual"
         };
-        docvec!(operator, args)
+        docvec![operator, args]
     }
 
     fn print_bin_op<'a>(
@@ -1002,7 +1002,7 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
         let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
-        Ok(docvec!(left, " ", op, " ", right))
+        Ok(docvec![left, " ", op, " ", right])
     }
 
     fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
@@ -1441,7 +1441,7 @@ pub(crate) fn constant_expression<'a>(
         Constant::StringConcatenation { left, right, .. } => {
             let left = constant_expression(context, tracker, left)?;
             let right = constant_expression(context, tracker, right)?;
-            Ok(docvec!(left, " + ", right))
+            Ok(docvec![left, " + ", right])
         }
 
         Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
@@ -1480,7 +1480,7 @@ fn bit_array<'a>(
 
                     (Some(size_value), _) if size_value == 8.into() => Ok(value),
 
-                    (Some(size_value), _) if size_value <= 0.into() => Ok(docvec![]),
+                    (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
 
                     _ => {
                         tracker.sized_integer_segment_used = true;
@@ -1800,11 +1800,11 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
 
 /// Wrap a document in an immediately involked function expression
 fn immediately_invoked_function_expression_document(document: Document<'_>) -> Document<'_> {
-    docvec!(
-        docvec!("(() => {", break_("", " "), document).nest(INDENT),
+    docvec![
+        docvec!["(() => {", break_("", " "), document].nest(INDENT),
         break_("", " "),
         "})()",
-    )
+    ]
     .group()
 }
 
@@ -1840,13 +1840,13 @@ fn record_constructor<'a>(
             construct_record(qualifier, name, vars.clone()),
             ";"
         ];
-        docvec!(
-            docvec!(wrap_args(vars), " => {", break_("", " "), body)
+        docvec![
+            docvec![wrap_args(vars), " => {", break_("", " "), body]
                 .nest(INDENT)
                 .append(break_("", " "))
                 .group(),
             "}",
-        )
+        ]
     }
 }
 
