@@ -1345,3 +1345,137 @@ pub fn main() {
         find_position_of("Int").under_char('n')
     );
 }
+
+#[test]
+fn hover_on_pipe_with_invalid_step() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("[")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_1() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("1")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_2() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("map")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_3() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_4() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {}
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) {}
+",
+        find_position_of("filter")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_5() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(wibble)
+  |> filter(fn(value) { value })
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
+",
+        find_position_of("fn(value)")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_6() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> wibble
+  |> filter(fn(value) { value })
+}
+
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
+",
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn hover_on_pipe_with_invalid_step_8() {
+    assert_hover!(
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> wibble
+  |> filter(fn(value) { value })
+}
+
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
+",
+        find_position_of("fn(value)")
+    );
+}
