@@ -69,6 +69,33 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now suggests a code action to pattern match on a variable.
+  For example:
+
+  ```gleam
+  pub fn main() {
+    let result = list.first(a_list)
+    //  ^ If you put your cursor over the variable
+    todo
+  }
+  ```
+
+  Triggering the code action on the `result` variable will generate the
+  following code for you:
+
+  ```gleam
+  pub fn main() {
+    let result = list.first(a_list)
+    case result {
+      Ok(value) -> todo
+      Error(value) -> todo
+    }
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
