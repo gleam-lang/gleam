@@ -341,7 +341,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, value, ..
             } => Ok(self.infer_string(value, location)),
 
-            UntypedExpr::PipeLine { expressions } => self.infer_pipeline(expressions),
+            UntypedExpr::PipeLine { expressions } => Ok(self.infer_pipeline(expressions)),
 
             UntypedExpr::Fn {
                 location,
@@ -416,7 +416,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> Result<TypedExpr, Error> {
+    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> TypedExpr {
         PipeTyper::infer(self, expressions)
     }
 
