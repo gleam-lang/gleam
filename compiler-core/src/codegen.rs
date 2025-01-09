@@ -33,10 +33,11 @@ impl<'a> Erlang<'a> {
         &self,
         writer: Writer,
         modules: &[Module],
+        root: &Utf8Path
     ) -> Result<()> {
         for module in modules {
             let erl_name = module.name.replace("/", "@");
-            self.erlang_module(&writer, module, &erl_name)?;
+            self.erlang_module(&writer, module, &erl_name, root)?;
             self.erlang_record_headers(&writer, module, &erl_name)?;
         }
         Ok(())
@@ -47,11 +48,12 @@ impl<'a> Erlang<'a> {
         writer: &Writer,
         module: &Module,
         erl_name: &str,
+        root: &Utf8Path
     ) -> Result<()> {
         let name = format!("{erl_name}.erl");
         let path = self.build_directory.join(&name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = erlang::module(&module.ast, &line_numbers);
+        let output = erlang::module(&module.ast, &line_numbers, root);
         tracing::debug!(name = ?name, "Generated Erlang module");
         writer.write(&path, &output?)
     }

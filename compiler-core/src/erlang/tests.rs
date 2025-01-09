@@ -14,6 +14,7 @@ use crate::{
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
 };
+use camino::Utf8Path;
 
 mod bit_arrays;
 mod case;
@@ -112,10 +113,11 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
         extra: parsed.extra,
         dependencies: vec![],
     };
+    let root = Utf8Path::new("/my/mod");
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);
-    module(&built_module.ast, &line_numbers).unwrap()
+    module(&built_module.ast, &line_numbers, &root).unwrap()
 }
 
 #[macro_export]
