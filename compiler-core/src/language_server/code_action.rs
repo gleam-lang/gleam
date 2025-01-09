@@ -3253,19 +3253,8 @@ impl<'a> DecoderPrinter<'a> {
     }
 }
 
-/// Builder for code action to destructure a function argument:
-///
-/// ```gleam
-/// pub fn wibble(arg: Wibble) {
-/// //             ^ Cursor here
-/// }
-///
-/// // Adds this to the top of the function:
-///
-/// pub fn wibble(arg: Wibble) {
-///   let Wibble(label1:, label2:) = arg
-/// }
-/// ```
+/// Builder for code action to pattern match on things like (anonymous) function
+/// arguments or variables.
 ///
 pub struct PatternMatchOnArgument<'a, A> {
     module: &'a Module,
@@ -3275,6 +3264,11 @@ pub struct PatternMatchOnArgument<'a, A> {
     edits: TextEdits<'a>,
 }
 
+/// A value we might want to pattern match on.
+/// Each variant will also contain all the info needed to know how to properly
+/// print and format the corresponding pattern matching code; that's why you'll
+/// see `Range`s and `SrcSpan` besides the type of the thing being matched.
+///
 pub enum PatternMatchedValue<'a> {
     FunctionArgument {
         /// The argument being pattern matched on.
