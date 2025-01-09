@@ -1185,7 +1185,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
@@ -1338,7 +1338,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         for arg in args {
@@ -1684,7 +1684,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         for arg in args {
@@ -1909,7 +1909,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         for arg in args {
@@ -2108,7 +2108,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         for arg in args {
@@ -2588,17 +2588,14 @@ impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         // The cursor has to be inside the last statement of the body to
         // offer the code action.
-        let Some(last_statement) = body.last() else {
-            return;
-        };
-        let last_statement_range = self.edits.src_span_to_lsp_range(last_statement.location());
+        let last_statement_range = self.edits.src_span_to_lsp_range(body.last().location());
         if within(self.params.range, last_statement_range) {
-            if let Some(call_data) = turn_statement_into_use(last_statement) {
+            if let Some(call_data) = turn_statement_into_use(body.last()) {
                 self.selected_call = Some(call_data);
             }
         }
@@ -2823,7 +2820,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let previous_position = self.position;
@@ -2902,7 +2899,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         let fn_range = self.edits.src_span_to_lsp_range(*location);
@@ -3366,7 +3363,7 @@ where
             return;
         };
 
-        let Some(patterns) = self.type_to_destructure_patterns(dbg!(arg.type_.as_ref())) else {
+        let Some(patterns) = self.type_to_destructure_patterns(arg.type_.as_ref()) else {
             return;
         };
 
@@ -3613,7 +3610,7 @@ where
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
         // If we're not inside the function there's no point in exploring its
@@ -3628,12 +3625,9 @@ where
             // and generate code for that one.
             let arg_range = self.edits.src_span_to_lsp_range(arg.location);
             if within(self.params.range, arg_range) {
-                let Some(first_statement) = body.first() else {
-                    return;
-                };
                 self.selected_value = Some(PatternMatchedValue::FunctionArgument {
                     arg,
-                    first_statement,
+                    first_statement: body.first(),
                     function_range,
                 });
                 return;

@@ -48,6 +48,7 @@ use crate::{
 use std::sync::Arc;
 
 use ecow::EcoString;
+use vec1::Vec1;
 
 use crate::type_::Type;
 
@@ -143,7 +144,7 @@ pub trait Visit<'ast> {
         type_: &'ast Arc<Type>,
         kind: &'ast FunctionLiteralKind,
         args: &'ast [TypedArg],
-        body: &'ast [TypedStatement],
+        body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<TypeAst>,
     ) {
         visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
@@ -824,7 +825,7 @@ pub fn visit_typed_expr_fn<'a, V>(
     _typ: &'a Arc<Type>,
     _kind: &'a FunctionLiteralKind,
     _args: &'a [TypedArg],
-    body: &'a [TypedStatement],
+    body: &'a Vec1<TypedStatement>,
     _return_annotation: &'a Option<TypeAst>,
 ) where
     V: Visit<'a> + ?Sized,
