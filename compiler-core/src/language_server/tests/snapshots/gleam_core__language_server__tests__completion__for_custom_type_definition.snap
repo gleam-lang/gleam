@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 523
 expression: "\npub type Wibble {\n  Wobble\n}"
 ---
 pub type Wibble {

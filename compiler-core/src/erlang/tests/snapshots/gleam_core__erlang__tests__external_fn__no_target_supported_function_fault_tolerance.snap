@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/external_fn.rs
 expression: "\n// This will error for having no support on this platform\n@external(erlang, \"one\", \"two\")\npub fn no_impl() -> Int\n\npub fn main() {\n  // This will due to no_impl not having an appropriate implementation for the\n  // target, NOT because it doesn't exist. The analyser should still know about\n  // it, even though it is invalid.\n  no_impl()\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 

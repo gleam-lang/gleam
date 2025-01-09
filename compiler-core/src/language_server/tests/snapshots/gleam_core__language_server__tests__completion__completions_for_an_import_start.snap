@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1100
 expression: "import gleam\n\npub fn main() {\n  0\n}"
 ---
 |import gleam

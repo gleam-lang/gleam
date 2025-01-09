@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/parse/tests.rs
-assertion_line: 1640
 expression: "\ntype Wibble {\n    @internal\n    Wibble1\n}\n"
 ---
 ----- SOURCE CODE

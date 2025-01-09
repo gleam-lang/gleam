@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 808
 expression: "\ntype Zoo = Int\n\npub fn wibble(\n  x: String,\n) -> String {\n  \"ok\"\n}\n"
 ---
 type Zoo = Int

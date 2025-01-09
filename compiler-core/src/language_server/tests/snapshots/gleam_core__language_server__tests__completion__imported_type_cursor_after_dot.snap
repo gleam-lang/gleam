@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 587
 expression: "import dep\n\npub fn wibble(\n  _: dep.Zoo,\n) -> Nil {\n  Nil\n}\n"
 ---
 import dep

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1754
 expression: "\npub fn main(x: Int) {\n  let x = [1, 2]\n\n}\n"
 ---
 pub fn main(x: Int) {

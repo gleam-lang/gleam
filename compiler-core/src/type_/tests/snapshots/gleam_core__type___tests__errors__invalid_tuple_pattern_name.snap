@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "let #(a, secondValue) = #(1, 2)"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 let #(a, secondValue) = #(1, 2)

@@ -1,6 +1,5 @@
 ---
 source: compiler-core/src/language_server/tests/completion.rs
-assertion_line: 1218
 expression: "\npub fn wibble(\n  _: String,\n) -> Nil {\n  Nil\n}\n"
 ---
 pub fn wibble(

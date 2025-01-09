@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/externals.rs
 expression: "@external(erlang, \"one\", \"two\")\npub fn main() -> Int\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 @external(erlang, "one", "two")
