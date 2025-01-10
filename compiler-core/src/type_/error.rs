@@ -591,12 +591,7 @@ pub enum Error {
     ErlangFloatUnsafe {
         location: SrcSpan,
     },
-}
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum ModuleValueUsageContext {
-    UnqualifiedImport,
-    ModuleAccess,
     /// When the echo keyword is not followed by an expression to be printed.
     /// The only place where echo is allowed to appear on its own is as a step
     /// of a pipeline, otherwise omitting the expression will result in this
@@ -610,6 +605,12 @@ pub enum ModuleValueUsageContext {
     EchoWithNoFollowingExpression {
         location: SrcSpan,
     },
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ModuleValueUsageContext {
+    UnqualifiedImport,
+    ModuleAccess,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
