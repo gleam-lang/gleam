@@ -3760,7 +3760,25 @@ fn pretty_constructor_name(
     }
 }
 
-/// .
+/// Builder for the "generate function" code action.
+/// Whenever someone hovers an invalid expression that is inferred to have a
+/// function type the language server can generate a function definition for it.
+/// For example:
+///
+/// ```gleam
+/// pub fn main() {
+///   wibble(1, 2, "hello")
+///  //  ^ [generate function]
+/// }
+/// ```
+///
+/// Will generate the following definition:
+///
+/// ```gleam
+/// pub fn wibble(arg_0: Int, arg_1: Int, arg_2: String) -> a {
+///   todo
+/// }
+/// ```
 ///
 pub struct GenerateFunction<'a> {
     module: &'a Module,
