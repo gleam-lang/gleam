@@ -3843,7 +3843,6 @@ impl<'a> GenerateFunction<'a> {
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        println!("{:#?}", fun.body);
         self.last_visited_function_end = Some(fun.end_position);
         ast::visit::visit_typed_function(self, fun);
     }
