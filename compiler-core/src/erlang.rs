@@ -20,6 +20,7 @@ use crate::{
     },
     Result,
 };
+use camino::Utf8Path;
 use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
 use im::HashSet;
@@ -29,7 +30,6 @@ use regex::{Captures, Regex};
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
-use camino::Utf8Path;
 
 const INDENT: isize = 4;
 const MAX_COLUMNS: isize = 80;
@@ -151,14 +151,18 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     .to_pretty_string(MAX_COLUMNS)
 }
 
-pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers, root: &'a Utf8Path) -> Result<String> {
+pub fn module<'a>(
+    module: &'a TypedModule,
+    line_numbers: &'a LineNumbers,
+    root: &'a Utf8Path,
+) -> Result<String> {
     Ok(module_document(module, line_numbers, root)?.to_pretty_string(MAX_COLUMNS))
 }
 
 fn module_document<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
-    root: &'a Utf8Path
+    root: &'a Utf8Path,
 ) -> Result<Document<'a>> {
     let mut exports = vec![];
     let mut type_defs = vec![];
@@ -230,7 +234,7 @@ fn module_document<'a>(
                 .map(|relative_path| module.name.clone() + relative_path)
                 .unwrap_or_else(|| src_path_full.clone())
         });
-    
+
     let mut needs_function_docs = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
     for definition in module.definitions.iter() {

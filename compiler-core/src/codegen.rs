@@ -33,7 +33,7 @@ impl<'a> Erlang<'a> {
         &self,
         writer: Writer,
         modules: &[Module],
-        root: &Utf8Path
+        root: &Utf8Path,
     ) -> Result<()> {
         for module in modules {
             let erl_name = module.name.replace("/", "@");
@@ -48,7 +48,7 @@ impl<'a> Erlang<'a> {
         writer: &Writer,
         module: &Module,
         erl_name: &str,
-        root: &Utf8Path
+        root: &Utf8Path,
     ) -> Result<()> {
         let name = format!("{erl_name}.erl");
         let path = self.build_directory.join(&name);
