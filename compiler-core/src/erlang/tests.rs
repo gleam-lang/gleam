@@ -113,7 +113,7 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
         extra: parsed.extra,
         dependencies: vec![],
     };
-    let root = Utf8Path::new("/my/mod");
+    let root = Utf8Path::new("/root");
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);

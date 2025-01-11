@@ -19,7 +19,7 @@ pub fn get_age(person: Person) { person.age }
 
 -type person() :: {teacher, nil, integer()} | {student, binary(), integer()}.
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("my/mod/project/test/my/mod.gleam", 6).
 -spec get_age(person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).

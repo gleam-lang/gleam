@@ -18,7 +18,7 @@ pub fn go() {
 
 -export([go/0]).
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec go() -> binary().
 go() ->
     <<"Hello, "/utf8, "Joe!"/utf8>>.

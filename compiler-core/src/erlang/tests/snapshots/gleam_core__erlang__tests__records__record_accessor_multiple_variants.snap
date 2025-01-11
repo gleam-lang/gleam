@@ -19,7 +19,7 @@ pub fn get_name(person: Person) { person.name }
 
 -type person() :: {teacher, binary(), binary()} | {student, binary(), integer()}.
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("my/mod/project/test/my/mod.gleam", 6).
 -spec get_name(person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).

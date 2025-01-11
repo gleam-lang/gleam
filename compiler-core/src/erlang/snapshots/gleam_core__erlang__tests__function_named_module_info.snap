@@ -19,12 +19,12 @@ pub fn main() {
 
 -export(['moduleInfo'/0, main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec 'moduleInfo'() -> integer().
 'moduleInfo'() ->
     1.
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("my/mod/project/test/my/mod.gleam", 6).
 -spec main() -> integer().
 main() ->
     'moduleInfo'().

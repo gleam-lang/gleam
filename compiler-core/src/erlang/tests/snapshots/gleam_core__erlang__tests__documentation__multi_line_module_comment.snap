@@ -30,7 +30,7 @@ pub fn main() { 1 }
     "\n"
 ).
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("my/mod/project/test/my/mod.gleam", 6).
 -spec main() -> integer().
 main() ->
     1.

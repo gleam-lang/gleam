@@ -17,7 +17,7 @@ pub fn main(x, y) {
 
 -export([main/2]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec main(any(), boolean()) -> integer().
 main(X, Y) ->
     case X of

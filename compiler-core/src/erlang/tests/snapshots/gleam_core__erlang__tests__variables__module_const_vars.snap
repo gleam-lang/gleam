@@ -21,22 +21,22 @@ pub fn use_compound() { compound.1(compound.0) }
 
 -export([use_int_alias/0, use_int_identity_alias/0, use_compound/0]).
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec int_identity(integer()) -> integer().
 int_identity(I) ->
     I.
 
--file("/root/project/test/my/mod.gleam", 3).
+-file("my/mod/project/test/my/mod.gleam", 3).
 -spec use_int_alias() -> integer().
 use_int_alias() ->
     42.
 
--file("/root/project/test/my/mod.gleam", 7).
+-file("my/mod/project/test/my/mod.gleam", 7).
 -spec use_int_identity_alias() -> integer().
 use_int_identity_alias() ->
     int_identity(42).
 
--file("/root/project/test/my/mod.gleam", 10).
+-file("my/mod/project/test/my/mod.gleam", 10).
 -spec use_compound() -> integer().
 use_compound() ->
     (erlang:element(2, {42, fun int_identity/1, fun int_identity/1}))(

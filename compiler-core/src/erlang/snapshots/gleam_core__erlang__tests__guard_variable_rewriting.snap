@@ -20,7 +20,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec main() -> float().
 main() ->
     case 1.0 of

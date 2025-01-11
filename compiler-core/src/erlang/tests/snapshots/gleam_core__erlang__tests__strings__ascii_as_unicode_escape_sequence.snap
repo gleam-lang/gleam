@@ -15,7 +15,7 @@ pub fn y() -> String {
 
 -export([y/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec y() -> binary().
 y() ->
     <<"\x{79}"/utf8>>.

@@ -15,7 +15,7 @@ pub fn go(x, y) {
 
 -export([go/2]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec go(binary(), binary()) -> binary().
 go(X, Y) ->
     <<X/binary, Y/binary>>.

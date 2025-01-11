@@ -18,12 +18,12 @@ pub fn main() {
 
 -export([retstring/0, main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec retstring() -> binary().
 retstring() ->
     <<"wibble"/utf8>>.
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec main() -> any().
 main() ->
     erlang:error(#{gleam_error => todo,

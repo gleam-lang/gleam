@@ -21,7 +21,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
--file("/root/project/test/my/mod.gleam", 4).
+-file("my/mod/project/test/my/mod.gleam", 4).
 -spec main({ok, integer()} | {error, any()}) -> integer().
 main(Arg) ->
     _ = {ok, 1},

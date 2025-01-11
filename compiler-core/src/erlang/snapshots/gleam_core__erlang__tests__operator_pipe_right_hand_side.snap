@@ -17,12 +17,12 @@ pub fn bool_expr(x, y) {
 
 -export([bool_expr/2]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec id(I) -> I.
 id(X) ->
     X.
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec bool_expr(boolean(), boolean()) -> boolean().
 bool_expr(X, Y) ->
     Y orelse begin

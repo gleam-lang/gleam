@@ -22,7 +22,7 @@ expression: "\n        pub type Wibble(a) {\n            Oops\n        }\n\n    
 
 -type wibble(I) :: oops | {gleam_phantom, I}.
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("my/mod/project/test/my/mod.gleam", 6).
 -spec wibble() -> {ok, any()} | {error, wibble(any())}.
 wibble() ->
     erlang:error(#{gleam_error => todo,

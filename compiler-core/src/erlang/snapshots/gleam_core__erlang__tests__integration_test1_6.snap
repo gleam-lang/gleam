@@ -15,17 +15,17 @@ pub fn fdiv(x, y) { x /. y }
 
 -export(['and'/2, 'or'/2, remainder/2, fdiv/2]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec 'and'(boolean(), boolean()) -> boolean().
 'and'(X, Y) ->
     X andalso Y.
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec 'or'(boolean(), boolean()) -> boolean().
 'or'(X, Y) ->
     X orelse Y.
 
--file("/root/project/test/my/mod.gleam", 3).
+-file("my/mod/project/test/my/mod.gleam", 3).
 -spec remainder(integer(), integer()) -> integer().
 remainder(X, Y) ->
     case Y of
@@ -33,7 +33,7 @@ remainder(X, Y) ->
         Gleam@denominator -> X rem Gleam@denominator
     end.
 
--file("/root/project/test/my/mod.gleam", 4).
+-file("my/mod/project/test/my/mod.gleam", 4).
 -spec fdiv(float(), float()) -> float().
 fdiv(X, Y) ->
     case Y of

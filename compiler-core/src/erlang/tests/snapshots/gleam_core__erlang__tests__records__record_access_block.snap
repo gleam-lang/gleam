@@ -23,7 +23,7 @@ pub fn main() {
 
 -type thing() :: {thing, integer(), integer()}.
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec main() -> integer().
 main() ->
     erlang:element(
