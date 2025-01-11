@@ -26,6 +26,34 @@
 
 ### Language server
 
+- The language server can now generate the definition of functions that do not
+  exist in the current file. For example if I write the following piece of code:
+
+  ```gleam
+  import gleam/io
+
+  pub type Pokemon {
+    Pokemon(pokedex_number: Int, name: String)
+  }
+
+  pub fn main() {
+    io.println(to_string(pokemon))
+    //          ^ If you put your cursor over this function that is
+    //            not implemented yet
+  }
+  ```
+
+  Triggering the "generate function" code action, the language server will
+  generate the following function for you:
+
+  ```gleam
+  fn to_string(pokemon: Pokemon) -> String {
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server can now fill in the labels of any function call, even when
   only some of the arguments are provided. For example:
 
