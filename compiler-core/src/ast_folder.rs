@@ -457,23 +457,25 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 clauses,
             } => {
                 let subjects = subjects.into_iter().map(|e| self.fold_expr(e)).collect();
-                let clauses = clauses
-                    .into_iter()
-                    .map(|mut c| {
-                        c.pattern = c
-                            .pattern
-                            .into_iter()
-                            .map(|p| self.fold_pattern(p))
-                            .collect();
-                        c.alternative_patterns = c
-                            .alternative_patterns
-                            .into_iter()
-                            .map(|p| p.into_iter().map(|p| self.fold_pattern(p)).collect())
-                            .collect();
-                        c.then = self.fold_expr(c.then);
-                        c
-                    })
-                    .collect();
+                let clauses = clauses.map(|clauses| {
+                    clauses
+                        .into_iter()
+                        .map(|mut c| {
+                            c.pattern = c
+                                .pattern
+                                .into_iter()
+                                .map(|p| self.fold_pattern(p))
+                                .collect();
+                            c.alternative_patterns = c
+                                .alternative_patterns
+                                .into_iter()
+                                .map(|p| p.into_iter().map(|p| self.fold_pattern(p)).collect())
+                                .collect();
+                            c.then = self.fold_expr(c.then);
+                            c
+                        })
+                        .collect()
+                });
                 UntypedExpr::Case {
                     location,
                     subjects,
@@ -742,7 +744,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         &mut self,
         location: SrcSpan,
         subjects: Vec<UntypedExpr>,
-        clauses: Vec<UntypedClause>,
+        clauses: Option<Vec<UntypedClause>>,
     ) -> UntypedExpr {
         UntypedExpr::Case {
             location,
