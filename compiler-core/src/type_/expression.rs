@@ -1463,8 +1463,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             None => {
                 self.problems.error(Error::MissingCaseBody { location });
                 return TypedExpr::Case {
-                    location: location,
-                    type_: self.new_unbound_var(),
+                    location,
+                    type_: return_type,
                     subjects: typed_subjects,
                     clauses: Vec::new(),
                 };
