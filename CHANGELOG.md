@@ -17,6 +17,11 @@
   shell starting from OTP27.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Parsing of `case` expressions is now fault tolerant. If a `case` expressions
+  is missing its body, the compiler can still perform type inference. This also
+  allows the Language Server to provide completion hints for `case` subjects.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - `gleam new` now has refined project name validation - rather than failing on
