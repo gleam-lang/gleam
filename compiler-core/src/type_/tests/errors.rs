@@ -2685,3 +2685,8 @@ fn negative_out_of_range_erlang_float_in_pattern() {
 fn negative_out_of_range_erlang_float_in_const() {
     assert_module_error!(r#"const x = -1.8e308"#);
 }
+
+#[test]
+fn missing_case_body() {
+    assert_error!("case True");
+}

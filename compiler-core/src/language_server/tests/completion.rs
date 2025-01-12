@@ -1886,3 +1886,18 @@ pub fn map(_, _) { [] }
         Position::new(3, 8)
     );
 }
+
+#[test]
+fn case_subject() {
+    let code = "
+pub fn main(something: Bool) {
+  case so
+}
+";
+
+    assert_apply_completion!(
+        TestProject::for_source(code),
+        "something",
+        Position::new(2, 9)
+    );
+}
