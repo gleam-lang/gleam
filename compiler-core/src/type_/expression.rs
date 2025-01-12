@@ -1428,13 +1428,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_case(
         &mut self,
         subjects: Vec<UntypedExpr>,
-        clauses: Vec<UntypedClause>,
+        clauses: Option<Vec<UntypedClause>>,
         location: SrcSpan,
     ) -> TypedExpr {
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
-        let mut typed_clauses = Vec::with_capacity(clauses.len());
 
         let return_type = self.new_unbound_var();
 
@@ -1459,6 +1458,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_subjects.push(subject);
         }
 
+        let clauses = match clauses {
+            Some(clauses) => clauses,
+            None => {
+                self.problems.error(Error::MissingCaseBody { location });
+                return TypedExpr::Case {
+                    location: location,
+                    type_: self.new_unbound_var(),
+                    subjects: typed_subjects,
+                    clauses: Vec::new(),
+                };
+            }
+        };
+
+        let mut typed_clauses = Vec::with_capacity(clauses.len());
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
         // NOTE: if there are 0 clauses then there are 0 panics

@@ -3066,6 +3066,27 @@ The missing patterns are:\n"
                     }
                 }
 
+                TypeError::MissingCaseBody { location } => {
+                    let text = wrap(
+                        "This case expression is missing its body."
+                        );
+                    Diagnostic {
+                        title: "Missing case body".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 TypeError::UnsupportedExpressionTarget {
                     location,
                     target: current_target,

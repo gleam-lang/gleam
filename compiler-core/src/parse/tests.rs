@@ -1678,3 +1678,8 @@ type Wibble {
 fn nested_tuple_access_after_function() {
     assert_parse!("tuple().0.1");
 }
+
+#[test]
+fn case_expression_without_body() {
+    assert_parse!("case a");
+}

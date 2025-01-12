@@ -443,6 +443,11 @@ pub enum Error {
         missing: Vec<EcoString>,
     },
 
+    /// A case expression is missing its body.
+    MissingCaseBody {
+        location: SrcSpan,
+    },
+
     /// Let assignment's pattern does not match all possible values of the type.
     InexhaustiveLetAssignment {
         location: SrcSpan,
@@ -1031,6 +1036,7 @@ impl Error {
             | Error::InvalidExternalJavascriptModule { location, .. }
             | Error::InvalidExternalJavascriptFunction { location, .. }
             | Error::InexhaustiveCaseExpression { location, .. }
+            | Error::MissingCaseBody { location }
             | Error::InexhaustiveLetAssignment { location, .. }
             | Error::UnusedTypeAliasParameter { location, .. }
             | Error::DuplicateTypeParameter { location, .. }

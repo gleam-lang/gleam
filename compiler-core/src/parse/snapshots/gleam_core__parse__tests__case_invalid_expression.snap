@@ -19,5 +19,4 @@ error: Syntax error
   │             ^^^^ I was not expecting this
 
 Found the keyword `type`, expected one of: 
-- `{`
-- an expression
+- `}`
