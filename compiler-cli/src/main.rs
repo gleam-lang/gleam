@@ -101,6 +101,27 @@ struct UpdateOptions {
     packages: Vec<String>,
 }
 
+#[derive(Args, Debug, Clone)]
+struct TreeOptions {
+    /// (optional) Name of the package to get the dependency tree for
+    #[arg(
+        short,
+        long,
+        ignore_case = true,
+        help = "Package to be used as the root of the tree"
+    )]
+    package: Option<String>,
+    /// (optional) Name of the package to get the inverted dependency tree for
+    #[arg(
+        short,
+        long,
+        ignore_case = true,
+        help = "Invert the tree direction and focus on the given package",
+        value_name = "PACKAGE"
+    )]
+    invert: Option<String>,
+}
+
 #[derive(Parser, Debug)]
 #[command(
     version,
@@ -355,6 +376,9 @@ enum Dependencies {
 
     /// Update dependency packages to their latest versions
     Update(UpdateOptions),
+
+    /// Tree of all the dependency packages
+    Tree(TreeOptions),
 }
 
 #[derive(Subcommand, Debug)]
@@ -484,6 +508,8 @@ fn main() {
         Command::Deps(Dependencies::Download) => download_dependencies(),
 
         Command::Deps(Dependencies::Update(options)) => dependencies::update(options.packages),
+
+        Command::Deps(Dependencies::Tree(options)) => dependencies::tree(options),
 
         Command::Hex(Hex::Authenticate) => hex::authenticate(),
 
