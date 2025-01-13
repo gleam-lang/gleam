@@ -4,7 +4,7 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::EcoString;
+use ecow::{eco_format, EcoString};
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
@@ -84,12 +84,8 @@ pub fn tree(options: TreeOptions) -> Result<()> {
         Some(&root_package)
     };
 
-    if let Some(package) = package {
-        println!("{0} v{1}", package.name, package.version,);
-        list_dependencies_tree(package.clone(), packages, EcoString::new(), invert)?;
-    } else {
-        println!("Package not found. Please check the package name.");
-    }
+    list_package_and_dependencies_tree(std::io::stdout(), package, packages.clone(), invert)?;
+
     Ok(())
 }
 
@@ -121,12 +117,45 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
         })
 }
 
+fn list_package_and_dependencies_tree<W: std::io::Write>(
+    mut buffer: W,
+    package: Option<&ManifestPackage>,
+    packages: Vec<ManifestPackage>,
+    invert: bool,
+) -> Result<()> {
+    if let Some(package) = package {
+        let tree = Vec::from([eco_format!("{0} v{1}", package.name, package.version)]);
+        let tree = list_dependencies_tree(
+            tree.clone(),
+            package.clone(),
+            packages,
+            EcoString::new(),
+            invert,
+        );
+
+        tree.iter()
+            .try_for_each(|line| writeln!(buffer, "{}", line))
+            .map_err(|e| Error::StandardIo {
+                action: StandardIoAction::Write,
+                err: Some(e.kind()),
+            })
+    } else {
+        writeln!(buffer, "Package not found. Please check the package name.").map_err(|e| {
+            Error::StandardIo {
+                action: StandardIoAction::Write,
+                err: Some(e.kind()),
+            }
+        })
+    }
+}
+
 fn list_dependencies_tree(
+    mut tree: Vec<EcoString>,
     package: ManifestPackage,
     packages: Vec<ManifestPackage>,
     accum: EcoString,
     invert: bool,
-) -> Result<()> {
+) -> Vec<EcoString> {
     let dependencies = packages
         .iter()
         .filter(|p| {
@@ -147,21 +176,27 @@ fn list_dependencies_tree(
             UTF8_SYMBOLS.tee
         };
 
-        println!(
+        tree.push(eco_format!(
             "{0}{1}{2}{2} {3} v{4}",
             accum.clone(),
             prefix,
             UTF8_SYMBOLS.right,
             dependency.name,
             dependency.version
-        );
+        ));
 
         let accum = accum.clone() + (if !is_last { UTF8_SYMBOLS.down } else { " " }) + "   ";
 
-        list_dependencies_tree(dependency.clone(), packages.clone(), accum.clone(), invert)?;
+        tree = list_dependencies_tree(
+            tree.clone(),
+            dependency.clone(),
+            packages.clone(),
+            accum.clone(),
+            invert,
+        );
     }
 
-    Ok(())
+    tree
 }
 
 #[derive(Debug, Clone, Copy)]

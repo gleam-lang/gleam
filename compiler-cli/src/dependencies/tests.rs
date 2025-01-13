@@ -64,6 +64,163 @@ zzz 0.4.0
 }
 
 #[test]
+fn list_tree_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "deps_proj".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_regexp".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    list_package_and_dependencies_tree(
+        &mut buffer,
+        manifest.packages.first(),
+        manifest.packages.clone(),
+        false,
+    )
+    .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"deps_proj v1.0.0
+├── gleam_regexp v1.0.0
+│   └── gleam_stdlib v0.52.0
+└── gleam_stdlib v0.52.0
+"#
+    )
+}
+
+#[test]
+fn list_tree_invert_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "deps_proj".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into(), "gleam_regexp".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+        ],
+    };
+    list_package_and_dependencies_tree(
+        &mut buffer,
+        manifest.packages.first(),
+        manifest.packages.clone(),
+        true,
+    )
+    .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"gleam_stdlib v0.52.0
+├── deps_proj v1.0.0
+└── gleam_regexp v1.0.0
+    └── deps_proj v1.0.0
+"#
+    )
+}
+
+#[test]
+fn list_tree_invalid_package_format() {
+    let mut buffer = vec![];
+    let manifest = Manifest {
+        requirements: HashMap::new(),
+        packages: vec![
+            ManifestPackage {
+                name: "gleam_stdlib".into(),
+                version: Version::new(0, 52, 0),
+                build_tools: ["rebar3".into(), "make".into()].into(),
+                otp_app: Some("aaa_app".into()),
+                requirements: vec![],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "gleam_regexp".into(),
+                version: Version::new(1, 0, 0),
+                build_tools: ["mix".into()].into(),
+                otp_app: None,
+                requirements: vec!["gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![3, 22]),
+                },
+            },
+            ManifestPackage {
+                name: "root".into(),
+                version: Version::parse("1.0.0").unwrap(),
+                build_tools: [].into(),
+                otp_app: None,
+                requirements: vec!["gleam_regexp".into(), "gleam_stdlib".into()],
+                source: ManifestPackageSource::Hex {
+                    outer_checksum: Base16Checksum(vec![1, 2, 3, 4]),
+                },
+            },
+        ],
+    };
+    list_package_and_dependencies_tree(&mut buffer, None, manifest.packages.clone(), false)
+        .unwrap();
+    assert_eq!(
+        std::str::from_utf8(&buffer).unwrap(),
+        r#"Package not found. Please check the package name.
+"#
+    )
+}
+
+#[test]
 fn parse_gleam_add_specifier_invalid_semver() {
     assert!(parse_gleam_add_specifier("some_package@1.2.3.4").is_err());
 }
