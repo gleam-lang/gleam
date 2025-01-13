@@ -14,7 +14,7 @@ use crate::{
     paths::ProjectPaths,
     type_::{
         self, printer::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
-        ValueConstructorVariant,
+        ValueConstructor, ValueConstructorVariant,
     },
     Error, Result, Warning,
 };
@@ -23,10 +23,11 @@ use ecow::EcoString;
 use itertools::Itertools;
 use lsp::CodeAction;
 use lsp_types::{
-    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position, Range,
-    SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
+    self as lsp, DocumentSymbol, Hover, HoverContents, MarkedString, Position,
+    PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
+    WorkspaceEdit,
 };
-use std::sync::Arc;
+use std::{collections::HashMap, sync::Arc};
 
 use super::{
     code_action::{
@@ -491,6 +492,80 @@ where
             }
 
             Ok(symbols)
+        })
+    }
+
+    pub fn prepare_rename(
+        &mut self,
+        params: lsp::TextDocumentPositionParams,
+    ) -> Response<Option<PrepareRenameResponse>> {
+        self.respond(|this| {
+            let (_, found) = match this.node_at_position(&params) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            Ok(match found {
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant: ValueConstructorVariant::LocalVariable { .. },
+                            ..
+                        },
+                    ..
+                }) => Some(PrepareRenameResponse::DefaultBehavior {
+                    default_behavior: true,
+                }),
+                _ => None,
+            })
+        })
+    }
+
+    pub fn rename(&mut self, params: lsp::RenameParams) -> Response<Option<WorkspaceEdit>> {
+        self.respond(|this| {
+            let position = params.text_document_position;
+
+            let (lines, found) = match this.node_at_position(&position) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            Ok(match found {
+                Located::Expression(TypedExpr::Var {
+                    location,
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::LocalVariable {
+                                    location: definition_location,
+                                },
+                            ..
+                        },
+                    ..
+                }) => {
+                    let range = src_span_to_lsp_range(*location, &lines);
+                    let definition_range = src_span_to_lsp_range(*definition_location, &lines);
+                    let range_edit = TextEdit {
+                        range,
+                        new_text: params.new_name.clone(),
+                    };
+                    let definition_edit = TextEdit {
+                        range: definition_range,
+                        new_text: params.new_name.clone(),
+                    };
+                    let mut changes = HashMap::new();
+                    let _ = changes.insert(
+                        position.text_document.uri,
+                        vec![range_edit, definition_edit],
+                    );
+                    Some(WorkspaceEdit {
+                        changes: Some(changes),
+                        document_changes: None,
+                        change_annotations: None,
+                    })
+                }
+                _ => None,
+            })
         })
     }
 
@@ -963,7 +1038,7 @@ fn hover_for_expression(
 }
 
 fn hover_for_imported_value(
-    value: &type_::ValueConstructor,
+    value: &ValueConstructor,
     location: &SrcSpan,
     line_numbers: LineNumbers,
     hex_module_imported_from: Option<&ModuleInterface>,
