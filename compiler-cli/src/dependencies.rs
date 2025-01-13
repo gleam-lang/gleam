@@ -32,12 +32,71 @@ use crate::{
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
+    TreeOptions,
+};
+
+struct Symbols {
+    down: &'static str,
+    tee: &'static str,
+    ell: &'static str,
+    right: &'static str,
+}
+
+static UTF8_SYMBOLS: Symbols = Symbols {
+    down: "│",
+    tee: "├",
+    ell: "└",
+    right: "─",
 };
 
 pub fn list() -> Result<()> {
+    let (_, _, manifest) = get_manifest_details()?;
+    list_manifest_packages(std::io::stdout(), manifest)
+}
+
+pub fn tree(options: TreeOptions) -> Result<()> {
+    let (project, config, manifest) = get_manifest_details()?;
+
+    // Initialize the root package since it is not part of the manifest
+    let root_package = ManifestPackage {
+        build_tools: vec![],
+        name: config.name.clone(),
+        requirements: config.all_direct_dependencies()?.keys().cloned().collect(),
+        version: config.version.clone(),
+        source: ManifestPackageSource::Local {
+            path: project.clone(),
+        },
+        otp_app: None,
+    };
+
+    // Get the manifest packages and add the root package to the vec
+    let mut packages = manifest.packages.iter().cloned().collect_vec();
+    packages.append(&mut vec![root_package.clone()]);
+
+    let mut invert = false;
+
+    let package: Option<&ManifestPackage> = if let Some(input_package_name) = options.package {
+        packages.iter().find(|p| p.name == input_package_name)
+    } else if let Some(input_package_name) = options.invert {
+        invert = true;
+        packages.iter().find(|p| p.name == input_package_name)
+    } else {
+        Some(&root_package)
+    };
+
+    if let Some(package) = package {
+        println!("{0} v{1}", package.name, package.version,);
+        list_dependencies_tree(package.clone(), packages, EcoString::new(), invert)?;
+    } else {
+        println!("Package not found. Please check the package name.");
+    }
+    Ok(())
+}
+
+fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let project = fs::get_project_root(fs::get_current_directory()?)?;
-    let paths = ProjectPaths::new(project);
+    let paths = ProjectPaths::new(project.clone());
     let config = crate::config::root_config()?;
     let (_, manifest) = get_manifest(
         &paths,
@@ -48,7 +107,7 @@ pub fn list() -> Result<()> {
         UseManifest::Yes,
         Vec::new(),
     )?;
-    list_manifest_packages(std::io::stdout(), manifest)
+    Ok((project, config, manifest))
 }
 
 fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
@@ -60,6 +119,49 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
             action: StandardIoAction::Write,
             err: Some(e.kind()),
         })
+}
+
+fn list_dependencies_tree(
+    package: ManifestPackage,
+    packages: Vec<ManifestPackage>,
+    accum: EcoString,
+    invert: bool,
+) -> Result<()> {
+    let dependencies = packages
+        .iter()
+        .filter(|p| {
+            (invert && p.requirements.contains(&package.name))
+                || (!invert && package.requirements.contains(&p.name))
+        })
+        .cloned()
+        .collect_vec();
+
+    let dependencies = dependencies.iter().sorted().enumerate();
+
+    let deps_length = dependencies.len();
+    for (index, dependency) in dependencies {
+        let is_last = index == deps_length - 1;
+        let prefix = if is_last {
+            UTF8_SYMBOLS.ell
+        } else {
+            UTF8_SYMBOLS.tee
+        };
+
+        println!(
+            "{0}{1}{2}{2} {3} v{4}",
+            accum.clone(),
+            prefix,
+            UTF8_SYMBOLS.right,
+            dependency.name,
+            dependency.version
+        );
+
+        let accum = accum.clone() + (if !is_last { UTF8_SYMBOLS.down } else { " " }) + "   ";
+
+        list_dependencies_tree(dependency.clone(), packages.clone(), accum.clone(), invert)?;
+    }
+
+    Ok(())
 }
 
 #[derive(Debug, Clone, Copy)]
