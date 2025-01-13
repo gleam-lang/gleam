@@ -20,7 +20,7 @@ use debug_ignore::DebugIgnore;
 use itertools::Itertools;
 use lsp_types::{
     self as lsp, HoverProviderCapability, InitializeParams, Position, PublishDiagnosticsParams,
-    Range, TextEdit, Url,
+    Range, RenameOptions, TextEdit, Url,
 };
 use serde_json::Value as Json;
 use std::collections::{HashMap, HashSet};
@@ -105,6 +105,8 @@ where
             Request::CodeAction(param) => self.code_action(param),
             Request::SignatureHelp(param) => self.signature_help(param),
             Request::DocumentSymbol(param) => self.document_symbol(param),
+            Request::PrepareRename(param) => self.prepare_rename(param),
+            Request::Rename(param) => self.rename(param),
         };
 
         self.publish_feedback(feedback);
@@ -333,6 +335,16 @@ where
         self.respond_with_engine(path, |engine| engine.document_symbol(params))
     }
 
+    fn prepare_rename(&mut self, params: lsp::TextDocumentPositionParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.prepare_rename(params))
+    }
+
+    fn rename(&mut self, params: lsp::RenameParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.rename(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -417,7 +429,12 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         document_formatting_provider: Some(lsp::OneOf::Left(true)),
         document_range_formatting_provider: None,
         document_on_type_formatting_provider: None,
-        rename_provider: None,
+        rename_provider: Some(lsp::OneOf::Right(RenameOptions {
+            prepare_provider: Some(true),
+            work_done_progress_options: lsp::WorkDoneProgressOptions {
+                work_done_progress: None,
+            },
+        })),
         document_link_provider: None,
         color_provider: None,
         folding_range_provider: None,
