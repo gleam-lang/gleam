@@ -84,9 +84,7 @@ pub fn tree(options: TreeOptions) -> Result<()> {
         Some(&root_package)
     };
 
-    list_package_and_dependencies_tree(std::io::stdout(), package, packages.clone(), invert)?;
-
-    Ok(())
+    list_package_and_dependencies_tree(std::io::stdout(), package, packages.clone(), invert)
 }
 
 fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
