@@ -537,7 +537,6 @@ where
 
             Ok(match found {
                 Located::Expression(TypedExpr::Var {
-                    location,
                     constructor:
                         ValueConstructor {
                             variant:
@@ -547,9 +546,7 @@ where
                             ..
                         },
                     ..
-                }) => {
-                    rename_local_variable(module, &lines, &params, *location, *definition_location)
-                }
+                }) => rename_local_variable(module, &lines, &params, *definition_location),
                 _ => None,
             })
         })
