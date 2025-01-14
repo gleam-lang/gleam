@@ -89,6 +89,71 @@ pub fn main() {
 }
 
 #[test]
+fn rename_shadowed_local_variable() {
+    assert_rename!(
+        "
+pub fn main() {
+  let wibble = 10
+  let wibble = wibble / 2
+  wibble
+}
+",
+        "wobble",
+        find_position_of("wibble /").to_selection(),
+    );
+}
+
+#[test]
+fn rename_shadowing_local_variable() {
+    assert_rename!(
+        "
+pub fn main() {
+  let wibble = 10
+  let wibble = wibble / 2
+  wibble
+}
+",
+        "wobble",
+        find_position_of("wibble").nth_occurrence(4).to_selection(),
+    );
+}
+
+#[test]
+fn rename_local_variable_record_access() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(wibble: 1)
+  wibble.wibble
+}
+",
+        "wobble",
+        find_position_of("wibble.").to_selection(),
+    );
+}
+#[test]
+fn rename_local_variable_guard_clause() {
+    assert_rename!(
+        "
+pub fn main() {
+  let wibble = True
+  case Nil {
+    Nil if wibble -> todo
+    _ -> panic
+  }
+  wibble || False
+}
+",
+        "wobble",
+        find_position_of("wibble ||").to_selection(),
+    );
+}
+
+#[test]
 fn no_rename_keyword() {
     assert_no_rename!(
         "
