@@ -73,18 +73,7 @@ pub fn tree(options: TreeOptions) -> Result<()> {
     let mut packages = manifest.packages.iter().cloned().collect_vec();
     packages.append(&mut vec![root_package.clone()]);
 
-    let mut invert = false;
-
-    let package: Option<&ManifestPackage> = if let Some(input_package_name) = options.package {
-        packages.iter().find(|p| p.name == input_package_name)
-    } else if let Some(input_package_name) = options.invert {
-        invert = true;
-        packages.iter().find(|p| p.name == input_package_name)
-    } else {
-        Some(&root_package)
-    };
-
-    list_package_and_dependencies_tree(std::io::stdout(), package, packages.clone(), invert)
+    list_package_and_dependencies_tree(std::io::stdout(), options, packages.clone(), config.name)
 }
 
 fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
@@ -117,10 +106,21 @@ fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) 
 
 fn list_package_and_dependencies_tree<W: std::io::Write>(
     mut buffer: W,
-    package: Option<&ManifestPackage>,
+    options: TreeOptions,
     packages: Vec<ManifestPackage>,
-    invert: bool,
+    root_package_name: EcoString,
 ) -> Result<()> {
+    let mut invert = false;
+
+    let package: Option<&ManifestPackage> = if let Some(input_package_name) = options.package {
+        packages.iter().find(|p| p.name == input_package_name)
+    } else if let Some(input_package_name) = options.invert {
+        invert = true;
+        packages.iter().find(|p| p.name == input_package_name)
+    } else {
+        packages.iter().find(|p| p.name == root_package_name)
+    };
+
     if let Some(package) = package {
         let tree = Vec::from([eco_format!("{0} v{1}", package.name, package.version)]);
         let tree = list_dependencies_tree(
