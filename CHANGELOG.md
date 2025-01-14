@@ -125,3 +125,7 @@
 - Fixed a bug where a block expression containing a singular record update would
   produce invalid erlang.
   ([yoshi](https://github.com/joshi-monster))
+
+- Fixed a typo in the error message when trying to import a test module into an
+  application module.
+  ([John Strunk](https://github.com/jrstrunk))
