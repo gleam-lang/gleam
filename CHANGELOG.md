@@ -24,6 +24,19 @@
   confirmation to use it.
   ([Diemo Gebhardt](https://github.com/diemogebhardt))
 
+- `gleam deps` now supports `tree` operation that lists the dependency tree.
+
+  ```markdown
+  Usage: gleam deps tree [OPTIONS]
+
+  Options:
+    -p, --package <PACKAGE>  Package to be used as the root of the tree
+    -i, --invert <PACKAGE>   Invert the tree direction and focus on the given package
+    -h, --help               Print help
+  ```
+
+  ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
 ### Language server
 
 - The language server can now fill in the labels of any function call, even when
