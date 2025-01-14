@@ -63,6 +63,19 @@
   when "Cmd/Ctrl + K", "s" or "/" is pressed.
   ([Sambit Sahoo](https://github.com/soulsam480))
 
+- `gleam deps` now supports `tree` operation that lists the dependency tree.
+
+  ```markdown
+  Usage: gleam deps tree [OPTIONS]
+
+  Options:
+    -p, --package <PACKAGE>  Package to be used as the root of the tree
+    -i, --invert <PACKAGE>   Invert the tree direction and focus on the given package
+    -h, --help               Print help
+  ```
+
+  ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
 ### Language server
 
 - The language server can now generate the definition of functions that do not
