@@ -31,7 +31,7 @@ use super::{
     compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
-    src_span_to_lsp_range,
+    src_span_to_lsp_range, TextEdits,
 };
 
 #[derive(Debug)]
@@ -77,48 +77,6 @@ impl CodeActionBuilder {
 
     pub fn push_to(self, actions: &mut Vec<CodeAction>) {
         actions.push(self.action);
-    }
-}
-
-/// A little wrapper around LineNumbers to make it easier to build text edits.
-///
-struct TextEdits<'a> {
-    line_numbers: &'a LineNumbers,
-    edits: Vec<TextEdit>,
-}
-
-impl<'a> TextEdits<'a> {
-    pub fn new(line_numbers: &'a LineNumbers) -> Self {
-        TextEdits {
-            line_numbers,
-            edits: vec![],
-        }
-    }
-
-    pub fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
-        src_span_to_lsp_range(location, self.line_numbers)
-    }
-
-    pub fn replace(&mut self, location: SrcSpan, new_text: String) {
-        self.edits.push(TextEdit {
-            range: src_span_to_lsp_range(location, self.line_numbers),
-            new_text,
-        })
-    }
-
-    pub fn insert(&mut self, at: u32, new_text: String) {
-        self.replace(SrcSpan { start: at, end: at }, new_text)
-    }
-
-    pub fn delete(&mut self, location: SrcSpan) {
-        self.replace(location, "".to_string())
-    }
-
-    fn delete_range(&mut self, range: Range) {
-        self.edits.push(TextEdit {
-            range,
-            new_text: "".into(),
-        })
     }
 }
 

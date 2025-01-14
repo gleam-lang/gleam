@@ -27,7 +27,7 @@ use lsp_types::{
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
-use std::{collections::HashMap, sync::Arc};
+use std::sync::Arc;
 
 use super::{
     code_action::{
@@ -39,6 +39,7 @@ use super::{
         TurnIntoUse, UseLabelShorthandSyntax,
     },
     completer::Completer,
+    rename::rename_local_variable,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -523,11 +524,15 @@ where
 
     pub fn rename(&mut self, params: lsp::RenameParams) -> Response<Option<WorkspaceEdit>> {
         self.respond(|this| {
-            let position = params.text_document_position;
+            let position = &params.text_document_position;
 
-            let (lines, found) = match this.node_at_position(&position) {
+            let (lines, found) = match this.node_at_position(position) {
                 Some(value) => value,
                 None => return Ok(None),
+            };
+
+            let Some(module) = this.module_for_uri(&position.text_document.uri) else {
+                return Ok(None);
             };
 
             Ok(match found {
@@ -543,26 +548,7 @@ where
                         },
                     ..
                 }) => {
-                    let range = src_span_to_lsp_range(*location, &lines);
-                    let definition_range = src_span_to_lsp_range(*definition_location, &lines);
-                    let range_edit = TextEdit {
-                        range,
-                        new_text: params.new_name.clone(),
-                    };
-                    let definition_edit = TextEdit {
-                        range: definition_range,
-                        new_text: params.new_name.clone(),
-                    };
-                    let mut changes = HashMap::new();
-                    let _ = changes.insert(
-                        position.text_document.uri,
-                        vec![range_edit, definition_edit],
-                    );
-                    Some(WorkspaceEdit {
-                        changes: Some(changes),
-                        document_changes: None,
-                        change_annotations: None,
-                    })
+                    rename_local_variable(module, &lines, &params, *location, *definition_location)
                 }
                 _ => None,
             })
