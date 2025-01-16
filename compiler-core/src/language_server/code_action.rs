@@ -3829,7 +3829,7 @@ impl<'a> GenerateFunction<'a> {
                 .named_type_name()
                 .map(|(_type_module, type_name)| type_name.to_snake_case())
                 .filter(|name| is_valid_function_name(name))
-                .unwrap_or(String::from("arg"));
+                .unwrap_or(String::from("value"));
 
             format!("{arg_name}: {}", printer.print_type(arg_type))
         } else {
