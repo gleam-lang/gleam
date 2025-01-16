@@ -130,8 +130,6 @@ where
                     .map_err(|e| ResolutionError::Failure(format!("Failed to parse range {e}")))?
                     .contains(locked_version);
                 if !compatible {
-                    // see [`crate::error::dependency_resolution_failed`] when
-                    // changing this error's text fmt
                     return Err(ResolutionError::Failure(format!(
                         "{name} is specified with the requirement `{range}`, \
 but it is locked to {locked_version}, which is incompatible.",
@@ -779,7 +777,29 @@ mod tests {
     }
 
     #[test]
-    fn resolution_locked_version_doesnt_satisfy_requirements_indirect() {
+    fn resolution_locked_version_doesnt_satisfy_requirements() {
+        let err = resolve_versions(
+            make_remote(),
+            HashMap::new(),
+            "app".into(),
+            vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
+            &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
+                .into_iter()
+                .collect(),
+        )
+        .unwrap_err();
+
+        match err {
+        Error::DependencyResolutionFailed{error, locked_conflicts: _} => assert_eq!(
+            error,
+            "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+        ),
+        _ => panic!("wrong error: {err}"),
+        }
+    }
+
+    #[test]
+    fn resolution_locked_version_doesnt_satisfy_requirements_locked() {
         // we're creating a dependency logging v1.4.0 that requires gleam_stdlib v0.40.0
         let mut requirements: HashMap<String, Dependency> = HashMap::new();
         let _ = requirements.insert(

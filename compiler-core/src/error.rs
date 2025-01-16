@@ -238,7 +238,6 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("Dependency tree resolution failed: {error}")]
     DependencyResolutionFailed {
         error: String,
-        // a vec of the names of locked dependencies responsible for the failure
         locked_conflicts: Vec<EcoString>,
     },
 
@@ -3603,8 +3602,6 @@ The error from the parser was:
                 }]
             }
 
-            // locked_conflicts ignored as the version resolver lib builds the message
-            // enumerating them
             Error::DependencyResolutionFailed{error, locked_conflicts: _} => {
                 let text = format!(
                     "An error occurred while determining what dependency packages and

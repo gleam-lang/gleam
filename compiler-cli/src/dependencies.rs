@@ -728,7 +728,8 @@ fn resolve_versions<Telem: Telemetry>(
                 ref locked_conflicts,
             },
         ) => {
-            if !is_ci_env() {
+            // Do not ask the user to unlock conflicts in CI or if they don't exist
+            if is_ci_env() || locked_conflicts.is_empty() {
                 return Err(err.clone());
             }
 
