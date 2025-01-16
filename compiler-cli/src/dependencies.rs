@@ -723,26 +723,22 @@ fn resolve_versions<Telem: Telemetry>(
     ) {
         Ok(it) => it,
         Err(
-            ref e @ Error::DependencyResolutionFailedWithLocked {
+            ref err @ Error::DependencyResolutionFailed {
                 error: _,
                 ref locked_conflicts,
             },
         ) => {
             if !is_ci_env() {
-                return Err(e.clone());
+                return Err(err.clone());
             }
 
-            let should_try_unlock = cli::confirm(
+            if cli::confirm(
                 "\nSome of these dependencies are locked to specific versions. It may
 be possible to find a solution if they are unlocked, would you like
 to unlock and try again?",
-            )?;
-
-            if should_try_unlock {
-                // unlock pkgs
+            )? {
                 unlock_packages(&mut locked, locked_conflicts, manifest)?;
 
-                // try again
                 dependency::resolve_versions(
                     PackageFetcher::boxed(runtime.clone()),
                     provided_hex_packages,
@@ -751,7 +747,7 @@ to unlock and try again?",
                     &locked,
                 )?
             } else {
-                return Err(e.clone());
+                return Err(err.clone());
             }
         }
 

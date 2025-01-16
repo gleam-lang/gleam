@@ -779,35 +779,6 @@ mod tests {
     }
 
     #[test]
-    fn resolution_locked_version_doesnt_satisfy_requirements() {
-        let err = resolve_versions(
-            make_remote(),
-            HashMap::new(),
-            "app".into(),
-            vec![("gleam_stdlib".into(), Range::new("~> 0.1.0".into()))].into_iter(),
-            &vec![("gleam_stdlib".into(), Version::new(0, 2, 0))]
-                .into_iter()
-                .collect(),
-        )
-        .unwrap_err();
-
-        match err {
-            Error::DependencyResolutionFailedWithLocked {
-                error,
-                locked_conflicts: _,
-            } => {
-                assert_eq!(
-                    error,
-                    format!("Unable to find compatible versions due to package versions locked by manifest.toml.\n\
-                             Consider unlocking the responsible locked package(s) :\n- gleam_stdlib"),
-                );
-            }
-            _ => panic!("wrong error: {err}"),
-        }
-    }
-
-    // These are errors where a locked package version is incompatible with a new package added via gleam add or via a manual gleam.toml update and gleam deps download AND the locked package is not constrained in manifest.toml.
-    #[test]
     fn resolution_locked_version_doesnt_satisfy_requirements_indirect() {
         // we're creating a dependency logging v1.4.0 that requires gleam_stdlib v0.40.0
         let mut requirements: HashMap<String, Dependency> = HashMap::new();
@@ -825,7 +796,7 @@ mod tests {
             "logging".into(),
             hexpm::Package {
                 name: "logging".to_string(),
-                repository: "test".to_string(),
+                repository: "repository".to_string(),
                 releases: vec![Release {
                     version: Version::new(1, 4, 0),
                     requirements: requirements,
@@ -840,7 +811,7 @@ mod tests {
         let err = resolve_versions(
             make_remote(),
             provided_packages,
-            "app".into(),
+            "root_name".into(),
             vec![("logging".into(), Range::new(">= 1.3.0 and < 2.0.0".into()))].into_iter(),
             &vec![("gleam_stdlib".into(), Version::new(0, 20, 0))]
                 .into_iter()
@@ -850,15 +821,16 @@ mod tests {
 
         // expect failure
         match err {
-            Error::DependencyResolutionFailedWithLocked {
+            Error::DependencyResolutionFailed {
                 error,
-                locked_conflicts: _,
+                locked_conflicts,
             } => {
                 assert_eq!(
                     error,
-                    format!("Unable to find compatible versions due to package versions locked by manifest.toml.\n\
-                             Consider unlocking the responsible locked package(s) :\n- gleam_stdlib"),
+                    format!("Unable to find compatible versions for the version constraints in your gleam.toml.\n\
+                             The conflicting packages are:\n- gleam_stdlib"),
                 );
+                assert_eq!(locked_conflicts, vec!["gleam_stdlib"])
             }
             _ => panic!("wrong error: {err}"),
         }
