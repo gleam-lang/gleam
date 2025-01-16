@@ -63,24 +63,24 @@ jobs:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             binary: x86-64
-            use-cross: true
+            cargo-tool: cross
           - os: ubuntu-latest
             target: aarch64-unknown-linux-musl
             binary: aarch64
-            use-cross: true
+            cargo-tool: cross
           # macos>=14 runs exclusively on aarch64 and will thus fail to execute properly for x64
           - os: macos-13
             target: x86_64-apple-darwin
             binary: x86_64
-            use-cross: false
+            cargo-tool: cargo
           - os: macos-latest
             target: aarch64-apple-darwin
             binary: arm64
-            use-cross: false
+            cargo-tool: cargo
           - os: windows-latest
             target: x86_64-pc-windows-msvc
             binary: x86-64
-            use-cross: false
+            cargo-tool: cargo
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -102,11 +102,11 @@ jobs:
           key: v1-${{ matrix.target }}
 
       - name: Build release binary
-        uses: clechasseur/rs-cargo@v2
+        uses: clechasseur/rs-cargo@v3
         with:
           command: build
           args: --release --target ${{ matrix.target }}
-          use-cross: ${{ matrix.use-cross }}
+          cargo-tool: ${{ matrix.cargo-tool }}
 
       - name: Verify binary architecture
         shell: bash
