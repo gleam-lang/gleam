@@ -32,8 +32,10 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
         Vec::new(),
-        dependencies::UseManifest::Yes,
-        dependencies::CheckMajorVersions::No,
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            ..Default::default()
+        },
     )?;
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
