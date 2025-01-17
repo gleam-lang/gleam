@@ -4031,6 +4031,38 @@ fn extract_variable_does_not_extract_a_variable() {
 }
 
 #[test]
+fn extract_variable_does_not_extract_an_entire_pipeline_step() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    [1, 2, 3]
+    |> map(todo)
+    |> map(todo)
+}
+
+fn map(list, fun) { todo }
+"#,
+        find_position_of("map").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_the_last_pipeline_step() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    [1, 2, 3]
+    |> map(todo)
+    |> map(todo)
+}
+
+fn map(list, fun) { todo }
+"#,
+        find_position_of("map").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_2() {
     assert_code_action!(
         EXTRACT_VARIABLE,
