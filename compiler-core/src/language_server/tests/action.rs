@@ -4777,3 +4777,31 @@ fn join(n: List(String)) -> String {
         find_position_of("int_to_string").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4177#event-15968345230
+#[test]
+fn generate_function_picks_argument_name_based_on_type() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(\"Hello\", 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_wont_generate_two_arguments_with_the_same_name_if_they_have_the_same_type() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(2, 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+

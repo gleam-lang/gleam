@@ -3874,22 +3874,17 @@ impl<'a> GenerateFunction<'a> {
             return vec![];
         };
 
+        let mut name_generator = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
         let args = if let [arg_type] = arguments_types.as_slice() {
-            let arg_name = arg_type
-                .named_type_name()
-                .map(|(_type_module, type_name)| type_name.to_snake_case())
-                .filter(|name| is_valid_function_name(name))
-                .unwrap_or(String::from("value"));
-
+            let arg_name = name_generator.generate_name_from_type(arg_type);
             format!("{arg_name}: {}", printer.print_type(arg_type))
         } else {
             arguments_types
                 .iter()
-                .enumerate()
-                .map(|(index, arg_type)| {
-                    let type_ = printer.print_type(arg_type);
-                    format!("arg_{}: {}", index + 1, type_)
+                .map(|arg_type| {
+                    let arg_name = name_generator.generate_name_from_type(arg_type);
+                    format!("{arg_name}: {}", printer.print_type(arg_type))
                 })
                 .join(", ")
         };
@@ -3923,7 +3918,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
             let candidate_name = self.module.code.get(name_range);
             match (candidate_name, type_.fn_types()) {
                 (None, _) | (_, None) => return,
-                (Some(name), _) if !is_valid_function_name(name) => return,
+                (Some(name), _) if !is_valid_lowercase_name(name) => return,
                 (Some(name), Some((arguments_types, return_type))) => {
                     self.function_to_generate = Some(FunctionToGenerate {
                         name,
@@ -3939,8 +3934,49 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     }
 }
 
+struct NameGenerator {
+    used_names: HashSet<EcoString>,
+}
+
+impl NameGenerator {
+    pub fn new() -> Self {
+        NameGenerator {
+            used_names: HashSet::new(),
+        }
+    }
+
+    pub fn rename_to_avoid_shadowing(&mut self, base: EcoString) -> EcoString {
+        let mut i = 1;
+        let mut candidate_name = base.clone();
+
+        loop {
+            if self.used_names.contains(&candidate_name) {
+                i += 1;
+                candidate_name = eco_format!("{base}_{i}");
+            } else {
+                let _ = self.used_names.insert(candidate_name.clone());
+                return candidate_name;
+            }
+        }
+    }
+
+    pub fn generate_name_from_type(&mut self, type_: &Arc<Type>) -> EcoString {
+        let base_name = type_
+            .named_type_name()
+            .map(|(_type_module, type_name)| EcoString::from(type_name.to_snake_case()))
+            .filter(|name| is_valid_lowercase_name(name))
+            .unwrap_or(EcoString::from("value"));
+
+        self.rename_to_avoid_shadowing(base_name)
+    }
+
+    pub fn add_used_name(&mut self, name: EcoString) {
+        let _ = self.used_names.insert(name);
+    }
+}
+
 #[must_use]
-fn is_valid_function_name(name: &str) -> bool {
+fn is_valid_lowercase_name(name: &str) -> bool {
     if !name.starts_with(|char: char| char.is_ascii_lowercase()) {
         return false;
     }
