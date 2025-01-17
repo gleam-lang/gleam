@@ -20,8 +20,10 @@ pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) ->
         telemetry,
         None,
         Vec::new(),
-        dependencies::UseManifest::Yes,
-        dependencies::CheckMajorVersions::No,
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            ..Default::default()
+        },
     )
 }
 
