@@ -401,8 +401,7 @@ fn pretty_print_major_versions_available(versions: dependency::PackageVersionDif
             * total_lines,
     );
 
-    output_string
-        .push_str("\nHint: the following dependencies have new major versions available:\n\n");
+    output_string.push_str("\nThe following dependencies have new major versions available:\n\n");
     for (name, v1, v2) in versions {
         let name_padding = " ".repeat(longest_package_name_length - name.len());
         let curr_ver_padding = " ".repeat(longest_current_version_length - v1.to_string().len());
