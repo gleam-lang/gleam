@@ -1,0 +1,4 @@
+# https://github.com/gleam-lang/gleam/issues/4112
+name = "var_init_warn"
+version = "0.1.0"
+target = "erlang"
