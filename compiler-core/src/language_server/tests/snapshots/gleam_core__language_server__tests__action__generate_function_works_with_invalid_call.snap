@@ -16,6 +16,6 @@ pub fn main() -> Bool {
   wibble(1, True, 2.3)
 }
 
-fn wibble(arg_1: Int, arg_2: Bool, arg_3: Float) -> Bool {
+fn wibble(int: Int, bool: Bool, float: Float) -> Bool {
   todo
 }

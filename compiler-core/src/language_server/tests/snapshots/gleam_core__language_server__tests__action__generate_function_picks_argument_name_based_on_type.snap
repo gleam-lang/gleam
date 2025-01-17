@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  wibble(\"Hello\", 1)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble("Hello", 1)
+  ↑                 
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  wibble("Hello", 1)
+}
+
+fn wibble(string: String, int: Int) -> a {
+  todo
+}
