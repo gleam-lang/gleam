@@ -1,0 +1,23 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  [1, 2, 3]\n  |> map(add(_, 1))\n}\n\npub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }\npub fn add(n, m) { n + m }\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  [1, 2, 3]
+  |> map(add(_, 1))
+         ↑         
+}
+
+pub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }
+pub fn add(n, m) { n + m }
+
+
+----- AFTER ACTION
+pub fn main() {
+  [1, 2, 3]
+  |> map(fn(int) { add(int, 1) })
+}
+
+pub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }
+pub fn add(n, m) { n + m }

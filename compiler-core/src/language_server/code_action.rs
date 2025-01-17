@@ -2904,7 +2904,14 @@ pub struct ExpandFunctionCapture<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    location: Option<(SrcSpan, SrcSpan, VariablesNames)>,
+    function_capture_data: Option<FunctionCaptureData>,
+}
+
+pub struct FunctionCaptureData {
+    function_span: SrcSpan,
+    hole_span: SrcSpan,
+    hole_type: Arc<Type>,
+    reserved_names: VariablesNames,
 }
 
 impl<'a> ExpandFunctionCapture<'a> {
@@ -2917,21 +2924,31 @@ impl<'a> ExpandFunctionCapture<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            location: None,
+            function_capture_data: None,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some((function, hole, names)) = self.location else {
+        let Some(FunctionCaptureData {
+            function_span,
+            hole_span,
+            hole_type,
+            reserved_names,
+        }) = self.function_capture_data
+        else {
             return vec![];
         };
 
-        let name = names.first_available_name("value");
-        self.edits.replace(hole, name.clone().into());
-        self.edits.insert(function.end, " }".into());
-        self.edits.insert(function.start, format!("fn({name}) {{ "));
+        let mut name_generator = NameGenerator::new();
+        name_generator.reserve_variable_names(reserved_names);
+        let name = name_generator.generate_name_from_type(&hole_type);
+
+        self.edits.replace(hole_span, name.clone().into());
+        self.edits.insert(function_span.end, " }".into());
+        self.edits
+            .insert(function_span.start, format!("fn({name}) {{ "));
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Expand function capture")
@@ -2956,11 +2973,12 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
         let fn_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, fn_range) && kind.is_capture() {
             if let [arg] = args {
-                self.location = Some((
-                    *location,
-                    arg.location,
-                    VariablesNames::from_statements(body),
-                ));
+                self.function_capture_data = Some(FunctionCaptureData {
+                    function_span: *location,
+                    hole_span: arg.location,
+                    hole_type: arg.type_.clone(),
+                    reserved_names: VariablesNames::from_statements(body),
+                });
             }
         }
 
@@ -2982,22 +3000,6 @@ impl VariablesNames {
             variables.visit_typed_statement(statement);
         }
         variables
-    }
-
-    fn first_available_name(&self, name: &str) -> EcoString {
-        let mut i = 0;
-        loop {
-            let name = if i == 0 {
-                EcoString::from(name)
-            } else {
-                eco_format!("{name}{i}")
-            };
-
-            if !self.names.contains(&name) {
-                return name;
-            }
-            i += 1;
-        }
     }
 }
 
@@ -3993,6 +3995,13 @@ impl NameGenerator {
             .fields
             .iter()
             .for_each(|(label, _)| self.add_used_name(label.clone()));
+    }
+
+    pub fn reserve_variable_names(&mut self, variable_names: VariablesNames) {
+        variable_names
+            .names
+            .iter()
+            .for_each(|name| self.add_used_name(name.clone()));
     }
 }
 
