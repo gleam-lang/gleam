@@ -139,6 +139,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When generating functions or variables, the language server can now pick
+  better names using the type of the code it's generating.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
