@@ -96,7 +96,10 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
         package_fetcher,
         cli::Reporter::new(),
     )
-    .should_use_manifest();
+    .with_config(DependencyManagerConfig {
+        use_manifest: UseManifest::Yes,
+        ..Default::default()
+    });
     let (_, manifest) = dependency_manager.get_manifest(&paths, &config, Vec::new())?;
     Ok((config, manifest))
 }
@@ -224,8 +227,11 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
         cli::Reporter::new(),
         None,
         packages.into_iter().map(EcoString::from).collect(),
-        use_manifest,
-        CheckMajorVersions::Yes,
+        DependencyManagerConfig {
+            use_manifest,
+            check_major_versions: CheckMajorVersions::Yes,
+            ..Default::default()
+        },
     )?;
 
     Ok(())
@@ -358,24 +364,15 @@ pub fn download<Telem: Telemetry>(
     telemetry: Telem,
     new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
     packages_to_update: Vec<EcoString>,
-    // If true we read the manifest from disc. If not set then we ignore any
-    // manifest which will result in the latest versions of the dependency
-    // packages being resolved (not the locked ones).
-    use_manifest: UseManifest,
-    // If true we check for major version updates and print them to the console.
-    check_major_versions: CheckMajorVersions,
+    config: DependencyManagerConfig,
 ) -> Result<Manifest> {
-    let mode = Mode::Dev;
-
     // Start event loop so we can run async functions to call the Hex API
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
     let dependency_manager =
         DependencyManager::new(runtime.handle().clone(), package_fetcher, telemetry)
-            .with_use_manifest(use_manifest)
-            .with_mode(mode)
-            .with_check_major_versions(check_major_versions);
+            .with_config(config);
 
     dependency_manager.download(paths, new_package, packages_to_update)
 }
@@ -648,7 +645,23 @@ fn same_requirements(
     Ok(left == right)
 }
 
-struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
+pub struct DependencyManagerConfig {
+    pub mode: Mode,
+    pub use_manifest: UseManifest,
+    pub check_major_versions: CheckMajorVersions,
+}
+
+impl Default for DependencyManagerConfig {
+    fn default() -> Self {
+        Self {
+            mode: Mode::Dev,
+            use_manifest: UseManifest::No,
+            check_major_versions: CheckMajorVersions::No,
+        }
+    }
+}
+
+pub struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
     runtime: tokio::runtime::Handle,
     package_fetcher: P,
     mode: Mode,
@@ -657,9 +670,10 @@ struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
     check_major_versions: CheckMajorVersions,
 }
 
-impl<Telem: Telemetry, P> DependencyManager<Telem, P>
+impl<Telem, P> DependencyManager<Telem, P>
 where
     P: dependency::PackageFetcher,
+    Telem: Telemetry,
 {
     pub fn new(runtime: tokio::runtime::Handle, package_fetcher: P, telemetry: Telem) -> Self {
         Self {
@@ -672,27 +686,14 @@ where
         }
     }
 
-    fn with_use_manifest(mut self, use_manifest: UseManifest) -> Self {
-        self.use_manifest = use_manifest;
+    pub fn with_config(mut self, config: DependencyManagerConfig) -> Self {
+        self.mode = config.mode;
+        self.use_manifest = config.use_manifest;
+        self.check_major_versions = config.check_major_versions;
         self
     }
 
-    fn with_mode(mut self, mode: Mode) -> Self {
-        self.mode = mode;
-        self
-    }
-
-    fn with_check_major_versions(mut self, check_major_versions: CheckMajorVersions) -> Self {
-        self.check_major_versions = check_major_versions;
-        self
-    }
-
-    fn should_use_manifest(mut self) -> Self {
-        self.use_manifest = UseManifest::Yes;
-        self
-    }
-
-    fn get_manifest(
+    pub fn get_manifest(
         &self,
         paths: &ProjectPaths,
         config: &PackageConfig,
@@ -738,7 +739,7 @@ where
         }
     }
 
-    fn download(
+    pub fn download(
         &self,
         paths: &ProjectPaths,
         new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
@@ -810,7 +811,7 @@ where
         Ok(manifest)
     }
 
-    fn resolve_versions(
+    pub fn resolve_versions(
         &self,
         project_paths: &ProjectPaths,
         config: &PackageConfig,
