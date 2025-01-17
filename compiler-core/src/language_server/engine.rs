@@ -34,8 +34,8 @@ use super::{
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
         ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs, GenerateDynamicDecoder,
-        GenerateFunction, LabelShorthandSyntax, LetAssertToCase, PatternMatchOnValue,
-        RedundantTupleInCaseSubject, TurnIntoUse,
+        GenerateFunction, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
+        TurnIntoUse, UseLabelShorthandSyntax,
     },
     completer::Completer,
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
@@ -329,7 +329,7 @@ where
             actions.extend(LetAssertToCase::new(module, &lines, &params).code_actions());
             actions
                 .extend(RedundantTupleInCaseSubject::new(module, &lines, &params).code_actions());
-            actions.extend(LabelShorthandSyntax::new(module, &lines, &params).code_actions());
+            actions.extend(UseLabelShorthandSyntax::new(module, &lines, &params).code_actions());
             actions.extend(FillInMissingLabelledArgs::new(module, &lines, &params).code_actions());
             actions.extend(DesugarUse::new(module, &lines, &params).code_actions());
             actions.extend(TurnIntoUse::new(module, &lines, &params).code_actions());
@@ -1008,6 +1008,8 @@ fn position_within(position: Position, range: Range) -> bool {
     position >= range.start && position <= range.end
 }
 
+/// Builds the code action to assign an unused value to `_`.
+///
 fn code_action_unused_values(
     module: &Module,
     line_numbers: &LineNumbers,
@@ -1067,6 +1069,8 @@ fn code_action_unused_values(
     }
 }
 
+/// Code action to remove unused imports.
+///
 fn code_action_unused_imports(
     module: &Module,
     line_numbers: &LineNumbers,
