@@ -2696,10 +2696,12 @@ pub struct ExtractVariable<'a> {
     latest_statement: Option<SrcSpan>,
 }
 
-#[derive(PartialEq, Eq, Copy, Clone)]
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
 enum ExtractVariablePosition {
     InsideCaptureBody,
     TopLevelStatement,
+    /// This is when we're on the call on the right hand side of a pipe `|>`
+    PipelineCall,
 }
 
 impl<'a> ExtractVariable<'a> {
@@ -2753,6 +2755,23 @@ impl<'a> ExtractVariable<'a> {
             .push_to(&mut action);
         action
     }
+
+    fn at_position<F>(&mut self, position: ExtractVariablePosition, fun: F)
+    where
+        F: Fn(&mut Self),
+    {
+        self.at_optional_position(Some(position), fun);
+    }
+
+    fn at_optional_position<F>(&mut self, position: Option<ExtractVariablePosition>, fun: F)
+    where
+        F: Fn(&mut Self),
+    {
+        let previous_position = self.position;
+        self.position = position;
+        fun(self);
+        self.position = previous_position;
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
@@ -2764,10 +2783,28 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             self.latest_statement = Some(stmt.location());
         }
 
-        let previous_position = self.position;
-        self.position = Some(ExtractVariablePosition::TopLevelStatement);
-        ast::visit::visit_typed_statement(self, stmt);
-        self.position = previous_position;
+        self.at_position(ExtractVariablePosition::TopLevelStatement, |this| {
+            ast::visit::visit_typed_statement(this, stmt);
+        });
+    }
+
+    fn visit_typed_expr_pipeline(
+        &mut self,
+        _location: &'ast SrcSpan,
+        assignments: &'ast [ast::TypedPipelineAssignment],
+        finally: &'ast TypedExpr,
+    ) {
+        // When visiting the assignments or the final pipeline call we want to
+        // keep track of out position so that we can avoid extracting those.
+        for assignment in assignments {
+            self.at_position(ExtractVariablePosition::PipelineCall, |this| {
+                this.visit_typed_pipeline_assignment(assignment);
+            });
+        }
+
+        self.at_position(ExtractVariablePosition::PipelineCall, |this| {
+            this.visit_typed_expr(finally)
+        });
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
@@ -2786,32 +2823,37 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         // // into:
         //
         // pub fn main() {
-        //   let value = 1
-        //   let wibble = value
+        //   let int = 1
+        //   let wibble = int
         // }
         // ```
         //
         // Not all that useful!
         //
-        if self.position != Some(ExtractVariablePosition::TopLevelStatement)
-            && within(self.params.range, expr_range)
-        {
-            match expr {
-                // We don't extract variables, they're already good.
-                // And we don't extract module selects by themselves but always
-                // want to consider those as part of a function call.
-                TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
-                _ => {
-                    self.selected_expression = Some(expr_location);
-                    self.statement_before_selected_expression = self.latest_statement;
+        match self.position {
+            Some(
+                ExtractVariablePosition::TopLevelStatement | ExtractVariablePosition::PipelineCall,
+            ) => (),
+
+            None | Some(ExtractVariablePosition::InsideCaptureBody) => {
+                if within(self.params.range, expr_range) {
+                    match expr {
+                        // We don't extract variables, they're already good.
+                        // And we don't extract module selects by themselves but always
+                        // want to consider those as part of a function call.
+                        TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
+                        _ => {
+                            self.selected_expression = Some(expr_location);
+                            self.statement_before_selected_expression = self.latest_statement;
+                        }
+                    }
                 }
             }
-        }
+        };
 
-        let previous_position = self.position;
-        self.position = None;
-        ast::visit::visit_typed_expr(self, expr);
-        self.position = previous_position;
+        self.at_optional_position(None, |this| {
+            ast::visit::visit_typed_expr(this, expr);
+        });
     }
 
     fn visit_typed_expr_fn(
@@ -2823,8 +2865,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
         body: &'ast Vec1<TypedStatement>,
         return_annotation: &'ast Option<ast::TypeAst>,
     ) {
-        let previous_position = self.position;
-        self.position = match kind {
+        let position = match kind {
             // If a fn is a capture `int.wibble(1, _)` its body will consist of
             // just a single expression statement. When visiting we must record
             // we're inside a capture body.
@@ -2833,8 +2874,18 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                 self.position
             }
         };
-        ast::visit::visit_typed_expr_fn(self, location, type_, kind, args, body, return_annotation);
-        self.position = previous_position;
+
+        self.at_optional_position(position, |this| {
+            ast::visit::visit_typed_expr_fn(
+                this,
+                location,
+                type_,
+                kind,
+                args,
+                body,
+                return_annotation,
+            );
+        });
     }
 
     // We don't want to offer the action if the cursor is over some invalid
