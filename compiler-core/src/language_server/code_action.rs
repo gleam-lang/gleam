@@ -2691,7 +2691,7 @@ pub struct ExtractVariable<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     position: Option<ExtractVariablePosition>,
-    selected_expression: Option<SrcSpan>,
+    selected_expression: Option<(SrcSpan, Arc<Type>)>,
     statement_before_selected_expression: Option<SrcSpan>,
     latest_statement: Option<SrcSpan>,
 }
@@ -2724,9 +2724,12 @@ impl<'a> ExtractVariable<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(location) = self.selected_expression else {
+        let Some((expression_span, expression_type)) = self.selected_expression else {
             return vec![];
         };
+
+        let mut name_generator = NameGenerator::new();
+        let variable_name = name_generator.generate_name_from_type(&expression_type);
 
         if let Some(container_location) = self.statement_before_selected_expression {
             let nesting = self
@@ -2738,14 +2741,16 @@ impl<'a> ExtractVariable<'a> {
             let content = self
                 .module
                 .code
-                .get(location.start as usize..location.end as usize)
+                .get(expression_span.start as usize..expression_span.end as usize)
                 .expect("selected expression");
             self.edits.insert(
                 container_location.start,
-                format!("let value = {content}\n{nesting}"),
+                format!("let {variable_name} = {content}\n{nesting}"),
             );
         }
-        self.edits.replace(location, "value".into());
+
+        self.edits
+            .replace(expression_span, String::from(variable_name));
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract variable")
@@ -2843,7 +2848,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                         // want to consider those as part of a function call.
                         TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
                         _ => {
-                            self.selected_expression = Some(expr_location);
+                            self.selected_expression = Some((expr_location, expr.type_()));
                             self.statement_before_selected_expression = self.latest_statement;
                         }
                     }

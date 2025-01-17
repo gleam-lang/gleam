@@ -18,10 +18,10 @@ pub fn main() {
 
 ----- AFTER ACTION
 pub fn main() {
-    let value = [1, 2, 3]
+    let list = [1, 2, 3]
     case
         list.map(
-          value,
+          list,
           int.add(1, _)
         )
     {
