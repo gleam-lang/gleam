@@ -10,14 +10,20 @@ use gleam_core::{
 
 use crate::{
     build_lock::BuildLock,
-    cli,
-    dependencies::UseManifest,
+    cli, dependencies,
     fs::{self, get_current_directory, get_project_root, ConsoleWarningEmitter},
 };
 
 pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
     let paths = crate::find_project_paths()?;
-    crate::dependencies::download(&paths, telemetry, None, Vec::new(), UseManifest::Yes, false)
+    dependencies::download(
+        &paths,
+        telemetry,
+        None,
+        Vec::new(),
+        dependencies::UseManifest::Yes,
+        dependencies::CheckMajorVersions::No,
+    )
 }
 
 pub fn main(options: Options, manifest: Manifest) -> Result<Built> {

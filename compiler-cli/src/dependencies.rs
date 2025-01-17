@@ -36,6 +36,14 @@ use crate::{
     http::HttpClient,
 };
 
+/// When set to `Yes`, the cli will check for major version updates of direct dependencies and
+/// print them to the console if the major versions are not upgradeable due to constraints.
+#[derive(Debug, Clone, Copy)]
+pub enum CheckMajorVersions {
+    Yes,
+    No,
+}
+
 pub fn list() -> Result<()> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
@@ -84,7 +92,7 @@ pub fn update(packages: Vec<String>) -> Result<()> {
         None,
         packages.into_iter().map(EcoString::from).collect(),
         use_manifest,
-        true,
+        CheckMajorVersions::Yes,
     )?;
 
     Ok(())
@@ -222,7 +230,7 @@ pub fn download<Telem: Telemetry>(
     // packages being resolved (not the locked ones).
     use_manifest: UseManifest,
     // If true we check for major version updates and print them to the console.
-    check_major_versions: bool,
+    check_major_versions: CheckMajorVersions,
 ) -> Result<Manifest> {
     let mode = Mode::Dev;
 
@@ -496,7 +504,7 @@ struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
     mode: Mode,
     use_manifest: UseManifest,
     telemetry: Telem,
-    check_major_versions: bool,
+    check_major_versions: CheckMajorVersions,
 }
 
 impl<Telem: Telemetry, P> DependencyManager<Telem, P>
@@ -510,7 +518,7 @@ where
             mode: Mode::Dev,
             use_manifest: UseManifest::No,
             telemetry,
-            check_major_versions: false,
+            check_major_versions: CheckMajorVersions::No,
         }
     }
 
@@ -524,7 +532,7 @@ where
         self
     }
 
-    fn with_check_major_versions(mut self, check_major_versions: bool) -> Self {
+    fn with_check_major_versions(mut self, check_major_versions: CheckMajorVersions) -> Self {
         self.check_major_versions = check_major_versions;
         self
     }
@@ -638,7 +646,7 @@ where
         }
         LocalPackages::from_manifest(&manifest).write_to_disc(paths)?;
 
-        if self.check_major_versions {
+        if let CheckMajorVersions::Yes = self.check_major_versions {
             let major_versions_available =
                 dependency::check_for_major_version_updates(&manifest, &self.package_fetcher);
             if !major_versions_available.is_empty() {
