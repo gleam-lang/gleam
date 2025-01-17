@@ -312,6 +312,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         wrongfully_allowed_version: SmallVersion,
     },
 
+    #[error("The certificate at {path} could not be read")]
+    CannotReadCertificate { path: String },
+
     #[error("Failed to encrypt data")]
     FailedToEncrypt { detail: String },
 
@@ -1398,6 +1401,17 @@ https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-fo
                 }]
             }
 
+            Error::CannotReadCertificate { path } => {
+                let text = wrap_format!("An error occurred while trying to read the certificate file at: {path}");
+
+                vec![Diagnostic {
+                    title: "Failed to read certificate".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
 
             Error::FailedToEncrypt { detail } => {
                 let text = wrap_format!("A problem was encountered encrypting data.
