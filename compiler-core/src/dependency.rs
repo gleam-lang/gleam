@@ -100,7 +100,7 @@ fn resolve_major_versions(
 pub fn check_for_major_version_updates(
     manifest: &manifest::Manifest,
     package_fetcher: &impl PackageFetcher,
-) -> HashMap<String, (Version, Version)> {
+) -> PackageVersionDiffs {
     // get the resolved versions of the direct dependencies to check for major
     // version updates.
     let versions = manifest
