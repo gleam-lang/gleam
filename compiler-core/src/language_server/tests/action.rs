@@ -4805,3 +4805,19 @@ pub fn main() {
     );
 }
 
+#[test]
+fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(String, string: String)
+}
+
+pub fn main(wibble: Wibble) {
+  todo
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}

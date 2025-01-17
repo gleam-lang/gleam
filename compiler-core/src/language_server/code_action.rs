@@ -3604,13 +3604,32 @@ where
             return None;
         };
 
+        // Since the constructor is a record constructor we know that its type
+        // is either `Named` or a `Fn` type, in either case we have to get the
+        // arguments types out of it.
+        let Some(arguments_types) = constructor
+            .type_
+            .fn_types()
+            .map(|(arguments_types, _return)| arguments_types)
+            .or_else(|| constructor.type_.constructor_types())
+        else {
+            // This should never happen but just in case we don't want to unwrap
+            // and panic.
+            return None;
+        };
+
+        let mut name_generator = NameGenerator::new();
         let index_to_label = match field_map {
             None => HashMap::new(),
-            Some(field_map) => field_map
-                .fields
-                .iter()
-                .map(|(label, index)| (index, label))
-                .collect::<HashMap<_, _>>(),
+            Some(field_map) => {
+                name_generator.reserve_all_labels(field_map);
+
+                field_map
+                    .fields
+                    .iter()
+                    .map(|(label, index)| (index, label))
+                    .collect::<HashMap<_, _>>()
+            }
         };
 
         let mut pattern =
@@ -3621,21 +3640,16 @@ where
         }
 
         pattern.push('(');
-        let args = if *constructor_arity <= 1 && index_to_label.get(&0).is_none() {
-            // If there's a single argument and its not labelled we don't add a
-            // number suffix to it and just call it "value".
-            String::from("value")
-        } else {
-            // Otherwise all unlabelled arguments will be called "value_<n>".
-            // Labelled arguments, on the other hand, will always use the
-            // shorthand syntax.
-            (0..*constructor_arity as u32)
-                .map(|i| match index_to_label.get(&i) {
-                    Some(label) => format!("{label}:"),
-                    None => format!("value_{i}"),
-                })
-                .join(", ")
-        };
+        let args = (0..*constructor_arity as u32)
+            .map(|i| match index_to_label.get(&i) {
+                Some(label) => eco_format!("{label}:"),
+                None => match arguments_types.get(i as usize) {
+                    None => name_generator.rename_to_avoid_shadowing(EcoString::from("value")),
+                    Some(type_) => name_generator.generate_name_from_type(type_),
+                },
+            })
+            .join(", ");
+
         pattern.push_str(&args);
         pattern.push(')');
         Some(pattern)
@@ -3972,6 +3986,13 @@ impl NameGenerator {
 
     pub fn add_used_name(&mut self, name: EcoString) {
         let _ = self.used_names.insert(name);
+    }
+
+    pub fn reserve_all_labels(&mut self, field_map: &FieldMap) {
+        field_map
+            .fields
+            .iter()
+            .for_each(|(label, _)| self.add_used_name(label.clone()));
     }
 }
 
