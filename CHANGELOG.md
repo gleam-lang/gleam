@@ -162,3 +162,7 @@
 - Fixed a typo in the error message when trying to import a test module into an
   application module.
   ([John Strunk](https://github.com/jrstrunk))
+
+- Fixed a bug where the "Extract variable" code action would erroneously extract
+  a pipeline step as a variable.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
