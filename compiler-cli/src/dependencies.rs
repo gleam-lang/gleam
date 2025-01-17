@@ -91,15 +91,15 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let config = crate::config::root_config(paths)?;
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
-    let dependency_manager = DependencyManager::new(
+    let dependency_manager = DependencyManagerConfig {
+        use_manifest: UseManifest::Yes,
+        ..Default::default()
+    }
+    .into_dependency_manager(
         runtime.handle().clone(),
         package_fetcher,
         cli::Reporter::new(),
-    )
-    .with_config(DependencyManagerConfig {
-        use_manifest: UseManifest::Yes,
-        ..Default::default()
-    });
+    );
     let (_, manifest) = dependency_manager.get_manifest(&paths, &config, Vec::new())?;
     Ok((config, manifest))
 }
@@ -371,8 +371,7 @@ pub fn download<Telem: Telemetry>(
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
     let dependency_manager =
-        DependencyManager::new(runtime.handle().clone(), package_fetcher, telemetry)
-            .with_config(config);
+        config.into_dependency_manager(runtime.handle().clone(), package_fetcher, telemetry);
 
     dependency_manager.download(paths, new_package, packages_to_update)
 }
@@ -661,6 +660,25 @@ impl Default for DependencyManagerConfig {
     }
 }
 
+impl DependencyManagerConfig {
+    pub fn into_dependency_manager<Telem: Telemetry, P: dependency::PackageFetcher>(
+        self,
+        runtime: tokio::runtime::Handle,
+        package_fetcher: P,
+        telemetry: Telem,
+    ) -> DependencyManager<Telem, P> {
+        DependencyManager {
+            runtime,
+            package_fetcher,
+            telemetry,
+
+            mode: self.mode,
+            use_manifest: self.use_manifest,
+            check_major_versions: self.check_major_versions,
+        }
+    }
+}
+
 pub struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
     runtime: tokio::runtime::Handle,
     package_fetcher: P,
@@ -675,24 +693,6 @@ where
     P: dependency::PackageFetcher,
     Telem: Telemetry,
 {
-    pub fn new(runtime: tokio::runtime::Handle, package_fetcher: P, telemetry: Telem) -> Self {
-        Self {
-            runtime,
-            package_fetcher,
-            mode: Mode::Dev,
-            use_manifest: UseManifest::No,
-            telemetry,
-            check_major_versions: CheckMajorVersions::No,
-        }
-    }
-
-    pub fn with_config(mut self, config: DependencyManagerConfig) -> Self {
-        self.mode = config.mode;
-        self.use_manifest = config.use_manifest;
-        self.check_major_versions = config.check_major_versions;
-        self
-    }
-
     pub fn get_manifest(
         &self,
         paths: &ProjectPaths,
