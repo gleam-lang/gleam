@@ -670,7 +670,7 @@ fn download_dependencies() -> Result<()> {
         None,
         Vec::new(),
         UseManifest::Yes,
-        true,
+        dependencies::CheckMajorVersions::Yes,
     )?;
     Ok(())
 }
