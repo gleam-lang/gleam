@@ -629,13 +629,13 @@ fn print_case_expression(
 /// Builder for code action to apply the label shorthand syntax on arguments
 /// where the label has the same name as the variable.
 ///
-pub struct LabelShorthandSyntax<'a> {
+pub struct UseLabelShorthandSyntax<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
 }
 
-impl<'a> LabelShorthandSyntax<'a> {
+impl<'a> UseLabelShorthandSyntax<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -663,7 +663,7 @@ impl<'a> LabelShorthandSyntax<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
+impl<'ast> ast::visit::Visit<'ast> for UseLabelShorthandSyntax<'_> {
     fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
         let arg_range = self.edits.src_span_to_lsp_range(arg.location);
         let is_selected = overlaps(arg_range, self.params.range);
