@@ -141,6 +141,6 @@ fn let_25() {
 
 // https://github.com/gleam-lang/gleam/issues/1991
 #[test]
-fn block() {
+fn no_scoped_var_collision() {
     assert_infer!("let x = 1 { let x = 1.0 } x", "Int");
 }
