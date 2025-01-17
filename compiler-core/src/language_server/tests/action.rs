@@ -4274,10 +4274,26 @@ fn expand_function_capture_does_not_shadow_variables() {
         EXPAND_FUNCTION_CAPTURE,
         r#"pub fn main() {
   let value = 1
-  let value1 = 2
-  wibble(value, _, value1)
+  let value_2 = 2
+  wibble(value, _, value_2)
 }"#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn expand_function_capture_picks_a_name_based_on_the_type_of_the_hole() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> map(add(_, 1))
+}
+
+pub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }
+pub fn add(n, m) { n + m }
+"#,
+        find_position_of("add").to_selection()
     );
 }
 
