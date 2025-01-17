@@ -50,11 +50,7 @@ pub fn list() -> Result<()> {
     let project = fs::get_project_root(fs::get_current_directory()?)?;
     let paths = ProjectPaths::new(project);
     let config = crate::config::root_config()?;
-    let dependency_manager = DependencyManagerConfig {
-        use_manifest: UseManifest::Yes,
-        ..Default::default()
-    }
-    .into_dependency_manager(
+    let dependency_manager = DependencyManagerConfig::default().into_dependency_manager(
         runtime.handle().clone(),
         package_fetcher,
         cli::Reporter::new(),
@@ -504,7 +500,7 @@ impl Default for DependencyManagerConfig {
     fn default() -> Self {
         Self {
             mode: Mode::Dev,
-            use_manifest: UseManifest::No,
+            use_manifest: UseManifest::Yes,
             check_major_versions: CheckMajorVersions::No,
         }
     }

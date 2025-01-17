@@ -251,10 +251,7 @@ impl DownloadDependencies for ProjectIO {
             NullTelemetry,
             None,
             Vec::new(),
-            dependencies::DependencyManagerConfig {
-                use_manifest: dependencies::UseManifest::Yes,
-                ..Default::default()
-            },
+            dependencies::DependencyManagerConfig::default(),
         )
     }
 }

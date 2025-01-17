@@ -643,7 +643,6 @@ fn download_dependencies() -> Result<()> {
         None,
         Vec::new(),
         dependencies::DependencyManagerConfig {
-            use_manifest: dependencies::UseManifest::Yes,
             check_major_versions: dependencies::CheckMajorVersions::Yes,
             ..Default::default()
         },
