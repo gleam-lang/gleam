@@ -106,7 +106,7 @@ jobs:
         with:
           command: build
           args: --release --target ${{ matrix.target }}
-          cargo-tool: ${{ matrix.cargo-tool }}
+          tool: ${{ matrix.cargo-tool }}
 
       - name: Verify binary architecture
         shell: bash
