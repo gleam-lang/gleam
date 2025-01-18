@@ -81,4 +81,16 @@ impl<'ast> Visit<'ast> for RenameLocalVariable {
             _ => {}
         }
     }
+
+    fn visit_typed_clause_guard_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        _type_: &'ast std::sync::Arc<crate::type_::Type>,
+        definition_location: &'ast SrcSpan,
+    ) {
+        if *definition_location == self.definition_location {
+            self.references.push(*location)
+        }
+    }
 }

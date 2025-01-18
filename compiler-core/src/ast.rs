@@ -1524,6 +1524,7 @@ pub enum ClauseGuard<Type, RecordTag> {
         location: SrcSpan,
         type_: Type,
         name: EcoString,
+        definition_location: SrcSpan,
     },
 
     TupleIndex {
