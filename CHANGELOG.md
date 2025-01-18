@@ -74,6 +74,31 @@
     -h, --help               Print help
   ```
 
+  For example, if the root project (`project_a`) depends on `package_b` and `package_c`, and `package_c` also depends on `package_b`, the output will be:
+
+
+  ```markdown
+  $ gleam deps tree
+
+  project_a v1.0.0
+  ├── package_b v0.52.0
+  └── package_c v1.2.0
+      └── package_b v0.52.0
+
+  $ gleam deps tree --package package_c
+
+  package_c v1.2.0
+  └── package_b v0.52.0
+
+  $ gleam deps tree --invert package_b
+
+  package_b v0.52.0
+  ├── package_c v1.2.0
+  │   └── project_a v1.0.0
+  └── project_a v1.0.0
+
+  ```
+
   ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
 
 ### Language server
