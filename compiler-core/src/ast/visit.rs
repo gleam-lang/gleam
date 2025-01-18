@@ -325,8 +325,9 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         name: &'ast EcoString,
         type_: &'ast Arc<Type>,
+        definition_location: &'ast SrcSpan,
     ) {
-        visit_typed_clause_guard_var(self, location, name, type_);
+        visit_typed_clause_guard_var(self, location, name, type_, definition_location);
     }
 
     fn visit_typed_clause_guard_tuple_index(
@@ -1250,7 +1251,8 @@ where
             location,
             type_,
             name,
-        } => v.visit_typed_clause_guard_var(location, name, type_),
+            definition_location,
+        } => v.visit_typed_clause_guard_var(location, name, type_, definition_location),
         super::ClauseGuard::TupleIndex {
             location,
             index,
@@ -1288,6 +1290,7 @@ pub fn visit_typed_clause_guard_var<'a, V>(
     _location: &'a SrcSpan,
     _name: &'a EcoString,
     _type_: &'a Arc<Type>,
+    _definition_location: &'a SrcSpan,
 ) where
     V: Visit<'a> + ?Sized,
 {

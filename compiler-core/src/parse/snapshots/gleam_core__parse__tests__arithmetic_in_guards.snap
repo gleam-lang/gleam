@@ -77,6 +77,10 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                         },
                                         type_: (),
                                         name: "x",
+                                        definition_location: SrcSpan {
+                                            start: 0,
+                                            end: 0,
+                                        },
                                     },
                                     right: Var {
                                         location: SrcSpan {
@@ -85,6 +89,10 @@ expression: "\ncase 2, 3 {\n    x, y if x + y == 1 -> True\n}"
                                         },
                                         type_: (),
                                         name: "y",
+                                        definition_location: SrcSpan {
+                                            start: 0,
+                                            end: 0,
+                                        },
                                     },
                                 },
                                 right: Constant(
