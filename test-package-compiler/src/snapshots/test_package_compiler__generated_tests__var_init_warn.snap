@@ -1,0 +1,19 @@
+---
+source: test-package-compiler/src/generated_tests.rs
+expression: "./cases/var_init_warn"
+---
+error: Unknown variable
+  ┌─ src/main.gleam:2:7
+  │
+2 │   let X(value) = 1
+  │       ^
+
+The custom type variant constructor `X` is not in scope here.
+
+error: Unknown variable
+  ┌─ src/main.gleam:3:3
+  │
+3 │   X + 2
+  │   ^
+
+The custom type variant constructor `X` is not in scope here.

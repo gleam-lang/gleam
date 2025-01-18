@@ -311,6 +311,17 @@ fn unknown_module_field_in_import() {
 
 #[rustfmt::skip]
 #[test]
+fn var_init_warn() {
+    let output = crate::prepare("./cases/var_init_warn");
+    insta::assert_snapshot!(
+        "var_init_warn",
+        output,
+        "./cases/var_init_warn",
+    );
+}
+
+#[rustfmt::skip]
+#[test]
 fn variable_or_module() {
     let output = crate::prepare("./cases/variable_or_module");
     insta::assert_snapshot!(
