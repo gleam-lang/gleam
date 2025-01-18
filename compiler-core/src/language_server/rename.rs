@@ -4,10 +4,11 @@ use ecow::EcoString;
 use lsp_types::{RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
+    analyse::name,
     ast::{self, visit::Visit, SrcSpan, TypedModule},
     build::Module,
     line_numbers::LineNumbers,
-    type_::{ValueConstructor, ValueConstructorVariant},
+    type_::{error::Named, ValueConstructor, ValueConstructorVariant},
 };
 
 use super::TextEdits;
@@ -29,6 +30,16 @@ pub fn rename_local_variable(
     params: &RenameParams,
     definition_location: SrcSpan,
 ) -> Option<WorkspaceEdit> {
+    if name::check_name_case(
+        Default::default(),
+        &params.new_name.as_str().into(),
+        Named::Variable,
+    )
+    .is_err()
+    {
+        return None;
+    }
+
     let uri = params.text_document_position.text_document.uri.clone();
     let mut edits = TextEdits::new(line_numbers);
 

@@ -163,3 +163,17 @@ pub fn main() {}
         find_position_of("fn").to_selection(),
     );
 }
+
+#[test]
+fn no_rename_invalid_name() {
+    assert_no_rename!(
+        "
+pub fn main() {
+  let wibble = 10
+  wibble
+}
+",
+        "Not_AValid_Name",
+        find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
