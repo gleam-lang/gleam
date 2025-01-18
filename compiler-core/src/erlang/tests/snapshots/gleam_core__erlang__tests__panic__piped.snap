@@ -16,7 +16,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     _pipe = <<"lets"/utf8>>,

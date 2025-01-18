@@ -30,7 +30,7 @@ expression: "\n          fn identity(a) {\n            a\n          }\n\n       
 
 -type funcs(J) :: {funcs, mapper(J)}.
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec identity(K) -> K.
 identity(A) ->
     A.

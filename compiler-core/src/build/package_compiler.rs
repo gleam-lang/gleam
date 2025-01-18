@@ -354,7 +354,7 @@ where
         // we overwrite any precompiled Erlang that was included in the Hex
         // package. Otherwise we will build the potentially outdated precompiled
         // version and not the newly compiled version.
-        Erlang::new(&build_dir, &include_dir).render(io, modules)?;
+        Erlang::new(&build_dir, &include_dir).render(io, modules, self.root)?;
 
         if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));

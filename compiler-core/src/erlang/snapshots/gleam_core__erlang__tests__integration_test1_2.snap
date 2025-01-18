@@ -11,7 +11,7 @@ pub fn loop() { loop() }
 
 -export([loop/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec loop() -> any().
 loop() ->
     loop().

@@ -14,7 +14,7 @@ pub fn run() -> Int
 
 -export([run/0]).
 
--file("/root/project/test/my/mod.gleam", 3).
+-file("my/mod/project/test/my/mod.gleam", 3).
 -spec run() -> integer().
 run() ->
     'Elixir.MyApp':run().

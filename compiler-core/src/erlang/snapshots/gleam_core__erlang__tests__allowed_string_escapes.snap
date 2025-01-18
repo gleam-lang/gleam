@@ -11,7 +11,7 @@ pub fn a() { "\n" "\r" "\t" "\\" "\"" "\\^" }
 
 -export([a/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec a() -> binary().
 a() ->
     <<"\n"/utf8>>,

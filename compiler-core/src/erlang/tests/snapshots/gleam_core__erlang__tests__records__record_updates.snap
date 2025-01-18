@@ -21,7 +21,7 @@ fn main() {
 
 -type person() :: {person, binary(), integer()}.
 
--file("/root/project/test/my/mod.gleam", 4).
+-file("my/mod/project/test/my/mod.gleam", 4).
 -spec main() -> person().
 main() ->
     P = {person, <<"Quinn"/utf8>>, 27},

@@ -23,12 +23,12 @@ pub fn two(a, b) {
 
 -export([two/2, main/0]).
 
--file("/root/project/test/my/mod.gleam", 10).
+-file("my/mod/project/test/my/mod.gleam", 10).
 -spec two(J, any()) -> J.
 two(A, B) ->
     A.
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     _pipe = 123,

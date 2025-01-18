@@ -24,12 +24,12 @@ pub fn main(x) {
 
 -type x() :: {x, integer(), integer()}.
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec id(I) -> I.
 id(X) ->
     X.
 
--file("/root/project/test/my/mod.gleam", 9).
+-file("my/mod/project/test/my/mod.gleam", 9).
 -spec main(x()) -> x().
 main(X) ->
     _record = X,

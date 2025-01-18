@@ -15,12 +15,12 @@ pub fn catch(x) { receive() }
 
 -export(['receive'/0, 'catch'/1]).
 
--file("/root/project/test/my/mod.gleam", 3).
+-file("my/mod/project/test/my/mod.gleam", 3).
 -spec 'receive'() -> integer().
 'receive'() ->
     'try':'and'().
 
--file("/root/project/test/my/mod.gleam", 4).
+-file("my/mod/project/test/my/mod.gleam", 4).
 -spec 'catch'(any()) -> integer().
 'catch'(X) ->
     'try':'and'().

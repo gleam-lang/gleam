@@ -16,7 +16,7 @@ pub fn expect(value, message) {
 
 -export([expect/2]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec expect({ok, L} | {error, any()}, binary()) -> L.
 expect(Value, Message) ->
     {ok, Inner} = case Value of

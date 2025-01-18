@@ -15,7 +15,7 @@ pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
 
 -export([x/0]).
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("my/mod/project/test/my/mod.gleam", 5).
 -spec x() -> integer().
 x() ->
     m:f(1, 2),

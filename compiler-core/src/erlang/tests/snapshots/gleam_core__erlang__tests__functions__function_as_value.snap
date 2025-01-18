@@ -19,12 +19,12 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec other() -> nil.
 other() ->
     nil.
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("my/mod/project/test/my/mod.gleam", 6).
 -spec main() -> fun(() -> nil).
 main() ->
     fun other/0.

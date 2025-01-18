@@ -13,7 +13,7 @@ pub fn apply(f: fn(a, Int) -> b, a: a) { a |> f(1) }
 
 -export([apply/2]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("my/mod/project/test/my/mod.gleam", 2).
 -spec apply(fun((I, integer()) -> J), I) -> J.
 apply(F, A) ->
     _pipe = A,

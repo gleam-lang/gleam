@@ -14,7 +14,7 @@ let x = #(100000000000000000, #(2000000000, 3000000000000, 40000000000), 50000, 
 
 -export([go/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("my/mod/project/test/my/mod.gleam", 1).
 -spec go() -> {integer(),
     {integer(), integer(), integer()},
     integer(),
