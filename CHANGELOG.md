@@ -215,6 +215,30 @@
   better names using the type of the code it's generating.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The Language Server now provides the ability to rename local variables.
+  For example:
+
+  ```gleam
+  pub fn main() {
+    let wibble = 10
+    //  ^ If you put your cursor here, and trigger a rename
+    wibble + 1
+  }
+  ```
+
+  Triggering a rename and entering `my_number` results in this code:
+
+
+  ```gleam
+  pub fn main() {
+    let my_number = 10
+    my_number + 1
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+
 ### Formatter
 
 ### Bug fixes
