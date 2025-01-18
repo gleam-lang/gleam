@@ -334,7 +334,7 @@ pub trait Visit<'ast> {
         location: &'ast SrcSpan,
         index: &'ast u64,
         type_: &'ast Arc<Type>,
-        tuple: &'ast Box<TypedClauseGuard>,
+        tuple: &'ast TypedClauseGuard,
     ) {
         visit_typed_clause_guard_tuple_index(self, location, index, type_, tuple)
     }
@@ -345,7 +345,7 @@ pub trait Visit<'ast> {
         index: &'ast Option<u64>,
         label: &'ast EcoString,
         type_: &'ast Arc<Type>,
-        container: &'ast Box<TypedClauseGuard>,
+        container: &'ast TypedClauseGuard,
     ) {
         visit_typed_clause_guard_field_access(self, location, index, label, type_, container)
     }
@@ -1298,7 +1298,7 @@ pub fn visit_typed_clause_guard_tuple_index<'a, V>(
     _location: &'a SrcSpan,
     _index: &'a u64,
     _type_: &'a Arc<Type>,
-    tuple: &'a Box<TypedClauseGuard>,
+    tuple: &'a TypedClauseGuard,
 ) where
     V: Visit<'a> + ?Sized,
 {
@@ -1311,7 +1311,7 @@ pub fn visit_typed_clause_guard_field_access<'a, V>(
     _index: &'a Option<u64>,
     _label: &'a EcoString,
     _type_: &'a Arc<Type>,
-    container: &'a Box<TypedClauseGuard>,
+    container: &'a TypedClauseGuard,
 ) where
     V: Visit<'a> + ?Sized,
 {
