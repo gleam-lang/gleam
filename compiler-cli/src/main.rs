@@ -111,7 +111,7 @@ struct TreeOptions {
         help = "Package to be used as the root of the tree"
     )]
     package: Option<String>,
-    /// Name of the package to get the inverted dependency tree for-878904231
+    /// Name of the package to get the inverted dependency tree for
     #[arg(
         short,
         long,
