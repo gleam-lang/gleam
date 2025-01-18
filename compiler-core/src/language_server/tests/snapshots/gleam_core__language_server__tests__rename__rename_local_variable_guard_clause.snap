@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/rename.rs
-assertion_line: 140
 expression: "\npub fn main() {\n  let wibble = True\n  case Nil {\n    Nil if wibble -> todo\n    _ -> panic\n  }\n  wibble || False\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE RENAME
 
@@ -13,7 +11,7 @@ pub fn main() {
     _ -> panic
   }
   wibble || False
-  ↑
+  ↑              
 }
 
 

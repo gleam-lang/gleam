@@ -1653,8 +1653,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let constructor = self.infer_value_constructor(&None, &name, &location)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
-                match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable { .. } => (),
+                let definition_location = match &constructor.variant {
+                    ValueConstructorVariant::LocalVariable { location } => *location,
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name });
@@ -1670,6 +1670,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     name,
                     type_: constructor.type_,
+                    definition_location,
                 })
             }
 

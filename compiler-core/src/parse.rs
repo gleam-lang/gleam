@@ -1595,6 +1595,7 @@ where
                         location: SrcSpan { start, end },
                         type_: (),
                         name,
+                        definition_location: SrcSpan::default(),
                     }
                 };
 
