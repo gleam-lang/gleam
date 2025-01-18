@@ -154,6 +154,35 @@ pub fn main() {
 }
 
 #[test]
+fn rename_local_variable_from_definition() {
+    assert_rename!(
+        "
+pub fn main() {
+  let wibble = 10
+  let wobble = wibble + 1
+  wobble - wibble
+}
+",
+        "some_value",
+        find_position_of("wibble =").to_selection()
+    );
+}
+
+#[test]
+fn rename_local_variable_from_definition_nested_pattern() {
+    assert_rename!(
+        "
+pub fn main() {
+  let assert Ok([_, wibble, ..]) = Error(12)
+  wibble
+}
+",
+        "second_element",
+        find_position_of("wibble,").to_selection()
+    );
+}
+
+#[test]
 fn no_rename_keyword() {
     assert_no_rename!(
         "
