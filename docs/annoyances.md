@@ -15,9 +15,3 @@ implemented. These are tracked in the Gleam issue tracker instead.
 ## Cannot shift repeated work to compile or initialise time
 
 For example, regex compilation.
-
-## Runtime debugging is basic
-
-Rust's `dbg!` and Elixir's `dbg` were mentioned as good additions.
-
-We have a reserved `echo` keyword for this.

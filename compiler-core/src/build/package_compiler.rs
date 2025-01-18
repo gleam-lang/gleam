@@ -354,7 +354,7 @@ where
         // we overwrite any precompiled Erlang that was included in the Hex
         // package. Otherwise we will build the potentially outdated precompiled
         // version and not the newly compiled version.
-        Erlang::new(&build_dir, &include_dir).render(io, modules)?;
+        Erlang::new(&build_dir, &include_dir, &self.root).render(io, modules)?;
 
         if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
@@ -378,8 +378,14 @@ where
             TypeScriptDeclarations::None
         };
 
-        JavaScript::new(&self.out, typescript, prelude_location, self.target_support)
-            .render(&self.io, modules)?;
+        JavaScript::new(
+            &self.out,
+            typescript,
+            prelude_location,
+            &self.root,
+            self.target_support,
+        )
+        .render(&self.io, modules, self.stdlib_package())?;
 
         if self.copy_native_files {
             self.copy_project_native_files(&self.out, &mut written)?;
@@ -431,6 +437,20 @@ where
 
         Ok(())
     }
+
+    fn stdlib_package(&self) -> StdlibPackage {
+        if self.config.dependencies.contains_key("gleam_stdlib") {
+            StdlibPackage::Present
+        } else {
+            StdlibPackage::Missing
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum StdlibPackage {
+    Present,
+    Missing,
 }
 
 fn analyse(
