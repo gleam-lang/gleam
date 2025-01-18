@@ -29,6 +29,44 @@
   confirmation to use it.
   ([Diemo Gebhardt](https://github.com/diemogebhardt))
 
+- `gleam deps` now supports `tree` operation that lists the dependency tree.
+
+  ```markdown
+  Usage: gleam deps tree [OPTIONS]
+
+  Options:
+    -p, --package <PACKAGE>  Package to be used as the root of the tree
+    -i, --invert <PACKAGE>   Invert the tree direction and focus on the given package
+    -h, --help               Print help
+  ```
+
+  For example, if the root project (`project_a`) depends on `package_b` and `package_c`, and `package_c` also depends on `package_b`, the output will be:
+
+
+  ```markdown
+  $ gleam deps tree
+
+  project_a v1.0.0
+  ├── package_b v0.52.0
+  └── package_c v1.2.0
+      └── package_b v0.52.0
+
+  $ gleam deps tree --package package_c
+
+  package_c v1.2.0
+  └── package_b v0.52.0
+
+  $ gleam deps tree --invert package_b
+
+  package_b v0.52.0
+  ├── package_c v1.2.0
+  │   └── project_a v1.0.0
+  └── project_a v1.0.0
+
+  ```
+
+  ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
 ### Language server
 
 - The language server can now generate the definition of functions that do not
