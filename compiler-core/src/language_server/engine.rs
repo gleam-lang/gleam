@@ -1,8 +1,8 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        CustomType, Definition, ModuleConstant, SrcSpan, TypedArg, TypedExpr, TypedFunction,
-        TypedModule, TypedPattern,
+        CustomType, Definition, ModuleConstant, Pattern, SrcSpan, TypedArg, TypedExpr,
+        TypedFunction, TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -547,6 +547,9 @@ where
                         },
                     ..
                 }) => rename_local_variable(module, &lines, &params, *definition_location),
+                Located::Pattern(Pattern::Variable { location, .. }) => {
+                    rename_local_variable(module, &lines, &params, *location)
+                }
                 _ => None,
             })
         })
