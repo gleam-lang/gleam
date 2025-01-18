@@ -514,9 +514,12 @@ where
                             ..
                         },
                     ..
-                }) => Some(PrepareRenameResponse::DefaultBehavior {
-                    default_behavior: true,
-                }),
+                })
+                | Located::Pattern(Pattern::Variable { .. }) => {
+                    Some(PrepareRenameResponse::DefaultBehavior {
+                        default_behavior: true,
+                    })
+                }
                 _ => None,
             })
         })
