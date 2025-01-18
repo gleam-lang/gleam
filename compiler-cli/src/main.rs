@@ -103,7 +103,7 @@ struct UpdateOptions {
 
 #[derive(Args, Debug, Clone)]
 struct TreeOptions {
-    /// (optional) Name of the package to get the dependency tree for
+    /// Name of the package to get the dependency tree for
     #[arg(
         short,
         long,
@@ -111,7 +111,7 @@ struct TreeOptions {
         help = "Package to be used as the root of the tree"
     )]
     package: Option<String>,
-    /// (optional) Name of the package to get the inverted dependency tree for
+    /// Name of the package to get the inverted dependency tree for-878904231
     #[arg(
         short,
         long,
