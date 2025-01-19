@@ -14,7 +14,7 @@ window.Gleam = (function () {
     let value;
     try {
       value = localStorage.getItem(`Gleam.${property}`);
-    } catch (_error) {}
+    } catch (_error) { }
     if (-1 < [null, undefined].indexOf(value)) {
       return gleamConfig[property].values[0].value;
     }
@@ -26,7 +26,7 @@ window.Gleam = (function () {
       (acc, name) =>
         `${acc}
         <svg class="icon icon-${name}"><use xlink:href="#icon-${name}"></use></svg>`,
-      ""
+      "",
     );
   };
 
@@ -67,6 +67,9 @@ window.Gleam = (function () {
   const sidebarToggles = document.querySelectorAll(".sidebar-toggle");
   const displayControls = document.createElement("div");
 
+  const isMac = navigator?.userAgentData?.platform === 'macOS'
+    || /mac/i.test(navigator.userAgent);
+
   displayControls.classList.add("display-controls");
   sidebar.appendChild(displayControls);
 
@@ -100,11 +103,11 @@ window.Gleam = (function () {
         `<button
           id="${property}-toggle"
           class="control control-${property} toggle toggle-0">
-        `
+        `,
       ) +
-        `
-        </button>
       `
+        </button>
+      `,
     );
 
     setProperty(null, property, function () {
@@ -121,21 +124,21 @@ window.Gleam = (function () {
 
     try {
       localStorage.setItem("Gleam." + property, value);
-    } catch (_error) {}
+    } catch (_error) { }
 
     bodyClasses.remove(`${property}-${previousValue}`);
     bodyClasses.add(`${property}-${value}`);
 
     const isDefault = value === gleamConfig[property].values[0].value;
     const toggleClasses = document.querySelector(
-      `#${property}-toggle`
+      `#${property}-toggle`,
     ).classList;
     toggleClasses.remove(`toggle-${isDefault ? 1 : 0}`);
     toggleClasses.add(`toggle-${isDefault ? 0 : 1}`);
 
     try {
       gleamConfig[property].callback(value);
-    } catch (_error) {}
+    } catch (_error) { }
 
     return value;
   };
@@ -151,7 +154,7 @@ window.Gleam = (function () {
       `;
     body.appendChild(el);
     self.hashOffset = parseInt(
-      getComputedStyle(el).getPropertyValue("height") || "0"
+      getComputedStyle(el).getPropertyValue("height") || "0",
     );
     body.removeChild(el);
   };
@@ -178,6 +181,9 @@ window.Gleam = (function () {
     const searchResults = document.getElementById("search-results");
     let currentInput;
     let currentSearchIndex = 0;
+
+    // Set search input placeholder based on OS
+    searchInput.setAttribute("placeholder", isMac ? "Search ⌘ + K" : "Search Ctrl + K")
 
     function showSearch() {
       document.documentElement.classList.add("search-active");
@@ -255,7 +261,7 @@ window.Gleam = (function () {
         start,
         batchSize,
         batchMillis,
-        searchIndex
+        searchIndex,
       ) {
         if (searchIndex != currentSearchIndex) {
           return;
@@ -273,7 +279,7 @@ window.Gleam = (function () {
             start + batchSize,
             batchSize,
             batchMillis,
-            searchIndex
+            searchIndex,
           );
         }, batchMillis);
       }
@@ -330,7 +336,7 @@ window.Gleam = (function () {
               for (let k = 0; k < preview_words_before; k++) {
                 const nextSpace = doc.content.lastIndexOf(
                   " ",
-                  previewStart - 2
+                  previewStart - 2,
                 );
                 const nextDot = doc.content.lastIndexOf(". ", previewStart - 2);
                 if (nextDot >= 0 && nextDot > nextSpace) {
@@ -380,7 +386,7 @@ window.Gleam = (function () {
             doc.title,
             0,
             doc.title.length,
-            titlePositions
+            titlePositions,
           );
         }
         if (contentPositions.length > 0) {
@@ -434,7 +440,7 @@ window.Gleam = (function () {
               content,
               position.previewStart,
               position.previewEnd,
-              position.highlight
+              position.highlight,
             );
             if (position.ellipsesAfter) {
               resultPreview.appendChild(document.createTextNode(" ..."));
@@ -466,6 +472,25 @@ window.Gleam = (function () {
       }
     }
 
+    addEvent(document, "keydown", function (event) {
+      // Don't do anything when search is already in focus
+      if (document.activeElement == searchInput) {
+        return
+      }
+
+      if (
+        // Handle cmd/ctrl + k
+        ((event.metaKey || event.ctrlKey) && event.key === 'k') ||
+        // Handle s or /
+        event.key === 's' || event.key === '/'
+      ) {
+        event.preventDefault();
+
+        searchInput.focus();
+        return;
+      }
+    })
+
     addEvent(searchInput, "focus", function () {
       setTimeout(update, 0);
     });
@@ -495,7 +520,7 @@ window.Gleam = (function () {
             if (active.parentElement.previousSibling) {
               const previous =
                 active.parentElement.previousSibling.querySelector(
-                  ".search-result"
+                  ".search-result",
                 );
               previous.classList.add("active");
             }
@@ -508,7 +533,7 @@ window.Gleam = (function () {
             if (active.parentElement.nextSibling) {
               const next =
                 active.parentElement.nextSibling.querySelector(
-                  ".search-result"
+                  ".search-result",
                 );
               active.classList.remove("active");
               next.classList.add("active");
@@ -595,12 +620,12 @@ window.Gleam = (function () {
         `
       .module-name > a,
       .member-name a[href^='#']
-    `
+    `,
       )
       .forEach(function (title) {
         title.innerHTML = title.innerHTML.replace(
           /([A-Z])|([_/])/g,
-          "$2<wbr>$1"
+          "$2<wbr>$1",
         );
       });
   };

@@ -29,6 +29,10 @@
   confirmation to use it.
   ([Diemo Gebhardt](https://github.com/diemogebhardt))
 
+- `gleam docs build` generated documentation site now focuses the search input
+  when "Cmd/Ctrl + K", "s" or "/" is pressed.
+  ([Sambit Sahoo](https://github.com/soulsam480))
+
 ### Language server
 
 - The language server can now generate the definition of functions that do not
