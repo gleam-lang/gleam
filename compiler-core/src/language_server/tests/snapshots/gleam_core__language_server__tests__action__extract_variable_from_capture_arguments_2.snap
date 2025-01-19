@@ -11,6 +11,6 @@ pub fn main() {
 
 ----- AFTER ACTION
 pub fn main() {
-  let value = 11
-  int.add(value, _)
+  let int = 11
+  int.add(int, _)
 }

@@ -1,19 +1,19 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "pub fn main() {\n  let value = 1\n  let value1 = 2\n  wibble(value, _, value1)\n}"
+expression: "pub fn main() {\n  let value = 1\n  let value_2 = 2\n  wibble(value, _, value_2)\n}"
 ---
 ----- BEFORE ACTION
 pub fn main() {
   let value = 1
-  let value1 = 2
-  wibble(value, _, value1)
-  ↑                       
+  let value_2 = 2
+  wibble(value, _, value_2)
+  ↑                        
 }
 
 
 ----- AFTER ACTION
 pub fn main() {
   let value = 1
-  let value1 = 2
-  fn(value2) { wibble(value, value2, value1) }
+  let value_2 = 2
+  fn(value_3) { wibble(value, value_3, value_2) }
 }

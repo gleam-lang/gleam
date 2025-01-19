@@ -21,6 +21,6 @@ pub type Wibble {
 }
 
 pub fn main(arg: Wibble) {
-  let Wobble(value_0, value_1, i_want_to_see_this:, and_this:) = arg
+  let Wobble(int, string, i_want_to_see_this:, and_this:) = arg
   todo
 }

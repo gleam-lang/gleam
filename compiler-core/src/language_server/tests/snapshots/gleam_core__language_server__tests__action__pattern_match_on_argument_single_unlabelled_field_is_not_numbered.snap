@@ -19,5 +19,5 @@ pub type Wibble {
 }
 
 pub fn main(arg: Wibble) {
-  let Wibble(value) = arg
+  let Wibble(int) = arg
 }

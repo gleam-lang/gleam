@@ -629,13 +629,13 @@ fn print_case_expression(
 /// Builder for code action to apply the label shorthand syntax on arguments
 /// where the label has the same name as the variable.
 ///
-pub struct LabelShorthandSyntax<'a> {
+pub struct UseLabelShorthandSyntax<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
 }
 
-impl<'a> LabelShorthandSyntax<'a> {
+impl<'a> UseLabelShorthandSyntax<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -663,7 +663,7 @@ impl<'a> LabelShorthandSyntax<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for LabelShorthandSyntax<'_> {
+impl<'ast> ast::visit::Visit<'ast> for UseLabelShorthandSyntax<'_> {
     fn visit_typed_call_arg(&mut self, arg: &'ast TypedCallArg) {
         let arg_range = self.edits.src_span_to_lsp_range(arg.location);
         let is_selected = overlaps(arg_range, self.params.range);
@@ -2691,7 +2691,7 @@ pub struct ExtractVariable<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     position: Option<ExtractVariablePosition>,
-    selected_expression: Option<SrcSpan>,
+    selected_expression: Option<(SrcSpan, Arc<Type>)>,
     statement_before_selected_expression: Option<SrcSpan>,
     latest_statement: Option<SrcSpan>,
 }
@@ -2724,9 +2724,12 @@ impl<'a> ExtractVariable<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(location) = self.selected_expression else {
+        let Some((expression_span, expression_type)) = self.selected_expression else {
             return vec![];
         };
+
+        let mut name_generator = NameGenerator::new();
+        let variable_name = name_generator.generate_name_from_type(&expression_type);
 
         if let Some(container_location) = self.statement_before_selected_expression {
             let nesting = self
@@ -2738,14 +2741,16 @@ impl<'a> ExtractVariable<'a> {
             let content = self
                 .module
                 .code
-                .get(location.start as usize..location.end as usize)
+                .get(expression_span.start as usize..expression_span.end as usize)
                 .expect("selected expression");
             self.edits.insert(
                 container_location.start,
-                format!("let value = {content}\n{nesting}"),
+                format!("let {variable_name} = {content}\n{nesting}"),
             );
         }
-        self.edits.replace(location, "value".into());
+
+        self.edits
+            .replace(expression_span, String::from(variable_name));
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Extract variable")
@@ -2843,7 +2848,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
                         // want to consider those as part of a function call.
                         TypedExpr::Var { .. } | TypedExpr::ModuleSelect { .. } => (),
                         _ => {
-                            self.selected_expression = Some(expr_location);
+                            self.selected_expression = Some((expr_location, expr.type_()));
                             self.statement_before_selected_expression = self.latest_statement;
                         }
                     }
@@ -2904,7 +2909,14 @@ pub struct ExpandFunctionCapture<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    location: Option<(SrcSpan, SrcSpan, VariablesNames)>,
+    function_capture_data: Option<FunctionCaptureData>,
+}
+
+pub struct FunctionCaptureData {
+    function_span: SrcSpan,
+    hole_span: SrcSpan,
+    hole_type: Arc<Type>,
+    reserved_names: VariablesNames,
 }
 
 impl<'a> ExpandFunctionCapture<'a> {
@@ -2917,21 +2929,31 @@ impl<'a> ExpandFunctionCapture<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            location: None,
+            function_capture_data: None,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some((function, hole, names)) = self.location else {
+        let Some(FunctionCaptureData {
+            function_span,
+            hole_span,
+            hole_type,
+            reserved_names,
+        }) = self.function_capture_data
+        else {
             return vec![];
         };
 
-        let name = names.first_available_name("value");
-        self.edits.replace(hole, name.clone().into());
-        self.edits.insert(function.end, " }".into());
-        self.edits.insert(function.start, format!("fn({name}) {{ "));
+        let mut name_generator = NameGenerator::new();
+        name_generator.reserve_variable_names(reserved_names);
+        let name = name_generator.generate_name_from_type(&hole_type);
+
+        self.edits.replace(hole_span, name.clone().into());
+        self.edits.insert(function_span.end, " }".into());
+        self.edits
+            .insert(function_span.start, format!("fn({name}) {{ "));
 
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Expand function capture")
@@ -2956,11 +2978,12 @@ impl<'ast> ast::visit::Visit<'ast> for ExpandFunctionCapture<'ast> {
         let fn_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, fn_range) && kind.is_capture() {
             if let [arg] = args {
-                self.location = Some((
-                    *location,
-                    arg.location,
-                    VariablesNames::from_statements(body),
-                ));
+                self.function_capture_data = Some(FunctionCaptureData {
+                    function_span: *location,
+                    hole_span: arg.location,
+                    hole_type: arg.type_.clone(),
+                    reserved_names: VariablesNames::from_statements(body),
+                });
             }
         }
 
@@ -2982,22 +3005,6 @@ impl VariablesNames {
             variables.visit_typed_statement(statement);
         }
         variables
-    }
-
-    fn first_available_name(&self, name: &str) -> EcoString {
-        let mut i = 0;
-        loop {
-            let name = if i == 0 {
-                EcoString::from(name)
-            } else {
-                eco_format!("{name}{i}")
-            };
-
-            if !self.names.contains(&name) {
-                return name;
-            }
-            i += 1;
-        }
     }
 }
 
@@ -3604,13 +3611,32 @@ where
             return None;
         };
 
+        // Since the constructor is a record constructor we know that its type
+        // is either `Named` or a `Fn` type, in either case we have to get the
+        // arguments types out of it.
+        let Some(arguments_types) = constructor
+            .type_
+            .fn_types()
+            .map(|(arguments_types, _return)| arguments_types)
+            .or_else(|| constructor.type_.constructor_types())
+        else {
+            // This should never happen but just in case we don't want to unwrap
+            // and panic.
+            return None;
+        };
+
+        let mut name_generator = NameGenerator::new();
         let index_to_label = match field_map {
             None => HashMap::new(),
-            Some(field_map) => field_map
-                .fields
-                .iter()
-                .map(|(label, index)| (index, label))
-                .collect::<HashMap<_, _>>(),
+            Some(field_map) => {
+                name_generator.reserve_all_labels(field_map);
+
+                field_map
+                    .fields
+                    .iter()
+                    .map(|(label, index)| (index, label))
+                    .collect::<HashMap<_, _>>()
+            }
         };
 
         let mut pattern =
@@ -3621,21 +3647,16 @@ where
         }
 
         pattern.push('(');
-        let args = if *constructor_arity <= 1 && index_to_label.get(&0).is_none() {
-            // If there's a single argument and its not labelled we don't add a
-            // number suffix to it and just call it "value".
-            String::from("value")
-        } else {
-            // Otherwise all unlabelled arguments will be called "value_<n>".
-            // Labelled arguments, on the other hand, will always use the
-            // shorthand syntax.
-            (0..*constructor_arity as u32)
-                .map(|i| match index_to_label.get(&i) {
-                    Some(label) => format!("{label}:"),
-                    None => format!("value_{i}"),
-                })
-                .join(", ")
-        };
+        let args = (0..*constructor_arity as u32)
+            .map(|i| match index_to_label.get(&i) {
+                Some(label) => eco_format!("{label}:"),
+                None => match arguments_types.get(i as usize) {
+                    None => name_generator.rename_to_avoid_shadowing(EcoString::from("value")),
+                    Some(type_) => name_generator.generate_name_from_type(type_),
+                },
+            })
+            .join(", ");
+
         pattern.push_str(&args);
         pattern.push(')');
         Some(pattern)
@@ -3874,22 +3895,17 @@ impl<'a> GenerateFunction<'a> {
             return vec![];
         };
 
+        let mut name_generator = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
         let args = if let [arg_type] = arguments_types.as_slice() {
-            let arg_name = arg_type
-                .named_type_name()
-                .map(|(_type_module, type_name)| type_name.to_snake_case())
-                .filter(|name| is_valid_function_name(name))
-                .unwrap_or(String::from("value"));
-
+            let arg_name = name_generator.generate_name_from_type(arg_type);
             format!("{arg_name}: {}", printer.print_type(arg_type))
         } else {
             arguments_types
                 .iter()
-                .enumerate()
-                .map(|(index, arg_type)| {
-                    let type_ = printer.print_type(arg_type);
-                    format!("arg_{}: {}", index + 1, type_)
+                .map(|arg_type| {
+                    let arg_name = name_generator.generate_name_from_type(arg_type);
+                    format!("{arg_name}: {}", printer.print_type(arg_type))
                 })
                 .join(", ")
         };
@@ -3923,7 +3939,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
             let candidate_name = self.module.code.get(name_range);
             match (candidate_name, type_.fn_types()) {
                 (None, _) | (_, None) => return,
-                (Some(name), _) if !is_valid_function_name(name) => return,
+                (Some(name), _) if !is_valid_lowercase_name(name) => return,
                 (Some(name), Some((arguments_types, return_type))) => {
                     self.function_to_generate = Some(FunctionToGenerate {
                         name,
@@ -3939,8 +3955,63 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     }
 }
 
+struct NameGenerator {
+    used_names: HashSet<EcoString>,
+}
+
+impl NameGenerator {
+    pub fn new() -> Self {
+        NameGenerator {
+            used_names: HashSet::new(),
+        }
+    }
+
+    pub fn rename_to_avoid_shadowing(&mut self, base: EcoString) -> EcoString {
+        let mut i = 1;
+        let mut candidate_name = base.clone();
+
+        loop {
+            if self.used_names.contains(&candidate_name) {
+                i += 1;
+                candidate_name = eco_format!("{base}_{i}");
+            } else {
+                let _ = self.used_names.insert(candidate_name.clone());
+                return candidate_name;
+            }
+        }
+    }
+
+    pub fn generate_name_from_type(&mut self, type_: &Arc<Type>) -> EcoString {
+        let base_name = type_
+            .named_type_name()
+            .map(|(_type_module, type_name)| EcoString::from(type_name.to_snake_case()))
+            .filter(|name| is_valid_lowercase_name(name))
+            .unwrap_or(EcoString::from("value"));
+
+        self.rename_to_avoid_shadowing(base_name)
+    }
+
+    pub fn add_used_name(&mut self, name: EcoString) {
+        let _ = self.used_names.insert(name);
+    }
+
+    pub fn reserve_all_labels(&mut self, field_map: &FieldMap) {
+        field_map
+            .fields
+            .iter()
+            .for_each(|(label, _)| self.add_used_name(label.clone()));
+    }
+
+    pub fn reserve_variable_names(&mut self, variable_names: VariablesNames) {
+        variable_names
+            .names
+            .iter()
+            .for_each(|name| self.add_used_name(name.clone()));
+    }
+}
+
 #[must_use]
-fn is_valid_function_name(name: &str) -> bool {
+fn is_valid_lowercase_name(name: &str) -> bool {
     if !name.starts_with(|char: char| char.is_ascii_lowercase()) {
         return false;
     }

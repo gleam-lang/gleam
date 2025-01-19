@@ -4274,10 +4274,26 @@ fn expand_function_capture_does_not_shadow_variables() {
         EXPAND_FUNCTION_CAPTURE,
         r#"pub fn main() {
   let value = 1
-  let value1 = 2
-  wibble(value, _, value1)
+  let value_2 = 2
+  wibble(value, _, value_2)
 }"#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn expand_function_capture_picks_a_name_based_on_the_type_of_the_hole() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> map(add(_, 1))
+}
+
+pub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }
+pub fn add(n, m) { n + m }
+"#,
+        find_position_of("add").to_selection()
     );
 }
 
@@ -4775,5 +4791,49 @@ fn join(n: List(String)) -> String {
 }
 ",
         find_position_of("int_to_string").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4177#event-15968345230
+#[test]
+fn generate_function_picks_argument_name_based_on_type() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(\"Hello\", 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_wont_generate_two_arguments_with_the_same_name_if_they_have_the_same_type() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(2, 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(String, string: String)
+}
+
+pub fn main(wibble: Wibble) {
+  todo
+}
+",
+        find_position_of("wibble").to_selection()
     );
 }

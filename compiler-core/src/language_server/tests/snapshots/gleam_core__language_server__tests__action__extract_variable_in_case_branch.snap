@@ -13,8 +13,8 @@ pub fn main() {
 
 ----- AFTER ACTION
 pub fn main() {
-    let value = [1, 2, 3]
+    let list = [1, 2, 3]
     case wibble {
-      _ -> value
+      _ -> list
     }
 }
