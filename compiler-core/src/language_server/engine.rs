@@ -547,9 +547,9 @@ where
                         },
                     ..
                 })
-                | Located::Pattern(Pattern::Variable { location, .. }) => {
-                    rename_local_variable(module, &lines, &params, *location)
-                }
+                | Located::Pattern(
+                    Pattern::Variable { location, .. } | Pattern::Assign { location, .. },
+                ) => rename_local_variable(module, &lines, &params, *location),
                 Located::Arg(arg) => match &arg.names {
                     ArgNames::Named { location, .. }
                     | ArgNames::NamedLabelled {
