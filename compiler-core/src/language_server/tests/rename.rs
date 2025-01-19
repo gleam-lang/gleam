@@ -183,6 +183,36 @@ pub fn main() {
 }
 
 #[test]
+fn rename_local_variable_assignment_pattern() {
+    assert_rename!(
+        "
+pub fn main() {
+  let assert Error(12 as something) = Error(12)
+  something
+}
+",
+        "the_error",
+        find_position_of("something")
+            .nth_occurrence(2)
+            .to_selection()
+    );
+}
+
+#[test]
+fn rename_local_variable_from_definition_assignment_pattern() {
+    assert_rename!(
+        "
+pub fn main() {
+  let assert Error(12 as something) = Error(12)
+  something
+}
+",
+        "the_error",
+        find_position_of("something)").to_selection()
+    );
+}
+
+#[test]
 fn rename_local_variable_argument() {
     assert_rename!(
         "

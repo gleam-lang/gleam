@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+assertion_line: 203
+expression: "\npub fn main() {\n  let assert Error(12 as something) = Error(12)\n  something\n}\n"
+snapshot_kind: text
+---
+----- BEFORE RENAME
+
+pub fn main() {
+  let assert Error(12 as something) = Error(12)
+                         ↑                     
+  something
+}
+
+
+----- AFTER RENAME
+
+pub fn main() {
+  let assert Error(12 as the_error) = Error(12)
+  the_error
+}
