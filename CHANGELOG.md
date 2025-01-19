@@ -22,6 +22,10 @@
   allows the Language Server to provide completion hints for `case` subjects.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- On the JavaScript target, bit array expressions and patterns no longer need to
+  be byte aligned, and the `bits` segment type is now supported in patterns.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ### Build tool
 
 - `gleam new` now has refined project name validation - rather than failing on
