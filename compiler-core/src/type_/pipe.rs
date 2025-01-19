@@ -193,6 +193,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 type_: self.argument_type.clone(),
                 variant: ValueConstructorVariant::LocalVariable {
                     location: self.argument_location,
+                    origin: VariableOrigin::Generated,
                 },
             },
         }
@@ -220,6 +221,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         self.expr_typer.environment.insert_local_variable(
             PIPE_VARIABLE.into(),
             location,
+            VariableOrigin::Generated,
             expression.type_(),
         );
         // Add the assignment to the AST

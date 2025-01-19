@@ -239,6 +239,42 @@ pub fn wibble(wibble: Float) {
 }
 
 #[test]
+fn rename_local_variable_label_shorthand() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let Wibble(wibble:) = todo
+  wibble + 1
+}
+",
+        "wobble",
+        find_position_of("wibble +").to_selection()
+    );
+}
+
+#[test]
+fn rename_local_variable_label_shorthand_from_definition() {
+    assert_rename!(
+        "
+type Wibble {
+  Wibble(wibble: Int)
+}
+
+pub fn main() {
+  let Wibble(wibble:) = todo
+  wibble + 1
+}
+",
+        "wobble",
+        find_position_of("wibble:)").to_selection()
+    );
+}
+
+#[test]
 fn no_rename_keyword() {
     assert_no_rename!(
         "
