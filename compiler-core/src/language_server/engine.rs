@@ -1,7 +1,7 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        CustomType, Definition, ModuleConstant, Pattern, SrcSpan, TypedArg, TypedExpr,
+        ArgNames, CustomType, Definition, ModuleConstant, Pattern, SrcSpan, TypedArg, TypedExpr,
         TypedFunction, TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
@@ -542,17 +542,22 @@ where
                 Located::Expression(TypedExpr::Var {
                     constructor:
                         ValueConstructor {
-                            variant:
-                                ValueConstructorVariant::LocalVariable {
-                                    location: definition_location,
-                                },
+                            variant: ValueConstructorVariant::LocalVariable { location },
                             ..
                         },
                     ..
-                }) => rename_local_variable(module, &lines, &params, *definition_location),
-                Located::Pattern(Pattern::Variable { location, .. }) => {
+                })
+                | Located::Pattern(Pattern::Variable { location, .. }) => {
                     rename_local_variable(module, &lines, &params, *location)
                 }
+                Located::Arg(arg) => match &arg.names {
+                    ArgNames::Named { location, .. }
+                    | ArgNames::NamedLabelled {
+                        name_location: location,
+                        ..
+                    } => rename_local_variable(module, &lines, &params, *location),
+                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
+                },
                 _ => None,
             })
         })
