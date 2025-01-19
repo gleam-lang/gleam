@@ -3671,7 +3671,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
-                    ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
+                    ArgNames::Named { name, location }
+                    | ArgNames::NamedLabelled {
+                        name,
+                        name_location: location,
+                        ..
+                    } => {
                         // Check that this name has not already been used for
                         // another argument
                         if !argument_names.insert(name) {
@@ -3684,7 +3689,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         // Insert a variable for the argument into the environment
                         body_typer
                             .environment
-                            .insert_local_variable(name.clone(), arg.location, t);
+                            .insert_local_variable(name.clone(), *location, t);
 
                         if !body.first().is_placeholder() {
                             // Register the variable in the usage tracker so that we
