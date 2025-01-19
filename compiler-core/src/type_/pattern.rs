@@ -67,7 +67,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // Register usage for the unused variable detection
                 self.environment.init_usage(
                     name.into(),
-                    EntityKind::Variable { origin },
+                    EntityKind::Variable {
+                        origin: origin.clone(),
+                    },
                     location,
                     self.problems,
                 );
@@ -85,7 +87,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 // And now insert the variable for use in the code that comes
                 // after the pattern.
                 self.environment
-                    .insert_local_variable(name.into(), location, type_);
+                    .insert_local_variable(name.into(), location, origin, type_);
                 Ok(())
             }
 
@@ -133,8 +135,9 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     .insert(name.clone(), variant_index);
                 // This variable is only inferred in this branch of the case expression
                 self.environment.insert_local_variable(
-                    name,
+                    name.clone(),
                     variable.definition_location().span,
+                    VariableOrigin::Variable(name),
                     type_,
                 );
             }

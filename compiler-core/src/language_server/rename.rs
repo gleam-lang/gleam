@@ -24,11 +24,17 @@ fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     }
 }
 
+pub enum VariableRenameKind {
+    Variable,
+    LabelShorthand,
+}
+
 pub fn rename_local_variable(
     module: &Module,
     line_numbers: &LineNumbers,
     params: &RenameParams,
     definition_location: SrcSpan,
+    kind: VariableRenameKind,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         Default::default(),
@@ -45,7 +51,13 @@ pub fn rename_local_variable(
 
     let references = RenameLocalVariable::new(definition_location).references(&module.ast);
 
-    edits.replace(definition_location, params.new_name.clone());
+    match kind {
+        VariableRenameKind::Variable => edits.replace(definition_location, params.new_name.clone()),
+        VariableRenameKind::LabelShorthand => {
+            edits.insert(definition_location.end, format!(" {}", params.new_name))
+        }
+    }
+
     references
         .into_iter()
         .for_each(|location| edits.replace(location, params.new_name.clone()));
@@ -88,6 +100,7 @@ impl<'ast> Visit<'ast> for RenameLocalVariable {
         match constructor.variant {
             ValueConstructorVariant::LocalVariable {
                 location: definition_location,
+                ..
             } if definition_location == self.definition_location => self.references.push(*location),
             _ => {}
         }

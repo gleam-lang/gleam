@@ -474,7 +474,10 @@ pub struct RecordAccessor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
-    LocalVariable { location: SrcSpan },
+    LocalVariable {
+        location: SrcSpan,
+        origin: VariableOrigin,
+    },
 
     /// A module constant
     ModuleConstant {
@@ -591,7 +594,7 @@ impl ValueConstructorVariant {
 
     pub fn definition_location(&self) -> SrcSpan {
         match self {
-            ValueConstructorVariant::LocalVariable { location }
+            ValueConstructorVariant::LocalVariable { location, .. }
             | ValueConstructorVariant::ModuleConstant { location, .. }
             | ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::Record { location, .. } => *location,
@@ -1121,7 +1124,7 @@ impl ValueConstructor {
                 span: literal.location(),
             },
 
-            ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
+            ValueConstructorVariant::LocalVariable { location, .. } => DefinitionLocation {
                 module: None,
                 span: *location,
             },

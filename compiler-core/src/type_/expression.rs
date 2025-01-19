@@ -1653,7 +1653,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                 // We cannot support all values in guard expressions as the BEAM does not
                 let definition_location = match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable { location } => *location,
+                    ValueConstructorVariant::LocalVariable { location, .. } => *location,
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name });
@@ -2466,6 +2466,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 type_: record_type,
                 variant: ValueConstructorVariant::LocalVariable {
                     location: record_location,
+                    origin: VariableOrigin::Generated,
                 },
             },
             name: RECORD_UPDATE_VARIABLE.into(),
@@ -3686,9 +3687,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         }
 
                         // Insert a variable for the argument into the environment
-                        body_typer
-                            .environment
-                            .insert_local_variable(name.clone(), *location, t);
+                        body_typer.environment.insert_local_variable(
+                            name.clone(),
+                            *location,
+                            VariableOrigin::Variable(name.clone()),
+                            t,
+                        );
 
                         if !body.first().is_placeholder() {
                             // Register the variable in the usage tracker so that we
