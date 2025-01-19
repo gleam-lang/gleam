@@ -183,6 +183,32 @@ pub fn main() {
 }
 
 #[test]
+fn rename_local_variable_argument() {
+    assert_rename!(
+        "
+pub fn add(first_number: Int, x: Int) -> Int {
+  x + first_number
+}
+",
+        "second_number",
+        find_position_of("x +").to_selection()
+    );
+}
+
+#[test]
+fn rename_local_variable_argument_from_definition() {
+    assert_rename!(
+        "
+pub fn wibble(wibble: Float) {
+  wibble /. 0.3
+}
+",
+        "wobble",
+        find_position_of("wibble:").to_selection()
+    );
+}
+
+#[test]
 fn no_rename_keyword() {
     assert_no_rename!(
         "
