@@ -13,8 +13,8 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, printer::Printer, Deprecation, ModuleInterface, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
+        self, error::VariableOrigin, printer::Printer, Deprecation, ModuleInterface, Type,
+        TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
     Error, Result, Warning,
 };
@@ -39,7 +39,7 @@ use super::{
         TurnIntoUse, UseLabelShorthandSyntax,
     },
     completer::Completer,
-    rename::rename_local_variable,
+    rename::{rename_local_variable, VariableRenameKind},
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -542,20 +542,51 @@ where
                 Located::Expression(TypedExpr::Var {
                     constructor:
                         ValueConstructor {
-                            variant: ValueConstructorVariant::LocalVariable { location },
+                            variant: ValueConstructorVariant::LocalVariable { location, origin },
                             ..
                         },
                     ..
                 })
-                | Located::Pattern(
-                    Pattern::Variable { location, .. } | Pattern::Assign { location, .. },
-                ) => rename_local_variable(module, &lines, &params, *location),
+                | Located::Pattern(Pattern::Variable {
+                    location, origin, ..
+                }) => match origin {
+                    VariableOrigin::Variable(_) | VariableOrigin::AssignmentPattern => {
+                        rename_local_variable(
+                            module,
+                            &lines,
+                            &params,
+                            *location,
+                            VariableRenameKind::Variable,
+                        )
+                    }
+                    VariableOrigin::LabelShorthand(_) => rename_local_variable(
+                        module,
+                        &lines,
+                        &params,
+                        *location,
+                        VariableRenameKind::LabelShorthand,
+                    ),
+                    VariableOrigin::Generated => None,
+                },
+                Located::Pattern(Pattern::Assign { location, .. }) => rename_local_variable(
+                    module,
+                    &lines,
+                    &params,
+                    *location,
+                    VariableRenameKind::Variable,
+                ),
                 Located::Arg(arg) => match &arg.names {
                     ArgNames::Named { location, .. }
                     | ArgNames::NamedLabelled {
                         name_location: location,
                         ..
-                    } => rename_local_variable(module, &lines, &params, *location),
+                    } => rename_local_variable(
+                        module,
+                        &lines,
+                        &params,
+                        *location,
+                        VariableRenameKind::Variable,
+                    ),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
                 _ => None,
