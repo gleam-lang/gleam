@@ -486,6 +486,10 @@ pub trait Visit<'ast> {
         visit_typed_pattern_bit_array(self, location, segments);
     }
 
+    fn visit_typed_pattern_bit_array_option(&mut self, option: &'ast BitArrayOption<TypedPattern>) {
+        visit_typed_pattern_bit_array_option(self, option);
+    }
+
     fn visit_typed_pattern_string_prefix(
         &mut self,
         location: &'ast SrcSpan,
@@ -1582,6 +1586,45 @@ pub fn visit_typed_pattern_bit_array<'a, V>(
 {
     for segment in segments {
         v.visit_typed_pattern(&segment.value);
+        for option in segment.options.iter() {
+            v.visit_typed_pattern_bit_array_option(option);
+        }
+    }
+}
+
+pub fn visit_typed_pattern_bit_array_option<'a, V>(
+    v: &mut V,
+    option: &'a BitArrayOption<TypedPattern>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    match option {
+        BitArrayOption::Bytes { location: _ } => { /* TODO */ }
+        BitArrayOption::Int { location: _ } => { /* TODO */ }
+        BitArrayOption::Float { location: _ } => { /* TODO */ }
+        BitArrayOption::Bits { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf8 { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf16 { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf32 { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf8Codepoint { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf16Codepoint { location: _ } => { /* TODO */ }
+        BitArrayOption::Utf32Codepoint { location: _ } => { /* TODO */ }
+        BitArrayOption::Signed { location: _ } => { /* TODO */ }
+        BitArrayOption::Unsigned { location: _ } => { /* TODO */ }
+        BitArrayOption::Big { location: _ } => { /* TODO */ }
+        BitArrayOption::Little { location: _ } => { /* TODO */ }
+        BitArrayOption::Native { location: _ } => { /* TODO */ }
+        BitArrayOption::Size {
+            location: _,
+            value,
+            short_form: _,
+        } => {
+            v.visit_typed_pattern(value);
+        }
+        BitArrayOption::Unit {
+            location: _,
+            value: _,
+        } => { /* TODO */ }
     }
 }
 

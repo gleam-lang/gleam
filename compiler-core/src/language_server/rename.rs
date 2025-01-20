@@ -117,4 +117,26 @@ impl<'ast> Visit<'ast> for RenameLocalVariable {
             self.references.push(*location)
         }
     }
+
+    fn visit_typed_pattern_var_usage(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        constructor: &'ast Option<ValueConstructor>,
+        _type_: &'ast std::sync::Arc<crate::type_::Type>,
+    ) {
+        let variant = match constructor {
+            Some(constructor) => &constructor.variant,
+            None => return,
+        };
+        match variant {
+            ValueConstructorVariant::LocalVariable {
+                location: definition_location,
+                ..
+            } if *definition_location == self.definition_location => {
+                self.references.push(*location)
+            }
+            _ => {}
+        }
+    }
 }

@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {\n  let prefix_size = bit_size(prefix)\n\n  case bits {\n    <<pref:bits-size(prefix_size), _:bits>> if pref == prefix -> True\n    _ -> False\n  }\n}\n"
+---
+----- BEFORE RENAME
+
+pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
+  let prefix_size = bit_size(prefix)
+      ↑                             
+
+  case bits {
+    <<pref:bits-size(prefix_size), _:bits>> if pref == prefix -> True
+    _ -> False
+  }
+}
+
+
+----- AFTER RENAME
+
+pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
+  let size_of_prefix = bit_size(prefix)
+
+  case bits {
+    <<pref:bits-size(size_of_prefix), _:bits>> if pref == prefix -> True
+    _ -> False
+  }
+}
