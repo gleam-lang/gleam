@@ -3982,11 +3982,30 @@ impl NameGenerator {
     }
 
     pub fn generate_name_from_type(&mut self, type_: &Arc<Type>) -> EcoString {
-        let base_name = type_
-            .named_type_name()
-            .map(|(_type_module, type_name)| EcoString::from(type_name.to_snake_case()))
-            .filter(|name| is_valid_lowercase_name(name))
-            .unwrap_or(EcoString::from("value"));
+        let type_to_base_name = |type_: &Arc<Type>| {
+            type_
+                .named_type_name()
+                .map(|(_type_module, type_name)| EcoString::from(type_name.to_snake_case()))
+                .filter(|name| is_valid_lowercase_name(name))
+                .unwrap_or(EcoString::from("value"))
+        };
+
+        let base_name = match type_.list_type() {
+            None => type_to_base_name(type_),
+            // If we're coming up with a name for a list we want to use the
+            // plural form for the name of the inner type. For example:
+            // `List(Pokemon)` should generate `pokemons`.
+            Some(inner_type) => {
+                let base_name = type_to_base_name(&inner_type);
+                // If the inner type name already ends in "s" we leave it as it
+                // is, or it would look funny.
+                if base_name.ends_with('s') {
+                    base_name
+                } else {
+                    eco_format!("{base_name}s")
+                }
+            }
+        };
 
         self.rename_to_avoid_shadowing(base_name)
     }

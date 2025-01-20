@@ -24,7 +24,7 @@ pub fn main() {
   |> int_to_string
 }
 
-fn sum(list: List(Int)) -> Int {
+fn sum(ints: List(Int)) -> Int {
   todo
 }
 
