@@ -4837,3 +4837,20 @@ pub fn main(wibble: Wibble) {
         find_position_of("wibble").to_selection()
     );
 }
+
+#[test]
+fn extract_variable_with_list_with_plural_name_does_not_add_another_s() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        "
+pub fn main() {
+  wibble([Names, Names])
+}
+
+pub type Names {
+  Names
+}
+",
+        find_position_of("[").to_selection()
+    );
+}
