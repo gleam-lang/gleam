@@ -283,6 +283,42 @@ pub fn main() {
 }
 
 #[test]
+fn rename_local_variable_in_bit_array_pattern() {
+    assert_rename!(
+        "
+pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
+  let prefix_size = bit_size(prefix)
+
+  case bits {
+    <<pref:bits-size(prefix_size), _:bits>> if pref == prefix -> True
+    _ -> False
+  }
+}
+",
+        "size_of_prefix",
+        find_position_of("prefix_size =").to_selection()
+    );
+}
+
+#[test]
+fn rename_local_variable_from_bit_array_pattern() {
+    assert_rename!(
+        "
+pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
+  let prefix_size = bit_size(prefix)
+
+  case bits {
+    <<pref:bits-size(prefix_size), _:bits>> if pref == prefix -> True
+    _ -> False
+  }
+}
+",
+        "size_of_prefix",
+        find_position_of("prefix_size)").to_selection()
+    );
+}
+
+#[test]
 fn no_rename_keyword() {
     assert_no_rename!(
         "
