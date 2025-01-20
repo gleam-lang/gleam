@@ -457,7 +457,33 @@ impl Type {
             (one @ Type::Named { .. }, Type::Var { type_ }) => {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
-            (Type::Named { .. }, Type::Named { .. }) => self == other,
+            // When comparing two types we don't care about the inferred variant:
+            // `True` has the same type as `False`, even if the inferred variants
+            // differ.
+            (
+                Type::Named {
+                    publicity,
+                    package,
+                    module,
+                    name,
+                    args,
+                    inferred_variant: _,
+                },
+                Type::Named {
+                    publicity: other_publicity,
+                    package: other_package,
+                    module: other_module,
+                    name: other_name,
+                    args: other_args,
+                    inferred_variant: _,
+                },
+            ) => {
+                publicity == other_publicity
+                    && package == other_package
+                    && module == other_module
+                    && name == other_name
+                    && args == other_args
+            }
 
             (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
             (one @ Type::Fn { .. }, Type::Var { type_ }) => {
