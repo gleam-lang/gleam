@@ -21,7 +21,7 @@ error: Unknown variable
 5 │     a if a == Wibble -> 0
   │               ^^^^^^ Did you mean `wibble`?
 
-The name `Wibble` is not in scope here.
+The custom type variant constructor `Wibble` is not in scope here.
 
 error: Unknown variable
   ┌─ /src/one/two.gleam:6:15
@@ -29,4 +29,4 @@ error: Unknown variable
 6 │     b if b == Wibble -> 0
   │               ^^^^^^ Did you mean `wibble`?
 
-The name `Wibble` is not in scope here.
+The custom type variant constructor `Wibble` is not in scope here.

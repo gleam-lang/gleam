@@ -18,4 +18,4 @@ error: Unknown variable
 6 │    NotAPerson(..person)
   │    ^^^^^^^^^^ Did you mean `Person`?
 
-The name `NotAPerson` is not in scope here.
+The custom type variant constructor `NotAPerson` is not in scope here.

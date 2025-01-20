@@ -37,4 +37,4 @@ error: Unknown variable
 2 │ const unbound: MyInvalidType = MyInvalidType
   │                                ^^^^^^^^^^^^^
 
-The name `MyInvalidType` is not in scope here.
+The custom type variant constructor `MyInvalidType` is not in scope here.
