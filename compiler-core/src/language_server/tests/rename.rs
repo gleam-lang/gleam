@@ -11,6 +11,14 @@ fn rename(
     new_name: &str,
     position: Position,
 ) -> Option<lsp_types::WorkspaceEdit> {
+    let _ = tester.at(position, |engine, params, _| {
+        let params = TextDocumentPositionParams {
+            text_document: params.text_document,
+            position,
+        };
+        engine.prepare_rename(params).result.unwrap()
+    })?;
+
     tester.at(position, |engine, params, _| {
         let params = RenameParams {
             text_document_position: TextDocumentPositionParams {
