@@ -26,11 +26,9 @@
   solve a type mismatch error:
 
   ```gleam
-  pub fn first(list: List(a)) -> Result(a, Nil) {
-    case number {
-      [] -> Error(Nil)
-      [first, ..rest] -> first
-    }
+  pub fn greet_logged_user() {
+    use <- bool.guard(when: !logged_in, return: Error(Nil))
+    "Hello!"
   }
   ```
 
@@ -38,15 +36,10 @@
 
   ```txt
   error: Type mismatch
-    ┌─ /src/one/two.gleam:5:5
+    ┌─ /main.gleam:7:3
     │
-  5 │     [first, ..rest] -> first
-    │     ^^^^^^^^^^^^^^^^^^^^^^^^
-    │                        │
-    │                        Did you mean to wrap this in an `Ok`?
-
-  This case clause was found to return a different type than the previous
-  one, but all case clauses must return the same type.
+  7 │   "Hello!"
+    │   ^^^^^^^^ Did you mean to wrap this in an `Ok`?
 
   Expected type:
 
@@ -54,7 +47,7 @@
 
   Found type:
 
-      a
+      String
   ```
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
