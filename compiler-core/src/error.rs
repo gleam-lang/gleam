@@ -2259,7 +2259,13 @@ but no type in scope with that name."
                     let text = if *type_with_name_in_scope {
                         wrap_format!("`{name}` is a type, it cannot be used as a value.")
                     } else {
-                        wrap_format!("The name `{name}` is not in scope here.")
+                        let is_first_char_uppercase = name.chars().next().is_some_and(char::is_uppercase);
+
+                        if is_first_char_uppercase {
+                            wrap_format!("The custom type variant constructor `{name}` is not in scope here.")
+                        } else {
+                            wrap_format!("The name `{name}` is not in scope here.")
+                        }
                     };
                     Diagnostic {
                         title: "Unknown variable".into(),
