@@ -194,6 +194,30 @@ impl Type {
         }
     }
 
+    /// If the type is a Gleam's prelude's List this will return its wrapped
+    /// type.
+    pub fn list_type(&self) -> Option<Arc<Self>> {
+        match self {
+            Type::Named {
+                publicity: Publicity::Public,
+                name,
+                module,
+                package,
+                args,
+                inferred_variant: _,
+            } if package == PRELUDE_PACKAGE_NAME
+                && module == PRELUDE_MODULE_NAME
+                && name == LIST =>
+            {
+                match args.as_slice() {
+                    [inner_type] => Some(inner_type.clone()),
+                    [] | [_, _, ..] => None,
+                }
+            }
+            _ => None,
+        }
+    }
+
     #[must_use]
     fn is_fun(&self) -> bool {
         match self {

@@ -12,7 +12,7 @@ pub fn main() {
 
 ----- AFTER ACTION
 pub fn main() {
-    let list = [1, 2, 3]
-    use <- wibble(list)
+    let ints = [1, 2, 3]
+    use <- wibble(ints)
     todo
 }

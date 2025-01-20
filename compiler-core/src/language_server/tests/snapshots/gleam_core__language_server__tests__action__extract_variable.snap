@@ -11,6 +11,6 @@ pub fn main() {
 
 ----- AFTER ACTION
 pub fn main() {
-  let list = [1, 2, 3]
-  list.map(list, int.add(1, _))
+  let ints = [1, 2, 3]
+  list.map(ints, int.add(1, _))
 }
