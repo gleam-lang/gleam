@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() {\n  let wibble = 10\n  let wobble = wibble + 1\n  wobble - wibble\n}\n"
+---
+----- BEFORE RENAME
+
+pub fn main() {
+  let wibble = 10
+      ↑          
+  let wobble = wibble + 1
+  wobble - wibble
+}
+
+
+----- AFTER RENAME
+
+pub fn main() {
+  let some_value = 10
+  let wobble = some_value + 1
+  wobble - some_value
+}

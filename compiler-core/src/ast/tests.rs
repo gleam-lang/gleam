@@ -6,6 +6,7 @@ use crate::analyse::TargetSupport;
 use crate::build::Target;
 use crate::config::PackageConfig;
 use crate::line_numbers::LineNumbers;
+use crate::type_::error::VariableOrigin;
 use crate::type_::expression::FunctionDefinition;
 use crate::type_::{Deprecation, Problems, PRELUDE_MODULE_NAME};
 use crate::warning::WarningEmitter;
@@ -234,6 +235,7 @@ wibble}"#,
             publicity: Publicity::Private,
             variant: ValueConstructorVariant::LocalVariable {
                 location: SrcSpan { start: 5, end: 11 },
+                origin: VariableOrigin::Variable("wibble".into()),
             },
             type_: type_::int(),
         },
