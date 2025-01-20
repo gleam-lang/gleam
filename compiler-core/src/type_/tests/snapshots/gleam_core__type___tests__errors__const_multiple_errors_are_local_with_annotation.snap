@@ -43,4 +43,4 @@ error: Unknown variable
 2 │ const tpl: String = #(Ok(1), MyInvalidType, 3)
   │                              ^^^^^^^^^^^^^
 
-The name `MyInvalidType` is not in scope here.
+The custom type variant constructor `MyInvalidType` is not in scope here.

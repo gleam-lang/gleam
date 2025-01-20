@@ -28,4 +28,4 @@ error: Unknown variable
 4 │   let Two = x
   │       ^^^
 
-The name `Two` is not in scope here.
+The custom type variant constructor `Two` is not in scope here.
