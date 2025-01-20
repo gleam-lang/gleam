@@ -52,6 +52,18 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The compiler now shows an improved error message when using an unknown type as a
+  variable name
+
+  ```txt
+  error: Unknown variable
+    ┌─ /src/one/two.gleam:4:3
+    │
+  4 │   X
+    │   ^
+  The custom type variant constructor `X` is not in scope here.
+  ```
+
 ### Build tool
 
 - `gleam new` now has refined project name validation - rather than failing on
