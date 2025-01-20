@@ -506,20 +506,30 @@ where
                 None => return Ok(None),
             };
 
+            let success_response = Some(PrepareRenameResponse::DefaultBehavior {
+                default_behavior: true,
+            });
+
             Ok(match found {
                 Located::Expression(TypedExpr::Var {
                     constructor:
                         ValueConstructor {
-                            variant: ValueConstructorVariant::LocalVariable { .. },
+                            variant: ValueConstructorVariant::LocalVariable { origin, .. },
                             ..
                         },
                     ..
                 })
-                | Located::Pattern(Pattern::Variable { .. }) => {
-                    Some(PrepareRenameResponse::DefaultBehavior {
-                        default_behavior: true,
-                    })
-                }
+                | Located::Pattern(Pattern::Variable { origin, .. }) => match origin {
+                    VariableOrigin::Variable(_)
+                    | VariableOrigin::AssignmentPattern
+                    | VariableOrigin::LabelShorthand(_) => success_response,
+                    VariableOrigin::Generated => None,
+                },
+                Located::Pattern(Pattern::Assign { .. }) => success_response,
+                Located::Arg(arg) => match &arg.names {
+                    ArgNames::Named { .. } | ArgNames::NamedLabelled { .. } => success_response,
+                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
+                },
                 _ => None,
             })
         })
