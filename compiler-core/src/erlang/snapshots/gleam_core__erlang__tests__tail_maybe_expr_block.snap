@@ -21,7 +21,7 @@ pub fn a() {
 
 -export([a/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec a() -> list(integer()).
 a() ->
     Fake_tap = fun(X) -> X end,

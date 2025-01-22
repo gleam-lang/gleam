@@ -27,7 +27,7 @@ pub fn go(x) {
 
 -export([go/1]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec go(binary()) -> binary().
 go(X) ->
     _ = case X of

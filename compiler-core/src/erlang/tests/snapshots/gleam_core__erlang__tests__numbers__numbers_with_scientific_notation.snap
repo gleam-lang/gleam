@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/erlang/tests/numbers.rs
 expression: "\nconst i = 100.001e223\nconst j = -100.001e-223\n\npub fn main() {\n  i\n  j\n}\n"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 
@@ -20,7 +19,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 5).
+-file("project/test/my/mod.gleam", 5).
 -spec main() -> float().
 main() ->
     100.001e223,

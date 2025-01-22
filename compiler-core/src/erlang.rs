@@ -20,12 +20,14 @@ use crate::{
     },
     Result,
 };
+use camino::Utf8Path;
 use ecow::{eco_format, EcoString};
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
 use pattern::pattern;
 use regex::{Captures, Regex};
+use std::path;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
@@ -150,13 +152,18 @@ pub fn record_definition(name: &str, fields: &[(&str, Arc<Type>)]) -> String {
     .to_pretty_string(MAX_COLUMNS)
 }
 
-pub fn module<'a>(module: &'a TypedModule, line_numbers: &'a LineNumbers) -> Result<String> {
-    Ok(module_document(module, line_numbers)?.to_pretty_string(MAX_COLUMNS))
+pub fn module<'a>(
+    module: &'a TypedModule,
+    line_numbers: &'a LineNumbers,
+    root: &'a Utf8Path,
+) -> Result<String> {
+    Ok(module_document(module, line_numbers, root)?.to_pretty_string(MAX_COLUMNS))
 }
 
 fn module_document<'a>(
     module: &'a TypedModule,
     line_numbers: &'a LineNumbers,
+    root: &'a Utf8Path,
 ) -> Result<Document<'a>> {
     let mut exports = vec![];
     let mut type_defs = vec![];
@@ -217,7 +224,19 @@ fn module_document<'a>(
         join(type_defs, lines(2)).append(lines(2))
     };
 
-    let src_path = EcoString::from(module.type_info.src_path.as_str());
+    let src_path_full = EcoString::from(module.type_info.src_path.as_str());
+    let root_str = root.to_string();
+    let separator = path::MAIN_SEPARATOR.to_string();
+    let src_path_relative = root_str
+        .is_empty()
+        .then(|| src_path_full.clone())
+        .unwrap_or_else(|| {
+            EcoString::from(
+                src_path_full
+                    .strip_prefix(&(root_str + &separator))
+                    .unwrap_or(&src_path_full),
+            )
+        });
 
     let mut needs_function_docs = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
@@ -227,7 +246,7 @@ fn module_document<'a>(
             &module.name,
             module.type_info.is_internal,
             line_numbers,
-            &src_path,
+            &src_path_relative,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
             statements.push(statement_document);
