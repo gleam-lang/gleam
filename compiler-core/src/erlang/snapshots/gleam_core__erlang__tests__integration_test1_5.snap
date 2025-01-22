@@ -12,12 +12,12 @@ fn add(x, y) { x + y }
 
 -export([go/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec add(integer(), integer()) -> integer().
 add(X, Y) ->
     X + Y.
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec go() -> integer().
 go() ->
     _pipe = 1,

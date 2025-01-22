@@ -21,12 +21,12 @@ pub fn get_age(person: Person) { person.age }
 -type person() :: {teacher, binary(), integer(), binary()} |
     {student, binary(), integer()}.
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("project/test/my/mod.gleam", 6).
 -spec get_name(person()) -> binary().
 get_name(Person) ->
     erlang:element(2, Person).
 
--file("/root/project/test/my/mod.gleam", 7).
+-file("project/test/my/mod.gleam", 7).
 -spec get_age(person()) -> integer().
 get_age(Person) ->
     erlang:element(3, Person).

@@ -14,7 +14,7 @@ pub type Pair(x, y) { Pair(x: x, y: y) } pub fn x() { Pair(1, 2) Pair(3., 4.) }
 
 -type pair(I, J) :: {pair, I, J}.
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec x() -> pair(float(), float()).
 x() ->
     {pair, 1, 2},

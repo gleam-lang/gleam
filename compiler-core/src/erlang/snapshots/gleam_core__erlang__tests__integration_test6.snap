@@ -11,7 +11,7 @@ pub fn x() { let x = 1 let x = x + 1 x }
 
 -export([x/0]).
 
--file("/root/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec x() -> integer().
 x() ->
     X = 1,
