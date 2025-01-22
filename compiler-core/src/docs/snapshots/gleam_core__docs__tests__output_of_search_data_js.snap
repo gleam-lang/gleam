@@ -1,6 +1,0 @@
----
-source: compiler-core/src/docs/tests.rs
-expression: json_wrapped_in_js
-snapshot_kind: text
----
-window.Gleam.initSearch({"items":[{"type":"module","parentTitle":"gleam/option","title":"gleam/option","doc":"","ref":"gleam/option.html"},{"type":"type","parentTitle":"gleam/option","title":"Option","doc":"`Option` represents a value that may be present or not. `Some` means the value is present, `None` means the value is not.","ref":"gleam/option.html#Option"},{"type":"function","parentTitle":"gleam/option","title":"unwrap","doc":"Extracts the value from an `Option`, returning a default value if there is none.","ref":"gleam/option.html#unwrap"},{"type":"constant","parentTitle":"gleam/dynamic/decode","title":"bool","doc":"A decoder that decodes `Bool` values.\n\n # Examples\n\n \n let result = decode.run(dynamic.from(True), decode.bool)\n assert result == Ok(True)\n \n","ref":"gleam/dynamic/decode.html#bool"}],"proglang":"gleam"});

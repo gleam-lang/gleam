@@ -363,7 +363,7 @@ pub fn generate_html<IO: FileSystemReader>(
         ),
     });
 
-    // lunr.min.js, search-data.js, search_data.json and index.js
+    // lunr.min.js, search_data.json and index.js
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("js/lunr.min.js"),
@@ -375,11 +375,6 @@ pub fn generate_html<IO: FileSystemReader>(
         programming_language: SearchProgrammingLanguage::Gleam,
     })
     .expect("search index serialization");
-
-    files.push(OutputFile {
-        path: Utf8PathBuf::from("search-data.js"),
-        content: Content::Text(format!("window.Gleam.initSearch({});", search_data_json)),
-    });
 
     files.push(OutputFile {
         path: Utf8PathBuf::from("search_data.json"),
