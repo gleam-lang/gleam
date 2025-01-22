@@ -701,20 +701,33 @@ where
                 self.advance();
                 let subjects =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
-                let _ = self.expect_one_following_series(&Token::LeftBrace, "an expression")?;
-                let clauses = Parser::series_of(self, &Parser::parse_case_clause, None)?;
-                let (_, end) =
-                    self.expect_one_following_series(&Token::RightBrace, "a case clause")?;
-                if subjects.is_empty() {
-                    return parse_error(
-                        ParseErrorType::ExpectedExpr,
-                        SrcSpan { start, end: case_e },
-                    );
+                if self.maybe_one(&Token::LeftBrace).is_some() {
+                    let clauses = Parser::series_of(self, &Parser::parse_case_clause, None)?;
+                    let (_, end) =
+                        self.expect_one_following_series(&Token::RightBrace, "a case clause")?;
+                    if subjects.is_empty() {
+                        return parse_error(
+                            ParseErrorType::ExpectedExpr,
+                            SrcSpan { start, end: case_e },
+                        );
+                    } else {
+                        UntypedExpr::Case {
+                            location: SrcSpan { start, end },
+                            subjects,
+                            clauses: Some(clauses),
+                        }
+                    }
                 } else {
                     UntypedExpr::Case {
-                        location: SrcSpan { start, end },
+                        location: SrcSpan::new(
+                            start,
+                            subjects
+                                .last()
+                                .map(|subject| subject.location().end)
+                                .unwrap_or(case_e),
+                        ),
                         subjects,
-                        clauses,
+                        clauses: None,
                     }
                 }
             }
@@ -1582,6 +1595,7 @@ where
                         location: SrcSpan { start, end },
                         type_: (),
                         name,
+                        definition_location: SrcSpan::default(),
                     }
                 };
 

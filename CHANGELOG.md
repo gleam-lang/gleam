@@ -4,12 +4,52 @@
 
 ### Compiler
 
+- Pipelines are now fault tolerant. A type error in the middle of a pipeline
+  won't stop the compiler from figuring out the types of the remaining pieces,
+  enabling the language server to show better suggestions for incomplete pipes.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Improved code generation for blocks in tail position on the Javascript target.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - Function documentation comments and module documentation comments are now
   included in the generated Erlang code and can be browsed from the Erlang
   shell starting from OTP27.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Parsing of `case` expressions is now fault tolerant. If a `case` expressions
+  is missing its body, the compiler can still perform type inference. This also
+  allows the Language Server to provide completion hints for `case` subjects.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The compiler can now suggest to wrap a value in an `Ok` or `Error` if that can
+  solve a type mismatch error:
+
+  ```gleam
+  pub fn greet_logged_user() {
+    use <- bool.guard(when: !logged_in, return: Error(Nil))
+    "Hello!"
+  }
+  ```
+
+  Results in the following error:
+
+  ```txt
+  error: Type mismatch
+    ┌─ /main.gleam:7:3
+    │
+  7 │   "Hello!"
+    │   ^^^^^^^^ Did you mean to wrap this in an `Ok`?
+
+  Expected type:
+
+      Result(a, Nil)
+
+  Found type:
+
+      String
+  ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Build tool
@@ -19,7 +59,77 @@
   confirmation to use it.
   ([Diemo Gebhardt](https://github.com/diemogebhardt))
 
+- `gleam docs build` generated documentation site now focuses the search input
+  when "Cmd/Ctrl + K", "s" or "/" is pressed.
+  ([Sambit Sahoo](https://github.com/soulsam480))
+
+- `gleam deps` now supports `tree` operation that lists the dependency tree.
+
+  ```markdown
+  Usage: gleam deps tree [OPTIONS]
+
+  Options:
+    -p, --package <PACKAGE>  Package to be used as the root of the tree
+    -i, --invert <PACKAGE>   Invert the tree direction and focus on the given package
+    -h, --help               Print help
+  ```
+
+  For example, if the root project (`project_a`) depends on `package_b` and `package_c`, and `package_c` also depends on `package_b`, the output will be:
+
+
+  ```markdown
+  $ gleam deps tree
+
+  project_a v1.0.0
+  ├── package_b v0.52.0
+  └── package_c v1.2.0
+      └── package_b v0.52.0
+
+  $ gleam deps tree --package package_c
+
+  package_c v1.2.0
+  └── package_b v0.52.0
+
+  $ gleam deps tree --invert package_b
+
+  package_b v0.52.0
+  ├── package_c v1.2.0
+  │   └── project_a v1.0.0
+  └── project_a v1.0.0
+
+  ```
+
+  ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
 ### Language server
+
+- The language server can now generate the definition of functions that do not
+  exist in the current file. For example if I write the following piece of code:
+
+  ```gleam
+  import gleam/io
+
+  pub type Pokemon {
+    Pokemon(pokedex_number: Int, name: String)
+  }
+
+  pub fn main() {
+    io.println(to_string(pokemon))
+    //          ^ If you put your cursor over this function that is
+    //            not implemented yet
+  }
+  ```
+
+  Triggering the "generate function" code action, the language server will
+  generate the following function for you:
+
+  ```gleam
+  fn to_string(pokemon: Pokemon) -> String {
+    todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The language server can now fill in the labels of any function call, even when
   only some of the arguments are provided. For example:
@@ -101,6 +211,34 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- When generating functions or variables, the language server can now pick
+  better names using the type of the code it's generating.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The Language Server now provides the ability to rename local variables.
+  For example:
+
+  ```gleam
+  pub fn main() {
+    let wibble = 10
+    //  ^ If you put your cursor here, and trigger a rename
+    wibble + 1
+  }
+  ```
+
+  Triggering a rename and entering `my_number` results in this code:
+
+
+  ```gleam
+  pub fn main() {
+    let my_number = 10
+    my_number + 1
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+
 ### Formatter
 
 ### Bug fixes
@@ -121,3 +259,10 @@
   produce invalid erlang.
   ([yoshi](https://github.com/joshi-monster))
 
+- Fixed a typo in the error message when trying to import a test module into an
+  application module.
+  ([John Strunk](https://github.com/jrstrunk))
+
+- Fixed a bug where the "Extract variable" code action would erroneously extract
+  a pipeline step as a variable.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))

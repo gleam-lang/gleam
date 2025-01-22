@@ -341,7 +341,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 location, value, ..
             } => Ok(self.infer_string(value, location)),
 
-            UntypedExpr::PipeLine { expressions } => self.infer_pipeline(expressions),
+            UntypedExpr::PipeLine { expressions } => Ok(self.infer_pipeline(expressions)),
 
             UntypedExpr::Fn {
                 location,
@@ -416,7 +416,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
     }
 
-    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> Result<TypedExpr, Error> {
+    fn infer_pipeline(&mut self, expressions: Vec1<UntypedExpr>) -> TypedExpr {
         PipeTyper::infer(self, expressions)
     }
 
@@ -1428,13 +1428,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_case(
         &mut self,
         subjects: Vec<UntypedExpr>,
-        clauses: Vec<UntypedClause>,
+        clauses: Option<Vec<UntypedClause>>,
         location: SrcSpan,
     ) -> TypedExpr {
         let subjects_count = subjects.len();
         let mut typed_subjects = Vec::with_capacity(subjects_count);
         let mut subject_types = Vec::with_capacity(subjects_count);
-        let mut typed_clauses = Vec::with_capacity(clauses.len());
 
         let return_type = self.new_unbound_var();
 
@@ -1459,6 +1458,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             typed_subjects.push(subject);
         }
 
+        let clauses = match clauses {
+            Some(clauses) => clauses,
+            None => {
+                self.problems.error(Error::MissingCaseBody { location });
+                return TypedExpr::Case {
+                    location,
+                    type_: return_type,
+                    subjects: typed_subjects,
+                    clauses: Vec::new(),
+                };
+            }
+        };
+
+        let mut typed_clauses = Vec::with_capacity(clauses.len());
         let mut has_a_guard = false;
         let mut all_patterns_are_discards = true;
         // NOTE: if there are 0 clauses then there are 0 panics
@@ -1472,9 +1485,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let typed_clause = self.infer_clause(clause, &typed_subjects);
             all_clauses_panic = all_clauses_panic && self.previous_panics;
 
-            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_())
-                .map_err(|e| e.case_clause_mismatch().into_error(typed_clause.location()))
-            {
+            if let Err(e) = unify(return_type.clone(), typed_clause.then.type_()).map_err(|e| {
+                e.case_clause_mismatch(typed_clause.location)
+                    .into_error(typed_clause.then.type_defining_location())
+            }) {
                 self.problems.error(e);
             }
             typed_clauses.push(typed_clause);
@@ -1639,8 +1653,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 let constructor = self.infer_value_constructor(&None, &name, &location)?;
 
                 // We cannot support all values in guard expressions as the BEAM does not
-                match &constructor.variant {
-                    ValueConstructorVariant::LocalVariable { .. } => (),
+                let definition_location = match &constructor.variant {
+                    ValueConstructorVariant::LocalVariable { location, .. } => *location,
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::Record { .. } => {
                         return Err(Error::NonLocalClauseGuardVariable { location, name });
@@ -1656,6 +1670,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location,
                     name,
                     type_: constructor.type_,
+                    definition_location,
                 })
             }
 
@@ -2452,6 +2467,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 type_: record_type,
                 variant: ValueConstructorVariant::LocalVariable {
                     location: record_location,
+                    origin: VariableOrigin::Generated,
                 },
             },
             name: RECORD_UPDATE_VARIABLE.into(),
@@ -3504,14 +3520,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     )
                 }
 
-                let value = match self.infer_call_argument(value, type_.clone(), argument_kind) {
-                    Ok(value) => value,
-                    Err(e) => {
-                        self.problems.error(e);
-                        self.error_expr(location)
-                    }
-                };
-
+                let value = self.infer_call_argument(value, type_.clone(), argument_kind);
                 CallArg {
                     label,
                     value,
@@ -3556,10 +3565,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         value: UntypedExpr,
         type_: Arc<Type>,
         kind: ArgumentKind,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let type_ = collapse_links(type_);
 
-        let value = match (&*type_, value) {
+        let value_location = value.location();
+        let result = match (&*type_, value) {
             // If the argument is expected to be a function and we are passed a
             // function literal with the correct number of arguments then we
             // have special handling of this argument, passing in information
@@ -3591,11 +3601,35 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             // Otherwise just perform normal type inference.
             (_, value) => self.infer(value),
-        }?;
+        };
 
-        unify(type_, value.type_())
-            .map_err(|e| convert_unify_call_error(e, value.location(), kind))?;
-        Ok(value)
+        match result {
+            Err(error) => {
+                // If we couldn't infer the value, we record the error and
+                // return an invalid expression with the type we were expecting
+                // to see.
+                self.problems.error(error);
+                TypedExpr::Invalid {
+                    location: value_location,
+                    type_,
+                }
+            }
+            Ok(value) => match unify(type_.clone(), value.type_()) {
+                Ok(_) => value,
+                Err(error) => {
+                    // If we couldn't unify it, we record the error and return
+                    // an invalid expression with the type we infered for the
+                    // value.
+                    let location = value.location();
+                    let error = convert_unify_call_error(error, location, kind);
+                    self.problems.error(error);
+                    TypedExpr::Invalid {
+                        location,
+                        type_: value.type_(),
+                    }
+                }
+            },
+        }
     }
 
     pub fn do_infer_fn(
@@ -3638,7 +3672,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             for (arg, t) in args.iter().zip(args.iter().map(|arg| arg.type_.clone())) {
                 match &arg.names {
-                    ArgNames::Named { name, .. } | ArgNames::NamedLabelled { name, .. } => {
+                    ArgNames::Named { name, location }
+                    | ArgNames::NamedLabelled {
+                        name,
+                        name_location: location,
+                        ..
+                    } => {
                         // Check that this name has not already been used for
                         // another argument
                         if !argument_names.insert(name) {
@@ -3649,9 +3688,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         }
 
                         // Insert a variable for the argument into the environment
-                        body_typer
-                            .environment
-                            .insert_local_variable(name.clone(), arg.location, t);
+                        body_typer.environment.insert_local_variable(
+                            name.clone(),
+                            *location,
+                            VariableOrigin::Variable(name.clone()),
+                            t,
+                        );
 
                         if !body.first().is_placeholder() {
                             // Register the variable in the usage tracker so that we

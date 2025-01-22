@@ -138,6 +138,18 @@ impl Type {
         }
     }
 
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            Self::Named {
+                module, name, args, ..
+            } if "Result" == name && is_prelude_module(module) => {
+                Some((args.first().cloned()?, args.get(1).cloned()?))
+            }
+            Self::Var { type_ } => type_.borrow().result_types(),
+            Self::Named { .. } | Self::Tuple { .. } | Type::Fn { .. } => None,
+        }
+    }
+
     pub fn is_unbound(&self) -> bool {
         match self {
             Self::Var { type_ } => type_.borrow().is_unbound(),
@@ -190,6 +202,30 @@ impl Type {
         match self {
             Self::Named { args, .. } => Some(args.clone()),
             Self::Var { type_, .. } => type_.borrow().constructor_types(),
+            _ => None,
+        }
+    }
+
+    /// If the type is a Gleam's prelude's List this will return its wrapped
+    /// type.
+    pub fn list_type(&self) -> Option<Arc<Self>> {
+        match self {
+            Type::Named {
+                publicity: Publicity::Public,
+                name,
+                module,
+                package,
+                args,
+                inferred_variant: _,
+            } if package == PRELUDE_PACKAGE_NAME
+                && module == PRELUDE_MODULE_NAME
+                && name == LIST =>
+            {
+                match args.as_slice() {
+                    [inner_type] => Some(inner_type.clone()),
+                    [] | [_, _, ..] => None,
+                }
+            }
             _ => None,
         }
     }
@@ -433,6 +469,116 @@ impl Type {
             _ => None,
         }
     }
+
+    #[must_use]
+    /// Returns `true` is the two types are the same. This differs from the
+    /// standard `Eq` implementation as it also follows all links to check if
+    /// two types are really the same.
+    ///
+    pub fn same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (Type::Named { .. }, Type::Fn { .. } | Type::Tuple { .. }) => false,
+            (one @ Type::Named { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            // When comparing two types we don't care about the inferred variant:
+            // `True` has the same type as `False`, even if the inferred variants
+            // differ.
+            (
+                Type::Named {
+                    publicity,
+                    package,
+                    module,
+                    name,
+                    args,
+                    inferred_variant: _,
+                },
+                Type::Named {
+                    publicity: other_publicity,
+                    package: other_package,
+                    module: other_module,
+                    name: other_name,
+                    args: other_args,
+                    inferred_variant: _,
+                },
+            ) => {
+                publicity == other_publicity
+                    && package == other_package
+                    && module == other_module
+                    && name == other_name
+                    && args == other_args
+            }
+
+            (Type::Fn { .. }, Type::Named { .. } | Type::Tuple { .. }) => false,
+            (one @ Type::Fn { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (
+                Type::Fn { args, retrn },
+                Type::Fn {
+                    args: other_args,
+                    retrn: other_retrn,
+                },
+            ) => {
+                args.len() == other_args.len()
+                    && args
+                        .iter()
+                        .zip(other_args)
+                        .all(|(one, other)| one.same_as(other))
+                    && retrn.same_as(other_retrn)
+            }
+
+            (Type::Var { type_ }, other) => type_.as_ref().borrow().same_as_other_type(other),
+
+            (Type::Tuple { .. }, Type::Fn { .. } | Type::Named { .. }) => false,
+            (one @ Type::Tuple { .. }, Type::Var { type_ }) => {
+                type_.as_ref().borrow().same_as_other_type(one)
+            }
+            (Type::Tuple { elems }, Type::Tuple { elems: other_elems }) => {
+                elems.len() == other_elems.len()
+                    && elems
+                        .iter()
+                        .zip(other_elems)
+                        .all(|(one, other)| one.same_as(other))
+            }
+        }
+    }
+}
+
+impl TypeVar {
+    #[must_use]
+    fn same_as_other_type(&self, other: &Type) -> bool {
+        match (self, other) {
+            (TypeVar::Unbound { .. }, _) => true,
+            (TypeVar::Link { type_ }, other) => type_.same_as(other),
+
+            (
+                TypeVar::Generic { .. },
+                Type::Named { .. } | Type::Fn { .. } | Type::Tuple { .. },
+            ) => false,
+
+            (one @ TypeVar::Generic { .. }, Type::Var { type_ }) => {
+                one.same_as(&type_.as_ref().borrow())
+            }
+        }
+    }
+
+    #[must_use]
+    fn same_as(&self, other: &Self) -> bool {
+        match (self, other) {
+            (TypeVar::Unbound { .. }, _) | (_, TypeVar::Unbound { .. }) => true,
+            (TypeVar::Link { type_ }, TypeVar::Link { type_: other_type }) => {
+                type_.same_as(other_type)
+            }
+            (TypeVar::Link { type_ }, other @ TypeVar::Generic { .. }) => {
+                other.same_as_other_type(type_)
+            }
+            (TypeVar::Generic { id }, TypeVar::Generic { id: other_id }) => id == other_id,
+            (one @ TypeVar::Generic { .. }, TypeVar::Link { type_ }) => {
+                one.same_as_other_type(type_)
+            }
+        }
+    }
 }
 
 pub fn collapse_links(t: Arc<Type>) -> Arc<Type> {
@@ -474,7 +620,10 @@ pub struct RecordAccessor {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ValueConstructorVariant {
     /// A locally defined variable or function parameter
-    LocalVariable { location: SrcSpan },
+    LocalVariable {
+        location: SrcSpan,
+        origin: VariableOrigin,
+    },
 
     /// A module constant
     ModuleConstant {
@@ -591,7 +740,7 @@ impl ValueConstructorVariant {
 
     pub fn definition_location(&self) -> SrcSpan {
         match self {
-            ValueConstructorVariant::LocalVariable { location }
+            ValueConstructorVariant::LocalVariable { location, .. }
             | ValueConstructorVariant::ModuleConstant { location, .. }
             | ValueConstructorVariant::ModuleFn { location, .. }
             | ValueConstructorVariant::Record { location, .. } => *location,
@@ -970,6 +1119,13 @@ impl TypeVar {
         }
     }
 
+    pub fn result_types(&self) -> Option<(Arc<Type>, Arc<Type>)> {
+        match self {
+            TypeVar::Link { type_ } => type_.result_types(),
+            TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
+        }
+    }
+
     pub fn fn_types(&self) -> Option<(Vec<Arc<Type>>, Arc<Type>)> {
         match self {
             Self::Link { type_ } => type_.fn_types(),
@@ -1121,7 +1277,7 @@ impl ValueConstructor {
                 span: literal.location(),
             },
 
-            ValueConstructorVariant::LocalVariable { location } => DefinitionLocation {
+            ValueConstructorVariant::LocalVariable { location, .. } => DefinitionLocation {
                 module: None,
                 span: *location,
             },

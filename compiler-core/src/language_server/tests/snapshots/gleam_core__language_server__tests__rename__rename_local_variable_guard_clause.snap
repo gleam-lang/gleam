@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn main() {\n  let wibble = True\n  case Nil {\n    Nil if wibble -> todo\n    _ -> panic\n  }\n  wibble || False\n}\n"
+---
+----- BEFORE RENAME
+
+pub fn main() {
+  let wibble = True
+  case Nil {
+    Nil if wibble -> todo
+    _ -> panic
+  }
+  wibble || False
+  ↑              
+}
+
+
+----- AFTER RENAME
+
+pub fn main() {
+  let wobble = True
+  case Nil {
+    Nil if wobble -> todo
+    _ -> panic
+  }
+  wobble || False
+}

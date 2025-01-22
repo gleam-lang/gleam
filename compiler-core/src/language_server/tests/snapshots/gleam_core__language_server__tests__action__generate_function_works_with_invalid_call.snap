@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() -> Bool {\n  wibble(1, True, 2.3)\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() -> Bool {
+  wibble(1, True, 2.3)
+  ↑                   
+}
+
+
+----- AFTER ACTION
+
+pub fn main() -> Bool {
+  wibble(1, True, 2.3)
+}
+
+fn wibble(int: Int, bool: Bool, float: Float) -> Bool {
+  todo
+}

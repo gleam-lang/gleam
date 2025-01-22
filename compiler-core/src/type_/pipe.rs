@@ -20,7 +20,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     pub fn infer(
         expr_typer: &'a mut ExprTyper<'b, 'c>,
         expressions: Vec1<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         // The scope is reset as pipelines are rewritten into a series of
         // assignments, and we don't want these variables to leak out of the
         // pipeline.
@@ -30,14 +30,23 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         result
     }
 
-    fn run(
-        expr_typer: &'a mut ExprTyper<'b, 'c>,
-        expressions: Vec1<UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+    fn run(expr_typer: &'a mut ExprTyper<'b, 'c>, expressions: Vec1<UntypedExpr>) -> TypedExpr {
         let size = expressions.len();
         let end = expressions.last().location().end;
         let mut expressions = expressions.into_iter();
-        let first = expr_typer.infer(expressions.next().expect("Empty pipeline in typer"))?;
+        let first = expressions.next().expect("Empty pipeline in typer");
+        let first_location = first.location();
+        let first = match expr_typer.infer(first) {
+            Ok(inferred) => inferred,
+            Err(e) => {
+                expr_typer.problems.error(e);
+                TypedExpr::Invalid {
+                    location: first_location,
+                    type_: expr_typer.new_unbound_var(),
+                }
+            }
+        };
+
         let mut typer = Self {
             size,
             expr_typer,
@@ -60,24 +69,20 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     fn infer_expressions(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let finally = self.infer_each_expression(expressions);
-
-        // Return any errors after clean-up
-        let finally = finally?;
         let assignments = std::mem::take(&mut self.assignments);
-
-        Ok(TypedExpr::Pipeline {
+        TypedExpr::Pipeline {
             assignments,
             location: self.location,
             finally: Box::new(finally),
-        })
+        }
     }
 
     fn infer_each_expression(
         &mut self,
         expressions: impl IntoIterator<Item = UntypedExpr>,
-    ) -> Result<TypedExpr, Error> {
+    ) -> TypedExpr {
         let mut finally = None;
 
         for (i, call) in expressions.into_iter().enumerate() {
@@ -105,13 +110,27 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
 
                 // left |> right(..args)
+                //         ^^^^^ This is `fun`
                 UntypedExpr::Call {
                     fun,
                     arguments,
                     location,
                     ..
                 } => {
-                    let fun = self.expr_typer.infer(*fun)?;
+                    let fun = match self.expr_typer.infer(*fun) {
+                        Ok(fun) => fun,
+                        Err(e) => {
+                            // In case we cannot infer the function we'll
+                            // replace it with an invalid expression with an
+                            // unbound type to keep going!
+                            self.expr_typer.problems.error(e);
+                            TypedExpr::Invalid {
+                                location,
+                                type_: self.expr_typer.new_unbound_var(),
+                            }
+                        }
+                    };
+
                     match fun.type_().fn_types() {
                         // Rewrite as right(..args)(left)
                         Some((args, _)) if args.len() == arguments.len() => {
@@ -123,7 +142,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 }
 
                 // right(left)
-                call => self.infer_apply_pipe(call)?,
+                call => self.infer_apply_pipe(call),
             };
 
             if i + 2 == self.size {
@@ -133,7 +152,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             }
         }
 
-        Ok(finally.expect("Empty pipeline in typer"))
+        finally.expect("Empty pipeline in typer")
     }
 
     /// Create a call argument that can be used to refer to the value on the
@@ -174,6 +193,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                 type_: self.argument_type.clone(),
                 variant: ValueConstructorVariant::LocalVariable {
                     location: self.argument_location,
+                    origin: VariableOrigin::Generated,
                 },
             },
         }
@@ -201,6 +221,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         self.expr_typer.environment.insert_local_variable(
             PIPE_VARIABLE.into(),
             location,
+            VariableOrigin::Generated,
             expression.type_(),
         );
         // Add the assignment to the AST
@@ -279,28 +300,47 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     }
 
     /// Attempt to infer a |> b as b(a)
-    fn infer_apply_pipe(&mut self, function: UntypedExpr) -> Result<TypedExpr, Error> {
-        let function = Box::new(self.expr_typer.infer(function)?);
+    /// b is the `function` argument.
+    fn infer_apply_pipe(&mut self, function: UntypedExpr) -> TypedExpr {
+        let function_location = function.location();
+        let function = Box::new(match self.expr_typer.infer(function) {
+            Ok(function) => function,
+            Err(error) => {
+                // If we cannot infer the function we put an invalid expression
+                // in its place so we can still keep going with the other steps.
+                self.expr_typer.problems.error(error);
+                TypedExpr::Invalid {
+                    location: function_location,
+                    type_: self.expr_typer.new_unbound_var(),
+                }
+            }
+        });
+
         let return_type = self.expr_typer.new_unbound_var();
         // Ensure that the function accepts one argument of the correct type
-        unify(
+        let unification_result = unify(
             function.type_(),
             fn_(vec![self.argument_type.clone()], return_type.clone()),
-        )
-        .map_err(|e| {
-            if self.check_if_pipe_type_mismatch(&e) {
-                return convert_unify_error(e, function.location())
-                    .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch);
+        );
+        match unification_result {
+            Ok(_) => (),
+            Err(error) => {
+                let error = if self.check_if_pipe_type_mismatch(&error) {
+                    convert_unify_error(error, function.location())
+                        .with_unify_error_situation(UnifyErrorSituation::PipeTypeMismatch)
+                } else {
+                    convert_unify_error(flip_unify_error(error), function.location())
+                };
+                self.expr_typer.problems.error(error);
             }
-            convert_unify_error(flip_unify_error(e), function.location())
-        })?;
+        };
 
-        Ok(TypedExpr::Call {
+        TypedExpr::Call {
             location: function.location(),
             type_: return_type,
             fun: function,
             args: vec![self.typed_left_hand_value_variable_call_argument()],
-        })
+        }
     }
 
     fn check_if_pipe_type_mismatch(&mut self, error: &UnifyError) -> bool {

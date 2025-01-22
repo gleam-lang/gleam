@@ -1524,6 +1524,7 @@ pub enum ClauseGuard<Type, RecordTag> {
         location: SrcSpan,
         type_: Type,
         name: EcoString,
+        definition_location: SrcSpan,
     },
 
     TupleIndex {
@@ -1950,7 +1951,6 @@ impl TypedPattern {
             | Pattern::VarUsage { .. }
             | Pattern::Assign { .. }
             | Pattern::Discard { .. }
-            | Pattern::BitArray { .. }
             | Pattern::StringPrefix { .. }
             | Pattern::Invalid { .. } => Some(Located::Pattern(self)),
 
@@ -1972,6 +1972,11 @@ impl TypedPattern {
                 .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
 
             Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
+
+            Pattern::BitArray { segments, .. } => segments
+                .iter()
+                .find_map(|segment| segment.find_node(byte_index))
+                .or(Some(Located::Pattern(self))),
         }
         .or(Some(Located::Pattern(self)))
     }
@@ -2045,6 +2050,16 @@ pub struct BitArraySegment<Value, Type> {
 impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)
+    }
+}
+
+impl TypedPatternBitArraySegment {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        self.value.find_node(byte_index).or_else(|| {
+            self.options
+                .iter()
+                .find_map(|option| option.find_node(byte_index))
+        })
     }
 }
 
@@ -2173,6 +2188,30 @@ impl<A> BitArrayOption<A> {
             BitArrayOption::Native { .. } => "native".into(),
             BitArrayOption::Size { .. } => "size".into(),
             BitArrayOption::Unit { .. } => "unit".into(),
+        }
+    }
+}
+
+impl BitArrayOption<TypedPattern> {
+    pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Native { .. }
+            | BitArrayOption::Unit { .. } => None,
+            BitArrayOption::Size { value, .. } => value.find_node(byte_index),
         }
     }
 }

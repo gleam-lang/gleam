@@ -278,7 +278,7 @@ impl<'a> CallGraphBuilder<'a> {
                 for subject in subjects {
                     self.expression(subject);
                 }
-                for clause in clauses {
+                for clause in clauses.as_deref().unwrap_or_default() {
                     let names = self.names.clone();
                     for pattern in &clause.pattern {
                         self.pattern(pattern);

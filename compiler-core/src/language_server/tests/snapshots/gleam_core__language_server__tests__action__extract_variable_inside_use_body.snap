@@ -14,7 +14,7 @@ pub fn main() {
 ----- AFTER ACTION
 pub fn main() {
     use <- wibble(todo)
-    let value = [1, 2, 3]
-    list.map(value, int.add(1, _))
+    let ints = [1, 2, 3]
+    list.map(ints, int.add(1, _))
     todo
 }

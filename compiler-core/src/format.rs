@@ -1030,7 +1030,7 @@ impl<'comments> Formatter<'comments> {
                 subjects,
                 clauses,
                 location,
-            } => self.case(subjects, clauses, location),
+            } => self.case(subjects, clauses.as_deref().unwrap_or_default(), location),
 
             UntypedExpr::FieldAccess {
                 label, container, ..

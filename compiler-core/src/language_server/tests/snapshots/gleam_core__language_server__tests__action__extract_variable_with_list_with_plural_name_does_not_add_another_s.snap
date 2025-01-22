@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  wibble([Names, Names])\n}\n\npub type Names {\n  Names\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble([Names, Names])
+         ↑              
+}
+
+pub type Names {
+  Names
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  let names = [Names, Names]
+  wibble(names)
+}
+
+pub type Names {
+  Names
+}

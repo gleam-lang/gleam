@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  case todo {\n    1 -> Ok(2)\n    _ -> 1\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> 1
+  }
+}
+
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:5:5
+  │
+5 │     _ -> 1
+  │     ^^^^^^
+
+This case clause was found to return a different type than the previous
+one, but all case clauses must return the same type.
+
+Expected type:
+
+    Result(Int, a)
+
+Found type:
+
+    Int

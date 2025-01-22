@@ -1,6 +1,7 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
+use crate::type_::collapse_links;
 use crate::type_::error::{
     MissingAnnotation, ModuleValueUsageContext, Named, UnknownField, UnknownTypeHint,
     UnsafeRecordUpdateReason,
@@ -21,6 +22,7 @@ use std::collections::HashSet;
 use std::fmt::{Debug, Display};
 use std::io::Write;
 use std::path::PathBuf;
+use std::sync::Arc;
 use termcolor::Buffer;
 use thiserror::Error;
 use vec1::Vec1;
@@ -1492,7 +1494,7 @@ Erlang's floating point type. To avoid this error float values must be in the ra
                         "The application module `{src_module}` \
 is importing the test module `{test_module}`.
 
-Test modules are not included in production builds so test \
+Test modules are not included in production builds so application \
 modules cannot import them. Perhaps move the `{test_module}` \
 module to the src directory.",
                         );
@@ -2007,6 +2009,20 @@ But function expects:
                     text.push_str(&printer.print_type(expected));
                     text.push_str("\n\nFound type:\n\n    ");
                     text.push_str(&printer.print_type(given));
+
+                    let (main_message_location, main_message_text, extra_labels) = match situation {
+                        // When the mismatch error comes from a case clause we want to highlight the
+                        // entire branch (pattern included) when reporting the error; in addition,
+                        // if the error could be resolved just by wrapping the value in an `Ok`
+                        // or `Error` we want to add an additional label with this hint below the
+                        // offending value.
+                        Some(UnifyErrorSituation::CaseClauseMismatch{ clause_location }) => (clause_location, None, vec![]),
+                        // In all other cases we just highlight the offending expression, optionally
+                        // adding the wrapping hint if it makes sense.
+                        Some(_) | None =>
+                            (location, hint_wrap_value_in_result(expected, given), vec![])
+                    };
+
                     Diagnostic {
                         title: "Type mismatch".into(),
                         text,
@@ -2014,12 +2030,12 @@ But function expects:
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
-                                text: None,
-                                span: *location,
+                                text: main_message_text,
+                                span: *main_message_location,
                             },
                             path: path.clone(),
                             src: src.clone(),
-                            extra_labels: vec![],
+                            extra_labels,
                         }),
                     }
                 }
@@ -3066,6 +3082,27 @@ The missing patterns are:\n"
                     }
                 }
 
+                TypeError::MissingCaseBody { location } => {
+                    let text = wrap(
+                        "This case expression is missing its body."
+                        );
+                    Diagnostic {
+                        title: "Missing case body".into(),
+                        text,
+                        hint: None,
+                        level: Level::Error,
+                        location: Some(Location {
+                            src: src.clone(),
+                            path: path.to_path_buf(),
+                            label: Label {
+                                text: None,
+                                span: *location,
+                            },
+                            extra_labels: Vec::new(),
+                        }),
+                    }
+                }
+
                 TypeError::UnsupportedExpressionTarget {
                     location,
                     target: current_target,
@@ -3991,6 +4028,19 @@ fn hint_alternative_operator(op: &BinOp, given: &Type) -> Option<String> {
         BinOp::AddFloat if given.is_string() => Some(hint_string_message()),
 
         _ => None,
+    }
+}
+
+fn hint_wrap_value_in_result(expected: &Arc<Type>, given: &Arc<Type>) -> Option<String> {
+    let expected = collapse_links(expected.clone());
+    let (expected_ok_type, expected_error_type) = expected.result_types()?;
+
+    if given.same_as(expected_ok_type.as_ref()) {
+        Some("Did you mean to wrap this in an `Ok`?".into())
+    } else if given.same_as(expected_error_type.as_ref()) {
+        Some("Did you mean to wrap this in an `Error`?".into())
+    } else {
+        None
     }
 }
 

@@ -218,13 +218,19 @@ impl Environment<'_> {
 
     /// Insert a variable in the current scope.
     ///
-    pub fn insert_local_variable(&mut self, name: EcoString, location: SrcSpan, type_: Arc<Type>) {
+    pub fn insert_local_variable(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+        origin: VariableOrigin,
+        type_: Arc<Type>,
+    ) {
         let _ = self.scope.insert(
             name,
             ValueConstructor {
                 deprecation: Deprecation::NotDeprecated,
                 publicity: Publicity::Private,
-                variant: ValueConstructorVariant::LocalVariable { location },
+                variant: ValueConstructorVariant::LocalVariable { location, origin },
                 type_,
             },
         );

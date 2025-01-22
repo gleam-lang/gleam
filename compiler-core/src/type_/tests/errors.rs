@@ -2685,3 +2685,167 @@ fn negative_out_of_range_erlang_float_in_pattern() {
 fn negative_out_of_range_erlang_float_in_const() {
     assert_module_error!(r#"const x = -1.8e308"#);
 }
+
+#[test]
+fn missing_case_body() {
+    assert_error!("case True");
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+  wibble(1)
+}
+
+fn wibble(arg: Result(Int, String)) { todo }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_with_block() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> {
+      todo
+      1
+    }
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_with_generic_type() {
+    assert_module_error!(
+        "
+pub fn first(list: List(a)) -> Result(a, Nil) {
+  case list {
+    [] -> Error(Nil)
+    [first, ..rest] -> first
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_ok_if_types_match_with_multiline_result_in_block() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Ok(2)
+    _ -> {
+      todo
+      1
+      |> add_1
+    }
+  }
+}
+
+fn add_1(n: Int) { n + 1 }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_error_if_types_match() {
+    assert_module_error!(
+        "
+pub fn main() {
+  case todo {
+    1 -> Error(1)
+    _ -> 1
+  }
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_value_into_error_if_types_match_2() {
+    assert_module_error!(
+        "
+pub fn main() {
+    wibble(\"a\")
+}
+
+fn wibble(arg: Result(Int, String)) { todo }
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_function_return_value_in_ok() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  1
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_function_return_value_in_error() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  True
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_use_returned_value_in_ok() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  1
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+"
+    );
+}
+
+#[test]
+fn suggest_wrapping_a_use_returned_value_in_error() {
+    assert_module_error!(
+        "
+pub fn main() -> Result(Int, Bool) {
+  use <- want_result
+  False
+}
+
+pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
+  todo
+}
+"
+    );
+}

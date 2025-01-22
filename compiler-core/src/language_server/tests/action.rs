@@ -73,6 +73,7 @@ const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
+const GENERATE_FUNCTION: &str = "Generate function";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4030,6 +4031,38 @@ fn extract_variable_does_not_extract_a_variable() {
 }
 
 #[test]
+fn extract_variable_does_not_extract_an_entire_pipeline_step() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    [1, 2, 3]
+    |> map(todo)
+    |> map(todo)
+}
+
+fn map(list, fun) { todo }
+"#,
+        find_position_of("map").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_does_not_extract_the_last_pipeline_step() {
+    assert_no_code_actions!(
+        EXTRACT_VARIABLE,
+        r#"pub fn main() {
+    [1, 2, 3]
+    |> map(todo)
+    |> map(todo)
+}
+
+fn map(list, fun) { todo }
+"#,
+        find_position_of("map").to_selection()
+    );
+}
+
+#[test]
 fn extract_variable_2() {
     assert_code_action!(
         EXTRACT_VARIABLE,
@@ -4241,10 +4274,26 @@ fn expand_function_capture_does_not_shadow_variables() {
         EXPAND_FUNCTION_CAPTURE,
         r#"pub fn main() {
   let value = 1
-  let value1 = 2
-  wibble(value, _, value1)
+  let value_2 = 2
+  wibble(value, _, value_2)
 }"#,
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn expand_function_capture_picks_a_name_based_on_the_type_of_the_hole() {
+    assert_code_action!(
+        EXPAND_FUNCTION_CAPTURE,
+        r#"pub fn main() {
+  [1, 2, 3]
+  |> map(add(_, 1))
+}
+
+pub fn map(l: List(a), f: fn(a) -> b) -> List(b) { todo }
+pub fn add(n, m) { n + m }
+"#,
+        find_position_of("add").to_selection()
     );
 }
 
@@ -4687,5 +4736,121 @@ pub fn main() {
 fn map(list: List(a), fun: fn(a) -> b) { todo }
 ",
         find_position_of("tuple").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_works_with_invalid_call() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() -> Bool {
+  wibble(1, True, 2.3)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_works_with_pipeline_steps() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> sum
+  |> int_to_string
+}
+
+fn int_to_string(n: Int) -> String {
+  todo
+}
+",
+        find_position_of("sum").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_works_with_pipeline_steps_1() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(int_to_string)
+  |> join
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) {
+  todo
+}
+
+fn join(n: List(String)) -> String {
+  todo
+}
+",
+        find_position_of("int_to_string").to_selection()
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4177#event-15968345230
+#[test]
+fn generate_function_picks_argument_name_based_on_type() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(\"Hello\", 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_wont_generate_two_arguments_with_the_same_name_if_they_have_the_same_type() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(2, 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+pub type Wibble {
+  Wibble(String, string: String)
+}
+
+pub fn main(wibble: Wibble) {
+  todo
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn extract_variable_with_list_with_plural_name_does_not_add_another_s() {
+    assert_code_action!(
+        EXTRACT_VARIABLE,
+        "
+pub fn main() {
+  wibble([Names, Names])
+}
+
+pub type Names {
+  Names
+}
+",
+        find_position_of("[").to_selection()
     );
 }
