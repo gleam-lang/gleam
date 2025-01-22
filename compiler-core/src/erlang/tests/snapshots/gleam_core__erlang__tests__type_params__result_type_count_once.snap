@@ -15,7 +15,7 @@ expression: "\n        pub fn wibble() -> Result(a, a) {\n            todo\n    
 
 -export([wibble/0]).
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec wibble() -> {ok, any()} | {error, any()}.
 wibble() ->
     erlang:error(#{gleam_error => todo,

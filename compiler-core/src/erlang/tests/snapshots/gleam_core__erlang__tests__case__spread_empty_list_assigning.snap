@@ -17,7 +17,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> list(any()).
 main() ->
     case [] of

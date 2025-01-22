@@ -17,7 +17,7 @@ pub fn a(name_: String) -> String {
 
 -export([a/1]).
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec a(binary()) -> binary().
 a(Name_) ->
     Name__ = Name_,

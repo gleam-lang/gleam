@@ -12,12 +12,12 @@ pub fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
 
 -export([x/0]).
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec go(I, any()) -> I.
 go(Xx, Yy) ->
     Xx.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec x() -> integer().
 x() ->
     go(1, 2),

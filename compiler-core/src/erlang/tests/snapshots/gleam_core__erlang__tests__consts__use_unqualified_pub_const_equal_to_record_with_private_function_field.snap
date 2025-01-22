@@ -24,7 +24,7 @@ expression: "\n              fn identity(a) {\n                a\n              
 
 -type mapper(I) :: {mapper, fun((I) -> I)}.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec identity(J) -> J.
 identity(A) ->
     A.

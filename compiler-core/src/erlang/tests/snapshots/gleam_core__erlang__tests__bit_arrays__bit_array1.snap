@@ -18,12 +18,12 @@ fn main() {
 
 -export([x/0]).
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec x() -> integer().
 x() ->
     2.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
     A = -1,

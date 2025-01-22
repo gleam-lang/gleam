@@ -15,7 +15,7 @@ pub fn main(x) {
 
 -export([main/1]).
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main(K) -> K.
 main(X) ->
     (fun(X@1) -> X@1 end)(X).

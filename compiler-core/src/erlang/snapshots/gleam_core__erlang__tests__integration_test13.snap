@@ -16,12 +16,12 @@ pub type State{ Start(Int) End(Int) }
 
 -type state() :: {start, integer()} | {'end', integer()}.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec build(fun((integer()) -> I)) -> I.
 build(Constructor) ->
     Constructor(1).
 
--file("my/mod/project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec main() -> state().
 main() ->
     build(fun(Field@0) -> {'end', Field@0} end).

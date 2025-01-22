@@ -20,7 +20,7 @@ pub fn go(a) {
 
 -export([go/1]).
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec go(integer()) -> integer().
 go(A) ->
     case A of

@@ -12,12 +12,12 @@ fn inc(x) { x + 1 }
 
 -export([go/0]).
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec inc(integer()) -> integer().
 inc(X) ->
     X + 1.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec go() -> integer().
 go() ->
     _pipe = 1,

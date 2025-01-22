@@ -40,12 +40,12 @@ pub fn main() {
 
 -type d() :: d.
 
--file("my/mod/project/test/my/mod.gleam", 7).
+-file("project/test/my/mod.gleam", 7).
 -spec wibble(a(), b(), c(), d()) -> nil.
 wibble(A, B, C, D) ->
     nil.
 
--file("my/mod/project/test/my/mod.gleam", 11).
+-file("project/test/my/mod.gleam", 11).
 -spec main() -> nil.
 main() ->
     wibble(a, b, c, d),

@@ -20,12 +20,12 @@ pub fn add(x) {
 
 -export([add/1, main/0]).
 
--file("my/mod/project/test/my/mod.gleam", 7).
+-file("project/test/my/mod.gleam", 7).
 -spec add(integer()) -> fun((fun(() -> integer())) -> integer()).
 add(X) ->
     fun(F) -> F() + X end.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     begin

@@ -28,7 +28,7 @@ pub fn main(a: A) {
 
 -type c() :: {c, integer()}.
 
--file("my/mod/project/test/my/mod.gleam", 5).
+-file("project/test/my/mod.gleam", 5).
 -spec main(a()) -> a().
 main(A) ->
     _record = A,

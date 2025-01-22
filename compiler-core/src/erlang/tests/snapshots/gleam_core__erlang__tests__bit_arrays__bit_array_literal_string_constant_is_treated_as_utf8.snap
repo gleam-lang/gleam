@@ -14,7 +14,7 @@ pub fn main() { a }
 
 -export([main/0]).
 
--file("my/mod/project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec main() -> bitstring().
 main() ->
     <<"hello"/utf8, " "/utf8, "world"/utf8>>.

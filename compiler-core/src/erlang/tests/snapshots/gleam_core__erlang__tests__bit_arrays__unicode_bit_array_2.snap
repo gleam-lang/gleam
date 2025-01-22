@@ -14,7 +14,7 @@ expression: "\n    pub fn main() {\n        let arr = <<\"\\u{1F600}\":utf8>>\n}
 
 -export([main/0]).
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> bitstring().
 main() ->
     Arr = <<"\x{1F600}"/utf8>>.

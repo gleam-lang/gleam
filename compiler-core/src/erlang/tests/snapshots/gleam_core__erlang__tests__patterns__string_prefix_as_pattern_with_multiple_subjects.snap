@@ -16,7 +16,7 @@ pub fn a(x) {
 
 -export([a/1]).
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec a(binary()) -> binary().
 a(X) ->
     case {X, X} of

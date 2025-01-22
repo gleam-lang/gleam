@@ -27,6 +27,7 @@ use im::HashSet;
 use itertools::Itertools;
 use pattern::pattern;
 use regex::{Captures, Regex};
+use std::path;
 use std::sync::OnceLock;
 use std::{collections::HashMap, ops::Deref, str::FromStr, sync::Arc};
 use vec1::Vec1;
@@ -224,15 +225,17 @@ fn module_document<'a>(
     };
 
     let src_path_full = EcoString::from(module.type_info.src_path.as_str());
-    let root_str = root.as_str();
+    let root_str = root.to_string();
+    let separator = path::MAIN_SEPARATOR.to_string();
     let src_path_relative = root_str
         .is_empty()
         .then(|| src_path_full.clone())
         .unwrap_or_else(|| {
-            src_path_full
-                .strip_prefix(root_str)
-                .map(|relative_path| module.name.clone() + relative_path)
-                .unwrap_or_else(|| src_path_full.clone())
+            EcoString::from(
+                src_path_full
+                    .strip_prefix(&(root_str + &separator))
+                    .unwrap_or(&src_path_full),
+            )
         });
 
     let mut needs_function_docs = false;

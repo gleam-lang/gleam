@@ -13,7 +13,7 @@ type Point { Point(x: Int, y: Int) } fn x(y) { let Point(a, b) = y a }
 
 -type point() :: {point, integer(), integer()}.
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec x(point()) -> integer().
 x(Y) ->
     {point, A, B} = Y,

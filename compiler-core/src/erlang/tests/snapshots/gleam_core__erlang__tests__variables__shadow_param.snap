@@ -14,7 +14,7 @@ fn(board) { board }
 
 -export([main/1]).
 
--file("my/mod/project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec main(I) -> I.
 main(Board) ->
     fun(Board@1) -> Board@1 end,

@@ -14,7 +14,7 @@ type Point { Point(x: Int, y: Int) }
 
 -type point() :: {point, integer(), integer()}.
 
--file("my/mod/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec x() -> point().
 x() ->
     {point, 4, 6},

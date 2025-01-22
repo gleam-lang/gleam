@@ -15,7 +15,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("my/mod/project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec main() -> fun((integer()) -> other_module:'let'()).
 main() ->
     fun(Field@0) -> {'let', Field@0} end.
