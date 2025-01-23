@@ -93,8 +93,9 @@ fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
     let paths = ProjectPaths::new(project.clone());
     let config = crate::config::root_config()?;
     let dependency_manager = DependencyManagerConfig {
+        mode: Mode::Dev,
         use_manifest: UseManifest::Yes,
-        ..Default::default()
+        check_major_versions: CheckMajorVersions::No,
     }
     .into_dependency_manager(
         runtime.handle().clone(),
@@ -230,9 +231,9 @@ pub fn update(packages: Vec<String>) -> Result<()> {
         None,
         packages.into_iter().map(EcoString::from).collect(),
         DependencyManagerConfig {
+            mode: Mode::Dev,
             use_manifest,
             check_major_versions: CheckMajorVersions::Yes,
-            ..Default::default()
         },
     )?;
 
@@ -633,16 +634,6 @@ pub struct DependencyManagerConfig {
     pub mode: Mode,
     pub use_manifest: UseManifest,
     pub check_major_versions: CheckMajorVersions,
-}
-
-impl Default for DependencyManagerConfig {
-    fn default() -> Self {
-        Self {
-            mode: Mode::Dev,
-            use_manifest: UseManifest::No,
-            check_major_versions: CheckMajorVersions::No,
-        }
-    }
 }
 
 impl DependencyManagerConfig {
