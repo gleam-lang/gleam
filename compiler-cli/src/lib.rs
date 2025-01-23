@@ -781,9 +781,9 @@ fn download_dependencies(paths: &ProjectPaths) -> Result<()> {
         None,
         Vec::new(),
         dependencies::DependencyManagerConfig {
+            mode: Mode::Dev,
             use_manifest: dependencies::UseManifest::Yes,
-            check_major_versions: dependencies::CheckMajorVersions::Yes,
-            ..Default::default()
+            check_major_versions: dependencies::CheckMajorVersions::No,
         },
     )?;
     Ok(())
