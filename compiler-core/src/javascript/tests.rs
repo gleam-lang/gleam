@@ -16,6 +16,7 @@ mod case;
 mod case_clause_guards;
 mod consts;
 mod custom_types;
+mod echo;
 mod externals;
 mod functions;
 mod generics;
@@ -203,14 +204,22 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    module(
+    let stdlib_package = StdlibPackage::Present;
+    let output = module(
         &ast,
         &line_numbers,
         Utf8Path::new(""),
+        "project/root".into(),
         &"".into(),
         TargetSupport::Enforced,
         TypeScriptDeclarations::None,
-    )
+        stdlib_package,
+    )?;
+
+    Ok(output.replace(
+        std::include_str!("../../templates/echo.mjs"),
+        "// ...omitted code from `templates/echo.mjs`...",
+    ))
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {

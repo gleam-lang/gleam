@@ -4,6 +4,45 @@
 
 ### Compiler
 
+- You can now use the `echo` keyword to debug print any value: `echo` can be
+  followed by any expression and it will print it to stderr alongside the module
+  it comes from and its line number. This:
+
+  ```gleam
+  pub fn main() {
+    echo [1, 2, 3]
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:2
+  [1, 2, 3]
+  ```
+
+  `echo` can also be used in the middle of a pipeline. This:
+
+  ```gleam
+  pub fn main() {
+    [1, 2, 3]
+    |> echo
+    |> list.map(fn(x) { x * 2 })
+    |> echo
+  }
+  ```
+
+  Will output to stderr:
+
+  ```txt
+  /src/module.gleam:3
+  [1, 2, 3]
+  /src/module.gleam:5
+  [2, 4, 6]
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - Pipelines are now fault tolerant. A type error in the middle of a pipeline
   won't stop the compiler from figuring out the types of the remaining pieces,
   enabling the language server to show better suggestions for incomplete pipes.
@@ -66,6 +105,10 @@
 
 ### Build tool
 
+- The build tool now refuses to publish any incomplete package that has any
+  `echo` debug printing left.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - `gleam new` now has refined project name validation - rather than failing on
   invalid project names, it suggests a valid alternative and prompts for
   confirmation to use it.
@@ -81,13 +124,13 @@
   Usage: gleam deps tree [OPTIONS]
 
   Options:
-    -p, --package <PACKAGE>  Package to be used as the root of the tree
-    -i, --invert <PACKAGE>   Invert the tree direction and focus on the given package
-    -h, --help               Print help
+  -p, --package <PACKAGE> Package to be used as the root of the tree
+  -i, --invert <PACKAGE> Invert the tree direction and focus on the given package
+  -h, --help Print help
   ```
 
-  For example, if the root project (`project_a`) depends on `package_b` and `package_c`, and `package_c` also depends on `package_b`, the output will be:
-
+  For example, if the root project (`project_a`) depends on `package_b` and
+  `package_c`, and `package_c` also depends on `package_b`, the output will be:
 
   ```markdown
   $ gleam deps tree
@@ -95,7 +138,7 @@
   project_a v1.0.0
   ├── package_b v0.52.0
   └── package_c v1.2.0
-      └── package_b v0.52.0
+  └── package_b v0.52.0
 
   $ gleam deps tree --package package_c
 
@@ -106,9 +149,8 @@
 
   package_b v0.52.0
   ├── package_c v1.2.0
-  │   └── project_a v1.0.0
+  │ └── project_a v1.0.0
   └── project_a v1.0.0
-
   ```
 
   ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
@@ -240,7 +282,6 @@
 
   Triggering a rename and entering `my_number` results in this code:
 
-
   ```gleam
   pub fn main() {
     let my_number = 10
@@ -249,7 +290,6 @@
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
-
 
 ### Formatter
 

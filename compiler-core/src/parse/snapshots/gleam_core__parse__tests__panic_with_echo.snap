@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "panic as echo \"string\""
+---
+[
+    Expression(
+        Panic {
+            location: SrcSpan {
+                start: 0,
+                end: 22,
+            },
+            message: Some(
+                Echo {
+                    location: SrcSpan {
+                        start: 9,
+                        end: 22,
+                    },
+                    expression: Some(
+                        String {
+                            location: SrcSpan {
+                                start: 14,
+                                end: 22,
+                            },
+                            value: "string",
+                        },
+                    ),
+                },
+            ),
+        },
+    ),
+]
