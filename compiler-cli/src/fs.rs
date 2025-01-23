@@ -1,6 +1,6 @@
 use gleam_core::{
     Result, Warning,
-    build::{NullTelemetry, Target},
+    build::{Mode, NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
@@ -252,8 +252,9 @@ impl DownloadDependencies for ProjectIO {
             None,
             Vec::new(),
             dependencies::DependencyManagerConfig {
+                mode: Mode::Dev,
                 use_manifest: dependencies::UseManifest::Yes,
-                ..Default::default()
+                check_major_versions: dependencies::CheckMajorVersions::No,
             },
         )
     }
