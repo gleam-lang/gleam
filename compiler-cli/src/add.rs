@@ -1,6 +1,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 
 use gleam_core::{
+    build::Mode,
     Error, Result,
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
@@ -33,8 +34,9 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
         Some((new_package_requirements.clone(), dev)),
         Vec::new(),
         dependencies::DependencyManagerConfig {
+            mode: Mode::Dev,
             use_manifest: dependencies::UseManifest::Yes,
-            ..Default::default()
+            check_major_versions: dependencies::CheckMajorVersions::No,
         },
     )?;
 
