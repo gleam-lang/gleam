@@ -2108,6 +2108,23 @@ pub fn identity(x: wobble.Wobble) -> wobble.Wobble {
 }
 
 #[test]
+fn test_qualified_to_unqualified_record_value_constructor_module_name() {
+    let src = r#"
+import option
+
+pub fn main() {
+  option.Some(1)
+}
+"#;
+    assert_code_action!(
+        "Unqualify option.Some",
+        TestProject::for_source(src)
+            .add_hex_module("option", "pub type Option(v) { Some(v) None }"),
+        find_position_of("option").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
 fn test_qualified_to_unqualified_import_basic_multiple() {
     let src = r#"
 import option
