@@ -27,7 +27,7 @@ pub fn main() {
 
 -type wobble() :: {wobble, integer(), integer()}.
 
--file("project/test/my/mod.gleam", 9).
+-file("./project/test/my/mod.gleam", 9).
 -spec main() -> wibble().
 main() ->
     Base = {wibble, 1, {wobble, 2, 3}, 4},

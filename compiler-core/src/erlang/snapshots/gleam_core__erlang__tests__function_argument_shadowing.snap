@@ -21,7 +21,7 @@ pub type Box {
 
 -type box() :: {box, integer()}.
 
--file("project/test/my/mod.gleam", 1).
+-file("./project/test/my/mod.gleam", 1).
 -spec main(any()) -> fun((integer()) -> box()).
 main(A) ->
     fun(Field@0) -> {box, Field@0} end.

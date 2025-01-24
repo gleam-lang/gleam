@@ -24,12 +24,12 @@ fn return_person() {
 
 -type person() :: {person, binary(), integer()}.
 
--file("project/test/my/mod.gleam", 9).
+-file("./project/test/my/mod.gleam", 9).
 -spec return_person() -> person().
 return_person() ->
     {person, <<"Quinn"/utf8>>, 27}.
 
--file("project/test/my/mod.gleam", 4).
+-file("./project/test/my/mod.gleam", 4).
 -spec main() -> person().
 main() ->
     New_p = begin

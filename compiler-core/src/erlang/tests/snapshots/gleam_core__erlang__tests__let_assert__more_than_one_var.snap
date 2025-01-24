@@ -14,7 +14,7 @@ pub fn go(x) {
 
 -export([go/1]).
 
--file("project/test/my/mod.gleam", 1).
+-file("./project/test/my/mod.gleam", 1).
 -spec go(list(integer())) -> list(integer()).
 go(X) ->
     [1, A, B, C] = case X of

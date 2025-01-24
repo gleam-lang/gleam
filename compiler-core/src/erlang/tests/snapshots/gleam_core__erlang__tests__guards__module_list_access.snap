@@ -20,7 +20,7 @@ expression: "\n          import hero\n          pub fn main() {\n            let
 
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 3).
+-file("./project/test/my/mod.gleam", 3).
 -spec main() -> boolean().
 main() ->
     Names = [<<"Tony Stark"/utf8>>, <<"Bruce Wayne"/utf8>>],

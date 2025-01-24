@@ -18,7 +18,7 @@ pub fn main(x) {
 
 -export([main/1]).
 
--file("project/test/my/mod.gleam", 2).
+-file("./project/test/my/mod.gleam", 2).
 -spec main(list(integer())) -> integer().
 main(X) ->
     case X of

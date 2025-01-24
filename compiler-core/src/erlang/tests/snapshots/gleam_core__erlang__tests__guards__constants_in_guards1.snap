@@ -20,7 +20,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
--file("project/test/my/mod.gleam", 4).
+-file("./project/test/my/mod.gleam", 4).
 -spec main(list(integer())) -> integer().
 main(Arg) ->
     case Arg of

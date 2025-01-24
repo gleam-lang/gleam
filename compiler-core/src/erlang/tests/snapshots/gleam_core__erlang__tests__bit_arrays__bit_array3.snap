@@ -16,7 +16,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 1).
+-file("./project/test/my/mod.gleam", 1).
 -spec main() -> integer().
 main() ->
     A = <<"test"/utf8>>,
