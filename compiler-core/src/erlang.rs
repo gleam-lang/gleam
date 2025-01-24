@@ -231,8 +231,9 @@ fn module_document<'a>(
         .unwrap_or_else(|| {
             EcoString::from(
                 src_path_full
-                    .strip_prefix(&(root_str + "/"))
-                    .unwrap_or(&src_path_full),
+                    .strip_prefix(&root_str)
+                    .map(|remaining| format!(".{}", remaining))
+                    .unwrap_or_else(|| src_path_full.to_string()),
             )
         });
 

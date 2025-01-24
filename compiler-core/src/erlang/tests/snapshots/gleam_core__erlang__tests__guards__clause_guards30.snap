@@ -18,7 +18,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("project/test/my/mod.gleam", 2).
+-file("./project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     case {0.1, 1.0} of

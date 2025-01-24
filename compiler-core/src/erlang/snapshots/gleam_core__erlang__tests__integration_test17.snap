@@ -16,7 +16,7 @@ fn create_user(user_id) { User(age: 22, id: user_id, name: "") }
 
 -type user() :: {user, integer(), binary(), integer()}.
 
--file("project/test/my/mod.gleam", 3).
+-file("./project/test/my/mod.gleam", 3).
 -spec create_user(integer()) -> user().
 create_user(User_id) ->
     {user, User_id, <<""/utf8>>, 22}.

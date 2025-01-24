@@ -28,7 +28,7 @@ expression: "\n        pub type Person {\n          Person(username: String, nam
 
 -type person() :: {person, binary(), binary(), integer()}.
 
--file("project/test/my/mod.gleam", 6).
+-file("./project/test/my/mod.gleam", 6).
 -spec main() -> binary().
 main() ->
     Given_name = <<"jack"/utf8>>,
