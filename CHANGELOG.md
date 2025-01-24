@@ -250,6 +250,17 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- `Unqualify` Action now get triggered when hovering over the module name
+  for record value constructor.
+  For example:
+
+  ```gleam
+  pub fn main() {
+    let my_option = option.Some(1)
+    //                 ^ would trigger "Unqualify option.Some"
+  }
+  ```
+  ([Jiangda Wang](https://github.com/Frank-III))
 
 ### Formatter
 
