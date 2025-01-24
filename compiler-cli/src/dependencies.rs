@@ -646,8 +646,15 @@ fn same_requirements(
 }
 
 pub struct DependencyManagerConfig {
+    /// In `Prod` mode, dev dependencies are not considered during the executed operation.
+    /// Otherwise (`Dev` or `Lsp`), all dependencies are considered
     pub mode: Mode,
+    // If `Yes` we read the manifest from disc. If not set then we ignore any
+    // manifest which will result in the latest versions of the dependency
+    // packages being resolved (not the locked ones).
     pub use_manifest: UseManifest,
+    /// When set to `Yes`, the cli will check for major version updates of direct dependencies and
+    /// print them to the console if the major versions are not upgradeable due to constraints.
     pub check_major_versions: CheckMajorVersions,
 }
 
