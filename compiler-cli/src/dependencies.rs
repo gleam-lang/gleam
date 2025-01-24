@@ -677,7 +677,7 @@ impl DependencyManagerConfig {
     }
 }
 
-pub struct DependencyManager<Telem: Telemetry, P: dependency::PackageFetcher> {
+pub struct DependencyManager<Telem, P> {
     runtime: tokio::runtime::Handle,
     package_fetcher: P,
     mode: Mode,
