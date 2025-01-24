@@ -1367,7 +1367,14 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         module_alias: &'ast EcoString,
         constructor: &'ast ModuleValueConstructor,
     ) {
-        let range = src_span_to_lsp_range(*location, &self.line_numbers);
+        // When hovering over a Record Value Constructor, we want to expand the source span to
+        // include the module name:
+        // option.Some
+        //  ↑
+        // This allows us to offer a code action when hovering over the module name.
+        let expanded_location =
+            SrcSpan::new(location.start - module_name.len() as u32, location.end);
+        let range = src_span_to_lsp_range(expanded_location, &self.line_numbers);
         if overlaps(self.params.range, range) {
             if let ModuleValueConstructor::Record {
                 name: constructor_name,
