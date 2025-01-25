@@ -92,7 +92,6 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
     let config = crate::config::root_config(paths)?;
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
     let dependency_manager = DependencyManagerConfig {
-        mode: Mode::Dev,
         use_manifest: UseManifest::Yes,
         check_major_versions: CheckMajorVersions::No,
     }
@@ -100,6 +99,7 @@ fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest
         runtime.handle().clone(),
         package_fetcher,
         cli::Reporter::new(),
+        Mode::Dev,
     );
     let (_, manifest) = dependency_manager.get_manifest(&paths, &config, Vec::new())?;
     Ok((config, manifest))
@@ -229,7 +229,6 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
         None,
         packages.into_iter().map(EcoString::from).collect(),
         DependencyManagerConfig {
-            mode: Mode::Dev,
             use_manifest,
             check_major_versions: CheckMajorVersions::Yes,
         },
@@ -371,8 +370,12 @@ pub fn download<Telem: Telemetry>(
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let package_fetcher = PackageFetcher::new(runtime.handle().clone());
 
-    let dependency_manager =
-        config.into_dependency_manager(runtime.handle().clone(), package_fetcher, telemetry);
+    let dependency_manager = config.into_dependency_manager(
+        runtime.handle().clone(),
+        package_fetcher,
+        telemetry,
+        Mode::Dev,
+    );
 
     dependency_manager.download(paths, new_package, packages_to_update)
 }
@@ -646,9 +649,6 @@ fn same_requirements(
 }
 
 pub struct DependencyManagerConfig {
-    /// In `Prod` mode, dev dependencies are not considered during the executed operation.
-    /// Otherwise (`Dev` or `Lsp`), all dependencies are considered
-    pub mode: Mode,
     // If `Yes` we read the manifest from disc. If not set then we ignore any
     // manifest which will result in the latest versions of the dependency
     // packages being resolved (not the locked ones).
@@ -664,13 +664,14 @@ impl DependencyManagerConfig {
         runtime: tokio::runtime::Handle,
         package_fetcher: P,
         telemetry: Telem,
+        mode: Mode,
     ) -> DependencyManager<Telem, P> {
         DependencyManager {
             runtime,
             package_fetcher,
             telemetry,
 
-            mode: self.mode,
+            mode,
             use_manifest: self.use_manifest,
             check_major_versions: self.check_major_versions,
         }
