@@ -266,3 +266,7 @@
 - Fixed a bug where the "Extract variable" code action would erroneously extract
   a pipeline step as a variable.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where variables bound in `let assert` assignments would be allowed
+  to be used in the custom panic message.
+  ([Surya Rose](https://github.com/GearsDatapacks))

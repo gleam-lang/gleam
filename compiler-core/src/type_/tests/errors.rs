@@ -2849,3 +2849,15 @@ pub fn want_result(wibble: fn() -> Result(Int, Bool)) {
 "
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/4195
+fn let_assert_binding_cannot_be_used_in_panic_message() {
+    assert_module_error!(
+        r#"
+pub fn main() {
+  let assert Ok(message) = Error("Not Message") as { "Uh oh: " <> message }
+}
+"#
+    );
+}
