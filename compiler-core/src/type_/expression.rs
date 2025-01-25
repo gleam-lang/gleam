@@ -1325,13 +1325,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_typ = value.type_();
 
-        let kind = match self.infer_assignment_kind(kind) {
-            Ok(kind) => kind,
-            Err(error) => {
-                self.problems.error(error);
-                AssignmentKind::Generated
-            }
-        };
+        let kind = self.infer_assignment_kind(kind.clone());
 
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
@@ -1401,10 +1395,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_assignment_kind(
         &mut self,
         kind: AssignmentKind<UntypedExpr>,
-    ) -> Result<AssignmentKind<TypedExpr>, Error> {
+    ) -> AssignmentKind<TypedExpr> {
         match kind {
-            AssignmentKind::Let => Ok(AssignmentKind::Let),
-            AssignmentKind::Generated => Ok(AssignmentKind::Generated),
+            AssignmentKind::Let => AssignmentKind::Let,
+            AssignmentKind::Generated => AssignmentKind::Generated,
             AssignmentKind::Assert { location, message } => {
                 let message = match message {
                     Some(message) => {
@@ -1412,15 +1406,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             FeatureKind::LetAssertWithMessage,
                             message.location(),
                         );
-                        let message = self.infer(*message)?;
+                        let message = self.infer(*message).unwrap_or_else(|error| {
+                            self.problems.error(error);
+                            self.error_expr(location)
+                        });
 
-                        unify(string(), message.type_())
-                            .map_err(|e| convert_unify_error(e, message.location()))?;
+                        let _ = unify(string(), message.type_()).map_err(|e| {
+                            self.problems
+                                .error(convert_unify_error(e, message.location()))
+                        });
                         Some(Box::new(message))
                     }
                     None => None,
                 };
-                Ok(AssignmentKind::Assert { location, message })
+                AssignmentKind::Assert { location, message }
             }
         }
     }
