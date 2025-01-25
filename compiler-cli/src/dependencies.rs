@@ -644,7 +644,7 @@ pub struct DependencyManagerConfig {
 }
 
 impl DependencyManagerConfig {
-    pub fn into_dependency_manager<Telem: Telemetry, P: dependency::PackageFetcher>(
+    fn into_dependency_manager<Telem: Telemetry, P: dependency::PackageFetcher>(
         self,
         runtime: tokio::runtime::Handle,
         package_fetcher: P,
@@ -663,7 +663,7 @@ impl DependencyManagerConfig {
     }
 }
 
-pub struct DependencyManager<Telem, P> {
+struct DependencyManager<Telem, P> {
     runtime: tokio::runtime::Handle,
     package_fetcher: P,
     mode: Mode,
@@ -677,7 +677,7 @@ where
     P: dependency::PackageFetcher,
     Telem: Telemetry,
 {
-    pub fn get_manifest(
+    fn get_manifest(
         &self,
         paths: &ProjectPaths,
         config: &PackageConfig,
@@ -723,7 +723,7 @@ where
         }
     }
 
-    pub fn download(
+    fn download(
         &self,
         paths: &ProjectPaths,
         new_package: Option<(Vec<(EcoString, Requirement)>, bool)>,
@@ -795,7 +795,7 @@ where
         Ok(manifest)
     }
 
-    pub fn resolve_versions(
+    fn resolve_versions(
         &self,
         project_paths: &ProjectPaths,
         config: &PackageConfig,
