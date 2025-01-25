@@ -654,7 +654,7 @@ fn atom(value: &str) -> Document<'_> {
     }
 }
 
-fn escape_atom_string(value: String) -> EcoString {
+pub fn escape_atom_string(value: String) -> EcoString {
     if is_erlang_reserved_word(&value) {
         // Escape because of keyword collision
         eco_format!("'{value}'")
