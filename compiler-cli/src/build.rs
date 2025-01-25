@@ -1,7 +1,7 @@
 use std::{rc::Rc, time::Instant};
 
 use gleam_core::{
-    build::{Built, Codegen, Mode, NullTelemetry, Options, ProjectCompiler, Telemetry},
+    build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
     paths::ProjectPaths,
     warning::WarningEmitterIO,
@@ -22,7 +22,6 @@ pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
         None,
         Vec::new(),
         dependencies::DependencyManagerConfig {
-            mode: Mode::Dev,
             use_manifest: dependencies::UseManifest::Yes,
             check_major_versions: dependencies::CheckMajorVersions::No,
         },
