@@ -1325,6 +1325,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let value_typ = value.type_();
 
+        let kind = match self.infer_assignment_kind(kind) {
+            Ok(kind) => kind,
+            Err(error) => {
+                self.problems.error(error);
+                AssignmentKind::Generated
+            }
+        };
+
         // Ensure the pattern matches the type of the value
         let pattern_location = pattern.location();
         let mut pattern_typer = pattern::PatternTyper::new(
@@ -1380,14 +1388,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             (AssignmentKind::Assert { .. }, _) => {}
         }
-
-        let kind = match self.infer_assignment_kind(kind) {
-            Ok(kind) => kind,
-            Err(error) => {
-                self.problems.error(error);
-                AssignmentKind::Generated
-            }
-        };
 
         Assignment {
             location,
