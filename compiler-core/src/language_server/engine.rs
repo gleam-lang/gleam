@@ -501,44 +501,53 @@ where
         params: lsp::TextDocumentPositionParams,
     ) -> Response<Option<PrepareRenameResponse>> {
         self.respond(|this| {
-            let (_, found) = match this.node_at_position(&params) {
+            let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
             };
 
-            let success_response = Some(PrepareRenameResponse::DefaultBehavior {
-                default_behavior: true,
-            });
+            let success_response = |location| {
+                Some(PrepareRenameResponse::Range(src_span_to_lsp_range(
+                    location, &lines,
+                )))
+            };
 
             Ok(match found {
                 Located::Expression(TypedExpr::Var {
                     constructor:
                         ValueConstructor {
-                            variant: ValueConstructorVariant::LocalVariable { origin, .. },
+                            variant: ValueConstructorVariant::LocalVariable { origin, location },
                             ..
                         },
                     ..
                 })
-                | Located::Pattern(Pattern::Variable { origin, .. }) => match origin {
+                | Located::Pattern(Pattern::Variable {
+                    origin, location, ..
+                }) => match origin {
                     VariableOrigin::Variable(_)
                     | VariableOrigin::AssignmentPattern
-                    | VariableOrigin::LabelShorthand(_) => success_response,
+                    | VariableOrigin::LabelShorthand(_) => success_response(*location),
                     VariableOrigin::Generated => None,
                 },
                 Located::Pattern(Pattern::VarUsage { constructor, .. }) => constructor
                     .as_ref()
                     .and_then(|constructor| match &constructor.variant {
-                        ValueConstructorVariant::LocalVariable { origin, .. } => match origin {
+                        ValueConstructorVariant::LocalVariable { origin, location } => match origin
+                        {
                             VariableOrigin::Variable(_)
                             | VariableOrigin::AssignmentPattern
-                            | VariableOrigin::LabelShorthand(_) => success_response,
+                            | VariableOrigin::LabelShorthand(_) => success_response(*location),
                             VariableOrigin::Generated => None,
                         },
                         _ => None,
                     }),
-                Located::Pattern(Pattern::Assign { .. }) => success_response,
+                Located::Pattern(Pattern::Assign { location, .. }) => success_response(*location),
                 Located::Arg(arg) => match &arg.names {
-                    ArgNames::Named { .. } | ArgNames::NamedLabelled { .. } => success_response,
+                    ArgNames::Named { location, .. }
+                    | ArgNames::NamedLabelled {
+                        name_location: location,
+                        ..
+                    } => success_response(*location),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
                 _ => None,
