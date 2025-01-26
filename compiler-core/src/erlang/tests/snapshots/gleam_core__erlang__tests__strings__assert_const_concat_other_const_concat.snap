@@ -18,7 +18,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("./project/test/my/mod.gleam", 5).
+-file("project/test/my/mod.gleam", 5).
 -spec main() -> binary().
 main() ->
     <<"cute"/utf8, "bee"/utf8, "buzz"/utf8>>.

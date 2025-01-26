@@ -25,7 +25,7 @@ pub fn main(arg) {
 
 -export([main/1]).
 
--file("./project/test/my/mod.gleam", 8).
+-file("project/test/my/mod.gleam", 8).
 -spec main({{integer(), float(), binary()}, binary(), float(), integer()}) -> integer().
 main(Arg) ->
     _ = [1, 2, 3],

@@ -17,7 +17,7 @@ pub fn main() {
 
 -export([main/0]).
 
--file("./project/test/my/mod.gleam", 4).
+-file("project/test/my/mod.gleam", 4).
 -spec main() -> nil.
 main() ->
     some@other:wibble().

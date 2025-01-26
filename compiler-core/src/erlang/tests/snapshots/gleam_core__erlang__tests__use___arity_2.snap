@@ -21,13 +21,13 @@ fn pair(x, f) {
 
 -export([main/0]).
 
--file("./project/test/my/mod.gleam", 7).
+-file("project/test/my/mod.gleam", 7).
 -spec pair(J, fun(() -> M)) -> {J, M}.
 pair(X, F) ->
     Y = F(),
     {X, Y}.
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> {float(), integer()}.
 main() ->
     pair(1.0, fun() -> 123 end).

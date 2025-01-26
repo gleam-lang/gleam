@@ -22,7 +22,7 @@ pub fn main() {
 
 -type module_info() :: module_info.
 
--file("./project/test/my/mod.gleam", 6).
+-file("project/test/my/mod.gleam", 6).
 -spec main() -> module_info().
 main() ->
     module_info.

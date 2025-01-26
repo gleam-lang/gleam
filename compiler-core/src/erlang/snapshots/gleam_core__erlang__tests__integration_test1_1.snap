@@ -14,7 +14,7 @@ pub type Money { Pound(Int) }
 
 -type money() :: {pound, integer()}.
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec pound(integer()) -> money().
 pound(X) ->
     {pound, X}.

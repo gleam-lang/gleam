@@ -14,7 +14,7 @@ type X { X(x: Int, y: Float) }
 
 -type x() :: {x, integer(), float()}.
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec x() -> x().
 x() ->
     {x, 1, 2.0},

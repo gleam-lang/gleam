@@ -15,7 +15,7 @@ pub fn main(x) -> String {
 
 -export([main/1]).
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main(binary()) -> binary().
 main(X) ->
     <<X/binary, "\\u{0308}"/utf8>>.

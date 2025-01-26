@@ -223,19 +223,13 @@ fn module_document<'a>(
         join(type_defs, lines(2)).append(lines(2))
     };
 
-    let src_path_full = EcoString::from(module.type_info.src_path.as_str());
-    let root_str = root.to_string();
-    let src_path_relative = root_str
-        .is_empty()
-        .then(|| src_path_full.clone())
-        .unwrap_or_else(|| {
-            EcoString::from(
-                src_path_full
-                    .strip_prefix(&root_str)
-                    .map(|remaining| format!(".{}", remaining))
-                    .unwrap_or_else(|| src_path_full.to_string()),
-            )
-        });
+    let src_path_full = &module.type_info.src_path;
+    let src_path_relative = EcoString::from(
+        src_path_full
+            .strip_prefix(root)
+            .unwrap_or_else(|_| src_path_full)
+            .to_string(),
+    );
 
     let mut needs_function_docs = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
