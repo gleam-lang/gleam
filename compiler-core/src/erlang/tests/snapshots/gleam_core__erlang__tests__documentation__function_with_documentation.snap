@@ -21,7 +21,7 @@ pub fn documented() { 1 }
 -define(DOC(Str), -compile([])).
 -endif.
 
--file("./project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 ?DOC(" Function doc!\n").
 -spec documented() -> integer().
 documented() ->

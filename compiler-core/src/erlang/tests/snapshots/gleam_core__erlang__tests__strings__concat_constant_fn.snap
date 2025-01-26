@@ -21,12 +21,12 @@ pub fn go() {
 
 -export([go/0]).
 
--file("./project/test/my/mod.gleam", 4).
+-file("project/test/my/mod.gleam", 4).
 -spec s() -> binary().
 s() ->
     <<"s"/utf8>>.
 
--file("./project/test/my/mod.gleam", 8).
+-file("project/test/my/mod.gleam", 8).
 -spec go() -> binary().
 go() ->
     <<(s())/binary, (s())/binary>>.

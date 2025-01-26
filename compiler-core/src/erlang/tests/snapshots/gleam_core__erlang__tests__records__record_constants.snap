@@ -16,7 +16,7 @@ pub fn a() { A }
 
 -type test() :: a.
 
--file("./project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec a() -> test().
 a() ->
     a.

@@ -14,7 +14,7 @@ pub fn x(y) {
 
 -export([x/1]).
 
--file("./project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec x({ok, any()} | {error, any()}) -> integer().
 x(Y) ->
     {ok, _} = case Y of

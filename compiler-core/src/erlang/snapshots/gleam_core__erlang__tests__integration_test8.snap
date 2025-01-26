@@ -11,7 +11,7 @@ pub fn x() { 1. <. 2.3 }
 
 -export([x/0]).
 
--file("./project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec x() -> boolean().
 x() ->
     1.0 < 2.3.

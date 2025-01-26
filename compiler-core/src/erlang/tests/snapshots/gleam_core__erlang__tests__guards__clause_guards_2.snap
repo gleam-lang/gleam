@@ -18,7 +18,7 @@ pub fn main(args) {
 
 -export([main/1]).
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main(boolean()) -> integer().
 main(Args) ->
     case Args of

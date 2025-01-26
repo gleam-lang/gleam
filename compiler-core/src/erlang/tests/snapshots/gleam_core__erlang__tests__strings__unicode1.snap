@@ -15,7 +15,7 @@ pub fn emoji() -> String {
 
 -export([emoji/0]).
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec emoji() -> binary().
 emoji() ->
     <<"\x{1f600}"/utf8>>.

@@ -14,7 +14,7 @@ pub fn do() -> Int
 
 -export([do/0]).
 
--file("./project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec do() -> integer().
 do() ->
     'Elixir.String':main().

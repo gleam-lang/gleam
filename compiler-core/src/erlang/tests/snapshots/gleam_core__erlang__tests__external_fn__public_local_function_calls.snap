@@ -15,12 +15,12 @@ fn x() { go(x: 1, y: 2) go(y: 3, x: 4) }
 
 -export([go/2]).
 
--file("./project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec go(integer(), integer()) -> integer().
 go(X, Y) ->
     m:f(X, Y).
 
--file("./project/test/my/mod.gleam", 4).
+-file("project/test/my/mod.gleam", 4).
 -spec x() -> integer().
 x() ->
     m:f(1, 2),

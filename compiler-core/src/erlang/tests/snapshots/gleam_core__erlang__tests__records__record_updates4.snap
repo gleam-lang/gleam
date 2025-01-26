@@ -24,7 +24,7 @@ fn main() {
 
 -type person() :: {person, binary(), integer()}.
 
--file("./project/test/my/mod.gleam", 5).
+-file("project/test/my/mod.gleam", 5).
 -spec main() -> person().
 main() ->
     Car = {car,

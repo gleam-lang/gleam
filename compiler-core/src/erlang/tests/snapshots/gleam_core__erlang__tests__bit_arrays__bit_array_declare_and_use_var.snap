@@ -14,7 +14,7 @@ pub fn go(x) {
 
 -export([go/1]).
 
--file("./project/test/my/mod.gleam", 1).
+-file("project/test/my/mod.gleam", 1).
 -spec go(bitstring()) -> bitstring().
 go(X) ->
     <<Name_size@1:8, Name:Name_size@1/binary>> = case X of

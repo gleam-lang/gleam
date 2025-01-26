@@ -13,7 +13,7 @@ expression: "@target(erlang)\n  pub fn main() { 1 }\n"
 
 -export([main/0]).
 
--file("./project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     1.

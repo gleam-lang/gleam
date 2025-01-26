@@ -23,7 +23,7 @@ fn main() {
 
 -type triple() :: {triple, integer(), integer(), integer()}.
 
--file("./project/test/my/mod.gleam", 6).
+-file("project/test/my/mod.gleam", 6).
 -spec main() -> integer().
 main() ->
     Triple = {triple, 1, 2, 3},

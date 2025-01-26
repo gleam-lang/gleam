@@ -14,7 +14,7 @@ pub fn one(x: Int) -> Int
 
 -export([one/1]).
 
--file("./project/test/my/mod.gleam", 3).
+-file("project/test/my/mod.gleam", 3).
 -spec one(integer()) -> integer().
 one(X) ->
     one:one(X).
