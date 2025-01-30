@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Updated protobuf to 3.7.1 and regenerated code from .proto files
+
 ## v3.1.0 - 2024-06-23
 
 - Added specific errors for missing minor or patch versions.
