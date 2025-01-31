@@ -228,7 +228,7 @@ impl BeamCompiler for ProjectIO {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<String>, Error> {
         self.beam_compiler
             .lock()
             .as_mut()

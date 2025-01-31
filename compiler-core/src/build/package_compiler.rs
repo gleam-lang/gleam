@@ -204,16 +204,20 @@ where
         Outcome::Ok(modules)
     }
 
-    fn compile_erlang_to_beam(&mut self, modules: &HashSet<Utf8PathBuf>) -> Result<(), Error> {
+    fn compile_erlang_to_beam(
+        &mut self,
+        modules: &HashSet<Utf8PathBuf>,
+    ) -> Result<Vec<EcoString>, Error> {
         if modules.is_empty() {
             tracing::debug!("no_erlang_to_compile");
-            return Ok(());
+            return Ok(Vec::new());
         }
 
         tracing::debug!("compiling_erlang");
 
         self.io
             .compile_beam(self.out, self.lib, modules, self.subprocess_stdio)
+            .map(|modules| modules.iter().map(|str| EcoString::from(str)).collect())
     }
 
     fn copy_project_native_files(
@@ -336,14 +340,6 @@ where
             tracing::debug!("skipping_native_file_copying");
         }
 
-        if let Some(config) = app_file_config {
-            ErlangApp::new(&self.out.join("ebin"), config).render(
-                io.clone(),
-                &self.config,
-                modules,
-            )?;
-        }
-
         if self.compile_beam_bytecode && self.write_entrypoint {
             self.render_erlang_entrypoint_module(&build_dir, &mut written)?;
         } else {
@@ -354,13 +350,23 @@ where
         // we overwrite any precompiled Erlang that was included in the Hex
         // package. Otherwise we will build the potentially outdated precompiled
         // version and not the newly compiled version.
-        Erlang::new(&build_dir, &include_dir).render(io, modules)?;
+        Erlang::new(&build_dir, &include_dir).render(io.clone(), modules)?;
 
-        if self.compile_beam_bytecode {
+        let native_modules: Vec<EcoString> = if self.compile_beam_bytecode {
             written.extend(modules.iter().map(Module::compiled_erlang_path));
-            self.compile_erlang_to_beam(&written)?;
+            self.compile_erlang_to_beam(&written)?
         } else {
             tracing::debug!("skipping_erlang_bytecode_compilation");
+            Vec::new()
+        };
+
+        if let Some(config) = app_file_config {
+            ErlangApp::new(&self.out.join("ebin"), config).render(
+                io,
+                &self.config,
+                modules,
+                native_modules,
+            )?;
         }
         Ok(())
     }

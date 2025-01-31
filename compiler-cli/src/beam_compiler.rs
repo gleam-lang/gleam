@@ -35,7 +35,7 @@ impl BeamCompiler {
         lib: &Utf8Path,
         modules: &HashSet<Utf8PathBuf>,
         stdio: Stdio,
-    ) -> Result<(), Error> {
+    ) -> Result<Vec<String>, Error> {
         let inner = match self.inner {
             Some(ref mut inner) => {
                 if let Ok(None) = inner.process.try_wait() {
@@ -66,14 +66,23 @@ impl BeamCompiler {
         })?;
 
         let mut buf = String::new();
+        let mut accumulated_modules: Vec<String> = Vec::new();
         while let (Ok(_), Ok(None)) = (inner.stdout.read_line(&mut buf), inner.process.try_wait()) {
             match buf.trim() {
-                "gleam-compile-result-ok" => return Ok(()),
+                "gleam-compile-result-ok" => {
+                    // Return Ok with the accumulated modules
+                    return Ok(accumulated_modules);
+                }
                 "gleam-compile-result-error" => {
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
                         err: None,
                     })
+                }
+                s if s.starts_with("gleam-compile-module:") => {
+                    if let Some(module_content) = s.strip_prefix("gleam-compile-module:") {
+                        accumulated_modules.push(module_content.to_string());
+                    }
                 }
                 _ => match stdio {
                     Stdio::Inherit => print!("{}", buf),
