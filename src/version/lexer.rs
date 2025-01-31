@@ -81,7 +81,7 @@ impl<'input> Token<'input> {
     }
 }
 
-impl<'input> std::fmt::Display for Token<'input> {
+impl std::fmt::Display for Token<'_> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Eq => write!(f, "=="),

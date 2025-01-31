@@ -191,7 +191,7 @@ impl pubgrub::version::Version for Version {
             match last_component {
                 Identifier::Numeric(pre) => *pre += 1,
                 Identifier::AlphaNumeric(pre) => {
-                    let mut segments = split_alphanumeric(&pre);
+                    let mut segments = split_alphanumeric(pre);
                     let last_segment = segments.last_mut().unwrap();
 
                     match last_segment {
@@ -199,7 +199,7 @@ impl pubgrub::version::Version for Version {
                         AlphaOrNumeric::Alpha(alpha) => {
                             // We should potentially be smarter about this (for instance, pick the next letter in the
                             // alphabetic sequence), however, this seems like it could be quite a bit more complex.
-                            alpha.push_str("1")
+                            alpha.push('1')
                         }
                     }
 
@@ -566,7 +566,7 @@ impl<'a> DependencyProvider<'a> {
 
 type PackageName = String;
 
-impl<'a> pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'a> {
+impl pubgrub::solver::DependencyProvider<PackageName, Version> for DependencyProvider<'_> {
     fn choose_package_version<
         Name: Borrow<PackageName>,
         Ver: Borrow<pubgrub::range::Range<Version>>,
