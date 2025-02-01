@@ -22,7 +22,7 @@ use std::{
 
 use camino::{ReadDirUtf8, Utf8Path, Utf8PathBuf};
 
-use crate::{dependencies::UseManifest, lsp::LspLocker};
+use crate::{dependencies, lsp::LspLocker};
 
 #[cfg(test)]
 mod tests;
@@ -246,7 +246,16 @@ impl MakeLocker for ProjectIO {
 
 impl DownloadDependencies for ProjectIO {
     fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest> {
-        crate::dependencies::download(paths, NullTelemetry, None, Vec::new(), UseManifest::Yes)
+        dependencies::download(
+            paths,
+            NullTelemetry,
+            None,
+            Vec::new(),
+            dependencies::DependencyManagerConfig {
+                use_manifest: dependencies::UseManifest::Yes,
+                check_major_versions: dependencies::CheckMajorVersions::No,
+            },
+        )
     }
 }
 
