@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\ntype Wibble {\n  Wibble(a: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(1)\n  case wibble.a != wibble.a {\n    True -> Nil\n    False -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble(a: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1)
+  case wibble.a != wibble.a {
+    True -> Nil
+    False -> Nil
+  }
+}
+
+
+----- WARNING
+warning: Same operand on either side of the equality operator
+  ┌─ /src/warning/wrn.gleam:8:8
+  │
+8 │   case wibble.a != wibble.a {
+  │        ^^^^^^^^^^^^^^^^^^^^ This will always be false

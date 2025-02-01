@@ -910,6 +910,11 @@ pub enum Warning {
     JavaScriptIntUnsafe {
         location: SrcSpan,
     },
+
+    EqualityOnSameOperands {
+        location: SrcSpan,
+        result: EcoString,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1113,7 +1118,8 @@ impl Warning {
             | Warning::UnreachableCodeAfterPanic { location, .. }
             | Warning::RedundantPipeFunctionCapture { location, .. }
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
-            | Warning::JavaScriptIntUnsafe { location, .. } => *location,
+            | Warning::JavaScriptIntUnsafe { location, .. }
+            | Warning::EqualityOnSameOperands { location, .. } => *location,
         }
     }
 
