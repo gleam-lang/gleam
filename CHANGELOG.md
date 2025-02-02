@@ -86,7 +86,8 @@
     -h, --help               Print help
   ```
 
-  For example, if the root project (`project_a`) depends on `package_b` and `package_c`, and `package_c` also depends on `package_b`, the output will be:
+  For example, if the root project (`project_a`) depends on `package_b` and
+  `package_c`, and `package_c` also depends on `package_b`, the output will be:
 
 
   ```markdown
@@ -112,6 +113,11 @@
   ```
 
   ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
+- The build tool now checks for modules that would collide with the new Erlang
+  `json` module in addition to the existing Erlang modules it already checked
+  for.
+  ([Louis Pilfold](https://github.com/lpil))
 
 ### Language server
 

@@ -881,6 +881,7 @@ fn ensure_gleam_module_does_not_overwrite_standard_erlang_module(input: &Input) 
         | "io_lib_format"
         | "io_lib_fread"
         | "io_lib_pretty"
+        | "json"
         | "kernel"
         | "kernel_config"
         | "kernel_refc"
