@@ -1,6 +1,7 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile_with_markdown_pages(config, vec![], pages,\nCompileWithMarkdownPagesOpts::default())"
+snapshot_kind: text
 ---
 //// one.html
 
@@ -313,10 +314,13 @@ expression: "compile_with_markdown_pages(config, vec![], pages,\nCompileWithMark
       });
       hljs.highlightAll();
     </script>
+
     <script src="./js/lunr.min.js?v=GLEAM_VERSION_HERE"></script>
     <script src="./js/index.js?v=0"></script>
-
-    <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="./search-data.js?v=0"></script>
+    <script>
+      fetch("./search_data.json?v=0")
+        .then(response => response.json())
+        .then(data => window.Gleam.initSearch(data));
+    </script>
   </body>
 </html>

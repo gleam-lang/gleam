@@ -302,10 +302,13 @@
       });
       hljs.highlightAll();
     </script>
+
     <script src="{{ unnest }}/js/lunr.min.js?v={{ gleam_version }}"></script>
     <script src="{{ unnest }}/js/index.js?v={{ rendering_timestamp }}"></script>
-
-    <!-- Load the search index using JSONP to avoid CORS issues -->
-    <script src="{{ unnest }}/search-data.js?v={{ rendering_timestamp }}"></script>
+    <script>
+      fetch("{{ unnest }}/search_data.json?v={{ rendering_timestamp }}")
+        .then(response => response.json())
+        .then(data => window.Gleam.initSearch(data));
+    </script>
   </body>
 </html>
