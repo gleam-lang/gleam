@@ -25,4 +25,4 @@ tracing.workspace = true
 getrandom.workspace = true
 
 [dev-dependencies]
-wasm-bindgen-test = "0.3.42"
+wasm-bindgen-test = "0.3.50"
