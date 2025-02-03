@@ -1172,6 +1172,38 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         })?;
 
+        // Track usage of the unaligned bit arrays feature on JavaScript so that
+        // warnings can be emitted if the Gleam version constraint is too low
+        if self.environment.target == Target::JavaScript {
+            for option in options.iter() {
+                if let BitArrayOption::<TypedValue>::Size {
+                    value, location, ..
+                } = option
+                {
+                    let mut using_unaligned_bit_array = false;
+
+                    if type_ == int() {
+                        match &(**value).as_int_literal() {
+                            Some(size) if size % 8 != 0 => {
+                                using_unaligned_bit_array = true;
+                            }
+                            _ => (),
+                        }
+                    } else if type_ == bits() {
+                        using_unaligned_bit_array = true;
+                    }
+
+                    if using_unaligned_bit_array {
+                        self.track_feature_usage(
+                            FeatureKind::JavaScriptUnalignedBitArray,
+                            *location,
+                        );
+                        break;
+                    }
+                }
+            }
+        }
+
         unify(type_.clone(), value.type_())
             .map_err(|e| convert_unify_error(e, value.location()))?;
 
