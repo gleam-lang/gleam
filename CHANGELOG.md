@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+Dedicated to the memory of Len Pilfold.
+
+## v1.8.0-rc1 - 2025-02-03
 
 ### Compiler
 
