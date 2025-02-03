@@ -64,6 +64,11 @@
   The custom type variant constructor `X` is not in scope here.
   ```
 
+  ([Roeeeee](https://github.com/5c077m4n))
+
+- Erlang `file` module attributes now use paths relative to the root.
+  ([Kasim](https://github.com/oneness))
+
 ### Build tool
 
 - `gleam new` now has refined project name validation - rather than failing on
