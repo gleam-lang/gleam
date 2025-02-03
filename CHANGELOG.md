@@ -64,6 +64,33 @@
   The custom type variant constructor `X` is not in scope here.
   ```
 
+- The compiler now warns when using the same operand on either side of the equality operator:
+
+  ```gleam
+  type Wibble {
+    Wibble(id: Int)
+  }
+
+  pub fn main() {
+    let wibble = Wibble(1)
+    case wibble.id == wibble.id {
+      True -> Nil
+      False -> Nil
+    }
+  }
+  ```
+
+  Results in the following warning:
+
+  ```
+    warning: Same operand on either side of the equality operator
+    ┌─ /app.gleam:7:8
+    │
+  7 │   case wibble.id == wibble.id {
+    │        ^^^^^^^^^^^^^^^^^^^^^^ This will always be true
+  ```
+  ([Ramkarthik Krishnamurthy](https://github.com/ramkarthik))
+
 ### Build tool
 
 - `gleam new` now has refined project name validation - rather than failing on

@@ -1190,8 +1190,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         right: UntypedExpr,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
+
         let (input_type, output_type) = match &name {
+            
             BinOp::Eq | BinOp::NotEq => {
+                self.check_for_equality_same_operands(name, left.clone(), right.clone(), location);
+
                 let left = self.infer(left)?;
                 let right = self.infer(right)?;
                 unify(left.type_(), right.type_())
@@ -1249,6 +1253,48 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             left: Box::new(left),
             right: Box::new(right),
         })
+    }
+
+    /// Checks if either side of the equality operator has the same operand
+    /// 
+    /// If it's the same operand, emit a warning
+    fn check_for_equality_same_operands(
+        &mut self,
+        name: BinOp,
+        left: UntypedExpr,
+        right: UntypedExpr,
+        location: SrcSpan,
+    ) {
+        match (left.clone(), right.clone()) {
+            (UntypedExpr::Var { location: _, name: left_name }, UntypedExpr::Var { location: _, name: right_name }) => {
+                if left_name == right_name {
+                    self.problems.warning(Warning::EqualityOnSameOperands { location, result: EcoString::from((name == BinOp::Eq).to_string()) });
+                }
+            }
+            (UntypedExpr::String { location: _, value: left_value }, UntypedExpr::String { location: _, value: right_value }) => {
+                if left_value == right_value {
+                    self.problems.warning(Warning::EqualityOnSameOperands { location, result: EcoString::from((name == BinOp::Eq).to_string()) });
+                }
+            }
+            (UntypedExpr::Int { location: _, value: _, int_value: left_int_value }, UntypedExpr::Int { location: _, value: _, int_value: right_int_value }) => {
+                if left_int_value == right_int_value {
+                    self.problems.warning(Warning::EqualityOnSameOperands { location, result: EcoString::from((name == BinOp::Eq).to_string()) });
+                }
+            }
+            (UntypedExpr::Float { location: _, value: left_value }, UntypedExpr::Float { location: _, value: right_value }) => {
+                if left_value == right_value {
+                    self.problems.warning(Warning::EqualityOnSameOperands { location, result: EcoString::from((name == BinOp::Eq).to_string()) });
+                }
+            }
+            (UntypedExpr::FieldAccess { location: _, label_location: _, label: left_label, container: left_container }, UntypedExpr::FieldAccess { location: _, label_location: _, label: right_label, container: right_container }) => {
+                if let (UntypedExpr::Var { location: _, name: left_name }, UntypedExpr::Var { location: _, name: right_name }) = (*left_container, *right_container) {
+                    if left_name == right_name && left_label == right_label {
+                        self.problems.warning(Warning::EqualityOnSameOperands { location, result: EcoString::from((name == BinOp::Eq).to_string()) });
+                    }
+                }
+            }
+            _ => ()
+        }
     }
 
     /// Checks for inefficient usage of `list.length` for checking for the empty list.

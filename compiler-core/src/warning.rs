@@ -1134,6 +1134,22 @@ information.",
                         extra_labels: Vec::new(),
                     }),
                 },
+
+                type_::Warning::EqualityOnSameOperands { location, result } => Diagnostic {
+                    title: "Same operand on either side of the equality operator".into(),
+                    text: "".into(),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: Some(format!("This will always be {result}")),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             },
         }
     }

@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  let greeting = \"hi\"\n  case greeting == greeting {\n    True -> Nil\n    False -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let greeting = "hi"
+  case greeting == greeting {
+    True -> Nil
+    False -> Nil
+  }
+}
+
+
+----- WARNING
+warning: Same operand on either side of the equality operator
+  ┌─ /src/warning/wrn.gleam:4:8
+  │
+4 │   case greeting == greeting {
+  │        ^^^^^^^^^^^^^^^^^^^^ This will always be true
