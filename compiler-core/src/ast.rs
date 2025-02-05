@@ -1275,6 +1275,13 @@ impl CallArg<TypedExpr> {
             }
         }
     }
+
+    pub fn is_capture_hole(&self) -> bool {
+        match &self.value {
+            TypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            _ => false,
+        }
+    }
 }
 
 impl CallArg<TypedPattern> {
@@ -2555,4 +2562,20 @@ impl TypedPipelineAssignment {
     pub fn type_(&self) -> Arc<Type> {
         self.value.type_()
     }
+}
+
+/// The kind of desugaring that might take place when rewriting a pipeline to
+/// regular assignments.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum PipelineAssignmentKind {
+    /// In case `a |> b(c)` is desugared to `b(a, c)`
+    FirstArgument,
+
+    /// In case there's an explicit hole and `a |> b(_, c)` is desugared to
+    /// `b(a, c)`.
+    Hole,
+
+    /// In case `a |> b(c)` is desugared to `b(c)(a)`
+    FunctionCall,
 }

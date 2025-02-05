@@ -54,8 +54,8 @@ use crate::type_::Type;
 
 use super::{
     untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause,
-    TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
+    PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment,
+    TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
     TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
     TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
 };
@@ -123,10 +123,19 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_pipeline(
         &mut self,
         location: &'ast SrcSpan,
-        assignments: &'ast [TypedPipelineAssignment],
+        first_value: &'ast TypedPipelineAssignment,
+        assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'ast TypedExpr,
+        finally_kind: &'ast PipelineAssignmentKind,
     ) {
-        visit_typed_expr_pipeline(self, location, assignments, finally);
+        visit_typed_expr_pipeline(
+            self,
+            location,
+            first_value,
+            assignments,
+            finally,
+            finally_kind,
+        );
     }
 
     fn visit_typed_expr_var(
@@ -698,9 +707,11 @@ where
         } => v.visit_typed_expr_block(location, statements),
         TypedExpr::Pipeline {
             location,
+            first_value,
             assignments,
             finally,
-        } => v.visit_typed_expr_pipeline(location, assignments, finally),
+            finally_kind,
+        } => v.visit_typed_expr_pipeline(location, first_value, assignments, finally, finally_kind),
         TypedExpr::Var {
             location,
             constructor,
@@ -848,12 +859,15 @@ pub fn visit_typed_expr_block<'a, V>(
 pub fn visit_typed_expr_pipeline<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    assignments: &'a [TypedPipelineAssignment],
+    first_value: &'a TypedPipelineAssignment,
+    assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
     finally: &'a TypedExpr,
+    _finally_kind: &'a PipelineAssignmentKind,
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for assignment in assignments {
+    v.visit_typed_pipeline_assignment(first_value);
+    for (assignment, _kind) in assignments {
         v.visit_typed_pipeline_assignment(assignment);
     }
 

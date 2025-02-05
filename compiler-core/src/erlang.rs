@@ -1938,10 +1938,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::String { value, .. } => string(value),
 
         TypedExpr::Pipeline {
+            first_value,
             assignments,
             finally,
             ..
-        } => pipeline(assignments, finally, env),
+        } => pipeline(first_value, assignments, finally, env),
 
         TypedExpr::Block { statements, .. } => block(statements, env),
 
@@ -2017,13 +2018,17 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
 }
 
 fn pipeline<'a>(
-    assignments: &'a [TypedPipelineAssignment],
+    first_value: &'a TypedPipelineAssignment,
+    assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
     finally: &'a TypedExpr,
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let mut documents = Vec::with_capacity((assignments.len() + 1) * 3);
 
-    for a in assignments {
+    let all_assignments = std::iter::once(first_value)
+        .chain(assignments.iter().map(|(assignment, _kind)| assignment));
+
+    for a in all_assignments {
         let body = maybe_block_expr(&a.value, env).group();
         let name = env.next_local_var_name(&a.name);
         documents.push(docvec![name, " = ", body]);

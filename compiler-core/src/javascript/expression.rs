@@ -178,10 +178,11 @@ impl<'module> Generator<'module> {
             } => self.variable(name, constructor),
 
             TypedExpr::Pipeline {
+                first_value,
                 assignments,
                 finally,
                 ..
-            } => self.pipeline(assignments.as_slice(), finally),
+            } => self.pipeline(first_value, assignments.as_slice(), finally),
 
             TypedExpr::Block { statements, .. } => self.block(statements),
 
@@ -490,12 +491,17 @@ impl<'module> Generator<'module> {
 
     fn pipeline<'a>(
         &mut self,
-        assignments: &'a [TypedPipelineAssignment],
+        first_value: &'a TypedPipelineAssignment,
+        assignments: &'a [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'a TypedExpr,
     ) -> Output<'a> {
         let count = assignments.len();
-        let mut documents = Vec::with_capacity((count + 1) * 2);
-        for assignment in assignments.iter() {
+        let mut documents = Vec::with_capacity((count + 2) * 2);
+
+        let all_assignments = std::iter::once(first_value)
+            .chain(assignments.iter().map(|(assignment, _kind)| assignment));
+
+        for assignment in all_assignments {
             documents.push(self.not_in_tail_position(|gen| {
                 gen.simple_variable_assignment(&assignment.name, &assignment.value)
             })?);

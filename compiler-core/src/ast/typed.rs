@@ -38,8 +38,10 @@ pub enum TypedExpr {
     /// locations when showing it in error messages, etc.
     Pipeline {
         location: SrcSpan,
-        assignments: Vec<TypedPipelineAssignment>,
+        first_value: TypedPipelineAssignment,
+        assignments: Vec<(TypedPipelineAssignment, PipelineAssignmentKind)>,
         finally: Box<Self>,
+        finally_kind: PipelineAssignmentKind,
     },
 
     Var {
@@ -206,12 +208,17 @@ impl TypedExpr {
             },
 
             Self::Pipeline {
+                first_value,
                 assignments,
                 finally,
                 ..
-            } => assignments
-                .iter()
-                .find_map(|e| e.find_node(byte_index))
+            } => first_value
+                .find_node(byte_index)
+                .or_else(|| {
+                    assignments
+                        .iter()
+                        .find_map(|(e, _)| e.find_node(byte_index))
+                })
                 .or_else(|| finally.find_node(byte_index)),
 
             // Exit the search and return None if during iteration a statement
