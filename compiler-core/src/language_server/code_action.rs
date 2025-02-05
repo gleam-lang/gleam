@@ -5,8 +5,8 @@ use crate::{
         self,
         visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
-        TypedStatement, TypedUse,
+        PipelineAssignmentKind, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
+        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedStatement, TypedUse,
     },
     build::{Located, Module},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -2761,12 +2761,17 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     fn visit_typed_expr_pipeline(
         &mut self,
         _location: &'ast SrcSpan,
-        assignments: &'ast [ast::TypedPipelineAssignment],
+        first_value: &'ast TypedPipelineAssignment,
+        assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'ast TypedExpr,
+        _finally_kind: &'ast PipelineAssignmentKind,
     ) {
         // When visiting the assignments or the final pipeline call we want to
         // keep track of out position so that we can avoid extracting those.
-        for assignment in assignments {
+        let all_assignments =
+            iter::once(first_value).chain(assignments.iter().map(|(assignment, _kind)| assignment));
+
+        for assignment in all_assignments {
             self.at_position(ExtractVariablePosition::PipelineCall, |this| {
                 this.visit_typed_pipeline_assignment(assignment);
             });
