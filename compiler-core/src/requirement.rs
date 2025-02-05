@@ -13,9 +13,18 @@ use serde::Deserialize;
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]
 pub enum Requirement {
-    Hex { version: Range },
-    Path { path: Utf8PathBuf },
-    Git { git: EcoString },
+    Hex {
+        version: Range,
+    },
+    Path {
+        path: Utf8PathBuf,
+    },
+
+    Git {
+        git: EcoString,
+        #[serde(rename = "ref")]
+        commit: EcoString,
+    },
 }
 
 impl Requirement {
@@ -29,8 +38,11 @@ impl Requirement {
         Requirement::Path { path: path.into() }
     }
 
-    pub fn git(url: &str) -> Requirement {
-        Requirement::Git { git: url.into() }
+    pub fn git(url: &str, commit: &str) -> Requirement {
+        Requirement::Git {
+            git: url.into(),
+            commit: commit.into(),
+        }
     }
 
     pub fn to_toml(&self, root_path: &Utf8Path) -> String {
@@ -44,7 +56,9 @@ impl Requirement {
                     make_relative(root_path, path).as_str().replace('\\', "/")
                 )
             }
-            Requirement::Git { git: url } => format!(r#"{{ git = "{url}" }}"#),
+            Requirement::Git { git: url, commit } => {
+                format!(r#"{{ git = "{url}", ref = "{commit}" }}"#)
+            }
         }
     }
 }
@@ -60,7 +74,10 @@ impl Serialize for Requirement {
         match self {
             Requirement::Hex { version: range } => map.serialize_entry("version", range)?,
             Requirement::Path { path } => map.serialize_entry("path", path)?,
-            Requirement::Git { git: url } => map.serialize_entry("git", url)?,
+            Requirement::Git { git: url, commit } => {
+                map.serialize_entry("git", url)?;
+                map.serialize_entry("ref", commit)?;
+            }
         }
         map.end()
     }
@@ -132,7 +149,7 @@ mod tests {
         assert_eq!(deps["local"], Requirement::path("/path/to/package"));
         assert_eq!(
             deps["github"],
-            Requirement::git("https://github.com/gleam-lang/otp.git")
+            Requirement::git("https://github.com/gleam-lang/otp.git", "4d34935")
         );
     }
 }
