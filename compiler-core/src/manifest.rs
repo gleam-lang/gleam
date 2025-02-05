@@ -231,7 +231,7 @@ mod tests {
                 ("aaa".into(), Requirement::hex("> 0.0.0")),
                 (
                     "awsome_local2".into(),
-                    Requirement::git("https://github.com/gleam-lang/gleam.git"),
+                    Requirement::git("https://github.com/gleam-lang/gleam.git", "bd9fe02f"),
                 ),
                 (
                     "awsome_local1".into(),
@@ -324,7 +324,7 @@ packages = [
 [requirements]
 aaa = { version = "> 0.0.0" }
 awsome_local1 = { path = "../path/to/package" }
-awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git" }
+awsome_local2 = { git = "https://github.com/gleam-lang/gleam.git", ref = "bd9fe02f" }
 gleam_stdlib = { version = "~> 0.17" }
 gleeunit = { version = "~> 0.1" }
 zzz = { version = "> 0.0.0" }

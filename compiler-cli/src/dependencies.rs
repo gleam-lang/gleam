@@ -1,5 +1,6 @@
 use std::{
     collections::{HashMap, HashSet},
+    process::Command,
     time::Instant,
 };
 
@@ -815,9 +816,15 @@ fn resolve_versions<Telem: Telemetry>(
                 &mut provided_packages,
                 &mut vec![],
             )?,
-            Requirement::Git { git } => {
-                provide_git_package(name.clone(), &git, project_paths, &mut provided_packages)?
-            }
+            Requirement::Git { git, commit } => provide_git_package(
+                name.clone(),
+                &git,
+                &commit,
+                project_paths.root(),
+                project_paths,
+                &mut provided_packages,
+                &mut Vec::new(),
+            )?,
         };
         let _ = root_requirements.insert(name, version);
     }
@@ -878,18 +885,43 @@ fn provide_local_package(
     )
 }
 
+fn download_git_package(package_name: &str, repo: &str, commit: &str) {
+    let _ = Command::new("git")
+        .arg("clone")
+        .arg("--depth=1")
+        .arg(format!("--branch={commit}"))
+        .arg(repo)
+        .arg(format!("./build/packages/{package_name}"))
+        .output()
+        .expect("TODO: Don't panic here");
+}
+
 /// Provide a package from a git repository
 fn provide_git_package(
-    _package_name: EcoString,
-    _repo: &str,
-    _project_paths: &ProjectPaths,
-    _provided: &mut HashMap<EcoString, ProvidedPackage>,
+    package_name: EcoString,
+    repo: &str,
+    commit: &str,
+    parent_path: &Utf8Path,
+    project_paths: &ProjectPaths,
+    provided: &mut HashMap<EcoString, ProvidedPackage>,
+    parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
-    let _git = ProvidedPackageSource::Git {
-        repo: "repo".into(),
-        commit: "commit".into(),
+    let package_source = ProvidedPackageSource::Git {
+        repo: repo.into(),
+        commit: commit.into(),
     };
-    Err(Error::GitDependencyUnsupported)
+
+    download_git_package(&package_name, repo, commit);
+    let package_path =
+        fs::canonicalise(&parent_path.join(&format!("build/packages/{package_name}")))?;
+    provide_package(
+        package_name,
+        package_path,
+        package_source,
+        project_paths,
+        provided,
+        parents,
+    )
 }
 
 /// Adds a gleam project located at a specific path to the list of "provided packages"
@@ -957,9 +989,15 @@ fn provide_package(
                     parents,
                 )?
             }
-            Requirement::Git { git } => {
-                provide_git_package(name.clone(), &git, project_paths, provided)?
-            }
+            Requirement::Git { git, commit } => provide_git_package(
+                name.clone(),
+                &git,
+                &commit,
+                &package_path,
+                project_paths,
+                provided,
+                parents,
+            )?,
         };
         let _ = requirements.insert(name, version);
     }

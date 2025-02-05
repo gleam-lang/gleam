@@ -738,7 +738,7 @@ fn prevent_publish_git_dependency() {
     let config = PackageConfig {
         dependencies: [(
             "provided".into(),
-            Requirement::git("https://github.com/gleam-lang/gleam.git"),
+            Requirement::git("https://github.com/gleam-lang/gleam.git", "da6e917"),
         )]
         .into(),
         ..Default::default()
