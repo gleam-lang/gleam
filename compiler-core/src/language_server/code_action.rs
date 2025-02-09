@@ -4026,9 +4026,28 @@ pub struct RemovePipe<'a> {
 }
 
 struct RemovePipeLocations {
+    /// This is the location of the value being piped into a call.
+    ///
+    /// ```gleam
+    ///    [1, 2, 3] |> list.length
+    /// // ^^^^^^^^^ This one here
+    /// ```
+    ///
     first_value: SrcSpan,
-    finally: SrcSpan,
-    finally_kind: PipelineAssignmentKind,
+
+    /// This is the location of the call the value is being piped into.
+    ///
+    /// ```gleam
+    ///    [1, 2, 3] |> list.length
+    /// //              ^^^^^^^^^^^ This one here
+    /// ```
+    ///
+    call: SrcSpan,
+
+    /// This is the kind of desugaring that is taking place when piping
+    /// `first_value` into `call`.
+    ///
+    call_kind: PipelineAssignmentKind,
 }
 
 impl<'a> RemovePipe<'a> {
@@ -4051,8 +4070,8 @@ impl<'a> RemovePipe<'a> {
         // If we couldn't find a pipeline to rewrite we don't return any action.
         let Some(RemovePipeLocations {
             first_value,
-            finally,
-            finally_kind,
+            call,
+            call_kind,
         }) = self.locations
         else {
             return vec![];
@@ -4062,12 +4081,12 @@ impl<'a> RemovePipe<'a> {
         // inlined as a function call argument.
         self.edits.delete(SrcSpan {
             start: first_value.start,
-            end: finally.start,
+            end: call.start,
         });
 
         // Then we have to insert the piped value in the appropriate position.
         // This will change based on how the pipeline is being desugared, we
-        // know this thanks to the `finally_kind`
+        // know this thanks to the `call_kind`
         let first_value_text = self
             .module
             .code
@@ -4075,16 +4094,18 @@ impl<'a> RemovePipe<'a> {
             .expect("invalid code span")
             .to_string();
 
-        match finally_kind {
+        match call_kind {
             // When piping into a `_` we replace the hole with the piped value:
             // `[1, 2] |> map(_, todo)` becomes `map([1, 2], todo)`.
             PipelineAssignmentKind::Hole { hole } => self.edits.replace(hole, first_value_text),
+
             // When piping is desguared as a function call we need to add the
             // missing parentheses:
             // `[1, 2] |> length` becomes `length([1, 2])`
-            PipelineAssignmentKind::FunctionCall => self
-                .edits
-                .insert(finally.end, format!("({first_value_text})")),
+            PipelineAssignmentKind::FunctionCall => {
+                self.edits.insert(call.end, format!("({first_value_text})"))
+            }
+
             // When the piped value is inserted as the first argument there's two
             // possible scenarios:
             // - there's a second argument as well: in that case we insert it
@@ -4097,7 +4118,7 @@ impl<'a> RemovePipe<'a> {
             } => self.edits.insert(start, format!("{first_value_text}, ")),
             PipelineAssignmentKind::FirstArgument {
                 second_argument: None,
-            } => self.edits.insert(finally.end - 1, first_value_text),
+            } => self.edits.insert(call.end - 1, first_value_text),
         }
 
         let mut action = Vec::with_capacity(1);
@@ -4121,16 +4142,19 @@ impl<'ast> ast::visit::Visit<'ast> for RemovePipe<'ast> {
     ) {
         let pipeline_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, pipeline_range) {
-            // If this is a single step pipeline like `a |> b` then there's no
-            // assignments but only the `first_value` and `finally`.
-            // It means we can rewrite the pipeline as a regular function call.
-            if assignments.is_empty() {
-                self.locations = Some(RemovePipeLocations {
-                    first_value: first_value.location,
-                    finally: finally.location(),
-                    finally_kind: *finally_kind,
-                })
-            }
+            // We will always desugar the pipeline's first step. If there's no
+            // intermediate assignment it means we're dealing with a single step
+            // pipeline and the call is `finally`.
+            let (call, call_kind) = assignments
+                .first()
+                .map(|(call, kind)| (call.location, *kind))
+                .unwrap_or_else(|| (finally.location(), *finally_kind));
+
+            self.locations = Some(RemovePipeLocations {
+                first_value: first_value.location,
+                call,
+                call_kind,
+            });
 
             ast::visit::visit_typed_expr_pipeline(
                 self,
