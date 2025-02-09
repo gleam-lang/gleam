@@ -33,10 +33,10 @@ use super::{
     code_action::{
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
-        ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs, GenerateDynamicDecoder,
-        GenerateFunction, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        RemovePipe, TurnIntoUse, UseLabelShorthandSyntax,
+        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder,
+        ConvertToFunctionCall, DesugarUse, ExpandFunctionCapture, ExtractVariable,
+        FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction, LetAssertToCase,
+        PatternMatchOnValue, RedundantTupleInCaseSubject, TurnIntoUse, UseLabelShorthandSyntax,
     },
     completer::Completer,
     rename::{rename_local_variable, VariableRenameKind},
@@ -338,7 +338,7 @@ where
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
-            actions.extend(RemovePipe::new(module, &lines, &params).code_actions());
+            actions.extend(ConvertToFunctionCall::new(module, &lines, &params).code_actions());
             actions.extend(
                 PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
             );

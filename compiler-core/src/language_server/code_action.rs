@@ -4018,14 +4018,17 @@ fn is_valid_lowercase_name(name: &str) -> bool {
 /// Code action to rewrite a single-step pipeline into a regular function call.
 /// For example: `a |> b(c, _)` would be rewritten as `b(c, a)`.
 ///
-pub struct RemovePipe<'a> {
+pub struct ConvertToFunctionCall<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    locations: Option<RemovePipeLocations>,
+    locations: Option<ConvertToFunctionCallLocations>,
 }
 
-struct RemovePipeLocations {
+/// All the different locations the "Convert to function call" code action needs
+/// to properly rewrite a pipeline into a function call.
+///
+struct ConvertToFunctionCallLocations {
     /// This is the location of the value being piped into a call.
     ///
     /// ```gleam
@@ -4050,7 +4053,7 @@ struct RemovePipeLocations {
     call_kind: PipelineAssignmentKind,
 }
 
-impl<'a> RemovePipe<'a> {
+impl<'a> ConvertToFunctionCall<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -4068,7 +4071,7 @@ impl<'a> RemovePipe<'a> {
         self.visit_typed_module(&self.module.ast);
 
         // If we couldn't find a pipeline to rewrite we don't return any action.
-        let Some(RemovePipeLocations {
+        let Some(ConvertToFunctionCallLocations {
             first_value,
             call,
             call_kind,
@@ -4122,7 +4125,7 @@ impl<'a> RemovePipe<'a> {
         }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Remove pipe")
+        CodeActionBuilder::new("Convert to function call")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -4131,7 +4134,7 @@ impl<'a> RemovePipe<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for RemovePipe<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for ConvertToFunctionCall<'ast> {
     fn visit_typed_expr_pipeline(
         &mut self,
         location: &'ast SrcSpan,
@@ -4150,7 +4153,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemovePipe<'ast> {
                 .map(|(call, kind)| (call.location, *kind))
                 .unwrap_or_else(|| (finally.location(), *finally_kind));
 
-            self.locations = Some(RemovePipeLocations {
+            self.locations = Some(ConvertToFunctionCallLocations {
                 first_value: first_value.location,
                 call,
                 call_kind,
