@@ -251,7 +251,7 @@ impl HasLocation for UntypedExpr {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FunctionLiteralKind {
-    Capture,
+    Capture { hole: SrcSpan },
     Anonymous { head: SrcSpan },
     Use { location: SrcSpan },
 }
@@ -259,7 +259,7 @@ pub enum FunctionLiteralKind {
 impl FunctionLiteralKind {
     pub fn is_capture(&self) -> bool {
         match self {
-            FunctionLiteralKind::Capture => true,
+            FunctionLiteralKind::Capture { .. } => true,
             FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => false,
         }
     }

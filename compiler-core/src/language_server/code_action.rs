@@ -1151,7 +1151,7 @@ impl<'ast> ast::visit::Visit<'ast> for AddAnnotations<'_> {
         // If the function doesn't have a head, we can't annotate it
         let location = match kind {
             // Function captures don't need any type annotations
-            FunctionLiteralKind::Capture => return,
+            FunctionLiteralKind::Capture { .. } => return,
             FunctionLiteralKind::Anonymous { head } => head,
             FunctionLiteralKind::Use { location } => location,
         };
@@ -2844,7 +2844,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
             // If a fn is a capture `int.wibble(1, _)` its body will consist of
             // just a single expression statement. When visiting we must record
             // we're inside a capture body.
-            FunctionLiteralKind::Capture => Some(ExtractVariablePosition::InsideCaptureBody),
+            FunctionLiteralKind::Capture { .. } => Some(ExtractVariablePosition::InsideCaptureBody),
             FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => {
                 self.position
             }

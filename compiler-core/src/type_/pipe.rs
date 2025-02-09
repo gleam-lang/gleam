@@ -2,8 +2,8 @@ use self::expression::CallKind;
 
 use super::*;
 use crate::ast::{
-    ImplicitCallArgOrigin, PipelineAssignmentKind, Statement, TypedPipelineAssignment, UntypedExpr,
-    PIPE_VARIABLE,
+    FunctionLiteralKind, ImplicitCallArgOrigin, PipelineAssignmentKind, Statement,
+    TypedPipelineAssignment, UntypedExpr, PIPE_VARIABLE,
 };
 use vec1::Vec1;
 
@@ -100,7 +100,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
             self.warn_if_call_first_argument_is_hole(&call);
 
             let (kind, call) = match call {
-                func @ UntypedExpr::Fn { location, .. } => {
+                func @ UntypedExpr::Fn { location, kind, .. } => {
                     let (func, args, return_type) = self.expr_typer.do_infer_call(
                         func.clone(),
                         vec![self.untyped_left_hand_value_variable_call_argument()],
@@ -108,9 +108,13 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                         CallKind::Function,
                     );
 
-                    let kind = match args.iter().find_position(|arg| arg.is_capture_hole()) {
-                        Some(_hole_index) => PipelineAssignmentKind::Hole,
-                        None => PipelineAssignmentKind::FunctionCall,
+                    let kind = match kind {
+                        FunctionLiteralKind::Capture { hole } => {
+                            PipelineAssignmentKind::Hole { hole }
+                        }
+                        FunctionLiteralKind::Anonymous { .. } | FunctionLiteralKind::Use { .. } => {
+                            PipelineAssignmentKind::FunctionCall
+                        }
                     };
 
                     (
