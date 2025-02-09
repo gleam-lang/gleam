@@ -4920,6 +4920,19 @@ fn wibble(a) { todo }
 }
 
 #[test]
+fn remove_pipe_works_with_argument_in_first_position_4() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble.wobble
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn remove_pipe_works_with_function_producing_another_function() {
     assert_code_action!(
         REMOVE_PIPE,

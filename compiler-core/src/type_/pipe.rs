@@ -348,7 +348,7 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
         };
 
         TypedExpr::Call {
-            location: function.location(),
+            location: function_location,
             type_: return_type,
             fun: function,
             args: vec![self.typed_left_hand_value_variable_call_argument()],
