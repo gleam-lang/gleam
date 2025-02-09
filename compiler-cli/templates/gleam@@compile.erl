@@ -141,7 +141,7 @@ do_compile_elixir(Modules, Out) ->
         {ok, ModuleAtoms, _} ->
             ToBeam = fun(ModuleAtom) ->
                 Beam = filename:join(Out, atom_to_list(ModuleAtom)) ++ ".beam",
-                log({compiled, ModuleAtom, Beam}),
+                log({compiled, Beam}),
                 {ModuleAtom, Beam}
             end,
             {true, lists:map(ToBeam, ModuleAtoms)};
