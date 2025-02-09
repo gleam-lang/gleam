@@ -4,7 +4,8 @@
 
 ### Compiler
 
-- Generated erlang .app files now include ffi modules from elixir and erlang.
+- Generated Erlang `.app` files now include external modules written in Elixir
+  and Erlang.
   ([LostKobrakai](https://github.com/lostkobrakai))
 
 - HexDocs documentation of Gleam packages now uses the ExDocs search data model,
