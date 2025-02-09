@@ -15,6 +15,29 @@
 
 ### Language server
 
+- The language server now offers a code action to convert the first step of a
+  pipeline to a regular function call. For example, this code:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    [1, 2, 3] |> list.map(fn(n) { n * 2 })
+  }
+  ```
+
+  Will be rewritten as:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    list.map([1, 2, 3], fn(n) { n * 2 })
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
