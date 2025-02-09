@@ -4180,7 +4180,9 @@ pub fn make_call(
         1 => Ok(UntypedExpr::Fn {
             location: call.location(),
             end_of_head_byte_index: call.location().end,
-            kind: FunctionLiteralKind::Capture,
+            kind: FunctionLiteralKind::Capture {
+                hole: hole_location.expect("At least a capture hole"),
+            },
             arguments: vec![Arg {
                 location: hole_location.expect("At least a capture hole"),
                 annotation: None,

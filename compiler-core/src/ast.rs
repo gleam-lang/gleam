@@ -2574,7 +2574,7 @@ pub enum PipelineAssignmentKind {
 
     /// In case there's an explicit hole and `a |> b(_, c)` is desugared to
     /// `b(a, c)`.
-    Hole,
+    Hole { hole: SrcSpan },
 
     /// In case `a |> b(c)` is desugared to `b(c)(a)`
     FunctionCall,
