@@ -2569,8 +2569,13 @@ impl TypedPipelineAssignment {
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum PipelineAssignmentKind {
-    /// In case `a |> b(c)` is desugared to `b(a, c)`
-    FirstArgument,
+    /// In case `a |> b(c)` is desugared to `b(a, c)`.
+    FirstArgument {
+        /// The location of the second argument of the call, in case there's any:
+        /// - `a |> b(c, d)`: here it's `Some` wrapping the location of `c`.
+        /// - `a |> b()`: here it's `None`.
+        second_argument: Option<SrcSpan>,
+    },
 
     /// In case there's an explicit hole and `a |> b(_, c)` is desugared to
     /// `b(a, c)`.

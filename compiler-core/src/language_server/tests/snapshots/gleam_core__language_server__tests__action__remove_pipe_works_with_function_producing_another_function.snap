@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  1 |> wibble(2)\n}\n\nfn wibble(c) -> fn(a) -> Nil {\n  fn(_) { Nil }\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  1 |> wibble(2)
+       ↑        
+}
+
+fn wibble(c) -> fn(a) -> Nil {
+  fn(_) { Nil }
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  wibble(2)(1)
+}
+
+fn wibble(c) -> fn(a) -> Nil {
+  fn(_) { Nil }
+}

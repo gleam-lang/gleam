@@ -74,6 +74,7 @@ const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const GENERATE_FUNCTION: &str = "Generate function";
+const REMOVE_PIPE: &str = "Remove pipe";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4869,5 +4870,117 @@ pub type Names {
 }
 ",
         find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn remove_pipe_works_with_argument_in_first_position() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+",
+        find_position_of("map").to_selection()
+    );
+}
+
+#[test]
+fn remove_pipe_works_with_argument_in_first_position_2() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble
+}
+
+fn wibble(a) { todo }
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn remove_pipe_works_with_argument_in_first_position_3() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble()
+}
+
+fn wibble(a) { todo }
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn remove_pipe_works_with_function_producing_another_function() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  1 |> wibble(2)
+}
+
+fn wibble(c) -> fn(a) -> Nil {
+  fn(_) { Nil }
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn remove_pipe_works_with_hole_in_first_position() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(_, todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+",
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn remove_pipe_works_with_hole_not_in_first_position() {
+    assert_code_action!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  fn(a) { todo }
+  |> map([1, 2, 3], _)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+",
+        find_position_of("fn(a)").select_until(find_position_of("map"))
+    );
+}
+
+#[test]
+fn remove_pipe_does_not_work_with_pipe_with_multiple_steps() {
+    assert_no_code_actions!(
+        REMOVE_PIPE,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(todo)
+  |> map(todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+",
+        find_position_of("[1, 2, 3]").select_until(find_position_of("map"))
     );
 }
