@@ -4014,3 +4014,132 @@ fn is_valid_lowercase_name(name: &str) -> bool {
 
     str_to_keyword(name).is_none()
 }
+
+/// Code action to rewrite a single-step pipeline into a regular function call.
+/// For example: `a |> b(c, _)` would be rewritten as `b(c, a)`.
+///
+pub struct RemovePipe<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    locations: Option<RemovePipeLocations>,
+}
+
+struct RemovePipeLocations {
+    first_value: SrcSpan,
+    finally: SrcSpan,
+    finally_kind: PipelineAssignmentKind,
+}
+
+impl<'a> RemovePipe<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            locations: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        // If we couldn't find a pipeline to rewrite we don't return any action.
+        let Some(RemovePipeLocations {
+            first_value,
+            finally,
+            finally_kind,
+        }) = self.locations
+        else {
+            return vec![];
+        };
+
+        // We first delete the first value of the pipeline as it's going to be
+        // inlined as a function call argument.
+        self.edits.delete(SrcSpan {
+            start: first_value.start,
+            end: finally.start,
+        });
+
+        // Then we have to insert the piped value in the appropriate position.
+        // This will change based on how the pipeline is being desugared, we
+        // know this thanks to the `finally_kind`
+        let first_value_text = self
+            .module
+            .code
+            .get(first_value.start as usize..first_value.end as usize)
+            .expect("invalid code span")
+            .to_string();
+
+        match finally_kind {
+            // When piping into a `_` we replace the hole with the piped value:
+            // `[1, 2] |> map(_, todo)` becomes `map([1, 2], todo)`.
+            PipelineAssignmentKind::Hole { hole } => self.edits.replace(hole, first_value_text),
+            // When piping is desguared as a function call we need to add the
+            // missing parentheses:
+            // `[1, 2] |> length` becomes `length([1, 2])`
+            PipelineAssignmentKind::FunctionCall => self
+                .edits
+                .insert(finally.end, format!("({first_value_text})")),
+            // When the piped value is inserted as the first argument there's two
+            // possible scenarios:
+            // - there's a second argument as well: in that case we insert it
+            //   before the second arg and add a comma
+            // - there's no other argument: `[1, 2] |> length()` becomes
+            //   `length([1, 2])`, we insert the value between the empty
+            //   parentheses
+            PipelineAssignmentKind::FirstArgument {
+                second_argument: Some(SrcSpan { start, .. }),
+            } => self.edits.insert(start, format!("{first_value_text}, ")),
+            PipelineAssignmentKind::FirstArgument {
+                second_argument: None,
+            } => self.edits.insert(finally.end - 1, first_value_text),
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove pipe")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemovePipe<'ast> {
+    fn visit_typed_expr_pipeline(
+        &mut self,
+        location: &'ast SrcSpan,
+        first_value: &'ast TypedPipelineAssignment,
+        assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
+        finally: &'ast TypedExpr,
+        finally_kind: &'ast PipelineAssignmentKind,
+    ) {
+        let pipeline_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, pipeline_range) {
+            // If this is a single step pipeline like `a |> b` then there's no
+            // assignments but only the `first_value` and `finally`.
+            // It means we can rewrite the pipeline as a regular function call.
+            if assignments.is_empty() {
+                self.locations = Some(RemovePipeLocations {
+                    first_value: first_value.location,
+                    finally: finally.location(),
+                    finally_kind: *finally_kind,
+                })
+            }
+
+            ast::visit::visit_typed_expr_pipeline(
+                self,
+                location,
+                first_value,
+                assignments,
+                finally,
+                finally_kind,
+            );
+        }
+    }
+}

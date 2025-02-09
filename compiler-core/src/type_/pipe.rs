@@ -159,7 +159,9 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
 
                         // Rewrite as right(left, ..args)
                         _ => (
-                            PipelineAssignmentKind::FirstArgument,
+                            PipelineAssignmentKind::FirstArgument {
+                                second_argument: arguments.first().map(|arg| arg.location),
+                            },
                             self.infer_insert_pipe(fun, arguments, location),
                         ),
                     }

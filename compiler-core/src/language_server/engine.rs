@@ -36,7 +36,7 @@ use super::{
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, DesugarUse,
         ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs, GenerateDynamicDecoder,
         GenerateFunction, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        TurnIntoUse, UseLabelShorthandSyntax,
+        RemovePipe, TurnIntoUse, UseLabelShorthandSyntax,
     },
     completer::Completer,
     rename::{rename_local_variable, VariableRenameKind},
@@ -338,6 +338,7 @@ where
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
+            actions.extend(RemovePipe::new(module, &lines, &params).code_actions());
             actions.extend(
                 PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
             );
