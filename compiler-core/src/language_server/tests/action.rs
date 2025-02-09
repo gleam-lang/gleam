@@ -4982,17 +4982,18 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 }
 
 #[test]
-fn remove_pipe_does_not_work_with_pipe_with_multiple_steps() {
-    assert_no_code_actions!(
+fn remove_pipe_always_inlines_the_first_step() {
+    assert_code_action!(
         REMOVE_PIPE,
         "
 pub fn main() {
   [1, 2, 3]
   |> map(todo)
-  |> map(todo)
+  |> filter(todo)
 }
 
 fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+fn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }
 ",
         find_position_of("[1, 2, 3]").select_until(find_position_of("map"))
     );
