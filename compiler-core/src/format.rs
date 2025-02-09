@@ -1338,6 +1338,7 @@ impl<'comments> Formatter<'comments> {
             .nest(INDENT)
             .append(break_("", " "))
             .append("{")
+            .next_break_fits(NextBreakFitsMode::Disabled)
             .group();
 
         let clauses_doc = concat(
