@@ -74,7 +74,7 @@ const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const GENERATE_FUNCTION: &str = "Generate function";
-const REMOVE_PIPE: &str = "Remove pipe";
+const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4874,9 +4874,9 @@ pub type Names {
 }
 
 #[test]
-fn remove_pipe_works_with_argument_in_first_position() {
+fn convert_to_function_call_works_with_argument_in_first_position() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   [1, 2, 3]
@@ -4890,9 +4890,9 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 }
 
 #[test]
-fn remove_pipe_works_with_argument_in_first_position_2() {
+fn convert_to_function_call_works_with_argument_in_first_position_2() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   [1, 2, 3] |> wibble
@@ -4905,9 +4905,9 @@ fn wibble(a) { todo }
 }
 
 #[test]
-fn remove_pipe_works_with_argument_in_first_position_3() {
+fn convert_to_function_call_works_with_argument_in_first_position_3() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   [1, 2, 3] |> wibble()
@@ -4920,9 +4920,9 @@ fn wibble(a) { todo }
 }
 
 #[test]
-fn remove_pipe_works_with_argument_in_first_position_4() {
+fn convert_to_function_call_works_with_argument_in_first_position_4() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   [1, 2, 3] |> wibble.wobble
@@ -4933,9 +4933,9 @@ pub fn main() {
 }
 
 #[test]
-fn remove_pipe_works_with_function_producing_another_function() {
+fn convert_to_function_call_works_with_function_producing_another_function() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   1 |> wibble(2)
@@ -4950,9 +4950,9 @@ fn wibble(c) -> fn(a) -> Nil {
 }
 
 #[test]
-fn remove_pipe_works_with_hole_in_first_position() {
+fn convert_to_function_call_works_with_hole_in_first_position() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   [1, 2, 3]
@@ -4966,9 +4966,9 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 }
 
 #[test]
-fn remove_pipe_works_with_hole_not_in_first_position() {
+fn convert_to_function_call_works_with_hole_not_in_first_position() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   fn(a) { todo }
@@ -4982,9 +4982,9 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 }
 
 #[test]
-fn remove_pipe_always_inlines_the_first_step() {
+fn convert_to_function_call_always_inlines_the_first_step() {
     assert_code_action!(
-        REMOVE_PIPE,
+        CONVERT_TO_FUNCTION_CALL,
         "
 pub fn main() {
   [1, 2, 3]
