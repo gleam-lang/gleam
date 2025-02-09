@@ -399,8 +399,8 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
     }
 }
 
-fn new_pipeline_assignment<'a, 'b>(
-    expr_typer: &mut ExprTyper<'a, 'b>,
+fn new_pipeline_assignment(
+    expr_typer: &mut ExprTyper<'_, '_>,
     expression: TypedExpr,
 ) -> TypedPipelineAssignment {
     let location = expression.location();
