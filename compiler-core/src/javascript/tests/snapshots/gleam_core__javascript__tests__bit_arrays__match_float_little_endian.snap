@@ -10,7 +10,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
 
 function go(x) {
   if (!(x.bitSize == 72)) {
@@ -23,7 +23,7 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.sliceToFloat(0, 64, false);
+  let a = bitArraySliceToFloat(x, 0, 64, false);
   let b = x.byteAt(8);
   return x;
 }

@@ -154,7 +154,19 @@ impl<'a> Generator<'a> {
 
         if self.tracker.bit_array_literal_used {
             self.register_prelude_usage(&mut imports, "toBitArray", None);
-        };
+        }
+
+        if self.tracker.bit_array_slice_used {
+            self.register_prelude_usage(&mut imports, "bitArraySlice", None);
+        }
+
+        if self.tracker.bit_array_slice_to_float_used {
+            self.register_prelude_usage(&mut imports, "bitArraySliceToFloat", None);
+        }
+
+        if self.tracker.bit_array_slice_to_int_used {
+            self.register_prelude_usage(&mut imports, "bitArraySliceToInt", None);
+        }
 
         if self.tracker.sized_integer_segment_used {
             self.register_prelude_usage(&mut imports, "sizedInt", None);
@@ -786,6 +798,9 @@ pub(crate) struct UsageTracker {
     pub float_division_used: bool,
     pub object_equality_used: bool,
     pub bit_array_literal_used: bool,
+    pub bit_array_slice_used: bool,
+    pub bit_array_slice_to_float_used: bool,
+    pub bit_array_slice_to_int_used: bool,
     pub sized_integer_segment_used: bool,
     pub string_bit_array_segment_used: bool,
     pub codepoint_bit_array_segment_used: bool,

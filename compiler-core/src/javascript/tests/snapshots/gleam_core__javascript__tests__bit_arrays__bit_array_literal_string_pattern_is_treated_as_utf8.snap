@@ -12,7 +12,7 @@ pub fn main() {
 }
 
 ----- COMPILED JAVASCRIPT
-import { toBitArray } from "../gleam.mjs";
+import { toBitArray, bitArraySlice } from "../gleam.mjs";
 
 export function main() {
   let $ = toBitArray([]);

@@ -261,21 +261,6 @@ export class BitArray {
     return true;
   }
 
-  /** @internal */
-  slice(start, end) {
-    return bitArraySlice(this, start, end);
-  }
-
-  /** @internal */
-  sliceToFloat(start, end, isBigEndian) {
-    return bitArraySliceToFloat(this, start, end, isBigEndian);
-  }
-
-  /** @internal */
-  sliceToInt(start, end, isBigEndian, isSigned) {
-    return bitArraySliceToInt(this, start, end, isBigEndian, isSigned);
-  }
-
   /**
    * Returns this bit array's internal buffer.
    *
@@ -373,7 +358,7 @@ function bitArrayPrintDeprecationWarning(name, message) {
  * @param {number} [end]
  * @returns {BitArray}
  */
-function bitArraySlice(bitArray, start, end) {
+export function bitArraySlice(bitArray, start, end) {
   end ??= bitArray.bitSize;
 
   bitArrayValidateRange(bitArray, start, end);
@@ -425,7 +410,7 @@ function bitArraySlice(bitArray, start, end) {
  * @param {boolean} isBigEndian
  * @returns {number}
  */
-function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
+export function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
   bitArrayValidateRange(bitArray, start, end);
 
   const floatSize = end - start;
@@ -488,7 +473,7 @@ function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
  * @param {boolean} isSigned
  * @returns {number}
  */
-function bitArraySliceToInt(bitArray, start, end, isBigEndian, isSigned) {
+export function bitArraySliceToInt(bitArray, start, end, isBigEndian, isSigned) {
   bitArrayValidateRange(bitArray, start, end);
 
   if (start === end) {
