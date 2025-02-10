@@ -3189,6 +3189,13 @@ impl RecordLabel<'_> {
             }
         }
     }
+
+    fn accessor(&self) -> EcoString {
+        match self {
+            RecordLabel::Labeled(label) => (*label).into(),
+            RecordLabel::Unlabeled(index) => eco_format!("{index}"),
+        }
+    }
 }
 
 impl<'a> DecoderPrinter<'a> {
@@ -3277,6 +3284,237 @@ impl<'a> DecoderPrinter<'a> {
             variable = field.label.variable_name(),
             field = field.label.field_key(),
             module = self.printer.print_module(DECODE_MODULE)
+        )
+    }
+}
+
+/// Builder for code action to apply the "Generate JSON encoder" action.
+///
+pub struct GenerateJsonEncoder<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    printer: Printer<'a>,
+    actions: &'a mut Vec<CodeAction>,
+}
+
+const JSON_MODULE: &str = "gleam/json";
+const JSON_PACKAGE_NAME: &str = "gleam_json";
+
+impl<'a> GenerateJsonEncoder<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+        actions: &'a mut Vec<CodeAction>,
+    ) -> Self {
+        let printer = Printer::new(&module.ast.names);
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            printer,
+            actions,
+        }
+    }
+
+    pub fn code_actions(&mut self) {
+        self.visit_typed_module(&self.module.ast);
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let range = self.edits.src_span_to_lsp_range(custom_type.location);
+        if !overlaps(self.params.range, range) {
+            return;
+        }
+
+        // For now, we only generate json encoders for types with one variant.
+        let constructor = match custom_type.constructors.as_slice() {
+            [constructor] => constructor,
+            _ => return,
+        };
+
+        let record_name = custom_type.name.to_snake_case();
+        let name = eco_format!("encode_{record_name}");
+
+        let Some(fields): Option<Vec<_>> = constructor
+            .arguments
+            .iter()
+            .map(|argument| {
+                Some(RecordField {
+                    label: RecordLabel::Labeled(
+                        argument.label.as_ref().map(|(_, name)| name.as_str())?,
+                    ),
+                    type_: &argument.type_,
+                })
+            })
+            .collect()
+        else {
+            return;
+        };
+
+        let mut encoder_printer = EncoderPrinter::new(
+            &self.module.ast.names,
+            custom_type.name.clone(),
+            self.module.name.clone(),
+        );
+
+        let encoders = fields
+            .iter()
+            .map(|field| encoder_printer.encode_field(&record_name, field, 4))
+            .join(",\n");
+
+        let json_type = self.printer.print_type(&Type::Named {
+            publicity: ast::Publicity::Public,
+            package: JSON_PACKAGE_NAME.into(),
+            module: JSON_MODULE.into(),
+            name: "Json".into(),
+            args: vec![],
+            inferred_variant: None,
+        });
+        let json_module = self.printer.print_module(JSON_MODULE);
+
+        let function = format!(
+            "
+
+fn {name}({record_name}: {type_name}) -> {json_type} {{
+  {json_module}.object([
+{encoders},
+  ])
+}}",
+            type_name = custom_type.name,
+        );
+
+        self.edits.insert(custom_type.end_position, function);
+        maybe_import(&mut self.edits, self.module, JSON_MODULE);
+
+        CodeActionBuilder::new("Generate JSON encoder")
+            .kind(CodeActionKind::REFACTOR)
+            .preferred(false)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .push_to(self.actions);
+    }
+}
+
+struct EncoderPrinter<'a> {
+    printer: Printer<'a>,
+    /// The name of the root type we are printing an encoder for
+    type_name: EcoString,
+    /// The module name of the root type we are printing an encoder for
+    type_module: EcoString,
+}
+
+impl<'a> EncoderPrinter<'a> {
+    fn new(names: &'a Names, type_name: EcoString, type_module: EcoString) -> Self {
+        Self {
+            type_name,
+            type_module,
+            printer: Printer::new(names),
+        }
+    }
+
+    fn encoder_for(&mut self, encoded_value: &str, type_: &Type, indent: usize) -> EcoString {
+        let module_name = self.printer.print_module(JSON_MODULE);
+
+        if type_.is_bool() {
+            eco_format!("{module_name}.bool({encoded_value})")
+        } else if type_.is_float() {
+            eco_format!("{module_name}.float({encoded_value})")
+        } else if type_.is_int() {
+            eco_format!("{module_name}.int({encoded_value})")
+        } else if type_.is_string() {
+            eco_format!("{module_name}.string({encoded_value})")
+        } else if let Some(types) = type_.tuple_types() {
+            let encoders = types
+                .iter()
+                .enumerate()
+                .map(|(index, type_)| {
+                    self.encoder_for(&format!("{encoded_value}.{index}"), type_, indent + 2)
+                })
+                .collect_vec();
+
+            eco_format!(
+                "{module_name}.preprocessed_array([
+{indent}  {encoders},
+{indent}])",
+                indent = " ".repeat(indent),
+                encoders = encoders.join(&format!(",\n{}", " ".repeat(indent + 2))),
+            )
+        } else {
+            let type_information = type_.named_type_information();
+            let type_information: Option<(&str, &str, &[Arc<Type>])> =
+                type_information.as_ref().map(|(module, name, arguments)| {
+                    (module.as_str(), name.as_str(), arguments.as_slice())
+                });
+
+            match type_information {
+                Some(("gleam", "List", [element])) => {
+                    eco_format!(
+                        "{module_name}.array({encoded_value}, {map_function})",
+                        map_function = self.encoder_for("_", element, indent)
+                    )
+                }
+                Some(("gleam/option", "Option", [some])) => {
+                    eco_format!(
+                        "case {encoded_value} {{
+{indent}  {none} -> {module_name}.null()
+{indent}  {some}(value) -> {encoder}
+{indent}}}",
+                        indent = " ".repeat(indent),
+                        none = self
+                            .printer
+                            .print_constructor(&"gleam/option".into(), &"None".into()),
+                        some = self
+                            .printer
+                            .print_constructor(&"gleam/option".into(), &"Some".into()),
+                        encoder = self.encoder_for("value", some, indent + 2)
+                    )
+                }
+                Some(("gleam/dict", "Dict", [key, value])) => {
+                    let stringify_function = match key.named_type_information().as_ref().map(
+                        |(module, name, arguments)| {
+                            (module.as_str(), name.as_str(), arguments.as_slice())
+                        },
+                    ) {
+                        Some(("gleam", "String", [])) => "fn(string) { string }",
+                        _ => &format!(
+                            r#"todo as "Function to stringify {}""#,
+                            self.printer.print_type(key)
+                        ),
+                    };
+                    eco_format!(
+                        "{module_name}.dict({encoded_value}, {stringify_function}, {})",
+                        self.encoder_for("_", value, indent)
+                    )
+                }
+                Some((module, name, _)) if module == self.type_module && name == self.type_name => {
+                    eco_format!("encode_{}({encoded_value})", name.to_snake_case())
+                }
+                _ => eco_format!(
+                    r#"todo as "Encoder for {}""#,
+                    self.printer.print_type(type_)
+                ),
+            }
+        }
+    }
+
+    fn encode_field(
+        &mut self,
+        record_name: &str,
+        field: &RecordField<'_>,
+        indent: usize,
+    ) -> EcoString {
+        let field_name = field.label.accessor();
+        let encoder = self.encoder_for(&format!("{record_name}.{field_name}"), field.type_, indent);
+
+        eco_format!(
+            r#"{indent}#("{field_name}", {encoder})"#,
+            indent = " ".repeat(indent),
         )
     }
 }
