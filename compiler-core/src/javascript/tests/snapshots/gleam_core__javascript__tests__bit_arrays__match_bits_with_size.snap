@@ -10,7 +10,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError, toBitArray, bitArraySlice, bitArraySliceToInt, sizedInt } from "../gleam.mjs";
+import { makeError, toBitArray, bitArraySlice, sizedInt } from "../gleam.mjs";
 
 function go(x) {
   let $ = toBitArray([sizedInt(0x77, 7, true)]);
