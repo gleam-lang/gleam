@@ -2889,6 +2889,191 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     }
 }
 
+/// Builder for code action to convert a literal use into a const.
+///
+/// For using the code action on each of the following lines:
+///
+/// ```gleam
+/// fn void() {
+///   let var = [1, 2, 3]
+///   let res = function("Statement", var)
+/// }
+/// ```
+///
+/// Both value literals will become:
+///
+/// ```gleam
+/// const ints = [1, 2, 3]
+/// const string = "Statement"
+///
+/// fn void() {
+///   let var = ints
+///   let res = function(string, var)
+/// }
+/// ```
+pub struct ExtractConstant<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    position: Option<ExtractConstantPosition>,
+    selected_expression: Option<(SrcSpan, Arc<Type>)>,
+}
+
+#[derive(PartialEq, Eq, Copy, Clone, Debug)]
+enum ExtractConstantPosition {
+    InsideCaptureBody,
+    TopLevelStatement,
+}
+
+impl<'a> ExtractConstant<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            position: None,
+            selected_expression: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some((expression_span, expression_type)) = self.selected_expression else {
+            return vec![];
+        };
+
+        let mut name_generator = NameGenerator::new();
+        let variable_name = name_generator.generate_name_from_type(&expression_type);
+
+        let content = self
+            .module
+            .code
+            .get((expression_span.start as usize)..(expression_span.end as usize))
+            .expect("selected expression");
+
+        let container_function_start = self
+            .module
+            .ast
+            .definitions
+            .iter()
+            .filter(|definition| definition.is_function())
+            .filter(|function| function.location().start < expression_span.start)
+            .map(|function| function.location().start)
+            .max();
+
+        if let Some(function_start) = container_function_start {
+            self.edits.insert(
+                function_start,
+                format!("const {variable_name} = {content}\n\n"),
+            );
+
+            self.edits
+                .replace(expression_span, String::from(variable_name));
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Extract constant")
+            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+
+    fn at_position<F>(&mut self, position: ExtractConstantPosition, fun: F)
+    where
+        F: Fn(&mut Self),
+    {
+        self.at_optional_position(Some(position), fun);
+    }
+
+    fn at_optional_position<F>(&mut self, position: Option<ExtractConstantPosition>, fun: F)
+    where
+        F: Fn(&mut Self),
+    {
+        let previous_position = self.position;
+        self.position = position;
+        fun(self);
+        self.position = previous_position;
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
+    fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
+        self.at_position(ExtractConstantPosition::TopLevelStatement, |this| {
+            ast::visit::visit_typed_statement(this, stmt);
+        });
+    }
+
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
+        let expr_location = expr.location();
+        let expr_range = self.edits.src_span_to_lsp_range(expr_location);
+
+        if within(self.params.range, expr_range) {
+            match expr {
+                // Attempt to extract whole list as long as it's comprised of only literals
+                TypedExpr::List { elements, .. } if elements.iter().all(TypedExpr::is_literal) => {
+                    self.selected_expression = Some((expr_location, expr.type_()));
+                }
+                // Attempt to extract whole tuple as long as it's comprised of only literals
+                TypedExpr::Tuple { elems, .. } if elems.iter().all(TypedExpr::is_literal) => {
+                    self.selected_expression = Some((expr_location, expr.type_()));
+                }
+                // Extract literals directly
+                TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => {
+                    self.selected_expression = Some((expr_location, expr.type_()));
+                }
+                _ => (),
+            }
+        }
+
+        self.at_optional_position(None, |this| {
+            ast::visit::visit_typed_expr(this, expr);
+        });
+    }
+
+    fn visit_typed_expr_fn(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        kind: &'ast FunctionLiteralKind,
+        args: &'ast [TypedArg],
+        body: &'ast Vec1<TypedStatement>,
+        return_annotation: &'ast Option<ast::TypeAst>,
+    ) {
+        let position = match kind {
+            FunctionLiteralKind::Capture { .. } => Some(ExtractConstantPosition::InsideCaptureBody),
+            _ => self.position,
+        };
+
+        self.at_optional_position(position, |this| {
+            ast::visit::visit_typed_expr_fn(
+                this,
+                location,
+                type_,
+                kind,
+                args,
+                body,
+                return_annotation,
+            );
+        });
+    }
+
+    // We don't want to offer the action if the cursor is over some invalid
+    // piece of code.
+    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, _type_: &'ast Arc<Type>) {
+        let invalid_range = self.edits.src_span_to_lsp_range(*location);
+        if within(self.params.range, invalid_range) {
+            self.selected_expression = None;
+        }
+    }
+}
+
 /// Builder for code action to apply the "expand function capture" action.
 ///
 pub struct ExpandFunctionCapture<'a> {
