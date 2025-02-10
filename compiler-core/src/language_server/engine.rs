@@ -34,10 +34,10 @@ use super::{
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, ConvertFromUse,
-        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractVariable,
-        FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
-        InlineVariable, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        UseLabelShorthandSyntax,
+        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractConstant,
+        ExtractVariable, FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction,
+        GenerateJsonEncoder, InlineVariable, LetAssertToCase, PatternMatchOnValue,
+        RedundantTupleInCaseSubject, UseLabelShorthandSyntax,
     },
     completer::Completer,
     rename::{rename_local_variable, VariableRenameKind},
@@ -371,6 +371,7 @@ where
             actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
+            actions.extend(ExtractConstant::new(module, &lines, &params).code_actions());
             actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToPipe::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToFunctionCall::new(module, &lines, &params).code_actions());
