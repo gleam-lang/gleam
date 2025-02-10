@@ -2,11 +2,15 @@ use std::convert::TryInto;
 use std::sync::OnceLock;
 
 use async_trait::async_trait;
-use gleam_core::{Error, Result};
+use camino::Utf8PathBuf;
+use gleam_core::{
+    error::{FileIoAction, FileKind},
+    Error, Result,
+};
 use http::{Request, Response};
+use reqwest::{Certificate, Client};
 
-static REQWEST_CLIENT: OnceLock<reqwest::Client> = OnceLock::new();
-static CERTS_ENV_VAR: &str = "GLEAM_CACERTS_PATH";
+static REQWEST_CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Debug)]
 pub struct HttpClient;
@@ -27,11 +31,8 @@ impl gleam_core::io::HttpClient for HttpClient {
         let request = request
             .try_into()
             .expect("Unable to convert HTTP request for use by reqwest library");
-        let mut response = REQWEST_CLIENT
-            .get_or_init(init_client)
-            .execute(request)
-            .await
-            .map_err(Error::http)?;
+        let client = init_client().map_err(Error::http)?;
+        let mut response = client.execute(request).await.map_err(Error::http)?;
         let mut builder = Response::builder()
             .status(response.status())
             .version(response.version());
@@ -44,31 +45,36 @@ impl gleam_core::io::HttpClient for HttpClient {
     }
 }
 
-fn init_client() -> reqwest::Client {
-    if let Some(cert) = get_certificate() {
-        return reqwest::Client::builder()
-            .add_root_certificate(cert)
+fn init_client() -> Result<&'static Client, Error> {
+    if let Some(client) = REQWEST_CLIENT.get() {
+        return Ok(client);
+    }
+
+    let certificate_path = std::env::var("GLEAM_CACERTS_PATH").map_err(|error| Error::FileIo {
+        kind: FileKind::Directory,
+        action: FileIoAction::Read,
+        path: Utf8PathBuf::new(),
+        err: Some(error.to_string()),
+    })?;
+
+    let certificate_bytes = std::fs::read(&certificate_path).map_err(|error| Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Parse,
+        path: Utf8PathBuf::from(&certificate_path),
+        err: Some(error.to_string()),
+    })?;
+
+    let certificate = Certificate::from_pem(&certificate_bytes).map_err(|error| Error::FileIo {
+        kind: FileKind::File,
+        action: FileIoAction::Parse,
+        path: Utf8PathBuf::from(&certificate_path),
+        err: Some(error.to_string()),
+    })?;
+
+    Ok(REQWEST_CLIENT.get_or_init(|| {
+        Client::builder()
+            .add_root_certificate(certificate)
             .build()
-            .expect("Unable to initialize a reqwest HTTP client");
-    } else {
-        return reqwest::Client::new();
-    }
-}
-
-fn get_certificate() -> Option<reqwest::Certificate> {
-    match std::env::var(CERTS_ENV_VAR) {
-        Ok(certs_path) => {
-            let data = std::fs::read(certs_path).expect(&format!(
-                "Unable to read certs file set as `{}`",
-                CERTS_ENV_VAR
-            ));
-            let cert = reqwest::Certificate::from_pem(&data).expect(&format!(
-                "Unable to construct a certificate from certs file set as `{}`",
-                CERTS_ENV_VAR
-            ));
-
-            Some(cert)
-        }
-        _ => None,
-    }
+            .expect("Failed to create reqwest client")
+    }))
 }
