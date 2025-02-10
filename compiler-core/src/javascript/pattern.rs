@@ -630,6 +630,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 }
                             }
 
+                            Pattern::Discard { .. } => {
+                                offset.increment(details.size);
+                            }
+
                             _ => {
                                 let start = offset.bits;
                                 let increment = details.size;
