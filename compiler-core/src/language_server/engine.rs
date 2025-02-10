@@ -35,8 +35,9 @@ use super::{
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder,
         ConvertToFunctionCall, DesugarUse, ExpandFunctionCapture, ExtractVariable,
-        FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction, LetAssertToCase,
-        PatternMatchOnValue, RedundantTupleInCaseSubject, TurnIntoUse, UseLabelShorthandSyntax,
+        FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
+        LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject, TurnIntoUse,
+        UseLabelShorthandSyntax,
     },
     completer::Completer,
     rename::{rename_local_variable, VariableRenameKind},
@@ -343,6 +344,7 @@ where
                 PatternMatchOnValue::new(module, &lines, &params, &this.compiler).code_actions(),
             );
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
+            GenerateJsonEncoder::new(module, &lines, &params, &mut actions).code_actions();
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             Ok(if actions.is_empty() {
                 None
