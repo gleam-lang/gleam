@@ -123,6 +123,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         endianness: Endianness,
         is_signed: bool,
     ) {
+        self.expression_generator
+            .tracker
+            .bit_array_slice_to_int_used = true;
+
         self.path.push(Index::BitArraySliceToInt {
             start,
             end,
@@ -132,6 +136,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn push_bit_array_slice_to_float(&mut self, start: usize, end: usize, endianness: Endianness) {
+        self.expression_generator
+            .tracker
+            .bit_array_slice_to_float_used = true;
+
         self.path.push(Index::BitArraySliceToFloat {
             start,
             end,
@@ -140,6 +148,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn push_bit_array_slice(&mut self, start: usize, end: Option<usize>) {
+        self.expression_generator.tracker.bit_array_slice_used = true;
         self.path.push(Index::BitArraySlice(start, end));
     }
 
@@ -159,47 +168,53 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }
     }
 
-    fn path_document(&self) -> Document<'a> {
-        concat(self.path.iter().map(|segment| match segment {
-            Index::Int(i) => eco_format!("[{i}]").to_doc(),
-            // TODO: escape string if needed
-            Index::String(s) => docvec![".", maybe_escape_property_doc(s)],
-            Index::ByteAt(i) => docvec![".byteAt(", i, ")"],
-            Index::BitArraySliceToInt {
-                start,
-                end,
-                endianness,
-                is_signed,
-            } => docvec![
-                ".sliceToInt(",
-                start,
-                ", ",
-                end,
-                ", ",
-                bool(endianness.is_big()),
-                ", ",
-                bool(*is_signed),
-                ")"
-            ],
-            Index::BitArraySliceToFloat {
-                start,
-                end,
-                endianness,
-            } => docvec![
-                ".sliceToFloat(",
-                start,
-                ", ",
-                end,
-                ", ",
-                bool(endianness.is_big()),
-                ")"
-            ],
-            Index::BitArraySlice(start, end) => match end {
-                Some(end) => docvec![".slice(", start, ", ", end, ")"],
-                None => docvec![".slice(", start, ")"],
-            },
-            Index::StringPrefixSlice(i) => docvec!(".slice(", i, ")"),
-        }))
+    fn apply_path_to_subject(&self, subject: Document<'a>) -> Document<'a> {
+        self.path
+            .iter()
+            .fold(subject, |acc, segment| match segment {
+                Index::Int(i) => acc.append(eco_format!("[{i}]").to_doc()),
+                // TODO: escape string if needed
+                Index::String(s) => acc.append(docvec![".", maybe_escape_property_doc(s)]),
+                Index::ByteAt(i) => acc.append(docvec![".byteAt(", i, ")"]),
+                Index::BitArraySliceToInt {
+                    start,
+                    end,
+                    endianness,
+                    is_signed,
+                } => docvec![
+                    "bitArraySliceToInt(",
+                    acc,
+                    ", ",
+                    start,
+                    ", ",
+                    end,
+                    ", ",
+                    bool(endianness.is_big()),
+                    ", ",
+                    bool(*is_signed),
+                    ")"
+                ],
+                Index::BitArraySliceToFloat {
+                    start,
+                    end,
+                    endianness,
+                } => docvec![
+                    "bitArraySliceToFloat(",
+                    acc,
+                    ", ",
+                    start,
+                    ", ",
+                    end,
+                    ", ",
+                    bool(endianness.is_big()),
+                    ")"
+                ],
+                Index::BitArraySlice(start, end) => match end {
+                    Some(end) => docvec!["bitArraySlice(", acc, ", ", start, ", ", end, ")"],
+                    None => docvec!["bitArraySlice(", acc, ", ", start, ")"],
+                },
+                Index::StringPrefixSlice(i) => docvec!(acc, ".slice(", i, ")"),
+            })
     }
 
     pub fn generate(
@@ -407,7 +422,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.assignments
             .iter()
             .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
+            .map(|assignment| assignment.subject.clone())
     }
 
     pub fn traverse_pattern(
@@ -531,7 +546,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     let var = self.next_local_var(left);
                     self.assignments.push(Assignment {
                         subject: expression::string(left_side_string),
-                        path: nil(),
                         name: left,
                         var,
                     });
@@ -834,52 +848,42 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
     fn push_assignment(&mut self, subject: Document<'a>, name: &'a EcoString) {
         let var = self.next_local_var(name);
-        let path = self.path_document();
-        self.assignments.push(Assignment {
-            subject,
-            path,
-            var,
-            name,
-        });
+        let subject = self.apply_path_to_subject(subject);
+        self.assignments.push(Assignment { subject, var, name });
     }
 
     fn push_string_prefix_check(&mut self, subject: Document<'a>, prefix: &'a str) {
         self.checks.push(Check::StringPrefix {
             prefix,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 
     fn push_booly_check(&mut self, subject: Document<'a>, expected_to_be_truthy: bool) {
         self.checks.push(Check::Booly {
             expected_to_be_truthy,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 
     fn push_equality_check(&mut self, subject: Document<'a>, to: Document<'a>) {
         self.checks.push(Check::Equal {
             to,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 
     fn push_variant_check(&mut self, subject: Document<'a>, kind: Document<'a>) {
         self.checks.push(Check::Variant {
             kind,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 
     fn push_result_check(&mut self, subject: Document<'a>, is_ok: bool) {
         self.checks.push(Check::Result {
             is_ok,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 
@@ -892,8 +896,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.checks.push(Check::ListLength {
             expected_length,
             has_tail_spread,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 
@@ -906,8 +909,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.checks.push(Check::BitArrayBitSize {
             expected_bit_size,
             tail_spread_type,
-            subject,
-            path: self.path_document(),
+            subject: self.apply_path_to_subject(subject),
         })
     }
 }
@@ -929,12 +931,11 @@ pub struct Assignment<'a> {
     pub name: &'a str,
     var: Document<'a>,
     pub subject: Document<'a>,
-    pub path: Document<'a>,
 }
 
 impl<'a> Assignment<'a> {
     pub fn into_doc(self) -> Document<'a> {
-        docvec!["let ", self.var, " = ", self.subject, self.path, ";"]
+        docvec!["let ", self.var, " = ", self.subject, ";"]
     }
 }
 
@@ -942,39 +943,32 @@ impl<'a> Assignment<'a> {
 pub enum Check<'a> {
     Result {
         subject: Document<'a>,
-        path: Document<'a>,
         is_ok: bool,
     },
     Variant {
         subject: Document<'a>,
-        path: Document<'a>,
         kind: Document<'a>,
     },
     Equal {
         subject: Document<'a>,
-        path: Document<'a>,
         to: Document<'a>,
     },
     ListLength {
         subject: Document<'a>,
-        path: Document<'a>,
         expected_length: usize,
         has_tail_spread: bool,
     },
     BitArrayBitSize {
         subject: Document<'a>,
-        path: Document<'a>,
         expected_bit_size: usize,
         tail_spread_type: Option<BitArrayTailSpreadType>,
     },
     StringPrefix {
         subject: Document<'a>,
-        path: Document<'a>,
         prefix: &'a str,
     },
     Booly {
         subject: Document<'a>,
-        path: Document<'a>,
         expected_to_be_truthy: bool,
     },
     Guard {
@@ -996,47 +990,37 @@ impl<'a> Check<'a> {
             Check::Booly {
                 expected_to_be_truthy,
                 subject,
-                path,
             } => {
                 if expected_to_be_truthy == match_desired {
-                    docvec![subject, path]
+                    subject
                 } else {
-                    docvec!["!", subject, path]
+                    docvec!["!", subject]
                 }
             }
 
-            Check::Variant {
-                subject,
-                path,
-                kind,
-            } => {
+            Check::Variant { subject, kind } => {
                 if match_desired {
-                    docvec![subject, path, " instanceof ", kind]
+                    docvec![subject, " instanceof ", kind]
                 } else {
-                    docvec!["!(", subject, path, " instanceof ", kind, ")"]
+                    docvec!["!(", subject, " instanceof ", kind, ")"]
                 }
             }
 
-            Check::Result {
-                subject,
-                path,
-                is_ok,
-            } => {
+            Check::Result { subject, is_ok } => {
                 if match_desired == is_ok {
-                    docvec![subject, path, ".isOk()"]
+                    docvec![subject, ".isOk()"]
                 } else {
-                    docvec!["!", subject, path, ".isOk()"]
+                    docvec!["!", subject, ".isOk()"]
                 }
             }
 
-            Check::Equal { subject, path, to } => {
+            Check::Equal { subject, to } => {
                 let operator = if match_desired { " === " } else { " !== " };
-                docvec![subject, path, operator, to]
+                docvec![subject, operator, to]
             }
 
             Check::ListLength {
                 subject,
-                path,
                 expected_length,
                 has_tail_spread,
             } => {
@@ -1046,18 +1030,17 @@ impl<'a> Check<'a> {
                     eco_format!(".hasLength({expected_length})").to_doc()
                 };
                 if match_desired {
-                    docvec![subject, path, length_check,]
+                    docvec![subject, length_check,]
                 } else {
-                    docvec!["!", subject, path, length_check,]
+                    docvec!["!", subject, length_check,]
                 }
             }
             Check::BitArrayBitSize {
                 subject,
-                path,
                 expected_bit_size,
                 tail_spread_type,
             } => {
-                let bit_size = docvec![subject.clone(), path.clone(), ".bitSize"];
+                let bit_size = docvec![subject.clone(), ".bitSize"];
 
                 let bit_size_check = match tail_spread_type {
                     Some(BitArrayTailSpreadType::Bits) => {
@@ -1088,16 +1071,12 @@ impl<'a> Check<'a> {
                     docvec!["!(", bit_size_check, ")"]
                 }
             }
-            Check::StringPrefix {
-                subject,
-                path,
-                prefix,
-            } => {
+            Check::StringPrefix { subject, prefix } => {
                 let prefix = expression::string(prefix);
                 if match_desired {
-                    docvec![subject, path, ".startsWith(", prefix, ")"]
+                    docvec![subject, ".startsWith(", prefix, ")"]
                 } else {
-                    docvec!["!", subject, path, ".startsWith(", prefix, ")"]
+                    docvec!["!", subject, ".startsWith(", prefix, ")"]
                 }
             }
         }

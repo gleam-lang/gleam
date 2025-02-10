@@ -11,7 +11,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { makeError, bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
   if (!(x.bitSize == 24)) {
@@ -24,7 +24,7 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.slice(8, 24);
+  let a = bitArraySlice(x, 8, 24);
   if (!(x.bitSize == 24)) {
     throw makeError(
       "let_assert",
@@ -35,6 +35,6 @@ function go(x) {
       { value: x }
     )
   }
-  let b = x.slice(8, 24);
+  let b = bitArraySlice(x, 8, 24);
   return x;
 }

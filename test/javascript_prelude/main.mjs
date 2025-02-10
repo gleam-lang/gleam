@@ -14,6 +14,9 @@ import {
   toList,
   sizedInt,
   sizedFloat,
+  bitArraySlice,
+  bitArraySliceToInt,
+  bitArraySliceToFloat,
 } from "./prelude.mjs";
 
 let failures = 0;
@@ -534,89 +537,103 @@ assertNotEqual(hasEqualsField, hasEqualsField2);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(0), 1);
 assertEqual(new BitArray(new Uint8Array([1, 2, 3])).byteAt(2), 3);
 
-// BitArray.slice()
+// bitArraySlice
 
-assertThrows("`BitArray.slice()` throws if start is less than zero", () =>
-  new BitArray(new Uint8Array([1])).slice(-1, 8),
+assertThrows("`bitArraySlice()` throws if start is less than zero", () =>
+  bitArraySlice(new BitArray(new Uint8Array([1])), -1, 8),
 );
 
 assertThrows(
-  "`BitArray.slice()` throws if start is greater than the bit size",
-  () => new BitArray(new Uint8Array([1])).slice(9, 8),
+  "`bitArraySlice()` throws if start is greater than the bit size",
+  () => bitArraySlice(new BitArray(new Uint8Array([1])), 9, 8),
 );
 
-assertThrows("`BitArray.slice()` throws if end is before start", () =>
-  new BitArray(new Uint8Array([1])).slice(4, 2),
+assertThrows("`bitArraySlice()` throws if end is before start", () =>
+  bitArraySlice(new BitArray(new Uint8Array([1])), 4, 2),
 );
 
 assertThrows(
-  "`BitArray.slice()` throws if end is greater than the bit size",
-  () => new BitArray(new Uint8Array([1])).slice(0, 10),
+  "`bitArraySlice()` throws if end is greater than the bit size",
+  () => bitArraySlice(new Uint8Array([1]), 0, 10),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([1, 2, 3])).slice(0, 0),
+  bitArraySlice(new BitArray(new Uint8Array([1, 2, 3])), 0, 0),
   new BitArray(new Uint8Array([])),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([0xbe, 0xff])).slice(0, 2),
+  bitArraySlice(new BitArray(new Uint8Array([0xbe, 0xff])), 0, 2),
   new BitArray(new Uint8Array([0xbe]), 2),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([0x12, 0b10101101, 0xff])).slice(10, 14),
+  bitArraySlice(new BitArray(new Uint8Array([0x12, 0b10101101, 0xff])), 10, 14),
   new BitArray(new Uint8Array([0b10110100]), 4),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([1, 2, 3])).slice(8, 24),
+  bitArraySlice(new BitArray(new Uint8Array([1, 2, 3])), 8, 24),
   new BitArray(new Uint8Array([2, 3])),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([1, 2, 3, 4, 5])).slice(8, 32),
+  bitArraySlice(new BitArray(new Uint8Array([1, 2, 3, 4, 5])), 8, 32),
   new BitArray(new Uint8Array([2, 3, 4])),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([1, 0xfe, 0xa1])).slice(8, 19),
+  bitArraySlice(new BitArray(new Uint8Array([1, 0xfe, 0xa1])), 8, 19),
   new BitArray(new Uint8Array([0xfe, 0xa1]), 11),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([17, 79, 190, 151, 98, 222, 101])).slice(19, 51),
+  bitArraySlice(
+    new BitArray(new Uint8Array([17, 79, 190, 151, 98, 222, 101])),
+    19,
+    51,
+  ),
   new BitArray(new Uint8Array([244, 187, 22, 243]), 32),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([0, 0, 0, 0, 0xff, 0xe0])).slice(37, 41),
+  bitArraySlice(new BitArray(new Uint8Array([0, 0, 0, 0, 0xff, 0xe0])), 37, 41),
   new BitArray(new Uint8Array([0b11111100]), 4),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([0xaa, 0xbb, 0xff, 0, 0, 0]))
-    .slice(8, 48)
-    .sliceToFloat(8, 40, false),
+  bitArraySliceToFloat(
+    bitArraySlice(
+      new BitArray(new Uint8Array([0xaa, 0xbb, 0xff, 0, 0, 0])),
+      8,
+      48,
+    ),
+    8,
+    40,
+    false,
+  ),
   3.5733110840282835e-43,
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([1, 2, 3, 4, 5])).slice(8, 32).slice(8),
+  bitArraySlice(
+    bitArraySlice(new BitArray(new Uint8Array([1, 2, 3, 4, 5])), 8, 32),
+    8,
+  ),
   new BitArray(new Uint8Array([3, 4])),
 );
 
 assertEqual(
-  new BitArray(
-    new Uint8Array([0b00000001, 0b00000010, 0b00000011]),
-    20,
-    2,
-  ).slice(4, 10),
+  bitArraySlice(
+    new BitArray(new Uint8Array([0b00000001, 0b00000010, 0b00000011]), 20, 2),
+    4,
+    10,
+  ),
   new BitArray(new Uint8Array([0b00000001, 0b00000010]), 6, 6),
 );
 
 assertEqual(
-  new BitArray(new Uint8Array([1])).slice(1),
+  bitArraySlice(new BitArray(new Uint8Array([1])), 1),
   new BitArray(new Uint8Array([0b00000010]), 7),
 );
 
@@ -702,54 +719,65 @@ assertEqual(
   new BitArray(new Uint8Array([255, 255, 255, 255, 255, 248, 0, 0, 0, 0]), 75),
 );
 
-// BitArray.sliceToFloat()
+// bitArraySliceToFloat()
 
 assertEqual(
-  toBitArray([63, 240, 0, 0, 0, 0, 0, 0]).sliceToFloat(0, 64, true),
+  bitArraySliceToFloat(toBitArray([63, 240, 0, 0, 0, 0, 0, 0]), 0, 64, true),
   1.0,
 );
 assertEqual(
-  toBitArray([0, 0, 0, 0, 0, 0, 240, 63]).sliceToFloat(0, 64, false),
+  bitArraySliceToFloat(toBitArray([0, 0, 0, 0, 0, 0, 240, 63]), 0, 64, false),
   1.0,
 );
 assertEqual(
-  toBitArray([0xff, 0xc9, 0x74, 0x24, 0x00]).sliceToFloat(8, 40, true),
+  bitArraySliceToFloat(toBitArray([0xff, 0xc9, 0x74, 0x24, 0x00]), 8, 40, true),
   -1000000.0,
 );
 assertEqual(
-  toBitArray([0x00, 0x24, 0x74, 0xc9]).sliceToFloat(0, 32, false),
+  bitArraySliceToFloat(toBitArray([0x00, 0x24, 0x74, 0xc9]), 0, 32, false),
   -1000000.0,
 );
 assertEqual(
-  new BitArray(
-    new Uint8Array([112, 152, 127, 244, 0, 7, 192]),
-    50,
-    0,
-  ).sliceToFloat(11, 43, true),
+  bitArraySliceToFloat(
+    new BitArray(new Uint8Array([112, 152, 127, 244, 0, 7, 192]), 50, 0),
+    11,
+    43,
+    true,
+  ),
   -511.25,
 );
 assertEqual(
-  new BitArray(
-    new Uint8Array([8, 0, 0, 0, 1, 129, 39, 103, 129, 254]),
-    79,
-    0,
-  ).sliceToFloat(7, 71, false),
+  bitArraySliceToFloat(
+    new BitArray(
+      new Uint8Array([8, 0, 0, 0, 1, 129, 39, 103, 129, 254]),
+      79,
+      0,
+    ),
+    7,
+    71,
+    false,
+  ),
   -5011.75,
 );
 assertEqual(
-  new BitArray(
-    new Uint8Array([212, 152, 127, 244, 0, 7, 192]),
-    50,
-    3,
-  ).sliceToFloat(11, 43, true),
+  bitArraySliceToFloat(
+    new BitArray(new Uint8Array([212, 152, 127, 244, 0, 7, 192]), 50, 3),
+    11,
+    43,
+    true,
+  ),
   1.0714967429001753e-19,
 );
 
-// BitArray.sliceToInt()
+// bitArraySliceToInt()
 
-assertEqual(toBitArray([0b10011110]).sliceToInt(0, 4, true, false), 0b1001);
 assertEqual(
-  new BitArray(new Uint8Array([0b11001110]), 7, 1).sliceToInt(
+  bitArraySliceToInt(toBitArray([0b10011110]), 0, 4, true, false),
+  0b1001,
+);
+assertEqual(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([0b11001110]), 7, 1),
     0,
     4,
     true,
@@ -757,12 +785,22 @@ assertEqual(
   ),
   0b1001,
 );
-assertEqual(toBitArray([0b10011110]).sliceToInt(4, 8, true, false), 0b1110);
-assertEqual(toBitArray([0b10011110]).sliceToInt(1, 6, true, true), 0b00111);
-assertEqual(toBitArray([0b10011010]).sliceToInt(3, 8, true, true), -6);
-assertEqual(toBitArray([0b10011010]).sliceToInt(0, 7, true, true), -51);
 assertEqual(
-  new BitArray(new Uint8Array([0b11001100, 0b00100000]), 11).sliceToInt(
+  bitArraySliceToInt(toBitArray([0b10011110]), 4, 8, true, false),
+  0b1110,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([0b10011110]), 1, 6, true, true),
+  0b00111,
+);
+assertEqual(bitArraySliceToInt(toBitArray([0b10011010]), 3, 8, true, true), -6);
+assertEqual(
+  bitArraySliceToInt(toBitArray([0b10011010]), 0, 7, true, true),
+  -51,
+);
+assertEqual(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([0b11001100, 0b00100000]), 11),
     1,
     11,
     false,
@@ -770,37 +808,59 @@ assertEqual(
   ),
   408,
 );
-assertEqual(toBitArray([0xb6, 0xe3]).sliceToInt(0, 12, true, false), 0xb6e);
-assertEqual(toBitArray([0xb6, 0xe3]).sliceToInt(0, 12, false, false), 0xeb6);
 assertEqual(
-  toBitArray([0xff, 0xb6, 0xe3]).sliceToInt(8, 20, true, false),
+  bitArraySliceToInt(toBitArray([0xb6, 0xe3]), 0, 12, true, false),
   0xb6e,
 );
 assertEqual(
-  toBitArray([0xff, 0xb6, 0xe3]).sliceToInt(20, 24, true, false),
-  0x03,
-);
-assertEqual(
-  toBitArray([0xff, 0xb6, 0xe3]).sliceToInt(8, 20, false, false),
+  bitArraySliceToInt(toBitArray([0xb6, 0xe3]), 0, 12, false, false),
   0xeb6,
 );
 assertEqual(
-  toBitArray([0xa5, 0x6c, 0xaa]).sliceToInt(5, 18, true, false),
+  bitArraySliceToInt(toBitArray([0xff, 0xb6, 0xe3]), 8, 20, true, false),
+  0xb6e,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([0xff, 0xb6, 0xe3]), 20, 24, true, false),
+  0x03,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([0xff, 0xb6, 0xe3]), 8, 20, false, false),
+  0xeb6,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([0xa5, 0x6c, 0xaa]), 5, 18, true, false),
   5554,
 );
 assertEqual(
-  toBitArray([0xa5, 0x6c, 0xaa]).sliceToInt(5, 18, false, true),
+  bitArraySliceToInt(toBitArray([0xa5, 0x6c, 0xaa]), 5, 18, false, true),
   -3411,
 );
-assertEqual(toBitArray([1, 2, 3]).sliceToInt(0, 8, true, false), 1);
-assertEqual(toBitArray([160, 2, 3]).sliceToInt(0, 8, false, true), -96);
-assertEqual(toBitArray([1, 2, 3]).sliceToInt(0, 16, true, false), 258);
-assertEqual(toBitArray([1, 2, 3]).sliceToInt(0, 16, false, false), 513);
-assertEqual(toBitArray([1, 160, 3]).sliceToInt(0, 16, false, true), -24575);
-assertEqual(toBitArray([160, 2, 3]).sliceToInt(0, 16, true, false), 40962);
-assertEqual(toBitArray([3, 160, 2]).sliceToInt(8, 24, true, true), -24574);
+assertEqual(bitArraySliceToInt(toBitArray([1, 2, 3]), 0, 8, true, false), 1);
 assertEqual(
-  new BitArray(new Uint8Array([146, 192, 70, 25, 128]), 33).sliceToInt(
+  bitArraySliceToInt(toBitArray([160, 2, 3]), 0, 8, false, true),
+  -96,
+);
+assertEqual(bitArraySliceToInt(toBitArray([1, 2, 3]), 0, 16, true, false), 258);
+assertEqual(
+  bitArraySliceToInt(toBitArray([1, 2, 3]), 0, 16, false, false),
+  513,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([1, 160, 3]), 0, 16, false, true),
+  -24575,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([160, 2, 3]), 0, 16, true, false),
+  40962,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([3, 160, 2]), 8, 24, true, true),
+  -24574,
+);
+assertEqual(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([146, 192, 70, 25, 128]), 33),
     1,
     24,
     true,
@@ -809,11 +869,12 @@ assertEqual(
   1_228_870,
 );
 assertEqual(
-  toBitArray([255, 255, 255, 255]).sliceToInt(0, 32, false, true),
+  bitArraySliceToInt(toBitArray([255, 255, 255, 255]), 0, 32, false, true),
   -1,
 );
 assertEqual(
-  new BitArray(new Uint8Array([217, 150, 209, 191, 0]), 33).sliceToInt(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([217, 150, 209, 191, 0]), 33),
     1,
     33,
     true,
@@ -822,7 +883,8 @@ assertEqual(
   3_006_112_638,
 );
 assertEqual(
-  new BitArray(new Uint8Array([146, 192, 70, 25, 128]), 33).sliceToInt(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([146, 192, 70, 25, 128]), 33),
     1,
     33,
     true,
@@ -831,7 +893,8 @@ assertEqual(
   629_181_491,
 );
 assertEqual(
-  new BitArray(new Uint8Array([251, 24, 47, 227, 128]), 33).sliceToInt(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([251, 24, 47, 227, 128]), 33),
     1,
     33,
     false,
@@ -840,7 +903,8 @@ assertEqual(
   3_344_904_438,
 );
 assertEqual(
-  new BitArray(new Uint8Array([240, 102, 91, 101, 128]), 33).sliceToInt(
+  bitArraySliceToInt(
+    new BitArray(new Uint8Array([240, 102, 91, 101, 128]), 33),
     0,
     33,
     false,
@@ -849,15 +913,28 @@ assertEqual(
   5_995_456_240,
 );
 assertEqual(
-  toBitArray([231, 255, 255, 255, 254, 123]).sliceToInt(0, 40, true, true),
+  bitArraySliceToInt(
+    toBitArray([231, 255, 255, 255, 254, 123]),
+    0,
+    40,
+    true,
+    true,
+  ),
   -103_079_215_106,
 );
 assertEqual(
-  toBitArray([0, 231, 255, 255, 253, 123, 17]).sliceToInt(1, 55, true, false),
+  bitArraySliceToInt(
+    toBitArray([0, 231, 255, 255, 253, 123, 17]),
+    1,
+    55,
+    true,
+    false,
+  ),
   127_543_348_739_464,
 );
 assertEqual(
-  toBitArray([142, 231, 255, 255, 253, 123, 17, 139]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([142, 231, 255, 255, 253, 123, 17, 139]),
     8,
     62,
     false,
@@ -866,7 +943,8 @@ assertEqual(
   -8425025061257241,
 );
 assertEqual(
-  toBitArray([142, 231, 255, 255, 253, 123, 17, 139]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([142, 231, 255, 255, 253, 123, 17, 139]),
     7,
     62,
     false,
@@ -875,15 +953,28 @@ assertEqual(
   -8293899692933261,
 );
 assertEqual(
-  toBitArray([142, 231, 255, 255, 253, 123, 17]).sliceToInt(8, 48, true, true),
+  bitArraySliceToInt(
+    toBitArray([142, 231, 255, 255, 253, 123, 17]),
+    8,
+    48,
+    true,
+    true,
+  ),
   -103_079_215_749,
 );
 assertEqual(
-  toBitArray([255, 255, 255, 255, 255, 255, 255]).sliceToInt(0, 56, true, true),
+  bitArraySliceToInt(
+    toBitArray([255, 255, 255, 255, 255, 255, 255]),
+    0,
+    56,
+    true,
+    true,
+  ),
   -1,
 );
 assertEqual(
-  toBitArray([0x00, 0xaa, 255, 255, 255, 255, 255]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([0x00, 0xaa, 255, 255, 255, 255, 255]),
     0,
     56,
     true,
@@ -892,7 +983,8 @@ assertEqual(
   0xaaffffffffff,
 );
 assertEqual(
-  toBitArray([255, 255, 255, 255, 255, 0xaa, 0x00]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([255, 255, 255, 255, 255, 0xaa, 0x00]),
     0,
     56,
     false,
@@ -901,7 +993,8 @@ assertEqual(
   0xaaffffffffff,
 );
 assertEqual(
-  toBitArray([255, 255, 255, 255, 255, 255, 255]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([255, 255, 255, 255, 255, 255, 255]),
     0,
     56,
     true,
@@ -909,16 +1002,26 @@ assertEqual(
   ),
   Number(0xfffffffffffffen),
 );
-assertEqual(toBitArray([0xfe, 0x3f]).sliceToInt(4, 12, true, false), 0xe3);
-assertEqual(toBitArray([253, 94]).sliceToInt(3, 11, true, true), -22);
-assertEqual(toBitArray([233, 164]).sliceToInt(3, 15, true, false), 1234);
-assertEqual(toBitArray([250, 72]).sliceToInt(3, 15, false, false), 1234);
 assertEqual(
-  toBitArray([250, 72, 223, 189]).sliceToInt(7, 29, true, false),
+  bitArraySliceToInt(toBitArray([0xfe, 0x3f]), 4, 12, true, false),
+  0xe3,
+);
+assertEqual(bitArraySliceToInt(toBitArray([253, 94]), 3, 11, true, true), -22);
+assertEqual(
+  bitArraySliceToInt(toBitArray([233, 164]), 3, 15, true, false),
+  1234,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([250, 72]), 3, 15, false, false),
+  1234,
+);
+assertEqual(
+  bitArraySliceToInt(toBitArray([250, 72, 223, 189]), 7, 29, true, false),
   596983,
 );
 assertEqual(
-  toBitArray([250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177]),
     14,
     85,
     false,
@@ -927,7 +1030,8 @@ assertEqual(
   70821197049655,
 );
 assertEqual(
-  toBitArray([250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177]).sliceToInt(
+  bitArraySliceToInt(
+    toBitArray([250, 72, 223, 189, 41, 97, 165, 0, 0, 0, 0, 177]),
     14,
     85,
     true,

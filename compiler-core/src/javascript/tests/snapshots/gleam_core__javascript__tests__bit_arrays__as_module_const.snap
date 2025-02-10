@@ -24,7 +24,7 @@ expression: "\n          pub const data = <<\n            0x1,\n            2,\n
         
 
 ----- COMPILED JAVASCRIPT
-import { toBitArray, sizedInt, stringBits, sizedFloat } from "../gleam.mjs";
+import { toBitArray, bitArraySlice, sizedInt, stringBits, sizedFloat } from "../gleam.mjs";
 
 export const data = /* @__PURE__ */ toBitArray([
   1,
@@ -35,7 +35,7 @@ export const data = /* @__PURE__ */ toBitArray([
   stringBits("Gleam"),
   sizedFloat(4.2, 64, true),
   sizedFloat(4.2, 32, true),
-  /* @__PURE__ */ toBitArray([250]).slice(0, 6),
+  bitArraySlice(/* @__PURE__ */ toBitArray([250]), 0, 6),
   sizedInt(-1, 64, true),
   /* @__PURE__ */ toBitArray([
     /* @__PURE__ */ toBitArray([1, 2, 3]),

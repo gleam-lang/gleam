@@ -34,15 +34,6 @@ export class BitArray {
   /** @internal */
   equals(other: BitArray): boolean;
 
-  /** @internal */
-  slice(start: number, end: number): BitArray;
-
-  /** @internal */
-  sliceToFloat(start: number, end: number, isBigEndian: boolean): number;
-
-  /** @internal */
-  sliceToInt(start: number, end: number, isBigEndian: boolean, isSigned: boolean): number;
-
   /** @deprecated */
   get buffer(): Uint8Array;
 

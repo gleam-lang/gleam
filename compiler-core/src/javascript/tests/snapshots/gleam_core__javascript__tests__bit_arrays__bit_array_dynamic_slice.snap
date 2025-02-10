@@ -11,9 +11,9 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { toBitArray } from "../gleam.mjs";
+import { toBitArray, bitArraySlice } from "../gleam.mjs";
 
 function go(x) {
   let i = 4;
-  return toBitArray([toBitArray([171]).slice(0, i)]);
+  return toBitArray([bitArraySlice(toBitArray([171]), 0, i)]);
 }

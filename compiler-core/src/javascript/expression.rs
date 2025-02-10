@@ -305,10 +305,14 @@ impl<'module> Generator<'module> {
                     [Opt::Bits { .. }, Opt::Size { value: size, .. }]
                     | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
                         TypedExpr::Int { value: size, .. } => {
-                            Ok(docvec![value, ".slice(0, ", size, ")"])
+                            self.tracker.bit_array_slice_used = true;
+                            Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
                         }
 
-                        TypedExpr::Var { name, .. } => Ok(docvec![value, ".slice(0, ", name, ")"]),
+                        TypedExpr::Var { name, .. } => {
+                            self.tracker.bit_array_slice_used = true;
+                            Ok(docvec!["bitArraySlice(", value, ", 0, ", name, ")"])
+                        }
 
                         _ => Err(Error::Unsupported {
                             feature: "This bit array segment option".into(),
@@ -1327,7 +1331,7 @@ pub(crate) fn guard_constant_expression<'a>(
         Constant::Var { name, .. } => Ok(assignments
             .iter()
             .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
+            .map(|assignment| assignment.subject.clone())
             .unwrap_or_else(|| maybe_escape_identifier_doc(name))),
 
         expression => constant_expression(Context::Function, tracker, expression),
@@ -1546,7 +1550,8 @@ fn bit_array<'a>(
                 [Opt::Bits { .. }, Opt::Size { value: size, .. }]
                 | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
                     Constant::Int { value: size, .. } => {
-                        Ok(docvec![value, ".slice(0, ", size, ")"])
+                        tracker.bit_array_slice_used = true;
+                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
                     }
 
                     _ => Err(Error::Unsupported {

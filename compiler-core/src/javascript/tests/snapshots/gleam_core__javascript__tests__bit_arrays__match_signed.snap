@@ -10,7 +10,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { makeError, bitArraySliceToInt } from "../gleam.mjs";
 
 function go(x) {
   if (!(x.bitSize == 8)) {
@@ -23,6 +23,6 @@ function go(x) {
       { value: x }
     )
   }
-  let a = x.sliceToInt(0, 8, true, true);
+  let a = bitArraySliceToInt(x, 0, 8, true, true);
   return x;
 }

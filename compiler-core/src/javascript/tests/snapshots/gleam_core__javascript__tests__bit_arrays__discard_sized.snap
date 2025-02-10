@@ -11,7 +11,7 @@ fn go(x) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { makeError, bitArraySliceToInt } from "../gleam.mjs";
 
 function go(x) {
   if (!(x.bitSize == 24)) {
