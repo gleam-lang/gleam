@@ -195,6 +195,33 @@
   }
   ```
 
+- The language server now offers the option to turn a variable value into a
+  const declaration. This will work as long as the value is a literal or a tuple
+  or list of literals. Values inside tuples or lists also work. For example, in
+  two uses of the code action:
+
+  ```gleam
+  pub fn main() {
+    [#("a", 0), #("b", 1), #("a", 2)]
+    |> key_filter("a")
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  const values = [#("a", 0), #("b", 1), #("a", 2)]
+
+  const string = "a"
+
+  pub fn main() {
+    values
+    |> key_filter(string)
+  }
+  ```
+
+  ([Matias Carlander](https://github.com/matiascr))
+
 ### Formatter
 
 ### Bug fixes
