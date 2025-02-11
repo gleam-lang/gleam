@@ -2190,16 +2190,17 @@ pub fn code_action_convert_unqualified_constructor_to_qualified(
     actions.extend(new_actions);
 }
 
-/// Builder for code action to apply the desugar use expression.
+/// Builder for code action to apply the convert from use action, turning a use
+/// expression into a regular function call.
 ///
-pub struct DesugarUse<'a> {
+pub struct ConvertFromUse<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     selected_use: Option<&'a TypedUse>,
 }
 
-impl<'a> DesugarUse<'a> {
+impl<'a> ConvertFromUse<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -2381,7 +2382,7 @@ impl<'a> DesugarUse<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for DesugarUse<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for ConvertFromUse<'ast> {
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
         // We only want to take into account the innermost use we find ourselves
         // into, so we can't stop at the first use we find (the outermost one)
@@ -2414,9 +2415,9 @@ impl<'ast> ast::visit::Visit<'ast> for DesugarUse<'ast> {
     }
 }
 
-/// Builder for code action to apply the turn into use expression.
+/// Builder for code action to apply the convert to use action.
 ///
-pub struct TurnIntoUse<'a> {
+pub struct ConvertToUse<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
@@ -2434,7 +2435,7 @@ struct CallLocations {
     callback_body_span: SrcSpan,
 }
 
-impl<'a> TurnIntoUse<'a> {
+impl<'a> ConvertToUse<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -2533,7 +2534,7 @@ impl<'a> TurnIntoUse<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for TurnIntoUse<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         // The cursor has to be inside the last statement of the function to
         // offer the code action.
