@@ -4532,4 +4532,20 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
 
         self.maybe_inline(*location);
     }
+
+    fn visit_typed_pattern_variable(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        _type: &'ast Arc<Type>,
+        _origin: &'ast VariableOrigin,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+
+        if !overlaps(self.params.range, range) {
+            return;
+        }
+
+        self.maybe_inline(*location);
+    }
 }
