@@ -5116,6 +5116,32 @@ fn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }
 }
 
 #[test]
+fn convert_to_function_call_works_with_labelled_argument() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble(wobble: _, woo:)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_works_with_labelled_argument_2() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble(wobble:, woo: _)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
     assert_no_code_actions!(
         GENERATE_JSON_ENCODER,
