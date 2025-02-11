@@ -195,6 +195,31 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The language server now offers the option to lift expressions into consts.
+  For example, in two uses of the code action:
+
+  ```gleam
+  pub fn main() {
+    [#("a", 0), #("b", 1), #("a", 2)]
+    |> key_filter("a")
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  const values = [#("a", 0), #("b", 1), #("a", 2)]
+
+  const string = "a"
+
+  pub fn main() {
+    values
+    |> key_filter(string)
+  }
+  ```
+
+  ([Matias Carlander](https://github.com/matiascr))
+
 ### Formatter
 
 ### Bug fixes
