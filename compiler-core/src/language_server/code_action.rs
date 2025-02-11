@@ -2915,14 +2915,7 @@ pub struct ExtractConstant<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    position: Option<ExtractConstantPosition>,
     selected_expression: Option<(SrcSpan, Arc<Type>)>,
-}
-
-#[derive(PartialEq, Eq, Copy, Clone, Debug)]
-enum ExtractConstantPosition {
-    InsideCaptureBody,
-    TopLevelStatement,
 }
 
 impl<'a> ExtractConstant<'a> {
@@ -2935,7 +2928,6 @@ impl<'a> ExtractConstant<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            position: None,
             selected_expression: None,
         }
     }
@@ -2962,8 +2954,8 @@ impl<'a> ExtractConstant<'a> {
             .definitions
             .iter()
             .filter(|definition| definition.is_function())
-            .filter(|function| function.location().start < expression_span.start)
             .map(|function| function.location().start)
+            .filter(|function_start| function_start < &expression_span.start)
             .max();
 
         if let Some(function_start) = container_function_start {
@@ -2984,32 +2976,9 @@ impl<'a> ExtractConstant<'a> {
             .push_to(&mut action);
         action
     }
-
-    fn at_position<F>(&mut self, position: ExtractConstantPosition, fun: F)
-    where
-        F: Fn(&mut Self),
-    {
-        self.at_optional_position(Some(position), fun);
-    }
-
-    fn at_optional_position<F>(&mut self, position: Option<ExtractConstantPosition>, fun: F)
-    where
-        F: Fn(&mut Self),
-    {
-        let previous_position = self.position;
-        self.position = position;
-        fun(self);
-        self.position = previous_position;
-    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
-    fn visit_typed_statement(&mut self, stmt: &'ast TypedStatement) {
-        self.at_position(ExtractConstantPosition::TopLevelStatement, |this| {
-            ast::visit::visit_typed_statement(this, stmt);
-        });
-    }
-
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
@@ -3032,45 +3001,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
             }
         }
 
-        self.at_optional_position(None, |this| {
-            ast::visit::visit_typed_expr(this, expr);
-        });
-    }
-
-    fn visit_typed_expr_fn(
-        &mut self,
-        location: &'ast SrcSpan,
-        type_: &'ast Arc<Type>,
-        kind: &'ast FunctionLiteralKind,
-        args: &'ast [TypedArg],
-        body: &'ast Vec1<TypedStatement>,
-        return_annotation: &'ast Option<ast::TypeAst>,
-    ) {
-        let position = match kind {
-            FunctionLiteralKind::Capture { .. } => Some(ExtractConstantPosition::InsideCaptureBody),
-            _ => self.position,
-        };
-
-        self.at_optional_position(position, |this| {
-            ast::visit::visit_typed_expr_fn(
-                this,
-                location,
-                type_,
-                kind,
-                args,
-                body,
-                return_annotation,
-            );
-        });
-    }
-
-    // We don't want to offer the action if the cursor is over some invalid
-    // piece of code.
-    fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, _type_: &'ast Arc<Type>) {
-        let invalid_range = self.edits.src_span_to_lsp_range(*location);
-        if within(self.params.range, invalid_range) {
-            self.selected_expression = None;
-        }
+        ast::visit::visit_typed_expr(self, expr);
     }
 }
 
