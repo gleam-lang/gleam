@@ -1,0 +1,50 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport gleam/option\nimport gleam/dict\n\npub type Something\n\npub type Wibble(value) {\n  Wibble(\n    maybe: option.Option(Int),\n    something: Something,\n    map: dict.Dict(String, List(Float)),\n    unknown: List(value),\n  )\n}\n"
+---
+----- BEFORE ACTION
+
+import gleam/option
+import gleam/dict
+
+pub type Something
+
+pub type Wibble(value) {
+    ↑                   
+  Wibble(
+    maybe: option.Option(Int),
+    something: Something,
+    map: dict.Dict(String, List(Float)),
+    unknown: List(value),
+  )
+}
+
+
+----- AFTER ACTION
+
+import gleam/json
+import gleam/option
+import gleam/dict
+
+pub type Something
+
+pub type Wibble(value) {
+  Wibble(
+    maybe: option.Option(Int),
+    something: Something,
+    map: dict.Dict(String, List(Float)),
+    unknown: List(value),
+  )
+}
+
+fn encode_wibble(wibble: Wibble(value)) -> json.Json {
+  json.object([
+    #("maybe", case wibble.maybe {
+      option.None -> json.null()
+      option.Some(value) -> json.int(value)
+    }),
+    #("something", todo as "Encoder for Something"),
+    #("map", json.dict(wibble.map, fn(string) { string }, json.array(_, json.float(_)))),
+    #("unknown", json.array(wibble.unknown, todo as "Encoder for value")),
+  ])
+}
