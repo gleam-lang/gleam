@@ -4128,7 +4128,6 @@ pub fn make_call(
     start: u32,
     end: u32,
 ) -> Result<UntypedExpr, ParseError> {
-    let mut num_holes = 0;
     let mut hole_location = None;
 
     let args = args
@@ -4141,8 +4140,7 @@ pub fn make_call(
                 name,
                 label,
             } => {
-                num_holes += 1;
-                if num_holes > 1 {
+                if hole_location.is_some() {
                     return parse_error(ParseErrorType::TooManyArgHoles, SrcSpan { start, end });
                 }
 
