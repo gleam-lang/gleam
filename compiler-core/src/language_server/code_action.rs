@@ -2940,6 +2940,22 @@ impl<'a> ExtractConstant<'a> {
         };
 
         let mut name_generator = NameGenerator::new();
+        let module_constant_names = VariablesNames {
+            names: self
+                .module
+                .ast
+                .definitions
+                .iter()
+                .map(|definition| match definition {
+                    ast::Definition::ModuleConstant(module_constant) => {
+                        Some(module_constant.name.clone())
+                    }
+                    _ => None,
+                })
+                .flatten()
+                .collect(),
+        };
+        name_generator.reserve_variable_names(module_constant_names);
         let variable_name = name_generator.generate_name_from_type(&expression_type);
 
         let content = self
