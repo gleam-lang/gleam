@@ -80,6 +80,7 @@ impl<'a> ModuleEncoder<'a> {
         accessors: &AccessorsMap,
     ) {
         self.build_type(builder.reborrow().init_type(), &accessors.type_);
+        self.build_publicity(builder.reborrow().init_publicity(), accessors.publicity);
         let mut accessors_builder = builder
             .reborrow()
             .init_shared_accessors(accessors.shared_accessors.len() as u32);

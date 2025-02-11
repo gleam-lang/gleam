@@ -831,6 +831,74 @@ fn accessors() {
 }
 
 #[test]
+fn private_accessors() {
+    let accessors1 = [
+        (
+            "a".into(),
+            RecordAccessor {
+                index: 6,
+                label: "siiixxx".into(),
+                type_: type_::nil(),
+            },
+        ),
+        (
+            "a".into(),
+            RecordAccessor {
+                index: 5,
+                label: "fiveee".into(),
+                type_: type_::float(),
+            },
+        ),
+    ];
+
+    let accessors2 = [(
+        "a".into(),
+        RecordAccessor {
+            index: 1,
+            label: "ok".into(),
+            type_: type_::float(),
+        },
+    )];
+
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: [
+            (
+                "one".into(),
+                AccessorsMap {
+                    publicity: Publicity::Private,
+                    type_: type_::int(),
+                    shared_accessors: accessors1.clone().into(),
+                    variant_specific_accessors: vec![accessors1.into()],
+                },
+            ),
+            (
+                "two".into(),
+                AccessorsMap {
+                    publicity: Publicity::Public,
+                    type_: type_::int(),
+                    shared_accessors: accessors2.clone().into(),
+                    variant_specific_accessors: vec![accessors2.into()],
+                },
+            ),
+        ]
+        .into(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+    };
+
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
 fn constant_int() {
     let module = constant_module(Constant::Int {
         location: Default::default(),
