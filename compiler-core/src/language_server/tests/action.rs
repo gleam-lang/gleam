@@ -71,6 +71,7 @@ const CONVERT_TO_USE: &str = "Convert to `use`";
 const EXTRACT_VARIABLE: &str = "Extract variable";
 const EXPAND_FUNCTION_CAPTURE: &str = "Expand function capture";
 const GENERATE_DYNAMIC_DECODER: &str = "Generate dynamic decoder";
+const GENERATE_JSON_ENCODER: &str = "Generate JSON encoder";
 const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const GENERATE_FUNCTION: &str = "Generate function";
@@ -4890,6 +4891,19 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 }
 
 #[test]
+fn generate_json_encoder() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Person {
+  Person(name: String, age: Int, height: Float, is_cool: Bool)
+}
+",
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_argument_in_first_position_2() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
@@ -4901,6 +4915,33 @@ pub fn main() {
 fn wibble(a) { todo }
 ",
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_json_encoder_complex_types() {
+    let src = "
+import gleam/option
+import gleam/dict
+
+pub type Something
+
+pub type Wibble(value) {
+  Wibble(
+    maybe: option.Option(Int),
+    something: Something,
+    map: dict.Dict(String, List(Float)),
+    unknown: List(value),
+  )
+}
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src)
+            .add_module("gleam/option", "pub type Option(a)")
+            .add_module("gleam/dict", "pub type Dict(k, v)"),
+        find_position_of("type W").to_selection()
     );
 }
 
@@ -4920,6 +4961,23 @@ fn wibble(a) { todo }
 }
 
 #[test]
+fn generate_json_encoder_already_imported_module() {
+    let src = "
+import gleam/json as json_encoding
+
+pub type Wibble {
+  Wibble(a: Int, b: Float, c: String)
+}
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_module("gleam/json", "pub type Json"),
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_argument_in_first_position_4() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
@@ -4929,6 +4987,19 @@ pub fn main() {
 }
 ",
         find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_json_encoder_tuple() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble(tuple: #(Int, Float, #(String, Bool)))
+}
+",
+        find_position_of("type W").to_selection()
     );
 }
 
@@ -4950,6 +5021,23 @@ fn wibble(c) -> fn(a) -> Nil {
 }
 
 #[test]
+fn generate_json_encoder_recursive_type() {
+    let src = "
+import gleam/option.{Some}
+
+pub type LinkedList {
+  LinkedList(value: Int, next: option.Option(LinkedList))
+}
+";
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src)
+            .add_module("gleam/option", "pub type Option(a) { Some(a) None }"),
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_hole_in_first_position() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
@@ -4962,6 +5050,20 @@ pub fn main() {
 fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 ",
         find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_generate_json_encoder_for_multi_variant_type() {
+    assert_no_code_actions!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble(wibble: Int)
+  Wobble(wobble: Float)
+}
+",
+        find_position_of("type").to_selection()
     );
 }
 
@@ -4996,5 +5098,16 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 fn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }
 ",
         find_position_of("[1, 2, 3]").select_until(find_position_of("map"))
+=======
+fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
+    assert_no_code_actions!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble(Int, Int, String)
+}
+",
+        find_position_of("type").to_selection()
+>>>>>>> 12a6e7162 (Add tests)
     );
 }
