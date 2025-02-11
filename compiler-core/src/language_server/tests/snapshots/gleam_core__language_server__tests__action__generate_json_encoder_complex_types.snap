@@ -44,7 +44,7 @@ fn encode_wibble(wibble: Wibble(value)) -> json.Json {
       option.Some(value) -> json.int(value)
     }),
     #("something", todo as "Encoder for Something"),
-    #("map", json.dict(wibble.map, fn(string) { string }, json.array(_, json.float(_)))),
+    #("map", json.dict(wibble.map, fn(string) { string }, json.array(_, json.float))),
     #("unknown", json.array(wibble.unknown, todo as "Encoder for value")),
   ])
 }

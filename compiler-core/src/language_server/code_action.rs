@@ -3424,15 +3424,25 @@ impl<'a> EncoderPrinter<'a> {
 
     fn encoder_for(&mut self, encoded_value: &str, type_: &Type, indent: usize) -> EcoString {
         let module_name = self.printer.print_module(JSON_MODULE);
+        let maybe_capture = |mut function: EcoString| {
+            if encoded_value == "_" {
+                function
+            } else {
+                function.push('(');
+                function.push_str(encoded_value);
+                function.push(')');
+                function
+            }
+        };
 
         if type_.is_bool() {
-            eco_format!("{module_name}.bool({encoded_value})")
+            maybe_capture(eco_format!("{module_name}.bool"))
         } else if type_.is_float() {
-            eco_format!("{module_name}.float({encoded_value})")
+            maybe_capture(eco_format!("{module_name}.float"))
         } else if type_.is_int() {
-            eco_format!("{module_name}.int({encoded_value})")
+            maybe_capture(eco_format!("{module_name}.int"))
         } else if type_.is_string() {
-            eco_format!("{module_name}.string({encoded_value})")
+            maybe_capture(eco_format!("{module_name}.string"))
         } else if let Some(types) = type_.tuple_types() {
             let encoders = types
                 .iter()
@@ -3497,7 +3507,7 @@ impl<'a> EncoderPrinter<'a> {
                     )
                 }
                 Some((module, name, _)) if module == self.type_module && name == self.type_name => {
-                    eco_format!("encode_{}({encoded_value})", name.to_snake_case())
+                    maybe_capture(eco_format!("encode_{}", name.to_snake_case()))
                 }
                 _ => eco_format!(
                     r#"todo as "Encoder for {}""#,
