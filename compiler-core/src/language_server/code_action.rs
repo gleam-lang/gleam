@@ -31,6 +31,7 @@ use super::{
     compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
+    rename::find_variable_references,
     src_span_to_lsp_range, TextEdits,
 };
 
@@ -4440,5 +4441,95 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToFunctionCall<'ast> {
                 finally_kind,
             );
         }
+    }
+}
+
+/// Builder for code action to inline a variable.
+///
+pub struct InlineVariable<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    actions: Vec<CodeAction>,
+}
+
+impl<'a> InlineVariable<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            actions: Vec::new(),
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        self.actions
+    }
+
+    fn maybe_inline(&mut self, location: SrcSpan) {
+        let variable_location =
+            match find_variable_references(&self.module.ast, location).as_slice() {
+                [only_reference] => *only_reference,
+                _ => return,
+            };
+
+        let Some(ast::Statement::Assignment(assignment)) =
+            self.module.ast.find_statement(location.start)
+        else {
+            return;
+        };
+
+        match &assignment.pattern {
+            Pattern::Variable { .. } => {
+                let value_location = assignment.value.location();
+                let value = self
+                    .module
+                    .code
+                    .get(value_location.start as usize..value_location.end as usize)
+                    .expect("Span is valid");
+
+                self.edits.replace(variable_location, value.into());
+                self.edits.delete(assignment.location);
+
+                CodeActionBuilder::new("Inline variable")
+                    .kind(CodeActionKind::REFACTOR_INLINE)
+                    .changes(
+                        self.params.text_document.uri.clone(),
+                        std::mem::take(&mut self.edits.edits),
+                    )
+                    .preferred(false)
+                    .push_to(&mut self.actions);
+            }
+            _ => {}
+        }
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        _name: &'ast EcoString,
+    ) {
+        let range = self.edits.src_span_to_lsp_range(*location);
+
+        if !overlaps(self.params.range, range) {
+            return;
+        }
+
+        let type_::ValueConstructorVariant::LocalVariable { location, .. } = &constructor.variant
+        else {
+            return;
+        };
+
+        self.maybe_inline(*location);
     }
 }

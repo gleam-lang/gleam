@@ -58,6 +58,12 @@ impl TypedModule {
             .iter()
             .find_map(|statement| statement.find_node(byte_index))
     }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        self.definitions
+            .iter()
+            .find_map(|definition| definition.find_statement(byte_index))
+    }
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
@@ -963,6 +969,23 @@ impl TypedDefinition {
                     None
                 }
             }
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match self {
+            Definition::Function(function) => {
+                if !function.full_location().contains(byte_index) {
+                    return None;
+                }
+
+                function
+                    .body
+                    .iter()
+                    .find(|statement| statement.location().contains(byte_index))
+            }
+
+            _ => None,
         }
     }
 }

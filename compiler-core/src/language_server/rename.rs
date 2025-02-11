@@ -49,7 +49,7 @@ pub fn rename_local_variable(
     let uri = params.text_document_position.text_document.uri.clone();
     let mut edits = TextEdits::new(line_numbers);
 
-    let references = RenameLocalVariable::new(definition_location).references(&module.ast);
+    let references = find_variable_references(&module.ast, definition_location);
 
     match kind {
         VariableRenameKind::Variable => edits.replace(definition_location, params.new_name.clone()),
@@ -65,26 +65,24 @@ pub fn rename_local_variable(
     Some(workspace_edit(uri, edits.edits))
 }
 
-struct RenameLocalVariable {
+pub fn find_variable_references(
+    module: &TypedModule,
     definition_location: SrcSpan,
+) -> Vec<SrcSpan> {
+    let mut finder = FindVariableReferences {
+        references: Vec::new(),
+        definition_location,
+    };
+    finder.visit_typed_module(module);
+    finder.references
+}
+
+struct FindVariableReferences {
     references: Vec<SrcSpan>,
+    definition_location: SrcSpan,
 }
 
-impl RenameLocalVariable {
-    fn new(definition_location: SrcSpan) -> Self {
-        Self {
-            references: Vec::new(),
-            definition_location,
-        }
-    }
-
-    fn references(mut self, ast: &TypedModule) -> Vec<SrcSpan> {
-        self.visit_typed_module(ast);
-        self.references
-    }
-}
-
-impl<'ast> Visit<'ast> for RenameLocalVariable {
+impl<'ast> Visit<'ast> for FindVariableReferences {
     fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
         if fun.full_location().contains(self.definition_location.start) {
             ast::visit::visit_typed_function(self, fun);
