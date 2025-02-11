@@ -10,6 +10,8 @@ use gleam_core::{
 use http::{Request, Response};
 use reqwest::{Certificate, Client};
 
+use crate::fs;
+
 static REQWEST_CLIENT: OnceLock<Client> = OnceLock::new();
 
 #[derive(Debug)]
@@ -50,20 +52,18 @@ fn init_client() -> Result<&'static Client, Error> {
         return Ok(client);
     }
 
-    let certificate_path = std::env::var("GLEAM_CACERTS_PATH").map_err(|error| Error::FileIo {
-        kind: FileKind::Directory,
-        action: FileIoAction::Read,
-        path: Utf8PathBuf::new(),
-        err: Some(error.to_string()),
-    })?;
+    let certificate_path = match std::env::var("GLEAM_CACERTS_PATH") {
+        Ok(path) => path,
+        Err(_) => {
+            return Ok(REQWEST_CLIENT.get_or_init(|| {
+                Client::builder()
+                    .build()
+                    .expect("Failed to create reqwest client")
+            }));
+        }
+    };
 
-    let certificate_bytes = std::fs::read(&certificate_path).map_err(|error| Error::FileIo {
-        kind: FileKind::File,
-        action: FileIoAction::Parse,
-        path: Utf8PathBuf::from(&certificate_path),
-        err: Some(error.to_string()),
-    })?;
-
+    let certificate_bytes = fs::read_bytes(&certificate_path)?;
     let certificate = Certificate::from_pem(&certificate_bytes).map_err(|error| Error::FileIo {
         kind: FileKind::File,
         action: FileIoAction::Parse,
