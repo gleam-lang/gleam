@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile(config, modules)"
-snapshot_kind: text
 ---
 //// app.html
 
@@ -298,21 +297,17 @@ snapshot_kind: text
               Arguments
             </h4>
 
-            <ul class="constructor-argument-list">
+            <dl class="constructor-argument-list">
             
-              <li>
-                <div class="constructor-argument-item">
-                  <p class="constructor-argument-label">
-                    <i>wabble</i>
-                  </p>
-                  <div class="constructor-argument-doc">
-                    <p>Documentation!!</p>
+              <dt class="constructor-argument-label">
+                wabble
+              </dt>
+              <dd class="constructor-argument-doc">
+                <p>Documentation!!</p>
 
-                  </div>
-                </div>
-              </li>
+              </dd>
             
-            </ul>
+            </dl>
             
           </div>
         </li>

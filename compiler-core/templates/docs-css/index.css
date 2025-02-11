@@ -565,16 +565,8 @@ body.drawer-open .label-closed {
   margin-bottom: var(--small-gap);
 }
 
-.constructor-argument-item {
-  display: flex;
-}
-
 .constructor-argument-label {
-  flex-shrink: 0;
-}
-
-.constructor-argument-doc {
-  margin-left: var(--gap);
+  font-style: italic;
 }
 
 .constructor-argument-list {
