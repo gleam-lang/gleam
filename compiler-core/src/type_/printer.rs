@@ -286,7 +286,7 @@ pub enum PrintMode {
 /// names that types and modules have been aliased with in the current module.
 #[derive(Debug)]
 pub struct Printer<'a> {
-    pub names: &'a Names,
+    names: &'a Names,
     uid: u64,
 
     /// Some type variables aren't bound to names, so when trying to print those,
