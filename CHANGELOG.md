@@ -42,6 +42,34 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The Language Server now suggests a code action to generate a function to
+  encode a custom type as JSON using the `gleam_json` package. For example:
+
+  ```gleam
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+  ```
+
+  Will become:
+
+  ```gleam
+  import gleam/json
+
+  pub type Person {
+    Person(name: String, age: Int)
+  }
+
+  fn encode_person(person: Person) -> json.Json {
+    json.object([
+      #("name", json.string(person.name)),
+      #("age", json.int(person.age)),
+    ])
+  }
+  ```
+
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes
