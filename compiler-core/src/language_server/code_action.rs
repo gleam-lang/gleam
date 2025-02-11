@@ -3375,11 +3375,22 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             inferred_variant: None,
         });
         let json_module = self.printer.print_module(JSON_MODULE);
+        let parameters = match custom_type.parameters.len() {
+            0 => EcoString::new(),
+            _ => eco_format!(
+                "({})",
+                custom_type
+                    .parameters
+                    .iter()
+                    .map(|(_, name)| name)
+                    .join(", ")
+            ),
+        };
 
         let function = format!(
             "
 
-fn {name}({record_name}: {type_name}) -> {json_type} {{
+fn {name}({record_name}: {type_name}{parameters}) -> {json_type} {{
   {json_module}.object([
 {encoders},
   ])
