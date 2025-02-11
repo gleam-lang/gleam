@@ -5098,7 +5098,10 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 fn filter(list: List(a), fun: fn(a) -> Bool) -> List(b) { todo }
 ",
         find_position_of("[1, 2, 3]").select_until(find_position_of("map"))
-=======
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
     assert_no_code_actions!(
         GENERATE_JSON_ENCODER,
@@ -5108,6 +5111,5 @@ pub type Wibble {
 }
 ",
         find_position_of("type").to_selection()
->>>>>>> 12a6e7162 (Add tests)
     );
 }
