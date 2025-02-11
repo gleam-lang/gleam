@@ -3424,8 +3424,9 @@ impl<'a> EncoderPrinter<'a> {
 
     fn encoder_for(&mut self, encoded_value: &str, type_: &Type, indent: usize) -> EcoString {
         let module_name = self.printer.print_module(JSON_MODULE);
+        let is_capture = encoded_value == "_";
         let maybe_capture = |mut function: EcoString| {
-            if encoded_value == "_" {
+            if is_capture {
                 function
             } else {
                 function.push('(');
@@ -3444,21 +3445,39 @@ impl<'a> EncoderPrinter<'a> {
         } else if type_.is_string() {
             maybe_capture(eco_format!("{module_name}.string"))
         } else if let Some(types) = type_.tuple_types() {
+            let (tuple, new_indent) = if is_capture {
+                ("value", indent + 4)
+            } else {
+                (encoded_value, indent + 2)
+            };
+
             let encoders = types
                 .iter()
                 .enumerate()
                 .map(|(index, type_)| {
-                    self.encoder_for(&format!("{encoded_value}.{index}"), type_, indent + 2)
+                    self.encoder_for(&format!("{tuple}.{index}"), type_, new_indent)
                 })
                 .collect_vec();
 
-            eco_format!(
-                "{module_name}.preprocessed_array([
+            if is_capture {
+                eco_format!(
+                    "fn(value) {{
+{indent}  {module_name}.preprocessed_array([
+{indent}    {encoders},
+{indent}  ])
+{indent}}}",
+                    indent = " ".repeat(indent),
+                    encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
+                )
+            } else {
+                eco_format!(
+                    "{module_name}.preprocessed_array([
 {indent}  {encoders},
 {indent}])",
-                indent = " ".repeat(indent),
-                encoders = encoders.join(&format!(",\n{}", " ".repeat(indent + 2))),
-            )
+                    indent = " ".repeat(indent),
+                    encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
+                )
+            }
         } else {
             let type_information = type_.named_type_information();
             let type_information: Option<(&str, &str, &[Arc<Type>])> =
