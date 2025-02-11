@@ -5142,6 +5142,19 @@ pub fn main() {
 }
 
 #[test]
+fn convert_to_function_call_works_when_piping_a_module_select() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  wibble.wobble |> woo(_)
+}
+",
+        find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
     assert_no_code_actions!(
         GENERATE_JSON_ENCODER,

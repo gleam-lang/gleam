@@ -384,9 +384,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 label_location,
                 label,
                 container,
-                ..
+                location,
             } => Ok(self.infer_field_access(
                 *container,
+                location,
                 label,
                 label_location,
                 FieldAccessUsage::Other,
@@ -975,6 +976,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_field_access(
         &mut self,
         container: UntypedExpr,
+        location: SrcSpan,
         label: EcoString,
         label_location: SrcSpan,
         usage: FieldAccessUsage,
@@ -1011,7 +1013,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (_, Some((Err(module_access_err), false))) => {
                 self.problems.error(module_access_err);
                 TypedExpr::Invalid {
-                    location: label_location,
+                    location,
                     type_: self.new_unbound_var(),
                 }
             }
@@ -1030,7 +1032,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         record: Box::new(record),
                     },
                     Err(_) => TypedExpr::Invalid {
-                        location: label_location,
+                        location,
                         type_: self.new_unbound_var(),
                     },
                 }
@@ -3282,9 +3284,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 label,
                 container,
                 label_location,
-                ..
+                location,
             } => Ok(self.infer_field_access(
                 *container,
+                location,
                 label,
                 label_location,
                 FieldAccessUsage::MethodCall,
