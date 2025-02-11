@@ -19,29 +19,6 @@
 
 ### Language server
 
-- The language server now offers a code action to convert the first step of a
-  pipeline to a regular function call. For example, this code:
-
-  ```gleam
-  import gleam/list
-
-  pub fn main() {
-    [1, 2, 3] |> list.map(fn(n) { n * 2 })
-  }
-  ```
-
-  Will be rewritten as:
-
-  ```gleam
-  import gleam/list
-
-  pub fn main() {
-    list.map([1, 2, 3], fn(n) { n * 2 })
-  }
-  ```
-
-  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
-
 - The Language Server now suggests a code action to generate a function to
   encode a custom type as JSON using the `gleam_json` package. For example:
 
@@ -69,6 +46,73 @@
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server now offers a code action to convert the first step of a
+  pipeline to a regular function call. For example, this code:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    [1, 2, 3] |> list.map(fn(n) { n * 2 })
+  }
+  ```
+
+  Will be rewritten as:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    list.map([1, 2, 3], fn(n) { n * 2 })
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- The language server now offers a code action to convert a function call into
+  a pipeline. For example, this code:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    list.map([1, 2, 3], fn(n) { n * 2 })
+  }
+  ```
+
+  Will be rewritten as:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    [1, 2, 3] |> list.map(fn(n) { n * 2 })
+  }
+  ```
+
+  You can also pick which argument is going to be piped. In this case:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    list.map([1, 2, 3], fn(n) { n * 2 })
+    //                   ^ If you put your cursor over here
+  }
+  ```
+
+  The code will be rewritten as:
+
+  ```gleam
+  import gleam/list
+
+  pub fn main() {
+    fn(n) { n * 2 } |> list.map([1, 2, 3], _)
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 - The Language Server now suggests a code action to inline a variable
   which is only used once. For example, this code:
