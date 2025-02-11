@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(tuple: #(Int, Float, #(String, Bool)))\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble(tuple: #(Int, Float, #(String, Bool)))
+}
+
+
+----- AFTER ACTION
+import gleam/json
+
+pub type Wibble {
+  Wibble(tuple: #(Int, Float, #(String, Bool)))
+}
+
+fn encode_wibble(wibble: Wibble) -> json.Json {
+  json.object([
+    #("tuple", json.preprocessed_array([
+      json.int(wibble.tuple.0),
+      json.float(wibble.tuple.1),
+      json.preprocessed_array([
+        json.string(wibble.tuple.2.0),
+        json.bool(wibble.tuple.2.1),
+      ]),
+    ])),
+  ])
+}
