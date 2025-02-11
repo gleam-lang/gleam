@@ -5054,6 +5054,19 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 }
 
 #[test]
+fn generate_json_encoder_list_of_tuples() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble(values: List(#(Int, String)))
+}
+",
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_json_encoder_for_multi_variant_type() {
     assert_no_code_actions!(
         GENERATE_JSON_ENCODER,
