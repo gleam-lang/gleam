@@ -4541,3 +4541,204 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
         self.maybe_inline(*location);
     }
 }
+
+/// Builder for the "convert to pipe" code action.
+///
+/// ```gleam
+/// pub fn main() {
+///   wibble(wobble, woo)
+///  //  ^ [convert to pipe]
+/// }
+/// ```
+///
+/// Will turn the code into the following pipeline:
+///
+/// ```gleam
+/// pub fn main() {
+///   wobble |> wibble(woo)
+/// }
+/// ```
+///
+pub struct ConvertToPipe<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    argument_to_pipe: Option<ConvertToPipeArg<'a>>,
+}
+
+/// Holds all the data needed by the "convert to pipe" code action to properly
+/// rewrite a call into a pipe. Here's what each span means:
+///
+/// ```gleam
+///    wibble(wobb|le, woo)
+/// // ^^^^^^^^^^^^^^^^^^^^ call
+/// // ^^^^^^ called
+/// //        ^^^^^^^ arg
+/// //                 ^^^ next arg
+/// ```
+///
+/// In this example `position` is 0, since the cursor is over the first
+/// argument.
+///
+pub struct ConvertToPipeArg<'a> {
+    /// The span of the called function.
+    called: SrcSpan,
+    /// The span of the entire function call.
+    call: SrcSpan,
+    /// The position (0-based) of the argument.
+    position: usize,
+    /// The argument we have to pipe.
+    arg: &'a TypedCallArg,
+    /// The span of the argument following the one we have to pipe, if there's
+    /// any.
+    next_arg: Option<SrcSpan>,
+}
+
+impl<'a> ConvertToPipe<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            argument_to_pipe: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(ConvertToPipeArg {
+            called,
+            call,
+            position,
+            arg,
+            next_arg,
+        }) = self.argument_to_pipe
+        else {
+            return vec![];
+        };
+
+        let arg_range = if arg.uses_label_shorthand() {
+            arg.location.start as usize..arg.location.end as usize - 1
+        } else if arg.label.is_some() {
+            let value = arg.value.location();
+            value.start as usize..value.end as usize
+        } else {
+            arg.location.start as usize..arg.location.end as usize
+        };
+
+        let arg_text = self.module.code.get(arg_range).expect("invalid srcspan");
+
+        match next_arg {
+            // When extracting an argument we never want to remove any explicit
+            // label that was written down, so in case it is labelled (be it a
+            // shorthand or not) we'll always replace the value with a `_`
+            _ if arg.uses_label_shorthand() => self.edits.insert(arg.location.end, " _".into()),
+            _ if arg.label.is_some() => self.edits.replace(arg.value.location(), "_".into()),
+
+            // Now we can deal with unlabelled arguments:
+            // If we're removing the first argument and there's other arguments
+            // after it, we need to delete the comma that was separating the
+            // two.
+            Some(next_arg) if position == 0 => self.edits.delete(SrcSpan {
+                start: arg.location.start,
+                end: next_arg.start,
+            }),
+            // Otherwise, if we're deleting the first argument and there's
+            // no other arguments following it, we remove the call's
+            // parentheses.
+            None if position == 0 => self.edits.delete(SrcSpan {
+                start: called.end,
+                end: call.end,
+            }),
+            // In all other cases we're piping something that is not the first
+            // argument so we just replace it with an `_`.
+            _ => self.edits.replace(arg.location, "_".into()),
+        };
+
+        // Finally we can add the argument that was removed as the first step
+        // of the newly defined pipeline.
+        self.edits.insert(call.start, format!("{arg_text} |> "));
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Convert to pipe")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) {
+        // We only visit a call if the cursor is somewhere within its location,
+        // otherwise we skip it entirely.
+        let call_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, call_range) {
+            return;
+        }
+
+        // If the cursor is over any of the arguments then we'll use that as
+        // the one to extract.
+        // Otherwise the cursor must be over the called function, in that case
+        // we extract the first argument (if there's one):
+        //
+        // ```gleam
+        //    wibble(wobble, woo)
+        // // ^^^^^^^^^^^^^ pipe the first argument if I'm here
+        // //                ^^^ pipe the second argument if I'm here
+        // ```
+        let argument_to_pipe = args
+            .iter()
+            .enumerate()
+            .find_map(|(position, arg)| {
+                let arg_range = self.edits.src_span_to_lsp_range(arg.location);
+                if within(self.params.range, arg_range) {
+                    Some((position, arg))
+                } else {
+                    None
+                }
+            })
+            .or_else(|| args.first().map(|arg| (0, arg)));
+
+        // If we're not hovering over any of the arguments _or_ there's no
+        // argument to extract at all we just return, there's nothing we can do
+        // on this call or any of its arguments (since we've determined the
+        // cursor is not over any of those).
+        let Some((position, arg)) = argument_to_pipe else {
+            return;
+        };
+
+        self.argument_to_pipe = Some(ConvertToPipeArg {
+            called: fun.location(),
+            call: *location,
+            position,
+            arg,
+            next_arg: args.get(position + 1).map(|arg| arg.location),
+        })
+    }
+
+    fn visit_typed_expr_pipeline(
+        &mut self,
+        _location: &'ast SrcSpan,
+        first_value: &'ast TypedPipelineAssignment,
+        _assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
+        _finally: &'ast TypedExpr,
+        _finally_kind: &'ast PipelineAssignmentKind,
+    ) {
+        // We can only apply the action on the first step of a pipeline, so we
+        // visit just that one and skip all the others.
+        ast::visit::visit_typed_pipeline_assignment(self, first_value);
+    }
+}
