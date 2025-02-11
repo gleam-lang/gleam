@@ -13,6 +13,10 @@
   making Gleam packages discoverable through global search of HexDocs.
   ([Diemo Gebhardt](https://github.com/diemogebhardt))
 
+- Allow users to set the `GLEAM_CACERTS_PATH` environment variable to specify a
+  path to a directory containing CA certificates to install Hex packages.
+  ([winstxnhdw](https://github.com/winstxnhdw))
+
 ### Language server
 
 ### Formatter
