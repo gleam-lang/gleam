@@ -3189,13 +3189,6 @@ impl RecordLabel<'_> {
             }
         }
     }
-
-    fn accessor(&self) -> EcoString {
-        match self {
-            RecordLabel::Labeled(label) => (*label).into(),
-            RecordLabel::Unlabeled(index) => eco_format!("{index}"),
-        }
-    }
 }
 
 impl<'a> DecoderPrinter<'a> {
@@ -3520,7 +3513,7 @@ impl<'a> EncoderPrinter<'a> {
         field: &RecordField<'_>,
         indent: usize,
     ) -> EcoString {
-        let field_name = field.label.accessor();
+        let field_name = field.label.variable_name();
         let encoder = self.encoder_for(&format!("{record_name}.{field_name}"), field.type_, indent);
 
         eco_format!(
