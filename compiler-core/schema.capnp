@@ -69,6 +69,7 @@ struct AccessorsMap {
   type @0 :Type;
   sharedAccessors @1 :List(Property(RecordAccessor));
   variantSpecificAccessors @2 :List(VariantSpecificAccessors);
+  publicity @3 :Publicity;
 }
 
 struct VariantSpecificAccessors {

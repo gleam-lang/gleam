@@ -73,3 +73,7 @@
 ### Formatter
 
 ### Bug fixes
+
+- Fixed a metadata caching bug where accessors for opaque types could sometimes
+  be used in other modules.
+  ([Louis Pilfold](https://github.com/lpil))

@@ -564,7 +564,7 @@ impl ModuleDecoder {
 
     fn accessors_map(&mut self, reader: &accessors_map::Reader<'_>) -> Result<AccessorsMap> {
         Ok(AccessorsMap {
-            publicity: Publicity::Public,
+            publicity: self.publicity(reader.get_publicity()?)?,
             type_: self.type_(&reader.get_type()?)?,
             shared_accessors: read_hashmap!(&reader.get_shared_accessors()?, self, record_accessor),
             variant_specific_accessors: read_vec!(
