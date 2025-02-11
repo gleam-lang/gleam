@@ -4496,7 +4496,19 @@ impl<'a> InlineVariable<'a> {
                     .expect("Span is valid");
 
                 self.edits.replace(variable_location, value.into());
-                self.edits.delete(assignment.location);
+
+                let mut location = assignment.location;
+                // If the statement is immediately followed by a newline, we want to delete that too
+                if self
+                    .module
+                    .code
+                    .get(assignment.location.end as usize..assignment.location.end as usize + 1)
+                    == Some("\n")
+                {
+                    location.end += 1;
+                }
+
+                self.edits.delete(location);
 
                 CodeActionBuilder::new("Inline variable")
                     .kind(CodeActionKind::REFACTOR_INLINE)
