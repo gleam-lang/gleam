@@ -1,8 +1,12 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "pub fn main() {\n  list.map([1, 2, 3], int.add(1, _))\n}"
+expression: "\nimport gleam/list\nimport gleam/int\n\npub fn main() {\n  list.map([1, 2, 3], int.add(1, _))\n}"
 ---
 ----- BEFORE ACTION
+
+import gleam/list
+import gleam/int
+
 pub fn main() {
   list.map([1, 2, 3], int.add(1, _))
                       ▔▔▔▔↑         
@@ -10,6 +14,10 @@ pub fn main() {
 
 
 ----- AFTER ACTION
+
+import gleam/list
+import gleam/int
+
 pub fn main() {
   let value = int.add(1, _)
   list.map([1, 2, 3], value)
