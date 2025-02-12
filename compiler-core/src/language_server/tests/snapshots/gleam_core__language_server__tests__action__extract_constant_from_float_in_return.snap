@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  0.25\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  0.25
+  ▔▔▔↑
+}
+
+
+----- AFTER ACTION
+const float = 0.25
+
+pub fn main() {
+  float
+}
