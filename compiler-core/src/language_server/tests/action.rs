@@ -4085,8 +4085,8 @@ fn map(list, fun) { todo }
 #[test]
 fn extract_variable_2() {
     let src = r#"
-import list
-import int
+import gleam/list
+import gleam/int
 
 pub fn main() {
   list.map([1, 2, 3], int.add(1, _))
@@ -4095,8 +4095,8 @@ pub fn main() {
     assert_code_action!(
         EXTRACT_VARIABLE,
         TestProject::for_source(src)
-            .add_module("int", "pub fn add(n, m) { todo }")
-            .add_module("list", "pub fn map(l, f) { todo }"),
+            .add_module("gleam/int", "pub fn add(n, m) { todo }")
+            .add_module("gleam/list", "pub fn map(l, f) { todo }"),
         find_position_of("int.").select_until(find_position_of("add"))
     );
 }
