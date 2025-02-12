@@ -982,7 +982,7 @@ impl TypedDefinition {
                 function
                     .body
                     .iter()
-                    .find(|statement| statement.location().contains(byte_index))
+                    .find_map(|statement| statement.find_statement(byte_index))
             }
 
             _ => None,
@@ -1296,6 +1296,17 @@ impl CallArg<TypedExpr> {
                     None
                 }
             }
+        }
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match (self.implicit, &self.value) {
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Invalid { .. }) => None,
+            (Some(ImplicitCallArgOrigin::Use), TypedExpr::Fn { body, .. }) => {
+                body.iter().find_map(|s| s.find_statement(byte_index))
+            }
+
+            _ => self.value.find_statement(byte_index),
         }
     }
 
@@ -2495,6 +2506,22 @@ impl TypedStatement {
         }
     }
 
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match self {
+            Statement::Use(use_) => use_.call.find_statement(byte_index),
+            Statement::Expression(expression) => expression.find_statement(byte_index),
+            Statement::Assignment(assignment) => {
+                assignment.value.find_statement(byte_index).or_else(|| {
+                    if assignment.location.contains(byte_index) {
+                        Some(self)
+                    } else {
+                        None
+                    }
+                })
+            }
+        }
+    }
+
     pub fn type_defining_location(&self) -> SrcSpan {
         match self {
             Statement::Expression(expression) => expression.type_defining_location(),
@@ -2577,9 +2604,11 @@ pub struct TypedPipelineAssignment {
 
 impl TypedPipelineAssignment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value
-            .find_node(byte_index)
-            .or_else(|| self.value.find_node(byte_index))
+        self.value.find_node(byte_index)
+    }
+
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        self.value.find_statement(byte_index)
     }
 
     pub fn type_(&self) -> Arc<Type> {
