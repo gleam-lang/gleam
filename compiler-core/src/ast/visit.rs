@@ -211,6 +211,7 @@ pub trait Visit<'ast> {
         visit_typed_expr_record_access(self, location, type_, label, index, record);
     }
 
+    #[allow(clippy::too_many_arguments)]
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
@@ -990,6 +991,7 @@ pub fn visit_typed_expr_record_access<'a, V>(
     v.visit_typed_expr(record);
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn visit_typed_expr_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
