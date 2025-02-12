@@ -432,8 +432,19 @@ async fn add_missing_packages<Telem: Telemetry>(
     let missing_packages = local.missing_local_packages(manifest, &project_name);
 
     let mut num_to_download = 0;
+
+    let missing_git_packages = missing_packages
+        .iter()
+        .copied()
+        .filter(|package| package.is_git())
+        .inspect(|_| {
+            num_to_download += 1;
+        })
+        .collect_vec();
+
     let mut missing_hex_packages = missing_packages
-        .into_iter()
+        .iter()
+        .copied()
         .filter(|package| package.is_hex())
         .inspect(|_| {
             num_to_download += 1;
@@ -441,7 +452,7 @@ async fn add_missing_packages<Telem: Telemetry>(
         .peekable();
 
     // If we need to download at-least one package
-    if missing_hex_packages.peek().is_some() {
+    if missing_hex_packages.peek().is_some() || !missing_git_packages.is_empty() {
         let http = HttpClient::boxed();
         let downloader = hex::Downloader::new(fs.clone(), fs, http, Untar::boxed(), paths.clone());
         let start = Instant::now();
@@ -449,6 +460,12 @@ async fn add_missing_packages<Telem: Telemetry>(
         downloader
             .download_hex_packages(missing_hex_packages, &project_name)
             .await?;
+        for package in missing_git_packages {
+            let ManifestPackageSource::Git { repo, commit } = &package.source else {
+                continue;
+            };
+            download_git_package(&package.name, repo, commit);
+        }
         telemetry.packages_downloaded(start, num_to_download);
     }
 
