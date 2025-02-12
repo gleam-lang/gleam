@@ -4498,13 +4498,11 @@ impl<'a> InlineVariable<'a> {
                 self.edits.replace(variable_location, value.into());
 
                 let mut location = assignment.location;
-                // If the statement is immediately followed by a newline, we want to delete that too
-                if self
-                    .module
-                    .code
-                    .get(assignment.location.end as usize..assignment.location.end as usize + 1)
-                    == Some("\n")
-                {
+
+                let chars = self.module.code.chars();
+                let mut chars = chars.skip(assignment.location.end as usize);
+                // Delete any whitespace after the removed statement
+                while chars.next().is_some_and(char::is_whitespace) {
                     location.end += 1;
                 }
 
