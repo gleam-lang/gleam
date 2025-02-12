@@ -5182,6 +5182,28 @@ pub fn main() {
 }
 
 #[test]
+fn inline_variable_in_case_scope() {
+    let src = r#"
+import gleam/io
+
+pub fn main(x) {
+  case x {
+    True -> {
+      let message = "Hello!"
+      io.println(message)
+    }
+    False -> Nil
+  }
+}
+"#;
+    assert_code_action!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message =").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_inline_variable_used_multiple_times() {
     let src = r#"
 import gleam/io
