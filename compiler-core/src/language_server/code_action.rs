@@ -1258,6 +1258,7 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
             qualified_constructor: None,
         }
     }
+
     fn get_module_import(
         &self,
         module_name: &EcoString,
@@ -1362,11 +1363,11 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
+        field_start: &'ast u32,
         type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
-        module_location: &'ast SrcSpan,
         constructor: &'ast ModuleValueConstructor,
     ) {
         // When hovering over a Record Value Constructor, we want to expand the source span to
@@ -1374,7 +1375,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         // option.Some
         //  ↑
         // This allows us to offer a code action when hovering over the module name.
-        let range = src_span_to_lsp_range(module_location.merge(location), &self.line_numbers);
+        let range = src_span_to_lsp_range(*location, &self.line_numbers);
         if overlaps(self.params.range, range) {
             if let ModuleValueConstructor::Record {
                 name: constructor_name,
@@ -1397,11 +1398,11 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         ast::visit::visit_typed_expr_module_select(
             self,
             location,
+            field_start,
             type_,
             label,
             module_name,
             module_alias,
-            module_location,
             constructor,
         )
     }
@@ -1454,12 +1455,6 @@ pub struct QualifiedToUnqualifiedImportSecondPass<'a> {
     qualified_constructor: QualifiedConstructor<'a>,
 }
 
-enum QualifiedConstructorType {
-    Type,
-    RecordValue,
-    PatternRecord,
-}
-
 impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
     pub fn new(
         module: &'a Module,
@@ -1493,29 +1488,11 @@ impl<'a> QualifiedToUnqualifiedImportSecondPass<'a> {
         action
     }
 
-    fn remove_module_qualifier(
-        &mut self,
-        location: SrcSpan,
-        constructor: QualifiedConstructorType,
-    ) {
-        // Find the start and end of the module qualifier
-
-        // The src_span for Type Constructors and Pattern Record Constructors is
-        // : option.Option / option.Some but for Record Constructors is: option.Some
-        //   ↑           ↑   ↑         ↑                                       ↑   ↑
-        // start       end start      end                                    start end
-        let span = if matches!(constructor, QualifiedConstructorType::RecordValue) {
-            SrcSpan::new(
-                location.start - self.qualified_constructor.used_name.len() as u32,
-                location.start + 1,
-            )
-        } else {
-            SrcSpan::new(
-                location.start,
-                location.start + self.qualified_constructor.used_name.len() as u32 + 1, // plus .
-            )
-        };
-        self.edits.delete(span);
+    fn remove_module_qualifier(&mut self, location: SrcSpan) {
+        self.edits.delete(SrcSpan {
+            start: location.start,
+            end: location.start + self.qualified_constructor.used_name.len() as u32 + 1, // plus .
+        })
     }
 
     fn edit_import(&mut self) {
@@ -1693,7 +1670,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             } = &self.qualified_constructor;
 
             if !layer.is_value() && used_name == module_name && name == constructor {
-                self.remove_module_qualifier(*location, QualifiedConstructorType::Type);
+                self.remove_module_qualifier(*location);
             }
         }
         ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
@@ -1702,11 +1679,11 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
+        field_start: &'ast u32,
         type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
-        module_location: &'ast SrcSpan,
         constructor: &'ast ModuleValueConstructor,
     ) {
         if let ModuleValueConstructor::Record { name, .. } = constructor {
@@ -1718,17 +1695,17 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             } = &self.qualified_constructor;
 
             if layer.is_value() && used_name == module_alias && name == constructor {
-                self.remove_module_qualifier(*location, QualifiedConstructorType::RecordValue);
+                self.remove_module_qualifier(*location);
             }
         }
         ast::visit::visit_typed_expr_module_select(
             self,
             location,
+            field_start,
             type_,
             label,
             module_name,
             module_alias,
-            module_location,
             constructor,
         )
     }
@@ -1753,10 +1730,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
                 } = &self.qualified_constructor;
 
                 if layer.is_value() && used_name == module_alias && name == constructor {
-                    self.remove_module_qualifier(
-                        *location,
-                        QualifiedConstructorType::PatternRecord,
-                    );
+                    self.remove_module_qualifier(*location);
                 }
             }
         }
@@ -2787,7 +2761,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
-        let expr_location = full_location(expr);
+        let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
 
         // If the expression is a top level statement we don't want to extract
@@ -4425,11 +4399,11 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToFunctionCall<'ast> {
             // pipeline and the call is `finally`.
             let (call, call_kind) = assignments
                 .first()
-                .map(|(call, kind)| (full_location(&call.value), *kind))
-                .unwrap_or_else(|| (full_location(finally), *finally_kind));
+                .map(|(call, kind)| (call.location, *kind))
+                .unwrap_or_else(|| (finally.location(), *finally_kind));
 
             self.locations = Some(ConvertToFunctionCallLocations {
-                first_value: full_location(&first_value.value),
+                first_value: first_value.location,
                 call,
                 call_kind,
             });
@@ -4565,42 +4539,5 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
         }
 
         self.maybe_inline(*location);
-    }
-}
-
-/// Returns the SrcSpan covering the entire expression: this will be the same
-/// as calling `.location()` on most elements with two notable exceptions:
-/// `RecordAccess` and `ModuleSelect` where the returned `SrcSpan` will cover
-/// the entire expression and not just the part following the `.` as you would
-/// get calling `location`.
-///
-fn full_location(expr: &TypedExpr) -> SrcSpan {
-    match expr {
-        TypedExpr::RecordAccess { location, .. } => *location,
-        TypedExpr::ModuleSelect {
-            location,
-            module_location,
-            ..
-        } => module_location.merge(location),
-        TypedExpr::Int { location, .. }
-        | TypedExpr::Float { location, .. }
-        | TypedExpr::String { location, .. }
-        | TypedExpr::Block { location, .. }
-        | TypedExpr::Pipeline { location, .. }
-        | TypedExpr::Var { location, .. }
-        | TypedExpr::Fn { location, .. }
-        | TypedExpr::List { location, .. }
-        | TypedExpr::Call { location, .. }
-        | TypedExpr::BinOp { location, .. }
-        | TypedExpr::Case { location, .. }
-        | TypedExpr::Tuple { location, .. }
-        | TypedExpr::TupleIndex { location, .. }
-        | TypedExpr::Todo { location, .. }
-        | TypedExpr::Panic { location, .. }
-        | TypedExpr::BitArray { location, .. }
-        | TypedExpr::RecordUpdate { location, .. }
-        | TypedExpr::NegateBool { location, .. }
-        | TypedExpr::NegateInt { location, .. }
-        | TypedExpr::Invalid { location, .. } => *location,
     }
 }

@@ -78,9 +78,9 @@ pub enum UntypedExpr {
         //   user.name
         //   ^^^^^^^^^
         location: SrcSpan,
-        // This is the location of just the field access
+        // This is the location of just the field access (ignoring the `.`)
         //   user.name
-        //       ^^^^^
+        //        ^^^^
         label_location: SrcSpan,
         label: EcoString,
         container: Box<Self>,

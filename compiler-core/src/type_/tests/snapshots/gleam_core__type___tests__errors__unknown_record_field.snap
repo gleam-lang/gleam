@@ -10,10 +10,10 @@ pub fn main(box: Box(Int)) { box.unknown }
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:3:33
+  ┌─ /src/one/two.gleam:3:34
   │
 3 │ pub fn main(box: Box(Int)) { box.unknown }
-  │                                 ^^^^^^^^ Did you mean `inner`?
+  │                                  ^^^^^^^ Did you mean `inner`?
 
 The value being accessed has this type:
 

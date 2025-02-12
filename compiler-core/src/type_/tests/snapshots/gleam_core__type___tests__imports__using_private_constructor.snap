@@ -15,9 +15,9 @@ pub fn main() {
 
 ----- ERROR
 error: Unknown module value
-  ┌─ /src/one/two.gleam:4:6
+  ┌─ /src/one/two.gleam:4:7
   │
 4 │   one.Two
-  │      ^^^^
+  │       ^^^
 
 The module `one` does not have a `Two` value.

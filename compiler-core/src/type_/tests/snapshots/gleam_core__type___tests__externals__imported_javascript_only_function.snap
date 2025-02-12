@@ -15,10 +15,10 @@ pub fn main() {
 
 ----- ERROR
 error: Unsupported target
-  ┌─ /src/one/two.gleam:3:9
+  ┌─ /src/one/two.gleam:3:10
   │
 3 │   module.javascript_only()
-  │         ^^^^^^^^^^^^^^^^
+  │          ^^^^^^^^^^^^^^^
 
 This value is not available as it is defined using externals, and there is
 no implementation for the Erlang target.

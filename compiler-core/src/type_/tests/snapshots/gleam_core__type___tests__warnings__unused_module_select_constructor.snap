@@ -14,7 +14,7 @@ pub fn main() {
 
 ----- WARNING
 warning: Unused value
-  ┌─ /src/warning/wrn.gleam:5:9
+  ┌─ /src/warning/wrn.gleam:5:3
   │
 5 │   wibble.Wibble
-  │         ^^^^^^^ This value is never used
+  │   ^^^^^^^^^^^^^ This value is never used

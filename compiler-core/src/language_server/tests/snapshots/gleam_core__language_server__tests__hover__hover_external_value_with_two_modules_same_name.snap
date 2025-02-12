@@ -6,7 +6,7 @@ import a/example_module as _
 import b/example_module
 fn main() {
     example_module.my_const
-                  ▔▔▔▔↑▔▔▔▔
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑▔▔▔▔
 }
 
 

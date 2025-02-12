@@ -214,21 +214,21 @@ pub trait Visit<'ast> {
     fn visit_typed_expr_module_select(
         &mut self,
         location: &'ast SrcSpan,
+        field_start: &'ast u32,
         type_: &'ast Arc<Type>,
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
-        module_location: &'ast SrcSpan,
         constructor: &'ast ModuleValueConstructor,
     ) {
         visit_typed_expr_module_select(
             self,
             location,
+            field_start,
             type_,
             label,
             module_name,
             module_alias,
-            module_location,
             constructor,
         );
     }
@@ -761,19 +761,19 @@ where
         } => v.visit_typed_expr_record_access(location, type_, label, index, record),
         TypedExpr::ModuleSelect {
             location,
+            field_start,
             type_,
             label,
             module_name,
             module_alias,
-            module_location,
             constructor,
         } => v.visit_typed_expr_module_select(
             location,
+            field_start,
             type_,
             label,
             module_name,
             module_alias,
-            module_location,
             constructor,
         ),
         TypedExpr::Tuple {
@@ -993,11 +993,11 @@ pub fn visit_typed_expr_record_access<'a, V>(
 pub fn visit_typed_expr_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
+    _field_start: &'a u32,
     _typ: &'a Arc<Type>,
     _label: &'a EcoString,
     _module_name: &'a EcoString,
     _module_alias: &'a EcoString,
-    _module_location: &'a SrcSpan,
     _constructor: &'a ModuleValueConstructor,
 ) where
     V: Visit<'a> + ?Sized,

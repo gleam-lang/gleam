@@ -97,27 +97,12 @@ pub enum TypedExpr {
     },
 
     ModuleSelect {
-        /// The location of the selected value coming after the `.` (including
-        /// it):
-        ///
-        /// ```gleam
-        ///    wibble.wobble
-        /// //       ^^^^^^^ location
-        /// ```
-        ///
         location: SrcSpan,
+        field_start: u32,
         type_: Arc<Type>,
         label: EcoString,
         module_name: EcoString,
         module_alias: EcoString,
-        /// The location of the module before the `.`:
-        ///
-        /// ```gleam
-        ///    wibble.wobble
-        /// // ^^^^^^ module_location
-        /// ```
-        ///
-        module_location: SrcSpan,
         constructor: ModuleValueConstructor,
     },
 
@@ -210,8 +195,26 @@ impl TypedExpr {
             | Self::Panic { .. }
             | Self::Float { .. }
             | Self::String { .. }
-            | Self::ModuleSelect { .. }
             | Self::Invalid { .. } => self.self_if_contains_location(byte_index),
+
+            Self::ModuleSelect {
+                location,
+                field_start,
+                ..
+            } => {
+                // We want to return the `ModuleSelect` only when we're hovering
+                // over the selected field, not on the module part.
+                let field_span = SrcSpan {
+                    start: *field_start,
+                    end: location.end,
+                };
+
+                if field_span.contains(byte_index) {
+                    Some(self.into())
+                } else {
+                    None
+                }
+            }
 
             Self::Todo { kind, .. } => match kind {
                 TodoKind::Keyword => self.self_if_contains_location(byte_index),
