@@ -180,6 +180,11 @@ impl ManifestPackage {
     pub fn is_local(&self) -> bool {
         matches!(self.source, ManifestPackageSource::Local { .. })
     }
+
+    #[inline]
+    pub fn is_git(&self) -> bool {
+        matches!(self.source, ManifestPackageSource::Git { .. })
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, serde::Serialize, serde::Deserialize)]
