@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\nimport gleam/io\n\npub fn main() {\n  let _ = {\n    let message = \"Hello!\"\n    io.println(message)\n  }\n}\n"
+---
+----- BEFORE ACTION
+
+import gleam/io
+
+pub fn main() {
+  let _ = {
+    let message = "Hello!"
+        ↑                 
+    io.println(message)
+  }
+}
+
+
+----- AFTER ACTION
+
+import gleam/io
+
+pub fn main() {
+  let _ = {
+    io.println("Hello!")
+  }
+}

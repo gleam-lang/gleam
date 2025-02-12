@@ -330,6 +330,134 @@ impl TypedExpr {
         }
     }
 
+    pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
+        match self {
+            Self::Var { .. }
+            | Self::Int { .. }
+            | Self::Panic { .. }
+            | Self::Float { .. }
+            | Self::String { .. }
+            | Self::ModuleSelect { .. }
+            | Self::Invalid { .. }
+            | Self::Todo { .. } => None,
+
+            Self::Pipeline {
+                first_value,
+                assignments,
+                finally,
+                ..
+            } => first_value
+                .find_statement(byte_index)
+                .or_else(|| {
+                    assignments
+                        .iter()
+                        .find_map(|(e, _)| e.find_statement(byte_index))
+                })
+                .or_else(|| finally.find_statement(byte_index)),
+
+            // Exit the search and return None if during iteration a statement
+            // is found with a start index beyond the index under search.
+            Self::Block { statements, .. } => {
+                for statement in statements {
+                    if statement.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = statement.find_statement(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
+            }
+
+            // Exit the search and return the encompassing type (e.g., list or tuple)
+            // if during iteration, an element is encountered with a start index
+            // beyond the index under search.
+            Self::Tuple {
+                elems: expressions, ..
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_statement(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                None
+            }
+
+            Self::List {
+                elements: expressions,
+                tail,
+                ..
+            } => {
+                for expression in expressions {
+                    if expression.location().start > byte_index {
+                        break;
+                    }
+
+                    if let Some(located) = expression.find_statement(byte_index) {
+                        return Some(located);
+                    }
+                }
+
+                if let Some(tail) = tail {
+                    if let Some(node) = tail.find_statement(byte_index) {
+                        return Some(node);
+                    }
+                }
+                None
+            }
+
+            Self::NegateBool { value, .. } | Self::NegateInt { value, .. } => {
+                value.find_statement(byte_index)
+            }
+
+            Self::Fn { body, .. } => body.iter().find_map(|s| s.find_statement(byte_index)),
+
+            Self::Call { fun, args, .. } => args
+                .iter()
+                .find_map(|arg| arg.find_statement(byte_index))
+                .or_else(|| fun.find_statement(byte_index)),
+
+            Self::BinOp { left, right, .. } => left
+                .find_statement(byte_index)
+                .or_else(|| right.find_statement(byte_index)),
+
+            Self::Case {
+                subjects, clauses, ..
+            } => subjects
+                .iter()
+                .find_map(|subject| subject.find_statement(byte_index))
+                .or_else(|| {
+                    clauses
+                        .iter()
+                        .find_map(|c| c.then.find_statement(byte_index))
+                }),
+
+            Self::RecordAccess {
+                record: expression, ..
+            }
+            | Self::TupleIndex {
+                tuple: expression, ..
+            } => expression.find_statement(byte_index),
+
+            Self::BitArray { segments, .. } => segments
+                .iter()
+                .find_map(|arg| arg.value.find_statement(byte_index)),
+
+            Self::RecordUpdate { record, args, .. } => args
+                .iter()
+                .filter(|arg| arg.implicit.is_none())
+                .find_map(|arg| arg.find_statement(byte_index))
+                .or_else(|| record.value.find_statement(byte_index)),
+        }
+    }
+
     fn self_if_contains_location(&self, byte_index: u32) -> Option<Located<'_>> {
         if self.location().contains(byte_index) {
             Some(self.into())
