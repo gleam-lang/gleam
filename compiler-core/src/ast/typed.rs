@@ -97,11 +97,27 @@ pub enum TypedExpr {
     },
 
     ModuleSelect {
+        /// The location of the selected value coming after the `.` (including
+        /// it):
+        ///
+        /// ```gleam
+        ///    wibble.wobble
+        /// //       ^^^^^^^ location
+        /// ```
+        ///
         location: SrcSpan,
         type_: Arc<Type>,
         label: EcoString,
         module_name: EcoString,
         module_alias: EcoString,
+        /// The location of the module before the `.`:
+        ///
+        /// ```gleam
+        ///    wibble.wobble
+        /// // ^^^^^^ module_location
+        /// ```
+        ///
+        module_location: SrcSpan,
         constructor: ModuleValueConstructor,
     },
 

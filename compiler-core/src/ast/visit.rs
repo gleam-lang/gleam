@@ -218,6 +218,7 @@ pub trait Visit<'ast> {
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
+        module_location: &'ast SrcSpan,
         constructor: &'ast ModuleValueConstructor,
     ) {
         visit_typed_expr_module_select(
@@ -227,6 +228,7 @@ pub trait Visit<'ast> {
             label,
             module_name,
             module_alias,
+            module_location,
             constructor,
         );
     }
@@ -763,6 +765,7 @@ where
             label,
             module_name,
             module_alias,
+            module_location,
             constructor,
         } => v.visit_typed_expr_module_select(
             location,
@@ -770,6 +773,7 @@ where
             label,
             module_name,
             module_alias,
+            module_location,
             constructor,
         ),
         TypedExpr::Tuple {
@@ -993,6 +997,7 @@ pub fn visit_typed_expr_module_select<'a, V>(
     _label: &'a EcoString,
     _module_name: &'a EcoString,
     _module_alias: &'a EcoString,
+    _module_location: &'a SrcSpan,
     _constructor: &'a ModuleValueConstructor,
 ) where
     V: Visit<'a> + ?Sized,

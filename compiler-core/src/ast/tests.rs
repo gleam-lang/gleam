@@ -371,6 +371,7 @@ fn find_node_module_select() {
         label: "label".into(),
         module_name: "name".into(),
         module_alias: "alias".into(),
+        module_location: SrcSpan { start: 0, end: 0 },
         constructor: ModuleValueConstructor::Fn {
             module: "module".into(),
             name: "function".into(),

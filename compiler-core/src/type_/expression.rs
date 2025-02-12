@@ -976,8 +976,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     fn infer_field_access(
         &mut self,
         container: UntypedExpr,
+
+        // The SrcSpan of the entire field access:
+        // ```gleam
+        //    wibble.wobble
+        // // ^^^^^^^^^^^^^ This
+        // ```
+        //
         location: SrcSpan,
         label: EcoString,
+
+        // The SrcSpan of the selection label:
+        // ```gleam
+        //    wibble.wobble
+        // // ^^^^^^ This
+        // ```
+        //
         label_location: SrcSpan,
         usage: FieldAccessUsage,
     ) -> TypedExpr {
@@ -2183,6 +2197,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     label,
                     module_name,
                     module_alias,
+                    module_location: _,
                     constructor,
                 } => match constructor {
                     ModuleValueConstructor::Constant { literal, .. } => {
@@ -2284,6 +2299,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::ModuleSelect {
             label,
             type_: Arc::clone(&type_),
+            module_location: *module_location,
             location: select_location,
             module_name,
             module_alias: module_alias.clone(),
@@ -2994,7 +3010,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // TODO: resvisit this. It is rather awkward at present how we
                 // have to convert to this other data structure.
                 let fun = match &module {
-                    Some((module_alias, _)) => {
+                    Some((module_alias, module_location)) => {
                         let type_ = Arc::clone(&constructor.type_);
                         let module_name = self
                             .environment
@@ -3018,6 +3034,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             label: name.clone(),
                             module_alias: module_alias.clone(),
                             module_name,
+                            module_location: *module_location,
                             type_,
                             constructor: module_value_constructor,
                             location,

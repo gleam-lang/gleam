@@ -1366,6 +1366,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
+        module_location: &'ast SrcSpan,
         constructor: &'ast ModuleValueConstructor,
     ) {
         // When hovering over a Record Value Constructor, we want to expand the source span to
@@ -1373,9 +1374,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         // option.Some
         //  ↑
         // This allows us to offer a code action when hovering over the module name.
-        let expanded_location =
-            SrcSpan::new(location.start - module_name.len() as u32, location.end);
-        let range = src_span_to_lsp_range(expanded_location, &self.line_numbers);
+        let range = src_span_to_lsp_range(module_location.merge(location), &self.line_numbers);
         if overlaps(self.params.range, range) {
             if let ModuleValueConstructor::Record {
                 name: constructor_name,
@@ -1402,6 +1401,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
             label,
             module_name,
             module_alias,
+            module_location,
             constructor,
         )
     }
@@ -1706,6 +1706,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
         label: &'ast EcoString,
         module_name: &'ast EcoString,
         module_alias: &'ast EcoString,
+        module_location: &'ast SrcSpan,
         constructor: &'ast ModuleValueConstructor,
     ) {
         if let ModuleValueConstructor::Record { name, .. } = constructor {
@@ -1727,6 +1728,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
             label,
             module_name,
             module_alias,
+            module_location,
             constructor,
         )
     }
@@ -2785,7 +2787,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     }
 
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
-        let expr_location = expr.location();
+        let expr_location = full_location(expr);
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
 
         // If the expression is a top level statement we don't want to extract
@@ -4423,11 +4425,11 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToFunctionCall<'ast> {
             // pipeline and the call is `finally`.
             let (call, call_kind) = assignments
                 .first()
-                .map(|(call, kind)| (call.location, *kind))
-                .unwrap_or_else(|| (finally.location(), *finally_kind));
+                .map(|(call, kind)| (full_location(&call.value), *kind))
+                .unwrap_or_else(|| (full_location(finally), *finally_kind));
 
             self.locations = Some(ConvertToFunctionCallLocations {
-                first_value: first_value.location,
+                first_value: full_location(&first_value.value),
                 call,
                 call_kind,
             });
@@ -4563,5 +4565,42 @@ impl<'ast> ast::visit::Visit<'ast> for InlineVariable<'ast> {
         }
 
         self.maybe_inline(*location);
+    }
+}
+
+/// Returns the SrcSpan covering the entire expression: this will be the same
+/// as calling `.location()` on most elements with two notable exceptions:
+/// `RecordAccess` and `ModuleSelect` where the returned `SrcSpan` will cover
+/// the entire expression and not just the part following the `.` as you would
+/// get calling `location`.
+///
+fn full_location(expr: &TypedExpr) -> SrcSpan {
+    match expr {
+        TypedExpr::RecordAccess { location, .. } => *location,
+        TypedExpr::ModuleSelect {
+            location,
+            module_location,
+            ..
+        } => module_location.merge(location),
+        TypedExpr::Int { location, .. }
+        | TypedExpr::Float { location, .. }
+        | TypedExpr::String { location, .. }
+        | TypedExpr::Block { location, .. }
+        | TypedExpr::Pipeline { location, .. }
+        | TypedExpr::Var { location, .. }
+        | TypedExpr::Fn { location, .. }
+        | TypedExpr::List { location, .. }
+        | TypedExpr::Call { location, .. }
+        | TypedExpr::BinOp { location, .. }
+        | TypedExpr::Case { location, .. }
+        | TypedExpr::Tuple { location, .. }
+        | TypedExpr::TupleIndex { location, .. }
+        | TypedExpr::Todo { location, .. }
+        | TypedExpr::Panic { location, .. }
+        | TypedExpr::BitArray { location, .. }
+        | TypedExpr::RecordUpdate { location, .. }
+        | TypedExpr::NegateBool { location, .. }
+        | TypedExpr::NegateInt { location, .. }
+        | TypedExpr::Invalid { location, .. } => *location,
     }
 }
