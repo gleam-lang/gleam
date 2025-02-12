@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/io\n\npub fn main() {\n  io.print(\"constant\")\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+pub fn main() {
+  io.print("constant")
+           ↑          
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const string = "constant"
+
+pub fn main() {
+  io.print(string)
+}

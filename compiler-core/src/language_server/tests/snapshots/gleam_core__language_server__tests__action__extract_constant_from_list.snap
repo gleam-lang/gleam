@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let c = [0.25, 99.99]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let c = [0.25, 99.99]
+          ↑            
+}
+
+
+----- AFTER ACTION
+const floats = [0.25, 99.99]
+
+pub fn main() {
+  let c = floats
+}
