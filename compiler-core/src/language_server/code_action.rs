@@ -4486,39 +4486,45 @@ impl<'a> InlineVariable<'a> {
             return;
         };
 
-        match &assignment.pattern {
-            Pattern::Variable { .. } => {
-                let value_location = assignment.value.location();
-                let value = self
-                    .module
-                    .code
-                    .get(value_location.start as usize..value_location.end as usize)
-                    .expect("Span is valid");
-
-                self.edits.replace(variable_location, value.into());
-
-                let mut location = assignment.location;
-
-                let chars = self.module.code.chars();
-                let mut chars = chars.skip(assignment.location.end as usize);
-                // Delete any whitespace after the removed statement
-                while chars.next().is_some_and(char::is_whitespace) {
-                    location.end += 1;
-                }
-
-                self.edits.delete(location);
-
-                CodeActionBuilder::new("Inline variable")
-                    .kind(CodeActionKind::REFACTOR_INLINE)
-                    .changes(
-                        self.params.text_document.uri.clone(),
-                        std::mem::take(&mut self.edits.edits),
-                    )
-                    .preferred(false)
-                    .push_to(&mut self.actions);
-            }
-            _ => {}
+        // If the assignment does not simple bind a variable, for example:
+        // ```gleam
+        // let #(first, second, third)
+        // io.println(first)
+        // //         ^ Inline here
+        // ```
+        // We can't inline it.
+        if !matches!(assignment.pattern, Pattern::Variable { .. }) {
+            return;
         }
+
+        let value_location = assignment.value.location();
+        let value = self
+            .module
+            .code
+            .get(value_location.start as usize..value_location.end as usize)
+            .expect("Span is valid");
+
+        self.edits.replace(variable_location, value.into());
+
+        let mut location = assignment.location;
+
+        let chars = self.module.code.chars();
+        let mut chars = chars.skip(assignment.location.end as usize);
+        // Delete any whitespace after the removed statement
+        while chars.next().is_some_and(char::is_whitespace) {
+            location.end += 1;
+        }
+
+        self.edits.delete(location);
+
+        CodeActionBuilder::new("Inline variable")
+            .kind(CodeActionKind::REFACTOR_INLINE)
+            .changes(
+                self.params.text_document.uri.clone(),
+                std::mem::take(&mut self.edits.edits),
+            )
+            .preferred(false)
+            .push_to(&mut self.actions);
     }
 }
 
