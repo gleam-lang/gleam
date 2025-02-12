@@ -4084,11 +4084,19 @@ fn map(list, fun) { todo }
 
 #[test]
 fn extract_variable_2() {
+    let src = r#"
+import list
+import int
+
+pub fn main() {
+  list.map([1, 2, 3], int.add(1, _))
+}"#;
+
     assert_code_action!(
         EXTRACT_VARIABLE,
-        r#"pub fn main() {
-  list.map([1, 2, 3], int.add(1, _))
-}"#,
+        TestProject::for_source(src)
+            .add_module("int", "pub fn add(n, m) { todo }")
+            .add_module("list", "pub fn map(l, f) { todo }"),
         find_position_of("int.").select_until(find_position_of("add"))
     );
 }
@@ -5142,7 +5150,7 @@ pub fn main() {
 }
 
 #[test]
-fn convert_to_function_call_works_when_piping_a_module_select() {
+fn convert_to_function_call_works_when_piping_an_invalid_module_select() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
         "
@@ -5150,6 +5158,25 @@ pub fn main() {
   wibble.wobble |> woo(_)
 }
 ",
+        find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_works_when_piping_a_module_select() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wobble |> woo(_)
+}
+
+fn woo(n) { todo }
+";
+
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        TestProject::for_source(src).add_module("wibble", "pub const wobble = 1"),
         find_position_of("woo").to_selection()
     );
 }
