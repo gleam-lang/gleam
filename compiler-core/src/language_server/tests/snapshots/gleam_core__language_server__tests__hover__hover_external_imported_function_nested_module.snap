@@ -5,7 +5,7 @@ expression: "\nimport my/nested/example_module\nfn main() {\n    example_module.
 import my/nested/example_module
 fn main() {
     example_module.my_fn
-                  ▔▔▔▔↑▔
+    ▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔▔↑▔
 }
 
 

@@ -20,10 +20,10 @@ pub fn fun(x) {
 
 ----- ERROR
 error: Unknown record field
-   ┌─ /src/one/two.gleam:12:4
+   ┌─ /src/one/two.gleam:12:5
    │
 12 │   x.b
-   │    ^^ This field does not exist
+   │     ^ This field does not exist
 
 The value being accessed has this type:
 

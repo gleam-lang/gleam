@@ -13,10 +13,10 @@ pub fn get_age(person: Person) { person.age }
 
 ----- ERROR
 error: Unknown record field
-  ┌─ /src/one/two.gleam:7:40
+  ┌─ /src/one/two.gleam:7:41
   │
 7 │ pub fn get_age(person: Person) { person.age }
-  │                                        ^^^^ Did you mean `name`?
+  │                                         ^^^ Did you mean `name`?
 
 The value being accessed has this type:
 

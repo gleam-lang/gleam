@@ -366,12 +366,12 @@ fn find_node_tuple_index() {
 #[test]
 fn find_node_module_select() {
     let expr = TypedExpr::ModuleSelect {
-        location: SrcSpan { start: 1, end: 3 },
+        location: SrcSpan { start: 1, end: 4 },
+        field_start: 2,
         type_: type_::int(),
         label: "label".into(),
         module_name: "name".into(),
         module_alias: "alias".into(),
-        module_location: SrcSpan { start: 0, end: 0 },
         constructor: ModuleValueConstructor::Fn {
             module: "module".into(),
             name: "function".into(),
@@ -384,7 +384,7 @@ fn find_node_module_select() {
     };
 
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), Some(Located::Expression(&expr)));
+    assert_eq!(expr.find_node(1), None);
     assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(3), Some(Located::Expression(&expr)));
 }
