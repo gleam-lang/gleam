@@ -331,16 +331,25 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 docvec![left, " * ", right]
             }
 
-            ClauseGuard::DivFloat { left, right, .. } | ClauseGuard::DivInt { left, right, .. } => {
+            ClauseGuard::DivFloat { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec![left, " / ", right]
+                self.expression_generator.tracker.float_division_used = true;
+                docvec!["divideFloat", wrap_args([left, right])]
+            }
+
+            ClauseGuard::DivInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                self.expression_generator.tracker.int_division_used = true;
+                docvec!["divideInt", wrap_args([left, right])]
             }
 
             ClauseGuard::RemainderInt { left, right, .. } => {
                 let left = self.wrapped_guard(left)?;
                 let right = self.wrapped_guard(right)?;
-                docvec![left, " % ", right]
+                self.expression_generator.tracker.int_remainder_used = true;
+                docvec!["remainderInt", wrap_args([left, right])]
             }
 
             ClauseGuard::Or { left, right, .. } => {
