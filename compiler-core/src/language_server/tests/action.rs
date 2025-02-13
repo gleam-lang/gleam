@@ -76,8 +76,8 @@ const PATTERN_MATCH_ON_ARGUMENT: &str = "Pattern match on argument";
 const PATTERN_MATCH_ON_VARIABLE: &str = "Pattern match on variable";
 const GENERATE_FUNCTION: &str = "Generate function";
 const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
-const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INLINE_VARIABLE: &str = "Inline variable";
+const CONVERT_TO_PIPE: &str = "Convert to pipe";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -4851,82 +4851,6 @@ pub fn main() {
 }
 
 #[test]
-fn convert_to_function_call_works_with_argument_in_first_position() {
-    assert_code_action!(
-        CONVERT_TO_FUNCTION_CALL,
-        "
-pub fn main() {
-  [1, 2, 3]
-  |> map(todo)
-}
-
-fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
-",
-        find_position_of("map").to_selection()
-    );
-}
-
-#[test]
-fn convert_to_function_call_works_with_argument_in_first_position_2() {
-    assert_code_action!(
-        CONVERT_TO_FUNCTION_CALL,
-        "
-pub fn main() {
-  [1, 2, 3] |> wibble
-}
-
-fn wibble(a) { todo }
-",
-        find_position_of("wibble").to_selection()
-    );
-}
-
-#[test]
-fn convert_to_function_call_works_with_argument_in_first_position_3() {
-    assert_code_action!(
-        CONVERT_TO_FUNCTION_CALL,
-        "
-pub fn main() {
-  [1, 2, 3] |> wibble()
-}
-
-fn wibble(a) { todo }
-",
-        find_position_of("wibble").to_selection()
-    );
-}
-
-#[test]
-fn convert_to_function_call_works_with_argument_in_first_position_4() {
-    assert_code_action!(
-        CONVERT_TO_FUNCTION_CALL,
-        "
-pub fn main() {
-  [1, 2, 3] |> wibble.wobble
-}
-",
-        find_position_of("wibble").to_selection()
-    );
-}
-
-#[test]
-fn convert_to_function_call_works_with_function_producing_another_function() {
-    assert_code_action!(
-        CONVERT_TO_FUNCTION_CALL,
-        "
-pub fn main() {
-  1 |> wibble(2)
-}
-
-fn wibble(c) -> fn(a) -> Nil {
-  fn(_) { Nil }
-}
-",
-        find_position_of("wibble").to_selection()
-    );
-}
-
-#[test]
 fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
@@ -4961,6 +4885,22 @@ pub type Names {
 }
 
 #[test]
+fn convert_to_function_call_works_with_argument_in_first_position() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+",
+        find_position_of("map").to_selection()
+    );
+}
+
+#[test]
 fn generate_json_encoder() {
     assert_code_action!(
         GENERATE_JSON_ENCODER,
@@ -4970,6 +4910,21 @@ pub type Person {
 }
 ",
         find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_works_with_argument_in_first_position_2() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble
+}
+
+fn wibble(a) { todo }
+",
+        find_position_of("wibble").to_selection()
     );
 }
 
@@ -5001,6 +4956,21 @@ pub type Wibble(value) {
 }
 
 #[test]
+fn convert_to_function_call_works_with_argument_in_first_position_3() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble()
+}
+
+fn wibble(a) { todo }
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn generate_json_encoder_already_imported_module() {
     let src = "
 import gleam/json as json_encoding
@@ -5018,6 +4988,19 @@ pub type Wibble {
 }
 
 #[test]
+fn convert_to_function_call_works_with_argument_in_first_position_4() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3] |> wibble.wobble
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn generate_json_encoder_tuple() {
     assert_code_action!(
         GENERATE_JSON_ENCODER,
@@ -5027,6 +5010,23 @@ pub type Wibble {
 }
 ",
         find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_works_with_function_producing_another_function() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  1 |> wibble(2)
+}
+
+fn wibble(c) -> fn(a) -> Nil {
+  fn(_) { Nil }
+}
+",
+        find_position_of("wibble").to_selection()
     );
 }
 
@@ -5044,6 +5044,22 @@ pub type LinkedList {
         TestProject::for_source(src)
             .add_module("gleam/option", "pub type Option(a) { Some(a) None }"),
         find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_works_with_hole_in_first_position() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  [1, 2, 3]
+  |> map(_, todo)
+}
+
+fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
+",
+        find_position_of("[").to_selection()
     );
 }
 
@@ -5071,35 +5087,6 @@ pub type Wibble {
 }
 ",
         find_position_of("type").to_selection()
-    );
-}
-
-#[test]
-fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
-    assert_no_code_actions!(
-        GENERATE_JSON_ENCODER,
-        "
-pub type Wibble {
-  Wibble(Int, Int, String)
-}
-",
-        find_position_of("type").to_selection()
-    );
-}
-
-#[test]
-fn convert_to_function_call_works_with_hole_in_first_position() {
-    assert_code_action!(
-        CONVERT_TO_FUNCTION_CALL,
-        "
-pub fn main() {
-  [1, 2, 3]
-  |> map(_, todo)
-}
-
-fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
-",
-        find_position_of("[").to_selection()
     );
 }
 
@@ -5192,6 +5179,154 @@ fn woo(n) { todo }
         CONVERT_TO_FUNCTION_CALL,
         TestProject::for_source(src).add_module("wibble", "pub const wobble = 1"),
         find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
+    assert_no_code_actions!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble(Int, Int, String)
+}
+",
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn inline_variable() {
+    let src = r#"
+import gleam/io
+
+pub fn main() {
+  let message = "Hello!"
+  io.println(message)
+}
+"#;
+    assert_code_action!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message)").to_selection()
+    );
+}
+
+#[test]
+fn inline_variable_from_definition() {
+    let src = r#"
+import gleam/io
+
+pub fn main() {
+  let message = "Hello!"
+  io.println(message)
+}
+"#;
+    assert_code_action!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message =").to_selection()
+    );
+}
+
+#[test]
+fn inline_variable_in_nested_scope() {
+    let src = r#"
+import gleam/io
+
+pub fn main() {
+  let _ = {
+    let message = "Hello!"
+    io.println(message)
+  }
+}
+"#;
+    assert_code_action!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message =").to_selection()
+    );
+}
+
+#[test]
+fn inline_variable_in_case_scope() {
+    let src = r#"
+import gleam/io
+
+pub fn main(x) {
+  case x {
+    True -> {
+      let message = "Hello!"
+      io.println(message)
+    }
+    False -> Nil
+  }
+}
+"#;
+    assert_code_action!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message =").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_inline_variable_used_multiple_times() {
+    let src = r#"
+import gleam/io
+
+pub fn main() {
+  let message = "Hello!"
+  io.println(message)
+  io.debug(message)
+}
+"#;
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module(
+            "gleam/io",
+            "pub fn println(value) {} pub fn debug(value) {}"
+        ),
+        find_position_of("message =").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_inline_variable_defined_in_complex_pattern() {
+    let src = r#"
+import gleam/io
+
+pub fn main() {
+  let #(message, second, _) = todo
+  io.println(message)
+}
+"#;
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message)").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_inline_variable_defined_in_case_clause() {
+    let src = r#"
+import gleam/io
+
+pub fn main(result) {
+  case result {
+    Ok(value) -> value
+    Error(message) -> {
+      io.println(message)
+      panic
+    }
+  }
+}
+"#;
+    assert_no_code_actions!(
+        INLINE_VARIABLE,
+        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
+        find_position_of("message").nth_occurrence(2).to_selection()
     );
 }
 
@@ -5335,140 +5470,5 @@ pub fn main() {
 }
 ",
         find_position_of("wobble").to_selection()
-    );
-}
-
-#[test]
-fn inline_variable() {
-    let src = r#"
-import gleam/io
-
-pub fn main() {
-  let message = "Hello!"
-  io.println(message)
-}
-"#;
-    assert_code_action!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
-        find_position_of("message)").to_selection()
-    );
-}
-
-#[test]
-fn inline_variable_from_definition() {
-    let src = r#"
-import gleam/io
-
-pub fn main() {
-  let message = "Hello!"
-  io.println(message)
-}
-"#;
-    assert_code_action!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
-        find_position_of("message =").to_selection()
-    );
-}
-
-#[test]
-fn inline_variable_in_nested_scope() {
-    let src = r#"
-import gleam/io
-
-pub fn main() {
-  let _ = {
-    let message = "Hello!"
-    io.println(message)
-  }
-}
-"#;
-    assert_code_action!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
-        find_position_of("message =").to_selection()
-    );
-}
-
-#[test]
-fn inline_variable_in_case_scope() {
-    let src = r#"
-import gleam/io
-
-pub fn main(x) {
-  case x {
-    True -> {
-      let message = "Hello!"
-      io.println(message)
-    }
-    False -> Nil
-  }
-}
-"#;
-    assert_code_action!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
-        find_position_of("message =").to_selection()
-    );
-}
-
-#[test]
-fn no_code_action_to_inline_variable_used_multiple_times() {
-    let src = r#"
-import gleam/io
-
-pub fn main() {
-  let message = "Hello!"
-  io.println(message)
-  io.debug(message)
-}
-"#;
-    assert_no_code_actions!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module(
-            "gleam/io",
-            "pub fn println(value) {} pub fn debug(value) {}"
-        ),
-        find_position_of("message =").to_selection()
-    );
-}
-
-#[test]
-fn no_code_action_to_inline_variable_defined_in_complex_pattern() {
-    let src = r#"
-import gleam/io
-
-pub fn main() {
-  let #(message, second, _) = todo
-  io.println(message)
-}
-"#;
-    assert_no_code_actions!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
-        find_position_of("message)").to_selection()
-    );
-}
-
-#[test]
-fn no_code_action_to_inline_variable_defined_in_case_clause() {
-    let src = r#"
-import gleam/io
-
-pub fn main(result) {
-  case result {
-    Ok(value) -> value
-    Error(message) -> {
-      io.println(message)
-      panic
-    }
-  }
-}
-"#;
-    assert_no_code_actions!(
-        INLINE_VARIABLE,
-        TestProject::for_source(src).add_module("gleam/io", "pub fn println(value) {}"),
-        find_position_of("message").nth_occurrence(2).to_selection()
     );
 }
