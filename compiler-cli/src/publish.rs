@@ -25,7 +25,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?
         && check_repo_url(&config, i_am_sure)?
-        && check_for_git_dependencies(&config);
+        && check_for_git_dependencies(&config)?;
 
     if !should_publish {
         println!("Not publishing.");
@@ -256,7 +256,7 @@ core team.\n",
     Ok(should_publish)
 }
 
-fn check_for_git_dependencies(config: &PackageConfig) -> bool {
+fn check_for_git_dependencies(config: &PackageConfig) -> Result<bool, Error> {
     let contains_git_dependencies = |dependencies: &HashMap<EcoString, Requirement>| {
         dependencies
             .iter()
@@ -270,9 +270,9 @@ fn check_for_git_dependencies(config: &PackageConfig) -> bool {
             "You are trying to publish a package which uses git dependencies.
 Git dependencies cannot be used in published packages."
         );
-        false
+        Ok(false)
     } else {
-        true
+        Ok(true)
     }
 }
 
