@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/case_clause_guards.rs
+expression: "\npub fn main() {\n  case 5 / 2 {\n    x if x == 5 / 2 -> True\n    _ -> False\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case 5 / 2 {
+    x if x == 5 / 2 -> True
+    _ -> False
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { divideInt } from "../gleam.mjs";
+
+export function main() {
+  let $ = divideInt(5, 2);
+  if ($ === (divideInt(5, 2))) {
+    let x = $;
+    return true;
+  } else {
+    return false;
+  }
+}

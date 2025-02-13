@@ -531,3 +531,48 @@ fn constructor_function_in_guard() {
     "#,
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4241
+#[test]
+fn int_division() {
+    assert_js!(
+        r#"
+pub fn main() {
+  case 5 / 2 {
+    x if x == 5 / 2 -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4241
+#[test]
+fn float_division() {
+    assert_js!(
+        r#"
+pub fn main() {
+  case 5.1 /. 0.0 {
+    x if x == 5.1 /. 0.0 -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4241
+#[test]
+fn int_remainder() {
+    assert_js!(
+        r#"
+pub fn main() {
+  case 4 % 0 {
+    x if x == 4 % 0 -> True
+    _ -> False
+  }
+}
+"#,
+    );
+}
