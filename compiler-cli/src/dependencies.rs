@@ -903,14 +903,41 @@ fn provide_local_package(
 }
 
 fn download_git_package(package_name: &str, repo: &str, commit: &str) {
+    // TODO: Don't panic in this function
+    let current_directory = fs::get_current_directory().unwrap();
+    let package_path = current_directory.join(format!("build/packages/{package_name}"));
+    fs::mkdir(&package_path).unwrap();
+
     let _ = Command::new("git")
-        .arg("clone")
-        .arg("--depth=1")
-        .arg(format!("--branch={commit}"))
-        .arg(repo)
-        .arg(format!("./build/packages/{package_name}"))
+        .arg("init")
+        .current_dir(&package_path)
         .output()
-        .expect("TODO: Don't panic here");
+        .unwrap();
+
+    let _ = Command::new("git")
+        .arg("remote")
+        .arg("add")
+        .arg("origin")
+        .arg(repo)
+        .current_dir(&package_path)
+        .output()
+        .unwrap();
+
+    let _ = Command::new("git")
+        .arg("fetch")
+        .arg("--depth=1")
+        .arg("origin")
+        .arg(commit)
+        .current_dir(&package_path)
+        .output()
+        .unwrap();
+
+    let _ = Command::new("git")
+        .arg("checkout")
+        .arg(commit)
+        .current_dir(&package_path)
+        .output()
+        .unwrap();
 }
 
 /// Provide a package from a git repository
