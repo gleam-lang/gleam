@@ -4767,6 +4767,18 @@ fn do_not_extract_constant_from_tuple_3() {
 }
 
 #[test]
+fn extract_constant_from_nested_structure() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  [#("a", 0), #("b", 1), #("a", 2)]
+  |> key_filter("a")
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
 fn do_not_extract_top_level_expression_statement() {
     assert_no_code_actions!(
         EXTRACT_VARIABLE,
