@@ -48,17 +48,17 @@ export class UtfCodepoint {
 export function toBitArray(segments: Array<BitArray | Uint8Array | number>): BitArray;
 
 export function sizedInt(
-  int: number,
+  value: number,
   size: number,
   isBigEndian: boolean
-): Uint8Array;
+): Uint8Array | BitArray;
 
 export function stringBits(string: string): Uint8Array;
 
 export function codepointBits(codepoint: UtfCodepoint): Uint8Array;
 
 export function sizedFloat(
-  float: number,
+  value: number,
   size: number,
   isBigEndian: boolean
 ): Uint8Array;
