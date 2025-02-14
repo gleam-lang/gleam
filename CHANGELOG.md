@@ -99,7 +99,7 @@
 ### Bug fixes
 
 - Fixed a bug where division and remainder operators would not work correctly
-  in guards on the javascript target.
+  in guards on the JavaScript target.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.8.1 - 2025-02-11
