@@ -464,7 +464,7 @@ async fn add_missing_packages<Telem: Telemetry>(
             let ManifestPackageSource::Git { repo, commit } = &package.source else {
                 continue;
             };
-            download_git_package(&package.name, repo, commit);
+            download_git_package(&package.name, repo, commit)?;
         }
         telemetry.packages_downloaded(start, num_to_download);
     }
@@ -902,17 +902,19 @@ fn provide_local_package(
     )
 }
 
-fn download_git_package(package_name: &str, repo: &str, commit: &str) {
-    // TODO: Don't panic in this function
-    let current_directory = fs::get_current_directory().unwrap();
+fn download_git_package(package_name: &str, repo: &str, commit: &str) -> Result<()> {
+    let current_directory = fs::get_current_directory()?;
     let package_path = current_directory.join(format!("build/packages/{package_name}"));
-    fs::mkdir(&package_path).unwrap();
+    fs::mkdir(&package_path)?;
 
     let _ = Command::new("git")
         .arg("init")
         .current_dir(&package_path)
         .output()
-        .unwrap();
+        .map_err(|error| Error::ShellCommand {
+            program: "git".into(),
+            err: Some(error.kind()),
+        })?;
 
     let _ = Command::new("git")
         .arg("remote")
@@ -921,7 +923,10 @@ fn download_git_package(package_name: &str, repo: &str, commit: &str) {
         .arg(repo)
         .current_dir(&package_path)
         .output()
-        .unwrap();
+        .map_err(|error| Error::ShellCommand {
+            program: "git".into(),
+            err: Some(error.kind()),
+        })?;
 
     let _ = Command::new("git")
         .arg("fetch")
@@ -930,14 +935,22 @@ fn download_git_package(package_name: &str, repo: &str, commit: &str) {
         .arg(commit)
         .current_dir(&package_path)
         .output()
-        .unwrap();
+        .map_err(|error| Error::ShellCommand {
+            program: "git".into(),
+            err: Some(error.kind()),
+        })?;
 
     let _ = Command::new("git")
         .arg("checkout")
         .arg(commit)
         .current_dir(&package_path)
         .output()
-        .unwrap();
+        .map_err(|error| Error::ShellCommand {
+            program: "git".into(),
+            err: Some(error.kind()),
+        })?;
+
+    Ok(())
 }
 
 /// Provide a package from a git repository
@@ -955,7 +968,7 @@ fn provide_git_package(
         commit: commit.into(),
     };
 
-    download_git_package(&package_name, repo, commit);
+    download_git_package(&package_name, repo, commit)?;
     let package_path =
         fs::canonicalise(&parent_path.join(&format!("build/packages/{package_name}")))?;
     provide_package(
