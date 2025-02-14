@@ -1,4 +1,6 @@
-use lsp_types::{GotoDefinitionParams, Location, Position, Range, Url};
+use lsp_types::{
+    request::GotoTypeDefinitionParams, GotoDefinitionParams, Location, Position, Range, Url,
+};
 
 use super::*;
 
@@ -18,6 +20,36 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
 fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
     let position = position_finder.find_position(project.src);
     let location = definition(&project, position).expect("a location to jump to");
+    jump_location_to_string(project, position, location)
+}
+
+fn type_definition(tester: &TestProject<'_>, position: Position) -> Option<Location> {
+    tester.at(position, |engine, param, _| {
+        let params = GotoTypeDefinitionParams {
+            text_document_position_params: param,
+            work_done_progress_params: Default::default(),
+            partial_result_params: Default::default(),
+        };
+        let response = engine.goto_type_definition(params);
+
+        response.result.unwrap()
+    })
+}
+
+fn pretty_type_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
+    let position = position_finder.find_position(project.src);
+    let location = type_definition(&project, position).expect("a location to jump to");
+    format!(
+        "Jumping to type definition\n\n{}",
+        jump_location_to_string(project, position, location)
+    )
+}
+
+fn jump_location_to_string(
+    project: TestProject<'_>,
+    original_position: Position,
+    location: Location,
+) -> String {
     let pretty_destination = location
         .uri
         .path_segments()
@@ -30,10 +62,10 @@ fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) 
     let src = hover::show_hover(
         project.src,
         Range {
-            start: position,
-            end: position,
+            start: original_position,
+            end: original_position,
         },
-        position,
+        original_position,
     );
 
     let destination = hover::show_hover(
@@ -62,6 +94,70 @@ macro_rules! assert_goto {
         let output = pretty_definition($project, $position);
         insta::assert_snapshot!(insta::internals::AutoName, output);
     };
+}
+
+#[macro_export]
+macro_rules! assert_goto_type {
+    ($src:literal, $position:expr) => {
+        let project = TestProject::for_source($src);
+        assert_goto_type!(project, $position);
+    };
+    ($project:expr, $position:expr) => {
+        let output = pretty_type_definition($project, $position);
+        insta::assert_snapshot!(insta::internals::AutoName, output);
+    };
+}
+
+#[test]
+fn goto_type_definition_in_same_file() {
+    assert_goto_type!(
+        "
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() {
+  let x = Wibble
+  x
+}",
+        find_position_of("x").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn goto_type_definition_in_different_file_of_same_project() {
+    let src = "
+import wibble.{type Wibble}
+
+pub fn main() {
+  use_wibble(todo)
+}
+
+pub fn use_wibble(wibble: Wibble) { todo }
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src).add_module("wibble", "pub type Wibble"),
+        find_position_of("todo")
+    );
+}
+
+#[test]
+fn goto_type_definition_in_different_file_of_dependency() {
+    let src = "
+import wibble.{type Wibble}
+
+pub fn main() {
+  use_wibble(todo)
+}
+
+pub fn use_wibble(wibble: Wibble) { todo }
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src).add_dep_module("wibble", "pub type Wibble"),
+        find_position_of("todo")
+    );
 }
 
 #[test]

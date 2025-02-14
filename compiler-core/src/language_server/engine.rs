@@ -1,8 +1,8 @@
 use crate::{
     analyse::name::correct_name_case,
     ast::{
-        ArgNames, CustomType, Definition, ModuleConstant, Pattern, SrcSpan, TypedArg, TypedExpr,
-        TypedFunction, TypedModule, TypedPattern,
+        ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern, SrcSpan,
+        TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -182,29 +182,58 @@ where
                 None => return Ok(None),
             };
 
-            let location = match node
-                .definition_location(this.compiler.project_compiler.get_importable_modules())
-            {
+            let Some(location) =
+                node.definition_location(this.compiler.project_compiler.get_importable_modules())
+            else {
+                return Ok(None);
+            };
+
+            Ok(this.goto_definition_response(line_numbers, params, location))
+        })
+    }
+
+    pub(crate) fn goto_type_definition(
+        &mut self,
+        params: lsp_types::GotoDefinitionParams,
+    ) -> Response<Option<lsp::Location>> {
+        self.respond(|this| {
+            let params = params.text_document_position_params;
+            let (line_numbers, node) = match this.node_at_position(&params) {
                 Some(location) => location,
                 None => return Ok(None),
             };
 
-            let (uri, line_numbers) = match location.module {
-                None => (params.text_document.uri, &line_numbers),
-                Some(name) => {
-                    let module = match this.compiler.get_source(name) {
-                        Some(module) => module,
-                        _ => return Ok(None),
-                    };
-                    let url = Url::parse(&format!("file:///{}", &module.path))
-                        .expect("goto definition URL parse");
-                    (url, &module.line_numbers)
-                }
+            let Some(location) = node
+                .type_definition_location(this.compiler.project_compiler.get_importable_modules())
+            else {
+                return Ok(None);
             };
-            let range = src_span_to_lsp_range(location.span, line_numbers);
 
-            Ok(Some(lsp::Location { uri, range }))
+            Ok(this.goto_definition_response(line_numbers, params, location))
         })
+    }
+
+    fn goto_definition_response(
+        &self,
+        line_numbers: LineNumbers,
+        params: lsp_types::TextDocumentPositionParams,
+        location: DefinitionLocation,
+    ) -> Option<lsp::Location> {
+        let (uri, line_numbers) = match location.module {
+            None => (params.text_document.uri, &line_numbers),
+            Some(name) => {
+                let module = match self.compiler.get_source(&name) {
+                    Some(module) => module,
+                    _ => return None,
+                };
+                let url = Url::parse(&format!("file:///{}", &module.path))
+                    .expect("goto definition URL parse");
+                (url, &module.line_numbers)
+            }
+        };
+        let range = src_span_to_lsp_range(location.span, line_numbers);
+
+        Some(lsp::Location { uri, range })
     }
 
     pub fn completion(

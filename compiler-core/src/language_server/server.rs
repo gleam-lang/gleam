@@ -107,6 +107,7 @@ where
             Request::DocumentSymbol(param) => self.document_symbol(param),
             Request::PrepareRename(param) => self.prepare_rename(param),
             Request::Rename(param) => self.rename(param),
+            Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
         };
 
         self.publish_feedback(feedback);
@@ -308,6 +309,14 @@ where
         self.respond_with_engine(path, |engine| engine.goto_definition(params))
     }
 
+    fn goto_type_definition(
+        &mut self,
+        params: lsp_types::GotoDefinitionParams,
+    ) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position_params.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.goto_type_definition(params))
+    }
+
     fn completion(&mut self, params: lsp::CompletionParams) -> (Json, Feedback) {
         let path = super::path(&params.text_document_position.text_document.uri);
 
@@ -418,7 +427,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
             },
         }),
         definition_provider: Some(lsp::OneOf::Left(true)),
-        type_definition_provider: None,
+        type_definition_provider: Some(lsp::TypeDefinitionProviderCapability::Simple(true)),
         implementation_provider: None,
         references_provider: None,
         document_highlight_provider: None,
