@@ -7,8 +7,8 @@ use lsp_types::{
     self as lsp,
     notification::{DidChangeTextDocument, DidCloseTextDocument, DidSaveTextDocument},
     request::{
-        CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, HoverRequest,
-        PrepareRenameRequest, Rename, SignatureHelpRequest,
+        CodeActionRequest, Completion, DocumentSymbolRequest, Formatting, GotoTypeDefinition,
+        HoverRequest, PrepareRenameRequest, Rename, SignatureHelpRequest,
     },
 };
 use std::time::Duration;
@@ -24,6 +24,7 @@ pub enum Request {
     Format(lsp::DocumentFormattingParams),
     Hover(lsp::HoverParams),
     GoToDefinition(lsp::GotoDefinitionParams),
+    GoToTypeDefinition(lsp::GotoDefinitionParams),
     Completion(lsp::CompletionParams),
     CodeAction(lsp::CodeActionParams),
     SignatureHelp(lsp::SignatureHelpParams),
@@ -71,6 +72,10 @@ impl Request {
             "textDocument/prepareRename" => {
                 let params = cast_request::<PrepareRenameRequest>(request);
                 Some(Message::Request(id, Request::PrepareRename(params)))
+            }
+            "textDocument/typeDefinition" => {
+                let params = cast_request::<GotoTypeDefinition>(request);
+                Some(Message::Request(id, Request::GoToTypeDefinition(params)))
             }
             _ => None,
         }

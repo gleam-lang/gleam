@@ -397,6 +397,35 @@ impl<'a> Located<'a> {
             Self::Label(_, _) => None,
         }
     }
+
+    pub(crate) fn type_(&self) -> Option<Arc<Type>> {
+        match self {
+            Located::Pattern(pattern) => Some(pattern.type_()),
+            Located::Statement(statement) => Some(statement.type_()),
+            Located::Expression(typed_expr) => Some(typed_expr.type_()),
+            Located::Arg(arg) => Some(arg.type_.clone()),
+            Located::Label(_, type_) | Located::Annotation(_, type_) => Some(type_.clone()),
+
+            Located::PatternSpread { .. } => None,
+            Located::ModuleStatement(definition) => None,
+            Located::FunctionBody(function) => None,
+            Located::UnqualifiedImport(unqualified_import) => None,
+        }
+    }
+
+    pub(crate) fn type_definition_location(
+        &self,
+        importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    ) -> Option<DefinitionLocation> {
+        let type_ = self.type_()?;
+        let (module_name, type_name, _) = type_.named_type_information()?;
+        let module = importable_modules.get(&module_name)?;
+        let location = module.get_public_type(&type_name)?.origin;
+        Some(DefinitionLocation {
+            module: Some(module_name),
+            span: location,
+        })
+    }
 }
 
 // Looks up the type constructor for the given type
