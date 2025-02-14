@@ -413,19 +413,43 @@ impl<'a> Located<'a> {
         }
     }
 
-    pub(crate) fn type_definition_location(
+    pub(crate) fn type_definition_locations(
         &self,
         importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
-    ) -> Option<DefinitionLocation> {
+    ) -> Option<Vec<DefinitionLocation>> {
         let type_ = self.type_()?;
-        let (module_name, type_name, _) = type_.named_type_information()?;
-        let module = importable_modules.get(&module_name)?;
-        let location = module.get_public_type(&type_name)?.origin;
-        Some(DefinitionLocation {
-            module: Some(module_name),
-            span: location,
-        })
+        Some(type_to_definition_locations(type_, importable_modules).collect_vec())
     }
+}
+
+fn type_to_definition_locations<'a>(
+    type_: Arc<Type>,
+    importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
+) -> Box<dyn Iterator<Item = DefinitionLocation> + 'a> {
+    let Some((module_name, type_name, type_parameters)) = type_.named_type_information() else {
+        return Box::new(std::iter::empty());
+    };
+
+    let Some(module) = importable_modules.get(&module_name) else {
+        return Box::new(std::iter::empty());
+    };
+
+    let Some(type_) = module.get_public_type(&type_name) else {
+        return Box::new(std::iter::empty());
+    };
+
+    let location = DefinitionLocation {
+        module: Some(module_name),
+        span: type_.origin,
+    };
+
+    let iter = std::iter::once(location).chain(
+        type_parameters
+            .into_iter()
+            .flat_map(|type_| type_to_definition_locations(type_.clone(), importable_modules)),
+    );
+
+    Box::new(iter)
 }
 
 // Looks up the type constructor for the given type

@@ -188,44 +188,48 @@ where
                 return Ok(None);
             };
 
-            Ok(this.goto_definition_response(line_numbers, params, location))
+            Ok(this.definition_location_to_lsp_location(&line_numbers, &params, location))
         })
     }
 
     pub(crate) fn goto_type_definition(
         &mut self,
         params: lsp_types::GotoDefinitionParams,
-    ) -> Response<Option<lsp::Location>> {
+    ) -> Response<Vec<lsp::Location>> {
         self.respond(|this| {
             let params = params.text_document_position_params;
             let (line_numbers, node) = match this.node_at_position(&params) {
                 Some(location) => location,
-                None => return Ok(None),
+                None => return Ok(vec![]),
             };
 
-            let Some(location) = node
-                .type_definition_location(this.compiler.project_compiler.get_importable_modules())
+            let Some(locations) = node
+                .type_definition_locations(this.compiler.project_compiler.get_importable_modules())
             else {
-                return Ok(None);
+                return Ok(vec![]);
             };
 
-            Ok(this.goto_definition_response(line_numbers, params, location))
+            let locations = locations
+                .into_iter()
+                .filter_map(|location| {
+                    this.definition_location_to_lsp_location(&line_numbers, &params, location)
+                })
+                .collect_vec();
+
+            Ok(locations)
         })
     }
 
-    fn goto_definition_response(
+    fn definition_location_to_lsp_location(
         &self,
-        line_numbers: LineNumbers,
-        params: lsp_types::TextDocumentPositionParams,
+        line_numbers: &LineNumbers,
+        params: &lsp_types::TextDocumentPositionParams,
         location: DefinitionLocation,
     ) -> Option<lsp::Location> {
         let (uri, line_numbers) = match location.module {
-            None => (params.text_document.uri, &line_numbers),
+            None => (params.text_document.uri.clone(), line_numbers),
             Some(name) => {
-                let module = match self.compiler.get_source(&name) {
-                    Some(module) => module,
-                    _ => return None,
-                };
+                let module = self.compiler.get_source(&name)?;
                 let url = Url::parse(&format!("file:///{}", &module.path))
                     .expect("goto definition URL parse");
                 (url, &module.line_numbers)
