@@ -464,7 +464,7 @@ async fn add_missing_packages<Telem: Telemetry>(
             let ManifestPackageSource::Git { repo, commit } = &package.source else {
                 continue;
             };
-            download_git_package(&package.name, repo, commit)?;
+            let _ = download_git_package(&package.name, repo, commit)?;
         }
         telemetry.packages_downloaded(start, num_to_download);
     }
@@ -902,7 +902,7 @@ fn provide_local_package(
     )
 }
 
-fn download_git_package(package_name: &str, repo: &str, commit: &str) -> Result<()> {
+fn download_git_package(package_name: &str, repo: &str, commit: &str) -> Result<EcoString> {
     let current_directory = fs::get_current_directory()?;
     let package_path = current_directory.join(format!("build/packages/{package_name}"));
     fs::mkdir(&package_path)?;
@@ -930,9 +930,7 @@ fn download_git_package(package_name: &str, repo: &str, commit: &str) -> Result<
 
     let _ = Command::new("git")
         .arg("fetch")
-        .arg("--depth=1")
         .arg("origin")
-        .arg(commit)
         .current_dir(&package_path)
         .output()
         .map_err(|error| Error::ShellCommand {
@@ -950,7 +948,22 @@ fn download_git_package(package_name: &str, repo: &str, commit: &str) -> Result<
             err: Some(error.kind()),
         })?;
 
-    Ok(())
+    let output = Command::new("git")
+        .arg("rev-parse")
+        .arg("HEAD")
+        .current_dir(&package_path)
+        .output()
+        .map_err(|error| Error::ShellCommand {
+            program: "git".into(),
+            err: Some(error.kind()),
+        })?;
+
+    let commit = String::from_utf8(output.stdout)
+        .expect("Output should be UTF-8")
+        .trim()
+        .into();
+
+    Ok(commit)
 }
 
 /// Provide a package from a git repository
@@ -963,12 +976,13 @@ fn provide_git_package(
     provided: &mut HashMap<EcoString, ProvidedPackage>,
     parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
+    let commit = download_git_package(&package_name, repo, commit)?;
+
     let package_source = ProvidedPackageSource::Git {
         repo: repo.into(),
-        commit: commit.into(),
+        commit,
     };
 
-    download_git_package(&package_name, repo, commit)?;
     let package_path =
         fs::canonicalise(&parent_path.join(&format!("build/packages/{package_name}")))?;
     provide_package(
