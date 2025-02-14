@@ -4154,13 +4154,13 @@ impl<'a> GenerateFunction<'a> {
         let name_range = function_name_location.start as usize..function_name_location.end as usize;
         let candidate_name = self.module.code.get(name_range);
         match (candidate_name, function_type.fn_types()) {
-            (None, _) | (_, None) => return,
-            (Some(name), _) if !is_valid_lowercase_name(name) => return,
+            (None, _) | (_, None) => (),
+            (Some(name), _) if !is_valid_lowercase_name(name) => (),
             (Some(name), Some((arguments_types, return_type))) => {
                 let arguments = arguments_types
                     .iter()
                     .enumerate()
-                    .map(|(i, arg)| (labels.get(&i).map(|s| s.clone()), arg.clone()))
+                    .map(|(i, arg)| (labels.get(&i).cloned(), arg.clone()))
                     .collect_vec();
 
                 self.function_to_generate = Some(FunctionToGenerate {
