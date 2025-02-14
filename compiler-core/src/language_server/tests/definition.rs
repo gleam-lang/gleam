@@ -12,7 +12,6 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
             partial_result_params: Default::default(),
         };
         let response = engine.goto_definition(params);
-
         response.result.unwrap()
     })
 }
@@ -20,10 +19,10 @@ fn definition(tester: &TestProject<'_>, position: Position) -> Option<Location> 
 fn pretty_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
     let position = position_finder.find_position(project.src);
     let location = definition(&project, position).expect("a location to jump to");
-    jump_location_to_string(project, position, location)
+    jump_locations_to_string(project, position, vec![location])
 }
 
-fn type_definition(tester: &TestProject<'_>, position: Position) -> Option<Location> {
+fn type_definition(tester: &TestProject<'_>, position: Position) -> Vec<Location> {
     tester.at(position, |engine, param, _| {
         let params = GotoTypeDefinitionParams {
             text_document_position_params: param,
@@ -38,27 +37,18 @@ fn type_definition(tester: &TestProject<'_>, position: Position) -> Option<Locat
 
 fn pretty_type_definition(project: TestProject<'_>, position_finder: PositionFinder) -> String {
     let position = position_finder.find_position(project.src);
-    let location = type_definition(&project, position).expect("a location to jump to");
+    let location = type_definition(&project, position);
     format!(
         "Jumping to type definition\n\n{}",
-        jump_location_to_string(project, position, location)
+        jump_locations_to_string(project, position, location)
     )
 }
 
-fn jump_location_to_string(
+fn jump_locations_to_string(
     project: TestProject<'_>,
     original_position: Position,
-    location: Location,
+    locations: Vec<Location>,
 ) -> String {
-    let pretty_destination = location
-        .uri
-        .path_segments()
-        .expect("a location to jump to")
-        // To make snapshots the same both on windows and unix systems we need
-        // to discard windows' `C:` path segment at the beginning of a uri.
-        .skip_while(|segment| *segment == "C:")
-        .join("/");
-
     let src = hover::show_hover(
         project.src,
         Range {
@@ -68,19 +58,37 @@ fn jump_location_to_string(
         original_position,
     );
 
-    let destination = hover::show_hover(
-        project
-            .src_from_module_url(&location.uri)
-            .expect("a module to jump to"),
-        location.range,
-        location.range.start,
-    );
+    let destinations = locations
+        .iter()
+        .map(|location| {
+            let pretty_destination = location
+                .uri
+                .path_segments()
+                .expect("a location to jump to")
+                // To make snapshots the same both on windows and unix systems we need
+                // to discard windows' `C:` path segment at the beginning of a uri.
+                .skip_while(|segment| *segment == "C:")
+                .join("/");
+
+            let destination_code = hover::show_hover(
+                project
+                    .src_from_module_url(&location.uri)
+                    .expect("a module to jump to"),
+                location.range,
+                location.range.start,
+            );
+
+            format!(
+                "----- Jumped to `{pretty_destination}`
+{destination_code}"
+            )
+        })
+        .join("\n\n");
 
     format!(
         "----- Jumping from `src/app.gleam`
 {src}
------ Jumped to `{pretty_destination}`
-{destination}",
+{destinations}",
     )
 }
 
@@ -157,6 +165,25 @@ pub fn use_wibble(wibble: Wibble) { todo }
     assert_goto_type!(
         TestProject::for_source(src).add_dep_module("wibble", "pub type Wibble"),
         find_position_of("todo")
+    );
+}
+
+#[test]
+fn goto_type_definition_can_jump_to_multiple_types() {
+    let src = "
+import wibble.{type Wibble, Wibble}
+import box.{Box}
+
+pub fn main() {
+  let a = Box(Wibble)
+}
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src)
+            .add_dep_module("wibble", "pub type Wibble { Wibble }")
+            .add_dep_module("box", "pub type Box(a) { Box(a) }"),
+        find_position_of("let a")
     );
 }
 

@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/language_server/tests/definition.rs
+expression: output
+---
+Jumping to type definition
+
+----- Jumping from `src/app.gleam`
+
+import wibble.{type Wibble, Wibble}
+import box.{Box}
+
+pub fn main() {
+  let a = Box(Wibble)
+  ↑                  
+}
+
+----- Jumped to `dep/src/box.gleam`
+pub type Box(a) { Box(a) }
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔           
+
+
+----- Jumped to `dep/src/wibble.gleam`
+pub type Wibble { Wibble }
+↑▔▔▔▔▔▔▔▔▔▔▔▔▔▔
