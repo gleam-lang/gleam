@@ -1023,9 +1023,9 @@ pub struct PatternConstructor {
 }
 
 impl PatternConstructor {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         Some(DefinitionLocation {
-            module: Some(self.module.as_str()),
+            module: Some(self.module.clone()),
             span: self.location,
         })
     }
@@ -1257,7 +1257,7 @@ impl ValueConstructor {
         self.variant.is_local_variable()
     }
 
-    pub fn definition_location(&self) -> DefinitionLocation<'_> {
+    pub fn definition_location(&self) -> DefinitionLocation {
         match &self.variant {
             ValueConstructorVariant::Record {
                 module, location, ..
@@ -1268,7 +1268,7 @@ impl ValueConstructor {
             | ValueConstructorVariant::ModuleFn {
                 location, module, ..
             } => DefinitionLocation {
-                module: Some(module.as_str()),
+                module: Some(module.clone()),
                 span: *location,
             },
 
