@@ -876,6 +876,13 @@ impl TypedExpr {
             },
         }
     }
+
+    pub(crate) fn is_invalid(&self) -> bool {
+        match self {
+            TypedExpr::Invalid { .. } => true,
+            _ => false,
+        }
+    }
 }
 
 impl<'a> From<&'a TypedExpr> for Located<'a> {

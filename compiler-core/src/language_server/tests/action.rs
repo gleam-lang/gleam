@@ -4851,6 +4851,45 @@ pub fn main() {
 }
 
 #[test]
+fn generate_function_takes_labels_into_account() {
+    assert_code_action!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(2, n: 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_does_not_trigger_if_labels_are_in_the_wrong_order() {
+    assert_no_code_actions!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(n: 2, 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn generate_function_does_not_trigger_if_there_are_repeated_labels() {
+    assert_no_code_actions!(
+        GENERATE_FUNCTION,
+        "
+pub fn main() {
+  wibble(n: 2, n: 1)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_generates_unique_names_even_with_labels() {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
