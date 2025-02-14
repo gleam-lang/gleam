@@ -984,7 +984,7 @@ fn provide_git_package(
     };
 
     let package_path =
-        fs::canonicalise(&parent_path.join(&format!("build/packages/{package_name}")))?;
+        fs::canonicalise(&parent_path.join(format!("build/packages/{package_name}")))?;
     provide_package(
         package_name,
         package_path,
