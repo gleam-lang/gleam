@@ -188,6 +188,48 @@ pub fn main() {
 }
 
 #[test]
+fn goto_type_definition_can_jump_to_all_types_in_a_tuple() {
+    let src = "
+import wibble.{type Wibble}
+import wobble.{type Wobble}
+import box.{type Box}
+
+pub fn main() {
+  let a: #(Box(Wibble), Wobble) = todo
+}
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src)
+            .add_dep_module("wibble", "pub type Wibble { Wibble }")
+            .add_dep_module("wobble", "pub type Wobble { Wobble }")
+            .add_dep_module("box", "pub type Box(a) { Box(a) }"),
+        find_position_of("let a")
+    );
+}
+
+#[test]
+fn goto_type_definition_can_jump_to_all_types_in_a_function_type() {
+    let src = "
+import wibble.{type Wibble}
+import wobble.{type Wobble}
+import box.{type Box}
+
+pub fn main() {
+  let a = fn(wibble: Wibble) { box.Box(wobble.Wobble) }
+}
+";
+
+    assert_goto_type!(
+        TestProject::for_source(src)
+            .add_dep_module("wibble", "pub type Wibble { Wibble }")
+            .add_dep_module("wobble", "pub type Wobble { Wobble }")
+            .add_dep_module("box", "pub type Box(a) { Box(a) }"),
+        find_position_of("let a")
+    );
+}
+
+#[test]
 fn goto_definition_local_variable() {
     assert_goto!(
         "

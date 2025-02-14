@@ -418,38 +418,85 @@ impl<'a> Located<'a> {
         importable_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
     ) -> Option<Vec<DefinitionLocation>> {
         let type_ = self.type_()?;
-        Some(type_to_definition_locations(type_, importable_modules).collect_vec())
+        Some(type_to_definition_locations(type_, importable_modules))
     }
 }
 
+/// Returns the locations of all the types that one could reach starting from
+/// the given type (included). This includes all types that are part of a
+/// tuple/function type or that are used as args in a named type.
+///
+/// For example, given this type `Dict(Int, #(Wibble, Wobble))` all the
+/// "reachable" include: `Dict`, `Int`, `Wibble` and `Wobble`.
+///
+/// This is what powers the "go to type definition" capability of the language
+/// server.
+///
 fn type_to_definition_locations<'a>(
     type_: Arc<Type>,
     importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-) -> Box<dyn Iterator<Item = DefinitionLocation> + 'a> {
-    let Some((module_name, type_name, type_parameters)) = type_.named_type_information() else {
-        return Box::new(std::iter::empty());
-    };
+) -> Vec<DefinitionLocation> {
+    match type_.as_ref() {
+        // For named types we start with the location of the named type itself
+        // followed by the locations of all types they reference in their args.
+        //
+        // For example with a `Dict(Wibble, Wobble)` we'd start with the
+        // definition of `Dict`, followed by the definition of `Wibble` and
+        // `Wobble`.
+        //
+        Type::Named {
+            module, name, args, ..
+        } => {
+            let Some(module) = importable_modules.get(module) else {
+                return vec![];
+            };
 
-    let Some(module) = importable_modules.get(&module_name) else {
-        return Box::new(std::iter::empty());
-    };
+            let Some(type_) = module.get_public_type(&name) else {
+                return vec![];
+            };
 
-    let Some(type_) = module.get_public_type(&type_name) else {
-        return Box::new(std::iter::empty());
-    };
+            let mut locations = vec![DefinitionLocation {
+                module: Some(module.name.clone()),
+                span: type_.origin,
+            }];
+            for arg in args {
+                locations.extend(type_to_definition_locations(
+                    arg.clone(),
+                    importable_modules,
+                ));
+            }
+            locations
+        }
 
-    let location = DefinitionLocation {
-        module: Some(module_name),
-        span: type_.origin,
-    };
+        // For fn types we just get the locations of their arguments and return
+        // type.
+        //
+        Type::Fn { args, retrn } => args
+            .iter()
+            .flat_map(|arg| type_to_definition_locations(arg.clone(), importable_modules))
+            .chain(type_to_definition_locations(
+                retrn.clone(),
+                importable_modules,
+            ))
+            .collect_vec(),
 
-    let iter = std::iter::once(location).chain(
-        type_parameters
-            .into_iter()
-            .flat_map(|type_| type_to_definition_locations(type_.clone(), importable_modules)),
-    );
+        // In case of a var we just follow it and get the locations of the type
+        // it points to.
+        //
+        Type::Var { type_ } => match type_.borrow().clone() {
+            type_::TypeVar::Unbound { .. } | type_::TypeVar::Generic { .. } => vec![],
+            type_::TypeVar::Link { type_ } => {
+                type_to_definition_locations(type_, importable_modules)
+            }
+        },
 
-    Box::new(iter)
+        // In case of tuples we get the locations of the wrapped types.
+        //
+        Type::Tuple { elems } => elems
+            .iter()
+            .flat_map(|elem| type_to_definition_locations(elem.clone(), importable_modules))
+            .collect_vec(),
+    }
 }
 
 // Looks up the type constructor for the given type
