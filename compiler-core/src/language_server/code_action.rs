@@ -4081,7 +4081,7 @@ pub struct GenerateFunction<'a> {
 
 struct FunctionToGenerate<'a> {
     name: &'a str,
-    arguments_types: Vec<Arc<Type>>,
+    arguments: Vec<(Option<EcoString>, Arc<Type>)>,
     return_type: Arc<Type>,
     previous_function_end: Option<u32>,
 }
@@ -4106,7 +4106,7 @@ impl<'a> GenerateFunction<'a> {
 
         let Some(FunctionToGenerate {
             name,
-            arguments_types,
+            arguments,
             previous_function_end: Some(insert_at),
             return_type,
         }) = self.function_to_generate
@@ -4116,18 +4116,19 @@ impl<'a> GenerateFunction<'a> {
 
         let mut name_generator = NameGenerator::new();
         let mut printer = Printer::new(&self.module.ast.names);
-        let args = if let [arg_type] = arguments_types.as_slice() {
-            let arg_name = name_generator.generate_name_from_type(arg_type);
-            format!("{arg_name}: {}", printer.print_type(arg_type))
-        } else {
-            arguments_types
-                .iter()
-                .map(|arg_type| {
-                    let arg_name = name_generator.generate_name_from_type(arg_type);
-                    format!("{arg_name}: {}", printer.print_type(arg_type))
-                })
-                .join(", ")
-        };
+        let args = arguments
+            .iter()
+            .map(|(arg_label, arg_type)| {
+                let arg_name = name_generator.generate_name_from_type(arg_type);
+                let pretty_type = printer.print_type(arg_type);
+                if let Some(arg_label) = arg_label {
+                    format!("{arg_label} {arg_name}: {pretty_type}")
+                } else {
+                    format!("{arg_name}: {pretty_type}")
+                }
+            })
+            .join(", ");
+
         let return_type = printer.print_type(&return_type);
 
         self.edits.insert(
@@ -4143,6 +4144,34 @@ impl<'a> GenerateFunction<'a> {
             .push_to(&mut action);
         action
     }
+
+    fn try_save_function_to_generate(
+        &mut self,
+        function_name_location: SrcSpan,
+        function_type: &Arc<Type>,
+        labels: HashMap<usize, EcoString>,
+    ) {
+        let name_range = function_name_location.start as usize..function_name_location.end as usize;
+        let candidate_name = self.module.code.get(name_range);
+        match (candidate_name, function_type.fn_types()) {
+            (None, _) | (_, None) => return,
+            (Some(name), _) if !is_valid_lowercase_name(name) => return,
+            (Some(name), Some((arguments_types, return_type))) => {
+                let arguments = arguments_types
+                    .iter()
+                    .enumerate()
+                    .map(|(i, arg)| (labels.get(&i).map(|s| s.clone()), arg.clone()))
+                    .collect_vec();
+
+                self.function_to_generate = Some(FunctionToGenerate {
+                    name,
+                    arguments,
+                    return_type,
+                    previous_function_end: self.last_visited_function_end,
+                })
+            }
+        }
+    }
 }
 
 impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
@@ -4154,24 +4183,62 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateFunction<'ast> {
     fn visit_typed_expr_invalid(&mut self, location: &'ast SrcSpan, type_: &'ast Arc<Type>) {
         let invalid_range = self.edits.src_span_to_lsp_range(*location);
         if within(self.params.range, invalid_range) {
-            let name_range = location.start as usize..location.end as usize;
-            let candidate_name = self.module.code.get(name_range);
-            match (candidate_name, type_.fn_types()) {
-                (None, _) | (_, None) => return,
-                (Some(name), _) if !is_valid_lowercase_name(name) => return,
-                (Some(name), Some((arguments_types, return_type))) => {
-                    self.function_to_generate = Some(FunctionToGenerate {
-                        name,
-                        arguments_types,
-                        return_type,
-                        previous_function_end: self.last_visited_function_end,
-                    })
-                }
-            }
+            self.try_save_function_to_generate(*location, type_, HashMap::new());
         }
 
         ast::visit::visit_typed_expr_invalid(self, location, type_);
     }
+
+    fn visit_typed_expr_call(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        fun: &'ast TypedExpr,
+        args: &'ast [TypedCallArg],
+    ) {
+        // If the function being called is invalid we need to generate a
+        // function that has the proper labels.
+        let fun_range = self.edits.src_span_to_lsp_range(fun.location());
+
+        if within(self.params.range, fun_range) && fun.is_invalid() {
+            if labels_are_correct(args) {
+                let labels = args
+                    .iter()
+                    .enumerate()
+                    .filter_map(|(i, arg)| arg.label.as_ref().map(|label| (i, label.clone())))
+                    .collect();
+
+                self.try_save_function_to_generate(fun.location(), &fun.type_(), labels);
+            }
+        } else {
+            ast::visit::visit_typed_expr_call(self, location, type_, fun, args);
+        }
+    }
+}
+
+#[must_use]
+/// Checks the labels in the given arguments are correct: that is there's no
+/// duplicate labels and all labelled arguments come after the unlabelled ones.
+fn labels_are_correct(args: &[TypedCallArg]) -> bool {
+    let mut labelled_arg_found = false;
+    let mut used_labels = HashSet::new();
+
+    for arg in args {
+        match &arg.label {
+            // Labels are invalid if there's duplicate ones or if an unlabelled
+            // argument comes after a labelled one.
+            Some(label) if used_labels.contains(label) => return false,
+            None if labelled_arg_found => return false,
+            // Otherwise we just add the label to the used ones.
+            Some(label) => {
+                labelled_arg_found = true;
+                let _ = used_labels.insert(label);
+            }
+            None => continue,
+        }
+    }
+
+    true
 }
 
 struct NameGenerator {
