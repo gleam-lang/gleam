@@ -1731,8 +1731,8 @@ impl SrcSpan {
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
-pub struct DefinitionLocation<'module> {
-    pub module: Option<&'module str>,
+pub struct DefinitionLocation {
+    pub module: Option<EcoString>,
     pub span: SrcSpan,
 }
 
@@ -1912,7 +1912,7 @@ impl<A> Pattern<A> {
 }
 
 impl TypedPattern {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             Pattern::Int { .. }
             | Pattern::Float { .. }
@@ -2484,7 +2484,7 @@ impl TypedStatement {
         }
     }
 
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             Statement::Expression(expression) => expression.definition_location(),
             Statement::Assignment(_) => None,

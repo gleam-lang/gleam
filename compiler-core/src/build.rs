@@ -349,9 +349,9 @@ impl<'a> Located<'a> {
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
         type_: std::sync::Arc<Type>,
-    ) -> Option<DefinitionLocation<'_>> {
+    ) -> Option<DefinitionLocation> {
         type_constructor_from_modules(importable_modules, type_).map(|t| DefinitionLocation {
-            module: Some(&t.module),
+            module: Some(t.module.clone()),
             span: t.origin,
         })
     }
@@ -359,7 +359,7 @@ impl<'a> Located<'a> {
     pub fn definition_location(
         &self,
         importable_modules: &'a im::HashMap<EcoString, type_::ModuleInterface>,
-    ) -> Option<DefinitionLocation<'_>> {
+    ) -> Option<DefinitionLocation> {
         match self {
             Self::PatternSpread { .. } => None,
             Self::Pattern(pattern) => pattern.definition_location(),
@@ -367,7 +367,7 @@ impl<'a> Located<'a> {
             Self::FunctionBody(statement) => None,
             Self::Expression(expression) => expression.definition_location(),
             Self::ModuleStatement(Definition::Import(import)) => Some(DefinitionLocation {
-                module: Some(import.module.as_str()),
+                module: Some(import.module.clone()),
                 span: SrcSpan { start: 0, end: 0 },
             }),
             Self::ModuleStatement(statement) => Some(DefinitionLocation {
@@ -382,12 +382,12 @@ impl<'a> Located<'a> {
             }) => importable_modules.get(*module).and_then(|m| {
                 if *is_type {
                     m.types.get(*name).map(|t| DefinitionLocation {
-                        module: Some(&module),
+                        module: Some((*module).clone()),
                         span: t.origin,
                     })
                 } else {
                     m.values.get(*name).map(|v| DefinitionLocation {
-                        module: Some(&module),
+                        module: Some((*module).clone()),
                         span: v.definition_location().span,
                     })
                 }

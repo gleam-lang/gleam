@@ -550,7 +550,7 @@ impl TypedExpr {
         }
     }
 
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             TypedExpr::Fn { .. }
             | TypedExpr::Int { .. }
@@ -582,7 +582,7 @@ impl TypedExpr {
                 constructor,
                 ..
             } => Some(DefinitionLocation {
-                module: Some(module_name.as_str()),
+                module: Some(module_name.clone()),
                 span: constructor.location(),
             }),
 

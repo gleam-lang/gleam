@@ -74,7 +74,7 @@ impl<T> Inferred<T> {
 }
 
 impl Inferred<PatternConstructor> {
-    pub fn definition_location(&self) -> Option<DefinitionLocation<'_>> {
+    pub fn definition_location(&self) -> Option<DefinitionLocation> {
         match self {
             Inferred::Known(value) => value.definition_location(),
             Inferred::Unknown => None,
