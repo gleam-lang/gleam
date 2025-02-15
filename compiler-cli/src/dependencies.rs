@@ -464,7 +464,7 @@ async fn add_missing_packages<Telem: Telemetry>(
             let ManifestPackageSource::Git { repo, commit } = &package.source else {
                 continue;
             };
-            let _ = download_git_package(&package.name, repo, commit)?;
+            let _ = download_git_package(&package.name, repo, commit, paths)?;
         }
         telemetry.packages_downloaded(start, num_to_download);
     }
@@ -837,7 +837,6 @@ fn resolve_versions<Telem: Telemetry>(
                 name.clone(),
                 &git,
                 &commit,
-                project_paths.root(),
                 project_paths,
                 &mut provided_packages,
                 &mut Vec::new(),
@@ -902,9 +901,13 @@ fn provide_local_package(
     )
 }
 
-fn download_git_package(package_name: &str, repo: &str, commit: &str) -> Result<EcoString> {
-    let current_directory = fs::get_current_directory()?;
-    let package_path = current_directory.join(format!("build/packages/{package_name}"));
+fn download_git_package(
+    package_name: &str,
+    repo: &str,
+    commit: &str,
+    project_paths: &ProjectPaths,
+) -> Result<EcoString> {
+    let package_path = project_paths.build_packages_package(package_name);
     fs::mkdir(&package_path)?;
 
     let _ = Command::new("git")
@@ -971,20 +974,19 @@ fn provide_git_package(
     package_name: EcoString,
     repo: &str,
     commit: &str,
-    parent_path: &Utf8Path,
     project_paths: &ProjectPaths,
     provided: &mut HashMap<EcoString, ProvidedPackage>,
     parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
-    let commit = download_git_package(&package_name, repo, commit)?;
+    let commit = download_git_package(&package_name, repo, commit, project_paths)?;
 
     let package_source = ProvidedPackageSource::Git {
         repo: repo.into(),
         commit,
     };
 
-    let package_path =
-        fs::canonicalise(&parent_path.join(format!("build/packages/{package_name}")))?;
+    let package_path = fs::canonicalise(&project_paths.build_packages_package(&package_name))?;
+
     provide_package(
         package_name,
         package_path,
@@ -1064,7 +1066,6 @@ fn provide_package(
                 name.clone(),
                 &git,
                 &commit,
-                &package_path,
                 project_paths,
                 provided,
                 parents,
