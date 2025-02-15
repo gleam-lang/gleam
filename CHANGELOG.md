@@ -19,6 +19,10 @@
 
 ### Language server
 
+- The language server now has the ability to jump to the type definition of any
+  hovered value.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 - The language server now offers a code action to convert the first step of a
   pipeline to a regular function call. For example, this code:
 
