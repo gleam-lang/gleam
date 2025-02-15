@@ -21,6 +21,12 @@
   be byte aligned, and the `bits` segment type is now supported in patterns.
   ([Richard Viney](https://github.com/richard-viney))
 
+### Build tool
+
+- The build tool now supports Git dependencies, and prevents packages being published
+  if they depend on any git packages.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Language server
 
 - The language server now has the ability to jump to the type definition of any
