@@ -1,19 +1,20 @@
 use std::{collections::HashMap, ops::Deref};
 
 use ecow::EcoString;
-use itertools::Itertools;
 use serde::Serialize;
 
 #[cfg(test)]
 mod tests;
 
 use crate::{
-    ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias},
     io::ordered_map,
-    type_::{Deprecation, Type, TypeVar, expression::Implementations},
+    type_::{
+        self, Deprecation, Type, TypeConstructor, TypeVar, ValueConstructorVariant,
+        expression::Implementations,
+    },
 };
 
-use crate::build::{Module, Package};
+use crate::build::Package;
 
 /// The public interface of a package that gets serialised as a json object.
 #[derive(Serialize, Debug)]
@@ -358,7 +359,10 @@ pub struct ParameterInterface {
 }
 
 impl PackageInterface {
-    pub fn from_package(package: &Package) -> PackageInterface {
+    pub fn from_package(
+        package: &Package,
+        cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+    ) -> PackageInterface {
         PackageInterface {
             name: package.config.name.clone(),
             version: package.config.version.to_string().into(),
@@ -370,183 +374,169 @@ impl PackageInterface {
             modules: package
                 .modules
                 .iter()
+                .map(|module| &module.ast.type_info)
+                .chain(
+                    package
+                        .module_names
+                        .iter()
+                        .filter_map(|name| cached_modules.get(name)),
+                )
                 .filter(|module| !package.config.is_internal_module(module.name.as_str()))
-                .map(|module| (module.name.clone(), ModuleInterface::from_module(module)))
+                .map(|module| (module.name.clone(), ModuleInterface::from_interface(module)))
                 .collect(),
         }
     }
 }
 
 impl ModuleInterface {
-    fn from_module(module: &Module) -> ModuleInterface {
+    pub fn from_interface(interface: &type_::ModuleInterface) -> ModuleInterface {
         let mut types = HashMap::new();
         let mut type_aliases = HashMap::new();
         let mut constants = HashMap::new();
         let mut functions = HashMap::new();
-        for statement in &module.ast.definitions {
-            match statement {
-                // A public type definition.
-                Definition::CustomType(CustomType {
-                    publicity: Publicity::Public,
-                    name,
-                    constructors,
-                    documentation,
-                    opaque,
-                    deprecation,
-                    typed_parameters,
-                    parameters: _,
-                    location: _,
-                    name_location: _,
-                    end_position: _,
-                }) => {
+        for (name, constructor) in interface
+            .types
+            .iter()
+            .filter(|(_, c)| c.publicity.is_public())
+        {
+            let mut id_map = IdMap::new();
+
+            let TypeConstructor {
+                deprecation,
+                documentation,
+                ..
+            } = constructor;
+
+            for typed_parameter in &constructor.parameters {
+                id_map.add_type_variable_id(typed_parameter.as_ref());
+            }
+
+            let _ = types.insert(
+                name.clone(),
+                TypeDefinitionInterface {
+                    documentation: documentation.clone(),
+                    deprecation: DeprecationInterface::from_deprecation(&deprecation),
+                    parameters: interface
+                        .types
+                        .get(&name.clone())
+                        .map_or(vec![], |t| t.parameters.clone())
+                        .len(),
+                    constructors: if constructor.opaque {
+                        vec![]
+                    } else {
+                        match interface.types_value_constructors.get(&name.clone()) {
+                            Some(constructors) => constructors
+                                .variants
+                                .iter()
+                                .map(|constructor| TypeConstructorInterface {
+                                    // TODO: Find documentation
+                                    documentation: None,
+                                    name: constructor.name.clone(),
+                                    parameters: constructor
+                                        .parameters
+                                        .iter()
+                                        .map(|arg| ParameterInterface {
+                                            label: arg.label.clone(),
+                                            // We share the same id_map between each step so that the
+                                            // incremental ids assigned are consisten with each other
+                                            type_: from_type_helper(
+                                                arg.type_.as_ref(),
+                                                &mut id_map,
+                                            ),
+                                        })
+                                        .collect(),
+                                })
+                                .collect(),
+                            None => vec![],
+                        }
+                    },
+                },
+            );
+        }
+
+        for (name, alias) in interface
+            .type_aliases
+            .iter()
+            .filter(|(_, v)| v.publicity.is_public())
+        {
+            let _ = type_aliases.insert(
+                name.clone(),
+                TypeAliasInterface {
+                    documentation: alias.documentation.clone(),
+                    deprecation: DeprecationInterface::from_deprecation(&alias.deprecation),
+                    parameters: alias.arity,
+                    alias: TypeInterface::from_type(&alias.type_),
+                },
+            );
+        }
+
+        for (name, value) in interface
+            .values
+            .iter()
+            .filter(|(_, v)| v.publicity.is_public())
+        {
+            match (value.type_.as_ref(), value.variant.clone()) {
+                (
+                    Type::Fn {
+                        args: arguments,
+                        retrn: return_type,
+                    },
+                    ValueConstructorVariant::ModuleFn {
+                        documentation,
+                        implementations,
+                        ..
+                    },
+                ) => {
                     let mut id_map = IdMap::new();
 
-                    // Let's first add all the types that appear in the type parameters so those are
-                    // taken into account when assigning incremental numbers to the constructor's
-                    // type variables.
-                    for typed_parameter in typed_parameters {
-                        id_map.add_type_variable_id(typed_parameter.as_ref());
-                    }
-
-                    let _ = types.insert(
-                        name.clone(),
-                        TypeDefinitionInterface {
-                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                            deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            parameters: typed_parameters.len(),
-                            constructors: if *opaque {
-                                vec![]
-                            } else {
-                                constructors
-                                    .iter()
-                                    .map(|constructor| TypeConstructorInterface {
-                                        documentation: constructor
-                                            .documentation
-                                            .as_ref()
-                                            .map(|(_, doc)| doc.clone()),
-                                        name: constructor.name.clone(),
-                                        parameters: constructor
-                                            .arguments
-                                            .iter()
-                                            .map(|arg| ParameterInterface {
-                                                label: arg
-                                                    .label
-                                                    .as_ref()
-                                                    .map(|(_, label)| label.clone()),
-                                                // We share the same id_map between each step so that the
-                                                // incremental ids assigned are consisten with each other
-                                                type_: from_type_helper(&arg.type_, &mut id_map),
-                                            })
-                                            .collect_vec(),
-                                    })
-                                    .collect()
-                            },
-                        },
-                    );
-                }
-
-                // A public type alias definition
-                Definition::TypeAlias(TypeAlias {
-                    publicity: Publicity::Public,
-                    alias,
-                    parameters,
-                    type_,
-                    documentation,
-                    deprecation,
-                    location: _,
-                    name_location: _,
-                    type_ast: _,
-                }) => {
-                    let _ = type_aliases.insert(
-                        alias.clone(),
-                        TypeAliasInterface {
-                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                            deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            parameters: parameters.len(),
-                            alias: TypeInterface::from_type(type_.as_ref()),
-                        },
-                    );
-                }
-
-                // A public module constant.
-                Definition::ModuleConstant(ModuleConstant {
-                    publicity: Publicity::Public,
-                    name,
-                    type_,
-                    documentation,
-                    implementations,
-                    deprecation,
-                    location: _,
-                    name_location: _,
-                    annotation: _,
-                    value: _,
-                }) => {
-                    let _ = constants.insert(
-                        name.clone(),
-                        ConstantInterface {
-                            implementations: ImplementationsInterface::from_implementations(
-                                implementations,
-                            ),
-                            type_: TypeInterface::from_type(type_.as_ref()),
-                            deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                        },
-                    );
-                }
-
-                // A public top-level function.
-                Definition::Function(Function {
-                    publicity: Publicity::Public,
-                    name,
-                    arguments,
-                    deprecation,
-                    return_type,
-                    documentation,
-                    implementations,
-                    location: _,
-                    end_position: _,
-                    body: _,
-                    return_annotation: _,
-                    external_erlang: _,
-                    external_javascript: _,
-                }) => {
-                    let mut id_map = IdMap::new();
-                    let (_, name) = name
-                        .as_ref()
-                        .expect("Function in a definition must be named");
                     let _ = functions.insert(
                         name.clone(),
                         FunctionInterface {
                             implementations: ImplementationsInterface::from_implementations(
-                                implementations,
+                                &implementations,
                             ),
-                            deprecation: DeprecationInterface::from_deprecation(deprecation),
-                            documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                            deprecation: DeprecationInterface::from_deprecation(&value.deprecation),
+                            documentation,
                             parameters: arguments
                                 .iter()
                                 .map(|arg| ParameterInterface {
-                                    label: arg.names.get_label().cloned(),
-                                    type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
+                                    // TODO: fixme
+                                    label: None,
+                                    type_: from_type_helper(arg, &mut id_map),
                                 })
                                 .collect(),
-                            return_: from_type_helper(return_type, &mut id_map),
+                            return_: from_type_helper(&return_type, &mut id_map),
                         },
                     );
                 }
 
-                // Private or internal definitions are not included.
-                Definition::Function(_) => {}
-                Definition::CustomType(_) => {}
-                Definition::ModuleConstant(_) => {}
-                Definition::TypeAlias(_) => {}
+                (
+                    type_,
+                    ValueConstructorVariant::ModuleConstant {
+                        documentation,
+                        implementations,
+                        ..
+                    },
+                ) => {
+                    let _ = constants.insert(
+                        name.clone(),
+                        ConstantInterface {
+                            implementations: ImplementationsInterface::from_implementations(
+                                &implementations,
+                            ),
+                            type_: TypeInterface::from_type(type_),
+                            deprecation: DeprecationInterface::from_deprecation(&value.deprecation),
+                            documentation,
+                        },
+                    );
+                }
 
-                // Imports are ignored.
-                Definition::Import(_) => {}
+                _ => {}
             }
         }
 
         ModuleInterface {
-            documentation: module.ast.documentation.clone(),
+            documentation: interface.documentation.clone(),
             types,
             type_aliases,
             constants,

@@ -22,8 +22,8 @@ use crate::{
     parse::SpannedString,
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, Warning,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant, Warning,
         environment::*,
         error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
         expression::{ExprTyper, FunctionDefinition, Implementations},
@@ -299,6 +299,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_values: values,
             accessors,
             names: type_names,
+            module_type_aliases: type_aliases,
             ..
         } = env;
 
@@ -318,7 +319,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let module = ast::Module {
-            documentation,
+            documentation: documentation.clone(),
             name: self.module_name.clone(),
             definitions: typed_statements,
             type_info: ModuleInterface {
@@ -334,6 +335,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 src_path: self.src_path,
                 warnings,
                 minimum_required_version: self.minimum_required_version,
+                type_aliases,
+                documentation,
             },
             names: type_names,
         };
@@ -1006,7 +1009,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     }
                 };
 
-                fields.push(TypeValueConstructorField { type_: t.clone() });
+                fields.push(TypeValueConstructorField {
+                    type_: t.clone(),
+                    label: label.as_ref().map(|(_location, label)| label.clone()),
+                });
 
                 // Register the type for this parameter
                 args_types.push(t);
@@ -1175,6 +1181,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     publicity,
                     type_,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    opaque: *opaque,
                 },
             )
             .expect("name uniqueness checked above");
@@ -1229,6 +1236,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // in some fashion.
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(args, &mut hydrator, environment);
+        let arity = parameters.len();
         let tryblock = || {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
@@ -1244,10 +1252,24 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     origin: *location,
                     module: self.module_name.clone(),
                     parameters,
-                    type_,
+                    type_: type_.clone(),
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    opaque: false,
+                },
+            )?;
+
+            environment.insert_type_alias(
+                name.clone(),
+                TypeAliasConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    type_,
+                    publicity: *publicity,
+                    deprecation: deprecation.clone(),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    arity,
                 },
             )?;
 

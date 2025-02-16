@@ -1,6 +1,6 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
-use capnp::text;
+use capnp::{text, text_list};
 use ecow::EcoString;
 use itertools::Itertools;
 
@@ -15,8 +15,9 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, expression::Implementations,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        expression::Implementations,
     },
     uid::UniqueIdGenerator,
 };
@@ -83,6 +84,8 @@ impl ModuleDecoder {
             src_path: self.str(reader.get_src_path()?)?.into(),
             warnings: vec![],
             minimum_required_version: self.version(&reader.get_required_version()?),
+            type_aliases: read_hashmap!(reader.get_type_aliases()?, self, type_alias_constructor),
+            documentation: self.string_list(reader.get_documentation()?)?,
         })
     }
 
@@ -90,10 +93,18 @@ impl ModuleDecoder {
         self.str(reader).map(|str| str.into())
     }
 
+    fn string_list(&self, reader: text_list::Reader<'_>) -> Result<Vec<EcoString>> {
+        let mut vec = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            vec.push(self.string(reader?)?);
+        }
+        Ok(vec)
+    }
+
     fn str<'a>(&self, reader: text::Reader<'a>) -> Result<&'a str> {
         reader
             .to_str()
-            .map_err(|_| capnp::Error::failed("String contains non-utf8 charaters".into()).into())
+            .map_err(|_| capnp::Error::failed("String contains non-utf8 characters".into()).into())
     }
 
     fn type_constructor(
@@ -117,6 +128,31 @@ impl ModuleDecoder {
             type_,
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+            opaque: reader.get_opaque(),
+        })
+    }
+
+    fn type_alias_constructor(
+        &mut self,
+        reader: &type_alias_constructor::Reader<'_>,
+    ) -> Result<TypeAliasConstructor> {
+        let type_ = self.type_(&reader.get_type()?)?;
+        let deprecation = reader.get_deprecation()?;
+        let deprecation = if deprecation.is_empty() {
+            Deprecation::NotDeprecated
+        } else {
+            Deprecation::Deprecated {
+                message: self.string(deprecation)?,
+            }
+        };
+        Ok(TypeAliasConstructor {
+            publicity: self.publicity(reader.get_publicity()?)?,
+            origin: self.src_span(&reader.get_origin()?)?,
+            module: self.string(reader.get_module()?)?,
+            type_,
+            deprecation,
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+            arity: reader.get_arity() as usize,
         })
     }
 
@@ -219,6 +255,7 @@ impl ModuleDecoder {
     ) -> Result<TypeValueConstructorField> {
         Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
+            label: self.optional_string(self.str(reader.get_label()?)?),
         })
     }
 

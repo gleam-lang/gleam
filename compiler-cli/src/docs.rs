@@ -1,6 +1,7 @@
 use std::time::{Instant, SystemTime};
 
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 
 use crate::{cli, fs::ProjectIO, http::HttpClient};
 use gleam_core::{
@@ -13,6 +14,7 @@ use gleam_core::{
     hex,
     io::HttpClient as _,
     paths::ProjectPaths,
+    type_,
 };
 
 pub fn remove(package: String, version: String) -> Result<()> {
@@ -60,7 +62,13 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
         },
         crate::build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
-    let outputs = build_documentation(paths, &config, &mut built.root_package, DocContext::Build)?;
+    let outputs = build_documentation(
+        paths,
+        &config,
+        &mut built.root_package,
+        DocContext::Build,
+        &built.module_interfaces,
+    )?;
 
     // Write
     crate::fs::delete_directory(&out)?;
@@ -100,6 +108,7 @@ pub(crate) fn build_documentation(
     config: &PackageConfig,
     compiled: &mut Package,
     is_hex_publish: DocContext,
+    cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
 ) -> Result<Vec<gleam_core::io::OutputFile>, Error> {
     compiled.attach_doc_and_module_comments();
     cli::print_generating_documentation();
@@ -122,6 +131,7 @@ pub(crate) fn build_documentation(
     outputs.push(gleam_core::docs::generate_json_package_interface(
         Utf8PathBuf::from("package-interface.json"),
         compiled,
+        cached_modules,
     ));
     Ok(outputs)
 }
@@ -155,6 +165,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
         &config,
         &mut built.root_package,
         DocContext::HexPublish,
+        &built.module_interfaces,
     )?;
     let archive = crate::fs::create_tar_archive(outputs)?;
 

@@ -18,7 +18,7 @@ use crate::{
     package_interface::PackageInterface,
     paths::ProjectPaths,
     pretty,
-    type_::Deprecation,
+    type_::{self, Deprecation},
     version::COMPILER_VERSION,
 };
 use askama::Template;
@@ -465,11 +465,15 @@ pub fn generate_html<IO: FileSystemReader>(
     files
 }
 
-pub fn generate_json_package_interface(path: Utf8PathBuf, package: &Package) -> OutputFile {
+pub fn generate_json_package_interface(
+    path: Utf8PathBuf,
+    package: &Package,
+    cached_modules: &im::HashMap<EcoString, type_::ModuleInterface>,
+) -> OutputFile {
     OutputFile {
         path,
         content: Content::Text(
-            serde_json::to_string(&PackageInterface::from_package(package))
+            serde_json::to_string(&PackageInterface::from_package(package, cached_modules))
                 .expect("JSON module interface serialisation"),
         ),
     }
