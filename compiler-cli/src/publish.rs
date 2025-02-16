@@ -1,5 +1,4 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::EcoString;
 use flate2::{write::GzEncoder, Compression};
 use gleam_core::{
     analyse::TargetSupport,
@@ -15,7 +14,7 @@ use gleam_core::{
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
 use sha2::Digest;
-use std::{collections::HashMap, io::Write, path::PathBuf, time::Instant};
+use std::{io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
 
@@ -24,8 +23,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?
-        && check_repo_url(&config, i_am_sure)?
-        && check_for_git_dependencies(&config)?;
+        && check_repo_url(&config, i_am_sure)?;
 
     if !should_publish {
         println!("Not publishing.");
@@ -254,26 +252,6 @@ core team.\n",
     let should_publish = cli::confirm_with_text("I am part of the Gleam core team")?;
     println!();
     Ok(should_publish)
-}
-
-fn check_for_git_dependencies(config: &PackageConfig) -> Result<bool, Error> {
-    let contains_git_dependencies = |dependencies: &HashMap<EcoString, Requirement>| {
-        dependencies
-            .iter()
-            .any(|(_, requirement)| matches!(requirement, Requirement::Git { .. }))
-    };
-
-    if contains_git_dependencies(&config.dependencies)
-        || contains_git_dependencies(&config.dev_dependencies)
-    {
-        println!(
-            "You are trying to publish a package which uses git dependencies.
-Git dependencies cannot be used in published packages."
-        );
-        Ok(false)
-    } else {
-        Ok(true)
-    }
 }
 
 struct Tarball {
