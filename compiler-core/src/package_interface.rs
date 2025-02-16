@@ -389,16 +389,15 @@ impl PackageInterface {
 }
 
 impl ModuleInterface {
-    pub fn from_interface(interface: &type_::ModuleInterface) -> ModuleInterface {
+    fn from_interface(interface: &type_::ModuleInterface) -> ModuleInterface {
         let mut types = HashMap::new();
         let mut type_aliases = HashMap::new();
         let mut constants = HashMap::new();
         let mut functions = HashMap::new();
-        for (name, constructor) in interface
-            .types
-            .iter()
-            .filter(|(_, c)| c.publicity.is_public())
-        {
+        for (name, constructor) in interface.types.iter().filter(|(name, c)| {
+            // Aliases are stored separately
+            c.publicity.is_public() && !interface.type_aliases.contains_key(*name)
+        }) {
             let mut id_map = IdMap::new();
 
             let TypeConstructor {

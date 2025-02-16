@@ -269,6 +269,8 @@ impl Module {
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
 
+        self.ast.type_info.documentation = self.ast.documentation.clone();
+
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.
         let mut statements: Vec<_> = self.ast.definitions.iter_mut().collect();
