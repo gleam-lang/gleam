@@ -30,6 +30,11 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
+pub struct Compiled {
+    pub modules: Vec<Module>,
+    pub module_names: Vec<EcoString>,
+}
+
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
     pub io: IO,
@@ -104,7 +109,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<Compiled, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -145,6 +150,8 @@ where
             Loaded::empty()
         };
 
+        let mut module_names = Vec::new();
+
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
             // Emit any cached warnings.
@@ -153,6 +160,8 @@ where
             if let Err(e) = self.emit_warnings(warnings, &module) {
                 return e.into();
             }
+
+            module_names.push(module.name.clone());
 
             // Register the cached module so its type information etc can be
             // used for compiling futher modules.
@@ -184,7 +193,16 @@ where
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
+            Outcome::PartialFailure(modules, error) => {
+                return Outcome::PartialFailure(
+                    Compiled {
+                        modules,
+                        module_names,
+                    },
+                    error,
+                )
+            }
+            Outcome::TotalFailure(error) => return Outcome::TotalFailure(error),
         };
 
         for mut module in modules.iter_mut() {
@@ -201,7 +219,10 @@ where
             return error.into();
         }
 
-        Outcome::Ok(modules)
+        Outcome::Ok(Compiled {
+            modules,
+            module_names,
+        })
     }
 
     fn compile_erlang_to_beam(

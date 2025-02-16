@@ -886,6 +886,8 @@ pub struct ModuleInterface {
     pub warnings: Vec<Warning>,
     /// The minimum Gleam version needed to use this module.
     pub minimum_required_version: Version,
+    pub type_aliases: HashMap<EcoString, TypeAliasConstructor>,
+    pub documentation: Vec<EcoString>,
 }
 
 impl ModuleInterface {
@@ -954,6 +956,7 @@ pub struct TypeValueConstructor {
 pub struct TypeValueConstructorField {
     /// This type of this parameter
     pub type_: Arc<Type>,
+    pub label: Option<EcoString>,
 }
 
 impl ModuleInterface {
@@ -1208,6 +1211,7 @@ impl TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
     pub publicity: Publicity,
+    pub opaque: bool,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,
@@ -1302,8 +1306,11 @@ impl ValueConstructor {
 pub struct TypeAliasConstructor {
     pub publicity: Publicity,
     pub module: EcoString,
-    pub type_: Type,
+    pub type_: Arc<Type>,
     pub arity: usize,
+    pub deprecation: Deprecation,
+    pub documentation: Option<EcoString>,
+    pub origin: SrcSpan,
 }
 
 impl ValueConstructor {

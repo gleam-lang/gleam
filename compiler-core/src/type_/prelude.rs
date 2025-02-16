@@ -241,6 +241,8 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         // prelude doesn't have real line numbers
         line_numbers: LineNumbers::new(""),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     for t in PreludeType::iter() {
@@ -254,6 +256,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     publicity: Publicity::Public,
                     deprecation: NotDeprecated,
                     documentation: None,
+                    opaque: false,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
             }
@@ -317,6 +320,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
             }
@@ -332,6 +336,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
             }
@@ -347,6 +352,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
             }
@@ -363,6 +369,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
             }
@@ -394,6 +401,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -423,6 +431,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -434,12 +443,14 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                 name: "Ok".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: result_value,
+                                    label: None,
                                 }],
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: result_error,
+                                    label: None,
                                 }],
                             },
                         ],
@@ -494,6 +505,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
             }
@@ -509,6 +521,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
+                        opaque: false,
                     },
                 );
             }
