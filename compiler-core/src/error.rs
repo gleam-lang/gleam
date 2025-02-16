@@ -233,9 +233,6 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("{0}")]
     Http(String),
 
-    #[error("Git dependencies are currently unsupported")]
-    GitDependencyUnsupported,
-
     #[error("Failed to create canonical path for package {0}")]
     DependencyCanonicalizationFailed(String),
 
@@ -3740,14 +3737,6 @@ The error from the version resolver library was:
                     level: Level::Error,
                 }]
             }
-
-            Error::GitDependencyUnsupported => vec![Diagnostic {
-                title: "Git dependencies are not currently supported".into(),
-                text: "Please remove all git dependencies from the gleam.toml file".into(),
-                hint: None,
-                location: None,
-                level: Level::Error,
-            }],
 
             Error::WrongDependencyProvided {
                 path,
