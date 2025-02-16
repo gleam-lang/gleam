@@ -1,4 +1,5 @@
 use camino::{Utf8Path, Utf8PathBuf};
+use ecow::EcoString;
 use flate2::{Compression, write::GzEncoder};
 use gleam_core::{
     Error, Result,
@@ -10,6 +11,7 @@ use gleam_core::{
     hex,
     paths::{self, ProjectPaths},
     requirement::Requirement,
+    type_,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
@@ -32,6 +34,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     let Tarball {
         mut compile_result,
+        cached_modules,
         data: package_tarball,
         src_files_added,
         generated_files_added,
@@ -46,6 +49,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         &config,
         &mut compile_result,
         DocContext::HexPublish,
+        &cached_modules,
     )?)?;
 
     // Ask user if this is correct
@@ -256,6 +260,7 @@ core team.\n",
 
 struct Tarball {
     compile_result: Package,
+    cached_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
@@ -372,6 +377,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
         compile_result: built.root_package,
+        cached_modules: built.module_interfaces,
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,

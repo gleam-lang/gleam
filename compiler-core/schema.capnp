@@ -30,6 +30,18 @@ struct Module {
   srcPath @7 :Text;
   isInternal @8 :Bool;
   requiredVersion @9 :Version;
+  typeAliases @10 :List(Property(TypeAliasConstructor));
+  documentation @11 :List(Text);
+}
+
+struct TypeAliasConstructor {
+    publicity @0 :Publicity;
+    module @1 :Text;
+    type @2 :Type;
+    arity @3 :UInt32;
+    deprecation @4 :Text;
+    documentation @5 :Text;
+    origin @6 :SrcSpan;
 }
 
 struct Version {
@@ -50,6 +62,7 @@ struct TypeValueConstructor {
 
 struct TypeValueConstructorParameter {
   type @0 :Type;
+  label @1 :Text;
 }
 
 struct TypeConstructor {
@@ -63,6 +76,7 @@ struct TypeConstructor {
   deprecated @4 :Text;
   origin @5 :SrcSpan;
   documentation @6 :Text;
+  opaque @7 :Bool;
 }
 
 struct AccessorsMap {

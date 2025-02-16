@@ -36,8 +36,9 @@ use std::{
 };
 
 use super::{
-    Codegen, Compile, ErlangAppCodegenConfiguration, Outcome, elixir_libraries::ElixirLibraries,
-    package_compiler::CachedWarnings,
+    Codegen, Compile, ErlangAppCodegenConfiguration, Outcome,
+    elixir_libraries::ElixirLibraries,
+    package_compiler::{CachedWarnings, Compiled},
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -68,7 +69,7 @@ pub struct Options {
 #[derive(Debug)]
 pub struct Built {
     pub root_package: Package,
-    module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
+    pub module_interfaces: im::HashMap<EcoString, type_::ModuleInterface>,
     compiled_dependency_modules: Vec<Module>,
 }
 
@@ -211,7 +212,16 @@ where
     pub fn compile_root_package(&mut self) -> Outcome<Package, Error> {
         let config = self.config.clone();
         self.compile_gleam_package(&config, true, self.paths.root().to_path_buf())
-            .map(|modules| Package { config, modules })
+            .map(
+                |Compiled {
+                     modules,
+                     module_names,
+                 }| Package {
+                    config,
+                    modules,
+                    module_names,
+                },
+            )
     }
 
     /// Checks that version file found in the build directory matches the
@@ -522,6 +532,7 @@ where
         let config = PackageConfig::read(config_path, &self.io)?;
         self.compile_gleam_package(&config, false, package_root)
             .into_result()
+            .map(|compiled| compiled.modules)
     }
 
     fn compile_gleam_package(
@@ -529,7 +540,7 @@ where
         config: &PackageConfig,
         is_root: bool,
         root_path: Utf8PathBuf,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<Compiled, Error> {
         let out_path =
             self.paths
                 .build_directory_for_package(self.mode(), self.target(), &config.name);

@@ -135,7 +135,11 @@ pub fn compile_package(
     };
     module.attach_doc_and_module_comments();
     let package: Package = package_from_module(module);
-    serde_json::to_string_pretty(&PackageInterface::from_package(&package)).expect("to json")
+    serde_json::to_string_pretty(&PackageInterface::from_package(
+        &package,
+        &Default::default(),
+    ))
+    .expect("to json")
 }
 
 fn package_from_module(module: Module) -> Package {
@@ -173,6 +177,7 @@ fn package_from_module(module: Module) -> Package {
                     .expect("internals glob"),
             ]),
         },
+        module_names: vec![module.name.clone()],
         modules: vec![module],
     }
 }

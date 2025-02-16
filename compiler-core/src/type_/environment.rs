@@ -47,6 +47,8 @@ pub struct Environment<'a> {
     /// Mapping from types to constructor names in the current module (or the prelude)
     pub module_types_constructors: HashMap<EcoString, TypeVariantConstructors>,
 
+    pub module_type_aliases: HashMap<EcoString, TypeAliasConstructor>,
+
     /// Values defined in the current module (or the prelude)
     pub module_values: HashMap<EcoString, ValueConstructor>,
 
@@ -115,6 +117,7 @@ impl<'a> Environment<'a> {
             entity_usages: vec![HashMap::new()],
             target_support,
             names,
+            module_type_aliases: HashMap::new(),
         }
     }
 }
@@ -311,6 +314,28 @@ impl Environment<'_> {
         let name = type_name.clone();
         let location = info.origin;
         match self.module_types.insert(type_name, info) {
+            None => Ok(()),
+            Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
+            Some(previous) => Err(Error::DuplicateTypeName {
+                name,
+                location,
+                previous_location: previous.origin,
+            }),
+        }
+    }
+
+    /// Map a type alias in the current scope.
+    /// Errors if the module already has a type with that name, unless the type is from the
+    /// prelude.
+    ///
+    pub fn insert_type_alias(
+        &mut self,
+        type_name: EcoString,
+        info: TypeAliasConstructor,
+    ) -> Result<(), Error> {
+        let name = type_name.clone();
+        let location = info.origin;
+        match self.module_type_aliases.insert(type_name, info) {
             None => Ok(()),
             Some(prelude_type) if is_prelude_module(&prelude_type.module) => Ok(()),
             Some(previous) => Err(Error::DuplicateTypeName {

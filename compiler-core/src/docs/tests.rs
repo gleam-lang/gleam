@@ -69,7 +69,8 @@ fn compile_with_markdown_pages(
             &mut HashSet::new(),
             &NullTelemetry,
         )
-        .unwrap();
+        .unwrap()
+        .modules;
 
     for module in &mut modules {
         module.attach_doc_and_module_comments();

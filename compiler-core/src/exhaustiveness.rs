@@ -994,6 +994,7 @@ impl ConstructorSpecialiser {
             .iter()
             .map(|p| TypeValueConstructorField {
                 type_: self.specialise_type(p.type_.as_ref()),
+                label: p.label.clone(),
             })
             .collect_vec();
         TypeValueConstructor {
