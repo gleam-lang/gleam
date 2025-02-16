@@ -23,8 +23,13 @@
 
 ### Build tool
 
-- The build tool now supports Git dependencies, and prevents packages being published
-  if they depend on any git packages.
+- The build tool now supports Git dependencies. For example:
+
+  ```
+  [dependencies]
+  gleam_stdlib = { git = "git@github.com:gleam-lang/stdlib", ref = "957b83b" }
+  ```
+
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Language server
