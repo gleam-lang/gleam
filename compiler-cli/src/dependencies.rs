@@ -833,10 +833,10 @@ fn resolve_versions<Telem: Telemetry>(
                 &mut provided_packages,
                 &mut vec![],
             )?,
-            Requirement::Git { git, commit } => provide_git_package(
+            Requirement::Git { git, ref_ } => provide_git_package(
                 name.clone(),
                 &git,
-                &commit,
+                &ref_,
                 project_paths,
                 &mut provided_packages,
                 &mut Vec::new(),
@@ -904,7 +904,7 @@ fn provide_local_package(
 fn download_git_package(
     package_name: &str,
     repo: &str,
-    commit: &str,
+    ref_: &str,
     project_paths: &ProjectPaths,
 ) -> Result<EcoString> {
     let package_path = project_paths.build_packages_package(package_name);
@@ -943,7 +943,7 @@ fn download_git_package(
 
     let _ = Command::new("git")
         .arg("checkout")
-        .arg(commit)
+        .arg(ref_)
         .current_dir(&package_path)
         .output()
         .map_err(|error| Error::ShellCommand {
@@ -973,12 +973,13 @@ fn download_git_package(
 fn provide_git_package(
     package_name: EcoString,
     repo: &str,
-    commit: &str,
+    // A git ref, such as a branch name, commit hash or tag name
+    ref_: &str,
     project_paths: &ProjectPaths,
     provided: &mut HashMap<EcoString, ProvidedPackage>,
     parents: &mut Vec<EcoString>,
 ) -> Result<hexpm::version::Range> {
-    let commit = download_git_package(&package_name, repo, commit, project_paths)?;
+    let commit = download_git_package(&package_name, repo, ref_, project_paths)?;
 
     let package_source = ProvidedPackageSource::Git {
         repo: repo.into(),
@@ -1062,14 +1063,9 @@ fn provide_package(
                     parents,
                 )?
             }
-            Requirement::Git { git, commit } => provide_git_package(
-                name.clone(),
-                &git,
-                &commit,
-                project_paths,
-                provided,
-                parents,
-            )?,
+            Requirement::Git { git, ref_ } => {
+                provide_git_package(name.clone(), &git, &ref_, project_paths, provided, parents)?
+            }
         };
         let _ = requirements.insert(name, version);
     }

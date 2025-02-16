@@ -23,7 +23,7 @@ pub enum Requirement {
     Git {
         git: EcoString,
         #[serde(rename = "ref")]
-        commit: EcoString,
+        ref_: EcoString,
     },
 }
 
@@ -38,10 +38,10 @@ impl Requirement {
         Requirement::Path { path: path.into() }
     }
 
-    pub fn git(url: &str, commit: &str) -> Requirement {
+    pub fn git(url: &str, ref_: &str) -> Requirement {
         Requirement::Git {
             git: url.into(),
-            commit: commit.into(),
+            ref_: ref_.into(),
         }
     }
 
@@ -56,8 +56,8 @@ impl Requirement {
                     make_relative(root_path, path).as_str().replace('\\', "/")
                 )
             }
-            Requirement::Git { git: url, commit } => {
-                format!(r#"{{ git = "{url}", ref = "{commit}" }}"#)
+            Requirement::Git { git: url, ref_ } => {
+                format!(r#"{{ git = "{url}", ref = "{ref_}" }}"#)
             }
         }
     }
@@ -74,9 +74,9 @@ impl Serialize for Requirement {
         match self {
             Requirement::Hex { version: range } => map.serialize_entry("version", range)?,
             Requirement::Path { path } => map.serialize_entry("path", path)?,
-            Requirement::Git { git: url, commit } => {
+            Requirement::Git { git: url, ref_ } => {
                 map.serialize_entry("git", url)?;
-                map.serialize_entry("ref", commit)?;
+                map.serialize_entry("ref", ref_)?;
             }
         }
         map.end()
