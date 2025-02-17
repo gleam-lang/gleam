@@ -483,10 +483,15 @@ impl ModuleInterface {
                     ValueConstructorVariant::ModuleFn {
                         documentation,
                         implementations,
+                        field_map,
                         ..
                     },
                 ) => {
                     let mut id_map = IdMap::new();
+
+                    let reverse_field_map = field_map
+                        .map(|field_map| field_map.indices_to_labels())
+                        .unwrap_or_default();
 
                     let _ = functions.insert(
                         name.clone(),
@@ -498,10 +503,10 @@ impl ModuleInterface {
                             documentation,
                             parameters: arguments
                                 .iter()
-                                .map(|arg| ParameterInterface {
-                                    // TODO: fixme
-                                    label: None,
-                                    type_: from_type_helper(arg, &mut id_map),
+                                .enumerate()
+                                .map(|(index, type_)| ParameterInterface {
+                                    label: reverse_field_map.get(&(index as u32)).cloned(),
+                                    type_: from_type_helper(type_, &mut id_map),
                                 })
                                 .collect(),
                             return_: from_type_helper(&return_type, &mut id_map),

@@ -312,3 +312,14 @@ pub type Box(a, b) {
 pub fn internal_modules_are_not_exported() {
     assert_package_interface_with_name!("internals/internal_module", "pub fn main() { 1 }");
 }
+
+#[test]
+pub fn labelled_function_parameters() {
+    assert_package_interface!(
+        r#"
+pub fn fold(list: List(a), from acc: b, with f: fn(a, b) -> b) -> b {
+  todo
+}
+"#
+    );
+}
