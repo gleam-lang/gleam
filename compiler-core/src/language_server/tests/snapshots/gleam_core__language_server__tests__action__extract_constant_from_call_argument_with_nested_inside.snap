@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/list\n\npub fn main() {\n  list.unzip([#(1, 2), #(3, 4)])\n}"
+---
+----- BEFORE ACTION
+import gleam/list
+
+pub fn main() {
+  list.unzip([#(1, 2), #(3, 4)])
+              ▔↑                
+}
+
+
+----- AFTER ACTION
+import gleam/list
+
+const value = #(1, 2)
+
+pub fn main() {
+  list.unzip([value, #(3, 4)])
+}
