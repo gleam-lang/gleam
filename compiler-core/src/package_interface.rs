@@ -414,7 +414,7 @@ impl ModuleInterface {
                 name.clone(),
                 TypeDefinitionInterface {
                     documentation: documentation.clone(),
-                    deprecation: DeprecationInterface::from_deprecation(&deprecation),
+                    deprecation: DeprecationInterface::from_deprecation(deprecation),
                     parameters: interface
                         .types
                         .get(&name.clone())
@@ -508,7 +508,7 @@ impl ModuleInterface {
                                     type_: from_type_helper(type_, &mut id_map),
                                 })
                                 .collect(),
-                            return_: from_type_helper(&return_type, &mut id_map),
+                            return_: from_type_helper(return_type, &mut id_map),
                         },
                     );
                 }
