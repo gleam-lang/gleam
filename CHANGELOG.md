@@ -260,6 +260,10 @@
   private type used in the same module it's defined in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where `gleam export package-interface` would not properly generate
+  the package interface file if some modules were cached.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.8.1 - 2025-02-11
 
 ### Bug fixes
