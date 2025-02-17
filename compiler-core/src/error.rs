@@ -158,7 +158,7 @@ pub enum Error {
     #[error("shell program `{program}` failed")]
     ShellCommand {
         program: String,
-        err: Option<std::io::ErrorKind>,
+        reason: ShellCommandFailureReason,
     },
 
     #[error("{name} is not a valid project name")]
@@ -375,6 +375,16 @@ pub fn parse_linux_distribution(distro: &str) -> Distro {
         "debian" => Distro::Debian,
         _ => Distro::Other,
     }
+}
+
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum ShellCommandFailureReason {
+    /// When we don't have any context about the failure
+    Unknown,
+    /// When the actual running of the command failed for some reason.
+    IoError(std::io::ErrorKind),
+    /// When the shell command returned an error status
+    ShellCommandError(String),
 }
 
 impl Error {
@@ -1164,8 +1174,8 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
 
             Error::ShellCommand {
                 program: command,
-                err: None,
-            } => {
+                reason: ShellCommandFailureReason::Unknown,
+            }  => {
                 let text =
                     format!("There was a problem when running the shell command `{command}`.");
                 vec![Diagnostic {
@@ -1179,7 +1189,7 @@ https://git-scm.com/book/en/v2/Getting-Started-Installing-Git",
 
             Error::ShellCommand {
                 program: command,
-                err: Some(err),
+                reason: ShellCommandFailureReason::IoError(err),
             } => {
                 let text = format!(
                     "There was a problem when running the shell command `{}`.
@@ -1189,6 +1199,28 @@ The error from the shell command library was:
     {}",
                     command,
                     std_io_error_kind_text(err)
+                );
+                vec![Diagnostic {
+                    title: "Shell command failure".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::ShellCommand {
+                program: command,
+                reason: ShellCommandFailureReason::ShellCommandError(err),
+            } => {
+                let text = format!(
+                    "There was a problem when running the shell command `{}`.
+
+The error from the shell command was:
+
+    {}",
+                    command,
+                    err
                 );
                 vec![Diagnostic {
                     title: "Shell command failure".into(),
