@@ -1,0 +1,78 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\npub fn fold(list: List(a), from acc: b, with f: fn(a, b) -> b) -> b {\n  todo\n}\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {},
+      "constants": {},
+      "functions": {
+        "fold": {
+          "documentation": null,
+          "deprecation": null,
+          "implementations": {
+            "gleam": true,
+            "uses-erlang-externals": false,
+            "uses-javascript-externals": false,
+            "can-run-on-erlang": true,
+            "can-run-on-javascript": true
+          },
+          "parameters": [
+            {
+              "label": null,
+              "type": {
+                "kind": "named",
+                "name": "List",
+                "package": "",
+                "module": "gleam",
+                "parameters": [
+                  {
+                    "kind": "variable",
+                    "id": 0
+                  }
+                ]
+              }
+            },
+            {
+              "label": "from",
+              "type": {
+                "kind": "variable",
+                "id": 1
+              }
+            },
+            {
+              "label": "with",
+              "type": {
+                "kind": "fn",
+                "parameters": [
+                  {
+                    "kind": "variable",
+                    "id": 0
+                  },
+                  {
+                    "kind": "variable",
+                    "id": 1
+                  }
+                ],
+                "return": {
+                  "kind": "variable",
+                  "id": 1
+                }
+              }
+            }
+          ],
+          "return": {
+            "kind": "variable",
+            "id": 1
+          }
+        }
+      }
+    }
+  }
+}
