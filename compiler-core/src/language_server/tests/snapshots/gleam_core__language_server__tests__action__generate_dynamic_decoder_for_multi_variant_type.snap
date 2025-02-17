@@ -35,3 +35,4 @@ fn wibble_decoder() -> decode.Decoder(Wibble) {
     }
     _ -> decode.failure(todo as "Zero value for Wibble", "Wibble")
   }
+}

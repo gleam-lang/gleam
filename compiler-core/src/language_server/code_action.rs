@@ -3083,7 +3083,8 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
   case variant {{
 {cases}
     _ -> {module}.failure(todo as "Zero value for {type_name}", "{type_name}")
-  }}"#,
+  }}
+}}"#,
                     type_name = custom_type.name,
                     cases = cases.join("\n")
                 ))
