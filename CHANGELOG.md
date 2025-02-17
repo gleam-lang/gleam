@@ -27,7 +27,7 @@
 
   ```
   [dependencies]
-  gleam_stdlib = { git = "git@github.com:gleam-lang/stdlib", ref = "957b83b" }
+  gleam_stdlib = { git = "https://github.com/gleam-lang/stdlib.git", ref = "957b83b" }
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
