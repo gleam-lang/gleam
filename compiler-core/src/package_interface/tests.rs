@@ -323,3 +323,17 @@ pub fn fold(list: List(a), from acc: b, with f: fn(a, b) -> b) -> b {
 "#
     );
 }
+
+#[test]
+pub fn constructors_with_documentation() {
+    assert_package_interface!(
+        r#"
+pub type Wibble {
+  /// This is the Wibble variant. It contains some example data.
+  Wibble(Int)
+  /// This is the Wobble variant. It is a recursive type.
+  Wobble(Wibble)
+}
+"#
+    );
+}

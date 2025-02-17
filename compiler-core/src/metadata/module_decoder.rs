@@ -246,6 +246,7 @@ impl ModuleDecoder {
                 self,
                 type_value_constructor_parameter
             ),
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 

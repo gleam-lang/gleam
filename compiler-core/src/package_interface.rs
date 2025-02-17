@@ -428,8 +428,7 @@ impl ModuleInterface {
                                 .variants
                                 .iter()
                                 .map(|constructor| TypeConstructorInterface {
-                                    // TODO: Find documentation
-                                    documentation: None,
+                                    documentation: constructor.documentation.clone(),
                                     name: constructor.name.clone(),
                                     parameters: constructor
                                         .parameters

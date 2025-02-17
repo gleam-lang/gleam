@@ -1088,6 +1088,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             constructors_data.push(TypeValueConstructor {
                 name: constructor.name.clone(),
                 parameters: fields,
+                documentation: constructor
+                    .documentation
+                    .as_ref()
+                    .map(|(_, documentation)| documentation.clone()),
             });
             environment.insert_variable(
                 constructor.name.clone(),
