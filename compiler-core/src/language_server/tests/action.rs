@@ -4414,13 +4414,13 @@ pub type LinkedList {
 }
 
 #[test]
-fn no_code_action_to_generate_dynamic_decoder_for_multi_variant_type() {
-    assert_no_code_actions!(
+fn generate_dynamic_decoder_for_multi_variant_type() {
+    assert_code_action!(
         GENERATE_DYNAMIC_DECODER,
         "
 pub type Wibble {
-  Wibble(wibble: Int)
-  Wobble(wobble: Float)
+  Wibble(wibble: Int, next: Wibble)
+  Wobble(wobble: Float, text: String, values: List(Bool))
 }
 ",
         find_position_of("type").to_selection()

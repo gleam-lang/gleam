@@ -3062,7 +3062,35 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             // We can't generate a decoder for an external type
             [] => return,
             [constructor] => self.generate_decoder_for_variant(custom_type, constructor, 0),
-            _ => return,
+            constructors => {
+                let Some(cases) = constructors
+                    .iter()
+                    .map(|constructor| {
+                        self.generate_decoder_for_variant(custom_type, constructor, 4)
+                            .map(|body| {
+                                eco_format!(
+                                    r#"    "{name}" -> {body}"#,
+                                    name = constructor.name.to_snake_case()
+                                )
+                            })
+                    })
+                    .collect::<Option<Vec<_>>>()
+                else {
+                    return;
+                };
+
+                let module = self.printer.print_module(DECODE_MODULE);
+                Some(eco_format!(
+                    r#"{{
+  use variant <- {module}.field("type", {module}.string)
+  case variant {{
+{cases}
+    _ -> {module}.failure(todo as "Zero value for {type_name}", "{type_name}")
+  }}"#,
+                    type_name = custom_type.name,
+                    cases = cases.join("\n")
+                ))
+            }
         }) else {
             return;
         };
