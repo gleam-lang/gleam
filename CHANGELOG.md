@@ -142,6 +142,44 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The code action to generate a dynamic decoder for a custom type can now
+  generate decoders for types with multiple variants. For example this code:
+
+  ```gleam
+  pub type Person {
+    Adult(age: Int, job: String)
+    Child(age: Int, height: Float)
+  }
+  ```
+
+  Becomes:
+
+  ```gleam
+  import gleam/dynamic/decode
+
+  pub type Person {
+    Adult(age: Int, job: String)
+    Child(age: Int, height: Float)
+  }
+
+  fn person_decoder() -> decode.Decoder(Person) {
+    use variant <- decode.field("type", decode.string)
+    case variant {
+      "adult" -> {
+        use age <- decode.field("age", decode.int)
+        use job <- decode.field("job", decode.string)
+        decode.success(Adult(age:, job:))
+      }
+      "child" -> {
+        use age <- decode.field("age", decode.int)
+        use height <- decode.field("height", decode.float)
+        decode.success(Child(age:, height:))
+      }
+      _ -> decode.failure(todo as "Zero value for Person", "Person")
+    }
+  }
+  ```
+
 ### Formatter
 
 ### Bug fixes
