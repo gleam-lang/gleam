@@ -72,7 +72,6 @@ mod run;
 mod shell;
 
 use config::root_config;
-use dependencies::UseManifest;
 use fs::{get_current_directory, get_project_root};
 pub use gleam_core::error::{Error, Result};
 
@@ -669,7 +668,10 @@ fn download_dependencies() -> Result<()> {
         cli::Reporter::new(),
         None,
         Vec::new(),
-        UseManifest::Yes,
+        dependencies::DependencyManagerConfig {
+            use_manifest: dependencies::UseManifest::Yes,
+            check_major_versions: dependencies::CheckMajorVersions::No,
+        },
     )?;
     Ok(())
 }
