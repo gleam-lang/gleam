@@ -17,12 +17,12 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
     echo(case 1 of
             _ ->
                 2
-        end, "/root/project/test/my/mod.gleam", 3).
+        end, "project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

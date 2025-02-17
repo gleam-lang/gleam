@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn main() {\n  wibble.wobble |> echo\n}\n"
+---
+----- BEFORE ACTION
+
+pub fn main() {
+  wibble.wobble |> echo
+                   ↑   
+}
+
+
+----- AFTER ACTION
+
+pub fn main() {
+  echo wibble.wobble
+}

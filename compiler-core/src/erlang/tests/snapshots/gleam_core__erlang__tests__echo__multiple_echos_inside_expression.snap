@@ -16,10 +16,10 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(1, "/root/project/test/my/mod.gleam", 3),
-    echo(2, "/root/project/test/my/mod.gleam", 4).
+    echo(1, "project/test/my/mod.gleam", 3),
+    echo(2, "project/test/my/mod.gleam", 4).
 
 % ...omitted code from `templates/echo.erl`...

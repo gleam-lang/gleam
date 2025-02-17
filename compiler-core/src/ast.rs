@@ -2652,4 +2652,7 @@ pub enum PipelineAssignmentKind {
 
     /// In case `a |> b(c)` is desugared to `b(c)(a)`
     FunctionCall,
+
+    /// In case there's an echo in the middle of a pipeline `a |> echo`
+    Echo,
 }

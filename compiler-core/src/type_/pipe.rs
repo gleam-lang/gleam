@@ -177,11 +177,14 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     // function.
                     // So it gets the type of the value coming from the previous
                     // step of the pipeline.
-                    TypedExpr::Echo {
-                        location,
-                        expression: None,
-                        type_: self.argument_type.clone(),
-                    }
+                    (
+                        PipelineAssignmentKind::Echo,
+                        TypedExpr::Echo {
+                            location,
+                            expression: None,
+                            type_: self.argument_type.clone(),
+                        },
+                    )
                 }
 
                 // right(left)

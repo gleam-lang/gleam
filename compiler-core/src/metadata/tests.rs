@@ -931,6 +931,7 @@ fn private_accessors() {
         name: "a".into(),
         types: HashMap::new(),
         types_value_constructors: HashMap::new(),
+        contains_echo: false,
         values: HashMap::new(),
         accessors: [
             (
