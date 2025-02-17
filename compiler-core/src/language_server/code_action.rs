@@ -6,7 +6,8 @@ use crate::{
         visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
         PipelineAssignmentKind, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedStatement, TypedUse,
+        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
+        TypedStatement, TypedUse,
     },
     build::{Located, Module},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -2999,23 +3000,13 @@ impl<'a> GenerateDynamicDecoder<'a> {
     pub fn code_actions(&mut self) {
         self.visit_typed_module(&self.module.ast);
     }
-}
 
-impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let range = self.edits.src_span_to_lsp_range(custom_type.location);
-        if !overlaps(self.params.range, range) {
-            return;
-        }
-
-        // For now, we only generate dynamic decoders for types with one variant.
-        let constructor = match custom_type.constructors.as_slice() {
-            [constructor] => constructor,
-            _ => return,
-        };
-
-        let name = eco_format!("{}_decoder", custom_type.name.to_snake_case());
-
+    fn generate_decoder_for_variant(
+        &mut self,
+        custom_type: &'a ast::TypedCustomType,
+        constructor: &'a TypedRecordConstructor,
+        indent: usize,
+    ) -> Option<EcoString> {
         let Some(fields): Option<Vec<_>> = constructor
             .arguments
             .iter()
@@ -3029,7 +3020,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             })
             .collect()
         else {
-            return;
+            return None;
         };
 
         let mut decoder_printer = DecoderPrinter::new(
@@ -3040,20 +3031,42 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
 
         let decoders = fields
             .iter()
-            .map(|field| decoder_printer.decode_field(field, 2))
+            .map(|field| decoder_printer.decode_field(field, indent + 2))
             .join("\n");
-
-        let decoder_type = self.printer.print_type(&Type::Named {
-            publicity: ast::Publicity::Public,
-            package: STDLIB_PACKAGE_NAME.into(),
-            module: DECODE_MODULE.into(),
-            name: "Decoder".into(),
-            args: vec![],
-            inferred_variant: None,
-        });
         let decode_module = self.printer.print_module(DECODE_MODULE);
 
         let mut field_names = fields.iter().map(|field| field.label.variable_name());
+
+        Some(eco_format!(
+            "{{
+{decoders}
+{indent}  {decode_module}.success({constructor_name}({fields}:))
+{indent}}}",
+            constructor_name = constructor.name,
+            fields = field_names.join(":, "),
+            indent = " ".repeat(indent),
+        ))
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let range = self.edits.src_span_to_lsp_range(custom_type.location);
+        if !overlaps(self.params.range, range) {
+            return;
+        }
+
+        let name = eco_format!("{}_decoder", custom_type.name.to_snake_case());
+
+        let Some(function_body) = (match custom_type.constructors.as_slice() {
+            // We can't generate a decoder for an external type
+            [] => return,
+            [constructor] => self.generate_decoder_for_variant(custom_type, constructor, 0),
+            _ => return,
+        }) else {
+            return;
+        };
+
         let parameters = match custom_type.parameters.len() {
             0 => EcoString::new(),
             _ => eco_format!(
@@ -3066,16 +3079,18 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
             ),
         };
 
-        let function = format!(
-            "
+        let decoder_type = self.printer.print_type(&Type::Named {
+            publicity: ast::Publicity::Public,
+            package: STDLIB_PACKAGE_NAME.into(),
+            module: DECODE_MODULE.into(),
+            name: "Decoder".into(),
+            args: vec![],
+            inferred_variant: None,
+        });
 
-fn {name}() -> {decoder_type}({type_name}{parameters}) {{
-{decoders}
-  {decode_module}.success({constructor_name}({fields}:))
-}}",
+        let function = format!(
+            "\n\nfn {name}() -> {decoder_type}({type_name}{parameters}) {function_body}",
             type_name = custom_type.name,
-            constructor_name = constructor.name,
-            fields = field_names.join(":, ")
         );
 
         self.edits.insert(custom_type.end_position, function);
