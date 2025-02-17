@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  [1, 2, 3, 4]\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  [1, 2, 3, 4]
+  ↑           
+}
+
+
+----- AFTER ACTION
+const ints = [1, 2, 3, 4]
+
+pub fn main() {
+  ints
+}

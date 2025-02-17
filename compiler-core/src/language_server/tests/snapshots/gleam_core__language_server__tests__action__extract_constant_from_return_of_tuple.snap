@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  #(0.25, 0.75)\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  #(0.25, 0.75)
+  ▔↑           
+}
+
+
+----- AFTER ACTION
+const value = #(0.25, 0.75)
+
+pub fn main() {
+  value
+}

@@ -4552,66 +4552,7 @@ fn extract_variable_in_block() {
 }
 
 #[test]
-fn extract_constant_from_string_in_return() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  "constant"
-}"#,
-        find_position_of("\"").select_until(find_position_of("\""))
-    );
-}
-
-#[test]
-fn extract_constant_from_int_in_return() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  100
-}"#,
-        find_position_of("1").select_until(find_position_of("0").nth_occurrence(2))
-    );
-}
-
-#[test]
-fn extract_constant_from_float_in_return() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  0.25
-}"#,
-        find_position_of("0").select_until(find_position_of("5"))
-    );
-}
-
-#[test]
-fn extract_constant_from_string_in_call_argument() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"import gleam/io
-
-pub fn main() {
-  io.print("constant")
-}"#,
-        find_position_of("\"").select_until(find_position_of("\""))
-    );
-}
-
-#[test]
-fn extract_constant_from_int_in_call_argument() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"import gleam/list
-
-pub fn main() {
-  list.sample([4, 5, 6], 2)
-}"#,
-        find_position_of("2").to_selection()
-    );
-}
-
-#[test]
-fn extract_constant_from_float_in_call_argument() {
+fn extract_constant_from_call_argument_with_float() {
     assert_code_action!(
         EXTRACT_CONSTANT,
         r#"import gleam/float
@@ -4624,18 +4565,112 @@ pub fn main() {
 }
 
 #[test]
-fn extract_constant_from_string_in_var_declaration() {
+fn extract_constant_from_call_argument_with_int() {
     assert_code_action!(
         EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  let c = "constant"
+        r#"import gleam/list
+
+pub fn main() {
+  list.sample([4, 5, 6], 2)
+}"#,
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_call_argument_with_list() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  io.debug(["constant", "another constant"])
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_call_argument_with_nested_inside() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/list
+
+pub fn main() {
+  list.unzip([#(1, 2), #(3, 4)])
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn extract_constant_from_call_argument_with_nested_outside() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/list
+
+pub fn main() {
+  list.unzip([#(1, 2), #(3, 4)])
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_call_argument_with_string() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  io.print("constant")
 }"#,
         find_position_of("\"").select_until(find_position_of("\""))
     );
 }
 
 #[test]
-fn extract_constant_from_int_in_var_declaration() {
+fn extract_constant_from_call_argument_with_tuple() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  io.debug(#(1, 2, 3))
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_float() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = 3.1415
+}"#,
+        find_position_of("3").select_until(find_position_of("5"))
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_float() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let c = 3.1415
+  io.debug(c)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_int() {
     assert_code_action!(
         EXTRACT_CONSTANT,
         r#"pub fn main() {
@@ -4646,13 +4681,137 @@ fn extract_constant_from_int_in_var_declaration() {
 }
 
 #[test]
-fn extract_constant_from_float_in_var_declaration() {
+fn extract_constant_from_whole_declaration_of_int() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let c = 125
+  io.debug(c)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_list() {
     assert_code_action!(
         EXTRACT_CONSTANT,
         r#"pub fn main() {
-  let c = 3.1415
+  let c = [3.1415, 0.33333333]
 }"#,
-        find_position_of("3").select_until(find_position_of("5"))
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_list() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let c = [3.1415, 0.33333333]
+  io.debug(c)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_nested_inside() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = #([1, 2, 3], [3, 2, 1])
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_nested_outside() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = #([1, 2, 3], [3, 2, 1])
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_nested() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let c = #([1, 2, 3], [3, 2, 1])
+  io.debug(c)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_string() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = "constant"
+}"#,
+        find_position_of("\"").select_until(find_position_of("\""))
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_string() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let c = "constant"
+  io.debug(c)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_tuple() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = #("one", "two", "three")
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_tuple() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let c = #("one", "two", "three")
+  io.debug(c)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("c"))
     );
 }
 
@@ -4668,13 +4827,213 @@ fn extract_constant_from_literal_within_list() {
 }
 
 #[test]
-fn extract_constant_from_list() {
+fn extract_constant_from_literal_within_tuple() {
     assert_code_action!(
         EXTRACT_CONSTANT,
         r#"pub fn main() {
-  let c = [0.25, 99.99]
+  let c = #(0.333334, todo)
+}"#,
+        find_position_of("0").select_until(find_position_of("4"))
+    );
+}
+
+#[test]
+fn extract_constant_from_nested_inside_in_expr() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  [#("a", 0), #("b", 1), #("a", 2)]
+  |> key_filter("a")
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_nested_outside_in_expr() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  [#("a", 0), #("b", 1), #("a", 2)]
+  |> key_filter("a")
 }"#,
         find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_return_of_float() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  0.25
+}"#,
+        find_position_of("0").select_until(find_position_of("5"))
+    );
+}
+
+#[test]
+fn extract_constant_from_return_of_int() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  100
+}"#,
+        find_position_of("1").select_until(find_position_of("0").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_return_of_list() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  [1, 2, 3, 4]
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_return_of_nested_outside() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  [#(0.25, 0.75), #(0.5, 1.5)]
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_return_of_string() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  "constant"
+}"#,
+        find_position_of("\"").select_until(find_position_of("\""))
+    );
+}
+
+#[test]
+fn extract_constant_from_return_of_tuple() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  #(0.25, 0.75)
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_taken_name_by_function() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"fn floats() {
+    [1.0, 2.0]
+}
+
+pub fn main() {
+  [0.25, 0.75]
+}"#,
+        find_position_of("[").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_taken_name_by_constant() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"const ints = [1, 2]
+
+pub fn main() {
+  [5, 50]
+}"#,
+        find_position_of("[").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_in_correct_position_1() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"
+fn first() {
+    1
+}
+
+fn second() {
+    2
+}
+
+fn third() {
+    3
+}
+"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_in_correct_position_2() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"
+fn first() {
+    1
+}
+
+fn second() {
+    2
+}
+
+fn third() {
+    3
+}
+"#,
+        find_position_of("2").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_in_correct_position_3() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"
+fn first() {
+    1
+}
+
+fn second() {
+    2
+}
+
+fn third() {
+    3
+}
+"#,
+        find_position_of("3").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_declaration_with_proper_indentation() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"
+pub fn main() {
+  let fahrenheit = {
+    let degrees = 64
+    degrees
+  }
+  fahrenheit
+}
+"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("s"))
     );
 }
 
@@ -4712,28 +5071,6 @@ fn do_not_extract_constant_from_list_3() {
 }
 
 #[test]
-fn extract_constant_from_literal_within_tuple() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  let c = #(0.333334, todo)
-}"#,
-        find_position_of("0").select_until(find_position_of("4"))
-    );
-}
-
-#[test]
-fn extract_constant_from_tuple() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  let c = #("constant", "another_literal")
-}"#,
-        find_position_of("(").nth_occurrence(2).to_selection()
-    );
-}
-
-#[test]
 fn do_not_extract_constant_from_tuple_1() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
@@ -4763,18 +5100,6 @@ fn do_not_extract_constant_from_tuple_3() {
   let c = #(0.25, todo)
 }"#,
         find_position_of("#").select_until(find_position_of("("))
-    );
-}
-
-#[test]
-fn extract_constant_from_nested_structure() {
-    assert_code_action!(
-        EXTRACT_CONSTANT,
-        r#"pub fn main() {
-  [#("a", 0), #("b", 1), #("a", 2)]
-  |> key_filter("a")
-}"#,
-        find_position_of("[").to_selection()
     );
 }
 

@@ -2916,6 +2916,61 @@ pub struct ExtractConstant<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     selected_expression: Option<(SrcSpan, Arc<Type>)>,
+    container_function_start: Option<u32>,
+    type_of_extractable: Option<ExtractableToConstant>,
+    name_to_use: Option<EcoString>,
+    value_to_use: Option<EcoString>,
+}
+
+enum ExtractableToConstant {
+    Collection,
+    Value,
+    Assignment,
+}
+
+fn is_literal_or_made_of_literals(expr: &TypedExpr) -> bool {
+    match expr {
+        // Attempt to extract whole list as long as it's comprised of only literals
+        TypedExpr::List { elements, tail, .. }
+            if elements.iter().all(TypedExpr::is_literal) && tail.is_none() =>
+        {
+            true
+        }
+        // Attempt to extract whole bit array as long as it's made up of literals
+        TypedExpr::BitArray { segments, .. }
+            if segments.iter().all(|segment| segment.value.is_literal()) =>
+        {
+            true
+        }
+        // Attempt to extract whole tuple as long as it's comprised of only literals
+        TypedExpr::Tuple { elems, .. } if elems.iter().all(TypedExpr::is_literal) => true,
+
+        // Extract literals directly
+        TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => true,
+
+        _ => false,
+    }
+}
+
+fn generate_new_name_for_constant(module: &Module, expr: &TypedExpr) -> EcoString {
+    let mut name_generator = NameGenerator::new();
+    let already_taken_names = VariablesNames {
+        names: module
+            .ast
+            .definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                ast::Definition::ModuleConstant(module_constant) => {
+                    Some(module_constant.name.clone())
+                }
+                ast::Definition::Function(function) => function.name.as_ref().map(|f| f.1.clone()),
+                _ => None,
+            })
+            .collect(),
+    };
+    name_generator.reserve_variable_names(already_taken_names);
+
+    name_generator.generate_name_from_type(&expr.type_())
 }
 
 impl<'a> ExtractConstant<'a> {
@@ -2929,58 +2984,69 @@ impl<'a> ExtractConstant<'a> {
             params,
             edits: TextEdits::new(line_numbers),
             selected_expression: None,
+            container_function_start: None,
+            type_of_extractable: None,
+            name_to_use: None,
+            value_to_use: None,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some((expression_span, expression_type)) = self.selected_expression else {
+        let Some((expr_span, _)) = self.selected_expression else {
             return vec![];
         };
 
-        let mut name_generator = NameGenerator::new();
-        let module_constant_names = VariablesNames {
-            names: self
-                .module
-                .ast
-                .definitions
-                .iter()
-                .filter_map(|definition| match definition {
-                    ast::Definition::ModuleConstant(module_constant) => {
-                        Some(module_constant.name.clone())
-                    }
-                    _ => None,
-                })
-                .collect(),
+        let (
+            Some(function_start),
+            Some(type_of_extractable),
+            Some(new_const_name),
+            Some(const_value),
+        ) = (
+            self.container_function_start,
+            self.type_of_extractable,
+            self.name_to_use,
+            self.value_to_use,
+        )
+        else {
+            return vec![];
         };
-        name_generator.reserve_variable_names(module_constant_names);
-        let variable_name = name_generator.generate_name_from_type(&expression_type);
 
-        let content = self
-            .module
-            .code
-            .get((expression_span.start as usize)..(expression_span.end as usize))
-            .expect("selected expression");
+        self.edits.insert(
+            function_start,
+            format!("const {new_const_name} = {const_value}\n\n"),
+        );
+        match type_of_extractable {
+            ExtractableToConstant::Assignment => {
+                let range = self
+                    .edits
+                    .src_span_to_lsp_range(self.selected_expression.expect("Real range value").0);
+                let mut indent_size = 0;
+                let line_start = *self
+                    .edits
+                    .line_numbers
+                    .line_starts
+                    .get(range.start.line as usize)
+                    .expect("Line number should be valid");
+                let chars = self.module.code.chars();
+                let mut chars = chars.skip(line_start as usize);
+                // Count indentation
+                while chars.next() == Some(' ') {
+                    indent_size += 1;
+                }
 
-        let container_function_start = self
-            .module
-            .ast
-            .definitions
-            .iter()
-            .filter(|definition| definition.is_function())
-            .map(|function| function.location().start)
-            .filter(|function_start| function_start < &expression_span.start)
-            .max();
+                let expr_span_with_new_line = SrcSpan {
+                    // We remove leading indentation + 1 to remove the newline with it
+                    start: expr_span.start - (indent_size + 1),
+                    end: expr_span.end,
+                };
+                self.edits.delete(expr_span_with_new_line);
+            }
 
-        if let Some(function_start) = container_function_start {
-            self.edits.insert(
-                function_start,
-                format!("const {variable_name} = {content}\n\n"),
-            );
-
-            self.edits
-                .replace(expression_span, String::from(variable_name));
+            ExtractableToConstant::Collection | ExtractableToConstant::Value => {
+                self.edits.replace(expr_span, String::from(new_const_name));
+            }
         }
 
         let mut action = Vec::with_capacity(1);
@@ -2994,26 +3060,93 @@ impl<'a> ExtractConstant<'a> {
 }
 
 impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
+    /// To get the position of the function containing the value or assignment
+    /// to extract
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        let fun_location = fun.location;
+        let fun_range = self.edits.src_span_to_lsp_range(SrcSpan {
+            start: fun_location.start,
+            end: fun.end_position,
+        });
+
+        if !within(self.params.range, fun_range) {
+            return;
+        }
+        self.container_function_start = Some(fun.location.start);
+
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    /// To extract the whole assignment
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        let expr_location = assignment.location;
+
+        // We only offer this code action for extracting the whole assignment
+        // between `let` and `=`.
+        let pattern_location = assignment.pattern.location();
+        let location = SrcSpan::new(assignment.location.start, pattern_location.end);
+        let code_action_range = self.edits.src_span_to_lsp_range(location);
+
+        if !within(self.params.range, code_action_range) {
+            ast::visit::visit_typed_assignment(self, assignment);
+            return;
+        }
+
+        if assignment.pattern.is_variable()
+            && is_literal_or_made_of_literals(assignment.value.as_ref())
+        {
+            let selected_expression = EcoString::from(
+                self.module
+                    .code
+                    .get(
+                        (assignment.value.location().start as usize)
+                            ..(assignment.location.end as usize),
+                    )
+                    .expect("selected expression"),
+            );
+
+            self.type_of_extractable = Some(ExtractableToConstant::Assignment);
+            self.selected_expression = Some((expr_location, assignment.type_()));
+            self.name_to_use = match &assignment.pattern {
+                Pattern::Variable { name, .. } => Some(name.clone()),
+                _ => None,
+            };
+            self.value_to_use = Some(selected_expression);
+        }
+    }
+
+    /// To extract only the literal
     fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
         let expr_location = expr.location();
         let expr_range = self.edits.src_span_to_lsp_range(expr_location);
 
-        if within(self.params.range, expr_range) {
-            match expr {
-                // Attempt to extract whole list as long as it's comprised of only literals
-                TypedExpr::List { elements, .. } if elements.iter().all(TypedExpr::is_literal) => {
-                    self.selected_expression = Some((expr_location, expr.type_()));
-                }
-                // Attempt to extract whole tuple as long as it's comprised of only literals
-                TypedExpr::Tuple { elems, .. } if elems.iter().all(TypedExpr::is_literal) => {
-                    self.selected_expression = Some((expr_location, expr.type_()));
-                }
-                // Extract literals directly
+        if !within(self.params.range, expr_range) {
+            ast::visit::visit_typed_expr(self, expr);
+            return;
+        }
+
+        if matches!(
+            self.type_of_extractable,
+            None | Some(ExtractableToConstant::Collection)
+        ) && is_literal_or_made_of_literals(expr)
+        {
+            let selected_expression = EcoString::from(
+                self.module
+                    .code
+                    .get((expr_location.start as usize)..(expr_location.end as usize))
+                    .expect("selected expression"),
+            );
+
+            self.type_of_extractable = Some(match expr {
                 TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => {
-                    self.selected_expression = Some((expr_location, expr.type_()));
+                    ExtractableToConstant::Value
                 }
-                _ => (),
-            }
+                _ => ExtractableToConstant::Collection,
+            });
+
+            self.selected_expression = Some((expr_location, expr.type_()));
+            self.name_to_use = Some(generate_new_name_for_constant(self.module, expr));
+            self.value_to_use = Some(selected_expression);
         }
 
         ast::visit::visit_typed_expr(self, expr);
