@@ -402,14 +402,20 @@ pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = U
         .filter(move |d| is_gleam_path(d, dir))
 }
 
-pub fn native_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
-    Ok(read_dir(dir)?
-        .flat_map(Result::ok)
-        .map(|e| e.into_path())
+pub fn native_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .require_git(false)
+        .filter_entry(|e| !is_gleam_build_dir(e))
+        .build()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(ignore::DirEntry::into_path)
+        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
-        }))
+        })
 }
 
 pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
