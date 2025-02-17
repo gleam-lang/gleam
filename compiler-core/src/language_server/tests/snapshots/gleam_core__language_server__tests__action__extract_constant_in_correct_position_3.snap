@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4596
+expression: "\nfn first() {\n    1\n}\n\nfn second() {\n    2\n}\n\nfn third() {\n    3\n}\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+fn first() {
+    1
+}
+
+fn second() {
+    2
+}
+
+fn third() {
+    3
+    ↑
+}
+
+
+----- AFTER ACTION
+
+fn first() {
+    1
+}
+
+fn second() {
+    2
+}
+
+const int = 3
+
+fn third() {
+    int
+}
