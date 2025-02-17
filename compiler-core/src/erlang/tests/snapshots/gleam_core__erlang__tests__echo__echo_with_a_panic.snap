@@ -15,13 +15,13 @@ pub fn main() {
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> any().
 main() ->
     echo(erlang:error(#{gleam_error => panic,
                 message => <<"`panic` expression evaluated."/utf8>>,
                 module => <<"my/mod"/utf8>>,
                 function => <<"main"/utf8>>,
-                line => 3}), "/root/project/test/my/mod.gleam", 3).
+                line => 3}), "project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

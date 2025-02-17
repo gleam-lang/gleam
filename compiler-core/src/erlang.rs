@@ -236,12 +236,7 @@ fn module_document<'a>(
     };
 
     let src_path_full = &module.type_info.src_path;
-    let src_path_relative = EcoString::from(
-        src_path_full
-            .strip_prefix(root)
-            .unwrap_or_else(|_| src_path_full)
-            .to_string(),
-    );
+    let src_path_relative = src_path_full.strip_prefix(root).unwrap_or(src_path_full);
 
     let mut needs_function_docs = false;
     let mut echo_used = false;
@@ -253,7 +248,7 @@ fn module_document<'a>(
             module.type_info.is_internal,
             line_numbers,
             &src_path_relative,
-            project_root,
+            root,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
             echo_used = echo_used || env.echo_used;
