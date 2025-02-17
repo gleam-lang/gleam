@@ -541,8 +541,6 @@ impl<'module> Generator<'module> {
         let all_assignments = std::iter::once(first_value)
             .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
-        let mut documents = Vec::with_capacity((count + 1) * 2);
-
         for assignment in all_assignments {
             match assignment.value.as_ref() {
                 // An echo in a pipeline won't result in an assignment, instead it

@@ -21,19 +21,13 @@ use camino::Utf8Path;
 pub struct Erlang<'a> {
     build_directory: &'a Utf8Path,
     include_directory: &'a Utf8Path,
-    project_root: &'a Utf8Path,
 }
 
 impl<'a> Erlang<'a> {
-    pub fn new(
-        build_directory: &'a Utf8Path,
-        include_directory: &'a Utf8Path,
-        project_root: &'a Utf8Path,
-    ) -> Self {
+    pub fn new(build_directory: &'a Utf8Path, include_directory: &'a Utf8Path) -> Self {
         Self {
             build_directory,
             include_directory,
-            project_root,
         }
     }
 

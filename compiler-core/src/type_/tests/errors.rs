@@ -2857,6 +2857,7 @@ fn let_assert_binding_cannot_be_used_in_panic_message() {
         r#"
 pub fn main() {
   let assert Ok(message) = Error("Not Message") as { "Uh oh: " <> message }
+}
 "#
     );
 }

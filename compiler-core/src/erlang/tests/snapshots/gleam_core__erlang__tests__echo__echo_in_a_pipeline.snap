@@ -19,16 +19,16 @@ pub fn wibble(n) { n }
 
 -export([wibble/1, main/0]).
 
--file("/root/project/test/my/mod.gleam", 8).
+-file("project/test/my/mod.gleam", 8).
 -spec wibble(J) -> J.
 wibble(N) ->
     N.
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> list(integer()).
 main() ->
     _pipe = [1, 2, 3],
-    echo(_pipe, "/root/project/test/my/mod.gleam", 4),
+    echo(_pipe, "project/test/my/mod.gleam", 4),
     wibble(_pipe).
 
 % ...omitted code from `templates/echo.erl`...
