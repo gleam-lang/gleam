@@ -58,6 +58,7 @@ struct TypesVariantConstructors {
 struct TypeValueConstructor {
   name @0 :Text;
   parameters @1 :List(TypeValueConstructorParameter);
+  documentation @2 :Text;
 }
 
 struct TypeValueConstructorParameter {

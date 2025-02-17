@@ -828,10 +828,12 @@ fn infer_module_type_retention_test() {
                             TypeValueConstructor {
                                 name: "True".into(),
                                 parameters: vec![],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "False".into(),
                                 parameters: vec![],
+                                documentation: None,
                             }
                         ]
                     }
@@ -846,14 +848,16 @@ fn infer_module_type_retention_test() {
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(1),
                                     label: None,
-                                }]
+                                }],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(2),
                                     label: None,
-                                }]
+                                }],
+                                documentation: None,
                             }
                         ]
                     }
@@ -864,7 +868,8 @@ fn infer_module_type_retention_test() {
                         type_parameters_ids: vec![],
                         variants: vec![TypeValueConstructor {
                             name: "Nil".into(),
-                            parameters: vec![]
+                            parameters: vec![],
+                            documentation: None,
                         }]
                     }
                 )

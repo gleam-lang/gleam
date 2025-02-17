@@ -950,6 +950,7 @@ impl TypeVariantConstructors {
 pub struct TypeValueConstructor {
     pub name: EcoString,
     pub parameters: Vec<TypeValueConstructorField>,
+    pub documentation: Option<EcoString>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

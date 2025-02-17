@@ -448,6 +448,7 @@ fn module_type_to_constructors_mapping() {
                 variants: vec![TypeValueConstructor {
                     name: "One".into(),
                     parameters: vec![],
+                    documentation: Some("Some documentation".into()),
                 }],
             },
         )]
@@ -1553,6 +1554,7 @@ fn type_variable_ids_in_constructors_are_shared() {
                             label: None,
                         },
                     ],
+                    documentation: None,
                 }],
             },
         )]),
@@ -1585,6 +1587,7 @@ fn type_variable_ids_in_constructors_are_shared() {
                         label: None,
                     },
                 ],
+                documentation: None,
             }],
         },
     )]);
