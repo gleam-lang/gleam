@@ -931,14 +931,17 @@ fn download_git_package(
 
     let _ = execute_command(Command::new("git").arg("init").current_dir(&package_path))?;
 
-    let _ = execute_command(
-        Command::new("git")
-            .arg("remote")
-            .arg("add")
-            .arg("origin")
-            .arg(repo)
-            .current_dir(&package_path),
-    )?;
+    // This command can fail if the directory already exists,
+    // for example if we resolve versions, then download dependencies.
+    // If that happens, we don't really care: We already have the origin,
+    // so we can safely ignore any errors here
+    let _ = Command::new("git")
+        .arg("remote")
+        .arg("add")
+        .arg("origin")
+        .arg(repo)
+        .current_dir(&package_path)
+        .output();
 
     let _ = execute_command(
         Command::new("git")
