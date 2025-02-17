@@ -901,6 +901,21 @@ fn provide_local_package(
     )
 }
 
+fn execute_command(command: &mut Command) -> Result<std::process::Output> {
+    let output = command.output().map_err(|error| Error::ShellCommand {
+        program: "git".into(),
+        err: Some(error.kind()),
+    })?;
+    if output.status.success() {
+        Ok(output)
+    } else {
+        Err(Error::ShellCommand {
+            program: "git".into(),
+            err: None,
+        })
+    }
+}
+
 fn download_git_package(
     package_name: &str,
     repo: &str,
@@ -910,56 +925,37 @@ fn download_git_package(
     let package_path = project_paths.build_packages_package(package_name);
     fs::mkdir(&package_path)?;
 
-    let _ = Command::new("git")
-        .arg("init")
-        .current_dir(&package_path)
-        .output()
-        .map_err(|error| Error::ShellCommand {
-            program: "git".into(),
-            err: Some(error.kind()),
-        })?;
+    let _ = execute_command(Command::new("git").arg("init").current_dir(&package_path))?;
 
-    let _ = Command::new("git")
-        .arg("remote")
-        .arg("add")
-        .arg("origin")
-        .arg(repo)
-        .current_dir(&package_path)
-        .output()
-        .map_err(|error| Error::ShellCommand {
-            program: "git".into(),
-            err: Some(error.kind()),
-        })?;
+    let _ = execute_command(
+        Command::new("git")
+            .arg("remote")
+            .arg("add")
+            .arg("origin")
+            .arg(repo)
+            .current_dir(&package_path),
+    )?;
 
-    let _ = Command::new("git")
-        .arg("fetch")
-        .arg("origin")
-        .current_dir(&package_path)
-        .output()
-        .map_err(|error| Error::ShellCommand {
-            program: "git".into(),
-            err: Some(error.kind()),
-        })?;
+    let _ = execute_command(
+        Command::new("git")
+            .arg("fetch")
+            .arg("origin")
+            .current_dir(&package_path),
+    )?;
 
-    let _ = Command::new("git")
-        .arg("checkout")
-        .arg(ref_)
-        .current_dir(&package_path)
-        .output()
-        .map_err(|error| Error::ShellCommand {
-            program: "git".into(),
-            err: Some(error.kind()),
-        })?;
+    let _ = execute_command(
+        Command::new("git")
+            .arg("checkout")
+            .arg(ref_)
+            .current_dir(&package_path),
+    )?;
 
-    let output = Command::new("git")
-        .arg("rev-parse")
-        .arg("HEAD")
-        .current_dir(&package_path)
-        .output()
-        .map_err(|error| Error::ShellCommand {
-            program: "git".into(),
-            err: Some(error.kind()),
-        })?;
+    let output = execute_command(
+        Command::new("git")
+            .arg("rev-parse")
+            .arg("HEAD")
+            .current_dir(&package_path),
+    )?;
 
     let commit = String::from_utf8(output.stdout)
         .expect("Output should be UTF-8")
