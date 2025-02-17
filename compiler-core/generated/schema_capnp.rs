@@ -2317,11 +2317,19 @@ pub mod type_value_constructor {
     pub fn has_parameters(&self) -> bool {
       !self.reader.get_pointer_field(1).is_null()
     }
+    #[inline]
+    pub fn get_documentation(self) -> ::capnp::Result<::capnp::text::Reader<'a>> {
+      ::capnp::traits::FromPointerReader::get_from_pointer(&self.reader.get_pointer_field(2), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn has_documentation(&self) -> bool {
+      !self.reader.get_pointer_field(2).is_null()
+    }
   }
 
   pub struct Builder<'a> { builder: ::capnp::private::layout::StructBuilder<'a> }
   impl <> ::capnp::traits::HasStructSize for Builder<'_,>  {
-    const STRUCT_SIZE: ::capnp::private::layout::StructSize = ::capnp::private::layout::StructSize { data: 0, pointers: 2 };
+    const STRUCT_SIZE: ::capnp::private::layout::StructSize = ::capnp::private::layout::StructSize { data: 0, pointers: 3 };
   }
   impl <> ::capnp::traits::HasTypeId for Builder<'_,>  {
     const TYPE_ID: u64 = _private::TYPE_ID;
@@ -2403,6 +2411,22 @@ pub mod type_value_constructor {
     pub fn has_parameters(&self) -> bool {
       !self.builder.is_pointer_field_null(1)
     }
+    #[inline]
+    pub fn get_documentation(self) -> ::capnp::Result<::capnp::text::Builder<'a>> {
+      ::capnp::traits::FromPointerBuilder::get_from_pointer(self.builder.get_pointer_field(2), ::core::option::Option::None)
+    }
+    #[inline]
+    pub fn set_documentation(&mut self, value: impl ::capnp::traits::SetterInput<::capnp::text::Owned>)  {
+      ::capnp::traits::SetterInput::set_pointer_builder(self.builder.reborrow().get_pointer_field(2), value, false).unwrap()
+    }
+    #[inline]
+    pub fn init_documentation(self, size: u32) -> ::capnp::text::Builder<'a> {
+      self.builder.get_pointer_field(2).init_text(size)
+    }
+    #[inline]
+    pub fn has_documentation(&self) -> bool {
+      !self.builder.is_pointer_field_null(2)
+    }
   }
 
   pub struct Pipeline { _typeless: ::capnp::any_pointer::Pipeline }
@@ -2414,17 +2438,17 @@ pub mod type_value_constructor {
   impl Pipeline  {
   }
   mod _private {
-    pub static ENCODED_NODE: [::capnp::Word; 54] = [
+    pub static ENCODED_NODE: [::capnp::Word; 70] = [
       ::capnp::word(0, 0, 0, 0, 5, 0, 6, 0),
       ::capnp::word(219, 85, 99, 173, 224, 242, 6, 232),
       ::capnp::word(13, 0, 0, 0, 1, 0, 0, 0),
       ::capnp::word(190, 237, 188, 253, 156, 169, 51, 181),
-      ::capnp::word(2, 0, 7, 0, 0, 0, 0, 0),
+      ::capnp::word(3, 0, 7, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(21, 0, 0, 0, 18, 1, 0, 0),
       ::capnp::word(37, 0, 0, 0, 7, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(33, 0, 0, 0, 119, 0, 0, 0),
+      ::capnp::word(33, 0, 0, 0, 175, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(115, 99, 104, 101, 109, 97, 46, 99),
@@ -2433,21 +2457,28 @@ pub mod type_value_constructor {
       ::capnp::word(110, 115, 116, 114, 117, 99, 116, 111),
       ::capnp::word(114, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 1, 0, 1, 0),
-      ::capnp::word(8, 0, 0, 0, 3, 0, 4, 0),
+      ::capnp::word(12, 0, 0, 0, 3, 0, 4, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 1, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(41, 0, 0, 0, 42, 0, 0, 0),
+      ::capnp::word(69, 0, 0, 0, 42, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(36, 0, 0, 0, 3, 0, 1, 0),
-      ::capnp::word(48, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(64, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(76, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(1, 0, 0, 0, 1, 0, 0, 0),
       ::capnp::word(0, 0, 1, 0, 1, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(45, 0, 0, 0, 90, 0, 0, 0),
+      ::capnp::word(73, 0, 0, 0, 90, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(44, 0, 0, 0, 3, 0, 1, 0),
-      ::capnp::word(72, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(72, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(100, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(2, 0, 0, 0, 2, 0, 0, 0),
+      ::capnp::word(0, 0, 1, 0, 2, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(97, 0, 0, 0, 114, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(96, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(108, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(110, 97, 109, 101, 0, 0, 0, 0),
       ::capnp::word(12, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
@@ -2469,11 +2500,21 @@ pub mod type_value_constructor {
       ::capnp::word(14, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(100, 111, 99, 117, 109, 101, 110, 116),
+      ::capnp::word(97, 116, 105, 111, 110, 0, 0, 0),
+      ::capnp::word(12, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(12, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
     ];
     pub fn get_field_types(index: u16) -> ::capnp::introspect::Type {
       match index {
         0 => <::capnp::text::Owned as ::capnp::introspect::Introspect>::introspect(),
         1 => <::capnp::struct_list::Owned<crate::schema_capnp::type_value_constructor_parameter::Owned> as ::capnp::introspect::Introspect>::introspect(),
+        2 => <::capnp::text::Owned as ::capnp::introspect::Introspect>::introspect(),
         _ => panic!("invalid field index {}", index),
       }
     }
@@ -2486,9 +2527,9 @@ pub mod type_value_constructor {
       members_by_discriminant: MEMBERS_BY_DISCRIMINANT,
       members_by_name: MEMBERS_BY_NAME,
     };
-    pub static NONUNION_MEMBERS : &[u16] = &[0,1];
+    pub static NONUNION_MEMBERS : &[u16] = &[0,1,2];
     pub static MEMBERS_BY_DISCRIMINANT : &[u16] = &[];
-    pub static MEMBERS_BY_NAME : &[u16] = &[0,1];
+    pub static MEMBERS_BY_NAME : &[u16] = &[2,0,1];
     pub const TYPE_ID: u64 = 0xe806_f2e0_ad63_55db;
   }
 }

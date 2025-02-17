@@ -252,6 +252,7 @@ impl<'a> ModuleEncoder<'a> {
         constructor: &TypeValueConstructor,
     ) {
         builder.set_name(&constructor.name);
+        builder.set_documentation(constructor.documentation.as_deref().unwrap_or_default());
         let mut builder = builder.init_parameters(constructor.parameters.len() as u32);
         for (i, parameter) in constructor.parameters.iter().enumerate() {
             self.build_type_value_constructor_parameter(

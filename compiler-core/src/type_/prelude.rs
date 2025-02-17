@@ -270,10 +270,12 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             TypeValueConstructor {
                                 name: "True".into(),
                                 parameters: vec![],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "False".into(),
                                 parameters: vec![],
+                                documentation: None,
                             },
                         ],
                     },
@@ -411,6 +413,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         variants: vec![TypeValueConstructor {
                             name: "Nil".into(),
                             parameters: vec![],
+                            documentation: None,
                         }],
                     },
                 );
@@ -445,6 +448,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                     type_: result_value,
                                     label: None,
                                 }],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
@@ -452,6 +456,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                     type_: result_error,
                                     label: None,
                                 }],
+                                documentation: None,
                             },
                         ],
                     },
