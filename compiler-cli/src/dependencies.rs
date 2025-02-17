@@ -12,7 +12,7 @@ use gleam_core::{
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
     dependency,
-    error::{FileIoAction, FileKind, StandardIoAction},
+    error::{FileIoAction, FileKind, ShellCommandFailureReason, StandardIoAction},
     hex::{self, HEXPM_PUBLIC_KEY},
     io::{HttpClient as _, TarUnpacker, WrappedReader},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
@@ -904,14 +904,18 @@ fn provide_local_package(
 fn execute_command(command: &mut Command) -> Result<std::process::Output> {
     let output = command.output().map_err(|error| Error::ShellCommand {
         program: "git".into(),
-        err: Some(error.kind()),
+        reason: ShellCommandFailureReason::IoError(error.kind()),
     })?;
     if output.status.success() {
         Ok(output)
     } else {
+        let reason = match String::from_utf8(output.stderr) {
+            Ok(stderr) => ShellCommandFailureReason::ShellCommandError(stderr),
+            Err(_) => ShellCommandFailureReason::Unknown,
+        };
         Err(Error::ShellCommand {
             program: "git".into(),
-            err: None,
+            reason,
         })
     }
 }

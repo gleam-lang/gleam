@@ -1,7 +1,7 @@
 use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
-    error::Error,
+    error::{Error, ShellCommandFailureReason},
     paths::ProjectPaths,
 };
 use std::process::Command;
@@ -43,7 +43,7 @@ pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
     tracing::info!("Running OS process {:?}", command);
     let _ = command.status().map_err(|e| Error::ShellCommand {
         program: "erl".into(),
-        err: Some(e.kind()),
+        reason: ShellCommandFailureReason::IoError(e.kind()),
     })?;
     Ok(())
 }

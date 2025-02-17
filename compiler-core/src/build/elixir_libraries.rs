@@ -1,4 +1,5 @@
 use crate::{
+    error::ShellCommandFailureReason,
     io::{CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     Error,
 };
@@ -97,7 +98,7 @@ where
             if status != 0 {
                 return Err(Error::ShellCommand {
                     program: "elixir".into(),
-                    err: None,
+                    reason: ShellCommandFailureReason::Unknown,
                 });
             }
         }

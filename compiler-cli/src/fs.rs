@@ -1,6 +1,6 @@
 use gleam_core::{
     build::{NullTelemetry, Target},
-    error::{parse_os, Error, FileIoAction, FileKind, OS},
+    error::{parse_os, Error, FileIoAction, FileKind, ShellCommandFailureReason, OS},
     io::{
         BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
         OutputFile, ReadDir, Stdio, WrappedReader,
@@ -214,7 +214,7 @@ impl CommandExecutor for ProjectIO {
 
                 other => Error::ShellCommand {
                     program: program.to_string(),
-                    err: Some(other),
+                    reason: ShellCommandFailureReason::IoError(other),
                 },
             }),
         }
@@ -661,7 +661,7 @@ pub fn is_inside_git_work_tree(path: &Utf8Path) -> Result<bool, Error> {
 
             other => Err(Error::ShellCommand {
                 program: "git".into(),
-                err: Some(other),
+                reason: ShellCommandFailureReason::IoError(other),
             }),
         },
     }

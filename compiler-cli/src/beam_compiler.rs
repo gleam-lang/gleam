@@ -1,5 +1,5 @@
 use gleam_core::{
-    error::Error,
+    error::{Error, ShellCommandFailureReason},
     io::{FileSystemWriter, Stdio},
     paths, Result,
 };
@@ -62,7 +62,7 @@ impl BeamCompiler {
 
         writeln!(inner.stdin, "{}.", args).map_err(|e| Error::ShellCommand {
             program: "escript".into(),
-            err: Some(e.kind()),
+            reason: ShellCommandFailureReason::IoError(e.kind()),
         })?;
 
         let mut buf = String::new();
@@ -76,7 +76,7 @@ impl BeamCompiler {
                 "gleam-compile-result-error" => {
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
-                        err: None,
+                        reason: ShellCommandFailureReason::Unknown,
                     })
                 }
                 s if s.starts_with("gleam-compile-module:") => {
@@ -96,7 +96,7 @@ impl BeamCompiler {
         // if we get here, stdout got closed before we got an "ok" or "err".
         Err(Error::ShellCommand {
             program: "escript".into(),
-            err: None,
+            reason: ShellCommandFailureReason::Unknown,
         })
     }
 
@@ -126,7 +126,7 @@ impl BeamCompiler {
                 },
                 other => Error::ShellCommand {
                     program: "escript".into(),
-                    err: Some(other),
+                    reason: ShellCommandFailureReason::IoError(other),
                 },
             })?;
 

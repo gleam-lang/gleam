@@ -1,13 +1,16 @@
 use crate::{
     analyse::TargetSupport,
     build::{
-        package_compiler, package_compiler::PackageCompiler, package_loader::StaleTracker,
-        project_compiler, telemetry::Telemetry, Mode, Module, Origin, Package, Target,
+        package_compiler::{self, PackageCompiler},
+        package_loader::StaleTracker,
+        project_compiler,
+        telemetry::Telemetry,
+        Mode, Module, Origin, Package, Target,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
     dep_tree,
-    error::{FileIoAction, FileKind},
+    error::{FileIoAction, FileKind, ShellCommandFailureReason},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
     manifest::{ManifestPackage, ManifestPackageSource},
     metadata,
@@ -385,7 +388,7 @@ where
         } else {
             Err(Error::ShellCommand {
                 program: "rebar3".into(),
-                err: None,
+                reason: ShellCommandFailureReason::Unknown,
             })
         }
     }
@@ -483,7 +486,7 @@ where
         } else {
             Err(Error::ShellCommand {
                 program: "mix".into(),
-                err: None,
+                reason: ShellCommandFailureReason::Unknown,
             })
         }
     }
