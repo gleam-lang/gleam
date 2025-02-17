@@ -3007,7 +3007,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
         constructor: &'a TypedRecordConstructor,
         indent: usize,
     ) -> Option<EcoString> {
-        let Some(fields): Option<Vec<_>> = constructor
+        let fields = constructor
             .arguments
             .iter()
             .map(|argument| {
@@ -3018,10 +3018,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
                     type_: &argument.type_,
                 })
             })
-            .collect()
-        else {
-            return None;
-        };
+            .collect::<Option<Vec<_>>>()?;
 
         let mut decoder_printer = DecoderPrinter::new(
             &self.module.ast.names,
