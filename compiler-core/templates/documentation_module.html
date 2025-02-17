@@ -10,8 +10,10 @@
 </ul>
 {% endif %}
 
+{% if !constants.is_empty() || !functions.is_empty() %}
+  <h2>Values</h2>
+{% endif %}
 {% if !constants.is_empty() %}
-<h2>Constants</h2>
 <ul>
   {% for constant in constants %}
   <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
@@ -20,7 +22,6 @@
 {% endif %}
 
 {% if !functions.is_empty() %}
-<h2>Functions</h2>
 <ul>
   {% for function in functions %}
   <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
