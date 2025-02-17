@@ -4,4 +4,4 @@ description = "Test project to test git dependencies"
 licences = ["Apache-2.0"]
 
 [dependencies]
-gleam_stdlib = { git = "git@github.com:gleam-lang/stdlib", ref = "957b83b" }
+gleam_stdlib = { git = "https://github.com/gleam-lang/stdlib.git", ref = "957b83b" }
