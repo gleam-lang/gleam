@@ -17,14 +17,14 @@ fn wibble(n: Int, m: Int) { n + m }
 
 -export([main/0]).
 
--file("/root/project/test/my/mod.gleam", 6).
+-file("project/test/my/mod.gleam", 6).
 -spec wibble(integer(), integer()) -> integer().
 wibble(N, M) ->
     N + M.
 
--file("/root/project/test/my/mod.gleam", 2).
+-file("project/test/my/mod.gleam", 2).
 -spec main() -> integer().
 main() ->
-    echo(wibble(1, 2), "/root/project/test/my/mod.gleam", 3).
+    echo(wibble(1, 2), "project/test/my/mod.gleam", 3).
 
 % ...omitted code from `templates/echo.erl`...

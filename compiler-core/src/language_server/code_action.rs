@@ -4550,6 +4550,13 @@ impl<'a> ConvertToFunctionCall<'a> {
             PipelineAssignmentKind::FirstArgument {
                 second_argument: None,
             } => self.edits.insert(call.end - 1, first_value_text),
+
+            // When the value is piped into an echo, to rewrite the pipeline we
+            // have to insert the value after the `echo` with no parentheses:
+            // `a |> echo` is rewritten as `echo a`.
+            PipelineAssignmentKind::Echo => {
+                self.edits.insert(call.end, format!(" {first_value_text}"))
+            }
         }
 
         let mut action = Vec::with_capacity(1);

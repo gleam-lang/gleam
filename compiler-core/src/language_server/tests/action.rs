@@ -5387,6 +5387,19 @@ fn woo(n) { todo }
 }
 
 #[test]
+fn convert_to_function_call_works_with_echo() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  wibble.wobble |> echo
+}
+",
+        find_position_of("echo").to_selection()
+    );
+}
+
+#[test]
 fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
     assert_no_code_actions!(
         GENERATE_JSON_ENCODER,

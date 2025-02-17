@@ -486,6 +486,10 @@ impl TypedExpr {
                 tuple: expression, ..
             } => expression.find_statement(byte_index),
 
+            Self::Echo { expression, .. } => expression
+                .as_ref()
+                .and_then(|e| e.find_statement(byte_index)),
+
             Self::BitArray { segments, .. } => segments
                 .iter()
                 .find_map(|arg| arg.value.find_statement(byte_index)),
