@@ -50,12 +50,14 @@ static UTF8_SYMBOLS: Symbols = Symbols {
 };
 
 pub fn list() -> Result<()> {
-    let (_, _, manifest) = get_manifest_details()?;
+    let paths = crate::find_project_paths()?;
+    let (_, manifest) = get_manifest_details(&paths)?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
 pub fn tree(options: TreeOptions) -> Result<()> {
-    let (project, config, manifest) = get_manifest_details()?;
+    let paths = crate::find_project_paths()?;
+    let (config, manifest) = get_manifest_details(&paths)?;
 
     // Initialize the root package since it is not part of the manifest
     let root_package = ManifestPackage {
@@ -64,7 +66,7 @@ pub fn tree(options: TreeOptions) -> Result<()> {
         requirements: config.all_direct_dependencies()?.keys().cloned().collect(),
         version: config.version.clone(),
         source: ManifestPackageSource::Local {
-            path: project.clone(),
+            path: paths.root().to_path_buf(),
         },
         otp_app: None,
     };
@@ -76,10 +78,8 @@ pub fn tree(options: TreeOptions) -> Result<()> {
     list_package_and_dependencies_tree(std::io::stdout(), options, packages.clone(), config.name)
 }
 
-fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
+fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let project = fs::get_project_root(fs::get_current_directory()?)?;
-    let paths = ProjectPaths::new(project.clone());
     let config = crate::config::root_config(&paths)?;
     let (_, manifest) = get_manifest(
         &paths,
@@ -90,7 +90,7 @@ fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
         UseManifest::Yes,
         Vec::new(),
     )?;
-    Ok((project, config, manifest))
+    Ok((config, manifest))
 }
 
 fn list_manifest_packages<W: std::io::Write>(mut buffer: W, manifest: Manifest) -> Result<()> {
@@ -237,7 +237,7 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     let _guard = lock.lock(&telemetry);
 
     // Read the project config
-    let config = crate::config::read(paths.root_config())?;
+    let config = crate::root_config(paths)?;
     let mut manifest = read_manifest_from_disc(paths)?;
 
     remove_extra_requirements(&config, &mut manifest)?;
@@ -370,7 +370,7 @@ pub fn download<Telem: Telemetry>(
     let fs = ProjectIO::boxed();
 
     // Read the project config
-    let mut config = crate::config::read(paths.root_config())?;
+    let mut config = crate::root_config(paths)?;
     let project_name = config.name.clone();
 
     // Insert the new packages to add, if it exists
