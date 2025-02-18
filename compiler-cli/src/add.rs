@@ -2,6 +2,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use gleam_core::{
     error::{FileIoAction, FileKind},
+    paths::ProjectPaths,
     Error, Result,
 };
 
@@ -11,9 +12,7 @@ use crate::{
     fs,
 };
 
-pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
-    let paths = crate::find_project_paths()?;
-
+pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     let mut new_package_requirements = Vec::with_capacity(packages_to_add.len());
     for specifier in packages_to_add {
         new_package_requirements.push(parse_gleam_add_specifier(&specifier)?);
