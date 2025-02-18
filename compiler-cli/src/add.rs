@@ -30,8 +30,8 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     )?;
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
-    let mut gleam_toml = read_toml_edit("gleam.toml")?;
-    let mut manifest_toml = read_toml_edit("manifest.toml")?;
+    let mut gleam_toml = read_toml_edit(paths.root_config().as_str())?;
+    let mut manifest_toml = read_toml_edit(paths.manifest().as_str())?;
 
     // Insert the new deps
     for (added_package, _) in new_package_requirements {
@@ -74,8 +74,14 @@ pub fn command(packages_to_add: Vec<String>, dev: bool) -> Result<()> {
     }
 
     // Write the updated config
-    fs::write(Utf8Path::new("gleam.toml"), &gleam_toml.to_string())?;
-    fs::write(Utf8Path::new("manifest.toml"), &manifest_toml.to_string())?;
+    fs::write(
+        Utf8Path::new(paths.root_config().as_str()),
+        &gleam_toml.to_string(),
+    )?;
+    fs::write(
+        Utf8Path::new(paths.manifest().as_str()),
+        &manifest_toml.to_string(),
+    )?;
 
     Ok(())
 }
