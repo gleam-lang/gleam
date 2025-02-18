@@ -1417,7 +1417,7 @@ pub(crate) fn guard_constant_expression<'a>(
         Constant::Var { name, .. } => Ok(assignments
             .iter()
             .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone().append(assignment.path.clone()))
+            .map(|assignment| assignment.subject.clone())
             .unwrap_or_else(|| maybe_escape_identifier(name).to_doc())),
 
         expression => constant_expression(Context::Function, tracker, expression),
