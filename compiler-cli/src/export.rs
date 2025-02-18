@@ -102,7 +102,7 @@ the {ENTRYPOINT_FILENAME} script.
 
 pub fn hex_tarball() -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let mut config = crate::config::root_config()?;
+    let mut config = crate::config::root_config(&paths)?;
     let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &mut config)?;
 
     let path = paths.build_export_hex_tarball(&config.name, &config.version.to_string());

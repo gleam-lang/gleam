@@ -41,7 +41,7 @@ pub struct BuildOptions {
 
 pub fn build(options: BuildOptions) -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let config = crate::config::root_config()?;
+    let config = crate::config::root_config(&paths)?;
 
     // Reset the build directory so we know the state of the project
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
@@ -127,7 +127,7 @@ pub(crate) fn build_documentation(
 
 pub fn publish() -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let config = crate::config::root_config()?;
+    let config = crate::config::root_config(&paths)?;
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();

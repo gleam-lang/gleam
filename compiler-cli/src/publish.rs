@@ -20,7 +20,7 @@ use crate::{build, cli, docs, fs, http::HttpClient};
 
 pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
     let paths = crate::find_project_paths()?;
-    let mut config = crate::config::root_config()?;
+    let mut config = crate::config::root_config(&paths)?;
 
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?
