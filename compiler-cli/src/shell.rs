@@ -10,6 +10,7 @@ pub fn command() -> Result<(), Error> {
 
     // Build project
     let _ = crate::build::main(
+        &paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -19,7 +20,7 @@ pub fn command() -> Result<(), Error> {
             target: Some(Target::Erlang),
             no_print_progress: false,
         },
-        crate::build::download_dependencies(crate::cli::Reporter::new())?,
+        crate::build::download_dependencies(&paths, crate::cli::Reporter::new())?,
     )?;
 
     // Don't exit on ctrl+c as it is used by child erlang shell

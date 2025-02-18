@@ -43,6 +43,7 @@ pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
+        &paths,
         &config,
         &mut compile_result,
         DocContext::HexPublish,
@@ -275,6 +276,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
 
     // Build the project to check that it is valid
     let built = build::main(
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -284,7 +286,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
             compile: Compile::All,
             no_print_progress: false,
         },
-        build::download_dependencies(cli::Reporter::new())?,
+        build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
 
     let minimum_required_version = built.minimum_required_version();

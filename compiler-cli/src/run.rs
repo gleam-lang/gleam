@@ -48,9 +48,9 @@ pub fn command(
 
     // Download dependencies
     let manifest = if no_print_progress {
-        crate::build::download_dependencies(NullTelemetry)?
+        crate::build::download_dependencies(&paths, NullTelemetry)?
     } else {
-        crate::build::download_dependencies(crate::cli::Reporter::new())?
+        crate::build::download_dependencies(&paths, crate::cli::Reporter::new())?
     };
 
     // Get the config for the module that is being run to check the target.
@@ -97,7 +97,7 @@ pub fn command(
         no_print_progress,
     };
 
-    let built = crate::build::main(options, manifest)?;
+    let built = crate::build::main(&paths, options, manifest)?;
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
