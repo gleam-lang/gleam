@@ -207,6 +207,11 @@
   provided labels.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the "Pattern match on argument" and
+  "Pattern match on variable" code actions would not allow to pattern match on a
+  private type used in the same module it's defined in.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.8.1 - 2025-02-11
 
 ### Bug fixes
