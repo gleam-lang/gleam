@@ -6,7 +6,8 @@ use crate::{
         visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
         AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
         PipelineAssignmentKind, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedStatement, TypedUse,
+        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
+        TypedStatement, TypedUse,
     },
     build::{Located, Module},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
@@ -3292,25 +3293,15 @@ impl<'a> GenerateJsonEncoder<'a> {
     pub fn code_actions(&mut self) {
         self.visit_typed_module(&self.module.ast);
     }
-}
 
-impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
-    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
-        let range = self.edits.src_span_to_lsp_range(custom_type.location);
-        if !overlaps(self.params.range, range) {
-            return;
-        }
-
-        // For now, we only generate json encoders for types with one variant.
-        let constructor = match custom_type.constructors.as_slice() {
-            [constructor] => constructor,
-            _ => return,
-        };
-
-        let record_name = custom_type.name.to_snake_case();
-        let name = eco_format!("encode_{record_name}");
-
-        let Some(fields): Option<Vec<_>> = constructor
+    fn generate_encoder(
+        &mut self,
+        constructor: &'a TypedRecordConstructor,
+        type_name: EcoString,
+        record_name: EcoString,
+        indent: usize,
+    ) -> Option<EcoString> {
+        let fields = constructor
             .arguments
             .iter()
             .map(|argument| {
@@ -3321,21 +3312,49 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
                     type_: &argument.type_,
                 })
             })
-            .collect()
-        else {
-            return;
-        };
+            .collect::<Option<Vec<_>>>()?;
 
-        let mut encoder_printer = EncoderPrinter::new(
-            &self.module.ast.names,
-            custom_type.name.clone(),
-            self.module.name.clone(),
-        );
+        let mut encoder_printer =
+            EncoderPrinter::new(&self.module.ast.names, type_name, self.module.name.clone());
 
         let encoders = fields
             .iter()
-            .map(|field| encoder_printer.encode_field(&record_name, field, 4))
+            .map(|field| encoder_printer.encode_field(&record_name, field, indent + 2))
             .join(",\n");
+
+        Some(eco_format!(
+            "{json_module}.object([
+{encoders},
+{indent}])",
+            indent = " ".repeat(indent),
+            json_module = self.printer.print_module(JSON_MODULE)
+        ))
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
+    fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
+        let range = self.edits.src_span_to_lsp_range(custom_type.location);
+        if !overlaps(self.params.range, range) {
+            return;
+        }
+        let record_name = custom_type.name.to_snake_case();
+
+        let Some(encoder) = (match custom_type.constructors.as_slice() {
+            // We can't generate an encoder for an external type
+            [] => return,
+            [constructor] => self.generate_encoder(
+                constructor,
+                custom_type.name.clone(),
+                EcoString::from(&record_name),
+                2,
+            ),
+            _ => return,
+        }) else {
+            return;
+        };
+
+        let name = eco_format!("encode_{record_name}");
 
         let json_type = self.printer.print_type(&Type::Named {
             publicity: ast::Publicity::Public,
@@ -3345,7 +3364,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             args: vec![],
             inferred_variant: None,
         });
-        let json_module = self.printer.print_module(JSON_MODULE);
+
         let parameters = match custom_type.parameters.len() {
             0 => EcoString::new(),
             _ => eco_format!(
@@ -3362,9 +3381,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             "
 
 fn {name}({record_name}: {type_name}{parameters}) -> {json_type} {{
-  {json_module}.object([
-{encoders},
-  ])
+  {encoder}
 }}",
             type_name = custom_type.name,
         );
