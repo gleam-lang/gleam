@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4432
+expression: "\npub type Wibble {\n  OneTwo(wibble: Int, next: Wibble)\n  ThreeFour(wobble: Float, text: String, values: List(Bool))\n  FiveSixSeven(one_two: Int)\n}\n"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  OneTwo(wibble: Int, next: Wibble)
+  ThreeFour(wobble: Float, text: String, values: List(Bool))
+  FiveSixSeven(one_two: Int)
+}
+
+
+----- AFTER ACTION
+import gleam/dynamic/decode
+
+pub type Wibble {
+  OneTwo(wibble: Int, next: Wibble)
+  ThreeFour(wobble: Float, text: String, values: List(Bool))
+  FiveSixSeven(one_two: Int)
+}
+
+fn wibble_decoder() -> decode.Decoder(Wibble) {
+  use variant <- decode.field("type", decode.string)
+  case variant {
+    "one_two" -> {
+      use wibble <- decode.field("wibble", decode.int)
+      use next <- decode.field("next", wibble_decoder())
+      decode.success(OneTwo(wibble:, next:))
+    }
+    "three_four" -> {
+      use wobble <- decode.field("wobble", decode.float)
+      use text <- decode.field("text", decode.string)
+      use values <- decode.field("values", decode.list(decode.bool))
+      decode.success(ThreeFour(wobble:, text:, values:))
+    }
+    "five_six_seven" -> {
+      use one_two <- decode.field("one_two", decode.int)
+      decode.success(FiveSixSeven(one_two:))
+    }
+    _ -> decode.failure(todo as "Zero value for Wibble", "Wibble")
+  }
+}
