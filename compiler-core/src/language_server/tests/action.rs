@@ -5130,6 +5130,21 @@ pub type Wibble {
 }
 
 #[test]
+fn generate_json_encoder_for_multi_variant_type_multi_word_name() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  OneTwoThree(wibble: Int, next: Wibble)
+  FourFive(wobble: Float, text: String, values: List(Bool))
+  SixSevenEight(one_two: Float)
+}
+",
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_hole_not_in_first_position() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
