@@ -500,9 +500,9 @@ fn parse_and_run_command() -> Result<(), Error> {
             target,
             warnings_as_errors,
             no_print_progress,
-        } => command_build(target, warnings_as_errors, no_print_progress),
+        } => command_build(&paths, target, warnings_as_errors, no_print_progress),
 
-        Command::Check { target } => command_check(target),
+        Command::Check { target } => command_check(&paths, target),
 
         Command::Docs(Docs::Build { open, target }) => {
             docs::build(docs::BuildOptions { open, target })
@@ -587,13 +587,14 @@ fn parse_and_run_command() -> Result<(), Error> {
         Command::Export(ExportTarget::JavascriptPrelude) => export::javascript_prelude(),
         Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
         Command::Export(ExportTarget::PackageInterface { output }) => {
-            export::package_interface(output)
+            export::package_interface(&paths, output)
         }
     }
 }
 
-fn command_check(target: Option<Target>) -> Result<()> {
+fn command_check(paths: &ProjectPaths, target: Option<Target>) -> Result<()> {
     let _ = build::main(
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -603,22 +604,24 @@ fn command_check(target: Option<Target>) -> Result<()> {
             target,
             no_print_progress: false,
         },
-        build::download_dependencies(cli::Reporter::new())?,
+        build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
     Ok(())
 }
 
 fn command_build(
+    paths: &ProjectPaths,
     target: Option<Target>,
     warnings_as_errors: bool,
     no_print_progress: bool,
 ) -> Result<()> {
     let manifest = if no_print_progress {
-        build::download_dependencies(NullTelemetry)?
+        build::download_dependencies(paths, NullTelemetry)?
     } else {
-        build::download_dependencies(cli::Reporter::new())?
+        build::download_dependencies(paths, cli::Reporter::new())?
     };
     let _ = build::main(
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors,

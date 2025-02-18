@@ -3,6 +3,7 @@ use std::{rc::Rc, time::Instant};
 use gleam_core::{
     build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
+    paths::ProjectPaths,
     warning::WarningEmitterIO,
     Result,
 };
@@ -14,21 +15,20 @@ use crate::{
     fs::{self, ConsoleWarningEmitter},
 };
 
-pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
-    let paths = crate::find_project_paths()?;
-    crate::dependencies::download(&paths, telemetry, None, Vec::new(), UseManifest::Yes)
+pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) -> Result<Manifest> {
+    crate::dependencies::download(paths, telemetry, None, Vec::new(), UseManifest::Yes)
 }
 
-pub fn main(options: Options, manifest: Manifest) -> Result<Built> {
-    main_with_warnings(options, manifest, Rc::new(ConsoleWarningEmitter))
+pub fn main(paths: &ProjectPaths, options: Options, manifest: Manifest) -> Result<Built> {
+    main_with_warnings(paths, options, manifest, Rc::new(ConsoleWarningEmitter))
 }
 
 pub(crate) fn main_with_warnings(
+    paths: &ProjectPaths,
     options: Options,
     manifest: Manifest,
     warnings: Rc<dyn WarningEmitterIO>,
 ) -> Result<Built> {
-    let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
     let root_config = crate::config::root_config(&paths)?;
     let telemetry: &'static dyn Telemetry = if options.no_print_progress {
@@ -53,7 +53,7 @@ pub(crate) fn main_with_warnings(
             manifest.packages,
             telemetry,
             warnings,
-            paths,
+            paths.clone(),
             io,
         );
         compiler.compile()?

@@ -14,11 +14,13 @@ use hexpm::version::Version;
 use crate::{build, cli};
 
 pub fn run() -> Result<()> {
+    let paths = crate::find_project_paths()?;
     // When running gleam fix we want all the compilation warnings to be hidden,
     // at the same time we need to access those to apply the fixes: so we
     // accumulate those into a vector.
     let warnings = Rc::new(VectorWarningEmitterIO::new());
     let _built = build::main_with_warnings(
+        &paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -28,7 +30,7 @@ pub fn run() -> Result<()> {
             target: None,
             no_print_progress: false,
         },
-        build::download_dependencies(cli::Reporter::new())?,
+        build::download_dependencies(&paths, cli::Reporter::new())?,
         warnings.clone(),
     )?;
     let warnings = warnings.take();
