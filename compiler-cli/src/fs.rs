@@ -2,8 +2,8 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{parse_os, Error, FileIoAction, FileKind, ShellCommandFailureReason, OS},
     io::{
-        BeamCompiler, CommandExecutor, Content, DirEntry, FileSystemReader, FileSystemWriter,
-        OutputFile, ReadDir, Stdio, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
+        FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
@@ -186,21 +186,21 @@ impl FileSystemWriter for ProjectIO {
 }
 
 impl CommandExecutor for ProjectIO {
-    fn exec(
-        &self,
-        program: &str,
-        args: &[String],
-        env: &[(&str, String)],
-        cwd: Option<&Utf8Path>,
-        stdio: Stdio,
-    ) -> Result<i32, Error> {
+    fn exec(&self, command: Command) -> Result<i32, Error> {
+        let Command {
+            program,
+            args,
+            env,
+            cwd,
+            stdio,
+        } = command;
         tracing::trace!(program=program, args=?args.join(" "), env=?env, cwd=?cwd, "command_exec");
-        let result = std::process::Command::new(program)
+        let result = std::process::Command::new(&program)
             .args(args)
             .stdin(stdio.get_process_stdio())
             .stdout(stdio.get_process_stdio())
-            .envs(env.iter().map(|pair| (pair.0, &pair.1)))
-            .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./")))
+            .envs(env.iter().map(|pair| (&pair.0, &pair.1)))
+            .current_dir(cwd.unwrap_or_else(|| Utf8Path::new("./").to_path_buf()))
             .status();
 
         match result {
@@ -208,12 +208,12 @@ impl CommandExecutor for ProjectIO {
 
             Err(error) => Err(match error.kind() {
                 io::ErrorKind::NotFound => Error::ShellProgramNotFound {
-                    program: program.to_string(),
+                    program,
                     os: get_os(),
                 },
 
                 other => Error::ShellCommand {
-                    program: program.to_string(),
+                    program,
                     reason: ShellCommandFailureReason::IoError(other),
                 },
             }),
@@ -679,7 +679,14 @@ pub fn git_init(path: &Utf8Path) -> Result<(), Error> {
 
     let args = vec!["init".into(), "--quiet".into(), path.to_string()];
 
-    match ProjectIO::new().exec("git", &args, &[], None, Stdio::Inherit) {
+    let command = Command {
+        program: "git".to_string(),
+        args,
+        env: vec![],
+        cwd: None,
+        stdio: Stdio::Inherit,
+    };
+    match ProjectIO::new().exec(command) {
         Ok(_) => Ok(()),
         Err(err) => match err {
             Error::ShellProgramNotFound { .. } => Ok(()),

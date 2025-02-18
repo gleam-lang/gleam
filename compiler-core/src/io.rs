@@ -307,14 +307,17 @@ fn files_with_extension<'a>(
 
 /// A trait used to run other programs.
 pub trait CommandExecutor {
-    fn exec(
-        &self,
-        program: &str,
-        args: &[String],
-        env: &[(&str, String)],
-        cwd: Option<&Utf8Path>,
-        stdio: Stdio,
-    ) -> Result<i32, Error>;
+    fn exec(&self, command: Command) -> Result<i32, Error>;
+}
+
+/// A command one can run with a `CommandExecutor`
+#[derive(Debug, Eq, PartialEq)]
+pub struct Command {
+    pub program: String,
+    pub args: Vec<String>,
+    pub env: Vec<(String, String)>,
+    pub cwd: Option<Utf8PathBuf>,
+    pub stdio: Stdio,
 }
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]

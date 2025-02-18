@@ -6,7 +6,7 @@ use debug_ignore::DebugIgnore;
 use crate::{
     error::Error,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
+        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
         FileSystemWriter, ReadDir, Stdio, WrappedReader,
     },
     Result,
@@ -157,14 +157,7 @@ impl<IO> CommandExecutor for FileSystemProxy<IO>
 where
     IO: CommandExecutor,
 {
-    fn exec(
-        &self,
-        _program: &str,
-        _args: &[String],
-        _env: &[(&str, String)],
-        _cwd: Option<&Utf8Path>,
-        _stdio: Stdio,
-    ) -> Result<i32> {
+    fn exec(&self, _command: Command) -> Result<i32> {
         panic!("The language server is not permitted to create subprocesses")
     }
 }

@@ -424,14 +424,7 @@ impl io::Write for InMemoryFile {
 }
 
 impl CommandExecutor for InMemoryFileSystem {
-    fn exec(
-        &self,
-        _program: &str,
-        _args: &[String],
-        _env: &[(&str, String)],
-        _cwd: Option<&Utf8Path>,
-        _stdio: Stdio,
-    ) -> Result<i32, Error> {
+    fn exec(&self, _command: Command) -> Result<i32, Error> {
         Ok(0) // Always succeed.
     }
 }
