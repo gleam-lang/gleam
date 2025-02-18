@@ -5116,13 +5116,13 @@ pub type Wibble {
 }
 
 #[test]
-fn no_code_action_to_generate_json_encoder_for_multi_variant_type() {
-    assert_no_code_actions!(
+fn generate_json_encoder_for_multi_variant_type() {
+    assert_code_action!(
         GENERATE_JSON_ENCODER,
         "
 pub type Wibble {
-  Wibble(wibble: Int)
-  Wobble(wobble: Float)
+  Wibble(wibble: Int, next: Wibble)
+  Wobble(wobble: Float, text: String, values: List(Bool))
 }
 ",
         find_position_of("type").to_selection()

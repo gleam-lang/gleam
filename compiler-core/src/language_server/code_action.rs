@@ -3299,6 +3299,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         constructor: &'a TypedRecordConstructor,
         type_name: EcoString,
         record_name: EcoString,
+        variant_tag: Option<EcoString>,
         indent: usize,
     ) -> Option<EcoString> {
         let fields = constructor
@@ -3322,12 +3323,16 @@ impl<'a> GenerateJsonEncoder<'a> {
             .map(|field| encoder_printer.encode_field(&record_name, field, indent + 2))
             .join(",\n");
 
+        let indent = " ".repeat(indent);
+        let json_module = self.printer.print_module(JSON_MODULE);
+
         Some(eco_format!(
-            "{json_module}.object([
+            "{json_module}.object([{tag}
 {encoders},
 {indent}])",
-            indent = " ".repeat(indent),
-            json_module = self.printer.print_module(JSON_MODULE)
+            tag = variant_tag
+                .map(|tag| eco_format!("\n{indent}  #(\"type\", {json_module}.string(\"{tag}\"))"))
+                .unwrap_or_default()
         ))
     }
 }
@@ -3338,7 +3343,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
         if !overlaps(self.params.range, range) {
             return;
         }
-        let record_name = custom_type.name.to_snake_case();
+        let record_name: EcoString = custom_type.name.to_snake_case().into();
 
         let Some(encoder) = (match custom_type.constructors.as_slice() {
             // We can't generate an encoder for an external type
@@ -3346,10 +3351,34 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             [constructor] => self.generate_encoder(
                 constructor,
                 custom_type.name.clone(),
-                EcoString::from(&record_name),
+                record_name.clone(),
+                None,
                 2,
             ),
-            _ => return,
+            constructors => constructors
+                .iter()
+                .map(|constructor| {
+                    Some(eco_format!(
+                        "    {name}(..) -> {encoder}",
+                        name = constructor.name,
+                        encoder = self.generate_encoder(
+                            constructor,
+                            custom_type.name.clone(),
+                            record_name.clone(),
+                            Some(constructor.name.to_snake_case().into()),
+                            4
+                        )?
+                    ))
+                })
+                .collect::<Option<Vec<_>>>()
+                .map(|cases| {
+                    eco_format!(
+                        "case {record_name} {{
+{cases}
+  }}",
+                        cases = cases.join("\n")
+                    )
+                }),
         }) else {
             return;
         };
