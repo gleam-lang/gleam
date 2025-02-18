@@ -19,7 +19,7 @@ use std::{io::Write, path::PathBuf, time::Instant};
 use crate::{build, cli, docs, fs, http::HttpClient};
 
 pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<()> {
-    let mut config = crate::config::root_config(&paths)?;
+    let mut config = crate::config::root_config(paths)?;
 
     let should_publish = check_for_gleam_prefix(&config)?
         && check_for_version_zero(&config)?
@@ -35,14 +35,14 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         data: package_tarball,
         src_files_added,
         generated_files_added,
-    } = do_build_hex_tarball(&paths, &mut config)?;
+    } = do_build_hex_tarball(paths, &mut config)?;
 
     check_for_name_squatting(&compile_result)?;
     check_for_multiple_top_level_modules(&compile_result, i_am_sure)?;
 
     // Build HTML documentation
     let docs_tarball = fs::create_tar_archive(docs::build_documentation(
-        &paths,
+        paths,
         &config,
         &mut compile_result,
         DocContext::HexPublish,

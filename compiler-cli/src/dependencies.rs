@@ -50,12 +50,12 @@ static UTF8_SYMBOLS: Symbols = Symbols {
 };
 
 pub fn list(paths: &ProjectPaths) -> Result<()> {
-    let (_, manifest) = get_manifest_details(&paths)?;
+    let (_, manifest) = get_manifest_details(paths)?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
 pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
-    let (config, manifest) = get_manifest_details(&paths)?;
+    let (config, manifest) = get_manifest_details(paths)?;
 
     // Initialize the root package since it is not part of the manifest
     let root_package = ManifestPackage {
@@ -78,9 +78,9 @@ pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
 
 fn get_manifest_details(paths: &ProjectPaths) -> Result<(PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
-    let config = crate::config::root_config(&paths)?;
+    let config = crate::config::root_config(paths)?;
     let (_, manifest) = get_manifest(
-        &paths,
+        paths,
         runtime.handle().clone(),
         Mode::Dev,
         &config,
@@ -210,7 +210,7 @@ pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
 
     // Update specific packages
     _ = download(
-        &paths,
+        paths,
         cli::Reporter::new(),
         None,
         packages.into_iter().map(EcoString::from).collect(),
