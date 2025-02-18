@@ -1,20 +1,20 @@
-use camino::{Utf8Path, Utf8PathBuf};
-
 use gleam_core::{
     error::{FileIoAction, FileKind},
+    paths::ProjectPaths,
     Error, Result,
 };
 
 use crate::{cli, fs};
 
-pub fn command(packages: Vec<String>) -> Result<()> {
+pub fn command(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     // Read gleam.toml so we can remove deps from it
-    let mut toml = fs::read("gleam.toml")?
+    let root_config = paths.root_config();
+    let mut toml = fs::read(&root_config)?
         .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {
             kind: FileKind::File,
             action: FileIoAction::Parse,
-            path: Utf8PathBuf::from("gleam.toml"),
+            path: root_config.to_path_buf(),
             err: Some(e.to_string()),
         })?;
 
@@ -43,9 +43,7 @@ pub fn command(packages: Vec<String>) -> Result<()> {
     }
 
     // Write the updated config
-    fs::write(Utf8Path::new("gleam.toml"), &toml.to_string())?;
-    let paths = crate::find_project_paths()?;
-
+    fs::write(root_config.as_path(), &toml.to_string())?;
     _ = crate::dependencies::cleanup(&paths, cli::Reporter::new())?;
 
     for package_to_remove in packages {
