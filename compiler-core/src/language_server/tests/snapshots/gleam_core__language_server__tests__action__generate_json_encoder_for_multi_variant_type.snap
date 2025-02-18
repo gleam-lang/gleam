@@ -1,0 +1,36 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble(wibble: Int, next: Wibble)\n  Wobble(wobble: Float, text: String, values: List(Bool))\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble(wibble: Int, next: Wibble)
+  Wobble(wobble: Float, text: String, values: List(Bool))
+}
+
+
+----- AFTER ACTION
+import gleam/json
+
+pub type Wibble {
+  Wibble(wibble: Int, next: Wibble)
+  Wobble(wobble: Float, text: String, values: List(Bool))
+}
+
+fn encode_wibble(wibble: Wibble) -> json.Json {
+  case wibble {
+    Wibble(..) -> json.object([
+      #("type", json.string("wibble"))
+      #("wibble", json.int(wibble.wibble)),
+      #("next", encode_wibble(wibble.next)),
+    ])
+    Wobble(..) -> json.object([
+      #("type", json.string("wobble"))
+      #("wobble", json.float(wibble.wobble)),
+      #("text", json.string(wibble.text)),
+      #("values", json.array(wibble.values, json.bool)),
+    ])
+  }
+}
