@@ -574,7 +574,7 @@ fn parse_and_run_command() -> Result<(), Error> {
 
         Command::Add { packages, dev } => add::command(packages, dev),
 
-        Command::Remove { packages } => remove::command(packages),
+        Command::Remove { packages } => remove::command(&paths, packages),
 
         Command::Update(options) => dependencies::update(options.packages),
 
