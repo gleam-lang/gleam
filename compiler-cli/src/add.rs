@@ -29,8 +29,8 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
     )?;
 
     // Read gleam.toml and manifest.toml so we can insert new deps into it
-    let mut gleam_toml = read_toml_edit(paths.root_config().as_str())?;
-    let mut manifest_toml = read_toml_edit(paths.manifest().as_str())?;
+    let mut gleam_toml = read_toml_edit(&paths.root_config())?;
+    let mut manifest_toml = read_toml_edit(&paths.manifest())?;
 
     // Insert the new deps
     for (added_package, _) in new_package_requirements {
@@ -73,19 +73,13 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
     }
 
     // Write the updated config
-    fs::write(
-        Utf8Path::new(paths.root_config().as_str()),
-        &gleam_toml.to_string(),
-    )?;
-    fs::write(
-        Utf8Path::new(paths.manifest().as_str()),
-        &manifest_toml.to_string(),
-    )?;
+    fs::write(&paths.root_config(), &gleam_toml.to_string())?;
+    fs::write(&paths.manifest(), &manifest_toml.to_string())?;
 
     Ok(())
 }
 
-fn read_toml_edit(name: &str) -> Result<toml_edit::DocumentMut, Error> {
+fn read_toml_edit(name: &Utf8Path) -> Result<toml_edit::DocumentMut, Error> {
     fs::read(name)?
         .parse::<toml_edit::DocumentMut>()
         .map_err(|e| Error::FileIo {
