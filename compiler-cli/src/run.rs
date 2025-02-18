@@ -7,7 +7,7 @@ use gleam_core::{
     build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
     error::Error,
-    io::{CommandExecutor, Stdio},
+    io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
 };
@@ -30,6 +30,28 @@ pub fn command(
     which: Which,
     no_print_progress: bool,
 ) -> Result<(), Error> {
+    let command = setup(
+        paths,
+        arguments,
+        target,
+        runtime,
+        module,
+        which,
+        no_print_progress,
+    )?;
+    let status = ProjectIO::new().exec(command)?;
+    std::process::exit(status);
+}
+
+fn setup(
+    paths: &ProjectPaths,
+    arguments: Vec<String>,
+    target: Option<Target>,
+    runtime: Option<Runtime>,
+    module: Option<String>,
+    which: Which,
+    no_print_progress: bool,
+) -> Result<Command, Error> {
     // Validate the module path
     if let Some(mod_path) = &module {
         if !is_gleam_module(mod_path) {
@@ -106,17 +128,17 @@ pub fn command(
 
     telemetry.running(&format!("{module}.main"));
 
-    // Run the command
-    let status = match target {
+    // Get the command to run the project.
+    match target {
         Target::Erlang => match runtime {
             Some(r) => Err(Error::InvalidRuntime {
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang(paths, &root_config.name, &module, arguments),
+            _ => run_erlang_command(paths, &root_config.name, &module, arguments),
         },
         Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
-            Runtime::Deno => run_javascript_deno(
+            Runtime::Deno => run_javascript_deno_command(
                 paths,
                 &root_config,
                 &main_function.package,
@@ -124,21 +146,21 @@ pub fn command(
                 arguments,
             ),
             Runtime::NodeJs => {
-                run_javascript_node(paths, &main_function.package, &module, arguments)
+                run_javascript_node_command(paths, &main_function.package, &module, arguments)
             }
-            Runtime::Bun => run_javascript_bun(paths, &main_function.package, &module, arguments),
+            Runtime::Bun => {
+                run_javascript_bun_command(paths, &main_function.package, &module, arguments)
+            }
         },
-    }?;
-
-    std::process::exit(status);
+    }
 }
 
-fn run_erlang(
+fn run_erlang_command(
     paths: &ProjectPaths,
     package: &str,
     module: &str,
     arguments: Vec<String>,
-) -> Result<i32, Error> {
+) -> Result<Command, Error> {
     let mut args = vec![];
 
     // Specify locations of Erlang applications
@@ -164,15 +186,21 @@ fn run_erlang(
         args.push(argument);
     }
 
-    ProjectIO::new().exec("erl", &args, &[], None, Stdio::Inherit)
+    Ok(Command {
+        program: "erl".to_string(),
+        args,
+        env: vec![],
+        cwd: None,
+        stdio: Stdio::Inherit,
+    })
 }
 
-fn run_javascript_bun(
+fn run_javascript_bun_command(
     paths: &ProjectPaths,
     package: &str,
     module: &str,
     arguments: Vec<String>,
-) -> Result<i32, Error> {
+) -> Result<Command, Error> {
     let mut args = vec!["run".to_string()];
     let entry = write_javascript_entrypoint(paths, package, module)?;
 
@@ -182,15 +210,21 @@ fn run_javascript_bun(
         args.push(arg);
     }
 
-    ProjectIO::new().exec("bun", &args, &[], None, Stdio::Inherit)
+    Ok(Command {
+        program: "bun".to_string(),
+        args,
+        env: vec![],
+        cwd: None,
+        stdio: Stdio::Inherit,
+    })
 }
 
-fn run_javascript_node(
+fn run_javascript_node_command(
     paths: &ProjectPaths,
     package: &str,
     module: &str,
     arguments: Vec<String>,
-) -> Result<i32, Error> {
+) -> Result<Command, Error> {
     let mut args = vec![];
     let entry = write_javascript_entrypoint(paths, package, module)?;
 
@@ -200,7 +234,13 @@ fn run_javascript_node(
         args.push(argument);
     }
 
-    ProjectIO::new().exec("node", &args, &[], None, Stdio::Inherit)
+    Ok(Command {
+        program: "node".to_string(),
+        args,
+        env: vec![],
+        cwd: None,
+        stdio: Stdio::Inherit,
+    })
 }
 
 fn write_javascript_entrypoint(
@@ -221,13 +261,13 @@ main();
     Ok(path)
 }
 
-fn run_javascript_deno(
+fn run_javascript_deno_command(
     paths: &ProjectPaths,
     config: &PackageConfig,
     package: &str,
     module: &str,
     arguments: Vec<String>,
-) -> Result<i32, Error> {
+) -> Result<Command, Error> {
     let mut args = vec![];
 
     // Run the main function.
@@ -294,7 +334,13 @@ fn run_javascript_deno(
         args.push(argument);
     }
 
-    ProjectIO::new().exec("deno", &args, &[], None, Stdio::Inherit)
+    Ok(Command {
+        program: "deno".to_string(),
+        args,
+        env: vec![],
+        cwd: None,
+        stdio: Stdio::Inherit,
+    })
 }
 
 fn add_deno_flag(args: &mut Vec<String>, flag: &str, flags: &DenoFlag) {

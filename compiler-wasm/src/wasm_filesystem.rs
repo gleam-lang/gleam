@@ -1,7 +1,7 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, CommandExecutor, FileSystemReader,
+        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
         FileSystemWriter, ReadDir, Stdio, WrappedReader,
     },
     Error, Result,
@@ -20,14 +20,7 @@ impl WasmFileSystem {
 }
 
 impl CommandExecutor for WasmFileSystem {
-    fn exec(
-        &self,
-        _program: &str,
-        _args: &[String],
-        _env: &[(&str, String)],
-        _cwd: Option<&Utf8Path>,
-        _stdio: Stdio,
-    ) -> Result<i32, Error> {
+    fn exec(&self, _command: Command) -> Result<i32, Error> {
         Ok(0) // Always succeed.
     }
 }
