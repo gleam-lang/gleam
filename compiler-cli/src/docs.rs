@@ -41,14 +41,14 @@ pub struct BuildOptions {
 }
 
 pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
-    let config = crate::config::root_config(&paths)?;
+    let config = crate::config::root_config(paths)?;
 
     // Reset the build directory so we know the state of the project
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
     let out = paths.build_documentation_directory(&config.name);
     let mut built = crate::build::main(
-        &paths,
+        paths,
         Options {
             mode: Mode::Prod,
             target: options.target,
@@ -58,9 +58,9 @@ pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
             root_target_support: TargetSupport::Enforced,
             no_print_progress: false,
         },
-        crate::build::download_dependencies(&paths, cli::Reporter::new())?,
+        crate::build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
-    let outputs = build_documentation(&paths, &config, &mut built.root_package, DocContext::Build)?;
+    let outputs = build_documentation(paths, &config, &mut built.root_package, DocContext::Build)?;
 
     // Write
     crate::fs::delete_directory(&out)?;
@@ -110,7 +110,7 @@ pub(crate) fn build_documentation(
     }];
     pages.extend(config.documentation.pages.iter().cloned());
     let mut outputs = gleam_core::docs::generate_html(
-        &paths,
+        paths,
         config,
         compiled.modules.as_slice(),
         &pages,
@@ -127,7 +127,7 @@ pub(crate) fn build_documentation(
 }
 
 pub fn publish(paths: &ProjectPaths) -> Result<()> {
-    let config = crate::config::root_config(&paths)?;
+    let config = crate::config::root_config(paths)?;
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let hex_config = hexpm::Config::new();
@@ -138,7 +138,7 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
     crate::fs::delete_directory(&paths.build_directory_for_target(Mode::Prod, config.target))?;
 
     let mut built = crate::build::main(
-        &paths,
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -148,10 +148,10 @@ pub fn publish(paths: &ProjectPaths) -> Result<()> {
             target: None,
             no_print_progress: false,
         },
-        crate::build::download_dependencies(&paths, cli::Reporter::new())?,
+        crate::build::download_dependencies(paths, cli::Reporter::new())?,
     )?;
     let outputs = build_documentation(
-        &paths,
+        paths,
         &config,
         &mut built.root_package,
         DocContext::HexPublish,

@@ -47,9 +47,9 @@ pub fn command(
 
     // Download dependencies
     let manifest = if no_print_progress {
-        crate::build::download_dependencies(&paths, NullTelemetry)?
+        crate::build::download_dependencies(paths, NullTelemetry)?
     } else {
-        crate::build::download_dependencies(&paths, crate::cli::Reporter::new())?
+        crate::build::download_dependencies(paths, crate::cli::Reporter::new())?
     };
 
     // Get the config for the module that is being run to check the target.
@@ -57,13 +57,13 @@ pub fn command(
     // belongs to a dependency or to the root package.
     let (mod_config, package_kind) = match &module {
         Some(mod_path) => {
-            crate::config::find_package_config_for_module(mod_path, &manifest, &paths)?
+            crate::config::find_package_config_for_module(mod_path, &manifest, paths)?
         }
-        _ => (crate::config::root_config(&paths)?, PackageKind::Root),
+        _ => (crate::config::root_config(paths)?, PackageKind::Root),
     };
 
     // The root config is required to run the project.
-    let root_config = crate::config::root_config(&paths)?;
+    let root_config = crate::config::root_config(paths)?;
 
     // Determine which module to run
     let module = module.unwrap_or(match which {
@@ -96,7 +96,7 @@ pub fn command(
         no_print_progress,
     };
 
-    let built = crate::build::main(&paths, options, manifest)?;
+    let built = crate::build::main(paths, options, manifest)?;
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
@@ -113,20 +113,20 @@ pub fn command(
                 target: Target::Erlang,
                 invalid_runtime: r,
             }),
-            _ => run_erlang(&paths, &root_config.name, &module, arguments),
+            _ => run_erlang(paths, &root_config.name, &module, arguments),
         },
         Target::JavaScript => match runtime.unwrap_or(mod_config.javascript.runtime) {
             Runtime::Deno => run_javascript_deno(
-                &paths,
+                paths,
                 &root_config,
                 &main_function.package,
                 &module,
                 arguments,
             ),
             Runtime::NodeJs => {
-                run_javascript_node(&paths, &main_function.package, &module, arguments)
+                run_javascript_node(paths, &main_function.package, &module, arguments)
             }
-            Runtime::Bun => run_javascript_bun(&paths, &main_function.package, &module, arguments),
+            Runtime::Bun => run_javascript_bun(paths, &main_function.package, &module, arguments),
         },
     }?;
 

@@ -21,7 +21,7 @@ pub fn command(paths: &ProjectPaths, packages_to_add: Vec<String>, dev: bool) ->
     // Insert the new packages into the manifest and perform dependency
     // resolution to determine suitable versions
     let manifest = crate::dependencies::download(
-        &paths,
+        paths,
         cli::Reporter::new(),
         Some((new_package_requirements.clone(), dev)),
         Vec::new(),

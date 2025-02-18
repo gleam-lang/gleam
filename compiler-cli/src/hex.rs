@@ -56,7 +56,7 @@ pub fn revert(
 ) -> Result<()> {
     let (package, version) = match (package, version) {
         (Some(pkg), Some(ver)) => (pkg, ver),
-        (None, Some(ver)) => (crate::config::root_config(&paths)?.name.to_string(), ver),
+        (None, Some(ver)) => (crate::config::root_config(paths)?.name.to_string(), ver),
         (Some(pkg), None) => {
             let query = format!("Which version of package {pkg} do you want to revert?");
             let ver = cli::ask(&query)?;
@@ -64,7 +64,7 @@ pub fn revert(
         }
         (None, None) => {
             // Only want to access root_config once rather than twice
-            let config = crate::config::root_config(&paths)?;
+            let config = crate::config::root_config(paths)?;
             (config.name.to_string(), config.version.to_string())
         }
     };

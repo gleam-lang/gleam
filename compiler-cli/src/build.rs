@@ -30,7 +30,7 @@ pub(crate) fn main_with_warnings(
     warnings: Rc<dyn WarningEmitterIO>,
 ) -> Result<Built> {
     let perform_codegen = options.codegen;
-    let root_config = crate::config::root_config(&paths)?;
+    let root_config = crate::config::root_config(paths)?;
     let telemetry: &'static dyn Telemetry = if options.no_print_progress {
         &NullTelemetry
     } else {
@@ -39,7 +39,7 @@ pub(crate) fn main_with_warnings(
     let io = fs::ProjectIO::new();
     let start = Instant::now();
     let lock = BuildLock::new_target(
-        &paths,
+        paths,
         options.mode,
         options.target.unwrap_or(root_config.target),
     )?;

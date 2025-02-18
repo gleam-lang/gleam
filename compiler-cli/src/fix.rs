@@ -19,7 +19,7 @@ pub fn run(paths: &ProjectPaths) -> Result<()> {
     // accumulate those into a vector.
     let warnings = Rc::new(VectorWarningEmitterIO::new());
     let _built = build::main_with_warnings(
-        &paths,
+        paths,
         Options {
             root_target_support: TargetSupport::Enforced,
             warnings_as_errors: false,
@@ -29,12 +29,12 @@ pub fn run(paths: &ProjectPaths) -> Result<()> {
             target: None,
             no_print_progress: false,
         },
-        build::download_dependencies(&paths, cli::Reporter::new())?,
+        build::download_dependencies(paths, cli::Reporter::new())?,
         warnings.clone(),
     )?;
     let warnings = warnings.take();
 
-    fix_minimum_required_version(&paths, warnings)?;
+    fix_minimum_required_version(paths, warnings)?;
 
     println!("Done!");
     Ok(())
