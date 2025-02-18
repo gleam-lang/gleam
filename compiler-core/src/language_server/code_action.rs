@@ -3371,7 +3371,7 @@ impl<'a> GenerateJsonEncoder<'a> {
 {encoders},
 {indent}])",
             tag = variant_tag
-                .map(|tag| eco_format!("\n{indent}  #(\"type\", {json_module}.string(\"{tag}\"))"))
+                .map(|tag| eco_format!("\n{indent}  #(\"type\", {json_module}.string(\"{tag}\")),"))
                 .unwrap_or_default()
         ))
     }

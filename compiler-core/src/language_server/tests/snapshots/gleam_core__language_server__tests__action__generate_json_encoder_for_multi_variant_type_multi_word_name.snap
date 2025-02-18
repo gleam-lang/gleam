@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 5134
 expression: "\npub type Wibble {\n  OneTwoThree(wibble: Int, next: Wibble)\n  FourFive(wobble: Float, text: String, values: List(Bool))\n  SixSevenEight(one_two: Float)\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 
@@ -26,18 +24,18 @@ pub type Wibble {
 fn encode_wibble(wibble: Wibble) -> json.Json {
   case wibble {
     OneTwoThree(..) -> json.object([
-      #("type", json.string("one_two_three"))
+      #("type", json.string("one_two_three")),
       #("wibble", json.int(wibble.wibble)),
       #("next", encode_wibble(wibble.next)),
     ])
     FourFive(..) -> json.object([
-      #("type", json.string("four_five"))
+      #("type", json.string("four_five")),
       #("wobble", json.float(wibble.wobble)),
       #("text", json.string(wibble.text)),
       #("values", json.array(wibble.values, json.bool)),
     ])
     SixSevenEight(..) -> json.object([
-      #("type", json.string("six_seven_eight"))
+      #("type", json.string("six_seven_eight")),
       #("one_two", json.float(wibble.one_two)),
     ])
   }
