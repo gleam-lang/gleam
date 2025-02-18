@@ -3,8 +3,8 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
-        BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
-        FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader,
+        is_native_file_extension, BeamCompiler, Command, CommandExecutor, Content, DirEntry,
+        FileSystemReader, FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
@@ -414,7 +414,7 @@ pub fn native_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = 
         .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
-            matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
+            is_native_file_extension(extension)
         })
 }
 
