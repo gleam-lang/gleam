@@ -3836,8 +3836,8 @@ where
     }
 
     /// Will produce a pattern that can be used on the left hand side of a let
-    /// assignment to destructure a value of the given type. For example given this
-    /// type:
+    /// assignment to destructure a value of the given type. For example given
+    /// this type:
     ///
     /// ```gleam
     /// pub type Wibble {
@@ -3849,10 +3849,9 @@ where
     /// The pattern will use the correct qualified/unqualified name for the
     /// constructor if it comes from another package.
     ///
-    /// Be careful how:
-    /// - If the type is internal this function will return `None`.
-    /// - If the type has multiple constructors, it won't be safe to use
-    ///   in a let binding and this function will return `None`.
+    /// The function will only produce a list of patterns that can be used from
+    /// the current module. So if the type comes from another module it must be
+    /// public! Otherwise this function will return an empty vec.
     ///
     fn type_to_destructure_patterns(&mut self, type_: &Type) -> Option<Vec1<EcoString>> {
         match type_ {
@@ -4080,15 +4079,31 @@ fn get_type_constructors<'a, 'b, IO>(
 where
     IO: CommandExecutor + FileSystemWriter + FileSystemReader + BeamCompiler + Clone,
 {
-    let Some(module_interface) = compiler.get_module_interface(type_module) else {
+    let type_is_inside_current_module = current_module == type_module;
+    let module_interface = if !type_is_inside_current_module {
+        // If the type is outside of the module we're in, we can only pattern
+        // match on it if the module can be imported.
+        // The `get_module_interface` already takes care of making this check.
+        compiler.get_module_interface(type_module)
+    } else {
+        // However, if the type is defined in the module we're in, we can always
+        // pattern match on it. So we get the current module's interface.
+        compiler
+            .modules
+            .get(current_module)
+            .map(|module| &module.ast.type_info)
+    };
+
+    let Some(module_interface) = module_interface else {
         return vec![];
     };
+
     // If the type is in an internal module that is not the current one, we
     // cannot use its constructors!
-    let outside_of_current_module = *current_module != module_interface.name;
-    if outside_of_current_module && module_interface.is_internal {
+    if !type_is_inside_current_module && module_interface.is_internal {
         return vec![];
     }
+
     let Some(constructors) = module_interface.types_value_constructors.get(type_name) else {
         return vec![];
     };
@@ -4097,12 +4112,8 @@ where
         .variants
         .iter()
         .filter_map(|variant| {
-            let constructor = module_interface.get_public_value(&variant.name)?;
-            if constructor.publicity.is_public() {
-                Some(constructor)
-            } else if constructor.publicity.is_internal() && !outside_of_current_module {
-                // An internal constructor can only be used from within its own
-                // module, otherwise we don't suggest any action.
+            let constructor = module_interface.values.get(&variant.name)?;
+            if type_is_inside_current_module || constructor.publicity.is_public() {
                 Some(constructor)
             } else {
                 None
