@@ -2967,21 +2967,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "test-output"
-version = "1.5.0"
-dependencies = [
- "camino",
- "gleam-core",
- "im",
- "insta",
- "itertools",
- "regex",
- "test-helpers-rs",
- "toml",
- "walkdir",
-]
-
-[[package]]
 name = "test-package-compiler"
 version = "1.8.1"
 dependencies = [
