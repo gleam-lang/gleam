@@ -4547,6 +4547,41 @@ pub fn main(arg: Wibble) {
 }
 
 #[test]
+fn pattern_match_on_argument_with_private_type_from_same_module() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_ARGUMENT,
+        "
+type Wibble {
+  Wobble(Int, String)
+}
+
+pub fn main(arg: Wibble) {
+  todo
+}
+",
+        find_position_of("arg").select_until(find_position_of("Wibble").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn pattern_match_on_value_with_private_type_from_same_module() {
+    assert_code_action!(
+        PATTERN_MATCH_ON_VARIABLE,
+        "
+type Wibble {
+  Wobble(Int, String)
+}
+
+pub fn main() {
+  let wibble = Wobble(1, \"Hello\")
+  todo
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
 fn pattern_match_on_argument_will_use_qualified_name() {
     let src = "
 import wibble

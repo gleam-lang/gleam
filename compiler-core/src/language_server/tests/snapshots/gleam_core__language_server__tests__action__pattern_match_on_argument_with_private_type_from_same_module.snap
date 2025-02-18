@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\ntype Wibble {\n  Wobble(Int, String)\n}\n\npub fn main(arg: Wibble) {\n  todo\n}\n"
+---
+----- BEFORE ACTION
+
+type Wibble {
+  Wobble(Int, String)
+}
+
+pub fn main(arg: Wibble) {
+            ▔▔▔▔▔↑        
+  todo
+}
+
+
+----- AFTER ACTION
+
+type Wibble {
+  Wobble(Int, String)
+}
+
+pub fn main(arg: Wibble) {
+  let Wobble(int, string) = arg
+  todo
+}
