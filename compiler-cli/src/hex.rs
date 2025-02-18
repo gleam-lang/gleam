@@ -4,6 +4,7 @@ use crate::{cli, http::HttpClient};
 use gleam_core::{
     hex::{self, RetirementReason},
     io::HttpClient as _,
+    paths::ProjectPaths,
     Error, Result,
 };
 
@@ -48,10 +49,14 @@ pub fn unretire(package: String, version: String) -> Result<()> {
     Ok(())
 }
 
-pub fn revert(package: Option<String>, version: Option<String>) -> Result<()> {
+pub fn revert(
+    paths: &ProjectPaths,
+    package: Option<String>,
+    version: Option<String>,
+) -> Result<()> {
     let (package, version) = match (package, version) {
         (Some(pkg), Some(ver)) => (pkg, ver),
-        (None, Some(ver)) => (crate::config::root_config()?.name.to_string(), ver),
+        (None, Some(ver)) => (crate::config::root_config(&paths)?.name.to_string(), ver),
         (Some(pkg), None) => {
             let query = format!("Which version of package {pkg} do you want to revert?");
             let ver = cli::ask(&query)?;
@@ -59,7 +64,7 @@ pub fn revert(package: Option<String>, version: Option<String>) -> Result<()> {
         }
         (None, None) => {
             // Only want to access root_config once rather than twice
-            let config = crate::config::root_config()?;
+            let config = crate::config::root_config(&paths)?;
             (config.name.to_string(), config.version.to_string())
         }
     };

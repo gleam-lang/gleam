@@ -477,8 +477,25 @@ fn main() {
     initialise_logger();
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();
+    let result = parse_and_run_command();
+    match result {
+        Ok(_) => {
+            tracing::info!("Successfully completed");
+        }
+        Err(error) => {
+            tracing::error!(error = ?error, "Failed");
+            let mut buffer = stderr.buffer();
+            error.pretty(&mut buffer);
+            stderr.print(&buffer).expect("Final result error writing");
+            std::process::exit(1);
+        }
+    }
+}
 
-    let result = match Command::parse() {
+fn parse_and_run_command() -> Result<(), Error> {
+    let paths = find_project_paths()?;
+
+    match Command::parse() {
         Command::Build {
             target,
             warnings_as_errors,
@@ -542,7 +559,7 @@ fn main() {
 
         Command::Publish { replace, yes } => publish::command(replace, yes),
 
-        Command::PrintConfig => print_config(),
+        Command::PrintConfig => print_config(&paths),
 
         Command::Hex(Hex::Retire {
             package,
@@ -553,7 +570,7 @@ fn main() {
 
         Command::Hex(Hex::Unretire { package, version }) => hex::unretire(package, version),
 
-        Command::Hex(Hex::Revert { package, version }) => hex::revert(package, version),
+        Command::Hex(Hex::Revert { package, version }) => hex::revert(&paths, package, version),
 
         Command::Add { packages, dev } => add::command(packages, dev),
 
@@ -571,19 +588,6 @@ fn main() {
         Command::Export(ExportTarget::TypescriptPrelude) => export::typescript_prelude(),
         Command::Export(ExportTarget::PackageInterface { output }) => {
             export::package_interface(output)
-        }
-    };
-
-    match result {
-        Ok(_) => {
-            tracing::info!("Successfully completed");
-        }
-        Err(error) => {
-            tracing::error!(error = ?error, "Failed");
-            let mut buffer = stderr.buffer();
-            error.pretty(&mut buffer);
-            stderr.print(&buffer).expect("Final result error writing");
-            std::process::exit(1);
         }
     }
 }
@@ -629,8 +633,8 @@ fn command_build(
     Ok(())
 }
 
-fn print_config() -> Result<()> {
-    let config = root_config()?;
+fn print_config(paths: &ProjectPaths) -> Result<()> {
+    let config = root_config(paths)?;
     println!("{config:#?}");
     Ok(())
 }

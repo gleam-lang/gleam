@@ -3,7 +3,6 @@ use std::{rc::Rc, time::Instant};
 use gleam_core::{
     build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
-    paths::ProjectPaths,
     warning::WarningEmitterIO,
     Result,
 };
@@ -12,7 +11,7 @@ use crate::{
     build_lock::BuildLock,
     cli,
     dependencies::UseManifest,
-    fs::{self, get_current_directory, get_project_root, ConsoleWarningEmitter},
+    fs::{self, ConsoleWarningEmitter},
 };
 
 pub fn download_dependencies(telemetry: impl Telemetry) -> Result<Manifest> {
@@ -31,7 +30,7 @@ pub(crate) fn main_with_warnings(
 ) -> Result<Built> {
     let paths = crate::find_project_paths()?;
     let perform_codegen = options.codegen;
-    let root_config = crate::config::root_config()?;
+    let root_config = crate::config::root_config(&paths)?;
     let telemetry: &'static dyn Telemetry = if options.no_print_progress {
         &NullTelemetry
     } else {
@@ -44,7 +43,6 @@ pub(crate) fn main_with_warnings(
         options.mode,
         options.target.unwrap_or(root_config.target),
     )?;
-    let current_dir = get_project_root(get_current_directory()?)?;
 
     tracing::info!("Compiling packages");
     let result = {
@@ -55,7 +53,7 @@ pub(crate) fn main_with_warnings(
             manifest.packages,
             telemetry,
             warnings,
-            ProjectPaths::new(current_dir),
+            paths,
             io,
         );
         compiler.compile()?

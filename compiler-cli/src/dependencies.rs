@@ -80,7 +80,7 @@ fn get_manifest_details() -> Result<(Utf8PathBuf, PackageConfig, Manifest)> {
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");
     let project = fs::get_project_root(fs::get_current_directory()?)?;
     let paths = ProjectPaths::new(project.clone());
-    let config = crate::config::root_config()?;
+    let config = crate::config::root_config(&paths)?;
     let (_, manifest) = get_manifest(
         &paths,
         runtime.handle().clone(),

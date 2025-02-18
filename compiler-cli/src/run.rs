@@ -60,11 +60,11 @@ pub fn command(
         Some(mod_path) => {
             crate::config::find_package_config_for_module(mod_path, &manifest, &paths)?
         }
-        _ => (crate::config::root_config()?, PackageKind::Root),
+        _ => (crate::config::root_config(&paths)?, PackageKind::Root),
     };
 
     // The root config is required to run the project.
-    let root_config = crate::config::root_config()?;
+    let root_config = crate::config::root_config(&paths)?;
 
     // Determine which module to run
     let module = module.unwrap_or(match which {
