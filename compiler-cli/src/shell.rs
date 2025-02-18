@@ -2,12 +2,11 @@ use gleam_core::{
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
     error::Error,
+    paths::ProjectPaths,
 };
 use std::process::Command;
 
-pub fn command() -> Result<(), Error> {
-    let paths = crate::find_project_paths()?;
-
+pub fn command(paths: &ProjectPaths) -> Result<(), Error> {
     // Build project
     let _ = crate::build::main(
         &paths,

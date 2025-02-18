@@ -49,14 +49,12 @@ static UTF8_SYMBOLS: Symbols = Symbols {
     right: "─",
 };
 
-pub fn list() -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn list(paths: &ProjectPaths) -> Result<()> {
     let (_, manifest) = get_manifest_details(&paths)?;
     list_manifest_packages(std::io::stdout(), manifest)
 }
 
-pub fn tree(options: TreeOptions) -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn tree(paths: &ProjectPaths, options: TreeOptions) -> Result<()> {
     let (config, manifest) = get_manifest_details(&paths)?;
 
     // Initialize the root package since it is not part of the manifest
@@ -203,8 +201,7 @@ pub enum UseManifest {
     No,
 }
 
-pub fn update(packages: Vec<String>) -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn update(paths: &ProjectPaths, packages: Vec<String>) -> Result<()> {
     let use_manifest = if packages.is_empty() {
         UseManifest::No
     } else {

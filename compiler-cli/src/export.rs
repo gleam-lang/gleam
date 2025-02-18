@@ -27,8 +27,7 @@ static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-en
 /// - ebin
 /// - include
 /// - priv
-pub(crate) fn erlang_shipment() -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
     let target = Target::Erlang;
     let mode = Mode::Prod;
     let build = paths.build_directory_for_target(mode, target);
@@ -102,8 +101,7 @@ the {ENTRYPOINT_FILENAME} script.
     Ok(())
 }
 
-pub fn hex_tarball() -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn hex_tarball(paths: &ProjectPaths) -> Result<()> {
     let mut config = crate::config::root_config(&paths)?;
     let data: Vec<u8> = crate::publish::build_hex_tarball(&paths, &mut config)?;
 
@@ -146,6 +144,6 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
     built.root_package.attach_doc_and_module_comments();
 
     let out = gleam_core::docs::generate_json_package_interface(out, &built.root_package);
-    crate::fs::write_outputs_under(&[out], crate::find_project_paths()?.root())?;
+    crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

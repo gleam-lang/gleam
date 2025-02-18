@@ -22,6 +22,7 @@ pub enum Which {
 
 // TODO: test
 pub fn command(
+    paths: &ProjectPaths,
     arguments: Vec<String>,
     target: Option<Target>,
     runtime: Option<Runtime>,
@@ -29,8 +30,6 @@ pub fn command(
     which: Which,
     no_print_progress: bool,
 ) -> Result<(), Error> {
-    let paths = crate::find_project_paths()?;
-
     // Validate the module path
     if let Some(mod_path) = &module {
         if !is_gleam_module(mod_path) {

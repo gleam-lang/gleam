@@ -13,8 +13,7 @@ use hexpm::version::Version;
 
 use crate::{build, cli};
 
-pub fn run() -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn run(paths: &ProjectPaths) -> Result<()> {
     // When running gleam fix we want all the compilation warnings to be hidden,
     // at the same time we need to access those to apply the fixes: so we
     // accumulate those into a vector.

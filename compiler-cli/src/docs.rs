@@ -40,8 +40,7 @@ pub struct BuildOptions {
     pub target: Option<Target>,
 }
 
-pub fn build(options: BuildOptions) -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn build(paths: &ProjectPaths, options: BuildOptions) -> Result<()> {
     let config = crate::config::root_config(&paths)?;
 
     // Reset the build directory so we know the state of the project
@@ -127,8 +126,7 @@ pub(crate) fn build_documentation(
     Ok(outputs)
 }
 
-pub fn publish() -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn publish(paths: &ProjectPaths) -> Result<()> {
     let config = crate::config::root_config(&paths)?;
 
     let runtime = tokio::runtime::Runtime::new().expect("Unable to start Tokio async runtime");

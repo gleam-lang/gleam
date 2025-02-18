@@ -18,8 +18,7 @@ use std::{io::Write, path::PathBuf, time::Instant};
 
 use crate::{build, cli, docs, fs, http::HttpClient};
 
-pub fn command(replace: bool, i_am_sure: bool) -> Result<()> {
-    let paths = crate::find_project_paths()?;
+pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<()> {
     let mut config = crate::config::root_config(&paths)?;
 
     let should_publish = check_for_gleam_prefix(&config)?
