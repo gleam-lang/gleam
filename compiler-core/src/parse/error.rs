@@ -157,6 +157,13 @@ utf16_codepoint, utf32_codepoint, signed, unsigned, big, little, native, size, u
                     "See: https://tour.gleam.run/basics/lists/".into(),
                 ],
             ),
+            ParseErrorType::ListSpreadWithAnotherSpread => (
+                "I wasn't expecting a spread here",
+                vec![
+                    "Hint: use list.append(list1, list2) to join two lists.".into(),
+                    "See: https://hexdocs.pm/gleam_stdlib/gleam/list.html#append".into(),
+                ],
+            ),
             ParseErrorType::ListSpreadFollowedByElements => (
                 "I wasn't expecting elements after this",
                 vec![
@@ -375,6 +382,7 @@ pub enum ParseErrorType {
     UnknownTarget, // an unknown target was used
     ListSpreadWithoutElements, // Pointless spread: `[..xs]`
     ListSpreadFollowedByElements, // trying to append something after the spread: `[..xs, x]`
+    ListSpreadWithAnotherSpread, // trying to use multiple spreads: `[..xs, ..ys]`
     LowcaseBooleanPattern, // most likely user meant True or False in patterns
     UnexpectedLabel, // argument labels were provided, but are not supported in this context
     UnexpectedEof,
