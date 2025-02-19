@@ -620,6 +620,15 @@ where
                                 elements_after_tail = Some(elements);
                             }
                         };
+
+                        // Give a better error when there is a another spread
+                        // like `[..wibble, wobble, ..wabble]`
+                        if self.maybe_one(&Token::DotDot).is_some() {
+                          return parse_error(
+                              ParseErrorType::ListSpreadWithAnotherSpread,
+                              SrcSpan { start, end },
+                          );
+                        }
                     };
 
                     if tail.is_some() && !elements_end_with_comma {
