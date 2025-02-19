@@ -29,27 +29,27 @@ export class List {
 
   // @internal
   atLeastLength(desired) {
-    for (let _ of this) {
-      if (desired <= 0) return true;
-      desired--;
-    }
-    return desired <= 0;
+    let current = this;
+    while (desired-- > 0 && current) current = current.tail;
+    return current !== undefined;
   }
 
   // @internal
   hasLength(desired) {
-    for (let _ of this) {
-      if (desired <= 0) return false;
-      desired--;
-    }
-    return desired === 0;
+    let current = this;
+    while (desired-- > 0 && current) current = current.tail;
+    return desired === -1 && current instanceof Empty;
   }
 
   // @internal
   countLength() {
+    let current = this;
     let length = 0;
-    for (let _ of this) length++;
-    return length;
+    while (current) {
+      current = current.tail;
+      length++;
+    }
+    return length - 1;
   }
 }
 
