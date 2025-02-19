@@ -21,6 +21,11 @@
   be byte aligned, and the `bits` segment type is now supported in patterns.
   ([Richard Viney](https://github.com/richard-viney))
 
+- The code generated for list pattern matching on the JavaScript target is now
+  more efficient. Gleam code that relies heavily on list pattern matching can
+  now be up to twice as fast.
+  ([yoshi~](https://github.com/yoshi-monster))
+
 ### Build tool
 
 - The build tool now supports Git dependencies. For example:
