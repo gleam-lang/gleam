@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "const ints = [1, 2]\n\npub fn main() {\n  [5, 50]\n}"
+---
+----- BEFORE ACTION
+const ints = [1, 2]
+
+pub fn main() {
+  [5, 50]
+  ↑      
+}
+
+
+----- AFTER ACTION
+const ints = [1, 2]
+
+const ints_2 = [5, 50]
+
+pub fn main() {
+  ints_2
+}

@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+assertion_line: 4366
+expression: "pub fn main() {\n  let c = #([1, 2, 3], [3, 2, 1])\n}"
+snapshot_kind: text
+---
+----- BEFORE ACTION
+pub fn main() {
+  let c = #([1, 2, 3], [3, 2, 1])
+            ↑                    
+}
+
+
+----- AFTER ACTION
+const ints = [1, 2, 3]
+
+pub fn main() {
+  let c = #(ints, [3, 2, 1])
+}
