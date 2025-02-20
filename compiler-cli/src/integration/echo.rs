@@ -41,7 +41,6 @@ fn run_and_capture_output(
     target: Option<Target>,
     runtime: Option<Runtime>,
 ) -> String {
-    println!("{}", paths.build_directory());
     let _ = fs::delete_directory(&paths.build_directory()).expect("delete build directory content");
 
     let Command {
