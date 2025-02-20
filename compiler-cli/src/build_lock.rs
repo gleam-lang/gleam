@@ -1,9 +1,9 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
+    Error, Result,
     build::{Mode, Target, Telemetry},
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
-    Error, Result,
 };
 use strum::IntoEnumIterator;
 

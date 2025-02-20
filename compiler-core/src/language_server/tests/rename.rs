@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use lsp_types::{Position, RenameParams, TextDocumentPositionParams, Url, WorkDoneProgressParams};
 
-use crate::language_server::tests::{find_position_of, TestProject};
+use crate::language_server::tests::{TestProject, find_position_of};
 
 use super::hover;
 
@@ -50,12 +50,12 @@ fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -
 }
 
 macro_rules! assert_rename {
-    ($code:literal, $new_name:literal, $range:expr $(,)?) => {
+    ($code:literal, $new_name:literal, $range:expr_2021 $(,)?) => {
         let project = TestProject::for_source($code);
         assert_rename!(project, $new_name, $range);
     };
 
-    ($project:expr, $new_name:literal, $range:expr $(,)?) => {
+    ($project:expr_2021, $new_name:literal, $range:expr_2021 $(,)?) => {
         let src = $project.src;
         let range = $range.find_range(src);
         let result = apply_rename($project, $new_name, range.start);
@@ -69,12 +69,12 @@ macro_rules! assert_rename {
 }
 
 macro_rules! assert_no_rename {
-    ($code:literal, $new_name:literal, $range:expr $(,)?) => {
+    ($code:literal, $new_name:literal, $range:expr_2021 $(,)?) => {
         let project = TestProject::for_source($code);
         assert_no_rename!(project, $new_name, $range);
     };
 
-    ($project:expr, $new_name:literal, $range:expr $(,)?) => {
+    ($project:expr_2021, $new_name:literal, $range:expr_2021 $(,)?) => {
         let src = $project.src;
         let range = $range.find_range(src);
         let result = rename($project, $new_name, range.start);

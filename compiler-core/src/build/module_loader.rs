@@ -9,15 +9,15 @@ use ecow::EcoString;
 use serde::{Deserialize, Serialize};
 
 use super::{
-    package_compiler::{module_name, CacheMetadata, CachedModule, Input, UncompiledModule},
-    package_loader::CodegenRequired,
     Mode, Origin, SourceFingerprint, Target,
+    package_compiler::{CacheMetadata, CachedModule, Input, UncompiledModule, module_name},
+    package_loader::CodegenRequired,
 };
 use crate::{
+    Error, Result,
     error::{FileIoAction, FileKind},
     io::{CommandExecutor, FileSystemReader, FileSystemWriter},
     warning::{TypeWarningEmitter, WarningEmitter},
-    Error, Result,
 };
 
 #[derive(Debug)]

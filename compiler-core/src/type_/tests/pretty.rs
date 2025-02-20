@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
 use crate::type_::{
+    Type,
     prelude::{bool, int, tuple},
     pretty::Printer,
-    Type,
 };
 
 use super::Publicity;

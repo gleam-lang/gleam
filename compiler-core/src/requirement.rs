@@ -6,9 +6,9 @@ use crate::io::make_relative;
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use hexpm::version::Range;
+use serde::Deserialize;
 use serde::de::{self, Deserializer, MapAccess, Visitor};
 use serde::ser::{Serialize, SerializeMap, Serializer};
-use serde::Deserialize;
 
 #[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
 #[serde(untagged, remote = "Self")]

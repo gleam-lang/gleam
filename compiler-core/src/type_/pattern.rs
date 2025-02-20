@@ -8,7 +8,7 @@ use num_bigint::BigInt;
 ///
 use super::*;
 use crate::{
-    analyse::{name::check_name_case, Inferred},
+    analyse::{Inferred, name::check_name_case},
     ast::{
         AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
     },
@@ -464,16 +464,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }
 
                 // The right hand side may assign a variable, which is the suffix of the string
-                if let AssignName::Variable(right) = &right_side_assignment {
-                    self.insert_variable(
-                        right.as_ref(),
-                        string(),
-                        right_location,
-                        VariableOrigin::Variable(right.clone()),
-                    )
-                    .map_err(|e| convert_unify_error(e, location))?;
-                } else if let AssignName::Discard(right) = &right_side_assignment {
-                    self.check_name_case(right_location, right, Named::Discard);
+                match &right_side_assignment {
+                    AssignName::Variable(right) => {
+                        self.insert_variable(
+                            right.as_ref(),
+                            string(),
+                            right_location,
+                            VariableOrigin::Variable(right.clone()),
+                        )
+                        .map_err(|e| convert_unify_error(e, location))?;
+                    }
+                    AssignName::Discard(_) => {
+                        if let AssignName::Discard(right) = &right_side_assignment {
+                            self.check_name_case(right_location, right, Named::Discard);
+                        }
+                    }
                 };
 
                 Ok(Pattern::StringPrefix {

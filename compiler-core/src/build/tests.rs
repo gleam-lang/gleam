@@ -1,6 +1,6 @@
-use crate::{manifest::ManifestPackage, Error};
+use crate::{Error, manifest::ManifestPackage};
 
-use super::project_compiler::{usable_build_tools, BuildTool};
+use super::project_compiler::{BuildTool, usable_build_tools};
 
 #[test]
 fn usable_build_tool_unknown() {

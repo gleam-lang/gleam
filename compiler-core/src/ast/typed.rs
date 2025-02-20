@@ -3,7 +3,7 @@ use std::sync::OnceLock;
 use type_::{FieldMap, TypedCallArg};
 
 use super::*;
-use crate::type_::{bool, HasType, Type, ValueConstructorVariant};
+use crate::type_::{HasType, Type, ValueConstructorVariant, bool};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {

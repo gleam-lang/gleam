@@ -1,6 +1,6 @@
 use super::{
-    expression::{ArgumentKind, CallKind},
     FieldAccessUsage,
+    expression::{ArgumentKind, CallKind},
 };
 use crate::{
     ast::{BinOp, Layer, SrcSpan, TodoKind},

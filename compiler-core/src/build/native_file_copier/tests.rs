@@ -1,7 +1,7 @@
 use super::NativeFileCopier;
 use crate::{
     build::native_file_copier::CopiedNativeFiles,
-    io::{memory::InMemoryFileSystem, FileSystemWriter},
+    io::{FileSystemWriter, memory::InMemoryFileSystem},
 };
 use std::{
     collections::HashMap,

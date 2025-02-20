@@ -5,8 +5,8 @@ use itertools::Itertools;
 
 use crate::{
     docvec,
-    javascript::{JavaScriptCodegenTarget, INDENT},
-    pretty::{break_, concat, join, line, Document, Documentable},
+    javascript::{INDENT, JavaScriptCodegenTarget},
+    pretty::{Document, Documentable, break_, concat, join, line},
 };
 
 /// A collection of JavaScript import statements from Gleam imports and from

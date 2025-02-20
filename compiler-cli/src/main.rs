@@ -88,8 +88,8 @@ use std::str::FromStr;
 use camino::Utf8PathBuf;
 
 use clap::{
-    builder::{styling, PossibleValuesParser, Styles, TypedValueParser},
     Args, Parser, Subcommand,
+    builder::{PossibleValuesParser, Styles, TypedValueParser, styling},
 };
 use strum::VariantNames;
 

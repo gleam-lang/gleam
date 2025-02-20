@@ -54,25 +54,25 @@ pub mod extra;
 pub mod lexer;
 mod token;
 
+use crate::Warning;
 use crate::analyse::Inferred;
 use crate::ast::{
     Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
-    CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function, FunctionLiteralKind,
-    HasLocation, Import, Module, ModuleConstant, Pattern, Publicity, RecordBeingUpdated,
-    RecordConstructor, RecordConstructorArg, SrcSpan, Statement, TargetedDefinition, TodoKind,
-    TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar,
-    UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard, UntypedConstant,
-    UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern, UntypedRecordUpdateArg,
-    UntypedStatement, UntypedUseAssignment, Use, UseAssignment, CAPTURE_VARIABLE,
+    CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function,
+    FunctionLiteralKind, HasLocation, Import, Module, ModuleConstant, Pattern, Publicity,
+    RecordBeingUpdated, RecordConstructor, RecordConstructorArg, SrcSpan, Statement,
+    TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
+    TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
+    UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
+    UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use, UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
 use crate::parse::extra::ModuleExtra;
+use crate::type_::Deprecation;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
-use crate::type_::Deprecation;
 use crate::warning::{DeprecatedSyntaxWarning, WarningEmitter};
-use crate::Warning;
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use error::{LexicalError, ParseError, ParseErrorType};
@@ -82,7 +82,7 @@ use std::cmp::Ordering;
 use std::collections::VecDeque;
 use std::str::FromStr;
 use token::Token;
-use vec1::{vec1, Vec1};
+use vec1::{Vec1, vec1};
 
 #[cfg(test)]
 mod tests;
@@ -181,10 +181,9 @@ pub fn parse_statement_sequence(src: &str) -> Result<Vec1<UntypedStatement>, Par
     let mut parser = Parser::new(lex);
     let expr = parser.parse_statement_seq();
     let expr = parser.ensure_no_errors_or_remaining_input(expr)?;
-    if let Some((e, _)) = expr {
-        Ok(e)
-    } else {
-        parse_error(ParseErrorType::ExpectedExpr, SrcSpan { start: 0, end: 0 })
+    match expr {
+        Some((e, _)) => Ok(e),
+        _ => parse_error(ParseErrorType::ExpectedExpr, SrcSpan { start: 0, end: 0 }),
     }
 }
 
@@ -197,10 +196,9 @@ pub fn parse_const_value(src: &str) -> Result<Constant<(), ()>, ParseError> {
     let mut parser = Parser::new(lex);
     let expr = parser.parse_const_value();
     let expr = parser.ensure_no_errors_or_remaining_input(expr)?;
-    if let Some(e) = expr {
-        Ok(e)
-    } else {
-        parse_error(ParseErrorType::ExpectedExpr, SrcSpan { start: 0, end: 0 })
+    match expr {
+        Some(e) => Ok(e),
+        _ => parse_error(ParseErrorType::ExpectedExpr, SrcSpan { start: 0, end: 0 }),
     }
 }
 
@@ -420,25 +418,31 @@ where
                 }
             }
 
-            if let Some((op_s, t, op_e)) = self.tok0.take() {
-                if let Some(p) = precedence(&t) {
-                    // Is Op
-                    self.advance();
-                    last_op_start = op_s;
-                    last_op_end = op_e;
-                    let _ = handle_op(
-                        Some(((op_s, t, op_e), p)),
-                        &mut opstack,
-                        &mut estack,
-                        &do_reduce_expression,
-                    );
-                } else {
-                    // Is not Op
-                    self.tok0 = Some((op_s, t, op_e));
+            match self.tok0.take() {
+                Some((op_s, t, op_e)) => {
+                    match precedence(&t) {
+                        Some(p) => {
+                            // Is Op
+                            self.advance();
+                            last_op_start = op_s;
+                            last_op_end = op_e;
+                            let _ = handle_op(
+                                Some(((op_s, t, op_e), p)),
+                                &mut opstack,
+                                &mut estack,
+                                &do_reduce_expression,
+                            );
+                        }
+                        _ => {
+                            // Is not Op
+                            self.tok0 = Some((op_s, t, op_e));
+                            break;
+                        }
+                    }
+                }
+                _ => {
                     break;
                 }
-            } else {
-                break;
             }
         }
 
@@ -758,7 +762,7 @@ where
                         return parse_error(
                             ParseErrorType::ExpectedExpr,
                             SrcSpan { start, end: start },
-                        )
+                        );
                     }
                 }
             }
@@ -778,7 +782,7 @@ where
                         return parse_error(
                             ParseErrorType::ExpectedExpr,
                             SrcSpan { start, end: start },
-                        )
+                        );
                     }
                 }
             }
@@ -791,115 +795,126 @@ where
 
         // field access and call can stack up
         loop {
-            if let Some((dot_start, _)) = self.maybe_one(&Token::Dot) {
-                let start = expr.location().start;
-                // field access
-                match self.tok0.take() {
-                    // tuple access
-                    Some((
-                        _,
-                        Token::Int {
-                            value,
-                            int_value: _,
-                        },
-                        end,
-                    )) => {
-                        self.advance();
-                        let v = value.replace("_", "");
-                        if let Ok(index) = u64::from_str(&v) {
-                            expr = UntypedExpr::TupleIndex {
-                                location: SrcSpan { start, end },
-                                index,
-                                tuple: Box::new(expr),
+            match self.maybe_one(&Token::Dot) {
+                Some((dot_start, _)) => {
+                    let start = expr.location().start;
+                    // field access
+                    match self.tok0.take() {
+                        // tuple access
+                        Some((
+                            _,
+                            Token::Int {
+                                value,
+                                int_value: _,
+                            },
+                            end,
+                        )) => {
+                            self.advance();
+                            let v = value.replace("_", "");
+                            match u64::from_str(&v) {
+                                Ok(index) => {
+                                    expr = UntypedExpr::TupleIndex {
+                                        location: SrcSpan { start, end },
+                                        index,
+                                        tuple: Box::new(expr),
+                                    }
+                                }
+                                _ => {
+                                    return parse_error(
+                                        ParseErrorType::InvalidTupleAccess,
+                                        SrcSpan { start, end },
+                                    );
+                                }
                             }
-                        } else {
-                            return parse_error(
-                                ParseErrorType::InvalidTupleAccess,
-                                SrcSpan { start, end },
-                            );
                         }
-                    }
 
-                    Some((label_start, Token::Name { name: label }, end)) => {
-                        self.advance();
-                        expr = UntypedExpr::FieldAccess {
-                            location: SrcSpan { start, end },
-                            label_location: SrcSpan {
-                                start: label_start,
-                                end,
-                            },
-                            label,
-                            container: Box::new(expr),
+                        Some((label_start, Token::Name { name: label }, end)) => {
+                            self.advance();
+                            expr = UntypedExpr::FieldAccess {
+                                location: SrcSpan { start, end },
+                                label_location: SrcSpan {
+                                    start: label_start,
+                                    end,
+                                },
+                                label,
+                                container: Box::new(expr),
+                            }
                         }
-                    }
 
-                    Some((label_start, Token::UpName { name: label }, end)) => {
-                        self.advance();
-                        expr = UntypedExpr::FieldAccess {
-                            location: SrcSpan { start, end },
-                            label_location: SrcSpan {
-                                start: label_start,
-                                end,
-                            },
-                            label,
-                            container: Box::new(expr),
+                        Some((label_start, Token::UpName { name: label }, end)) => {
+                            self.advance();
+                            expr = UntypedExpr::FieldAccess {
+                                location: SrcSpan { start, end },
+                                label_location: SrcSpan {
+                                    start: label_start,
+                                    end,
+                                },
+                                label,
+                                container: Box::new(expr),
+                            }
                         }
-                    }
 
-                    t0 => {
-                        // parse a field access with no label
-                        self.tok0 = t0;
-                        let end = dot_start + 1;
-                        expr = UntypedExpr::FieldAccess {
-                            location: SrcSpan { start, end },
-                            label_location: SrcSpan {
-                                start: dot_start,
-                                end,
-                            },
-                            label: "".into(),
-                            container: Box::new(expr),
-                        };
-                        return Ok(Some(expr));
+                        t0 => {
+                            // parse a field access with no label
+                            self.tok0 = t0;
+                            let end = dot_start + 1;
+                            expr = UntypedExpr::FieldAccess {
+                                location: SrcSpan { start, end },
+                                label_location: SrcSpan {
+                                    start: dot_start,
+                                    end,
+                                },
+                                label: "".into(),
+                                container: Box::new(expr),
+                            };
+                            return Ok(Some(expr));
+                        }
                     }
                 }
-            } else if self.maybe_one(&Token::LeftParen).is_some() {
-                let start = expr.location().start;
-                if let Some((dot_s, _)) = self.maybe_one(&Token::DotDot) {
-                    // Record update
-                    let base = self.expect_expression()?;
-                    let base_e = base.location().end;
-                    let record = RecordBeingUpdated {
-                        base: Box::new(base),
-                        location: SrcSpan {
-                            start: dot_s,
-                            end: base_e,
-                        },
-                    };
-                    let mut args = vec![];
-                    if self.maybe_one(&Token::Comma).is_some() {
-                        args = Parser::series_of(
-                            self,
-                            &Parser::parse_record_update_arg,
-                            Some(&Token::Comma),
-                        )?;
-                    }
-                    let (_, end) = self.expect_one(&Token::RightParen)?;
+                _ => {
+                    if self.maybe_one(&Token::LeftParen).is_some() {
+                        let start = expr.location().start;
+                        match self.maybe_one(&Token::DotDot) {
+                            Some((dot_s, _)) => {
+                                // Record update
+                                let base = self.expect_expression()?;
+                                let base_e = base.location().end;
+                                let record = RecordBeingUpdated {
+                                    base: Box::new(base),
+                                    location: SrcSpan {
+                                        start: dot_s,
+                                        end: base_e,
+                                    },
+                                };
+                                let mut args = vec![];
+                                if self.maybe_one(&Token::Comma).is_some() {
+                                    args = Parser::series_of(
+                                        self,
+                                        &Parser::parse_record_update_arg,
+                                        Some(&Token::Comma),
+                                    )?;
+                                }
+                                let (_, end) = self.expect_one(&Token::RightParen)?;
 
-                    expr = UntypedExpr::RecordUpdate {
-                        location: SrcSpan { start, end },
-                        constructor: Box::new(expr),
-                        record,
-                        arguments: args,
-                    };
-                } else {
-                    // Call
-                    let args = self.parse_fn_args()?;
-                    let (_, end) = self.expect_one(&Token::RightParen)?;
-                    expr = make_call(expr, args, start, end)?;
+                                expr = UntypedExpr::RecordUpdate {
+                                    location: SrcSpan { start, end },
+                                    constructor: Box::new(expr),
+                                    record,
+                                    arguments: args,
+                                };
+                            }
+                            _ => {
+                                // Call
+                                let args = self.parse_fn_args()?;
+                                let (_, end) = self.expect_one(&Token::RightParen)?;
+                                expr = make_call(expr, args, start, end)?;
+                            }
+                        }
+                    } else {
+                        // done
+                        break;
+                    }
                 }
-            } else {
-                // done
-                break;
             }
         }
 
@@ -914,10 +929,11 @@ where
     // use a, b, c <- function(a, b)
     // use a, b, c, <- function(a, b)
     fn parse_use(&mut self, start: u32, end: u32) -> Result<UntypedStatement, ParseError> {
-        let assignments = if let Some((_, Token::LArrow, _)) = self.tok0 {
-            vec![]
-        } else {
-            Parser::series_of(self, &Parser::parse_use_assignment, Some(&Token::Comma))?
+        let assignments = match self.tok0 {
+            Some((_, Token::LArrow, _)) => {
+                vec![]
+            }
+            _ => Parser::series_of(self, &Parser::parse_use_assignment, Some(&Token::Comma))?,
         };
 
         _ = self.expect_one_following_series(&Token::LArrow, "a use variable assignment")?;
@@ -963,20 +979,22 @@ where
 
     // An assignment, with `Let` already consumed
     fn parse_assignment(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
-        let mut kind = if let Some((assert_start, Token::Assert, assert_end)) = self.tok0 {
-            _ = self.next_tok();
-            AssignmentKind::Assert {
-                location: SrcSpan::new(assert_start, assert_end),
-                message: None,
+        let mut kind = match self.tok0 {
+            Some((assert_start, Token::Assert, assert_end)) => {
+                _ = self.next_tok();
+                AssignmentKind::Assert {
+                    location: SrcSpan::new(assert_start, assert_end),
+                    message: None,
+                }
             }
-        } else {
-            AssignmentKind::Let
+            _ => AssignmentKind::Let,
         };
-        let pattern = if let Some(p) = self.parse_pattern()? {
-            p
-        } else {
-            // DUPE: 62884
-            return self.next_tok_unexpected(vec!["A pattern".into()])?;
+        let pattern = match self.parse_pattern()? {
+            Some(p) => p,
+            _ => {
+                // DUPE: 62884
+                return self.next_tok_unexpected(vec!["A pattern".into()])?;
+            }
         };
         let annotation = self.parse_type_annotation(&Token::Colon)?;
         let (eq_s, eq_e) = self.maybe_one(&Token::Equal).ok_or(ParseError {
@@ -1125,7 +1143,7 @@ where
                             return parse_error(
                                 ParseErrorType::InvalidModuleTypePattern,
                                 SrcSpan { start, end },
-                            )
+                            );
                         }
                     }
                 } else {
@@ -1134,7 +1152,7 @@ where
                             return parse_error(
                                 ParseErrorType::LowcaseBooleanPattern,
                                 SrcSpan { start, end },
-                            )
+                            );
                         }
                         _ => Pattern::Variable {
                             origin: VariableOrigin::Variable(name.clone()),
@@ -1304,35 +1322,39 @@ where
 
                 let mut elements_after_tail = None;
                 let mut dot_dot_location = None;
-                let tail = if let Some((dot_dot_start, Token::DotDot, dot_dot_end)) = self.tok0 {
-                    dot_dot_location = Some((dot_dot_start, dot_dot_end));
-                    if !elements.is_empty() && !elements_end_with_comma {
-                        self.warnings
-                            .push(DeprecatedSyntaxWarning::DeprecatedListPattern {
-                                location: SrcSpan {
-                                    start: dot_dot_start,
-                                    end: dot_dot_end,
-                                },
-                            });
-                    }
+                let tail = match self.tok0 {
+                    Some((dot_dot_start, Token::DotDot, dot_dot_end)) => {
+                        dot_dot_location = Some((dot_dot_start, dot_dot_end));
+                        if !elements.is_empty() && !elements_end_with_comma {
+                            self.warnings
+                                .push(DeprecatedSyntaxWarning::DeprecatedListPattern {
+                                    location: SrcSpan {
+                                        start: dot_dot_start,
+                                        end: dot_dot_end,
+                                    },
+                                });
+                        }
 
-                    self.advance();
-                    let pat = self.parse_pattern()?;
-                    if self.maybe_one(&Token::Comma).is_some() {
-                        // See if there's a list of items after the tail,
-                        // like `[..wibble, wobble, wabble]`
-                        let elements =
-                            Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma));
-                        match elements {
-                            Err(_) => {}
-                            Ok(elements) => {
-                                elements_after_tail = Some(elements);
-                            }
+                        self.advance();
+                        let pat = self.parse_pattern()?;
+                        if self.maybe_one(&Token::Comma).is_some() {
+                            // See if there's a list of items after the tail,
+                            // like `[..wibble, wobble, wabble]`
+                            let elements = Parser::series_of(
+                                self,
+                                &Parser::parse_pattern,
+                                Some(&Token::Comma),
+                            );
+                            match elements {
+                                Err(_) => {}
+                                Ok(elements) => {
+                                    elements_after_tail = Some(elements);
+                                }
+                            };
                         };
-                    };
-                    Some(pat)
-                } else {
-                    None
+                        Some(pat)
+                    }
+                    _ => None,
                 };
 
                 let (end, rsqb_e) =
@@ -1361,7 +1383,7 @@ where
                     }
                     // There is a tail and but it has no content, implicit discard
                     Some(Some(pat)) => {
-                        return parse_error(ParseErrorType::InvalidTailPattern, pat.location())
+                        return parse_error(ParseErrorType::InvalidTailPattern, pat.location());
                     }
                     Some(None) => Some(Pattern::Discard {
                         location: SrcSpan {
@@ -1397,16 +1419,17 @@ where
             }
         };
 
-        if let Some((_, Token::As, _)) = self.tok0 {
-            self.advance();
-            let (start, name, end) = self.expect_name()?;
-            Ok(Some(Pattern::Assign {
-                name,
-                location: SrcSpan { start, end },
-                pattern: Box::new(pattern),
-            }))
-        } else {
-            Ok(Some(pattern))
+        match self.tok0 {
+            Some((_, Token::As, _)) => {
+                self.advance();
+                let (start, name, end) = self.expect_name()?;
+                Ok(Some(Pattern::Assign {
+                    name,
+                    location: SrcSpan { start, end },
+                    pattern: Box::new(pattern),
+                }))
+            }
+            _ => Ok(Some(pattern)),
         }
     }
 
@@ -1423,46 +1446,46 @@ where
     //   pattern, pattern | pattern, pattern if -> expr
     fn parse_case_clause(&mut self) -> Result<Option<UntypedClause>, ParseError> {
         let patterns = self.parse_patterns()?;
-        if let Some(lead) = &patterns.first() {
-            let mut alternative_patterns = vec![];
-            loop {
-                if self.maybe_one(&Token::Vbar).is_none() {
-                    break;
-                }
-                alternative_patterns.push(self.parse_patterns()?);
-            }
-            let guard = self.parse_case_clause_guard(false)?;
-            let (arr_s, arr_e) = self
-                .expect_one(&Token::RArrow)
-                .map_err(|e| self.add_multi_line_clause_hint(e))?;
-            let then = self.parse_expression()?;
-            if let Some(then) = then {
-                Ok(Some(Clause {
-                    location: SrcSpan {
-                        start: lead.location().start,
-                        end: then.location().end,
-                    },
-                    pattern: patterns,
-                    alternative_patterns,
-                    guard,
-                    then,
-                }))
-            } else {
-                match self.tok0 {
-                    Some((start, Token::DiscardName { .. }, end)) => {
-                        parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
+        match &patterns.first() {
+            Some(lead) => {
+                let mut alternative_patterns = vec![];
+                loop {
+                    if self.maybe_one(&Token::Vbar).is_none() {
+                        break;
                     }
-                    _ => parse_error(
-                        ParseErrorType::ExpectedExpr,
-                        SrcSpan {
-                            start: arr_s,
-                            end: arr_e,
+                    alternative_patterns.push(self.parse_patterns()?);
+                }
+                let guard = self.parse_case_clause_guard(false)?;
+                let (arr_s, arr_e) = self
+                    .expect_one(&Token::RArrow)
+                    .map_err(|e| self.add_multi_line_clause_hint(e))?;
+                let then = self.parse_expression()?;
+                match then {
+                    Some(then) => Ok(Some(Clause {
+                        location: SrcSpan {
+                            start: lead.location().start,
+                            end: then.location().end,
                         },
-                    ),
+                        pattern: patterns,
+                        alternative_patterns,
+                        guard,
+                        then,
+                    })),
+                    _ => match self.tok0 {
+                        Some((start, Token::DiscardName { .. }, end)) => {
+                            parse_error(ParseErrorType::IncorrectName, SrcSpan { start, end })
+                        }
+                        _ => parse_error(
+                            ParseErrorType::ExpectedExpr,
+                            SrcSpan {
+                                start: arr_s,
+                                end: arr_e,
+                            },
+                        ),
+                    },
                 }
             }
-        } else {
-            Ok(None)
+            _ => Ok(None),
         }
     }
     fn parse_patterns(&mut self) -> Result<Vec<UntypedPattern>, ParseError> {
@@ -1483,36 +1506,42 @@ where
             let mut last_op_start = 0;
             let mut last_op_end = 0;
             loop {
-                if let Some(unit) = self.parse_case_clause_guard_unit()? {
-                    estack.push(unit)
-                } else if estack.is_empty() {
-                    return Ok(None);
-                } else {
-                    return parse_error(
-                        ParseErrorType::OpNakedRight,
-                        SrcSpan {
-                            start: last_op_start,
-                            end: last_op_end,
-                        },
-                    );
+                match self.parse_case_clause_guard_unit()? {
+                    Some(unit) => estack.push(unit),
+                    _ => {
+                        if estack.is_empty() {
+                            return Ok(None);
+                        } else {
+                            return parse_error(
+                                ParseErrorType::OpNakedRight,
+                                SrcSpan {
+                                    start: last_op_start,
+                                    end: last_op_end,
+                                },
+                            );
+                        }
+                    }
                 }
 
                 if let Some((op_s, t, op_e)) = self.tok0.take() {
-                    if let Some(p) = t.guard_precedence() {
-                        // Is Op
-                        self.advance();
-                        last_op_start = op_s;
-                        last_op_end = op_e;
-                        let _ = handle_op(
-                            Some(((op_s, t, op_e), p)),
-                            &mut opstack,
-                            &mut estack,
-                            &do_reduce_clause_guard,
-                        );
-                    } else {
-                        // Is not Op
-                        self.tok0 = Some((op_s, t, op_e));
-                        break;
+                    match t.guard_precedence() {
+                        Some(p) => {
+                            // Is Op
+                            self.advance();
+                            last_op_start = op_s;
+                            last_op_end = op_e;
+                            let _ = handle_op(
+                                Some(((op_s, t, op_e), p)),
+                                &mut opstack,
+                                &mut estack,
+                                &do_reduce_clause_guard,
+                            );
+                        }
+                        _ => {
+                            // Is not Op
+                            self.tok0 = Some((op_s, t, op_e));
+                            break;
+                        }
                     }
                 }
             }
@@ -1586,18 +1615,16 @@ where
 
                 self.parse_function_call_in_clause_guard(start)?;
 
-                let mut unit = if let Some(record) =
-                    self.parse_record_in_clause_guard(&name, SrcSpan { start, end })?
-                {
-                    record
-                } else {
-                    ClauseGuard::Var {
-                        location: SrcSpan { start, end },
-                        type_: (),
-                        name,
-                        definition_location: SrcSpan::default(),
-                    }
-                };
+                let mut unit =
+                    match self.parse_record_in_clause_guard(&name, SrcSpan { start, end })? {
+                        Some(record) => record,
+                        _ => ClauseGuard::Var {
+                            location: SrcSpan { start, end },
+                            type_: (),
+                            name,
+                            definition_location: SrcSpan::default(),
+                        },
+                    };
 
                 loop {
                     let dot_s = match self.maybe_one(&Token::Dot) {
@@ -1615,21 +1642,24 @@ where
                             int_e,
                         )) => {
                             let v = value.replace("_", "");
-                            if let Ok(index) = u64::from_str(&v) {
-                                unit = ClauseGuard::TupleIndex {
-                                    location: SrcSpan {
-                                        start: dot_s,
-                                        end: int_e,
-                                    },
-                                    index,
-                                    type_: (),
-                                    tuple: Box::new(unit),
-                                };
-                            } else {
-                                return parse_error(
-                                    ParseErrorType::InvalidTupleAccess,
-                                    SrcSpan { start, end },
-                                );
+                            match u64::from_str(&v) {
+                                Ok(index) => {
+                                    unit = ClauseGuard::TupleIndex {
+                                        location: SrcSpan {
+                                            start: dot_s,
+                                            end: int_e,
+                                        },
+                                        index,
+                                        type_: (),
+                                        tuple: Box::new(unit),
+                                    };
+                                }
+                                _ => {
+                                    return parse_error(
+                                        ParseErrorType::InvalidTupleAccess,
+                                        SrcSpan { start, end },
+                                    );
+                                }
                             }
                         }
 
@@ -1652,7 +1682,7 @@ where
                             return parse_error(
                                 ParseErrorType::IncorrectName,
                                 SrcSpan { start, end },
-                            )
+                            );
                         }
 
                         _ => return self.next_tok_unexpected(vec!["A positive integer".into()]),
@@ -1668,11 +1698,12 @@ where
             }
             t0 => {
                 self.tok0 = t0;
-                if let Some(const_val) = self.parse_const_value()? {
-                    // Constant
-                    Ok(Some(ClauseGuard::Constant(const_val)))
-                } else {
-                    Ok(None)
+                match self.parse_const_value()? {
+                    Some(const_val) => {
+                        // Constant
+                        Ok(Some(ClauseGuard::Constant(const_val)))
+                    }
+                    _ => Ok(None),
                 }
             }
         }
@@ -1697,15 +1728,14 @@ where
             }
         };
 
-        if let Some(record) = self.parse_const_record_finish(
+        match self.parse_const_record_finish(
             module_location.start,
             Some((module.clone(), module_location)),
             name,
             end,
         )? {
-            Ok(Some(ClauseGuard::Constant(record)))
-        } else {
-            Ok(None)
+            Some(record) => Ok(Some(ClauseGuard::Constant(record))),
+            _ => Ok(None),
         }
     }
 
@@ -1776,8 +1806,8 @@ where
             (Some((start, Token::Name { name }, _)), Some((_, Token::Colon, end))) => {
                 self.advance();
                 self.advance();
-                if let Some(value) = self.parse_pattern()? {
-                    Ok(Some(CallArg {
+                match self.parse_pattern()? {
+                    Some(value) => Ok(Some(CallArg {
                         implicit: None,
                         location: SrcSpan {
                             start,
@@ -1785,35 +1815,35 @@ where
                         },
                         label: Some(name),
                         value,
-                    }))
-                } else {
-                    // Argument supplied with a label shorthand.
-                    Ok(Some(CallArg {
-                        implicit: None,
-                        location: SrcSpan { start, end },
-                        label: Some(name.clone()),
-                        value: UntypedPattern::Variable {
-                            origin: VariableOrigin::LabelShorthand(name.clone()),
-                            name,
+                    })),
+                    _ => {
+                        // Argument supplied with a label shorthand.
+                        Ok(Some(CallArg {
+                            implicit: None,
                             location: SrcSpan { start, end },
-                            type_: (),
-                        },
-                    }))
+                            label: Some(name.clone()),
+                            value: UntypedPattern::Variable {
+                                origin: VariableOrigin::LabelShorthand(name.clone()),
+                                name,
+                                location: SrcSpan { start, end },
+                                type_: (),
+                            },
+                        }))
+                    }
                 }
             }
             // unnamed arg
             (t0, t1) => {
                 self.tok0 = t0;
                 self.tok1 = t1;
-                if let Some(value) = self.parse_pattern()? {
-                    Ok(Some(CallArg {
+                match self.parse_pattern()? {
+                    Some(value) => Ok(Some(CallArg {
                         implicit: None,
                         location: value.location(),
                         label: None,
                         value,
-                    }))
-                } else {
-                    Ok(None)
+                    })),
+                    _ => Ok(None),
                 }
             }
         }
@@ -1823,31 +1853,33 @@ where
     //   a: expr
     //   a:
     fn parse_record_update_arg(&mut self) -> Result<Option<UntypedRecordUpdateArg>, ParseError> {
-        if let Some((start, label, _)) = self.maybe_name() {
-            let (_, end) = self.expect_one(&Token::Colon)?;
-            let value = self.parse_expression()?;
-            if let Some(value) = value {
-                Ok(Some(UntypedRecordUpdateArg {
-                    label,
-                    location: SrcSpan {
-                        start,
-                        end: value.location().end,
-                    },
-                    value,
-                }))
-            } else {
-                // Argument supplied with a label shorthand.
-                Ok(Some(UntypedRecordUpdateArg {
-                    label: label.clone(),
-                    location: SrcSpan { start, end },
-                    value: UntypedExpr::Var {
-                        name: label,
-                        location: SrcSpan { start, end },
-                    },
-                }))
+        match self.maybe_name() {
+            Some((start, label, _)) => {
+                let (_, end) = self.expect_one(&Token::Colon)?;
+                let value = self.parse_expression()?;
+                match value {
+                    Some(value) => Ok(Some(UntypedRecordUpdateArg {
+                        label,
+                        location: SrcSpan {
+                            start,
+                            end: value.location().end,
+                        },
+                        value,
+                    })),
+                    _ => {
+                        // Argument supplied with a label shorthand.
+                        Ok(Some(UntypedRecordUpdateArg {
+                            label: label.clone(),
+                            location: SrcSpan { start, end },
+                            value: UntypedExpr::Var {
+                                name: label,
+                                location: SrcSpan { start, end },
+                            },
+                        }))
+                    }
+                }
             }
-        } else {
-            Ok(None)
+            _ => Ok(None),
         }
     }
 
@@ -2087,11 +2119,12 @@ where
                 return Ok(None);
             }
         };
-        let annotation = if let Some(a) = self.parse_type_annotation(&Token::Colon)? {
-            end = a.location().end;
-            Some(a)
-        } else {
-            None
+        let annotation = match self.parse_type_annotation(&Token::Colon)? {
+            Some(a) => {
+                end = a.location().end;
+                Some(a)
+            }
+            _ => None,
         };
         Ok(Some(Arg {
             location: SrcSpan { start, end },
@@ -2134,69 +2167,78 @@ where
             }
         };
 
-        if let Some(value) = self.parse_expression()? {
-            let arg = if let Some((start, label, _)) = label {
-                CallArg {
-                    implicit: None,
-                    label: Some(label),
-                    location: SrcSpan {
-                        start,
-                        end: value.location().end,
+        match self.parse_expression()? {
+            Some(value) => {
+                let arg = match label {
+                    Some((start, label, _)) => CallArg {
+                        implicit: None,
+                        label: Some(label),
+                        location: SrcSpan {
+                            start,
+                            end: value.location().end,
+                        },
+                        value,
                     },
-                    value,
-                }
-            } else {
-                CallArg {
-                    implicit: None,
-                    label: None,
-                    location: value.location(),
-                    value,
-                }
-            };
-            Ok(Some(ParserArg::Arg(Box::new(arg))))
-        } else if let Some((name_start, name, name_end)) = self.maybe_discard_name() {
-            let arg = if let Some((label_start, label, _)) = label {
-                ParserArg::Hole {
-                    label: Some(label),
-                    arg_location: SrcSpan {
-                        start: label_start,
-                        end: name_end,
+                    _ => CallArg {
+                        implicit: None,
+                        label: None,
+                        location: value.location(),
+                        value,
                     },
-                    discard_location: SrcSpan {
-                        start: name_start,
-                        end: name_end,
-                    },
-                    name,
-                }
-            } else {
-                ParserArg::Hole {
-                    label: None,
-                    arg_location: SrcSpan {
-                        start: name_start,
-                        end: name_end,
-                    },
-                    discard_location: SrcSpan {
-                        start: name_start,
-                        end: name_end,
-                    },
-                    name,
-                }
-            };
+                };
+                Ok(Some(ParserArg::Arg(Box::new(arg))))
+            }
+            _ => {
+                match self.maybe_discard_name() {
+                    Some((name_start, name, name_end)) => {
+                        let arg = match label {
+                            Some((label_start, label, _)) => ParserArg::Hole {
+                                label: Some(label),
+                                arg_location: SrcSpan {
+                                    start: label_start,
+                                    end: name_end,
+                                },
+                                discard_location: SrcSpan {
+                                    start: name_start,
+                                    end: name_end,
+                                },
+                                name,
+                            },
+                            _ => ParserArg::Hole {
+                                label: None,
+                                arg_location: SrcSpan {
+                                    start: name_start,
+                                    end: name_end,
+                                },
+                                discard_location: SrcSpan {
+                                    start: name_start,
+                                    end: name_end,
+                                },
+                                name,
+                            },
+                        };
 
-            Ok(Some(arg))
-        } else if let Some((start, label, end)) = label {
-            // Argument supplied with a label shorthand.
-            Ok(Some(ParserArg::Arg(Box::new(CallArg {
-                implicit: None,
-                label: Some(label.clone()),
-                location: SrcSpan { start, end },
-                value: UntypedExpr::Var {
-                    name: label,
-                    location: SrcSpan { start, end },
-                },
-            }))))
-        } else {
-            Ok(None)
+                        Ok(Some(arg))
+                    }
+                    _ => {
+                        match label {
+                            Some((start, label, end)) => {
+                                // Argument supplied with a label shorthand.
+                                Ok(Some(ParserArg::Arg(Box::new(CallArg {
+                                    implicit: None,
+                                    label: Some(label.clone()),
+                                    location: SrcSpan { start, end },
+                                    value: UntypedExpr::Var {
+                                        name: label,
+                                        location: SrcSpan { start, end },
+                                    },
+                                }))))
+                            }
+                            _ => Ok(None),
+                        }
+                    }
+                }
+            }
         }
     }
 
@@ -2242,23 +2284,24 @@ where
                         }
                     }
 
-                    if let Some((c_s, c_n, c_e)) = Parser::maybe_upname(p) {
-                        let documentation = p.take_documentation(c_s);
-                        let (args, args_e) = Parser::parse_type_constructor_args(p)?;
-                        let end = args_e.max(c_e);
-                        Ok(Some(RecordConstructor {
-                            location: SrcSpan { start: c_s, end },
-                            name_location: SrcSpan {
-                                start: c_s,
-                                end: c_e,
-                            },
-                            name: c_n,
-                            arguments: args,
-                            documentation,
-                            deprecation: attributes.deprecated,
-                        }))
-                    } else {
-                        Ok(None)
+                    match Parser::maybe_upname(p) {
+                        Some((c_s, c_n, c_e)) => {
+                            let documentation = p.take_documentation(c_s);
+                            let (args, args_e) = Parser::parse_type_constructor_args(p)?;
+                            let end = args_e.max(c_e);
+                            Ok(Some(RecordConstructor {
+                                location: SrcSpan { start: c_s, end },
+                                name_location: SrcSpan {
+                                    start: c_s,
+                                    end: c_e,
+                                },
+                                name: c_n,
+                                arguments: args,
+                                documentation,
+                                deprecation: attributes.deprecated,
+                            }))
+                        }
+                        _ => Ok(None),
                     }
                 },
                 // No separator
@@ -2266,30 +2309,42 @@ where
             )?;
             let (_, close_end) = self.expect_custom_type_close(&name, public, opaque)?;
             (constructors, close_end)
-        } else if let Some((eq_s, eq_e)) = self.maybe_one(&Token::Equal) {
-            // Type Alias
-            if opaque {
-                return parse_error(ParseErrorType::OpaqueTypeAlias, SrcSpan { start, end });
-            }
-
-            if let Some(t) = self.parse_type()? {
-                let type_end = t.location().end;
-                return Ok(Some(Definition::TypeAlias(TypeAlias {
-                    documentation,
-                    location: SrcSpan::new(start, type_end),
-                    publicity: self.publicity(public, attributes.internal)?,
-                    alias: name,
-                    name_location,
-                    parameters,
-                    type_ast: t,
-                    type_: (),
-                    deprecation: std::mem::take(&mut attributes.deprecated),
-                })));
-            } else {
-                return parse_error(ParseErrorType::ExpectedType, SrcSpan::new(eq_s, eq_e));
-            }
         } else {
-            (vec![], end)
+            match self.maybe_one(&Token::Equal) {
+                Some((eq_s, eq_e)) => {
+                    // Type Alias
+                    if opaque {
+                        return parse_error(
+                            ParseErrorType::OpaqueTypeAlias,
+                            SrcSpan { start, end },
+                        );
+                    }
+
+                    match self.parse_type()? {
+                        Some(t) => {
+                            let type_end = t.location().end;
+                            return Ok(Some(Definition::TypeAlias(TypeAlias {
+                                documentation,
+                                location: SrcSpan::new(start, type_end),
+                                publicity: self.publicity(public, attributes.internal)?,
+                                alias: name,
+                                name_location,
+                                parameters,
+                                type_ast: t,
+                                type_: (),
+                                deprecation: std::mem::take(&mut attributes.deprecated),
+                            })));
+                        }
+                        _ => {
+                            return parse_error(
+                                ParseErrorType::ExpectedType,
+                                SrcSpan::new(eq_s, eq_e),
+                            );
+                        }
+                    }
+                }
+                _ => (vec![], end),
+            }
         };
 
         Ok(Some(Definition::CustomType(CustomType {
@@ -2314,23 +2369,24 @@ where
         &mut self,
     ) -> Result<(u32, EcoString, Vec<SpannedString>, u32, u32), ParseError> {
         let (start, upname, end) = self.expect_upname()?;
-        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
-            let args =
-                Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
-            let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
-            if args.is_empty() {
-                return parse_error(
-                    ParseErrorType::TypeDefinitionNoArguments,
-                    SrcSpan::new(par_s, par_e),
-                );
+        match self.maybe_one(&Token::LeftParen) {
+            Some((par_s, _)) => {
+                let args =
+                    Parser::series_of(self, &|p| Ok(Parser::maybe_name(p)), Some(&Token::Comma))?;
+                let (_, par_e) = self.expect_one_following_series(&Token::RightParen, "a name")?;
+                if args.is_empty() {
+                    return parse_error(
+                        ParseErrorType::TypeDefinitionNoArguments,
+                        SrcSpan::new(par_s, par_e),
+                    );
+                }
+                let args2 = args
+                    .into_iter()
+                    .map(|(start, name, end)| (SrcSpan { start, end }, name))
+                    .collect();
+                Ok((start, upname, args2, par_e, end))
             }
-            let args2 = args
-                .into_iter()
-                .map(|(start, name, end)| (SrcSpan { start, end }, name))
-                .collect();
-            Ok((start, upname, args2, par_e, end))
-        } else {
-            Ok((start, upname, vec![], end, end))
+            _ => Ok((start, upname, vec![], end, end)),
         }
     }
 
@@ -2453,23 +2509,22 @@ where
                 let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
                 let retrn = self.parse_type()?;
-                if let Some(retrn) = retrn {
-                    Ok(Some(TypeAst::Fn(TypeAstFn {
+                match retrn {
+                    Some(retrn) => Ok(Some(TypeAst::Fn(TypeAstFn {
                         location: SrcSpan {
                             start,
                             end: retrn.location().end,
                         },
                         return_: Box::new(retrn),
                         arguments: args,
-                    })))
-                } else {
-                    parse_error(
+                    }))),
+                    _ => parse_error(
                         ParseErrorType::ExpectedType,
                         SrcSpan {
                             start: arr_s,
                             end: arr_e,
                         },
-                    )
+                    ),
                 }
             }
 
@@ -2513,28 +2568,29 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<TypeAst>, ParseError> {
-        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
-            let args = self.parse_types()?;
-            let (_, par_e) = self.expect_one(&Token::RightParen)?;
-            if args.is_empty() {
-                return parse_error(
-                    ParseErrorType::TypeConstructorNoArguments,
-                    SrcSpan::new(par_s, par_e),
-                );
+        match self.maybe_one(&Token::LeftParen) {
+            Some((par_s, _)) => {
+                let args = self.parse_types()?;
+                let (_, par_e) = self.expect_one(&Token::RightParen)?;
+                if args.is_empty() {
+                    return parse_error(
+                        ParseErrorType::TypeConstructorNoArguments,
+                        SrcSpan::new(par_s, par_e),
+                    );
+                }
+                Ok(Some(TypeAst::Constructor(TypeAstConstructor {
+                    location: SrcSpan { start, end: par_e },
+                    module,
+                    name,
+                    arguments: args,
+                })))
             }
-            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
-                location: SrcSpan { start, end: par_e },
-                module,
-                name,
-                arguments: args,
-            })))
-        } else {
-            Ok(Some(TypeAst::Constructor(TypeAstConstructor {
+            _ => Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
                 module,
                 name,
                 arguments: vec![],
-            })))
+            }))),
         }
     }
 
@@ -2720,42 +2776,43 @@ where
         let annotation = self.parse_type_annotation(&Token::Colon)?;
 
         let (eq_s, eq_e) = self.expect_one(&Token::Equal)?;
-        if let Some(value) = self.parse_const_value()? {
-            Ok(Some(Definition::ModuleConstant(ModuleConstant {
-                documentation,
-                location: SrcSpan {
-                    start,
+        match self.parse_const_value()? {
+            Some(value) => {
+                Ok(Some(Definition::ModuleConstant(ModuleConstant {
+                    documentation,
+                    location: SrcSpan {
+                        start,
 
-                    // End after the type annotation if it's there, otherwise after the name
-                    end: annotation
-                        .as_ref()
-                        .map(|annotation| annotation.location().end)
-                        .unwrap_or(0)
-                        .max(name_end),
-                },
-                publicity: self.publicity(public, attributes.internal)?,
-                name,
-                name_location: SrcSpan::new(name_start, name_end),
-                annotation,
-                value: Box::new(value),
-                type_: (),
-                deprecation: attributes.deprecated.clone(),
-                implementations: Implementations {
-                    gleam: true,
-                    can_run_on_erlang: true,
-                    can_run_on_javascript: true,
-                    uses_erlang_externals: false,
-                    uses_javascript_externals: false,
-                },
-            })))
-        } else {
-            parse_error(
+                        // End after the type annotation if it's there, otherwise after the name
+                        end: annotation
+                            .as_ref()
+                            .map(|annotation| annotation.location().end)
+                            .unwrap_or(0)
+                            .max(name_end),
+                    },
+                    publicity: self.publicity(public, attributes.internal)?,
+                    name,
+                    name_location: SrcSpan::new(name_start, name_end),
+                    annotation,
+                    value: Box::new(value),
+                    type_: (),
+                    deprecation: attributes.deprecated.clone(),
+                    implementations: Implementations {
+                        gleam: true,
+                        can_run_on_erlang: true,
+                        can_run_on_javascript: true,
+                        uses_erlang_externals: false,
+                        uses_javascript_externals: false,
+                    },
+                })))
+            }
+            _ => parse_error(
                 ParseErrorType::NoValueAfterEqual,
                 SrcSpan {
                     start: eq_s,
                     end: eq_e,
                 },
-            )
+            ),
         }
     }
 
@@ -2767,10 +2824,9 @@ where
     //   foo <> "bar"
     fn parse_const_value(&mut self) -> Result<Option<UntypedConstant>, ParseError> {
         let constant_result = self.parse_const_value_unit();
-        if let Ok(Some(constant)) = constant_result {
-            self.parse_const_maybe_concatenation(constant)
-        } else {
-            constant_result
+        match constant_result {
+            Ok(Some(constant)) => self.parse_const_maybe_concatenation(constant),
+            _ => constant_result,
         }
     }
 
@@ -2945,23 +3001,22 @@ where
             Some((op_start, Token::LtGt, op_end)) => {
                 self.advance();
 
-                if let Ok(Some(right_constant_value)) = self.parse_const_value() {
-                    Ok(Some(Constant::StringConcatenation {
+                match self.parse_const_value() {
+                    Ok(Some(right_constant_value)) => Ok(Some(Constant::StringConcatenation {
                         location: SrcSpan {
                             start: left.location().start,
                             end: right_constant_value.location().end,
                         },
                         left: Box::new(left),
                         right: Box::new(right_constant_value),
-                    }))
-                } else {
-                    parse_error(
+                    })),
+                    _ => parse_error(
                         ParseErrorType::OpNakedRight,
                         SrcSpan {
                             start: op_start,
                             end: op_end,
                         },
-                    )
+                    ),
                 }
             }
             t0 => {
@@ -2979,28 +3034,31 @@ where
         name: EcoString,
         end: u32,
     ) -> Result<Option<UntypedConstant>, ParseError> {
-        if let Some((par_s, _)) = self.maybe_one(&Token::LeftParen) {
-            let args =
-                Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
-            let (_, par_e) =
-                self.expect_one_following_series(&Token::RightParen, "a constant record argument")?;
-            if args.is_empty() {
-                return parse_error(
-                    ParseErrorType::ConstantRecordConstructorNoArguments,
-                    SrcSpan::new(par_s, par_e),
-                );
+        match self.maybe_one(&Token::LeftParen) {
+            Some((par_s, _)) => {
+                let args =
+                    Parser::series_of(self, &Parser::parse_const_record_arg, Some(&Token::Comma))?;
+                let (_, par_e) = self.expect_one_following_series(
+                    &Token::RightParen,
+                    "a constant record argument",
+                )?;
+                if args.is_empty() {
+                    return parse_error(
+                        ParseErrorType::ConstantRecordConstructorNoArguments,
+                        SrcSpan::new(par_s, par_e),
+                    );
+                }
+                Ok(Some(Constant::Record {
+                    location: SrcSpan { start, end: par_e },
+                    module,
+                    name,
+                    args,
+                    tag: (),
+                    type_: (),
+                    field_map: None,
+                }))
             }
-            Ok(Some(Constant::Record {
-                location: SrcSpan { start, end: par_e },
-                module,
-                name,
-                args,
-                tag: (),
-                type_: (),
-                field_map: None,
-            }))
-        } else {
-            Ok(Some(Constant::Record {
+            _ => Ok(Some(Constant::Record {
                 location: SrcSpan { start, end },
                 module,
                 name,
@@ -3008,7 +3066,7 @@ where
                 tag: (),
                 type_: (),
                 field_map: None,
-            }))
+            })),
         }
     }
 
@@ -3033,9 +3091,9 @@ where
             }
         };
 
-        if let Some(value) = self.parse_const_value()? {
-            if let Some((start, label, _)) = label {
-                Ok(Some(CallArg {
+        match self.parse_const_value()? {
+            Some(value) => match label {
+                Some((start, label, _)) => Ok(Some(CallArg {
                     implicit: None,
                     location: SrcSpan {
                         start,
@@ -3043,31 +3101,34 @@ where
                     },
                     value,
                     label: Some(label),
-                }))
-            } else {
-                Ok(Some(CallArg {
+                })),
+                _ => Ok(Some(CallArg {
                     implicit: None,
                     location: value.location(),
                     value,
                     label: None,
-                }))
+                })),
+            },
+            _ => {
+                match label {
+                    Some((start, label, end)) => {
+                        // Argument supplied with a label shorthand.
+                        Ok(Some(CallArg {
+                            implicit: None,
+                            location: SrcSpan { start, end },
+                            label: Some(label.clone()),
+                            value: UntypedConstant::Var {
+                                location: SrcSpan { start, end },
+                                constructor: None,
+                                module: None,
+                                name: label,
+                                type_: (),
+                            },
+                        }))
+                    }
+                    _ => Ok(None),
+                }
             }
-        } else if let Some((start, label, end)) = label {
-            // Argument supplied with a label shorthand.
-            Ok(Some(CallArg {
-                implicit: None,
-                location: SrcSpan { start, end },
-                label: Some(label.clone()),
-                value: UntypedConstant::Var {
-                    location: SrcSpan { start, end },
-                    constructor: None,
-                    module: None,
-                    name: label,
-                    type_: (),
-                },
-            }))
-        } else {
-            Ok(None)
         }
     }
 
@@ -3088,31 +3149,32 @@ where
     where
         A: HasLocation + std::fmt::Debug,
     {
-        if let Some(value) = value_parser(self)? {
-            let options = if self.maybe_one(&Token::Colon).is_some() {
-                Parser::series_of(
-                    self,
-                    &|s| Parser::parse_bit_array_option(s, &arg_parser, &to_int_segment),
-                    Some(&Token::Minus),
-                )?
-            } else {
-                vec![]
-            };
-            let end = options
-                .last()
-                .map(|o| o.location().end)
-                .unwrap_or_else(|| value.location().end);
-            Ok(Some(BitArraySegment {
-                location: SrcSpan {
-                    start: value.location().start,
-                    end,
-                },
-                value: Box::new(value),
-                type_: (),
-                options,
-            }))
-        } else {
-            Ok(None)
+        match value_parser(self)? {
+            Some(value) => {
+                let options = if self.maybe_one(&Token::Colon).is_some() {
+                    Parser::series_of(
+                        self,
+                        &|s| Parser::parse_bit_array_option(s, &arg_parser, &to_int_segment),
+                        Some(&Token::Minus),
+                    )?
+                } else {
+                    vec![]
+                };
+                let end = options
+                    .last()
+                    .map(|o| o.location().end)
+                    .unwrap_or_else(|| value.location().end);
+                Ok(Some(BitArraySegment {
+                    location: SrcSpan {
+                        start: value.location().start,
+                        end,
+                    },
+                    value: Box::new(value),
+                    type_: (),
+                    options,
+                }))
+            }
+            _ => Ok(None),
         }
     }
 
@@ -3132,9 +3194,8 @@ where
                 if self.maybe_one(&Token::LeftParen).is_some() {
                     // named function segment
                     match name.as_str() {
-                        "unit" => {
-                            if let Some((int_s, Token::Int { value, .. }, int_e)) = self.next_tok()
-                            {
+                        "unit" => match self.next_tok() {
+                            Some((int_s, Token::Int { value, .. }, int_e)) => {
                                 let (_, end) = self.expect_one(&Token::RightParen)?;
                                 let v = value.replace("_", "");
                                 match u8::from_str(&v) {
@@ -3151,10 +3212,9 @@ where
                                         },
                                     }),
                                 }
-                            } else {
-                                self.next_tok_unexpected(vec!["positive integer".into()])
                             }
-                        }
+                            _ => self.next_tok_unexpected(vec!["positive integer".into()]),
+                        },
 
                         "size" => {
                             let value = arg_parser(self)?;
@@ -3222,18 +3282,16 @@ where
     }
 
     fn expect_expression(&mut self) -> Result<UntypedExpr, ParseError> {
-        if let Some(e) = self.parse_expression()? {
-            Ok(e)
-        } else {
-            self.next_tok_unexpected(vec!["An expression".into()])
+        match self.parse_expression()? {
+            Some(e) => Ok(e),
+            _ => self.next_tok_unexpected(vec!["An expression".into()]),
         }
     }
 
     fn expect_expression_unit(&mut self) -> Result<UntypedExpr, ParseError> {
-        if let Some(e) = self.parse_expression_unit()? {
-            Ok(e)
-        } else {
-            self.next_tok_unexpected(vec!["An expression".into()])
+        match self.parse_expression_unit()? {
+            Some(e) => Ok(e),
+            _ => self.next_tok_unexpected(vec!["An expression".into()]),
         }
     }
 
@@ -3360,17 +3418,20 @@ functions are declared separately from types.";
     fn expect_upname(&mut self) -> Result<(u32, EcoString, u32), ParseError> {
         let t = self.next_tok();
         match t {
-            Some((start, tok, end)) => {
-                if let Token::Name { .. } = tok {
+            Some((start, tok, end)) => match tok {
+                Token::Name { .. } => {
                     parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
-                } else if let Token::UpName { name } = tok {
-                    Ok((start, name, end))
-                } else if let Token::DiscardName { .. } = tok {
-                    parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
-                } else {
-                    parse_error(ParseErrorType::ExpectedUpName, SrcSpan { start, end })
                 }
-            }
+                _ => match tok {
+                    Token::UpName { name } => Ok((start, name, end)),
+                    _ => match tok {
+                        Token::DiscardName { .. } => {
+                            parse_error(ParseErrorType::IncorrectUpName, SrcSpan { start, end })
+                        }
+                        _ => parse_error(ParseErrorType::ExpectedUpName, SrcSpan { start, end }),
+                    },
+                },
+            },
             None => parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 }),
         }
     }
@@ -3380,7 +3441,7 @@ functions are declared separately from types.";
         let (start, t, end) = match self.next_tok() {
             Some(t) => t,
             None => {
-                return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 })
+                return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 });
             }
         };
         match t {
@@ -3777,17 +3838,18 @@ fn handle_op<A>(
     let mut next_op = next_op;
     loop {
         match (opstack.pop(), next_op.take()) {
-            (None, None) => {
-                if let Some(fin) = estack.pop() {
+            (None, None) => match estack.pop() {
+                Some(fin) => {
                     if estack.is_empty() {
                         return Some(fin);
                     } else {
                         panic!("Expression not fully reduced.")
                     }
-                } else {
+                }
+                _ => {
                     return None;
                 }
-            }
+            },
 
             (None, Some(op)) => {
                 opstack.push(op);
@@ -3873,25 +3935,31 @@ fn do_reduce_clause_guard(op: Spanned, estack: &mut Vec<UntypedClauseGuard>) {
 
 fn expr_op_reduction((_, token, _): Spanned, l: UntypedExpr, r: UntypedExpr) -> UntypedExpr {
     if token == Token::Pipe {
-        let expressions = if let UntypedExpr::PipeLine { mut expressions } = l {
-            expressions.push(r);
-            expressions
-        } else {
-            vec1![l, r]
+        let expressions = match l {
+            UntypedExpr::PipeLine { mut expressions } => {
+                expressions.push(r);
+                expressions
+            }
+            _ => {
+                vec1![l, r]
+            }
         };
         UntypedExpr::PipeLine { expressions }
-    } else if let Some(bin_op) = tok_to_binop(&token) {
-        UntypedExpr::BinOp {
-            location: SrcSpan {
-                start: l.location().start,
-                end: r.location().end,
-            },
-            name: bin_op,
-            left: Box::new(l),
-            right: Box::new(r),
-        }
     } else {
-        panic!("Token could not be converted to binop.")
+        match tok_to_binop(&token) {
+            Some(bin_op) => UntypedExpr::BinOp {
+                location: SrcSpan {
+                    start: l.location().start,
+                    end: r.location().end,
+                },
+                name: bin_op,
+                left: Box::new(l),
+                right: Box::new(r),
+            },
+            _ => {
+                panic!("Token could not be converted to binop.")
+            }
+        }
     }
 }
 

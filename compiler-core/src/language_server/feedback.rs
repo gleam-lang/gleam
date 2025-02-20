@@ -1,4 +1,4 @@
-use crate::{diagnostic::Diagnostic, Error, Warning};
+use crate::{Error, Warning, diagnostic::Diagnostic};
 use std::collections::{HashMap, HashSet};
 
 use camino::Utf8PathBuf;

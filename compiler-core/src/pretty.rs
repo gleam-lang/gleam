@@ -16,11 +16,11 @@
 #[cfg(test)]
 mod tests;
 
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{io::Utf8Writer, Result};
+use crate::{Result, io::Utf8Writer};
 
 #[macro_export]
 macro_rules! docvec {
@@ -28,7 +28,7 @@ macro_rules! docvec {
         Document::Vec(Vec::new())
     };
 
-    ($($x:expr),+ $(,)?) => {
+    ($($x:expr_2021),+ $(,)?) => {
         Document::Vec(vec![$($x.to_doc()),+])
     };
 }

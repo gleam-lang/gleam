@@ -7,9 +7,9 @@ use crate::{
     },
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, RecordAccessor,
-        Type, TypeConstructor, TypeValueConstructor, TypeVar, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Deprecation, FieldMap, RecordAccessor, Type, TypeConstructor,
+        TypeValueConstructor, TypeVar, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, expression::Implementations,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};

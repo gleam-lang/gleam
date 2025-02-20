@@ -1287,15 +1287,16 @@ impl CallArg<TypedExpr> {
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
             // In all other cases we're happy with the default behaviour.
             //
-            _ => {
-                if let Some(located) = self.value.find_node(byte_index) {
-                    Some(located)
-                } else if self.location.contains(byte_index) && self.label.is_some() {
-                    Some(Located::Label(self.location, self.value.type_()))
-                } else {
-                    None
+            _ => match self.value.find_node(byte_index) {
+                Some(located) => Some(located),
+                _ => {
+                    if self.location.contains(byte_index) && self.label.is_some() {
+                        Some(Located::Label(self.location, self.value.type_()))
+                    } else {
+                        None
+                    }
                 }
-            }
+            },
         }
     }
 
@@ -1312,7 +1313,7 @@ impl CallArg<TypedExpr> {
 
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
-            TypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            TypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
             _ => false,
         }
     }
@@ -1320,12 +1321,15 @@ impl CallArg<TypedExpr> {
 
 impl CallArg<TypedPattern> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        if let Some(located) = self.value.find_node(byte_index) {
-            Some(located)
-        } else if self.location.contains(byte_index) && self.label.is_some() {
-            Some(Located::Label(self.location, self.value.type_()))
-        } else {
-            None
+        match self.value.find_node(byte_index) {
+            Some(located) => Some(located),
+            _ => {
+                if self.location.contains(byte_index) && self.label.is_some() {
+                    Some(Located::Label(self.location, self.value.type_()))
+                } else {
+                    None
+                }
+            }
         }
     }
 }
@@ -1333,7 +1337,7 @@ impl CallArg<TypedPattern> {
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
-            UntypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            UntypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
             _ => false,
         }
     }

@@ -3,17 +3,18 @@ use super::{
     progress::ConnectionProgressReporter,
 };
 use crate::{
+    Result,
     diagnostic::{Diagnostic, Level},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
+        DownloadDependencies, MakeLocker,
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
         files::FileSystemProxy,
         router::Router,
-        src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+        src_span_to_lsp_range,
     },
     line_numbers::LineNumbers,
-    Result,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;
@@ -509,17 +510,18 @@ fn diagnostic_to_lsp(diagnostic: Diagnostic) -> Vec<lsp::Diagnostic> {
         .iter()
         .map(|extra| {
             let message = extra.label.text.clone().unwrap_or_default();
-            let location = if let Some((src, path)) = &extra.src_info {
-                let line_numbers = LineNumbers::new(src);
-                lsp::Location {
-                    uri: path_to_uri(path.clone()),
-                    range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+            let location = match &extra.src_info {
+                Some((src, path)) => {
+                    let line_numbers = LineNumbers::new(src);
+                    lsp::Location {
+                        uri: path_to_uri(path.clone()),
+                        range: src_span_to_lsp_range(extra.label.span, &line_numbers),
+                    }
                 }
-            } else {
-                lsp::Location {
+                _ => lsp::Location {
                     uri: path.clone(),
                     range: src_span_to_lsp_range(extra.label.span, &line_numbers),
-                }
+                },
             };
             lsp::DiagnosticRelatedInformation { location, message }
         })

@@ -1,6 +1,7 @@
 use gleam_core::{
+    Result, Warning,
     build::{NullTelemetry, Target},
-    error::{parse_os, Error, FileIoAction, FileKind, ShellCommandFailureReason, OS},
+    error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
         FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader,
@@ -9,7 +10,6 @@ use gleam_core::{
     manifest::Manifest,
     paths::ProjectPaths,
     warning::WarningEmitterIO,
-    Result, Warning,
 };
 use std::{
     collections::HashSet,

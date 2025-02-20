@@ -4,8 +4,8 @@ use std::sync::OnceLock;
 use async_trait::async_trait;
 use camino::Utf8PathBuf;
 use gleam_core::{
-    error::{FileIoAction, FileKind},
     Error, Result,
+    error::{FileIoAction, FileKind},
 };
 use http::{Request, Response};
 use reqwest::{Certificate, Client};

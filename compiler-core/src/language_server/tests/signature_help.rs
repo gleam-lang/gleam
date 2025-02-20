@@ -62,12 +62,12 @@ fn pretty_signature_help(signature_help: SignatureHelp) -> String {
 
 #[macro_export]
 macro_rules! assert_signature_help {
-    ($code:literal, $position:expr $(,)?) => {
+    ($code:literal, $position:expr_2021 $(,)?) => {
         let project = TestProject::for_source($code);
         assert_signature_help!(project, $position);
     };
 
-    ($project:expr, $position:expr $(,)?) => {
+    ($project:expr_2021, $position:expr_2021 $(,)?) => {
         let src = $project.src;
         let position = $position.find_position(src);
         let result = signature_help($project, position).expect("no signature help produced");
@@ -96,12 +96,12 @@ macro_rules! assert_signature_help {
 
 #[macro_export]
 macro_rules! assert_no_signature_help {
-    ($code:literal, $position:expr $(,)?) => {
+    ($code:literal, $position:expr_2021 $(,)?) => {
         let project = TestProject::for_source($code);
         assert_no_signature_help!(project, $position);
     };
 
-    ($project:expr, $position:expr $(,)?) => {
+    ($project:expr_2021, $position:expr_2021 $(,)?) => {
         let src = $project.src;
         let position = $position.find_position(src);
         let result = signature_help($project, position);

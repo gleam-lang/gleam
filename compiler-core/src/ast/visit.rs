@@ -41,8 +41,8 @@
 use crate::{
     analyse::Inferred,
     type_::{
-        error::VariableOrigin, ModuleValueConstructor, PatternConstructor, TypedCallArg,
-        ValueConstructor,
+        ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
+        error::VariableOrigin,
     },
 };
 use std::sync::Arc;
@@ -53,11 +53,12 @@ use vec1::Vec1;
 use crate::type_::Type;
 
 use super::{
-    untyped::FunctionLiteralKind, AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern,
-    PipelineAssignmentKind, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment,
-    TypedClause, TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
+    AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, PipelineAssignmentKind,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause,
+    TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
     TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
     TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
+    untyped::FunctionLiteralKind,
 };
 
 pub trait Visit<'ast> {

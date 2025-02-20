@@ -21,20 +21,20 @@ use itertools::Itertools;
 use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
 
 use crate::{
+    Result,
     config::PackageConfig,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
-        FileSystemWriter, ReadDir, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
+        WrappedReader, memory::InMemoryFileSystem,
     },
     language_server::{
-        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
-        DownloadDependencies, LockGuard, Locker, MakeLocker,
+        DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,
+        files::FileSystemProxy, progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
-    Result,
 };
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";

@@ -3,6 +3,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
+    Error, Result, Warning,
     analyse::TargetSupport,
     build::{self, Mode, Module, NullTelemetry, Outcome, ProjectCompiler},
     config::PackageConfig,
@@ -13,7 +14,6 @@ use crate::{
     paths::ProjectPaths,
     type_::ModuleInterface,
     warning::VectorWarningEmitterIO,
-    Error, Result, Warning,
 };
 use std::{collections::HashMap, rc::Rc};
 
