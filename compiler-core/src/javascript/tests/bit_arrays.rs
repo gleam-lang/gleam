@@ -613,12 +613,25 @@ fn go(x) {
 }
 
 #[test]
-fn match_dynamic_size_error() {
-    assert_js_error!(
+fn match_dynamic_size() {
+    assert_js!(
         r#"
 fn go(x) {
   let n = 16
   let assert <<a:size(n)>> = x
+}
+"#
+    );
+}
+
+#[test]
+fn match_dynamic_size_with_other_segments() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 16
+  let m = 32
+  let assert <<first:size(8), a:size(n), b:size(m), rest:bits>> = x
 }
 "#
     );
@@ -937,7 +950,7 @@ fn as_module_const() {
             "Gleam":utf8,
             4.2:float,
             4.2:32-float,
-            <<0xFA>>:bits-6, 
+            <<0xFA>>:bits-6,
             -1:64,
             <<
               <<1, 2, 3>>:bits,
