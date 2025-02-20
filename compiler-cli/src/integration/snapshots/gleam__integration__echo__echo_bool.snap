@@ -1,0 +1,16 @@
+---
+source: compiler-cli/src/integration/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo True
+  echo False
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+True
+[90msrc/main.gleam:3[39m
+False

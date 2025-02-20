@@ -15,10 +15,12 @@ pub fn main() {
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import * as $inspect from "../../other/other/inspect.mjs";
 import {
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
   BitArray as $BitArray,
   List as $List,
   UtfCodepoint as $UtfCodepoint,
-  CustomType as $CustomType,
 } from "../gleam.mjs";
 
 export function main() {
