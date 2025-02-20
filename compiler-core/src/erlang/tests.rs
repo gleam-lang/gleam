@@ -122,7 +122,7 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
 
 #[macro_export]
 macro_rules! assert_erl {
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
+    (($dep_package:expr_2021, $dep_name:expr_2021, $dep_src:expr_2021), $src:expr_2021 $(,)?) => {{
         let compiled = $crate::erlang::tests::compile_test_project(
             $src,
             "/root/project/test/my/mod.gleam",
@@ -135,7 +135,7 @@ macro_rules! assert_erl {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    ($src:expr $(,)?) => {{
+    ($src:expr_2021 $(,)?) => {{
         let compiled = $crate::erlang::tests::compile_test_project(
             $src,
             "/root/project/test/my/mod.gleam",

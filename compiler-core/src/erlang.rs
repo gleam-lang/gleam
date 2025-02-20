@@ -10,6 +10,7 @@ use crate::build::Target;
 use crate::strings::convert_string_escape_chars;
 use crate::type_::is_prelude_module;
 use crate::{
+    Result,
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
@@ -18,10 +19,9 @@ use crate::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
     },
-    Result,
 };
 use camino::Utf8Path;
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
@@ -489,16 +489,19 @@ fn module_function<'a>(
         // So the doc directive will look like this: `-doc(false).`
         env.needs_function_docs = true;
         docvec![attributes, line(), hidden_function_doc()]
-    } else if let Some((_, documentation)) = &function.documentation {
-        env.needs_function_docs = true;
-        let doc_lines = documentation
-            .trim_end()
-            .split('\n')
-            .map(EcoString::from)
-            .collect_vec();
-        docvec![attributes, line(), function_doc(&doc_lines)]
     } else {
-        attributes
+        match &function.documentation {
+            Some((_, documentation)) => {
+                env.needs_function_docs = true;
+                let doc_lines = documentation
+                    .trim_end()
+                    .split('\n')
+                    .map(EcoString::from)
+                    .collect_vec();
+                docvec![attributes, line(), function_doc(&doc_lines)]
+            }
+            _ => attributes,
+        }
     };
 
     Some((
@@ -1275,9 +1278,9 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             ..
         } => function_reference(Some(module), name, *arity),
 
-        ValueConstructorVariant::ModuleFn {
-            arity, ref module, ..
-        } if module == env.module => function_reference(None, name, *arity),
+        ValueConstructorVariant::ModuleFn { arity, module, .. } if module == env.module => {
+            function_reference(None, name, *arity)
+        }
 
         ValueConstructorVariant::ModuleFn {
             arity,
@@ -1715,7 +1718,7 @@ fn docs_args_call<'a>(
                         ValueConstructorVariant::ModuleConstant {
                             literal:
                                 Constant::Var {
-                                    constructor: Some(ref constructor),
+                                    constructor: Some(constructor),
                                     ..
                                 },
                             ..
@@ -1723,18 +1726,18 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } if constructor.variant.is_module_fn() => {
-            if let ValueConstructorVariant::ModuleFn {
+        } if constructor.variant.is_module_fn() => match &constructor.variant {
+            ValueConstructorVariant::ModuleFn {
                 external_erlang: Some((module, name)),
                 ..
             }
-            | ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant
-            {
+            | ValueConstructorVariant::ModuleFn { module, name, .. } => {
                 module_fn_with_args(module, name, args, env)
-            } else {
+            }
+            _ => {
                 unreachable!("The above clause guard ensures that this is a module fn")
             }
-        }
+        },
 
         TypedExpr::ModuleSelect {
             constructor:

@@ -1,9 +1,9 @@
 use crate::{build_lock::BuildLock, fs::ProjectIO};
 use gleam_core::{
+    Result,
     build::{Mode, NullTelemetry, Target},
     language_server::{LanguageServer, LockGuard, Locker},
     paths::ProjectPaths,
-    Result,
 };
 
 pub fn main() -> Result<()> {

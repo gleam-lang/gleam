@@ -1,10 +1,10 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
-    io::{
-        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
-        FileSystemWriter, ReadDir, Stdio, WrappedReader,
-    },
     Error, Result,
+    io::{
+        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir, Stdio,
+        WrappedReader, memory::InMemoryFileSystem,
+    },
 };
 use std::collections::HashSet;
 

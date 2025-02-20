@@ -26,10 +26,9 @@ impl SourceLinker {
             .expect("path is not in root")
             .with_extension("gleam");
 
-        let path_in_repo = if let Some(repo_path) = project_config.repository.path() {
-            to_url_path(&Utf8PathBuf::from(repo_path).join(path))
-        } else {
-            to_url_path(&path)
+        let path_in_repo = match project_config.repository.path() {
+            Some(repo_path) => to_url_path(&Utf8PathBuf::from(repo_path).join(path)),
+            _ => to_url_path(&path),
         }
         .unwrap_or_default();
 

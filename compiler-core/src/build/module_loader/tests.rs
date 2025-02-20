@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     build::SourceFingerprint,
-    io::{memory::InMemoryFileSystem, FileSystemWriter},
+    io::{FileSystemWriter, memory::InMemoryFileSystem},
     line_numbers::LineNumbers,
 };
 use std::time::Duration;

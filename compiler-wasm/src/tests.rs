@@ -87,9 +87,11 @@ pub fn main() { wibble() }
 "#,
     );
 
-    assert!(compile_package(0, "javascript")
-        .unwrap_err()
-        .contains("Unsupported feature for compilation target"));
+    assert!(
+        compile_package(0, "javascript")
+            .unwrap_err()
+            .contains("Unsupported feature for compilation target")
+    );
 }
 
 #[wasm_bindgen_test]

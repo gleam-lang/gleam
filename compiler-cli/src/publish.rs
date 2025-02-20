@@ -1,15 +1,15 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use flate2::{write::GzEncoder, Compression};
+use flate2::{Compression, write::GzEncoder};
 use gleam_core::{
+    Error, Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
-    error::{wrap, SmallVersion},
+    error::{SmallVersion, wrap},
     hex,
     paths::{self, ProjectPaths},
     requirement::Requirement,
-    Error, Result,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;

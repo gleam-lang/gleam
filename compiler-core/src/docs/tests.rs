@@ -5,7 +5,7 @@ use crate::{
     build::{Mode, NullTelemetry, PackageCompiler, StaleTracker, TargetCodegenConfiguration},
     config::{DocsPage, PackageConfig, Repository},
     docs::DocContext,
-    io::{memory::InMemoryFileSystem, FileSystemWriter},
+    io::{FileSystemWriter, memory::InMemoryFileSystem},
     paths::ProjectPaths,
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
@@ -392,8 +392,10 @@ fn source_link_for_github_repository() {
     };
 
     let modules = vec![("app.gleam", "pub type Wibble = Int")];
-    assert!(compile(config, modules)
-        .contains("https://github.com/wibble/wobble/blob/v0.1.0/src/app.gleam#L1-L1"));
+    assert!(
+        compile(config, modules)
+            .contains("https://github.com/wibble/wobble/blob/v0.1.0/src/app.gleam#L1-L1")
+    );
 }
 
 #[test]

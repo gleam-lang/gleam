@@ -5,6 +5,7 @@ pub(crate) mod name;
 mod tests;
 
 use crate::{
+    GLEAM_CORE_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
@@ -14,26 +15,24 @@ use crate::{
         UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
-    call_graph::{into_dependency_order, CallGraphNode},
+    call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
     type_::{
-        self,
+        self, AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
+        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
+        ValueConstructor, ValueConstructorVariant, Warning,
         environment::*,
-        error::{convert_unify_error, Error, FeatureKind, MissingAnnotation, Named, Problems},
+        error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
-    GLEAM_CORE_PACKAGE_NAME,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -847,27 +846,28 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .expect("Could not find preregistered type for function");
                     let preregistered_type = preregistered_fn.type_.clone();
 
-                    let args =
-                        if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
-                            args.into_iter()
-                                .zip(&args_types)
-                                .map(|(argument, t)| {
-                                    if let Some((location, label)) = &argument.label {
-                                        self.check_name_case(*location, label, Named::Label);
-                                    }
+                    let args = match preregistered_type.fn_types() {
+                        Some((args_types, _return_type)) => args
+                            .into_iter()
+                            .zip(&args_types)
+                            .map(|(argument, t)| {
+                                if let Some((location, label)) = &argument.label {
+                                    self.check_name_case(*location, label, Named::Label);
+                                }
 
-                                    RecordConstructorArg {
-                                        label: argument.label,
-                                        ast: argument.ast,
-                                        location: argument.location,
-                                        type_: t.clone(),
-                                        doc: argument.doc,
-                                    }
-                                })
-                                .collect()
-                        } else {
+                                RecordConstructorArg {
+                                    label: argument.label,
+                                    ast: argument.ast,
+                                    location: argument.location,
+                                    type_: t.clone(),
+                                    doc: argument.doc,
+                                }
+                            })
+                            .collect(),
+                        _ => {
                             vec![]
-                        };
+                        }
+                    };
 
                     RecordConstructor {
                         location,

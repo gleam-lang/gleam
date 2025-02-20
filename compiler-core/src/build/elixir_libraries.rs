@@ -1,7 +1,7 @@
 use crate::{
+    Error,
     error::ShellCommandFailureReason,
     io::{Command, CommandExecutor, FileSystemReader, FileSystemWriter, Stdio},
-    Error,
 };
 use camino::Utf8PathBuf;
 
@@ -79,13 +79,13 @@ where
                 ELIXIR_LIBS.iter().map(|lib| format!(":{}", lib)).collect();
             // Use Elixir to find its core lib paths and write the pathfinder file
             let args = vec![
-            "--eval".to_string(),
-            format!(
-                ":ok = File.write(~s({}), [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(~s(\\n)))",
-                self.paths_cache_filename(),
-                elixir_atoms.join(", "),
-            ),
-        ];
+                "--eval".to_string(),
+                format!(
+                    ":ok = File.write(~s({}), [{}] |> Stream.map(fn(lib) -> lib |> :code.lib_dir |> Path.expand end) |> Enum.join(~s(\\n)))",
+                    self.paths_cache_filename(),
+                    elixir_atoms.join(", "),
+                ),
+            ];
             tracing::debug!("writing_elixir_paths_to_build");
             let status = self.io.exec(Command {
                 program: ELIXIR_EXECUTABLE.into(),

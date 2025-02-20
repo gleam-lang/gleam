@@ -38,7 +38,7 @@ mod warnings;
 
 #[macro_export]
 macro_rules! assert_infer {
-    ($src:expr, $type_:expr $(,)?) => {
+    ($src:expr_2021, $type_:expr_2021 $(,)?) => {
         let t = $crate::type_::tests::infer($src);
         assert_eq!(($src, t), ($src, $type_.to_string()),);
     };
@@ -47,9 +47,9 @@ macro_rules! assert_infer {
 #[macro_export]
 macro_rules! assert_infer_with_module {
     (
-        ($name1:expr, $module_src1:literal),
-        ($name2:expr, $module_src2:literal),
-        $src:expr, $module:expr $(,)?
+        ($name1:expr_2021, $module_src1:literal),
+        ($name2:expr_2021, $module_src2:literal),
+        $src:expr_2021, $module:expr_2021 $(,)?
     ) => {
         let constructors = $crate::type_::tests::infer_module(
             $src,
@@ -62,7 +62,7 @@ macro_rules! assert_infer_with_module {
 
         assert_eq!(($src, constructors), ($src, expected));
     };
-    (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
+    (($name:expr_2021, $module_src:literal), $src:expr_2021, $module:expr_2021 $(,)?) => {
         let constructors =
             $crate::type_::tests::infer_module($src, vec![("thepackage", $name, $module_src)]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
@@ -73,7 +73,7 @@ macro_rules! assert_infer_with_module {
 
 #[macro_export]
 macro_rules! assert_module_infer {
-    ($src:expr, $module:expr $(,)?) => {{
+    ($src:expr_2021, $module:expr_2021 $(,)?) => {{
         let constructors = $crate::type_::tests::infer_module($src, vec![]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
         assert_eq!(($src, constructors), ($src, expected));
@@ -82,7 +82,7 @@ macro_rules! assert_module_infer {
 
 #[macro_export]
 macro_rules! assert_js_module_infer {
-    ($src:expr, $module:expr $(,)?) => {{
+    ($src:expr_2021, $module:expr_2021 $(,)?) => {{
         let constructors = $crate::type_::tests::infer_module_with_target(
             "test_module",
             $src,
@@ -96,7 +96,7 @@ macro_rules! assert_js_module_infer {
 
 #[macro_export]
 macro_rules! assert_module_error {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let error = $crate::type_::tests::module_error($src, vec![]);
         let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -105,7 +105,7 @@ macro_rules! assert_module_error {
 
 #[macro_export]
 macro_rules! assert_internal_module_error {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let error = $crate::type_::tests::internal_module_error($src, vec![]);
         let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -114,7 +114,7 @@ macro_rules! assert_internal_module_error {
 
 #[macro_export]
 macro_rules! assert_js_module_error {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let error = $crate::type_::tests::module_error_with_target(
             $src,
             vec![],
@@ -127,7 +127,7 @@ macro_rules! assert_js_module_error {
 
 #[macro_export]
 macro_rules! assert_module_syntax_error {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let error = $crate::type_::tests::syntax_error($src);
         let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -136,13 +136,13 @@ macro_rules! assert_module_syntax_error {
 
 #[macro_export]
 macro_rules! assert_error {
-    ($src:expr, $error:expr $(,)?) => {
+    ($src:expr_2021, $error:expr_2021 $(,)?) => {
         let result = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         assert_eq!(($src, sort_options($error)), ($src, sort_options(result)),);
     };
 
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let (error, names) = $crate::type_::tests::compile_statement_sequence($src)
             .expect_err("should infer an error");
         let error = $crate::error::Error::Type {
@@ -162,7 +162,7 @@ macro_rules! assert_error {
 
 #[macro_export]
 macro_rules! assert_with_module_error {
-    (($name:expr, $module_src:literal), $src:expr $(,)?) => {
+    (($name:expr_2021, $module_src:literal), $src:expr_2021 $(,)?) => {
         let error =
             $crate::type_::tests::module_error($src, vec![("thepackage", $name, $module_src)]);
         let output = format!(
@@ -181,9 +181,9 @@ macro_rules! assert_with_module_error {
     };
 
     (
-        ($name:expr, $module_src:literal),
-        ($name2:expr, $module_src2:literal),
-        $src:expr $(,)?
+        ($name:expr_2021, $module_src:literal),
+        ($name2:expr_2021, $module_src2:literal),
+        $src:expr_2021 $(,)?
     ) => {
         let error = $crate::type_::tests::module_error(
             $src,
@@ -271,14 +271,14 @@ macro_rules! assert_warnings_with_imports {
 
 #[macro_export]
 macro_rules! assert_warning {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let warning = $crate::type_::tests::get_printed_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert!(!warning.is_empty());
         let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
+    ($(($name:expr_2021, $module_src:literal)),+, $src:expr_2021) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(("thepackage", $name, $module_src)),*],
@@ -290,7 +290,7 @@ macro_rules! assert_warning {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
-    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr) => {
+    ($(($package:expr_2021, $name:expr_2021, $module_src:literal)),+, $src:expr_2021) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],
@@ -305,7 +305,7 @@ macro_rules! assert_warning {
 
 #[macro_export]
 macro_rules! assert_js_warning {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
@@ -320,7 +320,7 @@ macro_rules! assert_js_warning {
 
 #[macro_export]
 macro_rules! assert_js_no_warnings {
-    ($src:expr) => {
+    ($src:expr_2021) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
@@ -333,7 +333,7 @@ macro_rules! assert_js_no_warnings {
 
 #[macro_export]
 macro_rules! assert_warnings_with_gleam_version {
-    ($gleam_version:expr, $src:expr$(,)?) => {
+    ($gleam_version:expr_2021, $src:expr_2021$(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
@@ -348,7 +348,7 @@ macro_rules! assert_warnings_with_gleam_version {
 
 #[macro_export]
 macro_rules! assert_js_warnings_with_gleam_version {
-    ($gleam_version:expr, $src:expr$(,)?) => {
+    ($gleam_version:expr_2021, $src:expr_2021$(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
@@ -363,7 +363,7 @@ macro_rules! assert_js_warnings_with_gleam_version {
 
 #[macro_export]
 macro_rules! assert_js_no_warnings_with_gleam_version {
-    ($gleam_version:expr, $src:expr$(,)?) => {
+    ($gleam_version:expr_2021, $src:expr_2021$(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![],
@@ -376,11 +376,11 @@ macro_rules! assert_js_no_warnings_with_gleam_version {
 
 #[macro_export]
 macro_rules! assert_no_warnings {
-    ($src:expr $(,)?) => {
+    ($src:expr_2021 $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings($src, vec![], crate::build::Target::Erlang, None);
         assert_eq!(warnings, vec![]);
     };
-    ($(($package:expr, $name:expr, $module_src:literal)),+, $src:expr $(,)?) => {
+    ($(($package:expr_2021, $name:expr_2021, $module_src:literal)),+, $src:expr_2021 $(,)?) => {
         let warnings = $crate::type_::tests::get_warnings(
             $src,
             vec![$(($package, $name, $module_src)),*],

@@ -37,7 +37,7 @@ fn apply_conversion(src: &str, completions: Vec<CompletionItem>, value: &str) ->
 
 #[macro_export]
 macro_rules! assert_apply_completion {
-    ($project:expr, $name:literal, $position:expr) => {
+    ($project:expr_2021, $name:literal, $position:expr_2021) => {
         let src = $project.src;
         let completions = completion($project, $position);
         let output = format!(
@@ -51,7 +51,7 @@ macro_rules! assert_apply_completion {
 
 #[macro_export]
 macro_rules! assert_completion {
-    ($project:expr) => {
+    ($project:expr_2021) => {
         let src = $project.src;
         let result = completion_with_prefix($project, "");
         let output = format!(
@@ -61,7 +61,7 @@ macro_rules! assert_completion {
         );
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
-    ($project:expr, $position:expr) => {
+    ($project:expr_2021, $position:expr_2021) => {
         let src = $project.src;
         let result = completion($project, $position);
         let output = format!(
@@ -75,7 +75,7 @@ macro_rules! assert_completion {
 
 #[macro_export]
 macro_rules! assert_completion_with_prefix {
-    ($project:expr, $prefix:expr) => {
+    ($project:expr_2021, $prefix:expr_2021) => {
         let src = $project.src;
         let result = completion_with_prefix($project, $prefix);
         let line = 1 + $prefix.lines().count();
@@ -332,9 +332,11 @@ pub fn wobble() {
 }
 ";
 
-    assert_completion!(TestProject::for_source(code)
-        .add_module("dep", dep)
-        .add_module("dep2", dep2));
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", dep2)
+    );
 }
 
 #[test]
@@ -393,9 +395,11 @@ fn importable_adds_extra_new_line_if_import_exists_below_other_definitions() {
     let dep = "pub fn wobble() {\nNil\n}";
     let code = "\nimport dep2\n"; // "code" goes after "fn typing_in_here() {}".
 
-    assert_completion!(TestProject::for_source(code)
-        .add_module("dep", dep)
-        .add_module("dep2", ""));
+    assert_completion!(
+        TestProject::for_source(code)
+            .add_module("dep", dep)
+            .add_module("dep2", "")
+    );
 }
 
 #[test]

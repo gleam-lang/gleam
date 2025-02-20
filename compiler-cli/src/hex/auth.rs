@@ -1,5 +1,5 @@
 use crate::{cli, http::HttpClient};
-use gleam_core::{encryption, hex, paths::global_hexpm_credentials_path, Error, Result};
+use gleam_core::{Error, Result, encryption, hex, paths::global_hexpm_credentials_path};
 use std::time::SystemTime;
 
 pub const USER_PROMPT: &str = "https://hex.pm username";

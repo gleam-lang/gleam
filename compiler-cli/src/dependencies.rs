@@ -5,10 +5,11 @@ use std::{
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use flate2::read::GzDecoder;
 use futures::future;
 use gleam_core::{
+    Error, Result,
     build::{Mode, Target, Telemetry},
     config::PackageConfig,
     dependency,
@@ -18,7 +19,6 @@ use gleam_core::{
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
-    Error, Result,
 };
 use hexpm::version::Version;
 use itertools::Itertools;
@@ -29,11 +29,11 @@ use strum::IntoEnumIterator;
 mod tests;
 
 use crate::{
+    TreeOptions,
     build_lock::BuildLock,
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
-    TreeOptions,
 };
 
 struct Symbols {
@@ -336,7 +336,7 @@ pub fn parse_gleam_add_specifier(package: &str) -> Result<(EcoString, Requiremen
                 error: format!(
                     "Expected up to 3 numbers in version specifier (MAJOR.MINOR.PATCH), found {n}"
                 ),
-            })
+            });
         }
     };
 

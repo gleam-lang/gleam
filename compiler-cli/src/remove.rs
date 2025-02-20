@@ -1,7 +1,7 @@
 use gleam_core::{
+    Error, Result,
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
-    Error, Result,
 };
 
 use crate::{cli, fs};

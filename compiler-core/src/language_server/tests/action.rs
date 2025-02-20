@@ -81,12 +81,12 @@ const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INTERPOLATE_STRING: &str = "Interpolate string";
 
 macro_rules! assert_code_action {
-    ($title:expr, $code:literal, $range:expr $(,)?) => {
+    ($title:expr_2021, $code:literal, $range:expr_2021 $(,)?) => {
         let project = TestProject::for_source($code);
         assert_code_action!($title, project, $range);
     };
 
-    ($title:expr, $project:expr, $range:expr $(,)?) => {
+    ($title:expr_2021, $project:expr_2021, $range:expr_2021 $(,)?) => {
         let src = $project.src;
         let range = $range.find_range(src);
         let result = apply_code_action($title, $project, range);
@@ -100,12 +100,12 @@ macro_rules! assert_code_action {
 }
 
 macro_rules! assert_no_code_actions {
-    ($title:ident $(| $titles:ident)*, $code:literal, $range:expr $(,)?) => {
+    ($title:ident $(| $titles:ident)*, $code:literal, $range:expr_2021 $(,)?) => {
         let project = TestProject::for_source($code);
         assert_no_code_actions!($title $(| $titles)*, project, $range);
     };
 
-    ($title:ident $(| $titles:ident)*, $project:expr, $range:expr $(,)?) => {
+    ($title:ident $(| $titles:ident)*, $project:expr_2021, $range:expr_2021 $(,)?) => {
         let src = $project.src;
         let range = $range.find_range(src);
         let all_titles = vec![$title $(, $titles)*];
@@ -4613,8 +4613,8 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
-) {
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body()
+ {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "

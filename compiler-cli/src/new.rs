@@ -1,9 +1,9 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use clap::ValueEnum;
 use gleam_core::{
-    erlang, error,
+    Result, erlang, error,
     error::{Error, FileIoAction, FileKind, InvalidProjectNameReason},
-    parse, Result,
+    parse,
 };
 use serde::{Deserialize, Serialize};
 use std::fs::File;
@@ -13,7 +13,7 @@ use strum::{Display, EnumIter, EnumString, IntoEnumIterator, VariantNames};
 #[cfg(test)]
 mod tests;
 
-use crate::{fs::get_current_directory, NewOptions};
+use crate::{NewOptions, fs::get_current_directory};
 
 const GLEAM_STDLIB_REQUIREMENT: &str = ">= 0.44.0 and < 2.0.0";
 const GLEEUNIT_REQUIREMENT: &str = ">= 1.0.0 and < 2.0.0";
@@ -419,7 +419,7 @@ fn get_valid_project_name(name: Option<String>, project_root: &str) -> Result<St
             return Err(Error::InvalidProjectName {
                 name: initial_name,
                 reason: invalid_reason,
-            })
+            });
         }
     };
     let prompt_for_suggested_name = error::format_invalid_project_name_error(

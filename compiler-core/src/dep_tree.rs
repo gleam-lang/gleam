@@ -1,5 +1,5 @@
 use ecow::EcoString;
-use petgraph::{algo::Cycle, graph::NodeIndex, Direction};
+use petgraph::{Direction, algo::Cycle, graph::NodeIndex};
 use std::collections::{HashMap, HashSet};
 
 #[cfg(test)]

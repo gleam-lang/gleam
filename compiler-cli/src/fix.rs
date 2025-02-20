@@ -1,13 +1,13 @@
 use std::rc::Rc;
 
 use gleam_core::{
+    Error, Result, Warning,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options},
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
     type_,
     warning::VectorWarningEmitterIO,
-    Error, Result, Warning,
 };
 use hexpm::version::Version;
 

@@ -1,7 +1,8 @@
 use gleam_core::{
+    Result,
     error::{Error, ShellCommandFailureReason},
     io::{FileSystemWriter, Stdio},
-    paths, Result,
+    paths,
 };
 
 use crate::fs::get_os;
@@ -37,13 +38,10 @@ impl BeamCompiler {
         stdio: Stdio,
     ) -> Result<Vec<String>, Error> {
         let inner = match self.inner {
-            Some(ref mut inner) => {
-                if let Ok(None) = inner.process.try_wait() {
-                    inner
-                } else {
-                    self.inner.insert(self.spawn(io, out)?)
-                }
-            }
+            Some(ref mut inner) => match inner.process.try_wait() {
+                Ok(None) => inner,
+                _ => self.inner.insert(self.spawn(io, out)?),
+            },
 
             None => self.inner.insert(self.spawn(io, out)?),
         };
@@ -77,7 +75,7 @@ impl BeamCompiler {
                     return Err(Error::ShellCommand {
                         program: "escript".into(),
                         reason: ShellCommandFailureReason::Unknown,
-                    })
+                    });
                 }
                 s if s.starts_with("gleam-compile-module:") => {
                     if let Some(module_content) = s.strip_prefix("gleam-compile-module:") {

@@ -1,6 +1,6 @@
 //! General functions for working with graphs.
 
-use petgraph::{prelude::NodeIndex, stable_graph::StableGraph, Direction};
+use petgraph::{Direction, prelude::NodeIndex, stable_graph::StableGraph};
 
 /// Sort a graph into a sequence from the leaves to the roots.
 ///

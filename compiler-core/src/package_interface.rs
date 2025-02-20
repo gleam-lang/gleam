@@ -10,7 +10,7 @@ mod tests;
 use crate::{
     ast::{CustomType, Definition, Function, ModuleConstant, Publicity, TypeAlias},
     io::ordered_map,
-    type_::{expression::Implementations, Deprecation, Type, TypeVar},
+    type_::{Deprecation, Type, TypeVar, expression::Implementations},
 };
 
 use crate::build::{Module, Package};

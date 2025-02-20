@@ -2,14 +2,14 @@ use camino::Utf8Path;
 use debug_ignore::DebugIgnore;
 use flate2::read::GzDecoder;
 use futures::future;
-use hexpm::{version::Version, ApiError};
+use hexpm::{ApiError, version::Version};
 use tar::Archive;
 
 use crate::{
+    Error, Result,
     io::{FileSystemReader, FileSystemWriter, HttpClient, TarUnpacker},
     manifest::{ManifestPackage, ManifestPackageSource},
     paths::{self, ProjectPaths},
-    Error, Result,
 };
 
 pub const HEXPM_PUBLIC_KEY: &[u8] = b"-----BEGIN PUBLIC KEY-----
@@ -158,11 +158,11 @@ impl Downloader {
         &self,
         package: &ManifestPackage,
     ) -> Result<bool, Error> {
-        let outer_checksum = if let ManifestPackageSource::Hex { outer_checksum } = &package.source
-        {
-            outer_checksum
-        } else {
-            panic!("Attempt to download non-hex package from hex")
+        let outer_checksum = match &package.source {
+            ManifestPackageSource::Hex { outer_checksum } => outer_checksum,
+            _ => {
+                panic!("Attempt to download non-hex package from hex")
+            }
         };
 
         let tarball_path = paths::global_package_cache_package_tarball(

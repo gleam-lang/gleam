@@ -19,7 +19,7 @@ use super::PackageInterface;
 
 #[macro_export]
 macro_rules! assert_package_interface_with_name {
-    ($module_name:expr, $src:expr) => {
+    ($module_name:expr_2021, $src:expr_2021) => {
         let output =
             $crate::package_interface::tests::compile_package(Some($module_name), $src, None);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
@@ -28,7 +28,7 @@ macro_rules! assert_package_interface_with_name {
 
 #[macro_export]
 macro_rules! assert_package_interface {
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
+    (($dep_package:expr_2021, $dep_name:expr_2021, $dep_src:expr_2021), $src:expr_2021 $(,)?) => {{
         let output = $crate::package_interface::tests::compile_package(
             None,
             $src,
@@ -37,7 +37,7 @@ macro_rules! assert_package_interface {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
+    (($dep_package:expr_2021, $dep_name:expr_2021, $dep_src:expr_2021), $src:expr_2021 $(,)?) => {{
         let output = $crate::package_interface::tests::compile_package(
             None,
             $src,
@@ -46,7 +46,7 @@ macro_rules! assert_package_interface {
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
 
-    ($src:expr) => {{
+    ($src:expr_2021) => {{
         let output = $crate::package_interface::tests::compile_package(None, $src, None);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     }};
@@ -167,9 +167,11 @@ fn package_from_module(module: Module) -> Package {
             erlang: ErlangConfig::default(),
             javascript: JavaScriptConfig::default(),
             target: Target::Erlang,
-            internal_modules: Some(vec![GlobBuilder::new("internals/*")
-                .build()
-                .expect("internals glob")]),
+            internal_modules: Some(vec![
+                GlobBuilder::new("internals/*")
+                    .build()
+                    .expect("internals glob"),
+            ]),
         },
         modules: vec![module],
     }
