@@ -609,6 +609,7 @@ impl<'a> Generator<'a> {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn module(
     module: &TypedModule,
     line_numbers: &LineNumbers,

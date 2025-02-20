@@ -247,7 +247,7 @@ fn module_document<'a>(
             &module.name,
             module.type_info.is_internal,
             line_numbers,
-            &src_path_relative,
+            src_path_relative,
             root,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
