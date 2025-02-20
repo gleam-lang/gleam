@@ -2948,6 +2948,11 @@ fn is_literal_or_made_of_literals(expr: &TypedExpr) -> bool {
         // Extract literals directly
         TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => true,
 
+        // Extract non-record types directly
+        TypedExpr::Var { constructor, .. } => matches!(
+            constructor.variant,
+            type_::ValueConstructorVariant::Record { arity: 0, .. }
+        ),
         _ => false,
     }
 }
