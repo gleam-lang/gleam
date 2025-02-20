@@ -1,0 +1,16 @@
+---
+source: compiler-cli/src/integration/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo []
+  echo [1, 2, 3]
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+[]
+[90msrc/main.gleam:3[39m
+[1, 2, 3]

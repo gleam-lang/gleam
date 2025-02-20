@@ -1,0 +1,18 @@
+---
+source: compiler-cli/src/integration/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+import gleam/dict
+
+pub fn main() {
+  echo dict.new()
+  echo dict.from_list([#(1, "hello"), #(2, "world!")])
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:4[39m
+dict.from_list([])
+[90msrc/main.gleam:5[39m
+dict.from_list([#(1, "hello"), #(2, "world!")])

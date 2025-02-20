@@ -20,10 +20,12 @@ pub fn wibble(n) { n }
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
   toList,
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
   BitArray as $BitArray,
   List as $List,
   UtfCodepoint as $UtfCodepoint,
-  CustomType as $CustomType,
 } from "../gleam.mjs";
 
 export function wibble(n) {

@@ -1,0 +1,19 @@
+---
+source: compiler-cli/src/integration/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo 1.0
+  echo 2.1
+  echo 11.11
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+1.0
+[90msrc/main.gleam:3[39m
+2.1
+[90msrc/main.gleam:4[39m
+11.11

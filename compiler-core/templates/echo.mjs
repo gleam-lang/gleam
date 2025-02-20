@@ -45,7 +45,13 @@ function echo$inspectString(str) {
 function echo$inspectDict(map) {
   let body = "dict.from_list([";
   let first = true;
+
+  let key_value_pairs = [];
   map.forEach((value, key) => {
+    key_value_pairs.push([key, value]);
+  });
+  key_value_pairs.sort();
+  key_value_pairs.forEach(([key, value]) => {
     if (!first) body = body + ", ";
     body = body + "#(" + echo$inspect(key) + ", " + echo$inspect(value) + ")";
     first = false;
@@ -85,7 +91,7 @@ function echo$inspect(v) {
   if (Array.isArray(v)) return `#(${v.map(echo$inspect).join(", ")})`;
   if (v instanceof $List) return `[${v.toArray().map(echo$inspect).join(", ")}]`;
   if (v instanceof $UtfCodepoint) return `//utfcodepoint(${String.fromCodePoint(v.value)})`;
-  if (v instanceof $BitArray) return `<<${Array.from(v.buffer).join(", ")}>>`;
+  if (v instanceof $BitArray) return echo$inspectBitArray(v);
   if (v instanceof $CustomType) return echo$inspectCustomType(v);
   if (echo$isDict(v)) return echo$inspectDict(v);
   if (v instanceof Set) return `//js(Set(${[...v].map(echo$inspect).join(", ")}))`;
@@ -97,6 +103,29 @@ function echo$inspect(v) {
     return `//fn(${args.join(", ")}) { ... }`;
   }
   return echo$inspectObject(v);
+}
+
+function echo$inspectBitArray(bitArray) {
+  // We take all the aligned bytes of the bit array starting from `bitOffset`
+  // up to the end of the section containing all the aligned bytes.
+  let endOfAlignedBytes = bitArray.bitOffset + 8 * Math.trunc(bitArray.bitSize / 8);
+  let alignedBytes = bitArraySlice(bitArray, bitArray.bitOffset, endOfAlignedBytes);
+
+  // Now we need to get the remaining unaligned bits at the end of the bit array.
+  // They will start after `endOfAlignedBytes` and end at `bitArray.bitSize`
+  let remainingUnalignedBits = bitArray.bitSize % 8;
+  if (remainingUnalignedBits > 0) {
+    let remainingBits = bitArraySliceToInt(bitArray, endOfAlignedBytes, bitArray.bitSize, false, false);
+    let alignedBytesArray = Array.from(alignedBytes.rawBuffer);
+    let suffix = `${remainingBits}:size(${remainingUnalignedBits})`;
+    if (alignedBytesArray.length === 0) {
+      return `<<${suffix}>>`;
+    } else {
+      return `<<${Array.from(alignedBytes.rawBuffer).join(", ")}, ${suffix}>>`;
+    }
+  } else {
+    return `<<${Array.from(alignedBytes.rawBuffer).join(", ")}>>`;
+  }
 }
 
 function echo$isDict(value) {
