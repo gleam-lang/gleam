@@ -18,8 +18,8 @@ mod tests;
 pub use server::LanguageServer;
 
 use crate::{
-    ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
-    paths::ProjectPaths, Result,
+    Result, ast::SrcSpan, build::Target, line_numbers::LineNumbers, manifest::Manifest,
+    paths::ProjectPaths,
 };
 use camino::Utf8PathBuf;
 use lsp_types::{Position, Range, TextEdit, Url};

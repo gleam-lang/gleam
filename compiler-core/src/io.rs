@@ -402,7 +402,7 @@ impl Reader for WrappedReader {
 #[async_trait]
 pub trait HttpClient {
     async fn send(&self, request: http::Request<Vec<u8>>)
-        -> Result<http::Response<Vec<u8>>, Error>;
+    -> Result<http::Response<Vec<u8>>, Error>;
 }
 
 pub trait TarUnpacker {

@@ -12,7 +12,7 @@
 //! <https://www.typescriptlang.org/docs/handbook/declaration-files/introduction.html>
 
 use crate::ast::{AssignName, Publicity};
-use crate::type_::{is_prelude_module, PRELUDE_MODULE_NAME};
+use crate::type_::{PRELUDE_MODULE_NAME, is_prelude_module};
 use crate::{
     ast::{
         CustomType, Definition, Function, Import, ModuleConstant, TypeAlias, TypedArg,
@@ -20,14 +20,14 @@ use crate::{
     },
     docvec,
     javascript::JavaScriptCodegenTarget,
-    pretty::{break_, Document, Documentable},
+    pretty::{Document, Documentable, break_},
     type_::{Type, TypeVar},
 };
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use std::{collections::HashMap, ops::Deref, sync::Arc};
 
-use super::{import::Imports, join, line, lines, wrap_args, Output, INDENT};
+use super::{INDENT, Output, import::Imports, join, line, lines, wrap_args};
 
 /// When rendering a type variable to an TypeScript type spec we need all type
 /// variables with the same id to end up with the same name in the generated

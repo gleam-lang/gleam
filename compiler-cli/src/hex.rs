@@ -2,10 +2,10 @@ mod auth;
 
 use crate::{cli, http::HttpClient};
 use gleam_core::{
+    Error, Result,
     hex::{self, RetirementReason},
     io::HttpClient as _,
     paths::ProjectPaths,
-    Error, Result,
 };
 
 pub use auth::HexAuthentication;

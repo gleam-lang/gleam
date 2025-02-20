@@ -2,8 +2,8 @@ use self::expression::CallKind;
 
 use super::*;
 use crate::ast::{
-    FunctionLiteralKind, ImplicitCallArgOrigin, PipelineAssignmentKind, Statement,
-    TypedPipelineAssignment, UntypedExpr, PIPE_VARIABLE,
+    FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_VARIABLE, PipelineAssignmentKind, Statement,
+    TypedPipelineAssignment, UntypedExpr,
 };
 use vec1::Vec1;
 

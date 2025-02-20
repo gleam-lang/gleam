@@ -1,5 +1,5 @@
 use bimap::BiMap;
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use im::HashMap;
 use std::{collections::HashSet, sync::Arc};
 
@@ -321,10 +321,9 @@ impl<'a> Printer<'a> {
     }
 
     pub fn print_module(&self, module: &str) -> EcoString {
-        if let Some(module) = self.names.imported_modules.get(module) {
-            module.clone()
-        } else {
-            module.split("/").last().unwrap_or(module).into()
+        match self.names.imported_modules.get(module) {
+            Some(module) => module.clone(),
+            _ => module.split("/").last().unwrap_or(module).into(),
         }
     }
 

@@ -11,6 +11,7 @@ use strum::IntoEnumIterator;
 use vec1::Vec1;
 
 use crate::{
+    Result,
     ast::{
         self, Arg, CallArg, Definition, Function, FunctionLiteralKind, Pattern, Publicity,
         TypedExpr,
@@ -19,21 +20,20 @@ use crate::{
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     type_::{
-        self, collapse_links, error::VariableOrigin, pretty::Printer, FieldMap, ModuleInterface,
-        PreludeType, RecordAccessor, Type, TypeConstructor, ValueConstructorVariant,
-        PRELUDE_MODULE_NAME,
+        self, FieldMap, ModuleInterface, PRELUDE_MODULE_NAME, PreludeType, RecordAccessor, Type,
+        TypeConstructor, ValueConstructorVariant, collapse_links, error::VariableOrigin,
+        pretty::Printer,
     },
-    Result,
 };
 
 use super::{
+    DownloadDependencies, MakeLocker,
     compiler::LspProjectCompiler,
     edits::{
-        add_newlines_after_import, get_import, get_import_edit,
-        position_of_first_definition_if_import, Newlines,
+        Newlines, add_newlines_after_import, get_import, get_import_edit,
+        position_of_first_definition_if_import,
     },
     files::FileSystemProxy,
-    DownloadDependencies, MakeLocker,
 };
 
 // Represents the kind/specificity of completion that is being requested.

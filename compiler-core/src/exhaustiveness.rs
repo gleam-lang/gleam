@@ -38,10 +38,10 @@ use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
     ast::AssignName,
     type_::{
+        Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
         collapse_links,
         error::{UnknownTypeConstructorError, UnreachableCaseClauseReason},
-        is_prelude_module, Environment, Type, TypeValueConstructor, TypeValueConstructorField,
-        TypeVar,
+        is_prelude_module,
     },
 };
 use ecow::EcoString;

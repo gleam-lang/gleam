@@ -2,7 +2,7 @@ use pubgrub::range::Range;
 
 use crate::{
     analyse::TargetSupport,
-    ast::{Publicity, PIPE_VARIABLE},
+    ast::{PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
     uid::UniqueIdGenerator,
@@ -540,13 +540,13 @@ impl Environment<'_> {
             Type::Var { type_ } => {
                 match type_.borrow().deref() {
                     TypeVar::Link { type_ } => {
-                        return self.instantiate(type_.clone(), ids, hydrator)
+                        return self.instantiate(type_.clone(), ids, hydrator);
                     }
 
                     TypeVar::Unbound { .. } => {
                         return Arc::new(Type::Var {
                             type_: type_.clone(),
-                        })
+                        });
                     }
 
                     TypeVar::Generic { id } => match ids.get(id) {

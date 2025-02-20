@@ -15,26 +15,26 @@ use itertools::Itertools;
 use vec1::Vec1;
 
 use crate::{
+    Error, Result,
     ast::SrcSpan,
-    build::{module_loader::ModuleLoader, package_compiler::module_name, Module, Origin},
+    build::{Module, Origin, module_loader::ModuleLoader, package_compiler::module_name},
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{
-        gleam_cache_files, gleam_source_files, CommandExecutor, FileSystemReader, FileSystemWriter,
+        CommandExecutor, FileSystemReader, FileSystemWriter, gleam_cache_files, gleam_source_files,
     },
     metadata, type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
-    Error, Result,
 };
 
 use super::{
+    Mode, Target,
     module_loader::read_source,
     package_compiler::{
         CacheMetadata, CachedModule, CachedWarnings, Input, Loaded, UncompiledModule,
     },
-    Mode, Target,
 };
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

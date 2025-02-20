@@ -1,6 +1,6 @@
 use std::sync::OnceLock;
 
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use regex::Regex;
 
 use crate::{
