@@ -1,0 +1,20 @@
+---
+source: compiler-cli/src/integration/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo "hello world"
+  echo "multiline
+string"
+  echo "string with\t\r\nescaped chars"
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+"hello world"
+[90msrc/main.gleam:3[39m
+"multiline\nstring"
+[90msrc/main.gleam:5[39m
+"string with\t\r\nescaped chars"

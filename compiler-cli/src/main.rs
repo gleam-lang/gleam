@@ -67,6 +67,8 @@ mod format;
 mod fs;
 mod hex;
 mod http;
+#[cfg(test)]
+mod integration;
 mod lsp;
 mod new;
 mod panic;

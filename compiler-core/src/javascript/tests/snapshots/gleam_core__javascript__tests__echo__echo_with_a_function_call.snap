@@ -14,10 +14,12 @@ fn wibble(n: Int, m: Int) { n + m }
 ----- COMPILED JAVASCRIPT
 import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
 import {
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
   BitArray as $BitArray,
   List as $List,
   UtfCodepoint as $UtfCodepoint,
-  CustomType as $CustomType,
 } from "../gleam.mjs";
 
 function wibble(n, m) {
