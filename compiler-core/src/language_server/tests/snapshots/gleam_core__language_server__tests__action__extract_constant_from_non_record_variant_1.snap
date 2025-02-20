@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub type Auth {\n  Verified\n  Unverified\n}\n\npub fn main() {\n  let a = Unverified\n  let a = verify(something, a)\n\n  a\n}\n"
+---
+----- BEFORE ACTION
+pub type Auth {
+  Verified
+  Unverified
+}
+
+pub fn main() {
+  let a = Unverified
+          ▔▔▔▔▔▔▔▔▔↑
+  let a = verify(something, a)
+
+  a
+}
+
+
+----- AFTER ACTION
+pub type Auth {
+  Verified
+  Unverified
+}
+
+const auth = Unverified
+
+pub fn main() {
+  let a = auth
+  let a = verify(something, a)
+
+  a
+}

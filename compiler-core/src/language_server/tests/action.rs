@@ -5038,6 +5038,49 @@ pub fn main() {
 }
 
 #[test]
+fn extract_constant_from_non_record_variant_1() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub type Auth {
+  Verified
+  Unverified
+}
+
+pub fn main() {
+  let a = Unverified
+  let a = verify(something, a)
+
+  a
+}
+"#,
+        find_position_of("U")
+            .nth_occurrence(2)
+            .select_until(find_position_of("d").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn extract_constant_from_non_record_variant_2() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub type Auth {
+  Verified
+  Unverified
+}
+
+pub fn main() {
+  let a = verify(something, Unverified)
+
+  a
+}
+"#,
+        find_position_of("U")
+            .nth_occurrence(2)
+            .select_until(find_position_of("d").nth_occurrence(3))
+    );
+}
+
+#[test]
 fn do_not_extract_constant_from_list_1() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
