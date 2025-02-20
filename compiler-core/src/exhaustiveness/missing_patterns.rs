@@ -1,4 +1,4 @@
-use super::{printer::Printer, Constructor, Decision, Match, Variable};
+use super::{Constructor, Decision, Match, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
 use std::collections::{HashMap, HashSet};

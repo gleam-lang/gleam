@@ -1,6 +1,6 @@
 use std::sync::{
-    atomic::{AtomicU64, Ordering},
     Arc,
+    atomic::{AtomicU64, Ordering},
 };
 
 /// A generator of unique ids. Only one should be used per compilation run to

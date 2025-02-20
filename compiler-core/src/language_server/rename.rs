@@ -5,10 +5,10 @@ use lsp_types::{RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
     analyse::name,
-    ast::{self, visit::Visit, SrcSpan, TypedModule},
+    ast::{self, SrcSpan, TypedModule, visit::Visit},
     build::Module,
     line_numbers::LineNumbers,
-    type_::{error::Named, ValueConstructor, ValueConstructorVariant},
+    type_::{ValueConstructor, ValueConstructorVariant, error::Named},
 };
 
 use super::TextEdits;

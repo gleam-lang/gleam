@@ -1,11 +1,12 @@
 use crate::{
+    Error, Result, Warning,
     analyse::TargetSupport,
     build::{
+        Mode, Module, Origin, Package, Target,
         package_compiler::{self, PackageCompiler},
         package_loader::StaleTracker,
         project_compiler,
         telemetry::Telemetry,
-        Mode, Module, Origin, Package, Target,
     },
     codegen::{self, ErlangApp},
     config::PackageConfig,
@@ -19,7 +20,6 @@ use crate::{
     uid::UniqueIdGenerator,
     version::COMPILER_VERSION,
     warning::{self, WarningEmitter, WarningEmitterIO},
-    Error, Result, Warning,
 };
 use ecow::EcoString;
 use hexpm::version::Version;
@@ -36,8 +36,8 @@ use std::{
 };
 
 use super::{
-    elixir_libraries::ElixirLibraries, package_compiler::CachedWarnings, Codegen, Compile,
-    ErlangAppCodegenConfiguration, Outcome,
+    Codegen, Compile, ErlangAppCodegenConfiguration, Outcome, elixir_libraries::ElixirLibraries,
+    package_compiler::CachedWarnings,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
@@ -302,7 +302,7 @@ where
                 return Err(Error::UnsupportedBuildTool {
                     package: package.name.to_string(),
                     build_tools: package.build_tools.clone(),
-                })
+                });
             }
         };
 

@@ -5,6 +5,7 @@ use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
+    Result,
     ast::{
         BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
@@ -13,17 +14,16 @@ use crate::{
     line_numbers::LineNumbers,
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
-        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
+        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
+        ValueConstructor, ValueConstructorVariant, expression::Implementations,
     },
     uid::UniqueIdGenerator,
-    Result,
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
 macro_rules! read_vec {
-    ($reader:expr, $self:expr, $method:ident) => {{
+    ($reader:expr_2021, $self:expr_2021, $method:ident) => {{
         let reader = $reader;
         let mut vec = Vec::with_capacity(reader.len() as usize);
         for reader in reader.into_iter() {
@@ -35,7 +35,7 @@ macro_rules! read_vec {
 }
 
 macro_rules! read_hashmap {
-    ($reader:expr, $self:expr, $method:ident) => {{
+    ($reader:expr_2021, $self:expr_2021, $method:ident) => {{
         let reader = $reader;
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {

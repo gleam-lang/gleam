@@ -477,12 +477,15 @@ where
 
         let end_pos = self.get_pos();
 
-        if let Some(tok) = str_to_keyword(&name) {
-            Ok((start_pos, tok, end_pos))
-        } else if name.starts_with('_') {
-            Ok((start_pos, Token::DiscardName { name: name.into() }, end_pos))
-        } else {
-            Ok((start_pos, Token::Name { name: name.into() }, end_pos))
+        match str_to_keyword(&name) {
+            Some(tok) => Ok((start_pos, tok, end_pos)),
+            _ => {
+                if name.starts_with('_') {
+                    Ok((start_pos, Token::DiscardName { name: name.into() }, end_pos))
+                } else {
+                    Ok((start_pos, Token::Name { name: name.into() }, end_pos))
+                }
+            }
         }
     }
     // A type name or constructor
@@ -496,10 +499,9 @@ where
 
         let end_pos = self.get_pos();
 
-        if let Some(tok) = str_to_keyword(&name) {
-            Ok((start_pos, tok, end_pos))
-        } else {
-            Ok((start_pos, Token::UpName { name: name.into() }, end_pos))
+        match str_to_keyword(&name) {
+            Some(tok) => Ok((start_pos, tok, end_pos)),
+            _ => Ok((start_pos, Token::UpName { name: name.into() }, end_pos)),
         }
     }
 

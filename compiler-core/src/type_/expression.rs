@@ -4,12 +4,12 @@ use crate::{
     ast::{
         Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
         ClauseGuard, Constant, FunctionLiteralKind, HasLocation, ImplicitCallArgOrigin, Layer,
-        RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment,
-        TypedClause, TypedClauseGuard, TypedConstant, TypedExpr, TypedMultiPattern, TypedStatement,
-        UntypedArg, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
-        UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
-        UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
-        UseAssignment, RECORD_UPDATE_VARIABLE, USE_ASSIGNMENT_VARIABLE,
+        RECORD_UPDATE_VARIABLE, RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst,
+        TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
+        TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssignment,
+        UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment,
+        UntypedExpr, UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, UntypedUse,
+        UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
     exhaustiveness::{self, Reachability},
@@ -1713,7 +1713,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     ValueConstructorVariant::ModuleConstant { literal, .. }
                     | ValueConstructorVariant::LocalConstant { literal } => {
-                        return Ok(ClauseGuard::Constant(literal.clone()))
+                        return Ok(ClauseGuard::Constant(literal.clone()));
                     }
                 };
 
@@ -2569,32 +2569,37 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.track_feature_usage(FeatureKind::LabelShorthandSyntax, *location);
                     }
 
-                    if let Some(index) = fields.remove(label) {
-                        unify(variant.arg_type(index), value.type_())
-                            .map_err(|e| convert_unify_error(e, *location))?;
+                    match fields.remove(label) {
+                        Some(index) => {
+                            unify(variant.arg_type(index), value.type_())
+                                .map_err(|e| convert_unify_error(e, *location))?;
 
-                        Ok((
-                            index,
-                            CallArg {
-                                label: Some(label.clone()),
-                                location: *location,
-                                value,
-                                implicit: None,
-                            },
-                        ))
-                    } else if variant.has_field(label) {
-                        Err(Error::DuplicateArgument {
-                            location: *location,
-                            label: label.clone(),
-                        })
-                    } else {
-                        Err(self.unknown_field_error(
-                            variant.field_names(),
-                            record_type.clone(),
-                            *location,
-                            label.clone(),
-                            FieldAccessUsage::RecordUpdate,
-                        ))
+                            Ok((
+                                index,
+                                CallArg {
+                                    label: Some(label.clone()),
+                                    location: *location,
+                                    value,
+                                    implicit: None,
+                                },
+                            ))
+                        }
+                        _ => {
+                            if variant.has_field(label) {
+                                Err(Error::DuplicateArgument {
+                                    location: *location,
+                                    label: label.clone(),
+                                })
+                            } else {
+                                Err(self.unknown_field_error(
+                                    variant.field_names(),
+                                    record_type.clone(),
+                                    *location,
+                                    label.clone(),
+                                    FieldAccessUsage::RecordUpdate,
+                                ))
+                            }
+                        }
                     }
                 },
             )
@@ -2675,7 +2680,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
-                })
+                });
             }
         };
 
@@ -2703,7 +2708,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
-                })
+                });
             }
         };
 
@@ -2985,13 +2990,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                        return Err(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
                     // TODO: remove this clone. Could use an rc instead
                     ValueConstructorVariant::ModuleConstant { literal, .. }
                     | ValueConstructorVariant::LocalConstant { literal } => {
-                        return Ok(literal.clone())
+                        return Ok(literal.clone());
                     }
                 };
 
@@ -3029,13 +3034,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
                     ValueConstructorVariant::ModuleFn { .. }
                     | ValueConstructorVariant::LocalVariable { .. } => {
-                        return Err(Error::NonLocalClauseGuardVariable { location, name })
+                        return Err(Error::NonLocalClauseGuardVariable { location, name });
                     }
 
                     // TODO: remove this clone. Could be an rc instead
                     ValueConstructorVariant::ModuleConstant { literal, .. }
                     | ValueConstructorVariant::LocalConstant { literal } => {
-                        return Ok(literal.clone())
+                        return Ok(literal.clone());
                     }
                 };
 
@@ -3225,16 +3230,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Type annotation and inferred value are valid. Ensure they are unifiable.
             // NOTE: if the types are not unifiable we use the annotated type.
             (Some(Ok(const_ann)), Ok(inferred)) => {
-                if let Err(e) = unify(const_ann.clone(), inferred.type_())
+                match unify(const_ann.clone(), inferred.type_())
                     .map_err(|e| convert_unify_error(e, inferred.location()))
                 {
-                    self.problems.error(e);
-                    Constant::Invalid {
-                        location: loc,
-                        type_: const_ann,
+                    Err(e) => {
+                        self.problems.error(e);
+                        Constant::Invalid {
+                            location: loc,
+                            type_: const_ann,
+                        }
                     }
-                } else {
-                    inferred
+                    _ => inferred,
                 }
             }
             // Type annotation is valid but not the inferred value. Place a placeholder constant with the annotation type.
@@ -3427,22 +3433,24 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 }
             });
         if let Err(e) = field_map {
-            if let Error::IncorrectArity {
-                expected,
-                given,
-                labels,
-                location,
-            } = e
-            {
-                labelled_arity_error = true;
-                self.problems.error(Error::IncorrectArity {
+            match e {
+                Error::IncorrectArity {
                     expected,
                     given,
                     labels,
                     location,
-                });
-            } else {
-                self.problems.error(e);
+                } => {
+                    labelled_arity_error = true;
+                    self.problems.error(Error::IncorrectArity {
+                        expected,
+                        given,
+                        labels,
+                        location,
+                    });
+                }
+                _ => {
+                    self.problems.error(e);
+                }
             }
         }
 

@@ -2,6 +2,7 @@
 mod tests;
 
 use crate::{
+    Error, Result,
     ast::{
         CustomType, Import, ModuleConstant, TypeAlias, TypeAstConstructor, TypeAstFn, TypeAstHole,
         TypeAstTuple, TypeAstVar, *,
@@ -9,14 +10,13 @@ use crate::{
     build::Target,
     docvec,
     io::Utf8Writer,
-    parse::extra::{Comment, ModuleExtra},
     parse::SpannedString,
+    parse::extra::{Comment, ModuleExtra},
     pretty::{self, *},
     type_::{self, Type},
     warning::WarningEmitter,
-    Error, Result,
 };
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use itertools::Itertools;
 use std::{cmp::Ordering, sync::Arc};
 use vec1::Vec1;
@@ -136,7 +136,7 @@ impl<'comments> Formatter<'comments> {
     fn pop_comments_with_position(
         &mut self,
         limit: u32,
-    ) -> impl Iterator<Item = (u32, Option<&'comments str>)> {
+    ) -> impl Iterator<Item = (u32, Option<&'comments str>)> + use<'comments> {
         let (popped, rest, empty_lines) =
             comments_before(self.comments, self.empty_lines, limit, true);
         self.comments = rest;
@@ -146,14 +146,20 @@ impl<'comments> Formatter<'comments> {
 
     /// Pop comments that occur before a byte-index in the source, consuming
     /// and retaining any empty lines contained within.
-    fn pop_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
+    fn pop_comments(
+        &mut self,
+        limit: u32,
+    ) -> impl Iterator<Item = Option<&'comments str>> + use<'comments> {
         self.pop_comments_with_position(limit)
             .map(|(_position, comment)| comment)
     }
 
     /// Pop doc comments that occur before a byte-index in the source, consuming
     /// and dropping any empty lines contained within.
-    fn pop_doc_comments(&mut self, limit: u32) -> impl Iterator<Item = Option<&'comments str>> {
+    fn pop_doc_comments(
+        &mut self,
+        limit: u32,
+    ) -> impl Iterator<Item = Option<&'comments str>> + use<'comments> {
         let (popped, rest, empty_lines) =
             comments_before(self.doc_comments, self.empty_lines, limit, false);
         self.doc_comments = rest;

@@ -143,17 +143,19 @@ impl<'module> Generator<'module> {
             TypedExpr::Int { value, .. } => Ok(int(value)),
             TypedExpr::Float { value, .. } => Ok(float(value)),
 
-            TypedExpr::List { elements, tail, .. } => self.not_in_tail_position(|gen| match tail {
-                Some(tail) => {
-                    gen.tracker.prepend_used = true;
-                    let tail = gen.wrap_expression(tail)?;
-                    prepend(elements.iter().map(|e| gen.wrap_expression(e)), tail)
-                }
-                None => {
-                    gen.tracker.list_used = true;
-                    list(elements.iter().map(|e| gen.wrap_expression(e)))
-                }
-            }),
+            TypedExpr::List { elements, tail, .. } => {
+                self.not_in_tail_position(|r#gen| match tail {
+                    Some(tail) => {
+                        r#gen.tracker.prepend_used = true;
+                        let tail = r#gen.wrap_expression(tail)?;
+                        prepend(elements.iter().map(|e| r#gen.wrap_expression(e)), tail)
+                    }
+                    None => {
+                        r#gen.tracker.list_used = true;
+                        list(elements.iter().map(|e| r#gen.wrap_expression(e)))
+                    }
+                })
+            }
 
             TypedExpr::Tuple { elems, .. } => self.tuple(elems),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
@@ -223,7 +225,7 @@ impl<'module> Generator<'module> {
     }
 
     fn negate_with<'a>(&mut self, with: &'static str, value: &'a TypedExpr) -> Output<'a> {
-        self.not_in_tail_position(|gen| Ok(docvec![with, gen.wrap_expression(value)?]))
+        self.not_in_tail_position(|r#gen| Ok(docvec![with, r#gen.wrap_expression(value)?]))
     }
 
     fn bit_array<'a>(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
@@ -233,7 +235,7 @@ impl<'module> Generator<'module> {
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
-            let value = self.not_in_tail_position(|gen| gen.wrap_expression(&segment.value))?;
+            let value = self.not_in_tail_position(|r#gen| r#gen.wrap_expression(&segment.value))?;
 
             if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
                 let details = self.sized_bit_array_segment_details(segment)?;
@@ -373,7 +375,7 @@ impl<'module> Generator<'module> {
 
                 (
                     size_value,
-                    self.not_in_tail_position(|gen| gen.wrap_expression(size))?,
+                    self.not_in_tail_position(|r#gen| r#gen.wrap_expression(size))?,
                 )
             }
             _ => {
@@ -427,8 +429,8 @@ impl<'module> Generator<'module> {
             | TypedExpr::Case { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::RecordUpdate { .. } => self
-                .immediately_invoked_function_expression(expression, |gen, expr| {
-                    gen.expression(expr)
+                .immediately_invoked_function_expression(expression, |r#gen, expr| {
+                    r#gen.expression(expr)
                 }),
             _ => self.expression(expression),
         }
@@ -515,8 +517,8 @@ impl<'module> Generator<'module> {
             .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
         for assignment in all_assignments {
-            documents.push(self.not_in_tail_position(|gen| {
-                gen.simple_variable_assignment(&assignment.name, &assignment.value)
+            documents.push(self.not_in_tail_position(|r#gen| {
+                r#gen.simple_variable_assignment(&assignment.name, &assignment.value)
             })?);
             documents.push(line());
         }
@@ -548,8 +550,8 @@ impl<'module> Generator<'module> {
                 Statement::Use(use_) => self.child_expression(&use_.call),
             }
         } else {
-            self.immediately_invoked_function_expression(statements, |gen, statements| {
-                gen.statements(statements)
+            self.immediately_invoked_function_expression(statements, |r#gen, statements| {
+                r#gen.statements(statements)
             })
         }
     }
@@ -559,7 +561,7 @@ impl<'module> Generator<'module> {
         let mut documents = Vec::with_capacity(count * 3);
         for (i, statement) in statements.iter().enumerate() {
             if i + 1 < count {
-                documents.push(self.not_in_tail_position(|gen| gen.statement(statement))?);
+                documents.push(self.not_in_tail_position(|r#gen| r#gen.statement(statement))?);
                 if requires_semicolon(statement) {
                     documents.push(";".to_doc());
                 }
@@ -581,7 +583,7 @@ impl<'module> Generator<'module> {
         value: &'a TypedExpr,
     ) -> Output<'a> {
         // Subject must be rendered before the variable for variable numbering
-        let subject = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+        let subject = self.not_in_tail_position(|r#gen| r#gen.wrap_expression(value))?;
         let js_name = self.next_local_var(name);
         let assignment = docvec!["let ", js_name.clone(), " = ", subject, ";"];
         let assignment = if self.scope_position.is_tail() {
@@ -611,7 +613,7 @@ impl<'module> Generator<'module> {
         // Otherwise we need to compile the patterns
         let (subject, subject_assignment) = pattern::assign_subject(self, value);
         // Value needs to be rendered before traversing pattern to have correctly incremented variables.
-        let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+        let value = self.not_in_tail_position(|r#gen| r#gen.wrap_expression(value))?;
         let mut pattern_generator = pattern::Generator::new(self);
         pattern_generator.traverse_pattern(&subject, pattern)?;
         let compiled = pattern_generator.take_compiled();
@@ -649,7 +651,7 @@ impl<'module> Generator<'module> {
             pattern::assign_subjects(self, subject_values)
                 .into_iter()
                 .unzip();
-        let mut gen = pattern::Generator::new(self);
+        let mut r#gen = pattern::Generator::new(self);
 
         let mut doc = nil();
 
@@ -670,9 +672,10 @@ impl<'module> Generator<'module> {
 
             // A clause can have many patterns `pattern, pattern ->...`
             for multipatterns in multipatterns {
-                let scope = gen.expression_generator.current_scope_vars.clone();
-                let mut compiled = gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
-                let consequence = gen
+                let scope = r#gen.expression_generator.current_scope_vars.clone();
+                let mut compiled =
+                    r#gen.generate(&subjects, multipatterns, clause.guard.as_ref())?;
+                let consequence = r#gen
                     .expression_generator
                     .expression_flattening_blocks(&clause.then)?;
 
@@ -681,11 +684,11 @@ impl<'module> Generator<'module> {
 
                 // Reset the scope now that this clause has finished, causing the
                 // variables to go out of scope.
-                gen.expression_generator.current_scope_vars = scope;
+                r#gen.expression_generator.current_scope_vars = scope;
 
                 // If the pattern assigns any variables we need to render assignments
                 let body = if compiled.has_assignments() {
-                    let assignments = gen
+                    let assignments = r#gen
                         .expression_generator
                         .pattern_take_assignments_doc(&mut compiled);
                     docvec![assignments, line(), consequence]
@@ -719,7 +722,8 @@ impl<'module> Generator<'module> {
                         " else if ("
                     })
                     .append(
-                        gen.expression_generator
+                        r#gen
+                            .expression_generator
                             .pattern_take_checks_doc(&mut compiled, true),
                     )
                     .append(") {")
@@ -737,7 +741,7 @@ impl<'module> Generator<'module> {
             .zip(subject_values)
             .flat_map(|(assignment_name, value)| assignment_name.map(|name| (name, value)))
             .map(|(name, value)| {
-                let value = self.not_in_tail_position(|gen| gen.wrap_expression(value))?;
+                let value = self.not_in_tail_position(|r#gen| r#gen.wrap_expression(value))?;
                 Ok(docvec!["let ", name, " = ", value, ";", line()])
             })
             .try_collect()?;
@@ -752,7 +756,7 @@ impl<'module> Generator<'module> {
         message: Option<&'a TypedExpr>,
     ) -> Output<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
+            Some(m) => self.not_in_tail_position(|r#gen| r#gen.expression(m))?,
             None => string("Pattern match failed, no pattern matched the value."),
         };
 
@@ -760,15 +764,19 @@ impl<'module> Generator<'module> {
     }
 
     fn tuple<'a>(&mut self, elements: &'a [TypedExpr]) -> Output<'a> {
-        self.not_in_tail_position(|gen| {
-            array(elements.iter().map(|element| gen.wrap_expression(element)))
+        self.not_in_tail_position(|r#gen| {
+            array(
+                elements
+                    .iter()
+                    .map(|element| r#gen.wrap_expression(element)),
+            )
         })
     }
 
     fn call<'a>(&mut self, fun: &'a TypedExpr, arguments: &'a [TypedCallArg]) -> Output<'a> {
         let arguments = arguments
             .iter()
-            .map(|element| self.not_in_tail_position(|gen| gen.wrap_expression(&element.value)))
+            .map(|element| self.not_in_tail_position(|r#gen| r#gen.wrap_expression(&element.value)))
             .try_collect()?;
 
         self.call_with_doc_args(fun, arguments)
@@ -845,9 +853,9 @@ impl<'module> Generator<'module> {
             }
 
             _ => {
-                let fun = self.not_in_tail_position(|gen| {
+                let fun = self.not_in_tail_position(|r#gen| {
                     let is_fn_literal = matches!(fun, TypedExpr::Fn { .. });
-                    let fun = gen.wrap_expression(fun)?;
+                    let fun = r#gen.wrap_expression(fun)?;
                     if is_fn_literal {
                         Ok(docvec!["(", fun, ")"])
                     } else {
@@ -902,8 +910,8 @@ impl<'module> Generator<'module> {
     }
 
     fn record_access<'a>(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
-        self.not_in_tail_position(|gen| {
-            let record = gen.wrap_expression(record)?;
+        self.not_in_tail_position(|r#gen| {
+            let record = r#gen.wrap_expression(record)?;
             Ok(docvec![record, ".", maybe_escape_property_doc(label)])
         })
     }
@@ -915,15 +923,15 @@ impl<'module> Generator<'module> {
         args: &'a [TypedCallArg],
     ) -> Output<'a> {
         Ok(docvec![
-            self.not_in_tail_position(|gen| gen.assignment(record))?,
+            self.not_in_tail_position(|r#gen| r#gen.assignment(record))?,
             line(),
             self.call(constructor, args)?,
         ])
     }
 
     fn tuple_index<'a>(&mut self, tuple: &'a TypedExpr, index: u64) -> Output<'a> {
-        self.not_in_tail_position(|gen| {
-            let tuple = gen.wrap_expression(tuple)?;
+        self.not_in_tail_position(|r#gen| {
+            let tuple = r#gen.wrap_expression(tuple)?;
             Ok(docvec![tuple, eco_format!("[{index}]")])
         })
     }
@@ -955,22 +963,22 @@ impl<'module> Generator<'module> {
     }
 
     fn div_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let left = self.not_in_tail_position(|r#gen| r#gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|r#gen| r#gen.child_expression(right))?;
         self.tracker.int_division_used = true;
         Ok(docvec!["divideInt", wrap_args([left, right])])
     }
 
     fn remainder_int<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let left = self.not_in_tail_position(|r#gen| r#gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|r#gen| r#gen.child_expression(right))?;
         self.tracker.int_remainder_used = true;
         Ok(docvec!["remainderInt", wrap_args([left, right])])
     }
 
     fn div_float<'a>(&mut self, left: &'a TypedExpr, right: &'a TypedExpr) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let left = self.not_in_tail_position(|r#gen| r#gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|r#gen| r#gen.child_expression(right))?;
         self.tracker.float_division_used = true;
         Ok(docvec!["divideFloat", wrap_args([left, right])])
     }
@@ -983,15 +991,15 @@ impl<'module> Generator<'module> {
     ) -> Output<'a> {
         // If it is a simple scalar type then we can use JS' reference identity
         if is_js_scalar(left.type_()) {
-            let left_doc = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-            let right_doc = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+            let left_doc = self.not_in_tail_position(|r#gen| r#gen.child_expression(left))?;
+            let right_doc = self.not_in_tail_position(|r#gen| r#gen.child_expression(right))?;
             let operator = if should_be_equal { " === " } else { " !== " };
             return Ok(docvec![left_doc, operator, right_doc]);
         }
 
         // Other types must be compared using structural equality
-        let left = self.not_in_tail_position(|gen| gen.wrap_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.wrap_expression(right))?;
+        let left = self.not_in_tail_position(|r#gen| r#gen.wrap_expression(left))?;
+        let right = self.not_in_tail_position(|r#gen| r#gen.wrap_expression(right))?;
         Ok(self.prelude_equal_call(should_be_equal, left, right))
     }
 
@@ -1019,14 +1027,14 @@ impl<'module> Generator<'module> {
         right: &'a TypedExpr,
         op: &'a str,
     ) -> Output<'a> {
-        let left = self.not_in_tail_position(|gen| gen.child_expression(left))?;
-        let right = self.not_in_tail_position(|gen| gen.child_expression(right))?;
+        let left = self.not_in_tail_position(|r#gen| r#gen.child_expression(left))?;
+        let right = self.not_in_tail_position(|r#gen| r#gen.child_expression(right))?;
         Ok(docvec![left, " ", op, " ", right])
     }
 
     fn todo<'a>(&mut self, message: Option<&'a TypedExpr>, location: &'a SrcSpan) -> Output<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
+            Some(m) => self.not_in_tail_position(|r#gen| r#gen.expression(m))?,
             None => string("`todo` expression evaluated. This code has not yet been implemented."),
         };
         let doc = self.throw_error("todo", &message, *location, vec![]);
@@ -1036,7 +1044,7 @@ impl<'module> Generator<'module> {
 
     fn panic<'a>(&mut self, location: &'a SrcSpan, message: Option<&'a TypedExpr>) -> Output<'a> {
         let message = match message {
-            Some(m) => self.not_in_tail_position(|gen| gen.expression(m))?,
+            Some(m) => self.not_in_tail_position(|r#gen| r#gen.expression(m))?,
             None => string("`panic` expression evaluated."),
         };
         let doc = self.throw_error("panic", &message, *location, vec![]);

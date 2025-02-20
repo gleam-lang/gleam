@@ -11,7 +11,7 @@ use lsp_types::{
 
 use crate::{
     ast::{CallArg, ImplicitCallArgOrigin, TypedExpr},
-    type_::{pretty::Printer, FieldMap, ModuleValueConstructor, Type},
+    type_::{FieldMap, ModuleValueConstructor, Type, pretty::Printer},
 };
 
 pub fn for_expression(expr: &TypedExpr) -> Option<SignatureHelp> {

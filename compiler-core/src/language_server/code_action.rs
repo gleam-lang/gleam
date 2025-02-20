@@ -1,39 +1,38 @@
 use std::{collections::HashSet, iter, sync::Arc};
 
 use crate::{
+    Error, STDLIB_PACKAGE_NAME,
     ast::{
-        self,
-        visit::{visit_typed_call_arg, visit_typed_pattern_call_arg, Visit as _},
-        AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin, Pattern,
-        PipelineAssignmentKind, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
+        self, AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin,
+        Pattern, PipelineAssignmentKind, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
         TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
         TypedStatement, TypedUse,
+        visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
     type_::{
-        self,
+        self, FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         error::{ModuleSuggestion, VariableOrigin},
         printer::{Names, Printer},
-        FieldMap, ModuleValueConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
     },
-    Error, STDLIB_PACKAGE_NAME,
 };
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use heck::ToSnakeCase;
 use im::HashMap;
 use itertools::Itertools;
 use lsp_types::{CodeAction, CodeActionKind, CodeActionParams, Position, Range, TextEdit, Url};
-use vec1::{vec1, Vec1};
+use vec1::{Vec1, vec1};
 
 use super::{
+    TextEdits,
     compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
     rename::find_variable_references,
-    src_span_to_lsp_range, TextEdits,
+    src_span_to_lsp_range,
 };
 
 #[derive(Debug)]
@@ -867,10 +866,9 @@ pub fn code_action_import_module(
                 ))
             };
 
-            let title = if let Some(import) = &suggestion.import {
-                &format!("Import `{import}`")
-            } else {
-                &format!("Did you mean `{}`", suggestion.name)
+            let title = match &suggestion.import {
+                Some(import) => &format!("Import `{import}`"),
+                _ => &format!("Did you mean `{}`", suggestion.name),
             };
 
             CodeActionBuilder::new(title)
@@ -3190,7 +3188,7 @@ impl RecordLabel<'_> {
     fn variable_name(&self) -> EcoString {
         match self {
             RecordLabel::Labeled(label) => (*label).into(),
-            RecordLabel::Unlabeled(mut index) => {
+            &RecordLabel::Unlabeled(mut index) => {
                 let mut characters = Vec::new();
                 let alphabet_length = 26;
                 let alphabet_offset = b'a';
@@ -3231,58 +3229,71 @@ impl<'a> DecoderPrinter<'a> {
             eco_format!("{module_name}.int")
         } else if type_.is_string() {
             eco_format!("{module_name}.string")
-        } else if let Some(types) = type_.tuple_types() {
-            let fields = types
-                .iter()
-                .enumerate()
-                .map(|(index, type_)| RecordField {
-                    type_,
-                    label: RecordLabel::Unlabeled(index),
-                })
-                .collect_vec();
-            let decoders = fields
-                .iter()
-                .map(|field| self.decode_field(field, indent + 2))
-                .join("\n");
-            let mut field_names = fields.iter().map(|field| field.label.variable_name());
+        } else {
+            match type_.tuple_types() {
+                Some(types) => {
+                    let fields = types
+                        .iter()
+                        .enumerate()
+                        .map(|(index, type_)| RecordField {
+                            type_,
+                            label: RecordLabel::Unlabeled(index),
+                        })
+                        .collect_vec();
+                    let decoders = fields
+                        .iter()
+                        .map(|field| self.decode_field(field, indent + 2))
+                        .join("\n");
+                    let mut field_names = fields.iter().map(|field| field.label.variable_name());
 
-            eco_format!(
-                "{{
+                    eco_format!(
+                        "{{
 {decoders}
 
 {indent}  {module_name}.success(#({fields}))
 {indent}}}",
-                fields = field_names.join(", "),
-                indent = " ".repeat(indent)
-            )
-        } else {
-            let type_information = type_.named_type_information();
-            let type_information = type_information.as_ref().map(|(module, name, arguments)| {
-                (module.as_str(), name.as_str(), arguments.as_slice())
-            });
-
-            match type_information {
-                Some(("gleam/dynamic", "Dynamic", _)) => eco_format!("{module_name}.dynamic"),
-                Some(("gleam", "List", [element])) => {
-                    eco_format!("{module_name}.list({})", self.decoder_for(element, indent))
-                }
-                Some(("gleam/option", "Option", [some])) => {
-                    eco_format!("{module_name}.optional({})", self.decoder_for(some, indent))
-                }
-                Some(("gleam/dict", "Dict", [key, value])) => {
-                    eco_format!(
-                        "{module_name}.dict({}, {})",
-                        self.decoder_for(key, indent),
-                        self.decoder_for(value, indent)
+                        fields = field_names.join(", "),
+                        indent = " ".repeat(indent)
                     )
                 }
-                Some((module, name, _)) if module == self.type_module && name == self.type_name => {
-                    eco_format!("{}_decoder()", name.to_snake_case())
+                _ => {
+                    let type_information = type_.named_type_information();
+                    let type_information =
+                        type_information.as_ref().map(|(module, name, arguments)| {
+                            (module.as_str(), name.as_str(), arguments.as_slice())
+                        });
+
+                    match type_information {
+                        Some(("gleam/dynamic", "Dynamic", _)) => {
+                            eco_format!("{module_name}.dynamic")
+                        }
+                        Some(("gleam", "List", [element])) => {
+                            eco_format!("{module_name}.list({})", self.decoder_for(element, indent))
+                        }
+                        Some(("gleam/option", "Option", [some])) => {
+                            eco_format!(
+                                "{module_name}.optional({})",
+                                self.decoder_for(some, indent)
+                            )
+                        }
+                        Some(("gleam/dict", "Dict", [key, value])) => {
+                            eco_format!(
+                                "{module_name}.dict({}, {})",
+                                self.decoder_for(key, indent),
+                                self.decoder_for(value, indent)
+                            )
+                        }
+                        Some((module, name, _))
+                            if module == self.type_module && name == self.type_name =>
+                        {
+                            eco_format!("{}_decoder()", name.to_snake_case())
+                        }
+                        _ => eco_format!(
+                            r#"todo as "Decoder for {}""#,
+                            self.printer.print_type(type_)
+                        ),
+                    }
                 }
-                _ => eco_format!(
-                    r#"todo as "Decoder for {}""#,
-                    self.printer.print_type(type_)
-                ),
             }
         }
     }
@@ -3508,94 +3519,102 @@ impl<'a> EncoderPrinter<'a> {
             maybe_capture(eco_format!("{module_name}.int"))
         } else if type_.is_string() {
             maybe_capture(eco_format!("{module_name}.string"))
-        } else if let Some(types) = type_.tuple_types() {
-            let (tuple, new_indent) = if is_capture {
-                ("value", indent + 4)
-            } else {
-                (encoded_value, indent + 2)
-            };
+        } else {
+            match type_.tuple_types() {
+                Some(types) => {
+                    let (tuple, new_indent) = if is_capture {
+                        ("value", indent + 4)
+                    } else {
+                        (encoded_value, indent + 2)
+                    };
 
-            let encoders = types
-                .iter()
-                .enumerate()
-                .map(|(index, type_)| {
-                    self.encoder_for(&format!("{tuple}.{index}"), type_, new_indent)
-                })
-                .collect_vec();
+                    let encoders = types
+                        .iter()
+                        .enumerate()
+                        .map(|(index, type_)| {
+                            self.encoder_for(&format!("{tuple}.{index}"), type_, new_indent)
+                        })
+                        .collect_vec();
 
-            if is_capture {
-                eco_format!(
-                    "fn(value) {{
+                    if is_capture {
+                        eco_format!(
+                            "fn(value) {{
 {indent}  {module_name}.preprocessed_array([
 {indent}    {encoders},
 {indent}  ])
 {indent}}}",
-                    indent = " ".repeat(indent),
-                    encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
-                )
-            } else {
-                eco_format!(
-                    "{module_name}.preprocessed_array([
+                            indent = " ".repeat(indent),
+                            encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
+                        )
+                    } else {
+                        eco_format!(
+                            "{module_name}.preprocessed_array([
 {indent}  {encoders},
 {indent}])",
-                    indent = " ".repeat(indent),
-                    encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
-                )
-            }
-        } else {
-            let type_information = type_.named_type_information();
-            let type_information: Option<(&str, &str, &[Arc<Type>])> =
-                type_information.as_ref().map(|(module, name, arguments)| {
-                    (module.as_str(), name.as_str(), arguments.as_slice())
-                });
-
-            match type_information {
-                Some(("gleam", "List", [element])) => {
-                    eco_format!(
-                        "{module_name}.array({encoded_value}, {map_function})",
-                        map_function = self.encoder_for("_", element, indent)
-                    )
+                            indent = " ".repeat(indent),
+                            encoders = encoders.join(&format!(",\n{}", " ".repeat(new_indent))),
+                        )
+                    }
                 }
-                Some(("gleam/option", "Option", [some])) => {
-                    eco_format!(
-                        "case {encoded_value} {{
+                _ => {
+                    let type_information = type_.named_type_information();
+                    let type_information: Option<(&str, &str, &[Arc<Type>])> =
+                        type_information.as_ref().map(|(module, name, arguments)| {
+                            (module.as_str(), name.as_str(), arguments.as_slice())
+                        });
+
+                    match type_information {
+                        Some(("gleam", "List", [element])) => {
+                            eco_format!(
+                                "{module_name}.array({encoded_value}, {map_function})",
+                                map_function = self.encoder_for("_", element, indent)
+                            )
+                        }
+                        Some(("gleam/option", "Option", [some])) => {
+                            eco_format!(
+                                "case {encoded_value} {{
 {indent}  {none} -> {module_name}.null()
 {indent}  {some}(value) -> {encoder}
 {indent}}}",
-                        indent = " ".repeat(indent),
-                        none = self
-                            .printer
-                            .print_constructor(&"gleam/option".into(), &"None".into()),
-                        some = self
-                            .printer
-                            .print_constructor(&"gleam/option".into(), &"Some".into()),
-                        encoder = self.encoder_for("value", some, indent + 2)
-                    )
-                }
-                Some(("gleam/dict", "Dict", [key, value])) => {
-                    let stringify_function = match key.named_type_information().as_ref().map(
-                        |(module, name, arguments)| {
-                            (module.as_str(), name.as_str(), arguments.as_slice())
-                        },
-                    ) {
-                        Some(("gleam", "String", [])) => "fn(string) { string }",
-                        _ => &format!(
-                            r#"todo as "Function to stringify {}""#,
-                            self.printer.print_type(key)
+                                indent = " ".repeat(indent),
+                                none = self
+                                    .printer
+                                    .print_constructor(&"gleam/option".into(), &"None".into()),
+                                some = self
+                                    .printer
+                                    .print_constructor(&"gleam/option".into(), &"Some".into()),
+                                encoder = self.encoder_for("value", some, indent + 2)
+                            )
+                        }
+                        Some(("gleam/dict", "Dict", [key, value])) => {
+                            let stringify_function = match key
+                                .named_type_information()
+                                .as_ref()
+                                .map(|(module, name, arguments)| {
+                                    (module.as_str(), name.as_str(), arguments.as_slice())
+                                }) {
+                                Some(("gleam", "String", [])) => "fn(string) { string }",
+                                _ => &format!(
+                                    r#"todo as "Function to stringify {}""#,
+                                    self.printer.print_type(key)
+                                ),
+                            };
+                            eco_format!(
+                                "{module_name}.dict({encoded_value}, {stringify_function}, {})",
+                                self.encoder_for("_", value, indent)
+                            )
+                        }
+                        Some((module, name, _))
+                            if module == self.type_module && name == self.type_name =>
+                        {
+                            maybe_capture(eco_format!("encode_{}", name.to_snake_case()))
+                        }
+                        _ => eco_format!(
+                            r#"todo as "Encoder for {}""#,
+                            self.printer.print_type(type_)
                         ),
-                    };
-                    eco_format!(
-                        "{module_name}.dict({encoded_value}, {stringify_function}, {})",
-                        self.encoder_for("_", value, indent)
-                    )
+                    }
                 }
-                Some((module, name, _)) if module == self.type_module && name == self.type_name => {
-                    maybe_capture(eco_format!("encode_{}", name.to_snake_case()))
-                }
-                _ => eco_format!(
-                    r#"todo as "Encoder for {}""#,
-                    self.printer.print_type(type_)
-                ),
             }
         }
     }

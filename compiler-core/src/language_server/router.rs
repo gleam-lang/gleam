@@ -1,16 +1,16 @@
 use crate::{
+    Error, Result,
     build::SourceFingerprint,
     error::{FileIoAction, FileKind},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
-        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
-        DownloadDependencies, MakeLocker,
+        DownloadDependencies, MakeLocker, engine::LanguageServerEngine, files::FileSystemProxy,
+        progress::ProgressReporter,
     },
     paths::ProjectPaths,
-    Error, Result,
 };
 use std::{
-    collections::{hash_map::Entry, HashMap},
+    collections::{HashMap, hash_map::Entry},
     time::SystemTime,
 };
 
@@ -194,7 +194,7 @@ pub(crate) struct Project<A, B> {
 #[cfg(test)]
 mod find_gleam_project_parent_tests {
     use super::*;
-    use crate::io::{memory::InMemoryFileSystem, FileSystemWriter};
+    use crate::io::{FileSystemWriter, memory::InMemoryFileSystem};
 
     #[test]
     fn root() {
