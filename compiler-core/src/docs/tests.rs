@@ -139,6 +139,14 @@ pub fn one() {
     insta::assert_snapshot!(compile(config, modules));
 }
 
+#[test]
+fn ignored_argument_is_called_arg() {
+    let mut config = PackageConfig::default();
+    config.name = EcoString::from("test_project_name");
+    let modules = vec![("app.gleam", "pub fn one(_) { 1 }")];
+    insta::assert_snapshot!(compile(config, modules));
+}
+
 // https://github.com/gleam-lang/gleam/issues/2347
 #[test]
 fn tables() {

@@ -1765,7 +1765,10 @@ impl<'comments> Formatter<'comments> {
             ArgNames::NamedLabelled { label, name, .. } => docvec![label, " ", name],
             // We remove the underscore from discarded function arguments since we don't want to
             // expose this kind of detail: https://github.com/gleam-lang/gleam/issues/2561
-            ArgNames::Discard { name, .. } => name.strip_prefix('_').unwrap_or(name).to_doc(),
+            ArgNames::Discard { name, .. } => match name.strip_prefix('_').unwrap_or(name) {
+                "" => "arg".to_doc(),
+                name => name.to_doc(),
+            },
             ArgNames::LabelledDiscard { label, name, .. } => {
                 docvec![label, " ", name.strip_prefix('_').unwrap_or(name).to_doc()]
             }
