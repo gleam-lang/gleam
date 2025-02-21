@@ -4907,9 +4907,8 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
     }
 }
 
-/// Code action to split/interpolate a value into a string. If the cursor is
-/// inside the string (not selecting anything) the language server will offer to
-/// split it:
+/// Code action to interpolate a string. If the cursor is inside the string
+/// (not selecting anything) the language server will offer to split it:
 ///
 /// ```gleam
 /// "wibble | wobble"
@@ -4966,7 +4965,7 @@ impl<'a> InterpolateString<'a> {
             return vec![];
         };
 
-        let title = match interpolation {
+        match interpolation {
             StringInterpolation::InterpolateValue { value_location } => {
                 let name = self
                     .module
@@ -4978,13 +4977,11 @@ impl<'a> InterpolateString<'a> {
                     self.edits
                         .insert(value_location.start, format!("\" <> {name} <> \""));
                     self.edits.delete(value_location);
-                    "Interpolate variable"
                 } else if self.can_split_string_at(value_location.end) {
                     // If the string is not a valid name we just try and split
                     // the string at the end of the selection.
                     self.edits
                         .insert(value_location.end, "\" <> todo <> \"".into());
-                    "Split string"
                 } else {
                     // Otherwise there's no meaningful action we can do.
                     return vec![];
@@ -4993,14 +4990,13 @@ impl<'a> InterpolateString<'a> {
 
             StringInterpolation::SplitString { split_at } if self.can_split_string_at(split_at) => {
                 self.edits.insert(split_at, "\" <> todo <> \"".into());
-                "Split string"
             }
 
             StringInterpolation::SplitString { .. } => return vec![],
         };
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new(title)
+        CodeActionBuilder::new("Interpolate string")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)

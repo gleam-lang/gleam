@@ -78,8 +78,7 @@ const GENERATE_FUNCTION: &str = "Generate function";
 const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
 const INLINE_VARIABLE: &str = "Inline variable";
 const CONVERT_TO_PIPE: &str = "Convert to pipe";
-const SPLIT_STRING: &str = "Split string";
-const INTERPOLATE_VARIABLE: &str = "Interpolate variable";
+const INTERPOLATE_STRING: &str = "Interpolate string";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -119,7 +118,7 @@ macro_rules! assert_no_code_actions {
 #[test]
 fn split_string() {
     assert_code_action!(
-        SPLIT_STRING,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo"
 }"#,
@@ -130,7 +129,7 @@ fn split_string() {
 #[test]
 fn no_split_string_right_at_the_start() {
     assert_no_code_actions!(
-        SPLIT_STRING,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo"
 }"#,
@@ -141,7 +140,7 @@ fn no_split_string_right_at_the_start() {
 #[test]
 fn no_split_string_right_at_the_end() {
     assert_no_code_actions!(
-        SPLIT_STRING,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo"
 }"#,
@@ -152,7 +151,7 @@ fn no_split_string_right_at_the_end() {
 #[test]
 fn no_split_string_before_the_start() {
     assert_no_code_actions!(
-        SPLIT_STRING,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo"
 }"#,
@@ -163,7 +162,7 @@ fn no_split_string_before_the_start() {
 #[test]
 fn no_split_string_after_the_end() {
     assert_no_code_actions!(
-        SPLIT_STRING,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo"//we need this comment so we can put the cursor _after_ the closing quote
 }"#,
@@ -172,9 +171,9 @@ fn no_split_string_after_the_end() {
 }
 
 #[test]
-fn interpolate_variable_inside_string() {
+fn interpolate_string_inside_string() {
     assert_code_action!(
-        INTERPOLATE_VARIABLE,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo"
 }"#,
@@ -185,7 +184,7 @@ fn interpolate_variable_inside_string() {
 #[test]
 fn fallback_to_split_string_when_selecting_invalid_name() {
     assert_code_action!(
-        SPLIT_STRING,
+        INTERPOLATE_STRING,
         r#"pub fn main() {
   "wibble wobble woo woo"
 }"#,
