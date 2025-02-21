@@ -989,16 +989,22 @@ impl ConstructorSpecialiser {
     }
 
     fn specialise_type_value_constructor(&self, v: &TypeValueConstructor) -> TypeValueConstructor {
-        let TypeValueConstructor { name, parameters } = v;
+        let TypeValueConstructor {
+            name,
+            parameters,
+            documentation,
+        } = v;
         let parameters = parameters
             .iter()
             .map(|p| TypeValueConstructorField {
                 type_: self.specialise_type(p.type_.as_ref()),
+                label: p.label.clone(),
             })
             .collect_vec();
         TypeValueConstructor {
             name: name.clone(),
             parameters,
+            documentation: documentation.clone(),
         }
     }
 
