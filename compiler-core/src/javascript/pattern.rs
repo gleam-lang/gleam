@@ -125,21 +125,6 @@ impl Offset {
             tail_spread_type: None,
         }
     }
-    // This should never be called on an open ended offset
-    // However previous checks ensure bit_array segments without a size are only
-    // allowed at the end of a pattern
-    pub fn increment(&mut self, size: BitArraySize) {
-        match size {
-            BitArraySize::Literal(n) => self.increment_constant(n),
-            BitArraySize::Variable(name) => self.increment_variable(name),
-        }
-    }
-    pub fn increment_constant(&mut self, step: usize) {
-        self.bits.constant += step;
-    }
-    pub fn increment_variable(&mut self, variable: EcoString) {
-        self.bits.variables.push(variable);
-    }
     pub fn set_open_ended(&mut self, tail_spread_type: BitArrayTailSpreadType) {
         self.tail_spread_type = Some(tail_spread_type);
     }
@@ -746,12 +731,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                     self.push_byte_at(offset.bits.clone().divide(8));
                                     self.push_equality_check(subject.clone(), docvec![byte]);
                                     self.pop();
-                                    offset.increment_constant(8);
+                                    offset.bits.increment(BitArraySize::Literal(8));
                                 }
                             }
 
                             Pattern::Discard { .. } => {
-                                offset.increment(details.size);
+                                offset.bits.increment(details.size);
                             }
 
                             _ => {
@@ -784,7 +769,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                                 self.traverse_pattern(subject, &segment.value)?;
                                 self.pop();
-                                offset.increment(increment);
+                                offset.bits.increment(increment);
                             }
                         }
                     } else {
@@ -804,7 +789,19 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                     let increment = value.parse::<usize>().expect(
                                         "part of an Int node should always parse as integer",
                                     );
-                                    offset.increment_constant(increment);
+                                    offset.bits.increment(BitArraySize::Literal(increment));
+                                    let end = offset.bits.clone();
+
+                                    self.push_bit_array_slice(start, Some(end));
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
+                                }
+
+                                Pattern::VarUsage { name, .. } => {
+                                    let start = offset.bits.clone();
+
+                                    offset.bits.increment(BitArraySize::Variable(name.clone()));
                                     let end = offset.bits.clone();
 
                                     self.push_bit_array_slice(start, Some(end));
@@ -834,7 +831,20 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                     let increment = value.parse::<usize>().expect(
                                         "part of an Int node should always parse as integer",
                                     ) * 8;
-                                    offset.increment_constant(increment);
+                                    offset.bits.increment(BitArraySize::Literal(increment));
+                                    let end = offset.bits.clone();
+
+                                    self.push_bit_array_slice(start, Some(end));
+                                    self.traverse_pattern(subject, &segment.value)?;
+                                    self.pop();
+                                    Ok(())
+                                }
+
+                                Pattern::VarUsage { name, .. } => {
+                                    let start = offset.bits.clone();
+                                    offset.bits.increment(BitArraySize::Variable(eco_format!(
+                                        "{name} * 8"
+                                    )));
                                     let end = offset.bits.clone();
 
                                     self.push_bit_array_slice(start, Some(end));
@@ -867,7 +877,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                         }
                                         self.push_equality_check(subject.clone(), byte.to_doc());
                                         self.pop();
-                                        offset.increment_constant(8);
+                                        offset.bits.increment(BitArraySize::Literal(8));
                                     }
 
                                     Ok(())
