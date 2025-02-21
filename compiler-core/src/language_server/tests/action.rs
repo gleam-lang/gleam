@@ -5565,6 +5565,48 @@ pub fn main() {
 }
 
 #[test]
+fn convert_to_pipe_does_not_work_on_function_on_the_right_hand_side_of_use() {
+    assert_no_code_actions!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  use <- wibble(wobble)
+  todo
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_pipe_does_not_work_on_function_on_the_right_hand_side_of_use_2() {
+    assert_no_code_actions!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  use <- wibble(wobble)
+  todo
+}
+",
+        find_position_of("todo").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_pipe_works_inside_body_of_use() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  use <- wibble(wobble)
+  woo(123)
+}
+",
+        find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_pipe_pipes_the_outermost_argument() {
     assert_code_action!(
         CONVERT_TO_PIPE,
