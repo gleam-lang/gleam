@@ -3,12 +3,52 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch: {}
+  schedule:
+    - cron: "45 0 * * *"
 
 env:
   CARGO_TERM_COLOR: always
   RUSTFLAGS: "-D warnings"
+  VERSION: "${{ github.event_name == 'push' && github.ref_name || 'nightly' }}"
+
+permissions:
+  contents: write
+  id-token: write
+  packages: write
 
 jobs:
+  prepare-nightly:
+    runs-on: ubuntu-latest
+    name: Check latest commit
+    outputs:
+      should-run: ${{ steps.should-run.outputs.should-run }}
+    if: ${{ github.repository == 'gleam-lang/gleam' && github.event_name != 'push' }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: print latest_commit
+        run: echo ${{ github.sha }}
+
+      - id: should-run
+        continue-on-error: true
+        name: check latest commit is less than a day
+        if: ${{ github.event_name == 'schedule' }}
+        run: test -z $(git rev-list --after="24 hours" ${{ github.sha }}) && echo "should-run=false" >> $GITHUB_OUTPUT
+
+      - name: Delete old release assets
+        uses: mknejp/delete-release-assets@v1
+        if: ${{ steps.should-run != 'false' }}
+        with:
+          token: ${{ github.token }}
+          tag: nightly
+          fail-if-no-assets: false
+          fail-if-no-release: false
+          assets: |
+            *.zip
+            *.tar.gz
+            *.sha256
+            *.sha512
+
   build-release:
     name: build-release
     runs-on: ${{ matrix.os }}
@@ -20,7 +60,7 @@ jobs:
           - x86_64-apple-darwin
           - aarch64-apple-darwin
           - x86_64-pc-windows-msvc
-        toolchain: [stable]
+        toolchain: [ stable ]
         include:
           - os: ubuntu-latest
             target: x86_64-unknown-linux-musl
@@ -43,78 +83,27 @@ jobs:
             target: x86_64-pc-windows-msvc
             binary: x86-64
             cargo-tool: cargo
+          - os: ubuntu-latest
+            target: wasm32-unknown-unknown
+            cargo-tool: wasm-pack
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
+      - name: Update versions
+        if: ${{ env.VERSION == 'nightly' }}
+        shell: bash
+        run: ./bin/add-nightly-suffix-to-versions.sh
+
+      - name: "Build Archive"
+        id: build
+        uses: "./.github/actions/build-release"
         with:
+          version: ${{ env.VERSION }}
           toolchain: ${{ matrix.toolchain }}
           target: ${{ matrix.target }}
-
-      - name: Handle Rust dependencies caching
-        uses: Swatinem/rust-cache@v2
-        with:
-          key: v1-${{ matrix.target }}
-
-      - name: Build release binary
-        uses: clechasseur/rs-cargo@v3
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
-          tool: ${{ matrix.cargo-tool }}
-
-      - name: Verify binary architecture
-        shell: bash
-        run: |
-          BINARY_PATH="target/${{ matrix.target }}/release/gleam"
-          if [[ "${{ matrix.target }}" == *"windows"* ]]; then
-            BINARY_PATH="${BINARY_PATH}.exe"
-          fi
-
-          if ! file -b "$BINARY_PATH" | grep -q "${{ matrix.binary }}"; then
-            echo "error: Architecture mismatch"
-            echo "Expected architecture: '${{ matrix.binary }}'"
-            echo "Found binary type: '$(file -b "$BINARY_PATH")'"
-            exit 1
-          fi
-          echo "ok: Architecture match"
-
-      - name: Build archive
-        shell: bash
-        run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-
-          if [ "${{ matrix.os }}" = "windows-latest" ]; then
-            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.zip"
-            cp "target/${{ matrix.target }}/release/gleam.exe" "gleam.exe"
-            7z a "$ARCHIVE" "gleam.exe"
-            rm gleam.exe
-          else
-            ARCHIVE="gleam-$VERSION-${{ matrix.target }}.tar.gz"
-            cp "target/${{ matrix.target }}/release/gleam" "gleam"
-            tar -czvf "$ARCHIVE" "gleam"
-            rm gleam
-          fi
-
-          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
-          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
-          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
-
-      - name: Ensure binary successfully boots
-        shell: bash
-        run: |
-          case "${{ matrix.target }}" in
-            x86_64-pc-windows-msvc)
-              7z x "$ASSET"
-              ./gleam.exe --version ;;
-            aarch64*)
-              echo "We cannot test an ARM binary on a AMD64 runner" ;;
-            *)
-              tar -xvzf "$ASSET"
-              ./gleam --version ;;
-          esac
+          cargo-tool: ${{ matrix.cargo-tool }}
+          binary: ${{ matrix.binary }}
 
       - name: Upload release archive
         # https://github.com/softprops/action-gh-release/issues/445
@@ -124,50 +113,103 @@ jobs:
           draft: true
           prerelease: false
           fail_on_unmatched_files: true
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
+          files: "${{ steps.build.outputs.files }}"
 
-  build-release-wasm:
-    name: build-release-wasm
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-${{ matrix.target }}
+          path: "${{ steps.build.outputs.files }}"
+          overwrite: true
+
+  build-container-images:
+    name: build-container-images
+    needs: [ build-release ]
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'push' || (github.repository == 'gleam-lang/gleam' && needs.prepare-nightly.outputs.should-run != 'false') }}
+    strategy:
+      matrix:
+        base-image:
+          - scratch
+          - erlang
+          - erlang-slim
+          - erlang-alpine
+          - elixir
+          - elixir-slim
+          - elixir-alpine
+          - node
+          - node-slim
+          - node-alpine
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: actions-rs/toolchain@v1
         with:
-          toolchain: stable
-          target: wasm32-unknown-unknown
-          profile: minimal
-          override: true
+          sparse-checkout: containers
 
-      - name: Install wasm-pack
-        run: curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+      - name: Download Gleam release from previous job
+        uses: actions/download-artifact@v4
+        with:
+          pattern: release-{x86_64-unknown-linux-musl,aarch64-unknown-linux-musl}
 
-      - name: Build wasm
-        run: wasm-pack build --release --target web compiler-wasm
-
-      - name: Build wasm archive
+      - name: "Unpack and rearrange release"
+        shell: bash
         run: |
-          VERSION="${GITHUB_REF#refs/tags/}"
-          ARCHIVE="gleam-$VERSION-browser.tar.gz"
+          declare -A ARCH
+          ARCH["amd64"]="x86_64-unknown-linux-musl"
+          ARCH["arm64"]="aarch64-unknown-linux-musl"
 
-          tar -C compiler-wasm/pkg/ -czvf $ARCHIVE .
+          for SHORT in "${!ARCH[@]}"; do
+            LONG="${ARCH[$SHORT]}"
 
-          openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
-          openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
-          echo "ASSET=$ARCHIVE" >> $GITHUB_ENV
+            # Unpack Release
+            tar xf \
+              "release-$LONG/gleam-$VERSION-$LONG.tar.gz" \
+              -C "release-$LONG"
 
-      - name: Upload release archive
-        uses: softprops/action-gh-release@v2
+            # Move files into place
+            mv "release-$LONG/gleam" "gleam-$SHORT"
+
+            # Delete Unused Files
+            rm -rf "release-$LONG"
+          done
+
+      - name: Authenticate with GitHub container registry
+        uses: docker/login-action@v3
         with:
-          draft: true
-          prerelease: false
-          fail_on_unmatched_files: true
-          files: |
-            ${{ env.ASSET }}
-            ${{ env.ASSET }}.sha256
-            ${{ env.ASSET }}.sha512
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build version and tags
+        id: versions
+        run: |
+          # Strip `v` prefix from version
+          BARE_VERSION=$(echo "$VERSION" | sed -e 's|^v/\(.*\)|\1|')
+
+          # Build version with platform
+          PLATFORM_VERSION=$BARE_VERSION-${{ matrix.base-image }}
+
+          # Build container tag
+          TAG=ghcr.io/${{ github.repository }}:$PLATFORM_VERSION
+
+          echo "platform-version=$PLATFORM_VERSION" >> $GITHUB_OUTPUT
+          echo "container-tag=$TAG" >> $GITHUB_OUTPUT
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          file: containers/${{ matrix.base-image }}.dockerfile
+          push: true
+          tags: ${{ steps.versions.outputs.container-tag }}
+          labels: |
+            org.opencontainers.image.title=gleam
+            org.opencontainers.image.url=https://gleam.run
+            org.opencontainers.image.source=https://github.com/gleam-lang/gleam
+            org.opencontainers.image.version=${{ steps.versions.outputs.platform-version }}
+            org.opencontainers.image.licenses=Apache-2.0
