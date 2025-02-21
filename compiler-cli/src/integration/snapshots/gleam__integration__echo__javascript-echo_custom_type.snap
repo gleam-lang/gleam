@@ -1,0 +1,25 @@
+---
+source: compiler-cli/src/integration/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+pub type Wibble {
+  Wibble(a: Int, b: String)
+  Wobble(a: List(Float))
+  Woo
+}
+
+pub fn main() {
+  echo Wibble(1, "hello")
+  echo Wobble([1.0, 1.1])
+  echo Woo
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:8[39m
+Wibble(a: 1, b: "hello")
+[90msrc/main.gleam:9[39m
+Wobble(a: [1, 1.1])
+[90msrc/main.gleam:10[39m
+Woo

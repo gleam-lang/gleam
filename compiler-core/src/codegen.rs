@@ -1,6 +1,6 @@
 use crate::{
     analyse::TargetSupport,
-    build::{ErlangAppCodegenConfiguration, Module},
+    build::{package_compiler::StdlibPackage, ErlangAppCodegenConfiguration, Module},
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
@@ -167,6 +167,7 @@ pub enum TypeScriptDeclarations {
 pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
     prelude_location: &'a Utf8Path,
+    project_root: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
     target_support: TargetSupport,
 }
@@ -176,23 +177,30 @@ impl<'a> JavaScript<'a> {
         output_directory: &'a Utf8Path,
         typescript: TypeScriptDeclarations,
         prelude_location: &'a Utf8Path,
+        project_root: &'a Utf8Path,
         target_support: TargetSupport,
     ) -> Self {
         Self {
             prelude_location,
             output_directory,
             target_support,
+            project_root,
             typescript,
         }
     }
 
-    pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
+    pub fn render(
+        &self,
+        writer: &impl FileSystemWriter,
+        modules: &[Module],
+        stdlib_package: StdlibPackage,
+    ) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
             if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
-            self.js_module(writer, module, &js_name)?
+            self.js_module(writer, module, &js_name, stdlib_package)?
         }
         self.write_prelude(writer)?;
         Ok(())
@@ -243,6 +251,7 @@ impl<'a> JavaScript<'a> {
         writer: &impl FileSystemWriter,
         module: &Module,
         js_name: &str,
+        stdlib_package: StdlibPackage,
     ) -> Result<()> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
@@ -251,9 +260,11 @@ impl<'a> JavaScript<'a> {
             &module.ast,
             &line_numbers,
             &module.input_path,
+            self.project_root,
             &module.code,
             self.target_support,
             self.typescript,
+            stdlib_package,
         );
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
