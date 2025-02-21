@@ -29,6 +29,10 @@
   now be up to twice as fast.
   ([yoshi~](https://github.com/yoshi-monster))
 
+- On the JavaScript target, bit array patterns can now match segments of dynamic
+  size.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports Git dependencies. For example:
