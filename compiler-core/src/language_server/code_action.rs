@@ -4906,3 +4906,126 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         ast::visit::visit_typed_pipeline_assignment(self, first_value);
     }
 }
+
+/// Code action to split/interpolate a value into a string. If the cursor is
+/// inside the string (not selecting anything) the language server will offer to
+/// split it:
+///
+/// ```gleam
+/// "wibble | wobble"
+/// //      ^ [Split string]
+/// // Will produce the following
+/// "wibble " <> todo <> " wobble"
+/// ```
+///
+/// If the cursor is selecting an entire valid gleam name, then the language
+/// server will offer to interpolate it as a variable:
+///
+/// ```gleam
+/// "wibble wobble woo"
+/// //      ^^^^^^ [Interpolate variable]
+/// // Will produce the following
+/// "wibble " <> wobble <> " woo"
+/// ```
+///
+/// > Note: the cursor won't end up right after the inserted variable/todo.
+/// > that's a bit annoying, but in a future LSP version we will be able to
+/// > isnert tab stops to allow one to jump to the newly added variable/todo.
+///
+pub struct InterpolateString<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    string_interpolation: Option<StringInterpolation>,
+}
+
+enum StringInterpolation {
+    InterpolateValue { value_location: SrcSpan },
+    SplitString { split_at: u32 },
+}
+
+impl<'a> InterpolateString<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            string_interpolation: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(interpolation) = self.string_interpolation else {
+            return vec![];
+        };
+
+        let title = match interpolation {
+            StringInterpolation::InterpolateValue { value_location } => {
+                let value_range = value_location.start as usize..value_location.end as usize;
+                let name = self
+                    .module
+                    .code
+                    .get(value_range)
+                    .expect("invalid value range");
+
+                if !is_valid_lowercase_name(name) {
+                    return vec![];
+                }
+
+                self.edits
+                    .insert(value_location.start, format!("\" <> {name} <> \""));
+                self.edits.delete(value_location);
+
+                "Interpolate variable"
+            }
+            StringInterpolation::SplitString { split_at } => {
+                self.edits.insert(split_at, "\" <> todo <> \"".into());
+                "Split string"
+            }
+        };
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new(title)
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
+    fn visit_typed_expr_string(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        _value: &'ast EcoString,
+    ) {
+        // We can only interpolate/split a string if the cursor is somewhere
+        // within its location, otherwise we skip it.
+        let string_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, string_range) {
+            return;
+        }
+
+        let selection @ SrcSpan { start, end } =
+            self.edits.lsp_range_to_src_span(self.params.range);
+
+        if start == end {
+            if !(start <= location.start + 1 || start >= location.end - 1) {
+                self.string_interpolation =
+                    Some(StringInterpolation::SplitString { split_at: start });
+            }
+        } else {
+            self.string_interpolation = Some(StringInterpolation::InterpolateValue {
+                value_location: selection,
+            });
+        }
+    }
+}

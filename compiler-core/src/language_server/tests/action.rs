@@ -78,6 +78,8 @@ const GENERATE_FUNCTION: &str = "Generate function";
 const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
 const INLINE_VARIABLE: &str = "Inline variable";
 const CONVERT_TO_PIPE: &str = "Convert to pipe";
+const SPLIT_STRING: &str = "Split string";
+const INTERPOLATE_VARIABLE: &str = "Interpolate variable";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -112,6 +114,83 @@ macro_rules! assert_no_code_actions {
         let result = actions_with_title(all_titles, $project, range);
         assert_eq!(expected, result);
     };
+}
+
+#[test]
+fn split_string() {
+    assert_code_action!(
+        SPLIT_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
+fn no_split_string_right_at_the_start() {
+    assert_no_code_actions!(
+        SPLIT_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn no_split_string_right_at_the_end() {
+    assert_no_code_actions!(
+        SPLIT_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("\"").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn no_split_string_before_the_start() {
+    assert_no_code_actions!(
+        SPLIT_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("\"").to_selection()
+    );
+}
+
+#[test]
+fn no_split_string_after_the_end() {
+    assert_no_code_actions!(
+        SPLIT_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo"//we need this comment so we can put the cursor _after_ the closing quote
+}"#,
+        find_position_of("\"/").under_last_char().to_selection()
+    );
+}
+
+#[test]
+fn interpolate_variable_inside_string() {
+    assert_code_action!(
+        INTERPOLATE_VARIABLE,
+        r#"pub fn main() {
+  "wibble wobble woo"
+}"#,
+        find_position_of("wobble").select_until(find_position_of("wobble ").under_last_char()),
+    );
+}
+
+#[test]
+fn no_interpolate_variable_with_invalid_name() {
+    assert_no_code_actions!(
+        INTERPOLATE_VARIABLE,
+        r#"pub fn main() {
+  "wibble wobble woo woo"
+}"#,
+        find_position_of("wobble").select_until(find_position_of("woo").under_last_char()),
+    );
 }
 
 #[test]

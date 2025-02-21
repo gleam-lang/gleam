@@ -50,6 +50,13 @@ pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> R
     )
 }
 
+pub fn lsp_range_to_src_span(range: Range, line_numbers: &LineNumbers) -> SrcSpan {
+    let Range { start, end } = range;
+    let start = line_numbers.byte_index(start.line, start.character);
+    let end = line_numbers.byte_index(end.line, end.character);
+    SrcSpan { start, end }
+}
+
 /// A little wrapper around LineNumbers to make it easier to build text edits.
 ///
 #[derive(Debug)]
@@ -68,6 +75,10 @@ impl<'a> TextEdits<'a> {
 
     pub fn src_span_to_lsp_range(&self, location: SrcSpan) -> Range {
         src_span_to_lsp_range(location, self.line_numbers)
+    }
+
+    pub fn lsp_range_to_src_span(&self, range: Range) -> SrcSpan {
+        lsp_range_to_src_span(range, self.line_numbers)
     }
 
     pub fn replace(&mut self, location: SrcSpan, new_text: String) {
