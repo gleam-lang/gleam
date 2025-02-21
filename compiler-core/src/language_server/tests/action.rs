@@ -183,13 +183,13 @@ fn interpolate_variable_inside_string() {
 }
 
 #[test]
-fn no_interpolate_variable_with_invalid_name() {
-    assert_no_code_actions!(
-        INTERPOLATE_VARIABLE,
+fn fallback_to_split_string_when_selecting_invalid_name() {
+    assert_code_action!(
+        SPLIT_STRING,
         r#"pub fn main() {
   "wibble wobble woo woo"
 }"#,
-        find_position_of("wobble").select_until(find_position_of("woo").under_last_char()),
+        find_position_of("wobble").select_until(find_position_of("woo ").under_last_char()),
     );
 }
 
