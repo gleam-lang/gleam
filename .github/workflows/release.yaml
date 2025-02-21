@@ -15,6 +15,7 @@ env:
 permissions:
   contents: write
   id-token: write
+  attestations: write
   packages: write
 
 jobs:
@@ -48,6 +49,8 @@ jobs:
             *.tar.gz
             *.sha256
             *.sha512
+            *.sigstore
+            *.sbom.*.json
 
   build-release:
     name: build-release
@@ -169,6 +172,7 @@ jobs:
 
             # Move files into place
             mv "release-$LONG/gleam" "gleam-$SHORT"
+            mv "release-$LONG/gleam-$VERSION-$LONG.tar.gz.sbom.spdx.json" "gleam-$SHORT.sbom.spdx.json"
 
             # Delete Unused Files
             rm -rf "release-$LONG"
@@ -206,6 +210,8 @@ jobs:
           platforms: linux/amd64,linux/arm64
           file: containers/${{ matrix.base-image }}.dockerfile
           push: true
+          provenance: true
+          sbom: true
           tags: ${{ steps.versions.outputs.container-tag }}
           labels: |
             org.opencontainers.image.title=gleam
