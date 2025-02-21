@@ -638,12 +638,24 @@ fn go(x) {
 }
 
 #[test]
-fn match_dynamic_bits_size_error() {
-    assert_js_error!(
+fn match_dynamic_bits_size() {
+    assert_js!(
         r#"
 fn go(x) {
   let n = 16
   let assert <<a:bits-size(n)>> = x
+}
+"#
+    );
+}
+
+#[test]
+fn match_dynamic_bytes_size() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 3
+  let assert <<a:bytes-size(n)>> = x
 }
 "#
     );
