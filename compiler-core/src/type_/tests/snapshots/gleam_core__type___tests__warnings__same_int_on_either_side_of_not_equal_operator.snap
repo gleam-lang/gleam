@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  case 15 != 15 {\n    True -> Nil\n    False -> Nil\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  case 15 != 15 {
+    True -> Nil
+    False -> Nil
+  }
+}
+
+
+----- WARNING
+warning: Same operand on either side of the equality operator
+  ┌─ /src/warning/wrn.gleam:3:8
+  │
+3 │   case 15 != 15 {
+  │        ^^^^^^^^ This will always be false
