@@ -1,0 +1,15 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  \"wibble  wobble\" |> io.println\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  "wibble  wobble" |> io.println
+          ↑                     
+}
+
+
+----- AFTER ACTION
+pub fn main() {
+  { "wibble " <> todo <> " wobble" } |> io.println
+}

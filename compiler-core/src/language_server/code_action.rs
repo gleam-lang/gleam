@@ -4936,6 +4936,13 @@ pub struct InterpolateString<'a> {
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     string_interpolation: Option<(SrcSpan, StringInterpolation)>,
+    string_literal_position: StringLiteralPosition,
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+pub enum StringLiteralPosition {
+    FirstPipelineStep,
+    Other,
 }
 
 #[derive(Clone, Copy)]
@@ -4955,15 +4962,20 @@ impl<'a> InterpolateString<'a> {
             params,
             edits: TextEdits::new(line_numbers),
             string_interpolation: None,
+            string_literal_position: StringLiteralPosition::Other,
         }
     }
 
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some((_, interpolation)) = self.string_interpolation else {
+        let Some((string_location, interpolation)) = self.string_interpolation else {
             return vec![];
         };
+
+        if self.string_literal_position == StringLiteralPosition::FirstPipelineStep {
+            self.edits.insert(string_location.start, "{ ".into());
+        }
 
         match interpolation {
             StringInterpolation::InterpolateValue { value_location } => {
@@ -4995,6 +5007,10 @@ impl<'a> InterpolateString<'a> {
             StringInterpolation::SplitString { .. } => return vec![],
         };
 
+        if self.string_literal_position == StringLiteralPosition::FirstPipelineStep {
+            self.edits.insert(string_location.end, " }".into());
+        }
+
         let mut action = Vec::with_capacity(1);
         CodeActionBuilder::new("Interpolate string")
             .kind(CodeActionKind::REFACTOR_REWRITE)
@@ -5010,18 +5026,15 @@ impl<'a> InterpolateString<'a> {
                 !(at <= string_location.start + 1 || at >= string_location.end - 1)
             })
     }
-}
 
-impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
-    fn visit_typed_expr_string(
+    fn visit_literal_string(
         &mut self,
-        location: &'ast SrcSpan,
-        _type_: &'ast Arc<Type>,
-        _value: &'ast EcoString,
+        string_location: SrcSpan,
+        string_position: StringLiteralPosition,
     ) {
         // We can only interpolate/split a string if the cursor is somewhere
         // within its location, otherwise we skip it.
-        let string_range = self.edits.src_span_to_lsp_range(*location);
+        let string_range = self.edits.src_span_to_lsp_range(string_location);
         if !within(self.params.range, string_range) {
             return;
         }
@@ -5036,6 +5049,41 @@ impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
                 value_location: selection,
             }
         };
-        self.string_interpolation = Some((*location, interpolation));
+        self.string_interpolation = Some((string_location, interpolation));
+        self.string_literal_position = string_position;
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
+    fn visit_typed_expr_string(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        _value: &'ast EcoString,
+    ) {
+        self.visit_literal_string(*location, StringLiteralPosition::Other);
+    }
+
+    fn visit_typed_expr_pipeline(
+        &mut self,
+        _location: &'ast SrcSpan,
+        first_value: &'ast TypedPipelineAssignment,
+        assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
+        finally: &'ast TypedExpr,
+        _finally_kind: &'ast PipelineAssignmentKind,
+    ) {
+        if first_value.value.is_literal_string() {
+            self.visit_literal_string(
+                first_value.location,
+                StringLiteralPosition::FirstPipelineStep,
+            );
+        } else {
+            ast::visit::visit_typed_pipeline_assignment(self, first_value);
+        }
+
+        assignments
+            .iter()
+            .for_each(|(a, _)| ast::visit::visit_typed_pipeline_assignment(self, a));
+        self.visit_typed_expr(finally);
     }
 }
