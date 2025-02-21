@@ -4936,9 +4936,10 @@ pub struct InterpolateString<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    string_interpolation: Option<StringInterpolation>,
+    string_interpolation: Option<(SrcSpan, StringInterpolation)>,
 }
 
+#[derive(Clone, Copy)]
 enum StringInterpolation {
     InterpolateValue { value_location: SrcSpan },
     SplitString { split_at: u32 },
@@ -4961,33 +4962,41 @@ impl<'a> InterpolateString<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(interpolation) = self.string_interpolation else {
+        let Some((_, interpolation)) = self.string_interpolation else {
             return vec![];
         };
 
         let title = match interpolation {
             StringInterpolation::InterpolateValue { value_location } => {
-                let value_range = value_location.start as usize..value_location.end as usize;
                 let name = self
                     .module
                     .code
-                    .get(value_range)
+                    .get(value_location.start as usize..value_location.end as usize)
                     .expect("invalid value range");
 
-                if !is_valid_lowercase_name(name) {
+                if is_valid_lowercase_name(name) {
+                    self.edits
+                        .insert(value_location.start, format!("\" <> {name} <> \""));
+                    self.edits.delete(value_location);
+                    "Interpolate variable"
+                } else if self.can_split_string_at(value_location.end) {
+                    // If the string is not a valid name we just try and split
+                    // the string at the end of the selection.
+                    self.edits
+                        .insert(value_location.end, "\" <> todo <> \"".into());
+                    "Split string"
+                } else {
+                    // Otherwise there's no meaningful action we can do.
                     return vec![];
                 }
-
-                self.edits
-                    .insert(value_location.start, format!("\" <> {name} <> \""));
-                self.edits.delete(value_location);
-
-                "Interpolate variable"
             }
-            StringInterpolation::SplitString { split_at } => {
+
+            StringInterpolation::SplitString { split_at } if self.can_split_string_at(split_at) => {
                 self.edits.insert(split_at, "\" <> todo <> \"".into());
                 "Split string"
             }
+
+            StringInterpolation::SplitString { .. } => return vec![],
         };
 
         let mut action = Vec::with_capacity(1);
@@ -4997,6 +5006,13 @@ impl<'a> InterpolateString<'a> {
             .preferred(false)
             .push_to(&mut action);
         action
+    }
+
+    fn can_split_string_at(&self, at: u32) -> bool {
+        self.string_interpolation
+            .is_some_and(|(string_location, _)| {
+                !(at <= string_location.start + 1 || at >= string_location.end - 1)
+            })
     }
 }
 
@@ -5017,15 +5033,13 @@ impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
         let selection @ SrcSpan { start, end } =
             self.edits.lsp_range_to_src_span(self.params.range);
 
-        if start == end {
-            if !(start <= location.start + 1 || start >= location.end - 1) {
-                self.string_interpolation =
-                    Some(StringInterpolation::SplitString { split_at: start });
-            }
+        let interpolation = if start == end {
+            StringInterpolation::SplitString { split_at: start }
         } else {
-            self.string_interpolation = Some(StringInterpolation::InterpolateValue {
+            StringInterpolation::InterpolateValue {
                 value_location: selection,
-            });
-        }
+            }
+        };
+        self.string_interpolation = Some((*location, interpolation));
     }
 }
