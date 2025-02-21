@@ -638,6 +638,19 @@ fn go(x) {
 }
 
 #[test]
+fn match_dynamic_size_shadowed_variable() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 16
+  let n = 5
+  let assert <<a:size(n)>> = x
+}
+"#
+    );
+}
+
+#[test]
 fn match_dynamic_bits_size() {
     assert_js!(
         r#"

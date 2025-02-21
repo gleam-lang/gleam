@@ -15,19 +15,19 @@ pub static ASSIGNMENT_VAR: &str = "$";
 enum Index<'a> {
     Int(usize),
     String(&'a str),
-    ByteAt(OffsetBits),
+    ByteAt(OffsetBits<'a>),
     BitArraySliceToInt {
-        start: OffsetBits,
-        end: OffsetBits,
+        start: OffsetBits<'a>,
+        end: OffsetBits<'a>,
         endianness: Endianness,
         is_signed: bool,
     },
     BitArraySliceToFloat {
-        start: OffsetBits,
-        end: OffsetBits,
+        start: OffsetBits<'a>,
+        end: OffsetBits<'a>,
         endianness: Endianness,
     },
-    BitArraySlice(OffsetBits, Option<OffsetBits>),
+    BitArraySlice(OffsetBits<'a>, Option<OffsetBits<'a>>),
     StringPrefixSlice(usize),
 }
 
@@ -51,14 +51,14 @@ pub enum BitArrayTailSpreadType {
 }
 
 #[derive(Debug, Clone)]
-pub struct OffsetBits {
+pub struct OffsetBits<'a> {
     constant: usize,
-    variables: Vec<EcoString>,
+    variables: Vec<Document<'a>>,
     extra: Option<EcoString>,
 }
 
-impl OffsetBits {
-    fn increment(&mut self, size: BitArraySize) {
+impl<'a> OffsetBits<'a> {
+    fn increment(&mut self, size: BitArraySize<'a>) {
         match size {
             BitArraySize::Literal(size) => self.constant += size,
             BitArraySize::Variable(name) => self.variables.push(name),
@@ -80,7 +80,7 @@ impl OffsetBits {
     }
 }
 
-impl<'a> Documentable<'a> for OffsetBits {
+impl<'a> Documentable<'a> for OffsetBits<'a> {
     fn to_doc(self) -> Document<'a> {
         let doc = if self.variables.is_empty() {
             self.constant.to_doc()
@@ -109,12 +109,12 @@ impl<'a> Documentable<'a> for OffsetBits {
     }
 }
 
-struct Offset {
-    bits: OffsetBits,
+struct Offset<'a> {
+    bits: OffsetBits<'a>,
     tail_spread_type: Option<BitArrayTailSpreadType>,
 }
 
-impl Offset {
+impl Offset<'_> {
     pub fn new() -> Self {
         Self {
             bits: OffsetBits {
@@ -131,12 +131,12 @@ impl Offset {
 }
 
 #[derive(Debug, Clone)]
-enum BitArraySize {
+enum BitArraySize<'a> {
     Literal(usize),
-    Variable(EcoString),
+    Variable(Document<'a>),
 }
 
-impl BitArraySize {
+impl BitArraySize<'_> {
     fn is_literal_and(&self, function: impl FnOnce(usize) -> bool) -> bool {
         match self {
             BitArraySize::Literal(n) => function(*n),
@@ -146,8 +146,8 @@ impl BitArraySize {
 }
 
 #[derive(Debug)]
-struct SizedBitArraySegmentDetails {
-    size: BitArraySize,
+struct SizedBitArraySegmentDetails<'a> {
+    size: BitArraySize<'a>,
     endianness: Endianness,
     is_signed: bool,
 }
@@ -184,14 +184,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::StringPrefixSlice(i));
     }
 
-    fn push_byte_at(&mut self, i: OffsetBits) {
+    fn push_byte_at(&mut self, i: OffsetBits<'a>) {
         self.path.push(Index::ByteAt(i));
     }
 
     fn push_bit_array_slice_to_int(
         &mut self,
-        start: OffsetBits,
-        end: OffsetBits,
+        start: OffsetBits<'a>,
+        end: OffsetBits<'a>,
         endianness: Endianness,
         is_signed: bool,
     ) {
@@ -209,8 +209,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
     fn push_bit_array_slice_to_float(
         &mut self,
-        start: OffsetBits,
-        end: OffsetBits,
+        start: OffsetBits<'a>,
+        end: OffsetBits<'a>,
         endianness: Endianness,
     ) {
         self.expression_generator
@@ -224,7 +224,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         });
     }
 
-    fn push_bit_array_slice(&mut self, start: OffsetBits, end: Option<OffsetBits>) {
+    fn push_bit_array_slice(&mut self, start: OffsetBits<'a>, end: Option<OffsetBits<'a>>) {
         self.expression_generator.tracker.bit_array_slice_used = true;
         self.path.push(Index::BitArraySlice(start, end));
     }
@@ -704,7 +704,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     if segment.type_ == crate::type_::int()
                         || segment.type_ == crate::type_::float()
                     {
-                        let details = Self::sized_bit_array_segment_details(segment)?;
+                        let details = self.sized_bit_array_segment_details(segment)?;
 
                         match segment.value.as_ref() {
                             Pattern::Int { int_value, .. }
@@ -799,9 +799,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 }
 
                                 Pattern::VarUsage { name, .. } => {
+                                    let name = self.expression_generator.local_var(name);
                                     let start = offset.bits.clone();
 
-                                    offset.bits.increment(BitArraySize::Variable(name.clone()));
+                                    offset.bits.increment(BitArraySize::Variable(name));
                                     let end = offset.bits.clone();
 
                                     self.push_bit_array_slice(start, Some(end));
@@ -842,9 +843,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                                 Pattern::VarUsage { name, .. } => {
                                     let start = offset.bits.clone();
-                                    offset.bits.increment(BitArraySize::Variable(eco_format!(
-                                        "{name} * 8"
-                                    )));
+                                    let name = self.expression_generator.local_var(name);
+                                    offset
+                                        .bits
+                                        .increment(BitArraySize::Variable(name.append(" * 8")));
                                     let end = offset.bits.clone();
 
                                     self.push_bit_array_slice(start, Some(end));
@@ -912,9 +914,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }
     }
 
-    fn sized_bit_array_segment_details(
-        segment: &TypedPatternBitArraySegment,
-    ) -> Result<SizedBitArraySegmentDetails, Error> {
+    fn sized_bit_array_segment_details<'ast>(
+        &mut self,
+        segment: &'ast TypedPatternBitArraySegment,
+    ) -> Result<SizedBitArraySegmentDetails<'ast>, Error> {
         use BitArrayOption as Opt;
 
         if segment
@@ -949,7 +952,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                         "part of an Int node should always parse as integer",
                     )))
                 }
-                Pattern::VarUsage { name, .. } => Ok(BitArraySize::Variable(name.clone())),
+                Pattern::VarUsage { name, .. } => Ok(BitArraySize::Variable(
+                    self.expression_generator.local_var(name),
+                )),
                 _ => Err(Error::Unsupported {
                     feature: "Non-constant size option in patterns".into(),
                     location: segment.location,
@@ -1044,7 +1049,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     fn push_bit_array_bit_size_check(
         &mut self,
         subject: Document<'a>,
-        expected_bit_size: OffsetBits,
+        expected_bit_size: OffsetBits<'a>,
         tail_spread_type: Option<BitArrayTailSpreadType>,
     ) {
         self.checks.push(Check::BitArrayBitSize {
@@ -1101,7 +1106,7 @@ pub enum Check<'a> {
     },
     BitArrayBitSize {
         subject: Document<'a>,
-        expected_bit_size: OffsetBits,
+        expected_bit_size: OffsetBits<'a>,
         tail_spread_type: Option<BitArrayTailSpreadType>,
     },
     StringPrefix {
