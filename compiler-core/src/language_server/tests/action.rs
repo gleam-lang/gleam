@@ -193,6 +193,28 @@ fn fallback_to_split_string_when_selecting_invalid_name() {
 }
 
 #[test]
+fn splitting_string_as_first_pipeline_step_inserts_brackets() {
+    assert_code_action!(
+        INTERPOLATE_STRING,
+        r#"pub fn main() {
+  "wibble  wobble" |> io.println
+}"#,
+        find_position_of(" wobble").to_selection(),
+    );
+}
+
+#[test]
+fn interpolating_string_as_first_pipeline_step_inserts_brackets() {
+    assert_code_action!(
+        INTERPOLATE_STRING,
+        r#"pub fn main() {
+  "wibble wobble woo" |> io.println
+}"#,
+        find_position_of("wobble ").select_until(find_position_of("wobble ").under_last_char()),
+    );
+}
+
+#[test]
 fn test_remove_unused_simple() {
     let src = "
 // test

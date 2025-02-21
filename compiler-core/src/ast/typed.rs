@@ -630,6 +630,13 @@ impl TypedExpr {
         }
     }
 
+    pub fn is_literal_string(&self) -> bool {
+        match self {
+            Self::String { .. } => true,
+            _ => false,
+        }
+    }
+
     /// Returns `true` if the typed expr is [`Var`].
     ///
     /// [`Var`]: TypedExpr::Var
