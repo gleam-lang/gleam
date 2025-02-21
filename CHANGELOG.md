@@ -195,6 +195,31 @@
   }
   ```
 
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server now suggests a code action to easily interpolate a value
+  into a string. If the cursor is inside a literal string the language server
+  will offer to split it:
+
+  ```gleam
+  "wibble | wobble"
+  //      ^ Triggering the action with the cursor
+  //        here will produce this:
+  "wibble " <> todo <> " wobble"
+  ```
+
+  And if the cursor is selecting a valid gleam name, the language server will
+  offer to interpolate it as a variable:
+
+  ```gleam
+  "wibble wobble woo"
+  //      ^^^^^^ Triggering the code action if you're
+  //             selecting an entire name, will produce this:
+  "wibble " <> wobble <> " woo"
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
