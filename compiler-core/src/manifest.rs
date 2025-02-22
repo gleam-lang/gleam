@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 
+use crate::Result;
 use crate::io::{make_relative, ordered_map};
 use crate::requirement::Requirement;
-use crate::Result;
 use camino::{Utf8Path, Utf8PathBuf};
 use ecow::EcoString;
 use hexpm::version::Version;

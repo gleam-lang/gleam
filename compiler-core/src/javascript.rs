@@ -20,7 +20,7 @@ use crate::{
     pretty::*,
 };
 use camino::Utf8Path;
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use expression::Context;
 use itertools::Itertools;
 
@@ -530,7 +530,7 @@ impl<'a> Generator<'a> {
             // and the target support is not enforced. In this case we do not error, instead
             // returning nothing which will cause no function to be generated.
             Err(error) if error.is_unsupported() && !self.target_support.is_enforced() => {
-                return None
+                return None;
             }
 
             // Some other error case which will be returned to the user.
