@@ -429,7 +429,7 @@ pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item =
         .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
 }
 
-pub fn erlang_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
+pub fn toplevel_erlang_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
     Ok(read_dir(dir)?
         .flat_map(Result::ok)
         .map(|e| e.into_path())

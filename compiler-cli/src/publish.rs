@@ -508,7 +508,12 @@ fn generated_erlang_files(
 
     // Erlang headers
     if include.is_dir() {
-        for file in fs::erlang_files(&include)? {
+        // Note that the include subdirectory of 'build/prod/.../package'  is
+        // auto-generated on Erlang codegen based on exposed record types, and
+        // is always flat, so we can check only for top-level Erlang files.
+        // Precisely because it is auto-generated, we also don't check for
+        // '.gitignore' since it would typically always ignore 'build/' anyway.
+        for file in fs::toplevel_erlang_files(&include)? {
             let name = file.file_name().expect("generated_files include file name");
             files.push((tar_include.join(name), fs::read(file)?));
         }
