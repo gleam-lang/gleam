@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMarkdownPagesOpts::default())"
-snapshot_kind: text
 ---
 //// LICENSE.html
 
@@ -559,13 +558,16 @@ snapshot_kind: text
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
+
+
+
   
   <li><a href="#one">one</a></li>
   
+
+
 </ul>
 
 
@@ -927,13 +929,16 @@ snapshot_kind: text
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
+
+
+
   
   <li><a href="#one">one</a></li>
   
+
+
 </ul>
 
 
