@@ -107,13 +107,12 @@
 </section>
 {% endif %}
 
-{% if !constants.is_empty() %}
+{% if !constants.is_empty() || !functions.is_empty() %}
 <section class="module-members">
   <h1 id="module-constants" class="module-member-kind">
-    <a href="#module-constants">Constants</a>
+    <a href="#module-constants">Values</a>
     <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
-
   {% for constant in constants %}
   <div class="member">
     <div class="member-name">
@@ -132,15 +131,6 @@
     <div class="rendered-markdown">{{ constant.documentation|safe }}</div>
   </div>
   {% endfor %}
-</section>
-{% endif %}
-
-{% if !functions.is_empty() %}
-<section class="module-members">
-  <h1 id="module-functions" class="module-member-kind">
-    <a href="#module-functions">Functions</a>
-    <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
-  </h1>
   {% for function in functions %}
   <div class="member">
     <div class="member-name">
