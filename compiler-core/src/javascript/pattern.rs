@@ -51,10 +51,30 @@ pub enum BitArrayTailSpreadType {
 }
 
 #[derive(Debug, Clone)]
+/// Represents the offset into a bit array which is needed to extract the value
+/// of a specific pattern. This can either be a constant value, if we know it at
+/// compile-time, or a sum of some variables. For example:
+/// ```gleam
+/// case todo {
+///   <<_:size(8), extract_this>> -> todo
+///   //           ^ This has a known offset of 8
+///   <<x:size(8), y:size(x), z:size(y)>>
+///   //                      ^ This starts at offset x + 8, and ends at offset x + y + 8
+/// }
+/// ```
 pub struct OffsetBits<'a> {
+    /// The size of the known offset. The total offset will be at least this size.
+    /// If this field is 0, the offset is entirely composed of variable sizes.
     constant: usize,
+    /// Any variables which must be added to the known offset at runtime.
+    /// Empty if we know the size at compile-time.
     variables: Vec<Document<'a>>,
-    extra: Option<EcoString>,
+    /// Sometimes we need to divide an offset by a certain number, such as 8, because
+    /// sizes can be specified using bits or bytes in different circumstances.
+    /// If the size is constant, we can just divide that. However, if the size needs
+    /// to be computed at runtime, we must add that division as part of the calculation.
+    /// If this field is 1, we ignore it.
+    divide_by: usize,
 }
 
 impl<'a> OffsetBits<'a> {
@@ -66,21 +86,19 @@ impl<'a> OffsetBits<'a> {
     }
 
     fn is_whole_number_of_bytes(&self) -> bool {
-        self.variables.is_empty() && self.extra.is_none() && self.constant % 8 == 0
+        self.variables.is_empty() && self.constant % 8 == 0
     }
 
     fn divide(mut self, by: usize) -> Self {
         if self.variables.is_empty() {
-            self.constant /= by;
+            self.constant = self.constant / by;
         } else {
-            self.extra = Some(eco_format!(" / {by}"));
+            self.divide_by = self.divide_by * by;
         }
 
         self
     }
-}
 
-impl<'a> Documentable<'a> for OffsetBits<'a> {
     fn to_doc(self) -> Document<'a> {
         let doc = if self.variables.is_empty() {
             self.constant.to_doc()
@@ -102,9 +120,9 @@ impl<'a> Documentable<'a> for OffsetBits<'a> {
             .group()
         };
 
-        match self.extra {
-            Some(extra) => doc.append(extra).group(),
-            None => doc,
+        match self.divide_by {
+            1 => doc,
+            _ => doc.append(" / ".to_doc().append(self.divide_by)).group(),
         }
     }
 }
@@ -120,7 +138,7 @@ impl Offset<'_> {
             bits: OffsetBits {
                 constant: 0,
                 variables: Vec::new(),
-                extra: None,
+                divide_by: 1,
             },
             tail_spread_type: None,
         }
@@ -137,9 +155,9 @@ enum BitArraySize<'a> {
 }
 
 impl BitArraySize<'_> {
-    fn is_literal_and(&self, function: impl FnOnce(usize) -> bool) -> bool {
+    fn is_constant_value(&self, value: usize) -> bool {
         match self {
-            BitArraySize::Literal(n) => function(*n),
+            BitArraySize::Literal(size) => *size == value,
             BitArraySize::Variable(_) => false,
         }
     }
@@ -706,21 +724,12 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     {
                         let details = self.sized_bit_array_segment_details(segment)?;
 
-                        match segment.value.as_ref() {
-                            Pattern::Int { int_value, .. }
-                                if details
-                                    .size
-                                    .is_literal_and(|size| size <= SAFE_INT_SEGMENT_MAX_SIZE)
-                                    && details.size.is_literal_and(|size| size % 8 == 0)
+                        match (segment.value.as_ref(), details.size) {
+                            (Pattern::Int { int_value, .. }, BitArraySize::Literal(size))
+                                if size <= SAFE_INT_SEGMENT_MAX_SIZE
+                                    && size % 8 == 0
                                     && offset.bits.is_whole_number_of_bytes() =>
                             {
-                                let size = match details.size {
-                                    BitArraySize::Literal(size) => size,
-                                    BitArraySize::Variable(_) => {
-                                        unreachable!("We already checked that it's a literal")
-                                    }
-                                };
-
                                 let bytes = bit_array_segment_int_value_to_bytes(
                                     (*int_value).clone(),
                                     BigInt::from(size),
@@ -735,18 +744,17 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                                 }
                             }
 
-                            Pattern::Discard { .. } => {
-                                offset.bits.increment(details.size);
+                            (Pattern::Discard { .. }, size) => {
+                                offset.bits.increment(size);
                             }
 
-                            _ => {
+                            (_, size) => {
                                 let start = offset.bits.clone();
-                                let increment = details.size.clone();
                                 let mut end = offset.bits.clone();
-                                end.increment(increment.clone());
+                                end.increment(size.clone());
 
                                 if segment.type_ == crate::type_::int() {
-                                    if details.size.is_literal_and(|size| size == 8)
+                                    if size.is_constant_value(8)
                                         && !details.is_signed
                                         && offset.bits.is_whole_number_of_bytes()
                                     {
@@ -769,7 +777,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                                 self.traverse_pattern(subject, &segment.value)?;
                                 self.pop();
-                                offset.bits.increment(increment);
+                                offset.bits.increment(size);
                             }
                         }
                     } else {
@@ -973,7 +981,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }?;
 
         // 16-bit floats are not supported
-        if segment.type_ == crate::type_::float() && size.is_literal_and(|size| size == 16) {
+        if segment.type_ == crate::type_::float() && size.is_constant_value(16) {
             return Err(Error::Unsupported {
                 feature: "Float width of 16 bits in patterns".into(),
                 location: segment.location,
