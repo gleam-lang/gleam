@@ -11,21 +11,20 @@
 {% endif %}
 
 {% if !constants.is_empty() || !functions.is_empty() %}
-  <h2>Values</h2>
+<h2>Values</h2>
+<ul>
 {% endif %}
 {% if !constants.is_empty() %}
-<ul>
   {% for constant in constants %}
   <li><a href="#{{ constant.name }}">{{ constant.name }}</a></li>
   {% endfor %}
-</ul>
 {% endif %}
-
 {% if !functions.is_empty() %}
-<ul>
   {% for function in functions %}
   <li><a href="#{{ function.name }}">{{ function.name }}</a></li>
   {% endfor %}
+{% endif %}
+{% if !constants.is_empty() || !functions.is_empty() %}
 </ul>
 {% endif %}
 {% endblock %}
