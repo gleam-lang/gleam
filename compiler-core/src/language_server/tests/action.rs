@@ -5086,6 +5086,7 @@ fn do_not_extract_constant_from_list_1() {
         EXTRACT_CONSTANT,
         r#"pub fn main() {
   let c = ["constant", todo]
+  c
 }"#,
         find_position_of("[").to_selection()
     );
@@ -5096,7 +5097,7 @@ fn do_not_extract_constant_from_list_2() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
         r#"pub fn main() {
-  let c = [10, todo]
+  [10, todo]
 }"#,
         find_position_of("[").to_selection()
     );
@@ -5108,8 +5109,9 @@ fn do_not_extract_constant_from_list_3() {
         EXTRACT_CONSTANT,
         r#"pub fn main() {
   let c = [0.25, todo]
+  c
 }"#,
-        find_position_of("[").to_selection()
+        find_position_of("l").select_until(find_position_of("c"))
     );
 }
 
@@ -5119,6 +5121,7 @@ fn do_not_extract_constant_from_tuple_1() {
         EXTRACT_CONSTANT,
         r#"pub fn main() {
   let c = #("constant", todo)
+  c
 }"#,
         find_position_of("#").select_until(find_position_of("("))
     );
@@ -5129,7 +5132,7 @@ fn do_not_extract_constant_from_tuple_2() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
         r#"pub fn main() {
-  let c = #(10, todo)
+  #(10, todo)
 }"#,
         find_position_of("#").select_until(find_position_of("("))
     );
@@ -5141,8 +5144,48 @@ fn do_not_extract_constant_from_tuple_3() {
         EXTRACT_CONSTANT,
         r#"pub fn main() {
   let c = #(0.25, todo)
+  c
 }"#,
-        find_position_of("#").select_until(find_position_of("("))
+        find_position_of("l").select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_nested_1() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = list.unzip([#(1, 2), #(3, todo)])
+  c
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_nested_2() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  [[1.25, 1], [0.25, todo]]
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_nested_3() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/list
+
+pub fn main() {
+  let c = [#(1, 2), #(3, todo)]
+  c
+}"#,
+        find_position_of("l")
+            .nth_occurrence(3)
+            .select_until(find_position_of("c"))
     );
 }
 
