@@ -2932,18 +2932,20 @@ fn is_literal_or_made_of_literals(expr: &TypedExpr) -> bool {
     match expr {
         // Attempt to extract whole list as long as it's comprised of only literals
         TypedExpr::List { elements, tail, .. }
-            if elements.iter().all(TypedExpr::is_literal) && tail.is_none() =>
+            if elements.iter().all(is_literal_or_made_of_literals) && tail.is_none() =>
         {
             true
         }
         // Attempt to extract whole bit array as long as it's made up of literals
         TypedExpr::BitArray { segments, .. }
-            if segments.iter().all(|segment| segment.value.is_literal()) =>
+            if segments
+                .iter()
+                .all(|segment| is_literal_or_made_of_literals(&segment.value)) =>
         {
             true
         }
         // Attempt to extract whole tuple as long as it's comprised of only literals
-        TypedExpr::Tuple { elems, .. } if elems.iter().all(TypedExpr::is_literal) => true,
+        TypedExpr::Tuple { elems, .. } if elems.iter().all(is_literal_or_made_of_literals) => true,
 
         // Extract literals directly
         TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => true,
