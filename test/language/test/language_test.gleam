@@ -29,6 +29,10 @@ pub fn main() {
         unaligned_bit_array_expression_tests(),
       ),
       suite("unaligned bit array patterns", unaligned_bit_array_pattern_tests()),
+      suite(
+        "dynamic sized bit array patterns",
+        dynamic_size_bit_array_pattern_tests(),
+      ),
       suite("list spread", list_spread_tests()),
       suite("clause guards", clause_guard_tests()),
       suite("imported custom types", imported_custom_types_test()),
@@ -1485,6 +1489,71 @@ fn unaligned_bit_array_pattern_tests() -> List(Test) {
   ]
 }
 
+fn dynamic_size_bit_array_pattern_tests() -> List(Test) {
+  [
+    "let size = 8
+let assert <<value:size(size)>> = <<42>>"
+      |> example(fn() {
+        assert_equal(42, {
+          let size = 8
+          let assert <<value:size(size)>> = <<42>>
+          value
+        })
+      }),
+    "let size = 3
+let assert <<value:size(size), second:size(value), last:size(second)>> = <<5:3, 8:5, 928>>"
+      |> example(fn() {
+        assert_equal(928, {
+          let size = 3
+          let assert <<value:size(size), second:size(value), last:size(second)>> = <<
+            5:3, 8:5, 928,
+          >>
+          last
+        })
+      }),
+    "let size = 2
+let assert <<first_bytes:bytes-size(size), rest:bytes>> = <<1, 2, 3, 4>>"
+      |> example(fn() {
+        assert_equal(<<1, 2>>, {
+          let size = 2
+          let assert <<first_bytes:bytes-size(size), _rest:bytes>> = <<
+            1, 2, 3, 4,
+          >>
+          first_bytes
+        })
+      }),
+    "let size = 6
+let assert <<bits:bits-size(size), rest:bits>> = <<0b10010100, 6, 2938>>"
+      |> example(fn() {
+        assert_equal(<<0b100101:6>>, {
+          let size = 6
+          let assert <<bits:bits-size(size), _rest:bits>> = <<
+            0b10010100, 6, 2938,
+          >>
+          bits
+        })
+      }),
+    "let size = 7
+let assert <<123:size(size)>> = <<123:7>>"
+      |> example(fn() {
+        let size = 7
+        let assert <<123:size(size)>> = <<123:7>>
+        tests.pass()
+      }),
+    "let size = 4
+let size = size + 2
+let assert <<value:size(size)>> = <<462:6>>"
+      |> example(fn() {
+        assert_equal(426, {
+          let size = 4
+          let size = size + 2
+          let assert <<value:size(size)>> = <<462:6>>
+          value
+        })
+      }),
+  ]
+}
+
 fn list_spread_tests() -> List(Test) {
   [
     "[1, ..[]]"
@@ -2018,12 +2087,13 @@ fn string_pattern_matching_tests() {
       }),
     "match newline test"
       |> example(fn() {
-        assert_equal(" is a newline that escaped", case
-          "\\n is a newline that escaped"
-        {
-          "\\n" <> rest -> rest
-          _ -> panic
-        })
+        assert_equal(
+          " is a newline that escaped",
+          case "\\n is a newline that escaped" {
+            "\\n" <> rest -> rest
+            _ -> panic
+          },
+        )
       }),
   ]
 }
