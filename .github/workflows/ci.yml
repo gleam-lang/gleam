@@ -48,24 +48,8 @@ jobs:
           command: test
           args: --workspace --target ${{ matrix.target }}
 
-  rustfmt:
-    name: rustfmt
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-
-      - name: Install Rust toolchain
-        uses: dtolnay/rust-toolchain@stable
-        with:
-          toolchain: stable
-          components: rustfmt
-
-      - name: Check formatting
-        run: cargo fmt --all -- --check
-
-  lint-build:
-    name: lint-build
+  format-lint-build:
+    name: format-lint-build
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -76,9 +60,13 @@ jobs:
         uses: dtolnay/rust-toolchain@stable
         with:
           toolchain: stable
-          components: clippy
+          components: clippy, rustfmt
+
+      - name: Check formatting
+        run: cargo fmt --all -- --check
 
       - name: Run linter
         run: cargo clippy --workspace
 
-      - run: cargo build
+      - name: Run build
+        run: cargo build
