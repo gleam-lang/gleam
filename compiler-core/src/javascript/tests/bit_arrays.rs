@@ -651,6 +651,18 @@ fn go(x) {
 }
 
 #[test]
+fn match_dynamic_size_literal_value() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let n = 8
+  let assert <<a:size(n), 0b010101:size(8)>> = x
+}
+"#
+    );
+}
+
+#[test]
 fn match_dynamic_bits_size() {
     assert_js!(
         r#"
