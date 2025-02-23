@@ -103,21 +103,9 @@ impl<'a> OffsetBits<'a> {
         let doc = if self.variables.is_empty() {
             self.constant.to_doc()
         } else if self.constant == 0 {
-            join(
-                self.variables.into_iter().map(|variable| variable.to_doc()),
-                " + ".to_doc(),
-            )
-            .group()
+            join(self.variables, " + ".to_doc()).group()
         } else {
-            docvec![
-                join(
-                    self.variables.into_iter().map(|variable| variable.to_doc()),
-                    " + ".to_doc()
-                ),
-                " + ",
-                self.constant,
-            ]
-            .group()
+            docvec![join(self.variables, " + ".to_doc()), " + ", self.constant,].group()
         };
 
         match self.divide_by {
