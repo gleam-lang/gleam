@@ -25,7 +25,13 @@ struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
-    references: HashMap<EcoString, Vec<SrcSpan>>,
+    references: HashMap<EcoString, ReferenceInformation>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ReferenceInformation {
+    pub definition_location: SrcSpan,
+    pub references: Vec<SrcSpan>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -40,7 +46,7 @@ impl<'a> CallGraphBuilder<'a> {
         self,
     ) -> (
         StableGraph<(), (), Directed>,
-        HashMap<EcoString, Vec<SrcSpan>>,
+        HashMap<EcoString, ReferenceInformation>,
     ) {
         (self.graph, self.references)
     }
@@ -51,7 +57,7 @@ impl<'a> CallGraphBuilder<'a> {
         &mut self,
         function: &'a UntypedFunction,
     ) -> Result<(), Error> {
-        let (_, name) = function
+        let (name_location, name) = function
             .name
             .as_ref()
             .expect("A module's function must be named");
@@ -67,6 +73,15 @@ impl<'a> CallGraphBuilder<'a> {
                 name: name.clone(),
             });
         }
+
+        _ = self.references.insert(
+            name.clone(),
+            ReferenceInformation {
+                definition_location: *name_location,
+                references: Vec::new(),
+            },
+        );
+
         Ok(())
     }
 
@@ -89,6 +104,15 @@ impl<'a> CallGraphBuilder<'a> {
                 name: name.clone(),
             });
         }
+
+        _ = self.references.insert(
+            name.clone(),
+            ReferenceInformation {
+                definition_location: constant.name_location,
+                references: Vec::new(),
+            },
+        );
+
         Ok(())
     }
 
@@ -141,10 +165,10 @@ impl<'a> CallGraphBuilder<'a> {
         let Some((target, _)) = target else { return };
 
         _ = self.graph.add_edge(self.current_function, *target, ());
-        self.references
-            .entry(name.into())
-            .or_default()
-            .push(location);
+        _ = self
+            .references
+            .get_mut(name)
+            .map(|information| information.references.push(location));
     }
 
     fn statements(&mut self, statements: &'a [UntypedStatement]) {
@@ -508,7 +532,13 @@ impl<'a> CallGraphBuilder<'a> {
 pub fn call_graph_info(
     functions: Vec<UntypedFunction>,
     constants: Vec<UntypedModuleConstant>,
-) -> Result<(Vec<Vec<CallGraphNode>>, HashMap<EcoString, Vec<SrcSpan>>), Error> {
+) -> Result<
+    (
+        Vec<Vec<CallGraphNode>>,
+        HashMap<EcoString, ReferenceInformation>,
+    ),
+    Error,
+> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
