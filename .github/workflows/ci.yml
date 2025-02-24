@@ -48,8 +48,8 @@ jobs:
           command: test
           args: --workspace --target ${{ matrix.target }}
 
-  format-lint-build:
-    name: format-lint-build
+  format-lint:
+    name: format-lint
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -67,6 +67,3 @@ jobs:
 
       - name: Run linter
         run: cargo clippy --workspace
-
-      - name: Run build
-        run: cargo build
