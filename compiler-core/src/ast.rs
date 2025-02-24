@@ -20,6 +20,7 @@ use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
+use std::collections::HashMap;
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -50,6 +51,7 @@ pub struct Module<Info, Statements> {
     pub type_info: Info,
     pub definitions: Vec<Statements>,
     pub names: Names,
+    pub references: HashMap<EcoString, Vec<SrcSpan>>,
 }
 
 impl TypedModule {

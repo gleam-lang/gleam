@@ -4,6 +4,8 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
+use std::collections::HashMap;
+
 use crate::{
     ast::{
         AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
@@ -13,6 +15,7 @@ use crate::{
     type_::Error,
     Result,
 };
+use ecow::EcoString;
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{stable_graph::StableGraph, Directed};
@@ -22,6 +25,7 @@ struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
+    references: HashMap<EcoString, Vec<SrcSpan>>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -32,8 +36,13 @@ pub enum CallGraphNode {
 }
 
 impl<'a> CallGraphBuilder<'a> {
-    fn into_graph(self) -> StableGraph<(), (), Directed> {
-        self.graph
+    fn into_info(
+        self,
+    ) -> (
+        StableGraph<(), (), Directed>,
+        HashMap<EcoString, Vec<SrcSpan>>,
+    ) {
+        (self.graph, self.references)
     }
 
     /// Add each function to the graph, storing the index of the node under the
@@ -119,7 +128,7 @@ impl<'a> CallGraphBuilder<'a> {
         self.names = names;
     }
 
-    fn referenced(&mut self, name: &str) {
+    fn referenced(&mut self, name: &str, location: SrcSpan) {
         // If we don't know what the target is then it's either a programmer
         // error to be detected later, or it's not a module function and as such
         // is not a value we are tracking.
@@ -132,6 +141,10 @@ impl<'a> CallGraphBuilder<'a> {
         let Some((target, _)) = target else { return };
 
         _ = self.graph.add_edge(self.current_function, *target, ());
+        self.references
+            .entry(name.into())
+            .or_default()
+            .push(location);
     }
 
     fn statements(&mut self, statements: &'a [UntypedStatement]) {
@@ -180,8 +193,8 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             // Aha! A variable is being referenced.
-            UntypedExpr::Var { name, .. } => {
-                self.referenced(name);
+            UntypedExpr::Var { name, location, .. } => {
+                self.referenced(name, *location);
             }
 
             UntypedExpr::Call { fun, arguments, .. } => {
@@ -330,8 +343,8 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Pattern::VarUsage { name, .. } => {
-                self.referenced(name);
+            Pattern::VarUsage { name, location, .. } => {
+                self.referenced(name, *location);
             }
 
             Pattern::Assign { name, pattern, .. } => {
@@ -418,13 +431,17 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::Not { expression, .. } => self.guard(expression),
 
-            ClauseGuard::Var { name, .. } => self.referenced(name),
+            ClauseGuard::Var { name, location, .. } => self.referenced(name, *location),
 
             ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),
 
             ClauseGuard::FieldAccess { container, .. } => self.guard(container),
 
-            ClauseGuard::ModuleSelect { module_name, .. } => self.referenced(module_name),
+            ClauseGuard::ModuleSelect {
+                module_name,
+                location,
+                ..
+            } => self.referenced(module_name, *location),
 
             ClauseGuard::Constant(constant) => self.constant(constant),
         }
@@ -453,8 +470,11 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             Constant::Var {
-                module: None, name, ..
-            } => self.referenced(name),
+                module: None,
+                name,
+                location,
+                ..
+            } => self.referenced(name, *location),
 
             Constant::BitArray { segments, .. } => {
                 for segment in segments {
@@ -476,10 +496,10 @@ impl<'a> CallGraphBuilder<'a> {
 /// Determine the order in which functions and constants should be compiled and if any
 /// mutually recursive functions need to be compiled together.
 ///
-pub fn into_dependency_order(
+pub fn call_graph_info(
     functions: Vec<UntypedFunction>,
     constants: Vec<UntypedModuleConstant>,
-) -> Result<Vec<Vec<CallGraphNode>>, Error> {
+) -> Result<(Vec<Vec<CallGraphNode>>, HashMap<EcoString, Vec<SrcSpan>>), Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
@@ -500,7 +520,7 @@ pub fn into_dependency_order(
     }
 
     // Consume the grapher to get the graph
-    let graph = grapher.into_graph();
+    let (graph, references) = grapher.into_info();
 
     // Determine the order in which the functions should be compiled by looking
     // at which other functions they depend on.
@@ -532,5 +552,5 @@ pub fn into_dependency_order(
         })
         .collect_vec();
 
-    Ok(ordered)
+    Ok((ordered, references))
 }
