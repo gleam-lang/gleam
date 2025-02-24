@@ -13,6 +13,7 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
+use crate::call_graph::ReferenceInformation;
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
@@ -51,7 +52,7 @@ pub struct Module<Info, Statements> {
     pub type_info: Info,
     pub definitions: Vec<Statements>,
     pub names: Names,
-    pub references: HashMap<EcoString, Vec<SrcSpan>>,
+    pub references: HashMap<EcoString, ReferenceInformation>,
 }
 
 impl TypedModule {
