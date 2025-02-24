@@ -604,10 +604,11 @@ where
                     constructor:
                         ValueConstructor {
                             variant:
-                                ValueConstructorVariant::ModuleConstant { location, .. }
-                                | ValueConstructorVariant::ModuleFn { location, .. },
+                                ValueConstructorVariant::ModuleConstant { .. }
+                                | ValueConstructorVariant::ModuleFn { .. },
                             ..
                         },
+                    location,
                     ..
                 }) => success_response(*location),
                 _ => None,
