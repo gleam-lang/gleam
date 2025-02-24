@@ -42,7 +42,7 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    rename::{VariableRenameKind, rename_local_variable},
+    rename::{VariableRenameKind, rename_local_variable, rename_module_value},
     signature_help, src_span_to_lsp_range,
 };
 
@@ -591,6 +591,16 @@ where
                     } => success_response(*location),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant { location, .. }
+                                | ValueConstructorVariant::ModuleFn { location, .. },
+                            ..
+                        },
+                    ..
+                }) => success_response(*location),
                 _ => None,
             })
         })
@@ -685,6 +695,17 @@ where
                     ),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant { .. }
+                                | ValueConstructorVariant::ModuleFn { .. },
+                            ..
+                        },
+                    name,
+                    ..
+                }) => rename_module_value(module, &lines, &params, name),
                 _ => None,
             })
         })
