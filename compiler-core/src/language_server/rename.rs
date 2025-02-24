@@ -65,6 +65,40 @@ pub fn rename_local_variable(
     Some(workspace_edit(uri, edits.edits))
 }
 
+pub fn rename_module_value(
+    module: &Module,
+    line_numbers: &LineNumbers,
+    params: &RenameParams,
+    name: &EcoString,
+) -> Option<WorkspaceEdit> {
+    if name::check_name_case(
+        Default::default(),
+        &params.new_name.as_str().into(),
+        Named::Function,
+    )
+    .is_err()
+    {
+        return None;
+    }
+
+    let uri = params.text_document_position.text_document.uri.clone();
+    let mut edits = TextEdits::new(line_numbers);
+
+    let reference_information = module.ast.references.get(name)?;
+
+    edits.replace(
+        reference_information.definition_location,
+        params.new_name.clone(),
+    );
+
+    reference_information
+        .references
+        .iter()
+        .for_each(|location| edits.replace(*location, params.new_name.clone()));
+
+    Some(workspace_edit(uri, edits.edits))
+}
+
 pub fn find_variable_references(
     module: &TypedModule,
     definition_location: SrcSpan,

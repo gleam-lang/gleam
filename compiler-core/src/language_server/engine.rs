@@ -40,7 +40,7 @@ use super::{
         RedundantTupleInCaseSubject, UseLabelShorthandSyntax,
     },
     completer::Completer,
-    rename::{rename_local_variable, VariableRenameKind},
+    rename::{rename_local_variable, rename_module_value, VariableRenameKind},
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
@@ -589,6 +589,16 @@ where
                     } => success_response(*location),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant { location, .. }
+                                | ValueConstructorVariant::ModuleFn { location, .. },
+                            ..
+                        },
+                    ..
+                }) => success_response(*location),
                 _ => None,
             })
         })
@@ -683,6 +693,17 @@ where
                     ),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant { .. }
+                                | ValueConstructorVariant::ModuleFn { .. },
+                            ..
+                        },
+                    name,
+                    ..
+                }) => rename_module_value(module, &lines, &params, name),
                 _ => None,
             })
         })
