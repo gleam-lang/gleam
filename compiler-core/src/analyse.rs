@@ -15,7 +15,7 @@ use crate::{
         UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
-    call_graph::{CallGraphNode, into_dependency_order},
+    call_graph::{CallGraphNode, call_graph_info},
     config::PackageConfig,
     dep_tree,
     line_numbers::LineNumbers,
@@ -254,8 +254,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // Sort functions and constants into dependency order for inference. Definitions that do
         // not depend on other definitions are inferred first, then ones that depend
         // on those, etc.
-        let definition_groups =
-            match into_dependency_order(statements.functions, statements.constants) {
+        let (definition_groups, references) =
+            match call_graph_info(statements.functions, statements.constants) {
                 Ok(it) => it,
                 Err(error) => return self.all_errors(error),
             };
@@ -342,6 +342,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 contains_echo: echo_found,
             },
             names: type_names,
+            references,
         };
 
         match Vec1::try_from_vec(self.problems.take_errors()) {
