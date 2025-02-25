@@ -429,6 +429,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         environment.insert_module_value(name.clone(), variant);
 
+        environment.register_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name_location,
+        );
+
         if publicity.is_private() {
             environment.init_usage(
                 name.clone(),
@@ -640,6 +646,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             preregistered_type.clone(),
             publicity,
             deprecation.clone(),
+        );
+
+        environment.register_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name_location,
         );
 
         Definition::Function(Function {
