@@ -21,7 +21,7 @@ use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -52,7 +52,7 @@ pub struct Module<Info, Statements> {
     pub type_info: Info,
     pub definitions: Vec<Statements>,
     pub names: Names,
-    pub references: HashMap<EcoString, ReferenceInformation>,
+    pub references: References,
 }
 
 impl TypedModule {
@@ -67,6 +67,12 @@ impl TypedModule {
             .iter()
             .find_map(|definition| definition.find_statement(byte_index))
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct References {
+    pub imported_modules: HashSet<EcoString>,
+    pub value_references: HashMap<EcoString, ReferenceInformation>,
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
