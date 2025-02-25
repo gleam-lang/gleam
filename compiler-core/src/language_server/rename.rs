@@ -67,7 +67,6 @@ pub fn rename_local_variable(
 
 pub fn rename_module_value(
     main_module: &Module,
-    line_numbers: &LineNumbers,
     params: &RenameParams,
     module_name: &EcoString,
     name: &EcoString,
@@ -83,7 +82,6 @@ pub fn rename_module_value(
         return None;
     }
 
-    let mut edits = TextEdits::new(line_numbers);
     let mut workspace_edit = WorkspaceEdit {
         changes: Some(HashMap::new()),
         document_changes: None,
@@ -92,12 +90,12 @@ pub fn rename_module_value(
 
     rename_references_in_module(
         main_module,
-        &mut edits,
         &mut workspace_edit,
         module_name,
         name,
         params.new_name.clone(),
     );
+
     for (_, module) in modules {
         if module
             .ast
@@ -107,7 +105,6 @@ pub fn rename_module_value(
         {
             rename_references_in_module(
                 module,
-                &mut edits,
                 &mut workspace_edit,
                 module_name,
                 name,
@@ -121,13 +118,12 @@ pub fn rename_module_value(
 
 fn rename_references_in_module(
     module: &Module,
-    edits: &mut TextEdits<'_>,
     workspace_edit: &mut WorkspaceEdit,
     module_name: &EcoString,
     name: &EcoString,
     new_name: String,
 ) {
-    let Some(reference_information) = module
+    let Some(references) = module
         .ast
         .references
         .value_references
@@ -136,7 +132,10 @@ fn rename_references_in_module(
         return;
     };
 
-    reference_information
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut edits = TextEdits::new(&line_numbers);
+
+    references
         .iter()
         .for_each(|location| edits.replace(*location, new_name.clone()));
     // edits.replace(reference_information.definition_location, new_name);
@@ -148,7 +147,7 @@ fn rename_references_in_module(
     _ = workspace_edit
         .changes
         .as_mut()
-        .map(|changes| changes.insert(uri, std::mem::take(&mut edits.edits)));
+        .map(|changes| changes.insert(uri, edits.edits));
 }
 
 pub fn find_variable_references(
