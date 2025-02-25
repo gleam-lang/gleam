@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/io\n\npub fn main() {\n  io.debug(<<3:size(8)>>)\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+pub fn main() {
+  io.debug(<<3:size(8)>>)
+           ▔↑            
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const bit_array = <<3:size(8)>>
+
+pub fn main() {
+  io.debug(bit_array)
+}

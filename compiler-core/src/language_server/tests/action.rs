@@ -4552,6 +4552,19 @@ fn extract_variable_in_block() {
 }
 
 #[test]
+fn extract_constant_from_call_argument_with_bit_array() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  io.debug(<<3:size(8)>>)
+}"#,
+        find_position_of("<").select_until(find_position_of("<").nth_occurrence(2))
+    );
+}
+
+#[test]
 fn extract_constant_from_call_argument_with_float() {
     assert_code_action!(
         EXTRACT_CONSTANT,
@@ -4666,6 +4679,37 @@ pub fn main() {
         find_position_of("l")
             .nth_occurrence(2)
             .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn extract_constant_from_declaration_of_bit_array() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let b = <<"arr":utf32>>
+}"#,
+        find_position_of("u")
+            .nth_occurrence(2)
+            .select_until(find_position_of(">").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_bit_array() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+const n = 24
+
+pub fn main() {
+  let bits = <<8080:size(n)>>
+  bits
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("s").nth_occurrence(2))
     );
 }
 
@@ -4827,6 +4871,19 @@ fn extract_constant_from_literal_within_list() {
 }
 
 #[test]
+fn extract_constant_from_list_containing_constant() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"const something = "something"
+
+pub fn main() {
+  let c = ["constant", something]
+}"#,
+        find_position_of("[").to_selection()
+    );
+}
+
+#[test]
 fn extract_constant_from_literal_within_tuple() {
     assert_code_action!(
         EXTRACT_CONSTANT,
@@ -4834,6 +4891,19 @@ fn extract_constant_from_literal_within_tuple() {
   let c = #(0.333334, todo)
 }"#,
         find_position_of("0").select_until(find_position_of("4"))
+    );
+}
+
+#[test]
+fn extract_constant_from_tuple_containing_constant() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"const something = "something"
+
+pub fn main() {
+  let c = #(0.333334, something)
+}"#,
+        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
     );
 }
 
@@ -5077,6 +5147,51 @@ pub fn main() {
         find_position_of("U")
             .nth_occurrence(2)
             .select_until(find_position_of("d").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_bit_array_1() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let c = "constant"
+  let res = <<c:utf16>>
+  res
+}"#,
+        find_position_of("<").to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_bit_array_2() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let n = 1234
+  io.debug(<<8080:size(n)>>)
+}"#,
+        find_position_of("<").to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_bit_array_3() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let l = 1234
+  let r = 1234
+  let result = <<l:size(r)>>
+  result
+}"#,
+        find_position_of("l")
+            .nth_occurrence(5)
+            .select_until(find_position_of("t").nth_occurrence(5))
     );
 }
 

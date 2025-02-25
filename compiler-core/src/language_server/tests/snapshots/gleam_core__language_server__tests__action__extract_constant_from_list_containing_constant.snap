@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "const something = \"something\"\n\npub fn main() {\n  let c = [\"constant\", something]\n}"
+---
+----- BEFORE ACTION
+const something = "something"
+
+pub fn main() {
+  let c = ["constant", something]
+          ↑                      
+}
+
+
+----- AFTER ACTION
+const something = "something"
+
+const strings = ["constant", something]
+
+pub fn main() {
+  let c = strings
+}
