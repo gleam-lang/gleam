@@ -172,6 +172,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     used_name.clone(),
                 );
             }
+            ValueConstructorVariant::ModuleConstant { module, .. }
+            | ValueConstructorVariant::ModuleFn { module, .. } => {
+                self.environment.init_usage(
+                    used_name.clone(),
+                    EntityKind::ImportedValue,
+                    location,
+                    self.problems,
+                );
+                self.environment
+                    .register_reference(module.clone(), import_name.clone(), location);
+            }
             _ => self.environment.init_usage(
                 used_name.clone(),
                 EntityKind::ImportedValue,
