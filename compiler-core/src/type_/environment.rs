@@ -64,6 +64,7 @@ pub struct Environment<'a> {
     pub target_support: TargetSupport,
 
     pub names: Names,
+    pub references: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
 }
 
 impl<'a> Environment<'a> {
@@ -115,6 +116,7 @@ impl<'a> Environment<'a> {
             entity_usages: vec![HashMap::new()],
             target_support,
             names,
+            references: HashMap::new(),
         }
     }
 }
@@ -777,6 +779,13 @@ impl Environment<'_> {
             .get(type_name)
             .and_then(|type_constructors| type_constructors.variants.get(variant_index as usize))
             .map(|variant| &variant.name)
+    }
+
+    pub fn register_reference(&mut self, module: EcoString, name: EcoString, location: SrcSpan) {
+        self.references
+            .entry((module, name))
+            .or_default()
+            .push(location);
     }
 }
 
