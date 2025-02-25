@@ -2337,7 +2337,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let _ = self.environment.unused_modules.remove(module_alias);
             let _ = self.environment.unused_module_aliases.remove(module_alias);
 
-            (module.name.clone(), constructor.clone())
+            let constructor = constructor.clone();
+            let module_name = module.name.clone();
+
+            match &constructor.variant {
+                ValueConstructorVariant::ModuleFn { name, module, .. } => self
+                    .environment
+                    .register_reference(module.clone(), name.clone(), select_location),
+                ValueConstructorVariant::ModuleConstant { module, .. } => self
+                    .environment
+                    .register_reference(module.clone(), label.clone(), select_location),
+                ValueConstructorVariant::LocalVariable { .. }
+                | ValueConstructorVariant::LocalConstant { .. }
+                | ValueConstructorVariant::Record { .. } => {}
+            }
+
+            (module_name, constructor)
         };
 
         let type_ = self.instantiate(constructor.type_, &mut hashmap![]);
@@ -2912,6 +2927,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         self.narrow_implementations(*location, &variant)?;
+
+        match &variant {
+            ValueConstructorVariant::ModuleFn { name, module, .. } => self
+                .environment
+                .register_reference(module.clone(), name.clone(), *location),
+            ValueConstructorVariant::ModuleConstant { module, .. } => self
+                .environment
+                .register_reference(module.clone(), name.clone(), *location),
+            ValueConstructorVariant::LocalVariable { .. }
+            | ValueConstructorVariant::LocalConstant { .. }
+            | ValueConstructorVariant::Record { .. } => {}
+        }
 
         // Instantiate generic variables into unbound variables for this usage
         let type_ = self.instantiate(type_, &mut hashmap![]);
