@@ -7,7 +7,7 @@ use crate::language_server::tests::{TestProject, find_position_of};
 use super::hover;
 
 fn rename(
-    tester: TestProject<'_>,
+    tester: &TestProject<'_>,
     new_name: &str,
     position: Position,
 ) -> Option<lsp_types::WorkspaceEdit> {
@@ -32,21 +32,31 @@ fn rename(
     })
 }
 
-fn apply_rename(tester: TestProject<'_>, new_name: &str, position: Position) -> String {
-    let src = tester.src;
-    let changes = rename(tester, new_name, position)
+fn apply_rename(
+    tester: TestProject<'_>,
+    new_name: &str,
+    position: Position,
+) -> HashMap<String, String> {
+    let changes = rename(&tester, new_name, position)
         .expect("Rename failed")
         .changes
         .expect("No text edit found");
-    apply_code_edit(src, changes)
+    apply_code_edit(tester, changes)
 }
 
-fn apply_code_edit(src: &str, changes: HashMap<Url, Vec<lsp_types::TextEdit>>) -> String {
-    let mut result = src.to_string();
-    for (_, change) in changes {
-        result = super::apply_code_edit(result.as_str(), change);
+fn apply_code_edit(
+    tester: TestProject<'_>,
+    changes: HashMap<Url, Vec<lsp_types::TextEdit>>,
+) -> HashMap<String, String> {
+    let mut modules = HashMap::new();
+    for (uri, change) in changes {
+        let module_name = tester.module_name_from_url(&uri).expect("Valid uri");
+        let module_code = tester.src_from_module_url(&uri).expect("Module exists");
+
+        _ = modules.insert(module_name, super::apply_code_edit(module_code, change));
     }
-    result
+
+    modules
 }
 
 macro_rules! assert_rename {
@@ -58,12 +68,19 @@ macro_rules! assert_rename {
     ($project:expr, $new_name:literal, $range:expr $(,)?) => {
         let src = $project.src;
         let range = $range.find_range(src);
+        let mut output = String::from("----- BEFORE RENAME\n");
+        for (name, src) in $project.root_package_modules.iter() {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!(
+            "-- app.gleam\n{}\n\n----- AFTER RENAME\n",
+            hover::show_hover(src, range, range.start)
+        ));
+
         let result = apply_rename($project, $new_name, range.start);
-        let output = format!(
-            "----- BEFORE RENAME\n{}\n\n----- AFTER RENAME\n{}",
-            hover::show_hover(src, range, range.start),
-            result
-        );
+        for (name, src) in result {
+            output.push_str(&format!("-- {name}.gleam\n{}\n\n", src));
+        }
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
 }
@@ -71,7 +88,7 @@ macro_rules! assert_rename {
 macro_rules! assert_no_rename {
     ($code:literal, $new_name:literal, $range:expr $(,)?) => {
         let project = TestProject::for_source($code);
-        assert_no_rename!(project, $new_name, $range);
+        assert_no_rename!(&project, $new_name, $range);
     };
 
     ($project:expr, $new_name:literal, $range:expr $(,)?) => {
