@@ -72,8 +72,7 @@ fn parse_and_order(
         })
         .collect_vec();
 
-    Ok(call_graph_info(functions, constants)?
-        .0
+    Ok(into_dependency_order(functions, constants)?
         .into_iter()
         .map(|level| {
             level

@@ -69,6 +69,7 @@ pub fn rename_module_value(
     main_module: &Module,
     line_numbers: &LineNumbers,
     params: &RenameParams,
+    module_name: &EcoString,
     name: &EcoString,
     modules: &HashMap<EcoString, Module>,
 ) -> Option<WorkspaceEdit> {
@@ -93,6 +94,7 @@ pub fn rename_module_value(
         main_module,
         &mut edits,
         &mut workspace_edit,
+        module_name,
         name,
         params.new_name.clone(),
     );
@@ -107,6 +109,7 @@ pub fn rename_module_value(
                 module,
                 &mut edits,
                 &mut workspace_edit,
+                module_name,
                 name,
                 params.new_name.clone(),
             );
@@ -120,18 +123,23 @@ fn rename_references_in_module(
     module: &Module,
     edits: &mut TextEdits<'_>,
     workspace_edit: &mut WorkspaceEdit,
+    module_name: &EcoString,
     name: &EcoString,
     new_name: String,
 ) {
-    let Some(reference_information) = module.ast.references.value_references.get(name) else {
+    let Some(reference_information) = module
+        .ast
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))
+    else {
         return;
     };
 
     reference_information
-        .references
         .iter()
         .for_each(|location| edits.replace(*location, new_name.clone()));
-    edits.replace(reference_information.definition_location, new_name);
+    // edits.replace(reference_information.definition_location, new_name);
 
     let Ok(uri) = Url::from_file_path(&module.input_path) else {
         return;
