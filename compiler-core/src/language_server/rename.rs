@@ -96,7 +96,7 @@ pub fn rename_module_value(
         params.new_name.clone(),
     );
 
-    for (_, module) in modules {
+    for module in modules.values() {
         if module
             .ast
             .references
@@ -138,7 +138,6 @@ fn rename_references_in_module(
     references
         .iter()
         .for_each(|location| edits.replace(*location, new_name.clone()));
-    // edits.replace(reference_information.definition_location, new_name);
 
     let Ok(uri) = Url::from_file_path(&module.input_path) else {
         return;
