@@ -164,7 +164,10 @@ Parsed {
             type_variables: {},
             local_value_constructors: {},
         },
-        references: {},
+        references: References {
+            imported_modules: {},
+            value_references: {},
+        },
     },
     extra: ModuleExtra {
         module_comments: [],

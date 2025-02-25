@@ -3,6 +3,7 @@ source: compiler-core/src/language_server/tests/rename.rs
 expression: "\npub fn main() {\n  let assert Error(12 as something) = Error(12)\n  something\n}\n"
 ---
 ----- BEFORE RENAME
+-- app.gleam
 
 pub fn main() {
   let assert Error(12 as something) = Error(12)
@@ -12,6 +13,7 @@ pub fn main() {
 
 
 ----- AFTER RENAME
+-- app.gleam
 
 pub fn main() {
   let assert Error(12 as the_error) = Error(12)

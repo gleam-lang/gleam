@@ -3,6 +3,7 @@ source: compiler-core/src/language_server/tests/rename.rs
 expression: "\npub fn main() {\n  let wibble = True\n  case Nil {\n    Nil if wibble -> todo\n    _ -> panic\n  }\n  wibble || False\n}\n"
 ---
 ----- BEFORE RENAME
+-- app.gleam
 
 pub fn main() {
   let wibble = True
@@ -16,6 +17,7 @@ pub fn main() {
 
 
 ----- AFTER RENAME
+-- app.gleam
 
 pub fn main() {
   let wobble = True

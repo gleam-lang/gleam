@@ -3,6 +3,7 @@ source: compiler-core/src/language_server/tests/rename.rs
 expression: "\npub fn wibble(wibble: Float) {\n  wibble /. 0.3\n}\n"
 ---
 ----- BEFORE RENAME
+-- app.gleam
 
 pub fn wibble(wibble: Float) {
               ↑               
@@ -11,6 +12,7 @@ pub fn wibble(wibble: Float) {
 
 
 ----- AFTER RENAME
+-- app.gleam
 
 pub fn wibble(wobble: Float) {
   wobble /. 0.3
