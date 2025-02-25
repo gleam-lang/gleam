@@ -4,8 +4,6 @@
 #[cfg(test)]
 mod into_dependency_order_tests;
 
-use std::collections::HashMap;
-
 use crate::{
     Result,
     ast::{
@@ -15,7 +13,6 @@ use crate::{
     },
     type_::Error,
 };
-use ecow::EcoString;
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
 use petgraph::{Directed, stable_graph::StableGraph};
@@ -25,13 +22,6 @@ struct CallGraphBuilder<'a> {
     names: im::HashMap<&'a str, Option<(NodeIndex, SrcSpan)>>,
     graph: StableGraph<(), (), Directed>,
     current_function: NodeIndex,
-    references: HashMap<EcoString, ReferenceInformation>,
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ReferenceInformation {
-    pub definition_location: SrcSpan,
-    pub references: Vec<SrcSpan>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -42,13 +32,8 @@ pub enum CallGraphNode {
 }
 
 impl<'a> CallGraphBuilder<'a> {
-    fn into_info(
-        self,
-    ) -> (
-        StableGraph<(), (), Directed>,
-        HashMap<EcoString, ReferenceInformation>,
-    ) {
-        (self.graph, self.references)
+    fn into_graph(self) -> StableGraph<(), (), Directed> {
+        self.graph
     }
 
     /// Add each function to the graph, storing the index of the node under the
@@ -57,7 +42,7 @@ impl<'a> CallGraphBuilder<'a> {
         &mut self,
         function: &'a UntypedFunction,
     ) -> Result<(), Error> {
-        let (name_location, name) = function
+        let (_, name) = function
             .name
             .as_ref()
             .expect("A module's function must be named");
@@ -73,15 +58,6 @@ impl<'a> CallGraphBuilder<'a> {
                 name: name.clone(),
             });
         }
-
-        _ = self.references.insert(
-            name.clone(),
-            ReferenceInformation {
-                definition_location: *name_location,
-                references: Vec::new(),
-            },
-        );
-
         Ok(())
     }
 
@@ -104,15 +80,6 @@ impl<'a> CallGraphBuilder<'a> {
                 name: name.clone(),
             });
         }
-
-        _ = self.references.insert(
-            name.clone(),
-            ReferenceInformation {
-                definition_location: constant.name_location,
-                references: Vec::new(),
-            },
-        );
-
         Ok(())
     }
 
@@ -152,7 +119,7 @@ impl<'a> CallGraphBuilder<'a> {
         self.names = names;
     }
 
-    fn referenced(&mut self, name: &str, location: SrcSpan) {
+    fn referenced(&mut self, name: &str) {
         // If we don't know what the target is then it's either a programmer
         // error to be detected later, or it's not a module function and as such
         // is not a value we are tracking.
@@ -165,10 +132,6 @@ impl<'a> CallGraphBuilder<'a> {
         let Some((target, _)) = target else { return };
 
         _ = self.graph.add_edge(self.current_function, *target, ());
-        _ = self
-            .references
-            .get_mut(name)
-            .map(|information| information.references.push(location));
     }
 
     fn statements(&mut self, statements: &'a [UntypedStatement]) {
@@ -226,8 +189,8 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             // Aha! A variable is being referenced.
-            UntypedExpr::Var { name, location, .. } => {
-                self.referenced(name, *location);
+            UntypedExpr::Var { name, .. } => {
+                self.referenced(name);
             }
 
             UntypedExpr::Call { fun, arguments, .. } => {
@@ -376,8 +339,8 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            Pattern::VarUsage { name, location, .. } => {
-                self.referenced(name, *location);
+            Pattern::VarUsage { name, .. } => {
+                self.referenced(name);
             }
 
             Pattern::Assign { name, pattern, .. } => {
@@ -464,17 +427,13 @@ impl<'a> CallGraphBuilder<'a> {
 
             ClauseGuard::Not { expression, .. } => self.guard(expression),
 
-            ClauseGuard::Var { name, location, .. } => self.referenced(name, *location),
+            ClauseGuard::Var { name, .. } => self.referenced(name),
 
             ClauseGuard::TupleIndex { tuple, .. } => self.guard(tuple),
 
             ClauseGuard::FieldAccess { container, .. } => self.guard(container),
 
-            ClauseGuard::ModuleSelect {
-                module_name,
-                location,
-                ..
-            } => self.referenced(module_name, *location),
+            ClauseGuard::ModuleSelect { module_name, .. } => self.referenced(module_name),
 
             ClauseGuard::Constant(constant) => self.constant(constant),
         }
@@ -503,11 +462,8 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             Constant::Var {
-                module: None,
-                name,
-                location,
-                ..
-            } => self.referenced(name, *location),
+                module: None, name, ..
+            } => self.referenced(name),
 
             Constant::BitArray { segments, .. } => {
                 for segment in segments {
@@ -529,16 +485,10 @@ impl<'a> CallGraphBuilder<'a> {
 /// Determine the order in which functions and constants should be compiled and if any
 /// mutually recursive functions need to be compiled together.
 ///
-pub fn call_graph_info(
+pub fn into_dependency_order(
     functions: Vec<UntypedFunction>,
     constants: Vec<UntypedModuleConstant>,
-) -> Result<
-    (
-        Vec<Vec<CallGraphNode>>,
-        HashMap<EcoString, ReferenceInformation>,
-    ),
-    Error,
-> {
+) -> Result<Vec<Vec<CallGraphNode>>, Error> {
     let mut grapher = CallGraphBuilder::default();
 
     for function in &functions {
@@ -559,7 +509,7 @@ pub fn call_graph_info(
     }
 
     // Consume the grapher to get the graph
-    let (graph, references) = grapher.into_info();
+    let graph = grapher.into_graph();
 
     // Determine the order in which the functions should be compiled by looking
     // at which other functions they depend on.
@@ -591,5 +541,5 @@ pub fn call_graph_info(
         })
         .collect_vec();
 
-    Ok((ordered, references))
+    Ok(ordered)
 }

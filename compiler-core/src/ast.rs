@@ -13,7 +13,6 @@ pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
 use crate::build::{Located, Target};
-use crate::call_graph::ReferenceInformation;
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
@@ -72,7 +71,7 @@ impl TypedModule {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct References {
     pub imported_modules: HashSet<EcoString>,
-    pub value_references: HashMap<EcoString, ReferenceInformation>,
+    pub value_references: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to

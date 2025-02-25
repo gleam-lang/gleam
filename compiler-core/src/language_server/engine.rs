@@ -709,13 +709,26 @@ where
                     constructor:
                         ValueConstructor {
                             variant:
-                                ValueConstructorVariant::ModuleConstant { .. }
-                                | ValueConstructorVariant::ModuleFn { .. },
+                                ValueConstructorVariant::ModuleConstant {
+                                    module: module_name,
+                                    ..
+                                }
+                                | ValueConstructorVariant::ModuleFn {
+                                    module: module_name,
+                                    ..
+                                },
                             ..
                         },
                     name,
                     ..
-                }) => rename_module_value(module, &lines, &params, name, &this.compiler.modules),
+                }) => rename_module_value(
+                    module,
+                    &lines,
+                    &params,
+                    module_name,
+                    name,
+                    &this.compiler.modules,
+                ),
                 _ => None,
             })
         })
