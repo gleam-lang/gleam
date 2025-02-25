@@ -2852,6 +2852,380 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractVariable<'ast> {
     }
 }
 
+/// Builder for code action to convert a literal use into a const.
+///
+/// For using the code action on each of the following lines:
+///
+/// ```gleam
+/// fn void() {
+///   let var = [1, 2, 3]
+///   let res = function("Statement", var)
+/// }
+/// ```
+///
+/// Both value literals will become:
+///
+/// ```gleam
+/// const var = [1, 2, 3]
+/// const string = "Statement"
+///
+/// fn void() {
+///   let res = function(string, var)
+/// }
+/// ```
+pub struct ExtractConstant<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    /// The whole selected expression
+    selected_expression: Option<SrcSpan>,
+    /// The location of the start of the function containing the expression
+    container_function_start: Option<u32>,
+    /// The type of expression being extracted
+    type_of_extractable: Option<ExtractableToConstant>,
+    /// The name of the newly created constant
+    name_to_use: Option<EcoString>,
+    /// The right hand side expression of the newly created constant
+    value_to_use: Option<EcoString>,
+}
+
+/// Used when an expression can be extracted to a constant
+enum ExtractableToConstant {
+    /// Used for collections. This means that elements inside, are also
+    /// extractable as constants.
+    Collection,
+    /// Used for lone values. Literals in Gleam can be Ints, Floats, Strings
+    /// and type variants (not records).
+    Value,
+    /// Used for whole variable assignments. If the right hand side of the
+    /// expression can be extracted, the whole expression extracted and use the
+    /// local variable as a constant.
+    Assignment,
+}
+
+fn can_be_constant(
+    module: &Module,
+    expr: &TypedExpr,
+    module_constants: Option<&HashSet<&EcoString>>,
+) -> bool {
+    // We pass the `module_constants` on recursion to not compute them each time
+    let mc = match module_constants {
+        None => &module
+            .ast
+            .definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                ast::Definition::ModuleConstant(module_constant) => Some(&module_constant.name),
+
+                ast::Definition::Function(_)
+                | ast::Definition::TypeAlias(_)
+                | ast::Definition::CustomType(_)
+                | ast::Definition::Import(_) => None,
+            })
+            .collect(),
+        Some(mc) => mc,
+    };
+
+    match expr {
+        // Attempt to extract whole list as long as it's comprised of only literals
+        TypedExpr::List { elements, tail, .. } => {
+            elements
+                .iter()
+                .all(|element| can_be_constant(module, element, Some(mc)))
+                && tail.is_none()
+        }
+
+        // Attempt to extract whole bit array as long as it's made up of literals
+        TypedExpr::BitArray { segments, .. } => {
+            segments
+                .iter()
+                .all(|segment| can_be_constant(module, &segment.value, Some(mc)))
+                && segments.iter().all(|segment| {
+                    segment.options.iter().all(|option| match option {
+                        ast::BitArrayOption::Size { value, .. } => {
+                            can_be_constant(module, value, Some(mc))
+                        }
+
+                        ast::BitArrayOption::Bytes { .. }
+                        | ast::BitArrayOption::Int { .. }
+                        | ast::BitArrayOption::Float { .. }
+                        | ast::BitArrayOption::Bits { .. }
+                        | ast::BitArrayOption::Utf8 { .. }
+                        | ast::BitArrayOption::Utf16 { .. }
+                        | ast::BitArrayOption::Utf32 { .. }
+                        | ast::BitArrayOption::Utf8Codepoint { .. }
+                        | ast::BitArrayOption::Utf16Codepoint { .. }
+                        | ast::BitArrayOption::Utf32Codepoint { .. }
+                        | ast::BitArrayOption::Signed { .. }
+                        | ast::BitArrayOption::Unsigned { .. }
+                        | ast::BitArrayOption::Big { .. }
+                        | ast::BitArrayOption::Little { .. }
+                        | ast::BitArrayOption::Native { .. }
+                        | ast::BitArrayOption::Unit { .. } => true,
+                    })
+                })
+        }
+
+        // Attempt to extract whole tuple as long as it's comprised of only literals
+        TypedExpr::Tuple { elems, .. } => elems
+            .iter()
+            .all(|element| can_be_constant(module, element, Some(mc))),
+
+        // Extract literals directly
+        TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => true,
+
+        // Extract non-record types directly
+        TypedExpr::Var {
+            constructor, name, ..
+        } => {
+            matches!(
+                constructor.variant,
+                type_::ValueConstructorVariant::Record { arity: 0, .. }
+            ) || mc.contains(name)
+        }
+        TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. } => false,
+    }
+}
+
+/// Takes the list of already existing constants and functions and creates a
+/// name that doesn't conflict with them
+///
+fn generate_new_name_for_constant(module: &Module, expr: &TypedExpr) -> EcoString {
+    let mut name_generator = NameGenerator::new();
+    let already_taken_names = VariablesNames {
+        names: module
+            .ast
+            .definitions
+            .iter()
+            .filter_map(|definition| match definition {
+                ast::Definition::ModuleConstant(constant) => Some(constant.name.clone()),
+                ast::Definition::Function(function) => function.name.as_ref().map(|n| n.1.clone()),
+
+                ast::Definition::TypeAlias(_)
+                | ast::Definition::CustomType(_)
+                | ast::Definition::Import(_) => None,
+            })
+            .collect(),
+    };
+    name_generator.reserve_variable_names(already_taken_names);
+
+    name_generator.generate_name_from_type(&expr.type_())
+}
+
+impl<'a> ExtractConstant<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            selected_expression: None,
+            container_function_start: None,
+            type_of_extractable: None,
+            name_to_use: None,
+            value_to_use: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let (
+            Some(expr_span),
+            Some(function_start),
+            Some(type_of_extractable),
+            Some(new_const_name),
+            Some(const_value),
+        ) = (
+            self.selected_expression,
+            self.container_function_start,
+            self.type_of_extractable,
+            self.name_to_use,
+            self.value_to_use,
+        )
+        else {
+            return vec![];
+        };
+
+        // We insert the constant declaration
+        self.edits.insert(
+            function_start,
+            format!("const {new_const_name} = {const_value}\n\n"),
+        );
+
+        // We remove or replace the selected expression
+        match type_of_extractable {
+            // The whole expression is deleted for assignments
+            ExtractableToConstant::Assignment => {
+                let range = self
+                    .edits
+                    .src_span_to_lsp_range(self.selected_expression.expect("Real range value"));
+                let mut indent_size = 0;
+                let line_start = *self
+                    .edits
+                    .line_numbers
+                    .line_starts
+                    .get(range.start.line as usize)
+                    .expect("Line number should be valid");
+                let chars = self.module.code.chars();
+                let mut chars = chars.skip(line_start as usize);
+                // Count indentation
+                while chars.next() == Some(' ') {
+                    indent_size += 1;
+                }
+
+                let expr_span_with_new_line = SrcSpan {
+                    // We remove leading indentation + 1 to remove the newline with it
+                    start: expr_span.start - (indent_size + 1),
+                    end: expr_span.end,
+                };
+                self.edits.delete(expr_span_with_new_line);
+            }
+
+            // Only  right hand side is replaced for collection or values
+            ExtractableToConstant::Collection | ExtractableToConstant::Value => {
+                self.edits.replace(expr_span, String::from(new_const_name));
+            }
+        }
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Extract constant")
+            .kind(CodeActionKind::REFACTOR_EXTRACT)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
+    /// To get the position of the function containing the value or assignment
+    /// to extract
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        let fun_location = fun.location;
+        let fun_range = self.edits.src_span_to_lsp_range(SrcSpan {
+            start: fun_location.start,
+            end: fun.end_position,
+        });
+
+        if !within(self.params.range, fun_range) {
+            return;
+        }
+        self.container_function_start = Some(fun.location.start);
+
+        ast::visit::visit_typed_function(self, fun);
+    }
+
+    /// To extract the whole assignment
+    fn visit_typed_assignment(&mut self, assignment: &'ast TypedAssignment) {
+        let expr_location = assignment.location;
+
+        // We only offer this code action for extracting the whole assignment
+        // between `let` and `=`.
+        let pattern_location = assignment.pattern.location();
+        let location = SrcSpan::new(assignment.location.start, pattern_location.end);
+        let code_action_range = self.edits.src_span_to_lsp_range(location);
+
+        if !within(self.params.range, code_action_range) {
+            ast::visit::visit_typed_assignment(self, assignment);
+            return;
+        }
+
+        if assignment.pattern.is_variable() && can_be_constant(self.module, &assignment.value, None)
+        {
+            self.type_of_extractable = Some(ExtractableToConstant::Assignment);
+            self.selected_expression = Some(expr_location);
+            self.name_to_use = match &assignment.pattern {
+                Pattern::Variable { name, .. } => Some(name.clone()),
+                _ => None,
+            };
+            self.value_to_use = Some(EcoString::from(
+                self.module
+                    .code
+                    .get(
+                        (assignment.value.location().start as usize)
+                            ..(assignment.location.end as usize),
+                    )
+                    .expect("selected expression"),
+            ));
+        }
+    }
+
+    /// To extract only the literal
+    fn visit_typed_expr(&mut self, expr: &'ast TypedExpr) {
+        let expr_location = expr.location();
+        let expr_range = self.edits.src_span_to_lsp_range(expr_location);
+
+        if !within(self.params.range, expr_range) {
+            ast::visit::visit_typed_expr(self, expr);
+            return;
+        }
+
+        // Keep going down recursively if:
+        // - It's no extractable has been found yet (`None`)
+        // - It's a collection, which may or may not contain a value that can
+        //   be extracted (`Some(ExtractableToConstant::Collection)`)
+        if matches!(
+            self.type_of_extractable,
+            None | Some(ExtractableToConstant::Collection)
+        ) && can_be_constant(self.module, expr, None)
+        {
+            self.type_of_extractable = match expr {
+                TypedExpr::Var { .. } => Some(ExtractableToConstant::Value),
+                TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => {
+                    Some(ExtractableToConstant::Value)
+                }
+                TypedExpr::List { .. } | TypedExpr::Tuple { .. } | TypedExpr::BitArray { .. } => {
+                    Some(ExtractableToConstant::Collection)
+                }
+                TypedExpr::Block { .. }
+                | TypedExpr::Pipeline { .. }
+                | TypedExpr::Fn { .. }
+                | TypedExpr::Call { .. }
+                | TypedExpr::BinOp { .. }
+                | TypedExpr::Case { .. }
+                | TypedExpr::RecordAccess { .. }
+                | TypedExpr::ModuleSelect { .. }
+                | TypedExpr::TupleIndex { .. }
+                | TypedExpr::Todo { .. }
+                | TypedExpr::Panic { .. }
+                | TypedExpr::RecordUpdate { .. }
+                | TypedExpr::NegateBool { .. }
+                | TypedExpr::NegateInt { .. }
+                | TypedExpr::Invalid { .. } => None,
+            };
+
+            self.selected_expression = Some(expr_location);
+            self.name_to_use = Some(generate_new_name_for_constant(self.module, expr));
+            self.value_to_use = Some(EcoString::from(
+                self.module
+                    .code
+                    .get((expr_location.start as usize)..(expr_location.end as usize))
+                    .expect("selected expression"),
+            ));
+        }
+
+        ast::visit::visit_typed_expr(self, expr);
+    }
+}
+
 /// Builder for code action to apply the "expand function capture" action.
 ///
 pub struct ExpandFunctionCapture<'a> {

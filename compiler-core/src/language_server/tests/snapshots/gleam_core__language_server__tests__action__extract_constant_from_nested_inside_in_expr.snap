@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  [#(\"a\", 0), #(\"b\", 1), #(\"a\", 2)]\n  |> key_filter(\"a\")\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  [#("a", 0), #("b", 1), #("a", 2)]
+   ▔↑                              
+  |> key_filter("a")
+}
+
+
+----- AFTER ACTION
+const value = #("a", 0)
+
+pub fn main() {
+  [value, #("b", 1), #("a", 2)]
+  |> key_filter("a")
+}
