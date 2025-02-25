@@ -343,11 +343,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             },
             names: type_names,
             references: References {
-                imported_modules: env
-                    .imported_modules
-                    .into_iter()
-                    .map(|(name, _)| name)
-                    .collect(),
+                imported_modules: env.imported_modules.into_keys().collect(),
                 value_references: env.references,
             },
         };
