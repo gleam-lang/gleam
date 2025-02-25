@@ -715,7 +715,7 @@ where
                         },
                     name,
                     ..
-                }) => rename_module_value(module, &lines, &params, name),
+                }) => rename_module_value(module, &lines, &params, name, &this.compiler.modules),
                 _ => None,
             })
         })

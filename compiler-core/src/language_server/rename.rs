@@ -66,10 +66,11 @@ pub fn rename_local_variable(
 }
 
 pub fn rename_module_value(
-    module: &Module,
+    main_module: &Module,
     line_numbers: &LineNumbers,
     params: &RenameParams,
     name: &EcoString,
+    modules: &HashMap<EcoString, Module>,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         Default::default(),
@@ -81,22 +82,65 @@ pub fn rename_module_value(
         return None;
     }
 
-    let uri = params.text_document_position.text_document.uri.clone();
     let mut edits = TextEdits::new(line_numbers);
+    let mut workspace_edit = WorkspaceEdit {
+        changes: Some(HashMap::new()),
+        document_changes: None,
+        change_annotations: None,
+    };
 
-    let reference_information = module.ast.references.get(name)?;
-
-    edits.replace(
-        reference_information.definition_location,
+    rename_references_in_module(
+        main_module,
+        &mut edits,
+        &mut workspace_edit,
+        name,
         params.new_name.clone(),
     );
+    for (_, module) in modules {
+        if module
+            .ast
+            .references
+            .imported_modules
+            .contains(&main_module.name)
+        {
+            rename_references_in_module(
+                module,
+                &mut edits,
+                &mut workspace_edit,
+                name,
+                params.new_name.clone(),
+            );
+        }
+    }
+
+    Some(workspace_edit)
+}
+
+fn rename_references_in_module(
+    module: &Module,
+    edits: &mut TextEdits<'_>,
+    workspace_edit: &mut WorkspaceEdit,
+    name: &EcoString,
+    new_name: String,
+) {
+    let Some(reference_information) = module.ast.references.value_references.get(name) else {
+        return;
+    };
 
     reference_information
         .references
         .iter()
-        .for_each(|location| edits.replace(*location, params.new_name.clone()));
+        .for_each(|location| edits.replace(*location, new_name.clone()));
+    edits.replace(reference_information.definition_location, new_name);
 
-    Some(workspace_edit(uri, edits.edits))
+    let Ok(uri) = Url::from_file_path(&module.input_path) else {
+        return;
+    };
+
+    _ = workspace_edit
+        .changes
+        .as_mut()
+        .map(|changes| changes.insert(uri, std::mem::take(&mut edits.edits)));
 }
 
 pub fn find_variable_references(
