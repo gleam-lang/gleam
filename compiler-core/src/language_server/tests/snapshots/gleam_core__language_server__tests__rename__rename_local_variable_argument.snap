@@ -3,6 +3,7 @@ source: compiler-core/src/language_server/tests/rename.rs
 expression: "\npub fn add(first_number: Int, x: Int) -> Int {\n  x + first_number\n}\n"
 ---
 ----- BEFORE RENAME
+-- app.gleam
 
 pub fn add(first_number: Int, x: Int) -> Int {
   x + first_number
@@ -11,6 +12,7 @@ pub fn add(first_number: Int, x: Int) -> Int {
 
 
 ----- AFTER RENAME
+-- app.gleam
 
 pub fn add(first_number: Int, second_number: Int) -> Int {
   second_number + first_number
