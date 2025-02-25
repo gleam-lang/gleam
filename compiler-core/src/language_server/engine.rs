@@ -721,14 +721,9 @@ where
                         },
                     name,
                     ..
-                }) => rename_module_value(
-                    module,
-                    &lines,
-                    &params,
-                    module_name,
-                    name,
-                    &this.compiler.modules,
-                ),
+                }) => {
+                    rename_module_value(module, &params, module_name, name, &this.compiler.modules)
+                }
                 _ => None,
             })
         })
