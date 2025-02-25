@@ -3,6 +3,7 @@ source: compiler-core/src/language_server/tests/rename.rs
 expression: "\npub fn main() {\n  let wibble = 10\n  wibble\n}\n"
 ---
 ----- BEFORE RENAME
+-- app.gleam
 
 pub fn main() {
   let wibble = 10
@@ -12,6 +13,7 @@ pub fn main() {
 
 
 ----- AFTER RENAME
+-- app.gleam
 
 pub fn main() {
   let wobble = 10

@@ -3,6 +3,7 @@ source: compiler-core/src/language_server/tests/rename.rs
 expression: "\npub fn main() {\n  let assert Ok([_, wibble, ..]) = Error(12)\n  wibble\n}\n"
 ---
 ----- BEFORE RENAME
+-- app.gleam
 
 pub fn main() {
   let assert Ok([_, wibble, ..]) = Error(12)
@@ -12,6 +13,7 @@ pub fn main() {
 
 
 ----- AFTER RENAME
+-- app.gleam
 
 pub fn main() {
   let assert Ok([_, second_element, ..]) = Error(12)
