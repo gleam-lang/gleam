@@ -9,10 +9,10 @@ use crate::{
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
-        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
-        TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction, UntypedImport,
-        UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
+        RecordConstructorArg, References, SrcSpan, Statement, TypeAlias, TypeAst,
+        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition,
+        TypedExpr, TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction,
+        UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, call_graph_info},
@@ -342,7 +342,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 contains_echo: echo_found,
             },
             names: type_names,
-            references,
+            references: References {
+                imported_modules: env
+                    .imported_modules
+                    .into_iter()
+                    .map(|(name, _)| name)
+                    .collect(),
+                value_references: references,
+            },
         };
 
         match Vec1::try_from_vec(self.problems.take_errors()) {
