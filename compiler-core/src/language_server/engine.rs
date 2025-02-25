@@ -2,8 +2,8 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern, SrcSpan,
-        TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant, Pattern,
+        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -602,6 +602,18 @@ where
                     location,
                     ..
                 }) => success_response(*location),
+                Located::Expression(TypedExpr::ModuleSelect {
+                    location,
+                    field_start,
+                    ..
+                }) => success_response(SrcSpan::new(*field_start, location.end)),
+                Located::ModuleStatement(
+                    Definition::Function(Function {
+                        name: Some((name_location, _)),
+                        ..
+                    })
+                    | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
+                ) => success_response(*name_location),
                 _ => None,
             })
         })
@@ -713,6 +725,16 @@ where
                     name,
                     ..
                 }) => rename_module_value(&params, module_name, name, &this.compiler.modules),
+                Located::Expression(TypedExpr::ModuleSelect {
+                    module_name, label, ..
+                }) => rename_module_value(&params, module_name, label, &this.compiler.modules),
+                Located::ModuleStatement(
+                    Definition::Function(Function {
+                        name: Some((_, name)),
+                        ..
+                    })
+                    | Definition::ModuleConstant(ModuleConstant { name, .. }),
+                ) => rename_module_value(&params, &module.name, name, &this.compiler.modules),
                 _ => None,
             })
         })
