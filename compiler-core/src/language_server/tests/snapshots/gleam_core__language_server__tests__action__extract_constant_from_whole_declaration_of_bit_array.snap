@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/io\n\npub fn main() {\n  let b = <<1234:unit(4)-size(32)>>\n  io.debug(b)\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+const n = 24
+
+pub fn main() {
+  let bits = <<8080:size(n)>>
+  ▔▔▔▔▔▔▔↑                   
+  bits
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const n = 24
+
+const bits = <<8080:size(n)>>
+
+pub fn main() {
+  bits
+}
