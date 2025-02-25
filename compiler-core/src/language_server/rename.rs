@@ -66,7 +66,6 @@ pub fn rename_local_variable(
 }
 
 pub fn rename_module_value(
-    main_module: &Module,
     params: &RenameParams,
     module_name: &EcoString,
     name: &EcoString,
@@ -88,20 +87,9 @@ pub fn rename_module_value(
         change_annotations: None,
     };
 
-    rename_references_in_module(
-        main_module,
-        &mut workspace_edit,
-        module_name,
-        name,
-        params.new_name.clone(),
-    );
-
     for module in modules.values() {
-        if module
-            .ast
-            .references
-            .imported_modules
-            .contains(&main_module.name)
+        if &module.name == module_name
+            || module.ast.references.imported_modules.contains(module_name)
         {
             rename_references_in_module(
                 module,
