@@ -33,11 +33,11 @@ fn rename(
 }
 
 fn apply_rename(
-    tester: TestProject<'_>,
+    tester: &TestProject<'_>,
     new_name: &str,
     position: Position,
 ) -> HashMap<String, String> {
-    let changes = rename(&tester, new_name, position)
+    let changes = rename(tester, new_name, position)
         .expect("Rename failed")
         .changes
         .expect("No text edit found");
@@ -45,7 +45,7 @@ fn apply_rename(
 }
 
 fn apply_code_edit(
-    tester: TestProject<'_>,
+    tester: &TestProject<'_>,
     changes: HashMap<Url, Vec<lsp_types::TextEdit>>,
 ) -> HashMap<String, String> {
     let mut modules = HashMap::new();
@@ -61,26 +61,48 @@ fn apply_code_edit(
 
 macro_rules! assert_rename {
     ($code:literal, $new_name:literal, $range:expr $(,)?) => {
-        let project = TestProject::for_source($code);
-        assert_rename!(project, $new_name, $range);
+        assert_rename!(TestProject::for_source($code), $new_name, $range);
+    };
+
+    (($module_name:literal, $module_src:literal), $code:literal, $new_name:literal, $range:expr $(,)?) => {
+        assert_rename!(
+            TestProject::for_source($code).add_module($module_name, $module_src),
+            $new_name,
+            $range
+        );
     };
 
     ($project:expr, $new_name:literal, $range:expr $(,)?) => {
-        let src = $project.src;
+        let project = $project;
+        let src = project.src;
         let range = $range.find_range(src);
+        let result = apply_rename(&project, $new_name, range.start);
+
         let mut output = String::from("----- BEFORE RENAME\n");
-        for (name, src) in $project.root_package_modules.iter() {
+        for (name, src) in project.root_package_modules.iter() {
             output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
         }
         output.push_str(&format!(
             "-- app.gleam\n{}\n\n----- AFTER RENAME\n",
             hover::show_hover(src, range, range.start)
         ));
-
-        let result = apply_rename($project, $new_name, range.start);
-        for (name, src) in result {
-            output.push_str(&format!("-- {name}.gleam\n{}\n\n", src));
+        for (name, src) in project.root_package_modules.iter() {
+            output.push_str(&format!(
+                "-- {name}.gleam\n{}\n\n",
+                result
+                    .get(*name)
+                    .map(|string| string.as_str())
+                    .unwrap_or(*src)
+            ));
         }
+        output.push_str(&format!(
+            "-- app.gleam\n{}",
+            result
+                .get("app")
+                .map(|string| string.as_str())
+                .unwrap_or(src)
+        ));
+
         insta::assert_snapshot!(insta::internals::AutoName, output, src);
     };
 }
@@ -357,5 +379,475 @@ pub fn main() {
 ",
         "Not_AValid_Name",
         find_position_of("wibble").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn rename_function_from_definition() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() {
+  app.something()
+}
+"
+        ),
+        "
+pub fn something() {
+  something()
+}
+
+fn something_else() {
+  something()
+}
+",
+        "some_function",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn rename_function_from_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() {
+  app.something()
+}
+"
+        ),
+        "
+pub fn something() {
+  something()
+}
+
+fn something_else() {
+  something()
+}
+",
+        "some_function",
+        find_position_of("something")
+            .nth_occurrence(2)
+            .to_selection()
+    );
+}
+
+#[test]
+fn rename_function_from_qualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod
+
+pub fn main() {
+  mod.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn rename_function_from_unqualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod.{wibble}
+
+pub fn main() {
+  wibble()
+  mod.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble(").to_selection()
+    );
+}
+
+#[test]
+fn rename_aliased_function() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app.{something as something_else}
+
+fn wibble() {
+  something_else()
+}
+"
+        ),
+        "
+pub fn something() {
+  something()
+}
+
+fn something_else() {
+  something()
+}
+",
+        "some_function",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn rename_function_shadowing_module() {
+    let src = "
+import gleam/list
+
+pub fn list() {
+  []
+}
+
+pub fn main() {
+  list.map(todo, todo)
+}
+    ";
+
+    assert_rename!(
+        TestProject::for_source(src).add_hex_module("gleam/list", "pub fn map(_, _) {}"),
+        "empty_list",
+        find_position_of("list()").to_selection()
+    );
+}
+
+#[test]
+fn no_rename_function_with_invalid_name() {
+    assert_no_rename!(
+        "
+pub fn main() {
+  let wibble = 10
+  wibble
+}
+",
+        "Not_AValid_Name",
+        find_position_of("main").to_selection()
+    );
+}
+
+#[test]
+fn rename_constant_from_definition() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() {
+  app.something
+}
+"
+        ),
+        "
+pub const something = 10
+
+pub fn main() {
+  something + { 4 * something }
+}
+",
+        "ten",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn rename_constant_from_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() {
+  app.something
+}
+"
+        ),
+        "
+pub const something = 10
+
+pub fn main() {
+  something + { 4 * something }
+}
+",
+        "ten",
+        find_position_of("something")
+            .nth_occurrence(2)
+            .to_selection()
+    );
+}
+
+#[test]
+fn rename_constant_from_qualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub const something = 10
+
+fn wibble() {
+  something
+}
+"
+        ),
+        "
+import mod
+
+pub fn main() {
+  mod.something
+}
+",
+        "ten",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn rename_constant_from_unqualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub const something = 10
+
+fn wibble() {
+  something
+}
+"
+        ),
+        "
+import mod.{something}
+
+pub fn main() {
+  something + mod.something
+}
+",
+        "ten",
+        find_position_of("something +").to_selection()
+    );
+}
+
+#[test]
+fn rename_aliased_constant() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app.{something as some_constant}
+
+fn wibble() {
+  some_constant
+}
+"
+        ),
+        "
+pub const something = 10
+
+pub fn main() {
+  something + { 4 * something }
+}
+",
+        "ten",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
+fn rename_constant_shadowing_module() {
+    let src = "
+import gleam/list
+
+const list = []
+
+pub fn main() {
+  list.map(todo, todo)
+}
+    ";
+
+    assert_rename!(
+        TestProject::for_source(src).add_hex_module("gleam/list", "pub fn map(_, _) {}"),
+        "empty_list",
+        find_position_of("list =").to_selection()
+    );
+}
+
+#[test]
+fn no_rename_constant_with_invalid_name() {
+    assert_no_rename!(
+        "
+const value = 10
+",
+        "Ten",
+        find_position_of("value").to_selection()
+    );
+}
+
+#[test]
+fn rename_type_variant_from_definition() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() {
+  app.Constructor(4)
+}
+"
+        ),
+        "
+pub type Wibble {
+  Constructor(Int)
+}
+
+pub fn main() {
+  Constructor(10)
+}
+",
+        "Wibble",
+        find_position_of("Constructor(Int").to_selection()
+    );
+}
+
+#[test]
+fn rename_type_variant_from_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() {
+  app.Constructor(4)
+}
+"
+        ),
+        "
+pub type Wibble {
+  Constructor(Int)
+}
+
+pub fn main() {
+  Constructor(10)
+}
+",
+        "Wibble",
+        find_position_of("Constructor(10").to_selection()
+    );
+}
+
+#[test]
+fn rename_type_variant_from_qualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble {
+  Constructor(Int)
+}
+
+fn wibble() {
+  Constructor(42)
+}
+"
+        ),
+        "
+import mod
+
+pub fn main() {
+  mod.Constructor
+}
+",
+        "Variant",
+        find_position_of("Constructor").to_selection()
+    );
+}
+
+#[test]
+fn rename_type_variant_from_unqualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble {
+  Constructor(Int)
+}
+
+fn wibble() {
+  Constructor(81)
+}
+"
+        ),
+        "
+import mod.{Constructor}
+
+pub fn main() {
+  #(Constructor(75), mod.Constructor(57))
+}
+",
+        "Number",
+        find_position_of("Constructor,").to_selection()
+    );
+}
+
+#[test]
+fn rename_aliased_type_variant() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app.{Constructor as ValueConstructor}
+
+fn wibble() {
+  ValueConstructor(172)
+}
+"
+        ),
+        "
+pub type Wibble {
+  Constructor(Int)
+}
+
+pub fn main() {
+  Constructor(42)
+}
+",
+        "MakeAWibble",
+        find_position_of("Constructor").to_selection()
+    );
+}
+
+#[test]
+fn no_rename_type_variant_with_invalid_name() {
+    assert_no_rename!(
+        "
+pub type Wibble {
+  Constructor(Int)
+}
+",
+        "name_in_snake_case",
+        find_position_of("Constructor").to_selection()
     );
 }
