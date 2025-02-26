@@ -128,7 +128,7 @@ fn rename_references_in_module(
         .iter()
         .for_each(|location| edits.replace(*location, new_name.clone()));
 
-    let Ok(uri) = Url::from_file_path(&module.input_path) else {
+    let Some(uri) = url_from_path(module.input_path.as_str()) else {
         return;
     };
 
@@ -136,6 +136,29 @@ fn rename_references_in_module(
         .changes
         .as_mut()
         .map(|changes| changes.insert(uri, edits.edits));
+}
+
+fn url_from_path(path: &str) -> Option<Url> {
+    // The targets for which `from_file_path` is defined
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
+    let uri = Url::from_file_path(path).ok();
+
+    #[cfg(not(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    )))]
+    let uri = Url::parse(&format!("file://{path}")).ok();
+
+    uri
 }
 
 pub fn find_variable_references(
