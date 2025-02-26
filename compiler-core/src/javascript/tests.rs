@@ -205,16 +205,16 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
     let stdlib_package = StdlibPackage::Present;
-    let output = module(
-        &ast,
-        &line_numbers,
-        Utf8Path::new("src/module.gleam"),
-        "project/root".into(),
-        &"".into(),
-        TargetSupport::Enforced,
-        TypeScriptDeclarations::None,
+    let output = module(ModuleConfig {
+        module: &ast,
+        line_numbers: &line_numbers,
+        src: &"".into(),
+        target_support: TargetSupport::Enforced,
+        typescript: TypeScriptDeclarations::None,
         stdlib_package,
-    )?;
+        path: Utf8Path::new("src/module.gleam"),
+        project_root: "project/root".into(),
+    })?;
 
     Ok(output.replace(
         std::include_str!("../../templates/echo.mjs"),
