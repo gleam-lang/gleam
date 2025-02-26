@@ -62,8 +62,6 @@ fn run_and_capture_output(
 
     let mut process = std::process::Command::new(&program)
         .args(args)
-        .stdin(Stdio::null())
-        .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .envs(env.iter().map(|pair| (&pair.0, &pair.1)))
         .current_dir(paths.root())
