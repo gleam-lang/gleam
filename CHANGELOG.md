@@ -228,8 +228,8 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The Language Server now allows renaming of functions and constants across modules.
-  For example:
+- The Language Server now allows renaming of functions, constants and type variants
+  across modules. For example:
 
   ```gleam
   // wibble.gleam
