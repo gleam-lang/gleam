@@ -33,7 +33,7 @@ export function main() {
         {}
       )
     })(),
-    "",
+    "src/module.gleam",
     3,
   );
 }
