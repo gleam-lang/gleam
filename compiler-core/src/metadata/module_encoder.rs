@@ -336,12 +336,14 @@ impl<'a> ModuleEncoder<'a> {
                 module,
                 documentation: doc,
                 implementations,
+                name,
             } => {
                 let mut builder = builder.init_module_constant();
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
+                builder.reborrow().set_name(name);
                 self.build_implementations(builder.init_implementations(), *implementations)
             }
 

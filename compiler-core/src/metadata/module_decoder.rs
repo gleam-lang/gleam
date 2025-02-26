@@ -527,6 +527,7 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: self.string(reader.get_module()?)?,
+            name: self.string(reader.get_name()?)?,
             implementations: self.implementations(reader.get_implementations()?),
         })
     }

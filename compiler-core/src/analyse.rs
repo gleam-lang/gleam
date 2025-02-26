@@ -411,6 +411,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
+                name: name.clone(),
                 implementations,
             },
             type_: type_.clone(),
@@ -1650,6 +1651,7 @@ fn generalise_module_constant(
         literal: *value.clone(),
         module: module_name.clone(),
         implementations,
+        name: name.clone(),
     };
     environment.insert_variable(
         name.clone(),

@@ -171,8 +171,11 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     name.clone(),
                     used_name.clone(),
                 );
-                self.environment
-                    .register_reference(module.clone(), import_name.clone(), location);
+                self.environment.register_reference(
+                    module.clone(),
+                    import_name.clone(),
+                    import.imported_name_location,
+                );
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
             | ValueConstructorVariant::ModuleFn { module, .. } => {
@@ -182,8 +185,11 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     location,
                     self.problems,
                 );
-                self.environment
-                    .register_reference(module.clone(), import_name.clone(), location);
+                self.environment.register_reference(
+                    module.clone(),
+                    import_name.clone(),
+                    import.imported_name_location,
+                );
             }
             _ => self.environment.init_usage(
                 used_name.clone(),
