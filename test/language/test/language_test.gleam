@@ -1503,9 +1503,9 @@ let assert <<value:size(size)>> = <<42>>"
     "let size = 3
 let other_size = 5
 let third_size = 8
-let assert <<value:size(size), second:size(other_size), last:size(third_size)>> = <<5:3, 8:5, 928>>"
+let assert <<value:size(size), second:size(other_size), last:size(third_size)>> = <<5:3, 8:5, 128>>"
       |> example(fn() {
-        assert_equal(#(5, 8, 928), {
+        assert_equal(#(5, 8, 128), {
           let size = 3
           let other_size = 5
           let third_size = 8
@@ -1513,7 +1513,7 @@ let assert <<value:size(size), second:size(other_size), last:size(third_size)>> 
             value:size(size),
             second:size(other_size),
             last:size(third_size),
-          >> = <<5:3, 8:5, 928>>
+          >> = <<5:3, 8:5, 128>>
           #(value, second, last)
         })
       }),
@@ -1548,12 +1548,12 @@ let assert <<123:size(size)>> = <<123:7>>"
       }),
     "let size = 4
 let size = size + 2
-let assert <<value:size(size)>> = <<462:6>>"
+let assert <<value:size(size)>> = <<61:6>>"
       |> example(fn() {
-        assert_equal(426, {
+        assert_equal(61, {
           let size = 4
           let size = size + 2
-          let assert <<value:size(size)>> = <<462:6>>
+          let assert <<value:size(size)>> = <<61:6>>
           value
         })
       }),
