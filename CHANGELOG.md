@@ -288,8 +288,8 @@
   name.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The Language Server now allows renaming of functions and constants across modules.
-  For example:
+- The Language Server now allows renaming of functions, constants and type variants
+  across modules. For example:
 
   ```gleam
   // wibble.gleam

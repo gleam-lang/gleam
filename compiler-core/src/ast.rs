@@ -900,20 +900,21 @@ impl TypedDefinition {
 
             Definition::CustomType(custom) => {
                 // Check if location is within the type of one of the arguments of a constructor.
-                if let Some(annotation) = custom
+                if let Some(constructor) = custom
                     .constructors
                     .iter()
                     .find(|constructor| constructor.location.contains(byte_index))
-                    .and_then(|constructor| {
-                        constructor
-                            .arguments
-                            .iter()
-                            .find(|arg| arg.location.contains(byte_index))
-                    })
-                    .filter(|arg| arg.location.contains(byte_index))
-                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                 {
-                    return Some(annotation);
+                    if let Some(annotation) = constructor
+                        .arguments
+                        .iter()
+                        .find(|arg| arg.location.contains(byte_index))
+                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                    {
+                        return Some(annotation);
+                    }
+
+                    return Some(Located::RecordConstructor(constructor));
                 }
 
                 // Note that the custom type `.location` covers the function
