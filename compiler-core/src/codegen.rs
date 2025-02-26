@@ -5,7 +5,7 @@ use crate::{
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
-    javascript,
+    javascript::{self, ModuleConfig},
     line_numbers::LineNumbers,
 };
 use ecow::EcoString;
@@ -256,16 +256,16 @@ impl<'a> JavaScript<'a> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = javascript::module(
-            &module.ast,
-            &line_numbers,
-            &module.input_path,
-            self.project_root,
-            &module.code,
-            self.target_support,
-            self.typescript,
+        let output = javascript::module(ModuleConfig {
+            module: &module.ast,
+            line_numbers: &line_numbers,
+            path: &module.input_path,
+            project_root: self.project_root,
+            src: &module.code,
+            target_support: self.target_support,
+            typescript: self.typescript,
             stdlib_package,
-        );
+        });
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
     }
