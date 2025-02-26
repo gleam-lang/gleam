@@ -896,6 +896,12 @@ impl ModuleInterface {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Opaque {
+    Opaque,
+    NotOpaque,
+}
+
 /// Information on the constructors of a custom type.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeVariantConstructors {
@@ -913,6 +919,7 @@ pub struct TypeVariantConstructors {
     /// and `a` is a Generic type variable with id 1, then this field will be `[1]`.
     ///
     pub type_parameters_ids: Vec<u64>,
+    pub opaque: Opaque,
     pub variants: Vec<TypeValueConstructor>,
 }
 
@@ -920,6 +927,7 @@ impl TypeVariantConstructors {
     pub(crate) fn new(
         variants: Vec<TypeValueConstructor>,
         type_parameters: &[&EcoString],
+        opaque: Opaque,
         hydrator: Hydrator,
     ) -> TypeVariantConstructors {
         let named_types = hydrator.named_type_variables();
@@ -942,6 +950,7 @@ impl TypeVariantConstructors {
         Self {
             type_parameters_ids: type_parameters,
             variants,
+            opaque,
         }
     }
 }
@@ -1212,7 +1221,6 @@ impl TypeVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeConstructor {
     pub publicity: Publicity,
-    pub opaque: bool,
     pub origin: SrcSpan,
     pub module: EcoString,
     pub parameters: Vec<Arc<Type>>,

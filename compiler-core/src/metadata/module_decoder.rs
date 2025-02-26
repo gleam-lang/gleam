@@ -14,7 +14,7 @@ use crate::{
     line_numbers::LineNumbers,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, RecordAccessor, Type,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor, Type,
         TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
         TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
         expression::Implementations,
@@ -128,7 +128,6 @@ impl ModuleDecoder {
             type_,
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
-            opaque: reader.get_opaque(),
         })
     }
 
@@ -225,9 +224,16 @@ impl ModuleDecoder {
             self,
             type_variant_constructor_type_parameter_id
         );
+        let opaque = if reader.get_opaque() {
+            Opaque::Opaque
+        } else {
+            Opaque::NotOpaque
+        };
+
         Ok(TypeVariantConstructors {
             variants,
             type_parameters_ids,
+            opaque,
         })
     }
 

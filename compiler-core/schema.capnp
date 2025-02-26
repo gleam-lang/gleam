@@ -53,6 +53,7 @@ struct Version {
 struct TypesVariantConstructors {
   variants @0 :List(TypeValueConstructor);
   typeParametersIds @1 :List(UInt16);
+  opaque @2 :Bool;
 }
 
 struct TypeValueConstructor {
@@ -77,7 +78,6 @@ struct TypeConstructor {
   deprecated @4 :Text;
   origin @5 :SrcSpan;
   documentation @6 :Text;
-  opaque @7 :Bool;
 }
 
 struct AccessorsMap {

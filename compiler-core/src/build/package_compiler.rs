@@ -31,8 +31,10 @@ use camino::{Utf8Path, Utf8PathBuf};
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
 
 pub struct Compiled {
+    /// The modules which were just compiled
     pub modules: Vec<Module>,
-    pub module_names: Vec<EcoString>,
+    /// The names of all cached modules, which are not present in the `modules` field.
+    pub cached_module_names: Vec<EcoString>,
 }
 
 #[derive(Debug)]
@@ -150,7 +152,7 @@ where
             Loaded::empty()
         };
 
-        let mut module_names = Vec::new();
+        let mut cached_module_names = Vec::new();
 
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
@@ -161,7 +163,7 @@ where
                 return e.into();
             }
 
-            module_names.push(module.name.clone());
+            cached_module_names.push(module.name.clone());
 
             // Register the cached module so its type information etc can be
             // used for compiling futher modules.
@@ -197,7 +199,7 @@ where
                 return Outcome::PartialFailure(
                     Compiled {
                         modules,
-                        module_names,
+                        cached_module_names,
                     },
                     error,
                 )
@@ -221,7 +223,7 @@ where
 
         Outcome::Ok(Compiled {
             modules,
-            module_names,
+            cached_module_names,
         })
     }
 

@@ -215,7 +215,7 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
-    pub module_names: Vec<EcoString>,
+    pub cached_module_names: Vec<EcoString>,
 }
 
 impl Package {

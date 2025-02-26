@@ -215,11 +215,11 @@ where
             .map(
                 |Compiled {
                      modules,
-                     module_names,
+                     cached_module_names,
                  }| Package {
                     config,
                     modules,
-                    module_names,
+                    cached_module_names,
                 },
             )
     }
