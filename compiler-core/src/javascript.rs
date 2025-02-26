@@ -54,14 +54,17 @@ pub struct Generator<'a> {
 }
 
 impl<'a> Generator<'a> {
-    pub fn new(
-        line_numbers: &'a LineNumbers,
-        module: &'a TypedModule,
-        project_root: &'a Utf8Path,
-        target_support: TargetSupport,
-        typescript: TypeScriptDeclarations,
-        stdlib_package: StdlibPackage,
-    ) -> Self {
+    pub fn new(config: ModuleConfig<'a>) -> Self {
+        let ModuleConfig {
+            target_support,
+            typescript,
+            stdlib_package,
+            module,
+            line_numbers,
+            src: _,
+            path: _,
+            project_root,
+        } = config;
         let current_module_name_segments_count = module.name.split('/').count();
 
         Self {
@@ -612,31 +615,25 @@ impl<'a> Generator<'a> {
     }
 }
 
+#[derive(Debug)]
+pub struct ModuleConfig<'a> {
+    pub module: &'a TypedModule,
+    pub line_numbers: &'a LineNumbers,
+    pub src: &'a EcoString,
+    pub target_support: TargetSupport,
+    pub typescript: TypeScriptDeclarations,
+    pub stdlib_package: StdlibPackage,
+    pub path: &'a Utf8Path,
+    pub project_root: &'a Utf8Path,
+}
+
 #[allow(clippy::too_many_arguments)]
-pub fn module(
-    module: &TypedModule,
-    line_numbers: &LineNumbers,
-    path: &Utf8Path,
-    project_root: &Utf8Path,
-    src: &EcoString,
-    target_support: TargetSupport,
-    typescript: TypeScriptDeclarations,
-    stdlib_package: StdlibPackage,
-) -> Result<String, crate::Error> {
-    let document = Generator::new(
-        line_numbers,
-        module,
-        project_root,
-        target_support,
-        typescript,
-        stdlib_package,
-    )
-    .compile()
-    .map_err(|error| crate::Error::JavaScript {
-        path: path.to_path_buf(),
-        src: src.clone(),
-        error,
-    })?;
+pub fn module(config: ModuleConfig<'_>) -> Result<String, crate::Error> {
+    let path = config.path.to_path_buf();
+    let src = config.src.clone();
+    let document = Generator::new(config)
+        .compile()
+        .map_err(|error| crate::Error::JavaScript { path, src, error })?;
     Ok(document.to_pretty_string(80))
 }
 
