@@ -18,7 +18,7 @@ pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
     CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
-    TypedExpr, TypedFunction, TypedPattern, TypedStatement,
+    TypedExpr, TypedFunction, TypedPattern, TypedRecordConstructor, TypedStatement,
 };
 use crate::type_::Type;
 use crate::{
@@ -336,6 +336,7 @@ pub enum Located<'a> {
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),
     ModuleStatement(&'a TypedDefinition),
+    RecordConstructor(&'a TypedRecordConstructor),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
     Annotation(SrcSpan, std::sync::Arc<Type>),
@@ -374,6 +375,10 @@ impl<'a> Located<'a> {
                 module: None,
                 span: statement.location(),
             }),
+            Self::RecordConstructor(record) => Some(DefinitionLocation {
+                module: None,
+                span: record.location,
+            }),
             Self::UnqualifiedImport(UnqualifiedImport {
                 module,
                 name,
@@ -408,6 +413,7 @@ impl<'a> Located<'a> {
 
             Located::PatternSpread { .. } => None,
             Located::ModuleStatement(definition) => None,
+            Located::RecordConstructor(_) => None,
             Located::FunctionBody(function) => None,
             Located::UnqualifiedImport(unqualified_import) => None,
         }

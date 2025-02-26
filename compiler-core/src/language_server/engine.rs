@@ -2,7 +2,7 @@ use crate::{
     analyse::name::correct_name_case,
     ast::{
         ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant, Pattern,
-        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        RecordConstructor, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
@@ -13,8 +13,11 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, error::VariableOrigin, printer::Printer, Deprecation, ModuleInterface, Type,
-        TypeConstructor, ValueConstructor, ValueConstructorVariant,
+        self,
+        error::{Named, VariableOrigin},
+        printer::Printer,
+        Deprecation, ModuleInterface, ModuleValueConstructor, Type, TypeConstructor,
+        ValueConstructor, ValueConstructorVariant,
     },
     Error, Result, Warning,
 };
@@ -298,9 +301,8 @@ where
 
                 Located::FunctionBody(_) => Some(completer.completion_values()),
 
-                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
-                    Some(completer.completion_types())
-                }
+                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_))
+                | Located::RecordConstructor(_) => Some(completer.completion_types()),
 
                 // If the import completions returned no results and we are in an import then
                 // we should try to provide completions for unqualified values
@@ -594,7 +596,8 @@ where
                         ValueConstructor {
                             variant:
                                 ValueConstructorVariant::ModuleConstant { .. }
-                                | ValueConstructorVariant::ModuleFn { .. },
+                                | ValueConstructorVariant::ModuleFn { .. }
+                                | ValueConstructorVariant::Record { .. },
                             ..
                         },
                     location,
@@ -612,6 +615,9 @@ where
                     })
                     | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
                 ) => success_response(*name_location),
+                Located::RecordConstructor(RecordConstructor { name_location, .. }) => {
+                    success_response(*name_location)
+                }
                 _ => None,
             })
         })
@@ -722,17 +728,77 @@ where
                         },
                     name,
                     ..
-                }) => rename_module_value(&params, module_name, name, &this.compiler.modules),
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    name,
+                    &this.compiler.modules,
+                    Named::Function,
+                ),
                 Located::Expression(TypedExpr::ModuleSelect {
-                    module_name, label, ..
-                }) => rename_module_value(&params, module_name, label, &this.compiler.modules),
+                    module_name,
+                    label,
+                    constructor:
+                        ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. },
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    label,
+                    &this.compiler.modules,
+                    Named::Function,
+                ),
                 Located::ModuleStatement(
                     Definition::Function(Function {
                         name: Some((_, name)),
                         ..
                     })
                     | Definition::ModuleConstant(ModuleConstant { name, .. }),
-                ) => rename_module_value(&params, &module.name, name, &this.compiler.modules),
+                ) => rename_module_value(
+                    &params,
+                    &module.name,
+                    name,
+                    &this.compiler.modules,
+                    Named::Function,
+                ),
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::Record {
+                                    module: module_name,
+                                    name,
+                                    ..
+                                },
+                            ..
+                        },
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    name,
+                    &this.compiler.modules,
+                    Named::CustomTypeVariant,
+                ),
+                Located::Expression(TypedExpr::ModuleSelect {
+                    module_name,
+                    label,
+                    constructor: ModuleValueConstructor::Record { .. },
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    label,
+                    &this.compiler.modules,
+                    Named::CustomTypeVariant,
+                ),
+                Located::RecordConstructor(RecordConstructor { name, .. }) => rename_module_value(
+                    &params,
+                    &module.name,
+                    name,
+                    &this.compiler.modules,
+                    Named::CustomTypeVariant,
+                ),
                 _ => None,
             })
         })
@@ -778,6 +844,7 @@ where
                     Some(hover_for_module_constant(constant, lines, module))
                 }
                 Located::ModuleStatement(_) => None,
+                Located::RecordConstructor(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
                     module: module_name,
