@@ -97,7 +97,7 @@ impl Printer {
 
     fn type_var_doc<'a>(&mut self, type_: &TypeVar) -> Document<'a> {
         match type_ {
-            TypeVar::Link { ref type_, .. } => self.print(type_),
+            TypeVar::Link { type_, .. } => self.print(type_),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }
@@ -246,7 +246,7 @@ fn next_letter_test() {
 #[test]
 fn pretty_print_test() {
     macro_rules! assert_string {
-        ($src:expr, $type_:expr $(,)?) => {
+        ($src:expr_2021, $type_:expr_2021 $(,)?) => {
             let mut printer = Printer::new();
             assert_eq!($type_.to_string(), printer.pretty_print(&$src, 0),);
         };

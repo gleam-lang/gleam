@@ -418,7 +418,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     &mut self.assignments,
                     self.expression_generator.tracker,
                     constant,
-                )
+                );
             }
         })
     }

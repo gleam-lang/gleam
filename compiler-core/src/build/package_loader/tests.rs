@@ -1,14 +1,14 @@
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 
 use super::*;
 use crate::{
+    Warning,
     build::SourceFingerprint,
-    io::{memory::InMemoryFileSystem, FileSystemWriter},
+    io::{FileSystemWriter, memory::InMemoryFileSystem},
     line_numbers,
     parse::extra::ModuleExtra,
     warning::NullWarningEmitterIO,
-    Warning,
 };
 
 use std::time::Duration;

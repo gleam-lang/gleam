@@ -6,11 +6,11 @@ use hexpm::version::Version;
 use pretty_assertions::assert_eq;
 
 use gleam_core::{
+    Error,
     build::Runtime,
     config::{DenoConfig, DenoFlag, Docs, ErlangConfig, JavaScriptConfig, Repository},
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     requirement::Requirement,
-    Error,
 };
 
 use crate::dependencies::*;
@@ -507,14 +507,16 @@ fn provide_wrong_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    if let Err(Error::WrongDependencyProvided {
-        expected, found, ..
-    }) = result
-    {
-        assert_eq!(expected, "wrong_name");
-        assert_eq!(found, "hello_world");
-    } else {
-        panic!("Expected WrongDependencyProvided error")
+    match result {
+        Err(Error::WrongDependencyProvided {
+            expected, found, ..
+        }) => {
+            assert_eq!(expected, "wrong_name");
+            assert_eq!(found, "hello_world");
+        }
+        _ => {
+            panic!("Expected WrongDependencyProvided error")
+        }
     }
 }
 
@@ -568,10 +570,13 @@ fn provide_conflicting_package() {
         &mut provided,
         &mut vec!["root".into(), "subpackage".into()],
     );
-    if let Err(Error::ProvidedDependencyConflict { package, .. }) = result {
-        assert_eq!(package, "hello_world");
-    } else {
-        panic!("Expected ProvidedDependencyConflict error")
+    match result {
+        Err(Error::ProvidedDependencyConflict { package, .. }) => {
+            assert_eq!(package, "hello_world");
+        }
+        _ => {
+            panic!("Expected ProvidedDependencyConflict error")
+        }
     }
 }
 
@@ -589,10 +594,13 @@ fn provided_is_absolute() {
     );
     assert_eq!(result, Ok(hexpm::version::Range::new("== 0.1.0".into())));
     let package = provided.get("hello_world").unwrap().clone();
-    if let ProvidedPackageSource::Local { path } = package.source {
-        assert!(path.is_absolute())
-    } else {
-        panic!("Provide_local_package provided a package that is not local!")
+    match package.source {
+        ProvidedPackageSource::Local { path } => {
+            assert!(path.is_absolute())
+        }
+        _ => {
+            panic!("Provide_local_package provided a package that is not local!")
+        }
     }
 }
 

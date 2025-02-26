@@ -2,12 +2,13 @@ use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
+    Error, Result, Warning,
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
+        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
-        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -18,7 +19,6 @@ use crate::{
     paths, type_,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
-    Error, Result, Warning,
 };
 use askama::Template;
 use ecow::EcoString;
@@ -540,7 +540,7 @@ fn analyse(
                     path: path.clone(),
                     src: code.clone(),
                     errors,
-                })
+                });
             }
         };
     }

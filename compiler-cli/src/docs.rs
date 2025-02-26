@@ -4,6 +4,7 @@ use camino::{Utf8Path, Utf8PathBuf};
 
 use crate::{cli, fs::ProjectIO, http::HttpClient};
 use gleam_core::{
+    Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{DocsPage, PackageConfig},
@@ -12,7 +13,6 @@ use gleam_core::{
     hex,
     io::HttpClient as _,
     paths::ProjectPaths,
-    Result,
 };
 
 pub fn remove(package: String, version: String) -> Result<()> {

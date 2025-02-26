@@ -1,6 +1,6 @@
 use camino::{Utf8Path, Utf8PathBuf};
 use gleam_core::{
-    io::{memory::InMemoryFileSystem, Content, FileSystemWriter},
+    io::{Content, FileSystemWriter, memory::InMemoryFileSystem},
     version::COMPILER_VERSION,
 };
 use itertools::Itertools;

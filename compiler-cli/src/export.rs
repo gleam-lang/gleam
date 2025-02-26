@@ -1,9 +1,9 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
+    Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
-    Result,
 };
 
 #[cfg(target_os = "windows")]

@@ -1,14 +1,14 @@
 use camino::{Utf8Path, Utf8PathBuf};
 
 use gleam_core::{
+    Error, Result,
     error::{FileIoAction, FileKind},
     paths::ProjectPaths,
-    Error, Result,
 };
 
 use crate::{
     cli,
-    dependencies::{parse_gleam_add_specifier, UseManifest},
+    dependencies::{UseManifest, parse_gleam_add_specifier},
     fs,
 };
 

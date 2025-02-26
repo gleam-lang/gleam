@@ -2,7 +2,7 @@
 name = "test-package-compiler"
 version = "1.8.1"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
-edition = "2021"
+edition = "2024"
 license = "Apache-2.0"
 
 [dependencies]
