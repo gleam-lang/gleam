@@ -34,11 +34,11 @@ export function wibble(n) {
 
 export function main() {
   let _pipe = toList([1, 2, 3]);
-  echo(_pipe, "", 4)
+  echo(_pipe, "src/module.gleam", 4)
   let _pipe$1 = wibble(_pipe);
-  echo(_pipe$1, "", 6)
+  echo(_pipe$1, "src/module.gleam", 6)
   let _pipe$2 = wibble(_pipe$1);
-  return echo(_pipe$2, "", 8);
+  return echo(_pipe$2, "src/module.gleam", 8);
 }
 
 // ...omitted code from `templates/echo.mjs`...

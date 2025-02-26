@@ -29,7 +29,7 @@ export function main() {
       undefined;
       return 1;
     })(),
-    "",
+    "src/module.gleam",
     3,
   );
 }
