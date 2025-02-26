@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub fn something() {\n  something()\n}\n\nfn something_else() {\n  something()\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+import app.{something as something_else}
+
+fn wibble() {
+  something_else()
+}
+
+
+-- app.gleam
+
+pub fn something() {
+       ↑            
+  something()
+}
+
+fn something_else() {
+  something()
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+import app.{some_function as something_else}
+
+fn wibble() {
+  something_else()
+}
+
+
+-- app.gleam
+
+pub fn some_function() {
+  some_function()
+}
+
+fn something_else() {
+  some_function()
+}
