@@ -1099,6 +1099,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             );
 
+            environment.register_reference(
+                environment.current_module.clone(),
+                constructor.name.clone(),
+                constructor.name_location,
+            );
+
             if value_constructor_publicity.is_private() {
                 environment.init_usage(
                     constructor.name.clone(),

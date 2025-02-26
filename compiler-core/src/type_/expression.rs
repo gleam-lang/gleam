@@ -2341,15 +2341,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             let module_name = module.name.clone();
 
             match &constructor.variant {
-                ValueConstructorVariant::ModuleFn { name, module, .. } => self
+                ValueConstructorVariant::ModuleFn { name, module, .. }
+                | ValueConstructorVariant::Record { name, module, .. } => self
                     .environment
                     .register_reference(module.clone(), name.clone(), select_location),
                 ValueConstructorVariant::ModuleConstant { module, .. } => self
                     .environment
                     .register_reference(module.clone(), label.clone(), select_location),
                 ValueConstructorVariant::LocalVariable { .. }
-                | ValueConstructorVariant::LocalConstant { .. }
-                | ValueConstructorVariant::Record { .. } => {}
+                | ValueConstructorVariant::LocalConstant { .. } => {}
             }
 
             (module_name, constructor)
@@ -2929,15 +2929,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.narrow_implementations(*location, &variant)?;
 
         match &variant {
-            ValueConstructorVariant::ModuleFn { name, module, .. } => self
+            ValueConstructorVariant::ModuleFn { name, module, .. }
+            | ValueConstructorVariant::Record { name, module, .. } => self
                 .environment
                 .register_reference(module.clone(), name.clone(), *location),
             ValueConstructorVariant::ModuleConstant { module, .. } => self
                 .environment
                 .register_reference(module.clone(), name.clone(), *location),
             ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::LocalConstant { .. }
-            | ValueConstructorVariant::Record { .. } => {}
+            | ValueConstructorVariant::LocalConstant { .. } => {}
         }
 
         // Instantiate generic variables into unbound variables for this usage

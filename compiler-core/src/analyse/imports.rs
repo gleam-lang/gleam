@@ -171,6 +171,8 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     name.clone(),
                     used_name.clone(),
                 );
+                self.environment
+                    .register_reference(module.clone(), import_name.clone(), location);
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
             | ValueConstructorVariant::ModuleFn { module, .. } => {
