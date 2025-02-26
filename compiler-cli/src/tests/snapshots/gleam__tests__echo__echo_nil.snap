@@ -1,19 +1,13 @@
 ---
-source: compiler-cli/src/integration/echo.rs
+source: compiler-cli/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
 pub fn main() {
-  echo 1
-  echo 2
-  echo 100_000
+  echo Nil
 }
 
 
 --- gleam run output ----------------
 [90msrc/main.gleam:2[39m
-1
-[90msrc/main.gleam:3[39m
-2
-[90msrc/main.gleam:4[39m
-100000
+Nil
