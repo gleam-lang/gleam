@@ -625,9 +625,26 @@ where
                         ..
                     })
                     | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
-                ) => success_response(*name_location),
-                Located::RecordConstructor(RecordConstructor { name_location, .. }) => {
-                    success_response(*name_location)
+                )
+                | Located::RecordConstructor(RecordConstructor { name_location, .. }) => {
+                    let byte_index =
+                        lines.byte_index(params.position.line, params.position.character);
+                    // When we locate a module statement, we don't know where exactly the cursor
+                    // is positioned. In this example, we want to rename the first but not the second:
+                    // ```gleam
+                    // pub fn something() {
+                    //   //   ^ Trigger rename
+                    // }
+                    //
+                    // pub fn something_else() {
+                    //   //^ Trigger rename
+                    // }
+                    // ```
+                    if name_location.contains(byte_index) {
+                        success_response(*name_location)
+                    } else {
+                        None
+                    }
                 }
                 _ => None,
             })
