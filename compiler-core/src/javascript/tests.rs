@@ -197,7 +197,7 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         target_support: TargetSupport::NotEnforced,
         package_config: &config,
     }
-    .infer_module(ast, line_numbers, "".into())
+    .infer_module(ast, line_numbers, "src/module.gleam".into())
     .expect("should successfully infer")
 }
 
@@ -208,7 +208,7 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
     let output = module(
         &ast,
         &line_numbers,
-        Utf8Path::new(""),
+        Utf8Path::new("src/module.gleam"),
         "project/root".into(),
         &"".into(),
         TargetSupport::Enforced,
