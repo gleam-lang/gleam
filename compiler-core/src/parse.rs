@@ -2642,6 +2642,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        imported_name_location: location,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
@@ -2658,6 +2659,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        imported_name_location: location,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
@@ -2670,11 +2672,12 @@ where
 
                 Some((start, Token::Type, _)) => {
                     self.advance();
-                    let (_, name, end) = self.expect_upname()?;
+                    let (name_start, name, end) = self.expect_upname()?;
                     let location = SrcSpan { start, end };
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        imported_name_location: SrcSpan::new(name_start, end),
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
