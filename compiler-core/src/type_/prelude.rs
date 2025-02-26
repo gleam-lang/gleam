@@ -9,8 +9,9 @@ use crate::{
 };
 
 use super::{
-    ModuleInterface, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-    TypeVar, TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+    ModuleInterface, Opaque, Type, TypeConstructor, TypeValueConstructor,
+    TypeValueConstructorField, TypeVar, TypeVariantConstructors, ValueConstructor,
+    ValueConstructorVariant,
 };
 use crate::type_::Deprecation::NotDeprecated;
 use std::{cell::RefCell, collections::HashMap, sync::Arc};
@@ -256,7 +257,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     publicity: Publicity::Public,
                     deprecation: NotDeprecated,
                     documentation: None,
-                    opaque: false,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
             }
@@ -278,6 +278,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                 documentation: None,
                             },
                         ],
+                        opaque: Opaque::NotOpaque,
                     },
                 );
                 let _ = prelude.values.insert(
@@ -322,7 +323,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
             }
@@ -338,7 +338,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
             }
@@ -354,7 +353,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
             }
@@ -371,7 +369,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
             }
@@ -403,7 +400,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -415,6 +411,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                             parameters: vec![],
                             documentation: None,
                         }],
+                        opaque: Opaque::NotOpaque,
                     },
                 );
             }
@@ -434,7 +431,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -459,6 +455,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                                 documentation: None,
                             },
                         ],
+                        opaque: Opaque::NotOpaque,
                     },
                 );
                 let ok = generic_var(ids.next());
@@ -510,7 +507,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
             }
@@ -526,7 +522,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        opaque: false,
                     },
                 );
             }

@@ -835,7 +835,8 @@ fn infer_module_type_retention_test() {
                                 parameters: vec![],
                                 documentation: None,
                             }
-                        ]
+                        ],
+                        opaque: Opaque::NotOpaque,
                     }
                 ),
                 (
@@ -859,7 +860,8 @@ fn infer_module_type_retention_test() {
                                 }],
                                 documentation: None,
                             }
-                        ]
+                        ],
+                        opaque: Opaque::NotOpaque,
                     }
                 ),
                 (
@@ -870,7 +872,8 @@ fn infer_module_type_retention_test() {
                             name: "Nil".into(),
                             parameters: vec![],
                             documentation: None,
-                        }]
+                        }],
+                        opaque: Opaque::NotOpaque,
                     }
                 )
             ]),

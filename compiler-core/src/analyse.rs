@@ -21,9 +21,10 @@ use crate::{
     line_numbers::LineNumbers,
     parse::SpannedString,
     type_::{
-        self, AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant, Warning,
+        self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
+        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, Warning,
         environment::*,
         error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
         expression::{ExprTyper, FunctionDefinition, Implementations},
@@ -1108,10 +1109,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             );
         }
 
+        let opaque = if *opaque {
+            Opaque::Opaque
+        } else {
+            Opaque::NotOpaque
+        };
         // Now record the constructors for the type.
         environment.insert_type_to_constructors(
             name.clone(),
-            TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
+            TypeVariantConstructors::new(constructors_data, type_parameters, opaque, hydrator),
         );
 
         Ok(())
@@ -1185,7 +1191,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     publicity,
                     type_,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                    opaque: *opaque,
                 },
             )
             .expect("name uniqueness checked above");
@@ -1260,7 +1265,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                    opaque: false,
                 },
             )?;
 

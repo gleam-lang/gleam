@@ -9,8 +9,8 @@ mod tests;
 use crate::{
     io::ordered_map,
     type_::{
-        self, Deprecation, Type, TypeConstructor, TypeVar, ValueConstructorVariant,
-        expression::Implementations,
+        self, Deprecation, Opaque, Type, TypeConstructor, TypeVar, TypeVariantConstructors,
+        ValueConstructorVariant, expression::Implementations,
     },
 };
 
@@ -377,7 +377,7 @@ impl PackageInterface {
                 .map(|module| &module.ast.type_info)
                 .chain(
                     package
-                        .module_names
+                        .cached_module_names
                         .iter()
                         .filter_map(|name| cached_modules.get(name)),
                 )
@@ -420,33 +420,29 @@ impl ModuleInterface {
                         .get(&name.clone())
                         .map_or(vec![], |t| t.parameters.clone())
                         .len(),
-                    constructors: if constructor.opaque {
-                        vec![]
-                    } else {
-                        match interface.types_value_constructors.get(&name.clone()) {
-                            Some(constructors) => constructors
-                                .variants
-                                .iter()
-                                .map(|constructor| TypeConstructorInterface {
-                                    documentation: constructor.documentation.clone(),
-                                    name: constructor.name.clone(),
-                                    parameters: constructor
-                                        .parameters
-                                        .iter()
-                                        .map(|arg| ParameterInterface {
-                                            label: arg.label.clone(),
-                                            // We share the same id_map between each step so that the
-                                            // incremental ids assigned are consisten with each other
-                                            type_: from_type_helper(
-                                                arg.type_.as_ref(),
-                                                &mut id_map,
-                                            ),
-                                        })
-                                        .collect(),
-                                })
-                                .collect(),
-                            None => vec![],
-                        }
+                    constructors: match interface.types_value_constructors.get(&name.clone()) {
+                        Some(TypeVariantConstructors {
+                            variants,
+                            opaque: Opaque::NotOpaque,
+                            ..
+                        }) => variants
+                            .iter()
+                            .map(|constructor| TypeConstructorInterface {
+                                documentation: constructor.documentation.clone(),
+                                name: constructor.name.clone(),
+                                parameters: constructor
+                                    .parameters
+                                    .iter()
+                                    .map(|arg| ParameterInterface {
+                                        label: arg.label.clone(),
+                                        // We share the same id_map between each step so that the
+                                        // incremental ids assigned are consisten with each other
+                                        type_: from_type_helper(arg.type_.as_ref(), &mut id_map),
+                                    })
+                                    .collect(),
+                            })
+                            .collect(),
+                        Some(_) | None => Vec::new(),
                     },
                 },
             );
@@ -489,6 +485,7 @@ impl ModuleInterface {
                     let mut id_map = IdMap::new();
 
                     let reverse_field_map = field_map
+                        .as_ref()
                         .map(|field_map| field_map.indices_to_labels())
                         .unwrap_or_default();
 
@@ -504,7 +501,9 @@ impl ModuleInterface {
                                 .iter()
                                 .enumerate()
                                 .map(|(index, type_)| ParameterInterface {
-                                    label: reverse_field_map.get(&(index as u32)).cloned(),
+                                    label: reverse_field_map
+                                        .get(&(index as u32))
+                                        .map(|label| (*label).clone()),
                                     type_: from_type_helper(type_, &mut id_map),
                                 })
                                 .collect(),

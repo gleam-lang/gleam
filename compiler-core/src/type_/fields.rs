@@ -202,10 +202,10 @@ impl FieldMap {
             .collect_vec()
     }
 
-    pub fn indices_to_labels(&self) -> HashMap<u32, EcoString> {
+    pub fn indices_to_labels(&self) -> HashMap<u32, &EcoString> {
         self.fields
             .iter()
-            .map(|(name, index)| (*index, name.clone()))
+            .map(|(name, index)| (*index, name))
             .collect()
     }
 }

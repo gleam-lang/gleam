@@ -177,7 +177,7 @@ fn package_from_module(module: Module) -> Package {
                     .expect("internals glob"),
             ]),
         },
-        module_names: vec![module.name.clone()],
+        cached_module_names: Vec::new(),
         modules: vec![module],
     }
 }

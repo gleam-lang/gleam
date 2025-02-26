@@ -7,9 +7,10 @@ use crate::{
     },
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, RecordAccessor, Type, TypeAliasConstructor,
-        TypeConstructor, TypeValueConstructor, TypeVar, TypeVariantConstructors, ValueConstructor,
-        ValueConstructorVariant, expression::Implementations,
+        self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        expression::Implementations,
     },
 };
 use std::{collections::HashMap, ops::Deref, sync::Arc};
@@ -167,6 +168,10 @@ impl<'a> ModuleEncoder<'a> {
         mut builder: types_variant_constructors::Builder<'_>,
         data: &TypeVariantConstructors,
     ) {
+        match data.opaque {
+            Opaque::Opaque => builder.set_opaque(true),
+            Opaque::NotOpaque => builder.set_opaque(false),
+        }
         {
             let mut builder = builder
                 .reborrow()
@@ -225,7 +230,6 @@ impl<'a> ModuleEncoder<'a> {
                 .map(EcoString::as_str)
                 .unwrap_or_default(),
         );
-        builder.set_opaque(constructor.opaque);
     }
 
     fn build_type_alias_constructor(
