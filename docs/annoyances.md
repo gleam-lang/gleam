@@ -12,12 +12,6 @@ implemented. These are tracked in the Gleam issue tracker instead.
 
 For example, regex compilation.
 
-## Runtime debugging is basic
-
-Rust's `dbg!` and Elixir's `dbg` were mentioned as good additions.
-
-We have a reserved `echo` keyword for this.
-
 ## JavaScript custom type representation could be faster
 
 There's performance improvements to be had. Would would be optimal?

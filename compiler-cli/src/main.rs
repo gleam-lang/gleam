@@ -70,6 +70,8 @@ mod publish;
 mod remove;
 mod run;
 mod shell;
+#[cfg(test)]
+mod tests;
 
 use config::root_config;
 use dependencies::UseManifest;

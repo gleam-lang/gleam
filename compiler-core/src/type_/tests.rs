@@ -22,6 +22,7 @@ mod assert;
 mod assignments;
 mod conditional_compilation;
 mod custom_types;
+mod echo;
 mod errors;
 mod exhaustiveness;
 mod externals;
@@ -873,6 +874,7 @@ fn infer_module_type_retention_test() {
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            contains_echo: false,
         }
     );
 }

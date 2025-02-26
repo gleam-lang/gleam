@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/javascript/tests/echo.rs
+expression: "\npub fn main() {\n  echo case 1 {\n    _ -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  echo case 1 {
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import * as $stdlib$dict from "../../gleam_stdlib/dict.mjs";
+import {
+  CustomType as $CustomType,
+  bitArraySlice,
+  bitArraySliceToInt,
+  BitArray as $BitArray,
+  List as $List,
+  UtfCodepoint as $UtfCodepoint,
+} from "../gleam.mjs";
+
+export function main() {
+  return echo(
+    (() => {
+      let $ = 1;
+      {
+        return 2;
+      }
+    })(),
+    "src/module.gleam",
+    3,
+  );
+}
+
+// ...omitted code from `templates/echo.mjs`...

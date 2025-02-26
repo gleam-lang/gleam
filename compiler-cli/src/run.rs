@@ -30,6 +30,8 @@ pub fn command(
     which: Which,
     no_print_progress: bool,
 ) -> Result<(), Error> {
+    // Don't exit on ctrl+c as it is used by child erlang shell
+    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
     let command = setup(
         paths,
         arguments,
@@ -43,7 +45,7 @@ pub fn command(
     std::process::exit(status);
 }
 
-fn setup(
+pub(crate) fn setup(
     paths: &ProjectPaths,
     arguments: Vec<String>,
     target: Option<Target>,
@@ -122,9 +124,6 @@ fn setup(
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
-
-    // Don't exit on ctrl+c as it is used by child erlang shell
-    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     telemetry.running(&format!("{module}.main"));
 

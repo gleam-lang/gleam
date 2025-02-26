@@ -35,6 +35,8 @@ impl Position {
 #[derive(Debug)]
 pub(crate) struct Generator<'module> {
     module_name: EcoString,
+    src_path: &'module Utf8Path,
+    project_root: &'module Utf8Path,
     line_numbers: &'module LineNumbers,
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
@@ -54,6 +56,8 @@ impl<'module> Generator<'module> {
     #[allow(clippy::too_many_arguments)] // TODO: FIXME
     pub fn new(
         module_name: EcoString,
+        src_path: &'module Utf8Path,
+        project_root: &'module Utf8Path,
         line_numbers: &'module LineNumbers,
         function_name: EcoString,
         function_arguments: Vec<Option<&'module EcoString>>,
@@ -74,6 +78,8 @@ impl<'module> Generator<'module> {
         Self {
             tracker,
             module_name,
+            src_path,
+            project_root,
             line_numbers,
             function_name,
             function_arguments,
@@ -84,19 +90,21 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
-        match self.current_scope_vars.get(name) {
+    pub fn local_var(&mut self, name: &EcoString) -> EcoString {
+        let name = match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.clone(), 0);
-                maybe_escape_identifier_doc(name)
+                maybe_escape_identifier(name)
             }
-            Some(0) => maybe_escape_identifier_doc(name),
-            Some(n) if name == "$" => eco_format!("${n}").to_doc(),
-            Some(n) => eco_format!("{name}${n}").to_doc(),
-        }
+            Some(0) => maybe_escape_identifier(name),
+            Some(n) if name == "$" => eco_format!("${n}"),
+            Some(n) => eco_format!("{name}${n}"),
+        };
+
+        name
     }
 
-    pub fn next_local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
+    pub fn next_local_var(&mut self, name: &EcoString) -> EcoString {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.current_scope_vars.insert(name.clone(), next);
         self.local_var(name)
@@ -117,7 +125,7 @@ impl<'module> Generator<'module> {
 
     fn tail_call_loop<'a>(&mut self, body: Document<'a>, args: &'a [TypedArg]) -> Output<'a> {
         let loop_assignments = concat(args.iter().flat_map(Arg::get_variable_name).map(|name| {
-            let var = maybe_escape_identifier_doc(name);
+            let var = maybe_escape_identifier(name);
             docvec!["let ", var, " = loop$", name, ";", line()]
         }));
         Ok(docvec![
@@ -210,6 +218,19 @@ impl<'module> Generator<'module> {
             TypedExpr::NegateBool { value, .. } => self.negate_with("!", value),
 
             TypedExpr::NegateInt { value, .. } => self.negate_with("- ", value),
+
+            TypedExpr::Echo {
+                expression,
+                location,
+                ..
+            } => {
+                let expression = expression
+                    .as_ref()
+                    .expect("echo with no expression outside of pipe");
+                let expresion_doc =
+                    self.not_in_tail_position(|gen| gen.wrap_expression(expression))?;
+                self.echo(expresion_doc, location)
+            }
 
             TypedExpr::Invalid { .. } => {
                 panic!("invalid expressions should not reach code generation")
@@ -498,7 +519,7 @@ impl<'module> Generator<'module> {
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name)),
+            | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name).to_doc()),
         }
     }
 
@@ -514,13 +535,46 @@ impl<'module> Generator<'module> {
         let all_assignments = std::iter::once(first_value)
             .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
+        let mut latest_local_var: Option<EcoString> = None;
         for assignment in all_assignments {
-            documents.push(self.not_in_tail_position(|gen| {
-                gen.simple_variable_assignment(&assignment.name, &assignment.value)
-            })?);
+            match assignment.value.as_ref() {
+                // An echo in a pipeline won't result in an assignment, instead it
+                // just prints the previous variable assigned in the pipeline.
+                TypedExpr::Echo {
+                    expression: None,
+                    location,
+                    ..
+                } => documents.push(self.not_in_tail_position(|gen| {
+                    let var = latest_local_var
+                        .as_ref()
+                        .expect("echo with no previous step in a pipe");
+                    gen.echo(var.to_doc(), location)
+                })?),
+
+                // Otherwise we assign the intermediate pipe value to a variable.
+                _ => {
+                    documents.push(self.not_in_tail_position(|gen| {
+                        gen.simple_variable_assignment(&assignment.name, &assignment.value)
+                    })?);
+                    latest_local_var = Some(self.local_var(&assignment.name));
+                }
+            }
+
             documents.push(line());
         }
-        documents.push(self.expression(finally)?);
+
+        match finally {
+            TypedExpr::Echo {
+                expression: None,
+                location,
+                ..
+            } => {
+                let var = latest_local_var.expect("echo with no previous step in a pipe");
+                documents.push(self.echo(var.to_doc(), location)?);
+            }
+            _ => documents.push(self.expression(finally)?),
+        }
+
         Ok(documents.to_doc().force_break())
     }
 
@@ -1086,7 +1140,7 @@ impl<'module> Generator<'module> {
     ) -> Document<'a> {
         match constructor {
             ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
-                docvec!["$", module, ".", maybe_escape_identifier_doc(label)]
+                docvec!["$", module, ".", maybe_escape_identifier(label)]
             }
 
             ModuleValueConstructor::Record {
@@ -1199,6 +1253,24 @@ impl<'module> Generator<'module> {
             operator,
         )
         .group()
+    }
+
+    fn echo<'a>(&mut self, expression: Document<'a>, location: &'a SrcSpan) -> Output<'a> {
+        self.tracker.echo_used = true;
+
+        let relative_path = self
+            .src_path
+            .strip_prefix(self.project_root)
+            .unwrap_or(self.src_path)
+            .as_str();
+        let relative_path_doc = EcoString::from(relative_path).to_doc();
+
+        let echo_argument = call_arguments(vec![
+            Ok(expression),
+            Ok(relative_path_doc.surround("\"", "\"")),
+            Ok(self.line_numbers.line_number(location.start).to_doc()),
+        ])?;
+        Ok(self.wrap_return(docvec!["echo", echo_argument]))
     }
 }
 
@@ -1332,7 +1404,7 @@ pub(crate) fn guard_constant_expression<'a>(
             .iter()
             .find(|assignment| assignment.name == name)
             .map(|assignment| assignment.subject.clone())
-            .unwrap_or_else(|| maybe_escape_identifier_doc(name))),
+            .unwrap_or_else(|| maybe_escape_identifier(name).to_doc())),
 
         expression => constant_expression(Context::Function, tracker, expression),
     }
@@ -1447,12 +1519,12 @@ pub(crate) fn constant_expression<'a>(
 
         Constant::Var { name, module, .. } => Ok({
             match module {
-                None => maybe_escape_identifier_doc(name),
+                None => maybe_escape_identifier(name).to_doc(),
                 Some((module, _)) => {
                     // JS keywords can be accessed here, but we must escape anyway
                     // as we escape when exporting such names in the first place,
                     // and the imported name has to match the exported name.
-                    docvec!["$", module, ".", maybe_escape_identifier_doc(name)]
+                    docvec!["$", module, ".", maybe_escape_identifier(name)]
                 }
             }
         }),
@@ -1735,6 +1807,7 @@ impl TypedExpr {
             | TypedExpr::Case { .. }
             | TypedExpr::Panic { .. }
             | TypedExpr::Block { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Pipeline { .. }
             | TypedExpr::RecordUpdate { .. } => true,
 
@@ -1798,6 +1871,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
             | TypedExpr::Var { .. }
             | TypedExpr::List { .. }
             | TypedExpr::Call { .. }
+            | TypedExpr::Echo { .. }
             | TypedExpr::Float { .. }
             | TypedExpr::String { .. }
             | TypedExpr::BinOp { .. }
