@@ -885,7 +885,7 @@ impl ModuleValueConstructor {
 #[derive(Debug, Clone)]
 pub struct ModuleFunction {
     pub package: EcoString,
-    pub is_deprecated: bool
+    pub is_deprecated: Deprecation
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -1036,7 +1036,7 @@ impl ModuleInterface {
 
         Ok(ModuleFunction {
             package: self.package.clone(),
-            is_deprecated: false,
+            is_deprecated: value.deprecation.clone(),
         })
     }
 
