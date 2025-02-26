@@ -1086,6 +1086,8 @@ impl<A, B, C, E> Definition<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
+    /// The location excluding the potential `as ...` clause, or the `type` keyword
+    pub imported_name_location: SrcSpan,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
 }

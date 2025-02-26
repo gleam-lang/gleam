@@ -161,6 +161,7 @@ struct ValueConstructorVariant {
       literal @0 :Constant;
       location @1 :SrcSpan;
       module @2 :Text;
+      name @22 :Text;
       documentation @14 :Text;
       implementations @19 :Implementations;
     }

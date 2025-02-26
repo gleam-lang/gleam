@@ -2342,12 +2342,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             match &constructor.variant {
                 ValueConstructorVariant::ModuleFn { name, module, .. }
-                | ValueConstructorVariant::Record { name, module, .. } => self
+                | ValueConstructorVariant::Record { name, module, .. }
+                | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
                     .environment
                     .register_reference(module.clone(), name.clone(), select_location),
-                ValueConstructorVariant::ModuleConstant { module, .. } => self
-                    .environment
-                    .register_reference(module.clone(), label.clone(), select_location),
                 ValueConstructorVariant::LocalVariable { .. }
                 | ValueConstructorVariant::LocalConstant { .. } => {}
             }
@@ -2929,11 +2927,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         self.narrow_implementations(*location, &variant)?;
 
         match &variant {
+            // If the referenced name is different to the name of the original
+            // value, that means we are referencing it via an alias and don't
+            // want to track this reference.
+            ValueConstructorVariant::ModuleFn {
+                name: value_name, ..
+            }
+            | ValueConstructorVariant::Record {
+                name: value_name, ..
+            }
+            | ValueConstructorVariant::ModuleConstant {
+                name: value_name, ..
+            } if module.is_none() && value_name != name => {}
             ValueConstructorVariant::ModuleFn { name, module, .. }
-            | ValueConstructorVariant::Record { name, module, .. } => self
-                .environment
-                .register_reference(module.clone(), name.clone(), *location),
-            ValueConstructorVariant::ModuleConstant { module, .. } => self
+            | ValueConstructorVariant::Record { name, module, .. }
+            | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
                 .environment
                 .register_reference(module.clone(), name.clone(), *location),
             ValueConstructorVariant::LocalVariable { .. }
