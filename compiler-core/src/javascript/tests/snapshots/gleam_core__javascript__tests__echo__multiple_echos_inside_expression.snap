@@ -22,8 +22,8 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  echo(1, "", 3);
-  return echo(2, "", 4);
+  echo(1, "src/module.gleam", 3);
+  return echo(2, "src/module.gleam", 4);
 }
 
 // ...omitted code from `templates/echo.mjs`...
