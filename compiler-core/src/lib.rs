@@ -45,6 +45,7 @@
     unused_results
 )]
 #![allow(
+    clippy::assign_op_pattern,
     clippy::to_string_trait_impl,
     clippy::match_single_binding,
     clippy::match_like_matches_macro,

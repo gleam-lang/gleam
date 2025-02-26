@@ -42,7 +42,11 @@
     unstable_features,
     unused_results
 )]
-#![allow(clippy::match_single_binding, clippy::inconsistent_struct_constructor)]
+#![allow(
+    clippy::match_single_binding,
+    clippy::inconsistent_struct_constructor,
+    clippy::assign_op_pattern
+)]
 
 #[cfg(test)]
 #[macro_use]

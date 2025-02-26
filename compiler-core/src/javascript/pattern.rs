@@ -99,7 +99,7 @@ impl<'a> OffsetBits<'a> {
         self
     }
 
-    fn to_doc(self) -> Document<'a> {
+    fn into_doc(self) -> Document<'a> {
         let doc = if self.variables.is_empty() {
             self.constant.to_doc()
         } else if self.constant == 0 {
@@ -258,7 +258,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Index::Int(i) => acc.append(eco_format!("[{i}]").to_doc()),
                 // TODO: escape string if needed
                 Index::String(s) => acc.append(docvec![".", maybe_escape_property_doc(s)]),
-                Index::ByteAt(i) => acc.append(docvec![".byteAt(", i.clone(), ")"]),
+                Index::ByteAt(i) => acc.append(docvec![".byteAt(", i.clone().into_doc(), ")"]),
                 Index::BitArraySliceToInt {
                     start,
                     end,
@@ -268,9 +268,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     "bitArraySliceToInt(",
                     acc,
                     ", ",
-                    start.clone(),
+                    start.clone().into_doc(),
                     ", ",
-                    end.clone(),
+                    end.clone().into_doc(),
                     ", ",
                     bool(endianness.is_big()),
                     ", ",
@@ -285,9 +285,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     "bitArraySliceToFloat(",
                     acc,
                     ", ",
-                    start.clone(),
+                    start.clone().into_doc(),
                     ", ",
-                    end.clone(),
+                    end.clone().into_doc(),
                     ", ",
                     bool(endianness.is_big()),
                     ")"
@@ -298,13 +298,13 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                             "bitArraySlice(",
                             acc,
                             ", ",
-                            start.clone(),
+                            start.clone().into_doc(),
                             ", ",
-                            end.clone(),
+                            end.clone().into_doc(),
                             ")"
                         ]
                     }
-                    None => docvec!["bitArraySlice(", acc, ", ", start.clone(), ")"],
+                    None => docvec!["bitArraySlice(", acc, ", ", start.clone().into_doc(), ")"],
                 },
                 Index::StringPrefixSlice(i) => docvec!(acc, ".slice(", i, ")"),
             })
@@ -1186,7 +1186,7 @@ impl<'a> Check<'a> {
 
                 let bit_size_check = match tail_spread_type {
                     Some(BitArrayTailSpreadType::Bits) => {
-                        docvec![bit_size, " >= ", expected_bit_size]
+                        docvec![bit_size, " >= ", expected_bit_size.into_doc()]
                     }
                     Some(BitArrayTailSpreadType::Bytes) => {
                         // When the tail spread is for bytes rather than bits,
@@ -1196,15 +1196,15 @@ impl<'a> Check<'a> {
                             "(",
                             bit_size.clone(),
                             " >= ",
-                            expected_bit_size.clone(),
+                            expected_bit_size.clone().into_doc(),
                             " && (",
                             bit_size,
                             " - ",
-                            expected_bit_size,
+                            expected_bit_size.into_doc(),
                             ") % 8 === 0)"
                         ]
                     }
-                    None => docvec![bit_size, " == ", expected_bit_size],
+                    None => docvec![bit_size, " == ", expected_bit_size.into_doc()],
                 };
 
                 if match_desired {
