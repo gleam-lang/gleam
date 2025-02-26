@@ -93,11 +93,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn next_local_var(&mut self, name: &'a EcoString) -> Document<'a> {
-        self.expression_generator.next_local_var(name)
+        self.expression_generator.next_local_var(name).to_doc()
     }
 
     fn local_var(&mut self, name: &'a EcoString) -> Document<'a> {
-        self.expression_generator.local_var(name)
+        self.expression_generator.local_var(name).to_doc()
     }
 
     fn push_string(&mut self, s: &'a str) {
@@ -1121,12 +1121,15 @@ pub(crate) fn assign_subject<'a>(
         // performing computation or side effects multiple times.
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.is_local_variable() => (expression_generator.local_var(name), None),
+        } if constructor.is_local_variable() => {
+            (expression_generator.local_var(name).to_doc(), None)
+        }
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
             let subject = expression_generator
-                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
+                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()))
+                .to_doc();
             (subject.clone(), Some(subject))
         }
     }

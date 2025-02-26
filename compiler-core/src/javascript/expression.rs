@@ -41,8 +41,6 @@ pub(crate) struct Generator<'module> {
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
     current_scope_vars: im::HashMap<EcoString, usize>,
-    /// The latest local variable name that was used.
-    latest_local_var: Option<EcoString>,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
@@ -85,7 +83,6 @@ impl<'module> Generator<'module> {
             line_numbers,
             function_name,
             function_arguments,
-            latest_local_var: None,
             tail_recursion_used: false,
             current_scope_vars,
             function_position: Position::Tail,
@@ -93,7 +90,7 @@ impl<'module> Generator<'module> {
         }
     }
 
-    pub fn local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
+    pub fn local_var(&mut self, name: &EcoString) -> EcoString {
         let name = match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.clone(), 0);
@@ -104,11 +101,10 @@ impl<'module> Generator<'module> {
             Some(n) => eco_format!("{name}${n}"),
         };
 
-        self.latest_local_var = Some(name.clone());
-        name.to_doc()
+        name
     }
 
-    pub fn next_local_var<'a>(&mut self, name: &'a EcoString) -> Document<'a> {
+    pub fn next_local_var(&mut self, name: &EcoString) -> EcoString {
         let next = self.current_scope_vars.get(name).map_or(0, |i| i + 1);
         let _ = self.current_scope_vars.insert(name.clone(), next);
         self.local_var(name)
@@ -523,7 +519,7 @@ impl<'module> Generator<'module> {
             }
             ValueConstructorVariant::ModuleFn { .. }
             | ValueConstructorVariant::ModuleConstant { .. }
-            | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name)),
+            | ValueConstructorVariant::LocalVariable { .. } => Ok(self.local_var(name).to_doc()),
         }
     }
 
@@ -539,6 +535,7 @@ impl<'module> Generator<'module> {
         let all_assignments = std::iter::once(first_value)
             .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
+        let mut latest_local_var: Option<EcoString> = None;
         for assignment in all_assignments {
             match assignment.value.as_ref() {
                 // An echo in a pipeline won't result in an assignment, instead it
@@ -548,17 +545,19 @@ impl<'module> Generator<'module> {
                     location,
                     ..
                 } => documents.push(self.not_in_tail_position(|gen| {
-                    let var = gen
-                        .latest_local_var
+                    let var = latest_local_var
                         .as_ref()
                         .expect("echo with no previous step in a pipe");
                     gen.echo(var.to_doc(), location)
                 })?),
 
                 // Otherwise we assign the intermediate pipe value to a variable.
-                _ => documents.push(self.not_in_tail_position(|gen| {
-                    gen.simple_variable_assignment(&assignment.name, &assignment.value)
-                })?),
+                _ => {
+                    documents.push(self.not_in_tail_position(|gen| {
+                        gen.simple_variable_assignment(&assignment.name, &assignment.value)
+                    })?);
+                    latest_local_var = Some(self.local_var(&assignment.name));
+                }
             }
 
             documents.push(line());
@@ -570,10 +569,7 @@ impl<'module> Generator<'module> {
                 location,
                 ..
             } => {
-                let var = self
-                    .latest_local_var
-                    .as_ref()
-                    .expect("echo with no previous step in a pipe");
+                let var = latest_local_var.expect("echo with no previous step in a pipe");
                 documents.push(self.echo(var.to_doc(), location)?);
             }
             _ => documents.push(self.expression(finally)?),
