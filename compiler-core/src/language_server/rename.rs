@@ -70,11 +70,12 @@ pub fn rename_module_value(
     module_name: &EcoString,
     name: &EcoString,
     modules: &HashMap<EcoString, Module>,
+    name_kind: Named,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         Default::default(),
         &params.new_name.as_str().into(),
-        Named::Function,
+        name_kind,
     )
     .is_err()
     {
