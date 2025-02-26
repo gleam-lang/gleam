@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport gleam/list\n\npub fn list() {\n  []\n}\n\npub fn main() {\n  list.map(todo, todo)\n}\n    "
+---
+----- BEFORE RENAME
+-- app.gleam
+
+import gleam/list
+
+pub fn list() {
+       ↑
+  []
+}
+
+pub fn main() {
+  list.map(todo, todo)
+}
+
+
+
+----- AFTER RENAME
+-- app.gleam
+
+import gleam/list
+
+pub fn empty_list() {
+  []
+}
+
+pub fn main() {
+  list.map(todo, todo)
+}
