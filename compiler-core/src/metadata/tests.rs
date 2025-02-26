@@ -57,6 +57,7 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
                         can_run_on_erlang: true,
                         can_run_on_javascript: true,
                     },
+                    name: "one".into(),
                 },
             },
         )]
@@ -1099,6 +1100,7 @@ fn constant_var() {
                     can_run_on_erlang: true,
                     can_run_on_javascript: true,
                 },
+                name: "one_original".into(),
             },
         })),
     };
@@ -1131,6 +1133,7 @@ fn constant_var() {
                             can_run_on_erlang: true,
                             can_run_on_javascript: true,
                         },
+                        name: "one".into(),
                     },
                 },
             ),
@@ -1152,6 +1155,7 @@ fn constant_var() {
                             can_run_on_erlang: true,
                             can_run_on_javascript: true,
                         },
+                        name: "one_original".into(),
                     },
                 },
             ),

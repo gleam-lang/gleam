@@ -630,6 +630,7 @@ pub enum ValueConstructorVariant {
         documentation: Option<EcoString>,
         location: SrcSpan,
         module: EcoString,
+        name: EcoString,
         literal: Constant<Arc<Type>, EcoString>,
         implementations: Implementations,
     },
