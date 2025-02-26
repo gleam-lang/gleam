@@ -126,6 +126,7 @@ impl<'a> Environment<'a> {
             echo_found: false,
             references: HashMap::new(),
         }
+    }
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
