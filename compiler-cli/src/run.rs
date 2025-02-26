@@ -121,10 +121,13 @@ pub fn setup(
     };
 
     let built = crate::build::main(paths, options, manifest)?;
+
+    //Warn incase the module being run has been as internal
     if built.is_internal(&module.clone().into()).is_ok(){
         let message=format!("The module {} being called is marked as internal",module);
         tracing::warn!(message);
     }
+    
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
 
