@@ -468,7 +468,9 @@ where
     }
 
     fn stdlib_package(&self) -> StdlibPackage {
-        if self.config.dependencies.contains_key("gleam_stdlib") {
+        if self.config.dependencies.contains_key("gleam_stdlib")
+            || self.config.dev_dependencies.contains_key("gleam_stdlib")
+        {
             StdlibPackage::Present
         } else {
             StdlibPackage::Missing
