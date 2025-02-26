@@ -1,0 +1,37 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport mod\n\npub fn main() {\n  mod.wibble()\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+pub fn wibble() {
+  wibble()
+}
+
+
+-- app.gleam
+
+import mod
+
+pub fn main() {
+  mod.wibble()
+      ↑       
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+pub fn some_function() {
+  some_function()
+}
+
+
+-- app.gleam
+
+import mod
+
+pub fn main() {
+  mod.some_function()
+}

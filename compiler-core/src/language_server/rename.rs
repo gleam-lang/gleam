@@ -65,6 +65,102 @@ pub fn rename_local_variable(
     Some(workspace_edit(uri, edits.edits))
 }
 
+pub fn rename_module_value(
+    params: &RenameParams,
+    module_name: &EcoString,
+    name: &EcoString,
+    modules: &HashMap<EcoString, Module>,
+    name_kind: Named,
+) -> Option<WorkspaceEdit> {
+    if name::check_name_case(
+        Default::default(),
+        &params.new_name.as_str().into(),
+        name_kind,
+    )
+    .is_err()
+    {
+        return None;
+    }
+
+    let mut workspace_edit = WorkspaceEdit {
+        changes: Some(HashMap::new()),
+        document_changes: None,
+        change_annotations: None,
+    };
+
+    for module in modules.values() {
+        if &module.name == module_name
+            || module.ast.references.imported_modules.contains(module_name)
+        {
+            rename_references_in_module(
+                module,
+                &mut workspace_edit,
+                module_name,
+                name,
+                params.new_name.clone(),
+            );
+        }
+    }
+
+    Some(workspace_edit)
+}
+
+fn rename_references_in_module(
+    module: &Module,
+    workspace_edit: &mut WorkspaceEdit,
+    module_name: &EcoString,
+    name: &EcoString,
+    new_name: String,
+) {
+    let Some(references) = module
+        .ast
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))
+    else {
+        return;
+    };
+
+    let line_numbers = LineNumbers::new(&module.code);
+    let mut edits = TextEdits::new(&line_numbers);
+
+    references
+        .iter()
+        .for_each(|location| edits.replace(*location, new_name.clone()));
+
+    let Some(uri) = url_from_path(module.input_path.as_str()) else {
+        return;
+    };
+
+    _ = workspace_edit
+        .changes
+        .as_mut()
+        .map(|changes| changes.insert(uri, edits.edits));
+}
+
+fn url_from_path(path: &str) -> Option<Url> {
+    // The targets for which `from_file_path` is defined
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
+    let uri = Url::from_file_path(path).ok();
+
+    #[cfg(not(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    )))]
+    let uri = Url::parse(&format!("file://{path}")).ok();
+
+    uri
+}
+
 pub fn find_variable_references(
     module: &TypedModule,
     definition_location: SrcSpan,

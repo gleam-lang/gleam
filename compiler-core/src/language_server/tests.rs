@@ -411,14 +411,19 @@ impl<'a> TestProject<'a> {
         }
     }
 
+    pub fn module_name_from_url(&self, url: &Url) -> Option<String> {
+        Some(
+            url.path_segments()?
+                .skip_while(|segment| *segment != "src")
+                .skip(1)
+                .join("/")
+                .trim_end_matches(".gleam")
+                .into(),
+        )
+    }
+
     pub fn src_from_module_url(&self, url: &Url) -> Option<&str> {
-        let module_name: EcoString = url
-            .path_segments()?
-            .skip_while(|segment| *segment != "src")
-            .skip(1)
-            .join("/")
-            .trim_end_matches(".gleam")
-            .into();
+        let module_name: EcoString = self.module_name_from_url(url)?.into();
 
         if module_name == "app" {
             return Some(self.src);

@@ -20,6 +20,7 @@ use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
+use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
 use ecow::EcoString;
@@ -50,6 +51,7 @@ pub struct Module<Info, Statements> {
     pub type_info: Info,
     pub definitions: Vec<Statements>,
     pub names: Names,
+    pub references: References,
 }
 
 impl TypedModule {
@@ -64,6 +66,12 @@ impl TypedModule {
             .iter()
             .find_map(|definition| definition.find_statement(byte_index))
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct References {
+    pub imported_modules: HashSet<EcoString>,
+    pub value_references: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
 }
 
 /// The `@target(erlang)` and `@target(javascript)` attributes can be used to
@@ -879,20 +887,21 @@ impl TypedDefinition {
 
             Definition::CustomType(custom) => {
                 // Check if location is within the type of one of the arguments of a constructor.
-                if let Some(annotation) = custom
+                if let Some(constructor) = custom
                     .constructors
                     .iter()
                     .find(|constructor| constructor.location.contains(byte_index))
-                    .and_then(|constructor| {
-                        constructor
-                            .arguments
-                            .iter()
-                            .find(|arg| arg.location.contains(byte_index))
-                    })
-                    .filter(|arg| arg.location.contains(byte_index))
-                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                 {
-                    return Some(annotation);
+                    if let Some(annotation) = constructor
+                        .arguments
+                        .iter()
+                        .find(|arg| arg.location.contains(byte_index))
+                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                    {
+                        return Some(annotation);
+                    }
+
+                    return Some(Located::RecordConstructor(constructor));
                 }
 
                 // Note that the custom type `.location` covers the function
@@ -1064,6 +1073,8 @@ impl<A, B, C, E> Definition<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
+    /// The location excluding the potential `as ...` clause, or the `type` keyword
+    pub imported_name_location: SrcSpan,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
 }

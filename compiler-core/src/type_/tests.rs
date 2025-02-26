@@ -785,6 +785,7 @@ fn infer_module_type_retention_test() {
         definitions: vec![],
         type_info: (),
         names: Default::default(),
+        references: Default::default(),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
@@ -2728,6 +2729,7 @@ fn assert_suitable_main_function_not_module_function() {
                 can_run_on_erlang: true,
                 can_run_on_javascript: true,
             },
+            name: "main".into(),
         },
     };
     assert!(assert_suitable_main_function(&value, &"module".into(), Target::Erlang).is_err(),);

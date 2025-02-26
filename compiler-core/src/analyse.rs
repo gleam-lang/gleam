@@ -8,10 +8,10 @@ use crate::{
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
-        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
-        TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction, UntypedImport,
-        UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
+        RecordConstructorArg, References, SrcSpan, Statement, TypeAlias, TypeAst,
+        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition,
+        TypedExpr, TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction,
+        UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
     call_graph::{into_dependency_order, CallGraphNode},
@@ -337,6 +337,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 minimum_required_version: self.minimum_required_version,
             },
             names: type_names,
+            references: References {
+                imported_modules: env.imported_modules.into_keys().collect(),
+                value_references: env.references,
+            },
         };
 
         match Vec1::try_from_vec(self.problems.take_errors()) {
@@ -402,6 +406,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
+                name: name.clone(),
                 implementations,
             },
             type_: type_.clone(),
@@ -415,6 +420,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Deprecation::NotDeprecated,
         );
         environment.insert_module_value(name.clone(), variant);
+
+        environment.register_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name_location,
+        );
 
         if publicity.is_private() {
             environment.init_usage(
@@ -627,6 +638,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             preregistered_type.clone(),
             publicity,
             deprecation.clone(),
+        );
+
+        environment.register_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name_location,
         );
 
         Definition::Function(Function {
@@ -1068,6 +1085,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     type_: type_.clone(),
                     variant: constructor_info.clone(),
                 },
+            );
+
+            environment.register_reference(
+                environment.current_module.clone(),
+                constructor.name.clone(),
+                constructor.name_location,
             );
 
             if value_constructor_publicity.is_private() {
@@ -1592,6 +1615,7 @@ fn generalise_module_constant(
         literal: *value.clone(),
         module: module_name.clone(),
         implementations,
+        name: name.clone(),
     };
     environment.insert_variable(
         name.clone(),
