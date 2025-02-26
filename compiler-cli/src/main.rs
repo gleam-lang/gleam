@@ -63,8 +63,6 @@ mod format;
 mod fs;
 mod hex;
 mod http;
-#[cfg(test)]
-mod integration;
 mod lsp;
 mod new;
 mod panic;
@@ -72,6 +70,8 @@ mod publish;
 mod remove;
 mod run;
 mod shell;
+#[cfg(test)]
+mod tests;
 
 use config::root_config;
 use dependencies::UseManifest;
