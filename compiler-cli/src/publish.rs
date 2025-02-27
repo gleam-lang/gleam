@@ -812,6 +812,15 @@ fn exported_project_files_test() {
         ".github/workflows/test.yml",
         ".gitignore",
         "build/",
+        "ignored.txt",
+        "priv/ignored",
+        "src/also-ignored.gleam",
+        "src/ignored.gleam",
+        "src/ignored_ffi.mjs",
+        "src/ignored_ffi.erl",
+        "src/nested/ignored.gleam",
+        "src/nested/ignored_ffi.erl",
+        "src/nested/ignored_ffi.mjs",
         "test/exported_test.gleam",
         "test/exported_test_ffi.erl",
         "test/exported_test_ffi.ex",
@@ -819,6 +828,9 @@ fn exported_project_files_test() {
         "test/exported_test_ffi.js",
         "test/exported_test_ffi.mjs",
         "test/exported_test_ffi.ts",
+        "test/ignored_test.gleam",
+        "test/ignored_test_ffi.erl",
+        "test/ignored_test_ffi.mjs",
         "test/nested/exported_test.gleam",
         "test/nested/exported_test_ffi.erl",
         "test/nested/exported_test_ffi.ex",
@@ -826,29 +838,17 @@ fn exported_project_files_test() {
         "test/nested/exported_test_ffi.js",
         "test/nested/exported_test_ffi.mjs",
         "test/nested/exported_test_ffi.ts",
+        "test/nested/ignored.gleam",
+        "test/nested/ignored_test_ffi.erl",
+        "test/nested/ignored_test_ffi.mjs",
     ];
 
-    let gitignored_files = &[
-        ".ignored.txt",
-        "priv/.ignored",
-        "src/.ignored.gleam",
-        "src/.ignored_ffi.mjs",
-        "src/.ignored_ffi.erl",
-        "src/nested/.ignored.gleam",
-        "src/nested/.ignored_ffi.erl",
-        "src/nested/.ignored_ffi.mjs",
-        "test/.ignored_test.gleam",
-        "test/.ignored_test_ffi.erl",
-        "test/.ignored_test_ffi.mjs",
-        "test/nested/.ignored.gleam",
-        "test/nested/.ignored_test_ffi.erl",
-        "test/nested/.ignored_test_ffi.mjs",
-    ];
+    let gitignore = "ignored*
+src/also-ignored.gleam";
 
     for &file in exported_project_files
         .iter()
         .chain(unexported_project_files)
-        .chain(gitignored_files)
     {
         if file.ends_with("/") {
             fs::mkdir(path.join(file)).unwrap();
@@ -856,11 +856,11 @@ fn exported_project_files_test() {
         }
 
         let contents = match file {
-            ".gitignore" => gitignored_files.join("\n"),
-            _ => "".to_string(),
+            ".gitignore" => gitignore,
+            _ => "",
         };
 
-        fs::write(&path.join(file), &contents).unwrap();
+        fs::write(&path.join(file), contents).unwrap();
     }
 
     let mut chosen_exported_files = project_files(&path).unwrap();
