@@ -230,7 +230,19 @@
 
 ### Formatter
 
-- Changed the formatting of function captures with a single hole to remove it.
+- Redundant function captures that take no additional arguments are now
+  rewritten to not use the function capture syntax.
+
+  ```gleam
+  some_module.some_function(_)
+  ```
+
+  This code is reformatted like so:
+
+  ```gleam
+  some_module.some_function
+  ```
+
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Bug fixes
