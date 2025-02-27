@@ -230,6 +230,9 @@
 
 ### Formatter
 
+- Changed the formatting of function captures with a single hole to remove it.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where division and remainder operators would not work correctly
