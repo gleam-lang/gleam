@@ -1,4 +1,5 @@
 use camino::Utf8Path;
+use itertools::Itertools;
 
 #[test]
 fn is_inside_git_work_tree_ok() {
@@ -75,6 +76,48 @@ fn exclude_build_dir() {
     let files = super::gleam_files_excluding_gitignore(path).collect::<Vec<_>>();
 
     assert_eq!(files, vec![gleam_file]);
+}
+
+#[test]
+fn erlang_files_include_gitignored_files() {
+    let tmp_dir = tempfile::tempdir().unwrap();
+    let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
+
+    let included_files = &[
+        "abc.erl",
+        "abc.hrl",
+        "build/include/abc.erl",
+        "build/include/abc.hrl",
+        "ignored.erl",
+        "ignored.hrl",
+    ];
+
+    let excluded_files = &[
+        ".gitignore",
+        "abc.gleam",
+        "abc.js",
+        "build/abc.gleam",
+        "build/abc.js",
+    ];
+
+    let gitignore = "build/
+ignored.*";
+
+    for &file in included_files.iter().chain(excluded_files) {
+        let contents = match file {
+            ".gitignore" => gitignore,
+            _ => "",
+        };
+
+        super::write(&path.join(file), contents).unwrap();
+    }
+
+    let mut chosen_files = super::erlang_files(&path).collect_vec();
+    chosen_files.sort_unstable();
+
+    let expected_files = included_files.iter().map(|s| path.join(s)).collect_vec();
+
+    assert_eq!(expected_files, chosen_files);
 }
 
 #[test]

@@ -429,14 +429,21 @@ pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item =
         .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
 }
 
-pub fn erlang_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
-    Ok(read_dir(dir)?
-        .flat_map(Result::ok)
-        .map(|e| e.into_path())
+/// Walks through Erlang files in the directory. Does not exclude files ignored
+/// through `.gitignore`.
+pub fn erlang_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .standard_filters(false)
+        .build()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(ignore::DirEntry::into_path)
+        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             extension == "erl" || extension == "hrl"
-        }))
+        })
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
