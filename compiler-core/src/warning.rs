@@ -162,6 +162,10 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
+    InternalMain,
+    DeprecatedMain{
+        message: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -220,6 +224,20 @@ pub enum DeprecatedSyntaxWarning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
+            Warning::DeprecatedMain{message}=>Diagnostic{
+                title:"Deprecated main function".into(),
+                text:message.into(),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: None,
+            },
+            Warning::InternalMain=>Diagnostic{
+                title:"Internal main function".into(),
+                text:"The main function called has been marked internal".into(),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: None,
+            },
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "\
@@ -232,7 +250,6 @@ only lowercase alphanumeric characters or underscores."
                     "Rename `{path}` to be valid, or remove this file from the project source."
                 )),
             },
-
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -257,7 +274,6 @@ like this: `[item, ..list]`.",
                     extra_labels: vec![],
                 }),
             },
-
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -281,7 +297,6 @@ like this: `[item, ..list]`.",
                     extra_labels: vec![],
                 }),
             },
-
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -301,7 +316,6 @@ like this: `[item, ..list]`.",
                     extra_labels: vec![],
                 }),
             },
-
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -324,7 +338,6 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                     extra_labels: vec![],
                 }),
             },
-
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -336,24 +349,23 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 };
 
                 Diagnostic {
-                    title: "Deprecated target shorthand syntax".into(),
-                    text: wrap(&format!(
-                        "This shorthand target name is deprecated. Use the full name: `{full_name}` instead."
-                    )),
-                    hint: None,
-                    level: diagnostic::Level::Warning,
-                    location: Some(Location {
-                        label: diagnostic::Label {
-                            text: Some(format!("This should be replaced with `{full_name}`")),
-                            span: *location,
-                        },
-                        path: path.clone(),
-                        src: src.clone(),
-                        extra_labels: vec![],
-                    }),
-                }
+                                    title: "Deprecated target shorthand syntax".into(),
+                                    text: wrap(&format!(
+                                        "This shorthand target name is deprecated. Use the full name: `{full_name}` instead."
+                                    )),
+                                    hint: None,
+                                    level: diagnostic::Level::Warning,
+                                    location: Some(Location {
+                                        label: diagnostic::Label {
+                                            text: Some(format!("This should be replaced with `{full_name}`")),
+                                            span: *location,
+                                        },
+                                        path: path.clone(),
+                                        src: src.clone(),
+                                        extra_labels: vec![],
+                                    }),
+                                }
             }
-
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
@@ -1096,30 +1108,30 @@ See: https://tour.gleam.run/functions/pipelines/",
                     };
 
                     Diagnostic {
-                        title: "Incompatible gleam version range".into(),
-                        text: wrap(&format!(
-                        "{feature} introduced in version v{minimum_required_version}. But the Gleam version range \
+                                        title: "Incompatible gleam version range".into(),
+                                        text: wrap(&format!(
+                                        "{feature} introduced in version v{minimum_required_version}. But the Gleam version range \
                         specified in your `gleam.toml` would allow this code to run on an earlier \
                         version like v{wrongfully_allowed_version}, resulting in compilation errors!",
-                    )),
-                        hint: Some(format!(
-                            "Remove the version constraint from your `gleam.toml` or update it to be:
+                                    )),
+                                        hint: Some(format!(
+                                            "Remove the version constraint from your `gleam.toml` or update it to be:
 
     gleam = \">= {minimum_required_version}\""
-                        )),
-                        level: diagnostic::Level::Warning,
-                        location: Some(Location {
-                            label: diagnostic::Label {
-                                text: Some(format!(
-                                    "This requires a Gleam version >= {minimum_required_version}"
-                                )),
-                                span: *location,
-                            },
-                            path: path.clone(),
-                            src: src.clone(),
-                            extra_labels: vec![],
-                        }),
-                    }
+                                        )),
+                                        level: diagnostic::Level::Warning,
+                                        location: Some(Location {
+                                            label: diagnostic::Label {
+                                                text: Some(format!(
+                                                    "This requires a Gleam version >= {minimum_required_version}"
+                                                )),
+                                                span: *location,
+                                            },
+                                            path: path.clone(),
+                                            src: src.clone(),
+                                            extra_labels: vec![],
+                                        }),
+                                    }
                 }
 
                 type_::Warning::JavaScriptIntUnsafe { location } => Diagnostic {
