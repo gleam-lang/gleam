@@ -84,6 +84,7 @@ fn erlang_files_include_gitignored_files() {
     let path = Utf8Path::from_path(tmp_dir.path()).expect("Non Utf-8 Path");
 
     let included_files = &[
+        ".hidden.erl",
         "abc.erl",
         "abc.hrl",
         "build/include/abc.erl",
