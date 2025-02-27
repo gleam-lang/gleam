@@ -1,4 +1,18 @@
-use crate::assert_format;
+use crate::{assert_format, assert_format_rewrite};
+
+#[test]
+fn capture_with_single_argument() {
+    assert_format_rewrite!(
+        "pub fn main() -> Nil {
+  wibble([], wobble(_))
+}
+",
+        "pub fn main() -> Nil {
+  wibble([], wobble)
+}
+"
+    );
+}
 
 #[test]
 fn deprecated() {
