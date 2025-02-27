@@ -28,7 +28,7 @@ macro_rules! docvec {
         Document::Vec(Vec::new())
     };
 
-    ($($x:expr_2021),+ $(,)?) => {
+    ($($x:expr),+ $(,)?) => {
         Document::Vec(vec![$($x.to_doc()),+])
     };
 }

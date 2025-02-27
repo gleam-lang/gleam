@@ -23,7 +23,7 @@ use crate::{
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
 macro_rules! read_vec {
-    ($reader:expr_2021, $self:expr_2021, $method:ident) => {{
+    ($reader:expr, $self:expr, $method:ident) => {{
         let reader = $reader;
         let mut vec = Vec::with_capacity(reader.len() as usize);
         for reader in reader.into_iter() {
@@ -35,7 +35,7 @@ macro_rules! read_vec {
 }
 
 macro_rules! read_hashmap {
-    ($reader:expr_2021, $self:expr_2021, $method:ident) => {{
+    ($reader:expr, $self:expr, $method:ident) => {{
         let reader = $reader;
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {

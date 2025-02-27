@@ -51,12 +51,12 @@ pub fn show_hover(code: &str, range: Range, position: Position) -> String {
 
 #[macro_export]
 macro_rules! assert_hover {
-    ($code:literal, $position:expr_2021 $(,)?) => {
+    ($code:literal, $position:expr $(,)?) => {
         let project = TestProject::for_source($code);
         assert_hover!(project, $position);
     };
 
-    ($project:expr_2021, $position:expr_2021 $(,)?) => {
+    ($project:expr, $position:expr $(,)?) => {
         let src = $project.src;
         let position = $position.find_position(src);
         let result = hover($project, position).expect("no hover produced");
