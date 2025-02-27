@@ -1545,16 +1545,17 @@ impl<'comments> Formatter<'comments> {
         };
 
         match (position, arguments.as_slice()) {
-            // The capture is on the right hand side of a pipe and it only has
-            // an unlabelled hole:
+            // The capture has a single unlabelled hole:
             //
             //     wibble |> wobble(_)
+            //     list.map([], wobble(_))
             //
-            // We want it to become:
+            // We want these to become:
             //
             //     wibble |> wobble
+            //     list.map([], wobble)
             //
-            (FnCapturePosition::RightHandSideOfPipe, [arg])
+            (FnCapturePosition::RightHandSideOfPipe | FnCapturePosition::EverywhereElse, [arg])
                 if arg.is_capture_hole() && arg.label.is_none() =>
             {
                 self.expr(fun)
