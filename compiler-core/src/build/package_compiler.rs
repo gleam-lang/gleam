@@ -202,7 +202,7 @@ where
                         cached_module_names,
                     },
                     error,
-                )
+                );
             }
             Outcome::TotalFailure(error) => return Outcome::TotalFailure(error),
         };
