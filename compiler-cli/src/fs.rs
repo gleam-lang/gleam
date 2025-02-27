@@ -2,8 +2,8 @@ use gleam_core::{
     build::{NullTelemetry, Target},
     error::{parse_os, Error, FileIoAction, FileKind, ShellCommandFailureReason, OS},
     io::{
-        is_native_file_extension, BeamCompiler, Command, CommandExecutor, Content, DirEntry,
-        FileSystemReader, FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
+        FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
