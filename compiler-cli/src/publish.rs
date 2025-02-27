@@ -525,7 +525,7 @@ fn generated_erlang_files(
 
     // Erlang headers
     if include.is_dir() {
-        for file in fs::erlang_files(&include)? {
+        for file in fs::erlang_files(&include) {
             let name = file.file_name().expect("generated_files include file name");
             files.push((tar_include.join(name), fs::read(file)?));
         }
