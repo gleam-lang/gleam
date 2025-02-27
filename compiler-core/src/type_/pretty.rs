@@ -246,7 +246,7 @@ fn next_letter_test() {
 #[test]
 fn pretty_print_test() {
     macro_rules! assert_string {
-        ($src:expr_2021, $type_:expr_2021 $(,)?) => {
+        ($src:expr, $type_:expr $(,)?) => {
             let mut printer = Printer::new();
             assert_eq!($type_.to_string(), printer.pretty_print(&$src, 0),);
         };

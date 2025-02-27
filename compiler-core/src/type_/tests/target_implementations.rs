@@ -8,7 +8,7 @@ use crate::{
 use super::compile_module_with_opts;
 
 macro_rules! assert_targets {
-    ($src:expr_2021, $implementations:expr_2021 $(,)?) => {
+    ($src:expr, $implementations:expr $(,)?) => {
         let result = $crate::type_::tests::target_implementations::implementations($src);
         let expected = $implementations
             .iter()

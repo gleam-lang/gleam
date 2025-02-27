@@ -19,7 +19,7 @@ mod use_;
 
 #[macro_export]
 macro_rules! assert_format {
-    ($src:expr_2021 $(,)?) => {
+    ($src:expr $(,)?) => {
         let mut writer = String::new();
         $crate::format::pretty(&mut writer, &$src.into(), camino::Utf8Path::new("<stdin>"))
             .unwrap();
@@ -29,7 +29,7 @@ macro_rules! assert_format {
 
 #[macro_export]
 macro_rules! assert_format_rewrite {
-    ($src:expr_2021, $expected:expr_2021  $(,)?) => {
+    ($src:expr, $expected:expr  $(,)?) => {
         let mut writer = String::new();
         $crate::format::pretty(&mut writer, &$src.into(), camino::Utf8Path::new("<stdin>"))
             .unwrap();

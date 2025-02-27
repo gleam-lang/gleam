@@ -94,11 +94,11 @@ fn jump_locations_to_string(
 
 #[macro_export]
 macro_rules! assert_goto {
-    ($src:literal, $position:expr_2021) => {
+    ($src:literal, $position:expr) => {
         let project = TestProject::for_source($src);
         assert_goto!(project, $position);
     };
-    ($project:expr_2021, $position:expr_2021) => {
+    ($project:expr, $position:expr) => {
         let output = pretty_definition($project, $position);
         insta::assert_snapshot!(insta::internals::AutoName, output);
     };
@@ -106,11 +106,11 @@ macro_rules! assert_goto {
 
 #[macro_export]
 macro_rules! assert_goto_type {
-    ($src:literal, $position:expr_2021) => {
+    ($src:literal, $position:expr) => {
         let project = TestProject::for_source($src);
         assert_goto_type!(project, $position);
     };
-    ($project:expr_2021, $position:expr_2021) => {
+    ($project:expr, $position:expr) => {
         let output = pretty_type_definition($project, $position);
         insta::assert_snapshot!(insta::internals::AutoName, output);
     };
