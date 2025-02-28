@@ -304,7 +304,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 expression,
             } => self.infer_echo(location, expression),
 
-            UntypedExpr::Var { location, name, .. } => self.infer_var(name, location),
+            UntypedExpr::Var { location, name, .. } => {
+                self.infer_var(name, location, ReferenceRegistration::RegisterReferences)
+            }
 
             UntypedExpr::Int {
                 location,
@@ -949,8 +951,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
-    fn infer_var(&mut self, name: EcoString, location: SrcSpan) -> Result<TypedExpr, Error> {
-        let constructor = self.infer_value_constructor(&None, &name, &location)?;
+    fn infer_var(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+        register_reference: ReferenceRegistration,
+    ) -> Result<TypedExpr, Error> {
+        let constructor =
+            self.do_infer_value_constructor(&None, &name, &location, register_reference)?;
         self.narrow_implementations(location, &constructor.variant)?;
         Ok(TypedExpr::Var {
             constructor,
@@ -1032,7 +1040,17 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             _ => None,
         };
-        let record = self.infer(container);
+        let record = match container {
+            // If the left-hand-side of the record access is a variable, this might actually be
+            // module access. In that case, we only want to register a reference to the variable
+            // if we actually referencing it in the record access.
+            UntypedExpr::Var { location, name } => self.infer_var(
+                name,
+                location,
+                ReferenceRegistration::DoNotRegisterReferences,
+            ),
+            _ => self.infer(container),
+        };
         // TODO: is this clone avoidable? we need to box the record for inference in both
         // the success case and in the valid record but invalid label case
         let record_access = match record.clone() {
@@ -1046,9 +1064,60 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
         match (record_access, module_access) {
             // Record access is valid
-            (Ok(record_access), _) => record_access,
+            (Ok(record_access), _) => {
+                // If this is actually record access and not module access, and we didn't register
+                // the reference earlier, we register it now.
+                match &record_access {
+                    TypedExpr::RecordAccess { record, .. } => match record.as_ref() {
+                        TypedExpr::Var {
+                            location,
+                            constructor,
+                            name,
+                        } => self.register_value_constructor_reference(
+                            name,
+                            &constructor.variant,
+                            *location,
+                        ),
+                        _ => {}
+                    },
+                    _ => {}
+                }
+                record_access
+            }
             // Record access is invalid but module access is valid
-            (_, Some((Ok(module_access), _))) => module_access,
+            (
+                _,
+                Some((
+                    Ok(TypedExpr::ModuleSelect {
+                        location,
+                        field_start,
+                        type_,
+                        label,
+                        module_name,
+                        module_alias,
+                        constructor,
+                    }),
+                    _,
+                )),
+            ) => {
+                // We only register the reference here, if we know that this is a module access.
+                // Otherwise we would register module access even if we are actually accessing
+                // the field on a record
+                self.environment.register_reference(
+                    module_name.clone(),
+                    label.clone(),
+                    SrcSpan::new(field_start, location.end),
+                );
+                TypedExpr::ModuleSelect {
+                    location,
+                    field_start,
+                    type_,
+                    label,
+                    module_name,
+                    module_alias,
+                    constructor,
+                }
+            }
             // Module access was attempted but failed and it does not shadow an existing variable
             (_, Some((Err(module_access_err), false))) => {
                 self.problems.error(module_access_err);
@@ -2263,6 +2332,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     constructor,
                 } => match constructor {
                     ModuleValueConstructor::Constant { literal, .. } => {
+                        self.environment.register_reference(
+                            module_name.clone(),
+                            label.clone(),
+                            location,
+                        );
+
                         Ok(ClauseGuard::ModuleSelect {
                             location,
                             type_,
@@ -2339,16 +2414,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
             let constructor = constructor.clone();
             let module_name = module.name.clone();
-
-            match &constructor.variant {
-                ValueConstructorVariant::ModuleFn { name, module, .. }
-                | ValueConstructorVariant::Record { name, module, .. }
-                | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
-                    .environment
-                    .register_reference(module.clone(), name.clone(), select_location),
-                ValueConstructorVariant::LocalVariable { .. }
-                | ValueConstructorVariant::LocalConstant { .. } => {}
-            }
 
             (module_name, constructor)
         };
@@ -2865,6 +2930,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         name: &EcoString,
         location: &SrcSpan,
     ) -> Result<ValueConstructor, Error> {
+        self.do_infer_value_constructor(
+            module,
+            name,
+            location,
+            ReferenceRegistration::RegisterReferences,
+        )
+    }
+
+    fn do_infer_value_constructor(
+        &mut self,
+        module: &Option<(EcoString, SrcSpan)>,
+        name: &EcoString,
+        location: &SrcSpan,
+        register_reference: ReferenceRegistration,
+    ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
             // Look in the current scope for a binding with this name
             None => {
@@ -2926,7 +3006,30 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.narrow_implementations(*location, &variant)?;
 
-        match &variant {
+        if matches!(
+            register_reference,
+            ReferenceRegistration::RegisterReferences
+        ) {
+            self.register_value_constructor_reference(name, &variant, *location);
+        }
+
+        // Instantiate generic variables into unbound variables for this usage
+        let type_ = self.instantiate(type_, &mut hashmap![]);
+        Ok(ValueConstructor {
+            publicity,
+            deprecation,
+            variant,
+            type_,
+        })
+    }
+
+    fn register_value_constructor_reference(
+        &mut self,
+        referenced_name: &EcoString,
+        variant: &ValueConstructorVariant,
+        location: SrcSpan,
+    ) {
+        match variant {
             // If the referenced name is different to the name of the original
             // value, that means we are referencing it via an alias and don't
             // want to track this reference.
@@ -2938,24 +3041,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
             | ValueConstructorVariant::ModuleConstant {
                 name: value_name, ..
-            } if module.is_none() && value_name != name => {}
+            } if value_name != referenced_name => {}
             ValueConstructorVariant::ModuleFn { name, module, .. }
             | ValueConstructorVariant::Record { name, module, .. }
             | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
                 .environment
-                .register_reference(module.clone(), name.clone(), *location),
+                .register_reference(module.clone(), name.clone(), location),
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::LocalConstant { .. } => {}
         }
-
-        // Instantiate generic variables into unbound variables for this usage
-        let type_ = self.instantiate(type_, &mut hashmap![]);
-        Ok(ValueConstructor {
-            publicity,
-            deprecation,
-            variant,
-            type_,
-        })
     }
 
     fn report_name_error(&mut self, name: &EcoString, location: &SrcSpan) -> Error {
@@ -4013,6 +4107,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             self.minimum_required_version = minimum_required_version;
         }
     }
+}
+
+#[derive(Debug, Clone, Copy)]
+enum ReferenceRegistration {
+    RegisterReferences,
+    DoNotRegisterReferences,
 }
 
 fn extract_typed_use_call_assignments(

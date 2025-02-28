@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\nimport mod.{Constructor}\n\npub fn main() {\n  #(Constructor(75), mod.Constructor(57))\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+pub type Wibble {
+  Constructor(Int)
+}
+
+fn wibble() {
+  Constructor(81)
+}
+
+
+-- app.gleam
+
+import mod.{Constructor}
+
+pub fn main() {
+  #(Constructor(75), mod.Constructor(57))
+    ↑                                    
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+pub type Wibble {
+  Number(Int)
+}
+
+fn wibble() {
+  Number(81)
+}
+
+
+-- app.gleam
+
+import mod.{Number}
+
+pub fn main() {
+  #(Number(75), mod.Number(57))
+}

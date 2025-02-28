@@ -534,6 +534,34 @@ pub fn main() {
 }
 
 #[test]
+fn rename_function_shadowed_by_field_access() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+type App {
+  App(something: Int)
+}
+
+pub fn main() {
+  let app = App(10)
+  app.something
+}
+"
+        ),
+        "
+pub fn something() {
+  todo
+}
+",
+        "function",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
 fn no_rename_function_with_invalid_name() {
     assert_no_rename!(
         "
@@ -694,6 +722,32 @@ pub fn main() {
 }
 
 #[test]
+fn rename_constant_shadowed_by_field_access() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+type App {
+  App(something: Int)
+}
+
+pub fn main() {
+  let app = App(10)
+  app.something
+}
+"
+        ),
+        "
+pub const something = 10
+",
+        "constant",
+        find_position_of("something").to_selection()
+    );
+}
+
+#[test]
 fn no_rename_constant_with_invalid_name() {
     assert_no_rename!(
         "
@@ -808,7 +862,7 @@ pub fn main() {
 }
 ",
         "Number",
-        find_position_of("Constructor,").to_selection()
+        find_position_of("Constructor(75").to_selection()
     );
 }
 

@@ -8,14 +8,14 @@ expression: "\nimport gleam/list\n\npub fn list() {\n  []\n}\n\npub fn main() {\
 import gleam/list
 
 pub fn list() {
-       ↑
+       ↑       
   []
 }
 
 pub fn main() {
   list.map(todo, todo)
 }
-
+    
 
 
 ----- AFTER RENAME
