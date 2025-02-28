@@ -322,6 +322,8 @@ where
                 Located::Annotation(_, _) => Some(completer.completion_types()),
 
                 Located::Label(_, _) => None,
+
+                Located::ModuleName(_, _) => None,
             };
 
             Ok(completions)
@@ -827,6 +829,17 @@ Unused labelled fields:
                 }
                 Located::Label(location, type_) => {
                     Some(hover_for_label(location, type_, lines, module))
+                }
+                Located::ModuleName(location, name) => {
+                    let Some(module) = this.compiler.modules.get(name) else {
+                        return Ok(None);
+                    };
+                    Some(Hover {
+                        contents: HoverContents::Scalar(MarkedString::String(
+                            module.ast.documentation.join("\n"),
+                        )),
+                        range: Some(src_span_to_lsp_range(location, &lines)),
+                    })
                 }
             })
         })

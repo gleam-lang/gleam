@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\nimport wibble\n\npub fn main() {\n  wibble.wibble()\n}\n"
+---
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+  ↑▔▔▔▔▔         
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        " This is the wibble module.\n Here is some documentation about it.\n This module does stuff",
+    ),
+)
