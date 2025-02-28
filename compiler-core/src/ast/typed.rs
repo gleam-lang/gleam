@@ -200,6 +200,7 @@ impl TypedExpr {
             Self::ModuleSelect {
                 location,
                 field_start,
+                module_name,
                 ..
             } => {
                 // We want to return the `ModuleSelect` only when we're hovering
@@ -209,8 +210,13 @@ impl TypedExpr {
                     end: location.end,
                 };
 
+                // We subtract 1 so the location doesn't include the `.` character.
+                let module_span = SrcSpan::new(location.start, field_start - 1);
+
                 if field_span.contains(byte_index) {
                     Some(self.into())
+                } else if module_span.contains(byte_index) {
+                    Some(Located::ModuleName(module_span, module_name))
                 } else {
                     None
                 }

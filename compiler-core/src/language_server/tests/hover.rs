@@ -1479,3 +1479,29 @@ fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
         find_position_of("fn(value)")
     );
 }
+
+#[test]
+fn hover_over_module_name() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble.")
+    );
+}
