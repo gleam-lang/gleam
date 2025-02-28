@@ -1,0 +1,43 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub const something = 10\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+import app
+
+type App {
+  App(something: Int)
+}
+
+pub fn main() {
+  let app = App(10)
+  app.something
+}
+
+
+-- app.gleam
+
+pub const something = 10
+          ↑             
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+import app
+
+type App {
+  App(something: Int)
+}
+
+pub fn main() {
+  let app = App(10)
+  app.something
+}
+
+
+-- app.gleam
+
+pub const constant = 10
