@@ -1067,21 +1067,15 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             (Ok(record_access), _) => {
                 // If this is actually record access and not module access, and we didn't register
                 // the reference earlier, we register it now.
-                match &record_access {
-                    TypedExpr::RecordAccess { record, .. } => match record.as_ref() {
-                        TypedExpr::Var {
-                            location,
-                            constructor,
-                            name,
-                        } => self.register_value_constructor_reference(
-                            name,
-                            &constructor.variant,
-                            *location,
-                        ),
-                        _ => {}
-                    },
-                    _ => {}
-                }
+                if let TypedExpr::RecordAccess { record, .. } = &record_access { if let TypedExpr::Var {
+                        location,
+                        constructor,
+                        name,
+                    } = record.as_ref() { self.register_value_constructor_reference(
+                    name,
+                    &constructor.variant,
+                    *location,
+                ) } }
                 record_access
             }
             // Record access is invalid but module access is valid
