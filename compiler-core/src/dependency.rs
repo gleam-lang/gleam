@@ -4,11 +4,11 @@ use crate::{Error, Result};
 
 use ecow::EcoString;
 use hexpm::{
-    version::{Range, ResolutionError, Version},
     Dependency, Release,
+    version::{Range, ResolutionError, Version},
 };
 use pubgrub::{
-    solver::{choose_package_with_fewest_versions, Dependencies},
+    solver::{Dependencies, choose_package_with_fewest_versions},
     type_aliases::Map,
 };
 
@@ -789,11 +789,11 @@ mod tests {
         .unwrap_err();
 
         match err {
-        Error::DependencyResolutionFailed(msg) => assert_eq!(
-            msg,
-            "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
-        ),
-        _ => panic!("wrong error: {err}"),
+            Error::DependencyResolutionFailed(msg) => assert_eq!(
+                msg,
+                "An unrecoverable error happened while solving dependencies: gleam_stdlib is specified with the requirement `~> 0.1.0`, but it is locked to 0.2.0, which is incompatible."
+            ),
+            _ => panic!("wrong error: {err}"),
         }
     }
 

@@ -215,6 +215,7 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub cached_module_names: Vec<EcoString>,
 }
 
 impl Package {
@@ -267,6 +268,8 @@ impl Module {
             .iter()
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
+
+        self.ast.type_info.documentation = self.ast.documentation.clone();
 
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.

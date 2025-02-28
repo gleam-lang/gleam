@@ -3637,9 +3637,13 @@ fn commented_constructors() {
 
 #[test]
 fn function_captures_test() {
-    assert_format!(
+    assert_format_rewrite!(
         "pub fn main() {
   run(_)
+}
+",
+        "pub fn main() {
+  run
 }
 "
     );
@@ -3651,9 +3655,13 @@ fn function_captures_test() {
 "
     );
 
-    assert_format!(
+    assert_format_rewrite!(
         "pub fn main() {
   run(1, 2, _, 4, 5)(_)
+}
+",
+        "pub fn main() {
+  run(1, 2, _, 4, 5)
 }
 "
     );

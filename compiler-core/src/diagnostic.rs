@@ -91,10 +91,9 @@ impl Diagnostic {
             .extra_labels
             .iter()
             .map(|l| {
-                let (location_src, location_path) = if let Some(info) = &l.src_info {
-                    (info.0.as_str(), info.1.as_str())
-                } else {
-                    (main_location_src, main_location_path)
+                let (location_src, location_path) = match &l.src_info {
+                    Some(info) => (info.0.as_str(), info.1.as_str()),
+                    _ => (main_location_src, main_location_path),
                 };
                 match file_map.get(location_path) {
                     None => {

@@ -1,7 +1,7 @@
 use crate::{
+    Error, Result,
     format::{Formatter, Intermediate},
     warning::WarningEmitter,
-    Error, Result,
 };
 use camino::Utf8Path;
 use ecow::EcoString;

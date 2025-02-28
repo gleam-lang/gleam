@@ -1,9 +1,9 @@
 use camino::Utf8PathBuf;
 use gleam_core::{
+    Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
     paths::ProjectPaths,
-    Result,
 };
 
 #[cfg(target_os = "windows")]
@@ -143,7 +143,11 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
     )?;
     built.root_package.attach_doc_and_module_comments();
 
-    let out = gleam_core::docs::generate_json_package_interface(out, &built.root_package);
+    let out = gleam_core::docs::generate_json_package_interface(
+        out,
+        &built.root_package,
+        &built.module_interfaces,
+    );
     crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

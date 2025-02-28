@@ -11,9 +11,9 @@ use crate::{
     build::Origin,
     line_numbers::LineNumbers,
     type_::{
-        self, expression::Implementations, Deprecation, ModuleInterface, Type, TypeConstructor,
+        self, Deprecation, ModuleInterface, Opaque, Type, TypeAliasConstructor, TypeConstructor,
         TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
-        ValueConstructorVariant,
+        ValueConstructorVariant, expression::Implementations, prelude,
     },
     uid::UniqueIdGenerator,
 };
@@ -64,6 +64,8 @@ fn constant_module(constant: TypedConstant) -> ModuleInterface {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     }
 }
 
@@ -98,6 +100,8 @@ fn empty_module() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -121,6 +125,8 @@ fn with_line_numbers() {
         ),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -152,6 +158,8 @@ fn module_with_private_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -183,6 +191,8 @@ fn module_with_app_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -214,6 +224,8 @@ fn module_with_fn_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -245,6 +257,8 @@ fn module_with_tuple_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -282,6 +296,8 @@ fn module_with_generic_type() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            type_aliases: HashMap::new(),
+            documentation: Vec::new(),
         }
     }
 
@@ -319,6 +335,8 @@ fn module_with_type_links() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            type_aliases: HashMap::new(),
+            documentation: Vec::new(),
         }
     }
 
@@ -356,6 +374,8 @@ fn module_with_type_constructor_documentation() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            type_aliases: HashMap::new(),
+            documentation: Vec::new(),
         }
     }
 
@@ -396,6 +416,8 @@ fn module_with_type_constructor_origin() {
             line_numbers: LineNumbers::new(""),
             src_path: "some_path".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            type_aliases: HashMap::new(),
+            documentation: Vec::new(),
         }
     }
 
@@ -418,7 +440,9 @@ fn module_type_to_constructors_mapping() {
                 variants: vec![TypeValueConstructor {
                     name: "One".into(),
                     parameters: vec![],
+                    documentation: Some("Some documentation".into()),
                 }],
+                opaque: Opaque::NotOpaque,
             },
         )]
         .into(),
@@ -427,6 +451,8 @@ fn module_type_to_constructors_mapping() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -475,6 +501,8 @@ fn module_fn_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -524,6 +552,8 @@ fn deprecated_module_fn_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -571,6 +601,8 @@ fn private_module_fn_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -620,6 +652,8 @@ fn module_fn_value_regression() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -668,6 +702,8 @@ fn module_fn_value_with_field_map() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -697,13 +733,13 @@ fn record_value() {
                     name: "one".into(),
                     module: "themodule".into(),
                     field_map: None,
-                    arity: random.gen(),
-                    variants_count: random.gen(),
+                    arity: random.r#gen(),
+                    variants_count: random.r#gen(),
                     location: SrcSpan {
-                        start: random.gen(),
-                        end: random.gen(),
+                        start: random.r#gen(),
+                        end: random.r#gen(),
                     },
-                    variant_index: random.gen(),
+                    variant_index: random.r#gen(),
                 },
             },
         )]
@@ -711,6 +747,8 @@ fn record_value() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -740,15 +778,16 @@ fn record_value_with_field_map() {
                     module: "themodule".into(),
                     name: "one".into(),
                     field_map: Some(FieldMap {
-                        arity: random.gen(),
-                        fields: [("ok".into(), random.gen()), ("ko".into(), random.gen())].into(),
+                        arity: random.r#gen(),
+                        fields: [("ok".into(), random.r#gen()), ("ko".into(), random.r#gen())]
+                            .into(),
                     }),
-                    arity: random.gen(),
-                    variants_count: random.gen(),
-                    variant_index: random.gen(),
+                    arity: random.r#gen(),
+                    variants_count: random.r#gen(),
+                    variant_index: random.r#gen(),
                     location: SrcSpan {
-                        start: random.gen(),
-                        end: random.gen(),
+                        start: random.r#gen(),
+                        end: random.r#gen(),
                     },
                 },
             },
@@ -757,6 +796,8 @@ fn record_value_with_field_map() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -825,6 +866,8 @@ fn accessors() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -893,6 +936,8 @@ fn private_accessors() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1115,6 +1160,8 @@ fn constant_var() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1307,6 +1354,8 @@ fn deprecated_type() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1354,6 +1403,8 @@ fn module_fn_value_with_external_implementations() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1404,6 +1455,8 @@ fn internal_module_fn() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1457,6 +1510,8 @@ fn internal_annotated_module_fn() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     assert_eq!(roundtrip(&module), module);
@@ -1481,15 +1536,20 @@ fn type_variable_ids_in_constructors_are_shared() {
                     parameters: vec![
                         TypeValueConstructorField {
                             type_: type_::generic_var(6),
+                            label: None,
                         },
                         TypeValueConstructorField {
                             type_: type_::int(),
+                            label: None,
                         },
                         TypeValueConstructorField {
                             type_: type_::tuple(vec![type_::generic_var(4), type_::generic_var(5)]),
+                            label: None,
                         },
                     ],
+                    documentation: None,
                 }],
+                opaque: Opaque::NotOpaque,
             },
         )]),
         accessors: HashMap::new(),
@@ -1497,6 +1557,8 @@ fn type_variable_ids_in_constructors_are_shared() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
 
     let expected = HashMap::from([(
@@ -1508,15 +1570,20 @@ fn type_variable_ids_in_constructors_are_shared() {
                 parameters: vec![
                     TypeValueConstructorField {
                         type_: type_::generic_var(0),
+                        label: None,
                     },
                     TypeValueConstructorField {
                         type_: type_::int(),
+                        label: None,
                     },
                     TypeValueConstructorField {
                         type_: type_::tuple(vec![type_::generic_var(1), type_::generic_var(2)]),
+                        label: None,
                     },
                 ],
+                documentation: None,
             }],
+            opaque: Opaque::NotOpaque,
         },
     )]);
 
@@ -1557,6 +1624,100 @@ fn type_with_inferred_variant() {
         line_numbers: LineNumbers::new(""),
         src_path: "some_path".into(),
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
     };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_type_aliases() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "some_module".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: [(
+            "MyAlias".into(),
+            TypeAliasConstructor {
+                publicity: Publicity::Public,
+                module: "some_module".into(),
+                type_: prelude::int(),
+                arity: 1,
+                deprecation: Deprecation::NotDeprecated,
+                documentation: Some("Some documentation".into()),
+                origin: Default::default(),
+            },
+        )]
+        .into(),
+        documentation: Vec::new(),
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_documentation() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "some_module".into(),
+        types: HashMap::new(),
+        types_value_constructors: HashMap::new(),
+        values: HashMap::new(),
+        accessors: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: vec![
+            "This is a line of documentation".into(),
+            "And here is another".into(),
+            "And finally, a third".into(),
+        ],
+    };
+    assert_eq!(roundtrip(&module), module);
+}
+
+#[test]
+fn module_with_opaque_type() {
+    let module = ModuleInterface {
+        warnings: vec![],
+        is_internal: false,
+        package: "some_package".into(),
+        origin: Origin::Src,
+        name: "a".into(),
+        types: HashMap::new(),
+        types_value_constructors: [(
+            "SomeType".into(),
+            TypeVariantConstructors {
+                type_parameters_ids: vec![0, 1, 2],
+                variants: vec![TypeValueConstructor {
+                    name: "One".into(),
+                    parameters: vec![],
+                    documentation: Some("Some documentation".into()),
+                }],
+                opaque: Opaque::Opaque,
+            },
+        )]
+        .into(),
+        accessors: HashMap::new(),
+        values: HashMap::new(),
+        line_numbers: LineNumbers::new(""),
+        src_path: "some_path".into(),
+        minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: HashMap::new(),
+        documentation: Vec::new(),
+    };
+
     assert_eq!(roundtrip(&module), module);
 }

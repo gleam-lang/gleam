@@ -4,12 +4,12 @@ use std::time::SystemTime;
 use debug_ignore::DebugIgnore;
 
 use crate::{
+    Result,
     error::Error,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
-        FileSystemWriter, ReadDir, Stdio, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir, Stdio,
+        WrappedReader, memory::InMemoryFileSystem,
     },
-    Result,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};

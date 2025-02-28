@@ -4613,8 +4613,8 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
-) {
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body()
+ {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "

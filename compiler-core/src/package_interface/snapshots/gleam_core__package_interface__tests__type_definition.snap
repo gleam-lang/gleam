@@ -12,7 +12,7 @@ expression: "\n/// Wibble's documentation\npub type Wibble(a, b) {\n  Wibble\n  
       "type-aliases": {},
       "types": {
         "Wibble": {
-          "documentation": " Wibble's documentation",
+          "documentation": " Wibble's documentation\n",
           "deprecation": null,
           "parameters": 2,
           "constructors": [

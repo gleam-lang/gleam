@@ -1,4 +1,5 @@
 use crate::{
+    Result,
     analyse::TargetSupport,
     build::{ErlangAppCodegenConfiguration, Module},
     config::PackageConfig,
@@ -6,7 +7,6 @@ use crate::{
     io::FileSystemWriter,
     javascript,
     line_numbers::LineNumbers,
-    Result,
 };
 use ecow::EcoString;
 use erlang::escape_atom_string;
