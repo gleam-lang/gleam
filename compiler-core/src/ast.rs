@@ -419,7 +419,9 @@ impl TypeAst {
                     None
                 })
                 .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
+            TypeAst::Constructor(TypeAstConstructor {
+                arguments, module, ..
+            }) => type_
                 .constructor_types()
                 .and_then(|arg_types| {
                     if let Some(arg) = arguments
@@ -432,6 +434,13 @@ impl TypeAst {
 
                     None
                 })
+                .or(module.as_ref().and_then(|(name, location)| {
+                    if location.contains(byte_index) {
+                        Some(Located::ModuleName(*location, name))
+                    } else {
+                        None
+                    }
+                }))
                 .or(Some(Located::Annotation(self.location(), type_))),
             TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
                 .tuple_types()
