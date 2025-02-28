@@ -1505,3 +1505,27 @@ pub fn wibble() {
         find_position_of("wibble.")
     );
 }
+
+#[test]
+fn hover_over_module_name_in_annotation() {
+    let src = "
+import wibble
+
+pub fn main(w: wibble.Wibble) {
+  todo
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+
+pub type Wibble
+"
+        ),
+        find_position_of("wibble.")
+    );
+}
