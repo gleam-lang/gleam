@@ -1710,6 +1710,7 @@ fn module_with_type_aliases() {
         )]
         .into(),
         documentation: Vec::new(),
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1735,6 +1736,7 @@ fn module_with_documentation() {
             "And here is another".into(),
             "And finally, a third".into(),
         ],
+        contains_echo: false,
     };
     assert_eq!(roundtrip(&module), module);
 }
@@ -1768,6 +1770,7 @@ fn module_with_opaque_type() {
         minimum_required_version: Version::new(0, 1, 0),
         type_aliases: HashMap::new(),
         documentation: Vec::new(),
+        contains_echo: false,
     };
 
     assert_eq!(roundtrip(&module), module);
