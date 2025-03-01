@@ -60,11 +60,13 @@ fn run_and_capture_output(
     )
     .expect("run setup");
 
-    let mut process = std::process::Command::new(&program)
+    let _ = dbg!(std::fs::exists(paths.root()));
+
+    let mut process = std::process::Command::new(&dbg!(program))
         .args(args)
         .stderr(Stdio::piped())
         .envs(env.iter().map(|pair| (&pair.0, &pair.1)))
-        .current_dir(paths.root())
+        .current_dir(dbg!(paths.root()))
         .spawn()
         .expect("spawn run process");
 

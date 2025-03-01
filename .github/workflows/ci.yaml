@@ -107,6 +107,21 @@ jobs:
           mix local.hex --force
         if: ${{ runner.os == 'macOS' }} # setup-beam does not support macOS
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.2"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2"
+
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v2
         with:
@@ -293,7 +308,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install wasm-pack
         run: |
