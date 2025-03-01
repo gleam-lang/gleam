@@ -376,7 +376,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                     }),
                 }
             }
-            
+
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
@@ -1127,6 +1127,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                     )),
                         hint: Some(format!(
                             "Remove the version constraint from your `gleam.toml` or update it to be:
+
     gleam = \">= {minimum_required_version}\""
                         )),
                         level: diagnostic::Level::Warning,
