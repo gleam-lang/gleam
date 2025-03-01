@@ -1,13 +1,9 @@
 ---
 source: compiler-core/src/language_server/tests/hover.rs
-expression: "\nimport wibble\n\npub fn main() {\n  wibble.wibble()\n}\n"
+expression: "\nimport wibble\n"
 ---
 import wibble
-
-pub fn main() {
-  wibble.wibble()
-  ↑▔▔▔▔▔         
-}
+▔▔▔▔▔▔▔↑▔▔▔▔▔
 
 
 ----- Hover content -----
