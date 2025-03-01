@@ -4,6 +4,9 @@
 
 ### Compiler
 
+- Gleam will now warn when running a deprecated or internal module main function
+([Lioncat2002](https://github.com/Lioncat2002))
+
 - Generated Erlang `.app` files now include external modules written in Elixir
   and Erlang.
   ([LostKobrakai](https://github.com/lostkobrakai))
