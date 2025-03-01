@@ -127,7 +127,7 @@ pub fn setup(
 
     let built = crate::build::main(paths, options, manifest)?;
 
-    //Warn incase the module being run has been as internal
+    // Warn incase the module being run has been as internal
     let warning_emitter = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
 
     // Warn incase the module being run has been as internal
