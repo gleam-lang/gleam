@@ -648,6 +648,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::Constructor {
                 location,
                 module,
+                name_location,
                 name,
                 arguments: mut pattern_args,
                 spread,
@@ -816,6 +817,12 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
+                self.environment.register_reference(
+                    constructor.module.clone(),
+                    constructor.name.clone(),
+                    name_location,
+                );
+
                 let instantiated_constructor_type =
                     self.environment
                         .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
@@ -862,6 +869,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                             Ok(Pattern::Constructor {
                                 location,
+                                name_location,
                                 module,
                                 name,
                                 arguments: pattern_args,
@@ -897,6 +905,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                             Ok(Pattern::Constructor {
                                 location,
+                                name_location,
                                 module,
                                 name,
                                 arguments: vec![],

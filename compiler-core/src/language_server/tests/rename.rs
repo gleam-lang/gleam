@@ -980,3 +980,45 @@ pub type Type {
         find_position_of("X").to_selection()
     );
 }
+
+#[test]
+fn rename_type_variant_pattern_with_arguments() {
+    assert_rename!(
+        "
+pub type Wibble {
+  Wibble(Int)
+  Wobble(Float)
+}
+
+fn wibble() {
+  case Wibble(10) {
+    Wibble(20) -> todo
+    Wibble(_) -> panic
+  }
+}
+",
+        "Variant",
+        find_position_of("Wibble(10)").to_selection()
+    );
+}
+
+#[test]
+fn rename_type_variant_from_pattern() {
+    assert_rename!(
+        "
+pub type Type {
+  X
+  Y
+}
+
+pub fn main(t) {
+  case t {
+    X -> 0
+    Y -> 0
+  }
+}
+",
+        "Renamed",
+        find_position_of("X ->").to_selection()
+    );
+}

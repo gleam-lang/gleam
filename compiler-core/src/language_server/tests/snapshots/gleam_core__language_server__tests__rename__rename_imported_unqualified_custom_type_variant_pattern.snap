@@ -1,0 +1,45 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub type Type {\n  X\n  Y\n}\n"
+---
+----- BEFORE RENAME
+-- other.gleam
+
+import app.{X, Y}
+
+pub fn main(t) {
+  case t {
+    X -> 0
+    Y -> 0
+  }
+}
+
+
+-- app.gleam
+
+pub type Type {
+  X
+  ↑
+  Y
+}
+
+
+----- AFTER RENAME
+-- other.gleam
+
+import app.{Renamed, Y}
+
+pub fn main(t) {
+  case t {
+    Renamed -> 0
+    Y -> 0
+  }
+}
+
+
+-- app.gleam
+
+pub type Type {
+  Renamed
+  Y
+}
