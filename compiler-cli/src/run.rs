@@ -131,7 +131,8 @@ pub fn setup(
     let warning_emitter = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
 
     // Warn incase the module being run has been as internal
-    if built.is_internal(&module.clone().into()).is_ok() {
+    let internal_module=built.is_internal(&module.clone().into()).unwrap_or(false);
+    if internal_module {
         let warning = Warning::InternalMain {
             module: module.clone().into(),
         };
