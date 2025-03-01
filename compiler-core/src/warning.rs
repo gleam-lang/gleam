@@ -162,7 +162,9 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
-    InternalMain,
+    InternalMain {
+        module: EcoString,
+    },
     DeprecatedMain {
         message: EcoString,
     },
@@ -231,13 +233,16 @@ impl Warning {
                 location: None,
                 hint: None,
             },
-            Warning::InternalMain => Diagnostic {
-                title: "Internal main function".into(),
-                text: "The main function called has been marked internal".into(),
-                level: diagnostic::Level::Warning,
-                location: None,
-                hint: None,
-            },
+            Warning::InternalMain { module } => {
+                let message = format!("The module {} has been marked internal", module);
+                Diagnostic {
+                    title: "Internal main function".into(),
+                    text: message,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            }
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "\

@@ -3,6 +3,7 @@ use std::{rc::Rc, sync::OnceLock};
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
+    Warning,
     analyse::TargetSupport,
     build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
@@ -11,7 +12,6 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
     warning::WarningEmitter,
-    Warning,
 };
 
 use crate::{
@@ -132,7 +132,9 @@ pub fn setup(
 
     // Warn incase the module being run has been as internal
     if built.is_internal(&module.clone().into()).is_ok() {
-        let warning = Warning::InternalMain;
+        let warning = Warning::InternalMain {
+            module: module.clone().into(),
+        };
         warning_emitter.emit(warning);
     }
 
