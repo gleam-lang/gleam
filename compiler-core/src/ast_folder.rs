@@ -1149,13 +1149,21 @@ pub trait PatternFolder {
 
             Pattern::Constructor {
                 location,
+                name_location,
                 name,
                 arguments,
                 module,
                 spread,
                 constructor: _,
                 type_: (),
-            } => self.fold_pattern_constructor(location, name, arguments, module, spread),
+            } => self.fold_pattern_constructor(
+                location,
+                name_location,
+                name,
+                arguments,
+                module,
+                spread,
+            ),
 
             Pattern::Tuple { location, elems } => self.fold_pattern_tuple(location, elems),
 
@@ -1265,6 +1273,7 @@ pub trait PatternFolder {
     fn fold_pattern_constructor(
         &mut self,
         location: SrcSpan,
+        name_location: SrcSpan,
         name: EcoString,
         arguments: Vec<CallArg<UntypedPattern>>,
         module: Option<(EcoString, SrcSpan)>,
@@ -1272,6 +1281,7 @@ pub trait PatternFolder {
     ) -> UntypedPattern {
         Pattern::Constructor {
             location,
+            name_location,
             name,
             arguments,
             module,
@@ -1366,6 +1376,7 @@ pub trait PatternFolder {
 
             Pattern::Constructor {
                 location,
+                name_location,
                 name,
                 arguments,
                 module,
@@ -1382,6 +1393,7 @@ pub trait PatternFolder {
                     .collect();
                 Pattern::Constructor {
                     location,
+                    name_location,
                     name,
                     arguments,
                     module,

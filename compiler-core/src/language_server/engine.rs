@@ -1,6 +1,6 @@
 use crate::{
     Error, Result, Warning,
-    analyse::name::correct_name_case,
+    analyse::{self, name::correct_name_case},
     ast::{
         ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant, Pattern,
         RecordConstructor, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
@@ -554,6 +554,8 @@ where
                 )))
             };
 
+            let byte_index = lines.byte_index(params.position.line, params.position.character);
+
             Ok(match found {
                 Located::Expression(TypedExpr::Var {
                     constructor:
@@ -584,6 +586,13 @@ where
                         _ => None,
                     }),
                 Located::Pattern(Pattern::Assign { location, .. }) => success_response(*location),
+                Located::Pattern(Pattern::Constructor { name_location, .. }) => {
+                    if name_location.contains(byte_index) {
+                        success_response(*name_location)
+                    } else {
+                        None
+                    }
+                }
                 Located::Arg(arg) => match &arg.names {
                     ArgNames::Named { location, .. }
                     | ArgNames::NamedLabelled {
@@ -617,8 +626,6 @@ where
                     | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
                 )
                 | Located::RecordConstructor(RecordConstructor { name_location, .. }) => {
-                    let byte_index =
-                        lines.byte_index(params.position.line, params.position.character);
                     // When we locate a module statement, we don't know where exactly the cursor
                     // is positioned. In this example, we want to rename the first but not the second:
                     // ```gleam
@@ -814,6 +821,16 @@ where
                     &params,
                     &module.name,
                     name,
+                    &this.compiler.modules,
+                    Named::CustomTypeVariant,
+                ),
+                Located::Pattern(Pattern::Constructor {
+                    constructor: analyse::Inferred::Known(constructor),
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    &constructor.module,
+                    &constructor.name,
                     &this.compiler.modules,
                     Named::CustomTypeVariant,
                 ),
