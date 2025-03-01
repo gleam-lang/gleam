@@ -10,8 +10,8 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::analyse::TargetSupport;
-use crate::build::package_compiler::StdlibPackage;
 use crate::build::Target;
+use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
