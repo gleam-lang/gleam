@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile(config, modules)"
-snapshot_kind: text
 ---
 //// app.html
 
@@ -228,13 +227,16 @@ snapshot_kind: text
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
+
+
+
   
   <li><a href="#discard">discard</a></li>
   
+
+
 </ul>
 
 
