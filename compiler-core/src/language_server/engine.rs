@@ -738,6 +738,12 @@ where
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines, module))
                 }
+                Located::ModuleStatement(Definition::Import(import)) => {
+                    let Some(module) = this.compiler.modules.get(&import.module) else {
+                        return Ok(None);
+                    };
+                    Some(hover_for_module(module, import.location, &lines))
+                }
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
@@ -841,17 +847,7 @@ Unused labelled fields:
                     let Some(module) = this.compiler.modules.get(name) else {
                         return Ok(None);
                     };
-                    let contents = format!(
-                        "```gleam
-{name}
-```
-{}",
-                        module.ast.documentation.join("\n")
-                    );
-                    Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::String(contents)),
-                        range: Some(src_span_to_lsp_range(location, &lines)),
-                    })
+                    Some(hover_for_module(module, location, &lines))
                 }
             })
         })
@@ -1194,7 +1190,7 @@ fn hover_for_imported_value(
     let documentation = value.get_documentation().unwrap_or_default();
 
     let link_section = hex_module_imported_from.map_or("".to_string(), |m| {
-        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), name)
+        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), Some(name))
     });
 
     // Show the type of the hovered node to the user
@@ -1208,6 +1204,24 @@ fn hover_for_imported_value(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
+    }
+}
+
+fn hover_for_module(module: &Module, location: SrcSpan, line_numbers: &LineNumbers) -> Hover {
+    let documentation = module.ast.documentation.join("\n");
+    let name = &module.name;
+
+    let link_section = format_hexdocs_link_section(&module.ast.type_info.package, name, None);
+
+    let contents = format!(
+        "```gleam
+{name}
+```
+{documentation}{link_section}",
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(location, line_numbers)),
     }
 }
 
@@ -1442,8 +1456,15 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     }
 }
 
-fn format_hexdocs_link_section(package_name: &str, module_name: &str, name: &str) -> String {
-    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+fn format_hexdocs_link_section(
+    package_name: &str,
+    module_name: &str,
+    name: Option<&str>,
+) -> String {
+    let link = match name {
+        Some(name) => format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}"),
+        None => format!("https://hexdocs.pm/{package_name}/{module_name}.html"),
+    };
     format!("\nView on [HexDocs]({link})")
 }
 
@@ -1460,7 +1481,11 @@ fn get_hexdocs_link_section(
         _ => None,
     })?;
 
-    Some(format_hexdocs_link_section(package_name, module_name, name))
+    Some(format_hexdocs_link_section(
+        package_name,
+        module_name,
+        Some(name),
+    ))
 }
 
 /// Converts the source start position of a documentation comment's contents into

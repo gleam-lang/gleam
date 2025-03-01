@@ -13,6 +13,6 @@ pub fn main() {
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nwibble/wobble\n```\n The module documentation",
+        "```gleam\nwibble/wobble\n```\n The module documentation\nView on [HexDocs](https://hexdocs.pm/app/wibble/wobble.html)",
     ),
 )

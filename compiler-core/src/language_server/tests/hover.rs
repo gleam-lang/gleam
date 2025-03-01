@@ -1553,3 +1553,21 @@ pub type Wibble
         find_position_of("wibble.")
     );
 }
+
+#[test]
+fn hover_over_imported_module() {
+    let src = "
+import wibble
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+"
+        ),
+        find_position_of("wibble")
+    );
+}
