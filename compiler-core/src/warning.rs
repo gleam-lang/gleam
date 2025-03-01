@@ -255,6 +255,7 @@ only lowercase alphanumeric characters or underscores."
                     "Rename `{path}` to be valid, or remove this file from the project source."
                 )),
             },
+
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -279,6 +280,7 @@ like this: `[item, ..list]`.",
                     extra_labels: vec![],
                 }),
             },
+
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -302,6 +304,7 @@ like this: `[item, ..list]`.",
                     extra_labels: vec![],
                 }),
             },
+
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -321,6 +324,7 @@ like this: `[item, ..list]`.",
                     extra_labels: vec![],
                 }),
             },
+
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -343,6 +347,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                     extra_labels: vec![],
                 }),
             },
+
             Warning::DeprecatedSyntax {
                 path,
                 src,
@@ -371,6 +376,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                     }),
                 }
             }
+            
             Self::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
