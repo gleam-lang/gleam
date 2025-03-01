@@ -2989,3 +2989,155 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn same_variable_on_either_side_of_equal_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let greeting = "hi"
+  case greeting == greeting {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn same_variable_on_either_side_of_not_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  let greeting = "hi"
+  case greeting != greeting {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn same_field_access_on_either_side_of_equal_equal_operator() {
+    assert_warning!(
+        r#"
+type Wibble {
+  Wibble(a: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1)
+  case wibble.a == wibble.a {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn same_field_access_on_either_side_of_not_equal_operator() {
+    assert_warning!(
+        r#"
+type Wibble {
+  Wibble(a: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(1)
+  case wibble.a != wibble.a {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+    );
+}
+
+#[test]
+fn same_int_on_either_side_of_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  case 10 == 10 {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+);
+}
+
+#[test]
+fn same_int_on_either_side_of_not_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  case 15 != 15 {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+);
+}
+
+#[test]
+fn same_float_on_either_side_of_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  case 1.00 == 1.00 {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+);
+}
+
+#[test]
+fn same_float_on_either_side_of_not_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  case 10.0 != 10.0 {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+);
+}
+
+#[test]
+fn same_string_on_either_side_of_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  case "hi" == "hi" {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+);
+}
+
+#[test]
+fn same_string_on_either_side_of_not_equal_operator() {
+    assert_warning!(
+        r#"
+pub fn main() {
+  case "hi" != "hi" {
+    True -> Nil
+    False -> Nil
+  }
+}
+"#
+);
+}
