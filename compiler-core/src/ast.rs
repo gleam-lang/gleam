@@ -1830,6 +1830,7 @@ pub enum Pattern<Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
+        name_location: SrcSpan,
         name: EcoString,
         arguments: Vec<CallArg<Self>>,
         module: Option<(EcoString, SrcSpan)>,
