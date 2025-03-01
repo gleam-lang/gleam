@@ -905,3 +905,78 @@ pub type Wibble {
         find_position_of("Constructor").to_selection()
     );
 }
+
+#[test]
+fn rename_custom_type_variant_pattern() {
+    assert_rename!(
+        "
+pub type Type {
+  X
+  Y
+}
+
+pub fn main(t) {
+  case t {
+    X -> 0
+    Y -> 0
+  }
+}
+",
+        "Renamed",
+        find_position_of("X").to_selection()
+    );
+}
+
+#[test]
+fn rename_imported_custom_type_variant_pattern() {
+    assert_rename!(
+        (
+            "other",
+            "
+import app
+
+pub fn main(t) {
+  case t {
+    app.X -> 0
+    app.Y -> 0
+  }
+}
+"
+        ),
+        "
+pub type Type {
+  X
+  Y
+}
+",
+        "Renamed",
+        find_position_of("X").to_selection()
+    );
+}
+
+#[test]
+fn rename_imported_unqualified_custom_type_variant_pattern() {
+    assert_rename!(
+        (
+            "other",
+            "
+import app.{X, Y}
+
+pub fn main(t) {
+  case t {
+    X -> 0
+    Y -> 0
+  }
+}
+"
+        ),
+        "
+pub type Type {
+  X
+  Y
+}
+",
+        "Renamed",
+        find_position_of("X").to_selection()
+    );
+}
