@@ -1,0 +1,58 @@
+---
+source: compiler-core/src/package_interface/tests.rs
+expression: "\npub type Wibble {\n  /// This is the Wibble variant. It contains some example data.\n  Wibble(Int)\n  /// This is the Wobble variant. It is a recursive type.\n  Wobble(Wibble)\n}\n"
+---
+{
+  "name": "my_package",
+  "version": "11.10.9-1.wibble+build",
+  "gleam-version-constraint": "1.0.0",
+  "modules": {
+    "my/module": {
+      "documentation": [],
+      "type-aliases": {},
+      "types": {
+        "Wibble": {
+          "documentation": null,
+          "deprecation": null,
+          "parameters": 0,
+          "constructors": [
+            {
+              "documentation": " This is the Wibble variant. It contains some example data.\n",
+              "name": "Wibble",
+              "parameters": [
+                {
+                  "label": null,
+                  "type": {
+                    "kind": "named",
+                    "name": "Int",
+                    "package": "",
+                    "module": "gleam",
+                    "parameters": []
+                  }
+                }
+              ]
+            },
+            {
+              "documentation": " This is the Wobble variant. It is a recursive type.\n",
+              "name": "Wobble",
+              "parameters": [
+                {
+                  "label": null,
+                  "type": {
+                    "kind": "named",
+                    "name": "Wibble",
+                    "package": "my_package",
+                    "module": "my/module",
+                    "parameters": []
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      },
+      "constants": {},
+      "functions": {}
+    }
+  }
+}

@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     ast::{Arg, Function, ModuleConstant, Publicity},
-    type_::{expression::Implementations, Deprecation},
+    type_::{Deprecation, expression::Implementations},
 };
 use ecow::EcoString;
 

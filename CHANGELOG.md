@@ -230,6 +230,21 @@
 
 ### Formatter
 
+- Redundant function captures that take no additional arguments are now
+  rewritten to not use the function capture syntax.
+
+  ```gleam
+  some_module.some_function(_)
+  ```
+
+  This code is reformatted like so:
+
+  ```gleam
+  some_module.some_function
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Bug fixes
 
 - Fixed a bug where division and remainder operators would not work correctly
@@ -244,6 +259,10 @@
   "Pattern match on variable" code actions would not allow to pattern match on a
   private type used in the same module it's defined in.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- Fixed a bug where `gleam export package-interface` would not properly generate
+  the package interface file if some modules were cached.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.8.1 - 2025-02-11
 

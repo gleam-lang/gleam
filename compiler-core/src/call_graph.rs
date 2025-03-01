@@ -5,17 +5,17 @@
 mod into_dependency_order_tests;
 
 use crate::{
+    Result,
     ast::{
         AssignName, BitArrayOption, ClauseGuard, Constant, Pattern, SrcSpan, Statement,
         UntypedClauseGuard, UntypedExpr, UntypedFunction, UntypedModuleConstant, UntypedPattern,
         UntypedStatement,
     },
     type_::Error,
-    Result,
 };
 use itertools::Itertools;
 use petgraph::stable_graph::NodeIndex;
-use petgraph::{stable_graph::StableGraph, Directed};
+use petgraph::{Directed, stable_graph::StableGraph};
 
 #[derive(Debug, Default)]
 struct CallGraphBuilder<'a> {

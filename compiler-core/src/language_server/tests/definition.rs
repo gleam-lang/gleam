@@ -1,5 +1,5 @@
 use lsp_types::{
-    request::GotoTypeDefinitionParams, GotoDefinitionParams, Location, Position, Range, Url,
+    GotoDefinitionParams, Location, Position, Range, Url, request::GotoTypeDefinitionParams,
 };
 
 use super::*;

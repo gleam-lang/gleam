@@ -97,7 +97,7 @@ impl Printer {
 
     fn type_var_doc<'a>(&mut self, type_: &TypeVar) -> Document<'a> {
         match type_ {
-            TypeVar::Link { ref type_, .. } => self.print(type_),
+            TypeVar::Link { type_, .. } => self.print(type_),
             TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => self.generic_type_var(*id),
         }
     }

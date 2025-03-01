@@ -2,12 +2,13 @@ use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
+    Error, Result, Warning,
     ast::{SrcSpan, TypedModule, UntypedModule},
     build::{
+        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
         elixir_libraries::ElixirLibraries,
         native_file_copier::NativeFileCopier,
         package_loader::{CodegenRequired, PackageLoader, StaleTracker},
-        Mode, Module, Origin, Outcome, Package, SourceFingerprint, Target,
     },
     codegen::{Erlang, ErlangApp, JavaScript, TypeScriptDeclarations},
     config::PackageConfig,
@@ -18,7 +19,6 @@ use crate::{
     paths, type_,
     uid::UniqueIdGenerator,
     warning::{TypeWarningEmitter, WarningEmitter},
-    Error, Result, Warning,
 };
 use askama::Template;
 use ecow::EcoString;
@@ -29,6 +29,13 @@ use vec1::Vec1;
 use camino::{Utf8Path, Utf8PathBuf};
 
 use super::{ErlangAppCodegenConfiguration, TargetCodegenConfiguration, Telemetry};
+
+pub struct Compiled {
+    /// The modules which were just compiled
+    pub modules: Vec<Module>,
+    /// The names of all cached modules, which are not present in the `modules` field.
+    pub cached_module_names: Vec<EcoString>,
+}
 
 #[derive(Debug)]
 pub struct PackageCompiler<'a, IO> {
@@ -104,7 +111,7 @@ where
         stale_modules: &mut StaleTracker,
         incomplete_modules: &mut HashSet<EcoString>,
         telemetry: &dyn Telemetry,
-    ) -> Outcome<Vec<Module>, Error> {
+    ) -> Outcome<Compiled, Error> {
         let span = tracing::info_span!("compile", package = %self.config.name.as_str());
         let _enter = span.enter();
 
@@ -145,6 +152,8 @@ where
             Loaded::empty()
         };
 
+        let mut cached_module_names = Vec::new();
+
         // Load the cached modules that have previously been compiled
         for module in loaded.cached.into_iter() {
             // Emit any cached warnings.
@@ -153,6 +162,8 @@ where
             if let Err(e) = self.emit_warnings(warnings, &module) {
                 return e.into();
             }
+
+            cached_module_names.push(module.name.clone());
 
             // Register the cached module so its type information etc can be
             // used for compiling futher modules.
@@ -184,7 +195,16 @@ where
 
         let mut modules = match outcome {
             Outcome::Ok(modules) => modules,
-            Outcome::PartialFailure(_, _) | Outcome::TotalFailure(_) => return outcome,
+            Outcome::PartialFailure(modules, error) => {
+                return Outcome::PartialFailure(
+                    Compiled {
+                        modules,
+                        cached_module_names,
+                    },
+                    error,
+                );
+            }
+            Outcome::TotalFailure(error) => return Outcome::TotalFailure(error),
         };
 
         for mut module in modules.iter_mut() {
@@ -201,7 +221,10 @@ where
             return error.into();
         }
 
-        Outcome::Ok(modules)
+        Outcome::Ok(Compiled {
+            modules,
+            cached_module_names,
+        })
     }
 
     fn compile_erlang_to_beam(
@@ -540,7 +563,7 @@ fn analyse(
                     path: path.clone(),
                     src: code.clone(),
                     errors,
-                })
+                });
             }
         };
     }
