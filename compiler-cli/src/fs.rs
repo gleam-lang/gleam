@@ -4,7 +4,7 @@ use gleam_core::{
     error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
-        FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader,
+        FileSystemWriter, OutputFile, ReadDir, Stdio, WrappedReader, is_native_file_extension,
     },
     language_server::{DownloadDependencies, Locker, MakeLocker},
     manifest::Manifest,
@@ -389,10 +389,14 @@ fn is_gleam_build_dir(e: &ignore::DirEntry) -> bool {
     parent_path.join("gleam.toml").exists()
 }
 
-pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+/// Walks through all Gleam module files in the directory, even if ignored,
+/// except for those in the `build/` directory. Excludes any Gleam files within
+/// invalid module paths, for example if they or a folder they're in contain a
+/// dot or a hyphen within their names.
+pub fn gleam_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
-        .require_git(false)
+        .standard_filters(false)
         .filter_entry(|e| !is_gleam_build_dir(e))
         .build()
         .filter_map(Result::ok)
@@ -402,20 +406,29 @@ pub fn gleam_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = U
         .filter(move |d| is_gleam_path(d, dir))
 }
 
-pub fn native_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
-    Ok(read_dir(dir)?
-        .flat_map(Result::ok)
-        .map(|e| e.into_path())
-        .filter(|path| {
-            let extension = path.extension().unwrap_or_default();
-            matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
-        }))
-}
-
-pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+/// Walks through all native files in the directory, such as `.mjs` and `.erl`,
+/// even if ignored.
+pub fn native_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
-        .require_git(false)
+        .standard_filters(false)
+        .filter_entry(|e| !is_gleam_build_dir(e))
+        .build()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(ignore::DirEntry::into_path)
+        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .filter(|path| {
+            let extension = path.extension().unwrap_or_default();
+            is_native_file_extension(extension)
+        })
+}
+
+/// Walks through all files in the directory, even if ignored.
+pub fn private_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .standard_filters(false)
         .build()
         .filter_map(Result::ok)
         .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
@@ -423,14 +436,20 @@ pub fn private_files_excluding_gitignore(dir: &Utf8Path) -> impl Iterator<Item =
         .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
 }
 
-pub fn erlang_files(dir: &Utf8Path) -> Result<impl Iterator<Item = Utf8PathBuf> + '_> {
-    Ok(read_dir(dir)?
-        .flat_map(Result::ok)
-        .map(|e| e.into_path())
+/// Walks through all `.erl` and `.hrl` files in the directory, even if ignored.
+pub fn erlang_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
+    ignore::WalkBuilder::new(dir)
+        .follow_links(true)
+        .standard_filters(false)
+        .build()
+        .filter_map(Result::ok)
+        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .map(ignore::DirEntry::into_path)
+        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             extension == "erl" || extension == "hrl"
-        }))
+        })
 }
 
 pub fn create_tar_archive(outputs: Vec<OutputFile>) -> Result<Vec<u8>, Error> {
