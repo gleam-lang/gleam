@@ -739,7 +739,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                             [Opt::Utf8 { .. }] => match segment.value.as_ref() {
                                 Pattern::String { value, .. } => {
-                                    for byte in value.as_bytes() {
+                                    for byte in convert_string_escape_chars(value).as_bytes() {
                                         if offset.bits % 8 == 0 {
                                             self.push_byte_at(offset.bits / 8);
                                         } else {
