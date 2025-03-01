@@ -73,7 +73,9 @@ pub fn rename_module_value(
     name_kind: Named,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
-        Default::default(),
+        // We don't care about the actual error here, just whether the name is valid,
+        // so we just use the default span.
+        SrcSpan::default(),
         &params.new_name.as_str().into(),
         name_kind,
     )

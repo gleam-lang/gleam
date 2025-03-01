@@ -901,7 +901,7 @@ impl TypedDefinition {
                         return Some(annotation);
                     }
 
-                    return Some(Located::RecordConstructor(constructor));
+                    return Some(Located::VariantConstructorDefinition(constructor));
                 }
 
                 // Note that the custom type `.location` covers the function
