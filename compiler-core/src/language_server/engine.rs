@@ -304,7 +304,7 @@ where
                 Located::FunctionBody(_) => Some(completer.completion_values()),
 
                 Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_))
-                | Located::RecordConstructor(_) => Some(completer.completion_types()),
+                | Located::VariantConstructorDefinition(_) => Some(completer.completion_types()),
 
                 // If the import completions returned no results and we are in an import then
                 // we should try to provide completions for unqualified values
@@ -635,7 +635,9 @@ where
                     })
                     | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
                 )
-                | Located::RecordConstructor(RecordConstructor { name_location, .. }) => {
+                | Located::VariantConstructorDefinition(RecordConstructor {
+                    name_location, ..
+                }) => {
                     // When we locate a module statement, we don't know where exactly the cursor
                     // is positioned. In this example, we want to rename the first but not the second:
                     // ```gleam
@@ -827,13 +829,15 @@ where
                     &this.compiler.modules,
                     Named::CustomTypeVariant,
                 ),
-                Located::RecordConstructor(RecordConstructor { name, .. }) => rename_module_value(
-                    &params,
-                    &module.name,
-                    name,
-                    &this.compiler.modules,
-                    Named::CustomTypeVariant,
-                ),
+                Located::VariantConstructorDefinition(RecordConstructor { name, .. }) => {
+                    rename_module_value(
+                        &params,
+                        &module.name,
+                        name,
+                        &this.compiler.modules,
+                        Named::CustomTypeVariant,
+                    )
+                }
                 Located::Pattern(Pattern::Constructor {
                     constructor: analyse::Inferred::Known(constructor),
                     ..
@@ -900,7 +904,7 @@ where
                     ))
                 }
                 Located::ModuleStatement(_) => None,
-                Located::RecordConstructor(_) => None,
+                Located::VariantConstructorDefinition(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
                     module: module_name,
