@@ -73,7 +73,7 @@ fn exclude_build_dir() {
     let gleam_file = path.join("b/build/f.gleam").to_path_buf();
     super::write(&gleam_file, "").unwrap();
 
-    let files = super::gleam_files_excluding_gitignore(path).collect::<Vec<_>>();
+    let files = super::gleam_files(path).collect::<Vec<_>>();
 
     assert_eq!(files, vec![gleam_file]);
 }
