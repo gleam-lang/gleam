@@ -1333,19 +1333,15 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
     ) {
         let range = src_span_to_lsp_range(*location, &self.line_numbers);
         if overlaps(self.params.range, range) {
-            if let Some((module_alias, module_location)) = module {
-                if let Some(import) =
-                    self.module
-                        .find_node(module_location.start)
-                        .and_then(|node| {
-                            if let Located::Annotation(_, ty) = node {
-                                if let Some((module, _)) = ty.named_type_name() {
-                                    return self.get_module_import(&module, name, ast::Layer::Type);
-                                }
-                            }
-                            None
-                        })
-                {
+            if let Some((module_alias, _)) = module {
+                if let Some(import) = self.module.find_node(location.end).and_then(|node| {
+                    if let Located::Annotation(_, ty) = node {
+                        if let Some((module, _)) = ty.named_type_name() {
+                            return self.get_module_import(&module, name, ast::Layer::Type);
+                        }
+                    }
+                    None
+                }) {
                     self.qualified_constructor = Some(QualifiedConstructor {
                         import,
                         module_aliased: import.as_name.is_some(),

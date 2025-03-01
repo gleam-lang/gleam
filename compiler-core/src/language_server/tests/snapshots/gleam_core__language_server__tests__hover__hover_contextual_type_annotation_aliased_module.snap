@@ -5,7 +5,7 @@ expression: "\nimport wibble/wobble as wubble\n\nfn main(wibble: wubble.Wibble) 
 import wibble/wobble as wubble
 
 fn main(wibble: wubble.Wibble) {
-                ▔▔▔▔▔↑▔▔▔▔▔▔▔   
+                ▔▔▔▔▔▔▔↑▔▔▔▔▔   
   wibble
 }
 

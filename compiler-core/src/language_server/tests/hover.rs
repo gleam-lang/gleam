@@ -1069,7 +1069,7 @@ fn make_wibble() -> wobble.Wibble { wobble.Wibble }
 
     assert_hover!(
         TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
-        find_position_of("-> wobble").under_char('o')
+        find_position_of("-> wobble.Wibble").under_char('i')
     );
 }
 
@@ -1131,7 +1131,7 @@ fn main(wibble: wubble.Wibble) {
 
     assert_hover!(
         TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
-        find_position_of(": wubble").under_char('e')
+        find_position_of(": wubble.Wibble").under_char('W')
     );
 }
 

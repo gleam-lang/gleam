@@ -2,8 +2,8 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern, SrcSpan,
-        TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        self, ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern,
+        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -323,7 +323,14 @@ where
 
                 Located::Label(_, _) => None,
 
-                Located::ModuleName(_, _) => None,
+                Located::ModuleName {
+                    layer: ast::Layer::Type,
+                    ..
+                } => Some(completer.completion_types()),
+                Located::ModuleName {
+                    layer: ast::Layer::Value,
+                    ..
+                } => Some(completer.completion_values()),
             };
 
             Ok(completions)
@@ -830,7 +837,7 @@ Unused labelled fields:
                 Located::Label(location, type_) => {
                     Some(hover_for_label(location, type_, lines, module))
                 }
-                Located::ModuleName(location, name) => {
+                Located::ModuleName { location, name, .. } => {
                     let Some(module) = this.compiler.modules.get(name) else {
                         return Ok(None);
                     };
