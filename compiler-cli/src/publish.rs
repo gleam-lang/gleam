@@ -470,12 +470,11 @@ fn contents_tarball(
 
 fn project_files(base_path: &Utf8Path) -> Result<Vec<Utf8PathBuf>> {
     let src = base_path.join(Utf8Path::new("src"));
-    let mut files: Vec<Utf8PathBuf> = fs::gleam_files_excluding_gitignore(&src)
-        .chain(fs::native_files_excluding_gitignore(&src))
+    let mut files: Vec<Utf8PathBuf> = fs::gleam_files(&src)
+        .chain(fs::native_files(&src))
         .collect();
     let private = base_path.join(Utf8Path::new("priv"));
-    let mut private_files: Vec<Utf8PathBuf> =
-        fs::private_files_excluding_gitignore(&private).collect();
+    let mut private_files: Vec<Utf8PathBuf> = fs::private_files(&private).collect();
     files.append(&mut private_files);
     let mut add = |path| {
         let path = base_path.join(path);
@@ -789,8 +788,13 @@ fn exported_project_files_test() {
         "README.md",
         "README.txt",
         "gleam.toml",
+        "priv/ignored",
         "priv/wibble",
         "priv/wobble.js",
+        "src/.hidden/hidden_ffi.erl",
+        "src/.hidden/hidden_ffi.mjs",
+        "src/.hidden_ffi.erl",
+        "src/.hidden_ffi.mjs",
         "src/exported.gleam",
         "src/exported_ffi.erl",
         "src/exported_ffi.ex",
@@ -798,6 +802,9 @@ fn exported_project_files_test() {
         "src/exported_ffi.js",
         "src/exported_ffi.mjs",
         "src/exported_ffi.ts",
+        "src/ignored.gleam",
+        "src/ignored_ffi.erl",
+        "src/ignored_ffi.mjs",
         "src/nested/exported.gleam",
         "src/nested/exported_ffi.erl",
         "src/nested/exported_ffi.ex",
@@ -805,6 +812,9 @@ fn exported_project_files_test() {
         "src/nested/exported_ffi.js",
         "src/nested/exported_ffi.mjs",
         "src/nested/exported_ffi.ts",
+        "src/nested/ignored.gleam",
+        "src/nested/ignored_ffi.erl",
+        "src/nested/ignored_ffi.mjs",
     ];
 
     let unexported_project_files = &[
@@ -813,20 +823,9 @@ fn exported_project_files_test() {
         ".gitignore",
         "build/",
         "ignored.txt",
-        "priv/ignored",
-        "src/.hidden/hidden.gleam",
-        "src/.hidden/hidden_ffi.erl",
-        "src/.hidden/hidden_ffi.mjs",
-        "src/.hidden.gleam",
-        "src/.hidden_ffi.erl",
-        "src/.hidden_ffi.mjs",
-        "src/also-ignored.gleam",
-        "src/ignored.gleam",
-        "src/ignored_ffi.mjs",
-        "src/ignored_ffi.erl",
-        "src/nested/ignored.gleam",
-        "src/nested/ignored_ffi.erl",
-        "src/nested/ignored_ffi.mjs",
+        "src/.hidden/hidden.gleam", // Not a valid Gleam module path
+        "src/.hidden.gleam",        // Not a valid Gleam module name
+        "src/also-ignored.gleam",   // Not a valid Gleam module name
         "test/exported_test.gleam",
         "test/exported_test_ffi.erl",
         "test/exported_test_ffi.ex",
@@ -847,6 +846,7 @@ fn exported_project_files_test() {
         "test/nested/ignored.gleam",
         "test/nested/ignored_test_ffi.erl",
         "test/nested/ignored_test_ffi.mjs",
+        "unrelated-file.txt",
     ];
 
     let gitignore = "ignored*
