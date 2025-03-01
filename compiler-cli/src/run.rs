@@ -128,7 +128,7 @@ fn setup(
     //Warn incase the module being run has been as internal
     let warning_emitter = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
 
-    //Warn incase the module being run has been as internal
+    // Warn incase the module being run has been as internal
     if built.is_internal(&module.clone().into()).is_ok() {
         let warning = Warning::InternalMain;
         warning_emitter.emit(warning);
@@ -137,7 +137,7 @@ fn setup(
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
 
-    //Warn incase the main function being run has been deprecated
+    // Warn incase the main function being run has been deprecated
     if main_function.deprecation.is_deprecated() {
         let deprecation_message = match main_function.deprecation {
             gleam_core::type_::Deprecation::Deprecated { message } => Some(message),
