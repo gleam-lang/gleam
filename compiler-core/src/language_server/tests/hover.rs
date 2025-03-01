@@ -1507,6 +1507,30 @@ pub fn wibble() {
 }
 
 #[test]
+fn hover_over_module_with_path() {
+    let src = "
+import wibble/wobble
+
+pub fn main() {
+  wobble.wibble()
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "wibble/wobble",
+            "
+//// The module documentation
+
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wobble.")
+    );
+}
+
+#[test]
 fn hover_over_module_name_in_annotation() {
     let src = "
 import wibble

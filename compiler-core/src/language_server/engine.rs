@@ -834,10 +834,15 @@ Unused labelled fields:
                     let Some(module) = this.compiler.modules.get(name) else {
                         return Ok(None);
                     };
+                    let contents = format!(
+                        "```gleam
+{name}
+```
+{}",
+                        module.ast.documentation.join("\n")
+                    );
                     Some(Hover {
-                        contents: HoverContents::Scalar(MarkedString::String(
-                            module.ast.documentation.join("\n"),
-                        )),
+                        contents: HoverContents::Scalar(MarkedString::String(contents)),
                         range: Some(src_span_to_lsp_range(location, &lines)),
                     })
                 }
