@@ -1,7 +1,7 @@
 use crate::{
     Result,
     analyse::TargetSupport,
-    build::{package_compiler::StdlibPackage, ErlangAppCodegenConfiguration, Module},
+    build::{ErlangAppCodegenConfiguration, Module, package_compiler::StdlibPackage},
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
