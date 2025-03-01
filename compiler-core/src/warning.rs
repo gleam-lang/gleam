@@ -163,7 +163,7 @@ pub enum Warning {
         warning: DeprecatedSyntaxWarning,
     },
     InternalMain,
-    DeprecatedMain{
+    DeprecatedMain {
         message: EcoString,
     },
 }
@@ -224,16 +224,16 @@ pub enum DeprecatedSyntaxWarning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
-            Warning::DeprecatedMain{message}=>Diagnostic{
-                title:"Deprecated main function".into(),
-                text:message.into(),
+            Warning::DeprecatedMain { message } => Diagnostic {
+                title: "Deprecated main function".into(),
+                text: message.into(),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: None,
             },
-            Warning::InternalMain=>Diagnostic{
-                title:"Internal main function".into(),
-                text:"The main function called has been marked internal".into(),
+            Warning::InternalMain => Diagnostic {
+                title: "Internal main function".into(),
+                text: "The main function called has been marked internal".into(),
                 level: diagnostic::Level::Warning,
                 location: None,
                 hint: None,

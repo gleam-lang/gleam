@@ -863,7 +863,7 @@ impl ModuleValueConstructor {
 #[derive(Debug, Clone)]
 pub struct ModuleFunction {
     pub package: EcoString,
-    pub deprecation: Deprecation
+    pub deprecation: Deprecation,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
