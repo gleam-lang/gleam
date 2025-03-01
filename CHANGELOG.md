@@ -264,6 +264,11 @@
   the package interface file if some modules were cached.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where pattern matching using a UTF-8 string constant would not
+  work correctly on the JavaScript target when the string contained escape
+  characters.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.8.1 - 2025-02-11
 
 ### Bug fixes

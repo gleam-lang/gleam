@@ -271,6 +271,17 @@ fn go(x) {
 }
 
 #[test]
+fn match_utf8_with_escape_chars() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<"\"\\\r\n\t\f\u{1f600}">> = x
+}
+"#,
+    );
+}
+
+#[test]
 fn match_utf8() {
     assert_js!(
         r#"
