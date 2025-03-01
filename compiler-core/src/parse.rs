@@ -425,26 +425,27 @@ where
                 }
             }
 
-            if let Some((op_s, t, op_e)) = self.tok0.take() {
-                if let Some(p) = precedence(&t) {
-                    right_after_pipe = t == Token::Pipe;
+            let Some((op_s, t, op_e)) = self.tok0.take() else {
+                break;
+            };
 
-                    // Is Op
-                    self.advance();
-                    last_op_start = op_s;
-                    last_op_end = op_e;
-                    let _ = handle_op(
-                        Some(((op_s, t, op_e), p)),
-                        &mut opstack,
-                        &mut estack,
-                        &do_reduce_expression,
-                    );
-                } else {
-                    // Is not Op
-                    self.tok0 = Some((op_s, t, op_e));
-                    break;
-                }
-            }
+            let Some(p) = precedence(&t) else {
+                self.tok0 = Some((op_s, t, op_e));
+                break;
+            };
+
+            right_after_pipe = t == Token::Pipe;
+
+            // Is Op
+            self.advance();
+            last_op_start = op_s;
+            last_op_end = op_e;
+            let _ = handle_op(
+                Some(((op_s, t, op_e), p)),
+                &mut opstack,
+                &mut estack,
+                &do_reduce_expression,
+            );
         }
 
         Ok(handle_op(
