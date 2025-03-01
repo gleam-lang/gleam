@@ -436,7 +436,11 @@ impl TypeAst {
                 })
                 .or(module.as_ref().and_then(|(name, location)| {
                     if location.contains(byte_index) {
-                        Some(Located::ModuleName(*location, name))
+                        Some(Located::ModuleName {
+                            location: *location,
+                            name,
+                            layer: Layer::Type,
+                        })
                     } else {
                         None
                     }

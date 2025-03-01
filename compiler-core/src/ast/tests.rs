@@ -384,7 +384,14 @@ fn find_node_module_select() {
     };
 
     assert_eq!(expr.find_node(0), None);
-    assert_eq!(expr.find_node(1), None);
+    assert_eq!(
+        expr.find_node(1),
+        Some(Located::ModuleName {
+            location: SrcSpan::new(1, 1),
+            name: &"name".into(),
+            layer: super::Layer::Value
+        })
+    );
     assert_eq!(expr.find_node(2), Some(Located::Expression(&expr)));
     assert_eq!(expr.find_node(3), Some(Located::Expression(&expr)));
 }

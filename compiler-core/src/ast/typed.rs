@@ -216,7 +216,11 @@ impl TypedExpr {
                 if field_span.contains(byte_index) {
                     Some(self.into())
                 } else if module_span.contains(byte_index) {
-                    Some(Located::ModuleName(module_span, module_name))
+                    Some(Located::ModuleName {
+                        location: module_span,
+                        name: module_name,
+                        layer: Layer::Value,
+                    })
                 } else {
                     None
                 }
