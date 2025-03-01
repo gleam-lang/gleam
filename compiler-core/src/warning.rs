@@ -162,7 +162,9 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
-    InternalMain,
+    InternalMain {
+        module: EcoString,
+    },
     DeprecatedMain {
         message: EcoString,
     },
@@ -231,13 +233,16 @@ impl Warning {
                 location: None,
                 hint: None,
             },
-            Warning::InternalMain => Diagnostic {
-                title: "Internal main function".into(),
-                text: "The main function called has been marked internal".into(),
-                level: diagnostic::Level::Warning,
-                location: None,
-                hint: None,
-            },
+            Warning::InternalMain { module } => {
+                let message = format!("The module {} has been marked internal", module);
+                Diagnostic {
+                    title: "Internal main function".into(),
+                    text: message,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            }
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "\
@@ -1014,15 +1019,18 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                     panic_position: unreachable_code_kind,
                 } => {
                     let text = match unreachable_code_kind {
-                                        PanicPosition::PreviousExpression =>
-                                            "This code is unreachable because it comes after a `panic`.",
-                                        PanicPosition::PreviousFunctionArgument =>
-                                            "This argument is unreachable because the previous one always panics. \
-Your code will crash before reaching this point.",
-                                        PanicPosition::LastFunctionArgument =>
-                                            "This function call is unreachable because its last argument always panics. \
-Your code will crash before reaching this point.",
-                                    };
+                        PanicPosition::PreviousExpression => {
+                            "This code is unreachable because it comes after a `panic`."
+                        }
+                        PanicPosition::PreviousFunctionArgument => {
+                            "This argument is unreachable because the previous one always panics. \
+Your code will crash before reaching this point."
+                        }
+                        PanicPosition::LastFunctionArgument => {
+                            "This function call is unreachable because its last argument always panics. \
+Your code will crash before reaching this point."
+                        }
+                    };
 
                     Diagnostic {
                         title: "Unreachable code".into(),
