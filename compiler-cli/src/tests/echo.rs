@@ -21,7 +21,11 @@ fn run_and_produce_pretty_snapshot(
         .map(ProjectPaths::new)
         .expect("project paths");
 
-    let output = run_and_capture_output(&paths, "main", target, runtime);
+    let output = run_and_capture_output(&paths, "main", target, runtime)
+        // Echo's output includes paths, so we need this to make sure tests do
+        // not fail when running on Windows.
+        .replace("src\\", "src/");
+
     let main_module_content =
         fs::read(paths.src_directory().join("main.gleam")).expect("read main module");
 
