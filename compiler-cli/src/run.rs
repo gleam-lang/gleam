@@ -9,10 +9,15 @@ use gleam_core::{
     error::Error,
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
-    type_::ModuleFunction, warning::WarningEmitter, Warning,
+    type_::ModuleFunction,
+    warning::WarningEmitter,
+    Warning,
 };
 
-use crate::{config::PackageKind, fs::{ConsoleWarningEmitter, ProjectIO}};
+use crate::{
+    config::PackageKind,
+    fs::{ConsoleWarningEmitter, ProjectIO},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -136,15 +141,16 @@ pub fn setup(
 
     //Warn incase the main function being run has been deprecated
     if main_function.deprecation.is_deprecated() {
-        let deprecation_message=match main_function.deprecation{
+        let deprecation_message = match main_function.deprecation {
             gleam_core::type_::Deprecation::Deprecated { message } => Some(message),
-            gleam_core::type_::Deprecation::NotDeprecated=>None
+            gleam_core::type_::Deprecation::NotDeprecated => None,
         };
-        let warning = Warning::DeprecatedMain{message: deprecation_message.unwrap()};
-        warning_emitter.emit(warning);
+        if let Some(message) = deprecation_message {
+            let warning = Warning::DeprecatedMain { message };
+            warning_emitter.emit(warning);
+        }
     }
 
-    
     // Don't exit on ctrl+c as it is used by child erlang shell
     ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 

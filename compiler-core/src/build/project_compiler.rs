@@ -97,7 +97,7 @@ impl Built {
             .unwrap_or(Version::new(0, 1, 0))
     }
 
-    pub fn is_internal(&self,module: &EcoString)-> Result<bool, Error> {
+    pub fn is_internal(&self, module: &EcoString) -> Result<bool, Error> {
         match self.module_interfaces.get(module) {
             Some(module_data) => Ok(module_data.is_internal),
             None => Err(Error::ModuleDoesNotExist {
@@ -105,7 +105,7 @@ impl Built {
                 suggestion: None,
             }),
         }
-   }
+    }
 }
 
 #[derive(Debug)]
