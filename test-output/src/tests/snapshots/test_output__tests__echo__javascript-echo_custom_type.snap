@@ -1,5 +1,5 @@
 ---
-source: compiler-cli/src/tests/echo.rs
+source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
@@ -18,8 +18,8 @@ pub fn main() {
 
 --- gleam run output ----------------
 [90msrc/main.gleam:8[39m
-Wibble(1, "hello")
+Wibble(a: 1, b: "hello")
 [90msrc/main.gleam:9[39m
-Wobble([1.0, 1.1])
+Wobble(a: [1, 1.1])
 [90msrc/main.gleam:10[39m
 Woo

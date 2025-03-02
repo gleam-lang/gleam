@@ -1,0 +1,15 @@
+[package]
+name = "test-output"
+version = "1.8.1"
+authors = ["Louis Pilfold <louis@lpil.uk>"]
+edition = "2024"
+license = "Apache-2.0"
+
+[dependencies]
+gleam-core = { path = "../compiler-core" }
+gleam-cli = { path = "../compiler-cli" }
+test-helpers-rs = { path = "../test-helpers-rs" }
+camino = { workspace = true, features = ["serde1"] }
+
+[dev-dependencies]
+insta.workspace = true
