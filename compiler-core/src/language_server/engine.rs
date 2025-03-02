@@ -27,7 +27,7 @@ use lsp_types::{
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -81,7 +81,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
 
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
-    hex_deps: std::collections::HashSet<EcoString>,
+    hex_deps: HashSet<EcoString>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -739,10 +739,15 @@ where
                     Some(hover_for_module_constant(constant, lines, module))
                 }
                 Located::ModuleStatement(Definition::Import(import)) => {
-                    let Some(module) = this.compiler.modules.get(&import.module) else {
+                    let Some(module) = this.compiler.get_module_interface(&import.module) else {
                         return Ok(None);
                     };
-                    Some(hover_for_module(module, import.location, &lines))
+                    Some(hover_for_module(
+                        module,
+                        import.location,
+                        &lines,
+                        &this.hex_deps,
+                    ))
                 }
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
@@ -844,10 +849,10 @@ Unused labelled fields:
                     Some(hover_for_label(location, type_, lines, module))
                 }
                 Located::ModuleName { location, name, .. } => {
-                    let Some(module) = this.compiler.modules.get(name) else {
+                    let Some(module) = this.compiler.get_module_interface(name) else {
                         return Ok(None);
                     };
-                    Some(hover_for_module(module, location, &lines))
+                    Some(hover_for_module(module, location, &lines, &this.hex_deps))
                 }
             })
         })
@@ -1155,7 +1160,7 @@ fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: &Module,
-    hex_deps: &std::collections::HashSet<EcoString>,
+    hex_deps: &HashSet<EcoString>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
@@ -1207,17 +1212,27 @@ fn hover_for_imported_value(
     }
 }
 
-fn hover_for_module(module: &Module, location: SrcSpan, line_numbers: &LineNumbers) -> Hover {
-    let documentation = module.ast.documentation.join("\n");
+fn hover_for_module(
+    module: &ModuleInterface,
+    location: SrcSpan,
+    line_numbers: &LineNumbers,
+    hex_deps: &HashSet<EcoString>,
+) -> Hover {
+    let documentation = module.documentation.join("\n");
     let name = &module.name;
 
-    let link_section = format_hexdocs_link_section(&module.ast.type_info.package, name, None);
+    let link_section = if hex_deps.contains(&module.package) {
+        format_hexdocs_link_section(&module.package, name, None)
+    } else {
+        String::new()
+    };
 
     let contents = format!(
         "```gleam
 {name}
 ```
-{documentation}{link_section}",
+{documentation}
+{link_section}",
     );
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
@@ -1472,7 +1487,7 @@ fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
     ast: &TypedModule,
-    hex_deps: &std::collections::HashSet<EcoString>,
+    hex_deps: &HashSet<EcoString>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
         Definition::Import(p) if p.module == module_name && hex_deps.contains(&p.package) => {
