@@ -131,7 +131,7 @@ jobs:
         uses: clechasseur/rs-cargo@v3
         with:
           command: install
-          args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked --force"
+          args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
           tool: ${{ matrix.cargo-tool }}
         if: ${{ matrix.run-integration-tests }}
 
