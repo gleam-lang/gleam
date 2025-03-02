@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    ModuleInterface, Opaque, Type, TypeConstructor, TypeValueConstructor,
+    ModuleInterface, Opaque, References, Type, TypeConstructor, TypeValueConstructor,
     TypeValueConstructorField, TypeVar, TypeVariantConstructors, ValueConstructor,
     ValueConstructorVariant,
 };
@@ -245,6 +245,7 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
         type_aliases: HashMap::new(),
         documentation: Vec::new(),
         contains_echo: false,
+        references: References::default(),
     };
 
     for t in PreludeType::iter() {

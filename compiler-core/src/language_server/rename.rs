@@ -8,10 +8,10 @@ use crate::{
     ast::{self, SrcSpan, TypedModule, visit::Visit},
     build::Module,
     line_numbers::LineNumbers,
-    type_::{ValueConstructor, ValueConstructorVariant, error::Named},
+    type_::{ModuleInterface, ValueConstructor, ValueConstructorVariant, error::Named},
 };
 
-use super::TextEdits;
+use super::{TextEdits, compiler::ModuleSourceInformation};
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     let mut changes = HashMap::new();
@@ -69,7 +69,8 @@ pub fn rename_module_value(
     params: &RenameParams,
     module_name: &EcoString,
     name: &EcoString,
-    modules: &HashMap<EcoString, Module>,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
     name_kind: Named,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
@@ -91,11 +92,14 @@ pub fn rename_module_value(
     };
 
     for module in modules.values() {
-        if &module.name == module_name
-            || module.ast.references.imported_modules.contains(module_name)
-        {
+        if &module.name == module_name || module.references.imported_modules.contains(module_name) {
+            let Some(source_information) = sources.get(&module.name) else {
+                continue;
+            };
+
             rename_references_in_module(
                 module,
+                source_information,
                 &mut workspace_edit,
                 module_name,
                 name,
@@ -108,14 +112,14 @@ pub fn rename_module_value(
 }
 
 fn rename_references_in_module(
-    module: &Module,
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
     workspace_edit: &mut WorkspaceEdit,
     module_name: &EcoString,
     name: &EcoString,
     new_name: String,
 ) {
     let Some(references) = module
-        .ast
         .references
         .value_references
         .get(&(module_name.clone(), name.clone()))
@@ -123,14 +127,13 @@ fn rename_references_in_module(
         return;
     };
 
-    let line_numbers = LineNumbers::new(&module.code);
-    let mut edits = TextEdits::new(&line_numbers);
+    let mut edits = TextEdits::new(&source_information.line_numbers);
 
     references
         .iter()
         .for_each(|location| edits.replace(*location, new_name.clone()));
 
-    let Some(uri) = url_from_path(module.input_path.as_str()) else {
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
         return;
     };
 
