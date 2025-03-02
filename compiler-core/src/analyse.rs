@@ -22,8 +22,8 @@ use crate::{
     parse::SpannedString,
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
-        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
-        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
+        TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, Warning,
         environment::*,
         error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
@@ -338,6 +338,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 minimum_required_version: self.minimum_required_version,
                 type_aliases,
                 documentation,
+                references: References {
+                    imported_modules: env.imported_modules.into_keys().collect(),
+                    value_references: env.references,
+                },
             },
             names: type_names,
         };
@@ -405,6 +409,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 location,
                 literal: typed_expr.clone(),
                 module: self.module_name.clone(),
+                name: name.clone(),
                 implementations,
             },
             type_: type_.clone(),
@@ -418,6 +423,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Deprecation::NotDeprecated,
         );
         environment.insert_module_value(name.clone(), variant);
+
+        environment.register_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name_location,
+        );
 
         if publicity.is_private() {
             environment.init_usage(
@@ -630,6 +641,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             preregistered_type.clone(),
             publicity,
             deprecation.clone(),
+        );
+
+        environment.register_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            name_location,
         );
 
         Definition::Function(Function {
@@ -1075,6 +1092,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     type_: type_.clone(),
                     variant: constructor_info.clone(),
                 },
+            );
+
+            environment.register_reference(
+                environment.current_module.clone(),
+                constructor.name.clone(),
+                constructor.name_location,
             );
 
             if value_constructor_publicity.is_private() {
@@ -1622,6 +1645,7 @@ fn generalise_module_constant(
         literal: *value.clone(),
         module: module_name.clone(),
         implementations,
+        name: name.clone(),
     };
     environment.insert_variable(
         name.clone(),

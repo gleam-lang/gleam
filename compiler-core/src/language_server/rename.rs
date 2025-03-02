@@ -8,10 +8,10 @@ use crate::{
     ast::{self, SrcSpan, TypedModule, visit::Visit},
     build::Module,
     line_numbers::LineNumbers,
-    type_::{ValueConstructor, ValueConstructorVariant, error::Named},
+    type_::{ModuleInterface, ValueConstructor, ValueConstructorVariant, error::Named},
 };
 
-use super::TextEdits;
+use super::{TextEdits, compiler::ModuleSourceInformation};
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     let mut changes = HashMap::new();
@@ -63,6 +63,107 @@ pub fn rename_local_variable(
         .for_each(|location| edits.replace(location, params.new_name.clone()));
 
     Some(workspace_edit(uri, edits.edits))
+}
+
+pub fn rename_module_value(
+    params: &RenameParams,
+    module_name: &EcoString,
+    name: &EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+    name_kind: Named,
+) -> Option<WorkspaceEdit> {
+    if name::check_name_case(
+        // We don't care about the actual error here, just whether the name is valid,
+        // so we just use the default span.
+        SrcSpan::default(),
+        &params.new_name.as_str().into(),
+        name_kind,
+    )
+    .is_err()
+    {
+        return None;
+    }
+
+    let mut workspace_edit = WorkspaceEdit {
+        changes: Some(HashMap::new()),
+        document_changes: None,
+        change_annotations: None,
+    };
+
+    for module in modules.values() {
+        if &module.name == module_name || module.references.imported_modules.contains(module_name) {
+            let Some(source_information) = sources.get(&module.name) else {
+                continue;
+            };
+
+            rename_references_in_module(
+                module,
+                source_information,
+                &mut workspace_edit,
+                module_name,
+                name,
+                params.new_name.clone(),
+            );
+        }
+    }
+
+    Some(workspace_edit)
+}
+
+fn rename_references_in_module(
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+    workspace_edit: &mut WorkspaceEdit,
+    module_name: &EcoString,
+    name: &EcoString,
+    new_name: String,
+) {
+    let Some(references) = module
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))
+    else {
+        return;
+    };
+
+    let mut edits = TextEdits::new(&source_information.line_numbers);
+
+    references
+        .iter()
+        .for_each(|location| edits.replace(*location, new_name.clone()));
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return;
+    };
+
+    _ = workspace_edit
+        .changes
+        .as_mut()
+        .map(|changes| changes.insert(uri, edits.edits));
+}
+
+fn url_from_path(path: &str) -> Option<Url> {
+    // The targets for which `from_file_path` is defined
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
+    let uri = Url::from_file_path(path).ok();
+
+    #[cfg(not(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    )))]
+    let uri = Url::parse(&format!("file://{path}")).ok();
+
+    uri
 }
 
 pub fn find_variable_references(

@@ -14,14 +14,14 @@ use crate::{
     line_numbers::LineNumbers,
     schema_capnp::{self as schema, *},
     type_::{
-        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor, Type,
-        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
-        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
-        expression::Implementations,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor,
+        References, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, expression::Implementations,
     },
     uid::UniqueIdGenerator,
 };
-use std::{collections::HashMap, io::BufRead, sync::Arc};
+use std::{collections::HashMap, collections::HashSet, io::BufRead, sync::Arc};
 
 macro_rules! read_vec {
     ($reader:expr, $self:expr, $method:ident) => {{
@@ -86,6 +86,7 @@ impl ModuleDecoder {
             minimum_required_version: self.version(&reader.get_required_version()?),
             type_aliases: read_hashmap!(reader.get_type_aliases()?, self, type_alias_constructor),
             documentation: self.string_list(reader.get_documentation()?)?,
+            references: self.references(reader.get_references()?)?,
         })
     }
 
@@ -105,6 +106,35 @@ impl ModuleDecoder {
         reader
             .to_str()
             .map_err(|_| capnp::Error::failed("String contains non-utf8 characters".into()).into())
+    }
+
+    fn references(&self, reader: references::Reader<'_>) -> Result<References> {
+        Ok(References {
+            imported_modules: self.string_set(reader.get_imported_modules()?)?,
+            value_references: self.value_references(reader.get_value_references()?)?,
+        })
+    }
+
+    fn string_set(&self, reader: text_list::Reader<'_>) -> Result<HashSet<EcoString>> {
+        let mut set = HashSet::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            let _ = set.insert(self.string(reader?)?);
+        }
+        Ok(set)
+    }
+
+    fn value_references(
+        &self,
+        reader: capnp::struct_list::Reader<'_, value_reference::Owned>,
+    ) -> Result<HashMap<(EcoString, EcoString), Vec<SrcSpan>>> {
+        let mut map = HashMap::with_capacity(reader.len() as usize);
+        for prop in reader.into_iter() {
+            let module = self.string(prop.get_module()?)?;
+            let name = self.string(prop.get_name()?)?;
+            let references = read_vec!(prop.get_references()?, self, src_span);
+            let _ = map.insert((module, name), references);
+        }
+        Ok(map)
     }
 
     fn type_constructor(
@@ -526,6 +556,7 @@ impl ModuleDecoder {
             location: self.src_span(&reader.get_location()?)?,
             literal: self.constant(&reader.get_literal()?)?,
             module: self.string(reader.get_module()?)?,
+            name: self.string(reader.get_name()?)?,
             implementations: self.implementations(reader.get_implementations()?),
         })
     }

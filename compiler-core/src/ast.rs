@@ -879,20 +879,21 @@ impl TypedDefinition {
 
             Definition::CustomType(custom) => {
                 // Check if location is within the type of one of the arguments of a constructor.
-                if let Some(annotation) = custom
+                if let Some(constructor) = custom
                     .constructors
                     .iter()
                     .find(|constructor| constructor.location.contains(byte_index))
-                    .and_then(|constructor| {
-                        constructor
-                            .arguments
-                            .iter()
-                            .find(|arg| arg.location.contains(byte_index))
-                    })
-                    .filter(|arg| arg.location.contains(byte_index))
-                    .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
                 {
-                    return Some(annotation);
+                    if let Some(annotation) = constructor
+                        .arguments
+                        .iter()
+                        .find(|arg| arg.location.contains(byte_index))
+                        .and_then(|arg| arg.ast.find_node(byte_index, arg.type_.clone()))
+                    {
+                        return Some(annotation);
+                    }
+
+                    return Some(Located::VariantConstructorDefinition(constructor));
                 }
 
                 // Note that the custom type `.location` covers the function
@@ -1064,6 +1065,8 @@ impl<A, B, C, E> Definition<A, B, C, E> {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct UnqualifiedImport {
     pub location: SrcSpan,
+    /// The location excluding the potential `as ...` clause, or the `type` keyword
+    pub imported_name_location: SrcSpan,
     pub name: EcoString,
     pub as_name: Option<EcoString>,
 }
@@ -1806,6 +1809,7 @@ pub enum Pattern<Type> {
     /// The constructor for a custom type. Starts with an uppercase letter.
     Constructor {
         location: SrcSpan,
+        name_location: SrcSpan,
         name: EcoString,
         arguments: Vec<CallArg<Self>>,
         module: Option<(EcoString, SrcSpan)>,
