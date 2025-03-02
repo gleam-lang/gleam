@@ -785,7 +785,6 @@ fn infer_module_type_retention_test() {
         definitions: vec![],
         type_info: (),
         names: Default::default(),
-        references: Default::default(),
     };
     let direct_dependencies = HashMap::from_iter(vec![]);
     let ids = UniqueIdGenerator::new();
@@ -885,6 +884,7 @@ fn infer_module_type_retention_test() {
             minimum_required_version: Version::new(0, 1, 0),
             type_aliases: HashMap::new(),
             documentation: Vec::new(),
+            references: References::default()
         }
     );
 }

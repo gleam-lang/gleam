@@ -32,6 +32,18 @@ struct Module {
   requiredVersion @9 :Version;
   typeAliases @10 :List(Property(TypeAliasConstructor));
   documentation @11 :List(Text);
+  references @12 :References;
+}
+
+struct References {
+  importedModules @0 :List(Text);
+  valueReferences @1 :List(ValueReference);
+}
+
+struct ValueReference {
+  module @0 :Text;
+  name @1 :Text;
+  references @2 :List(SrcSpan);
 }
 
 struct TypeAliasConstructor {
