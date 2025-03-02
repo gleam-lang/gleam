@@ -33,6 +33,18 @@ struct Module {
   typeAliases @10 :List(Property(TypeAliasConstructor));
   documentation @11 :List(Text);
   containsEcho @12 :Bool;
+  references @13 :References;
+}
+
+struct References {
+  importedModules @0 :List(Text);
+  valueReferences @1 :List(ValueReference);
+}
+
+struct ValueReference {
+  module @0 :Text;
+  name @1 :Text;
+  references @2 :List(SrcSpan);
 }
 
 struct TypeAliasConstructor {

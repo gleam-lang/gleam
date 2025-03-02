@@ -243,7 +243,6 @@ where
             type_info: (),
             definitions,
             names: Default::default(),
-            references: Default::default(),
         };
         Ok(Parsed {
             module,
