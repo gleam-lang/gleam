@@ -91,18 +91,15 @@ impl<'module> Generator<'module> {
     }
 
     pub fn local_var(&mut self, name: &EcoString) -> EcoString {
-        let name = match self.current_scope_vars.get(name) {
+        match self.current_scope_vars.get(name) {
             None => {
                 let _ = self.current_scope_vars.insert(name.clone(), 0);
-                maybe_escape_identifier(name)
                 maybe_escape_identifier(name)
             }
             Some(0) => maybe_escape_identifier(name),
             Some(n) if name == "$" => eco_format!("${n}"),
             Some(n) => eco_format!("{name}${n}"),
-        };
-
-        name
+        }
     }
 
     pub fn next_local_var(&mut self, name: &EcoString) -> EcoString {
@@ -1150,7 +1147,6 @@ impl<'module> Generator<'module> {
         match constructor {
             ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. } => {
                 docvec!["$", module, ".", maybe_escape_identifier(label)]
-                docvec!["$", module, ".", maybe_escape_identifier(label)]
             }
 
             ModuleValueConstructor::Record {
@@ -1272,7 +1268,9 @@ impl<'module> Generator<'module> {
             .src_path
             .strip_prefix(self.project_root)
             .unwrap_or(self.src_path)
-            .as_str();
+            .as_str()
+            .replace("\\", "\\\\");
+
         let relative_path_doc = EcoString::from(relative_path).to_doc();
 
         let echo_argument = call_arguments(vec![
@@ -1530,12 +1528,10 @@ pub(crate) fn constant_expression<'a>(
         Constant::Var { name, module, .. } => Ok({
             match module {
                 None => maybe_escape_identifier(name).to_doc(),
-                None => maybe_escape_identifier(name).to_doc(),
                 Some((module, _)) => {
                     // JS keywords can be accessed here, but we must escape anyway
                     // as we escape when exporting such names in the first place,
                     // and the imported name has to match the exported name.
-                    docvec!["$", module, ".", maybe_escape_identifier(name)]
                     docvec!["$", module, ".", maybe_escape_identifier(name)]
                 }
             }

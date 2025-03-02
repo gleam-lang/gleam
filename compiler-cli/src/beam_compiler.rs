@@ -113,7 +113,7 @@ impl BeamCompiler {
         tracing::trace!(escript_path=?escript_path, "spawn_beam_compiler");
 
         let mut process = std::process::Command::new("escript")
-            .args([escript_path])
+            .arg(escript_path)
             .stdin(std::process::Stdio::piped())
             .stdout(std::process::Stdio::piped())
             .spawn()

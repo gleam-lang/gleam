@@ -470,9 +470,7 @@ impl<'a> Generator<'a> {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
                 maybe_escape_identifier(n).to_doc()
-                maybe_escape_identifier(n).to_doc()
             });
-            let name = maybe_escape_identifier(&i.name).to_doc();
             let name = maybe_escape_identifier(&i.name).to_doc();
             Member { name, alias }
         });
@@ -523,7 +521,6 @@ impl<'a> Generator<'a> {
 
         Ok(docvec![
             head,
-            maybe_escape_identifier(name),
             maybe_escape_identifier(name),
             " = ",
             document,
@@ -816,7 +813,6 @@ fn maybe_escape_identifier(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
         EcoString::from(word)
     } else {
-        escape_identifier(word)
         escape_identifier(word)
     }
 }
