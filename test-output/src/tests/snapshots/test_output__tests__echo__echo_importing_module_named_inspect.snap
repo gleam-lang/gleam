@@ -11,5 +11,5 @@ pub fn main() {
 
 
 --- gleam run output ----------------
-[90mpath_to_main.gleam:4[39m
+[90msrc/main.gleam:4[39m
 Nil

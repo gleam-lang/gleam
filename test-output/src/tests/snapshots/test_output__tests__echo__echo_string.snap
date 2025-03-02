@@ -12,9 +12,9 @@ string"
 
 
 --- gleam run output ----------------
-[90mpath_to_main.gleam:2[39m
+[90msrc/main.gleam:2[39m
 "hello world"
-[90mpath_to_main.gleam:3[39m
+[90msrc/main.gleam:3[39m
 "multiline\nstring"
-[90mpath_to_main.gleam:5[39m
+[90msrc/main.gleam:5[39m
 "string with\t\r\nescaped chars"

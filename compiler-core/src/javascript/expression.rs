@@ -1270,7 +1270,9 @@ impl<'module> Generator<'module> {
             .src_path
             .strip_prefix(self.project_root)
             .unwrap_or(self.src_path)
-            .as_str();
+            .as_str()
+            .replace("\\", "\\\\");
+
         let relative_path_doc = EcoString::from(relative_path).to_doc();
 
         let echo_argument = call_arguments(vec![
