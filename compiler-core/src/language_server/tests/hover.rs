@@ -1490,7 +1490,7 @@ pub fn main() {
 }
 ";
     assert_hover!(
-        TestProject::for_source(src).add_module(
+        TestProject::for_source(src).add_hex_module(
             "wibble",
             "
 //// This is the wibble module.
@@ -1516,7 +1516,7 @@ pub fn main() {
 }
 ";
     assert_hover!(
-        TestProject::for_source(src).add_module(
+        TestProject::for_source(src).add_hex_module(
             "wibble/wobble",
             "
 //// The module documentation
@@ -1540,7 +1540,7 @@ pub fn main(w: wibble.Wibble) {
 }
 ";
     assert_hover!(
-        TestProject::for_source(src).add_module(
+        TestProject::for_source(src).add_hex_module(
             "wibble",
             "
 //// This is the wibble module.
@@ -1556,6 +1556,24 @@ pub type Wibble
 
 #[test]
 fn hover_over_imported_module() {
+    let src = "
+import wibble
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+"
+        ),
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn no_hexdocs_link_when_hovering_over_local_module() {
     let src = "
 import wibble
 ";

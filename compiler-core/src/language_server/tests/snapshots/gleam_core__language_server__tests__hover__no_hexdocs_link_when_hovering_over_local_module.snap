@@ -9,6 +9,6 @@ import wibble
 ----- Hover content -----
 Scalar(
     String(
-        "```gleam\nwibble\n```\n This is the wibble module.\n Here is some documentation about it.\n This module does stuff\n\nView on [HexDocs](https://hexdocs.pm/hex/wibble.html)",
+        "```gleam\nwibble\n```\n This is the wibble module.\n Here is some documentation about it.\n This module does stuff\n",
     ),
 )
