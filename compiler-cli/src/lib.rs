@@ -479,7 +479,7 @@ enum Docs {
     },
 }
 
-fn main() {
+pub fn main() {
     initialise_logger();
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();
