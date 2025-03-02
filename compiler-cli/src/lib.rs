@@ -60,7 +60,7 @@ mod docs;
 mod export;
 mod fix;
 mod format;
-mod fs;
+pub mod fs;
 mod hex;
 mod http;
 mod lsp;
@@ -68,10 +68,8 @@ mod new;
 mod panic;
 mod publish;
 mod remove;
-mod run;
+pub mod run;
 mod shell;
-#[cfg(test)]
-mod tests;
 
 use config::root_config;
 use dependencies::UseManifest;

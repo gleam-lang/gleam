@@ -7,7 +7,7 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-use crate::{
+use gleam_cli::{
     fs,
     run::{self, Which},
 };
@@ -17,9 +17,8 @@ fn run_and_produce_pretty_snapshot(
     runtime: Option<Runtime>,
     project_directory: Utf8PathBuf,
 ) -> String {
-    let paths = fs::get_project_root(project_directory)
-        .map(ProjectPaths::new)
-        .expect("project paths");
+    let project_root = fs::get_project_root(project_directory).expect("project root");
+    let paths = ProjectPaths::new(project_root);
 
     let output = run_and_capture_output(&paths, "main", target, runtime)
         // Echo's output includes paths, so we need this to make sure tests do

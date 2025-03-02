@@ -45,7 +45,7 @@ pub fn command(
     std::process::exit(status);
 }
 
-pub(crate) fn setup(
+pub fn setup(
     paths: &ProjectPaths,
     arguments: Vec<String>,
     target: Option<Target>,

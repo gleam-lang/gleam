@@ -1,5 +1,5 @@
 ---
-source: compiler-cli/src/tests/echo.rs
+source: test-output/src/tests/echo.rs
 expression: output
 ---
 --- main.gleam ----------------------
