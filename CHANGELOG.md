@@ -228,6 +228,10 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- The Language Server now shows module documentation when hovering over a module
+  name.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 - Redundant function captures that take no additional arguments are now

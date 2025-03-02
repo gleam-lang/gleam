@@ -193,7 +193,7 @@ where
             incomplete_modules,
         );
 
-        let mut modules = match outcome {
+        let modules = match outcome {
             Outcome::Ok(modules) => modules,
             Outcome::PartialFailure(modules, error) => {
                 return Outcome::PartialFailure(
@@ -206,10 +206,6 @@ where
             }
             Outcome::TotalFailure(error) => return Outcome::TotalFailure(error),
         };
-
-        for mut module in modules.iter_mut() {
-            module.attach_doc_and_module_comments();
-        }
 
         tracing::debug!("performing_code_generation");
 
@@ -515,12 +511,8 @@ fn analyse(
             Outcome::Ok(ast) => {
                 // Module has compiled successfully. Make sure it isn't marked as incomplete.
                 let _ = incomplete_modules.remove(&name.clone());
-                // Register the types from this module so they can be imported into
-                // other modules.
-                let _ = module_types.insert(name.clone(), ast.type_info.clone());
-                // Register the successfully type checked module data so that it can be
-                // used for code generation and in the language server.
-                modules.push(Module {
+
+                let mut module = Module {
                     dependencies,
                     origin,
                     extra,
@@ -529,7 +521,15 @@ fn analyse(
                     code,
                     ast,
                     input_path: path,
-                });
+                };
+                module.attach_doc_and_module_comments();
+
+                // Register the types from this module so they can be imported into
+                // other modules.
+                let _ = module_types.insert(module.name.clone(), module.ast.type_info.clone());
+                // Register the successfully type checked module data so that it can be
+                // used for code generation and in the language server.
+                modules.push(module);
             }
 
             Outcome::PartialFailure(ast, errors) => {

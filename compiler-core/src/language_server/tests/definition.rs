@@ -791,3 +791,19 @@ pub fn main() {
         find_position_of("w: Wibble").under_char('i')
     );
 }
+
+#[test]
+fn goto_definition_module() {
+    let code = "
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+}
+";
+
+    assert_goto!(
+        TestProject::for_source(code).add_module("wibble", "pub fn wibble() {}"),
+        find_position_of("wibble.").under_char('i')
+    );
+}

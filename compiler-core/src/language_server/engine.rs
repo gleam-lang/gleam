@@ -2,8 +2,8 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern, SrcSpan,
-        TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        self, ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern,
+        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -27,7 +27,7 @@ use lsp_types::{
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -81,7 +81,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
 
     /// Used to know if to show the "View on HexDocs" link
     /// when hovering on an imported value
-    hex_deps: std::collections::HashSet<EcoString>,
+    hex_deps: HashSet<EcoString>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -322,6 +322,15 @@ where
                 Located::Annotation(_, _) => Some(completer.completion_types()),
 
                 Located::Label(_, _) => None,
+
+                Located::ModuleName {
+                    layer: ast::Layer::Type,
+                    ..
+                } => Some(completer.completion_types()),
+                Located::ModuleName {
+                    layer: ast::Layer::Value,
+                    ..
+                } => Some(completer.completion_values()),
             };
 
             Ok(completions)
@@ -729,6 +738,17 @@ where
                 Located::ModuleStatement(Definition::ModuleConstant(constant)) => {
                     Some(hover_for_module_constant(constant, lines, module))
                 }
+                Located::ModuleStatement(Definition::Import(import)) => {
+                    let Some(module) = this.compiler.get_module_interface(&import.module) else {
+                        return Ok(None);
+                    };
+                    Some(hover_for_module(
+                        module,
+                        import.location,
+                        &lines,
+                        &this.hex_deps,
+                    ))
+                }
                 Located::ModuleStatement(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
@@ -827,6 +847,12 @@ Unused labelled fields:
                 }
                 Located::Label(location, type_) => {
                     Some(hover_for_label(location, type_, lines, module))
+                }
+                Located::ModuleName { location, name, .. } => {
+                    let Some(module) = this.compiler.get_module_interface(name) else {
+                        return Ok(None);
+                    };
+                    Some(hover_for_module(module, location, &lines, &this.hex_deps))
                 }
             })
         })
@@ -1134,7 +1160,7 @@ fn hover_for_expression(
     expression: &TypedExpr,
     line_numbers: LineNumbers,
     module: &Module,
-    hex_deps: &std::collections::HashSet<EcoString>,
+    hex_deps: &HashSet<EcoString>,
 ) -> Hover {
     let documentation = expression.get_documentation().unwrap_or_default();
 
@@ -1169,7 +1195,7 @@ fn hover_for_imported_value(
     let documentation = value.get_documentation().unwrap_or_default();
 
     let link_section = hex_module_imported_from.map_or("".to_string(), |m| {
-        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), name)
+        format_hexdocs_link_section(m.package.as_str(), m.name.as_str(), Some(name))
     });
 
     // Show the type of the hovered node to the user
@@ -1183,6 +1209,34 @@ fn hover_for_imported_value(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
+    }
+}
+
+fn hover_for_module(
+    module: &ModuleInterface,
+    location: SrcSpan,
+    line_numbers: &LineNumbers,
+    hex_deps: &HashSet<EcoString>,
+) -> Hover {
+    let documentation = module.documentation.join("\n");
+    let name = &module.name;
+
+    let link_section = if hex_deps.contains(&module.package) {
+        format_hexdocs_link_section(&module.package, name, None)
+    } else {
+        String::new()
+    };
+
+    let contents = format!(
+        "```gleam
+{name}
+```
+{documentation}
+{link_section}",
+    );
+    Hover {
+        contents: HoverContents::Scalar(MarkedString::String(contents)),
+        range: Some(src_span_to_lsp_range(location, line_numbers)),
     }
 }
 
@@ -1417,8 +1471,15 @@ fn get_expr_qualified_name(expression: &TypedExpr) -> Option<(&EcoString, &EcoSt
     }
 }
 
-fn format_hexdocs_link_section(package_name: &str, module_name: &str, name: &str) -> String {
-    let link = format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}");
+fn format_hexdocs_link_section(
+    package_name: &str,
+    module_name: &str,
+    name: Option<&str>,
+) -> String {
+    let link = match name {
+        Some(name) => format!("https://hexdocs.pm/{package_name}/{module_name}.html#{name}"),
+        None => format!("https://hexdocs.pm/{package_name}/{module_name}.html"),
+    };
     format!("\nView on [HexDocs]({link})")
 }
 
@@ -1426,7 +1487,7 @@ fn get_hexdocs_link_section(
     module_name: &str,
     name: &str,
     ast: &TypedModule,
-    hex_deps: &std::collections::HashSet<EcoString>,
+    hex_deps: &HashSet<EcoString>,
 ) -> Option<String> {
     let package_name = ast.definitions.iter().find_map(|def| match def {
         Definition::Import(p) if p.module == module_name && hex_deps.contains(&p.package) => {
@@ -1435,7 +1496,11 @@ fn get_hexdocs_link_section(
         _ => None,
     })?;
 
-    Some(format_hexdocs_link_section(package_name, module_name, name))
+    Some(format_hexdocs_link_section(
+        package_name,
+        module_name,
+        Some(name),
+    ))
 }
 
 /// Converts the source start position of a documentation comment's contents into
