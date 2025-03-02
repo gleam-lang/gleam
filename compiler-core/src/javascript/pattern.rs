@@ -15,19 +15,19 @@ pub static ASSIGNMENT_VAR: &str = "$";
 enum Index<'a> {
     Int(usize),
     String(&'a str),
-    ByteAt(OffsetBits<'a>),
+    ByteAt(OffsetBits),
     BitArraySliceToInt {
-        start: OffsetBits<'a>,
-        end: OffsetBits<'a>,
+        start: OffsetBits,
+        end: OffsetBits,
         endianness: Endianness,
         is_signed: bool,
     },
     BitArraySliceToFloat {
-        start: OffsetBits<'a>,
-        end: OffsetBits<'a>,
+        start: OffsetBits,
+        end: OffsetBits,
         endianness: Endianness,
     },
-    BitArraySlice(OffsetBits<'a>, Option<OffsetBits<'a>>),
+    BitArraySlice(OffsetBits, Option<OffsetBits>),
     StringPrefixSlice(usize),
 }
 
@@ -62,13 +62,13 @@ pub enum BitArrayTailSpreadType {
 ///   //                      ^ This starts at offset x + 8, and ends at offset x + y + 8
 /// }
 /// ```
-pub struct OffsetBits<'a> {
+pub struct OffsetBits {
     /// The size of the known offset. The total offset will be at least this size.
     /// If this field is 0, the offset is entirely composed of variable sizes.
     constant: usize,
     /// Any variables which must be added to the known offset at runtime.
     /// Empty if we know the size at compile-time.
-    variables: Vec<Document<'a>>,
+    variables: Vec<EcoString>,
     /// Sometimes we need to divide an offset by a certain number, such as 8, because
     /// sizes can be specified using bits or bytes in different circumstances.
     /// If the size is constant, we can just divide that. However, if the size needs
@@ -77,8 +77,8 @@ pub struct OffsetBits<'a> {
     divide_by: usize,
 }
 
-impl<'a> OffsetBits<'a> {
-    fn increment(&mut self, size: BitArraySize<'a>) {
+impl OffsetBits {
+    fn increment(&mut self, size: BitArraySize) {
         match size {
             BitArraySize::Literal(size) => self.constant += size,
             BitArraySize::Variable(name) => self.variables.push(name),
@@ -99,13 +99,29 @@ impl<'a> OffsetBits<'a> {
         self
     }
 
-    fn into_doc(self) -> Document<'a> {
+    fn to_doc(&self) -> Document<'static> {
         let doc = if self.variables.is_empty() {
             self.constant.to_doc()
         } else if self.constant == 0 {
-            join(self.variables, " + ".to_doc()).group()
+            join(
+                self.variables
+                    .iter()
+                    .map(|variable| variable.clone().to_doc()),
+                " + ".to_doc(),
+            )
+            .group()
         } else {
-            docvec![join(self.variables, " + ".to_doc()), " + ", self.constant,].group()
+            docvec![
+                join(
+                    self.variables
+                        .iter()
+                        .map(|variable| variable.clone().to_doc()),
+                    " + ".to_doc()
+                ),
+                " + ",
+                self.constant,
+            ]
+            .group()
         };
 
         match self.divide_by {
@@ -115,12 +131,12 @@ impl<'a> OffsetBits<'a> {
     }
 }
 
-struct Offset<'a> {
-    bits: OffsetBits<'a>,
+struct Offset {
+    bits: OffsetBits,
     tail_spread_type: Option<BitArrayTailSpreadType>,
 }
 
-impl Offset<'_> {
+impl Offset {
     pub fn new() -> Self {
         Self {
             bits: OffsetBits {
@@ -137,12 +153,12 @@ impl Offset<'_> {
 }
 
 #[derive(Debug, Clone)]
-enum BitArraySize<'a> {
+enum BitArraySize {
     Literal(usize),
-    Variable(Document<'a>),
+    Variable(EcoString),
 }
 
-impl BitArraySize<'_> {
+impl BitArraySize {
     fn is_constant_value(&self, value: usize) -> bool {
         match self {
             BitArraySize::Literal(size) => *size == value,
@@ -152,8 +168,8 @@ impl BitArraySize<'_> {
 }
 
 #[derive(Debug)]
-struct SizedBitArraySegmentDetails<'a> {
-    size: BitArraySize<'a>,
+struct SizedBitArraySegmentDetails {
+    size: BitArraySize,
     endianness: Endianness,
     is_signed: bool,
 }
@@ -170,11 +186,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }
     }
 
-    fn next_local_var(&mut self, name: &'a EcoString) -> Document<'a> {
+    fn next_local_var(&mut self, name: &EcoString) -> EcoString {
         self.expression_generator.next_local_var(name)
     }
 
-    fn local_var(&mut self, name: &'a EcoString) -> Document<'a> {
+    fn local_var(&mut self, name: &EcoString) -> EcoString {
         self.expression_generator.local_var(name)
     }
 
@@ -190,14 +206,14 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.path.push(Index::StringPrefixSlice(i));
     }
 
-    fn push_byte_at(&mut self, i: OffsetBits<'a>) {
+    fn push_byte_at(&mut self, i: OffsetBits) {
         self.path.push(Index::ByteAt(i));
     }
 
     fn push_bit_array_slice_to_int(
         &mut self,
-        start: OffsetBits<'a>,
-        end: OffsetBits<'a>,
+        start: OffsetBits,
+        end: OffsetBits,
         endianness: Endianness,
         is_signed: bool,
     ) {
@@ -215,8 +231,8 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
     fn push_bit_array_slice_to_float(
         &mut self,
-        start: OffsetBits<'a>,
-        end: OffsetBits<'a>,
+        start: OffsetBits,
+        end: OffsetBits,
         endianness: Endianness,
     ) {
         self.expression_generator
@@ -230,7 +246,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         });
     }
 
-    fn push_bit_array_slice(&mut self, start: OffsetBits<'a>, end: Option<OffsetBits<'a>>) {
+    fn push_bit_array_slice(&mut self, start: OffsetBits, end: Option<OffsetBits>) {
         self.expression_generator.tracker.bit_array_slice_used = true;
         self.path.push(Index::BitArraySlice(start, end));
     }
@@ -258,7 +274,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Index::Int(i) => acc.append(eco_format!("[{i}]").to_doc()),
                 // TODO: escape string if needed
                 Index::String(s) => acc.append(docvec![".", maybe_escape_property_doc(s)]),
-                Index::ByteAt(i) => acc.append(docvec![".byteAt(", i.clone().into_doc(), ")"]),
+                Index::ByteAt(i) => acc.append(docvec![".byteAt(", i, ")"]),
                 Index::BitArraySliceToInt {
                     start,
                     end,
@@ -268,9 +284,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     "bitArraySliceToInt(",
                     acc,
                     ", ",
-                    start.clone().into_doc(),
+                    start,
                     ", ",
-                    end.clone().into_doc(),
+                    end,
                     ", ",
                     bool(endianness.is_big()),
                     ", ",
@@ -285,26 +301,18 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     "bitArraySliceToFloat(",
                     acc,
                     ", ",
-                    start.clone().into_doc(),
+                    start,
                     ", ",
-                    end.clone().into_doc(),
+                    end,
                     ", ",
                     bool(endianness.is_big()),
                     ")"
                 ],
                 Index::BitArraySlice(start, end) => match end {
                     Some(end) => {
-                        docvec![
-                            "bitArraySlice(",
-                            acc,
-                            ", ",
-                            start.clone().into_doc(),
-                            ", ",
-                            end.clone().into_doc(),
-                            ")"
-                        ]
+                        docvec!["bitArraySlice(", acc, ", ", start, ", ", end, ")"]
                     }
-                    None => docvec!["bitArraySlice(", acc, ", ", start.clone().into_doc(), ")"],
+                    None => docvec!["bitArraySlice(", acc, ", ", start, ")"],
                 },
                 Index::StringPrefixSlice(i) => docvec!(acc, ".slice(", i, ")"),
             })
@@ -480,7 +488,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
             ClauseGuard::Var { name, .. } => self
                 .path_doc_from_assignments(name)
-                .unwrap_or_else(|| self.local_var(name)),
+                .unwrap_or_else(|| self.local_var(name).to_doc()),
 
             ClauseGuard::TupleIndex { tuple, index, .. } => {
                 docvec![self.guard(tuple)?, "[", index, "]"]
@@ -645,7 +653,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     //
                     // We also want to push this assignment without using push_assignment, since we
                     // do _not_ want to access the current path on the static string!
-                    let var = self.next_local_var(left);
+                    let var = self.next_local_var(left).to_doc();
                     self.assignments.push(Assignment {
                         subject: expression::string(left_side_string),
                         name: left,
@@ -839,10 +847,9 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
 
                                 Pattern::VarUsage { name, .. } => {
                                     let start = offset.bits.clone();
-                                    let name = self.expression_generator.local_var(name);
-                                    offset
-                                        .bits
-                                        .increment(BitArraySize::Variable(name.append(" * 8")));
+                                    let mut name = self.expression_generator.local_var(name);
+                                    name.push_str(" * 8");
+                                    offset.bits.increment(BitArraySize::Variable(name));
                                     let end = offset.bits.clone();
 
                                     self.push_bit_array_slice(start, Some(end));
@@ -910,10 +917,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         }
     }
 
-    fn sized_bit_array_segment_details<'ast>(
+    fn sized_bit_array_segment_details(
         &mut self,
-        segment: &'ast TypedPatternBitArraySegment,
-    ) -> Result<SizedBitArraySegmentDetails<'ast>, Error> {
+        segment: &TypedPatternBitArraySegment,
+    ) -> Result<SizedBitArraySegmentDetails, Error> {
         use BitArrayOption as Opt;
 
         if segment
@@ -989,7 +996,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     }
 
     fn push_assignment(&mut self, subject: Document<'a>, name: &'a EcoString) {
-        let var = self.next_local_var(name);
+        let var = self.next_local_var(name).to_doc();
         let subject = self.apply_path_to_subject(subject);
         self.assignments.push(Assignment { subject, var, name });
     }
@@ -1045,7 +1052,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     fn push_bit_array_bit_size_check(
         &mut self,
         subject: Document<'a>,
-        expected_bit_size: OffsetBits<'a>,
+        expected_bit_size: OffsetBits,
         tail_spread_type: Option<BitArrayTailSpreadType>,
     ) {
         self.checks.push(Check::BitArrayBitSize {
@@ -1102,7 +1109,7 @@ pub enum Check<'a> {
     },
     BitArrayBitSize {
         subject: Document<'a>,
-        expected_bit_size: OffsetBits<'a>,
+        expected_bit_size: OffsetBits,
         tail_spread_type: Option<BitArrayTailSpreadType>,
     },
     StringPrefix {
@@ -1186,7 +1193,7 @@ impl<'a> Check<'a> {
 
                 let bit_size_check = match tail_spread_type {
                     Some(BitArrayTailSpreadType::Bits) => {
-                        docvec![bit_size, " >= ", expected_bit_size.into_doc()]
+                        docvec![bit_size, " >= ", expected_bit_size]
                     }
                     Some(BitArrayTailSpreadType::Bytes) => {
                         // When the tail spread is for bytes rather than bits,
@@ -1196,15 +1203,15 @@ impl<'a> Check<'a> {
                             "(",
                             bit_size.clone(),
                             " >= ",
-                            expected_bit_size.clone().into_doc(),
+                            expected_bit_size,
                             " && (",
                             bit_size,
                             " - ",
-                            expected_bit_size.into_doc(),
+                            expected_bit_size,
                             ") % 8 === 0)"
                         ]
                     }
-                    None => docvec![bit_size, " == ", expected_bit_size.into_doc()],
+                    None => docvec![bit_size, " == ", expected_bit_size],
                 };
 
                 if match_desired {
@@ -1250,12 +1257,15 @@ pub(crate) fn assign_subject<'a>(
         // performing computation or side effects multiple times.
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.is_local_variable() => (expression_generator.local_var(name), None),
+        } if constructor.is_local_variable() => {
+            (expression_generator.local_var(name).to_doc(), None)
+        }
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
             let subject = expression_generator
-                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
+                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()))
+                .to_doc();
             (subject.clone(), Some(subject))
         }
     }
