@@ -81,7 +81,7 @@ pub fn get_distro_str() -> String {
 }
 
 /// A `FileWriter` implementation that writes to the file system.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct ProjectIO {
     beam_compiler: Arc<Mutex<crate::beam_compiler::BeamCompiler>>,
 }
