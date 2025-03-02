@@ -17,9 +17,9 @@ pub fn main() {
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:8[39m
+[90mpath_to_main.gleam:8[39m
 Wibble(1, "hello")
-[90msrc/main.gleam:9[39m
+[90mpath_to_main.gleam:9[39m
 Wobble([1.0, 1.1])
-[90msrc/main.gleam:10[39m
+[90mpath_to_main.gleam:10[39m
 Woo

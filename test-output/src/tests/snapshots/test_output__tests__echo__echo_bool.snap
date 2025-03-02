@@ -10,7 +10,7 @@ pub fn main() {
 
 
 --- gleam run output ----------------
-[90msrc/main.gleam:2[39m
+[90mpath_to_main.gleam:2[39m
 True
-[90msrc/main.gleam:3[39m
+[90mpath_to_main.gleam:3[39m
 False
