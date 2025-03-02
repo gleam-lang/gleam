@@ -191,6 +191,15 @@ jobs:
         working-directory: ./test/project_erlang_windows
         if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
+      - name: test-output
+        uses: clechasseur/rs-cargo@v3
+        with:
+          command: test
+          args: "--target ${{ matrix.target }}"
+          tool: ${{ matrix.cargo-tool }}
+          working-directory: "./test-output"
+        if: ${{ matrix.run-integration-tests }}
+
       - name: test/project_erlang export package-interface (non-windows)
         run: |
           gleam export package-interface --out="interface.json"
