@@ -60,7 +60,7 @@ mod docs;
 mod export;
 mod fix;
 mod format;
-mod fs;
+pub mod fs;
 mod hex;
 mod http;
 mod lsp;
@@ -68,7 +68,7 @@ mod new;
 mod panic;
 mod publish;
 mod remove;
-mod run;
+pub mod run;
 mod shell;
 
 use config::root_config;
@@ -473,7 +473,7 @@ enum Docs {
     },
 }
 
-fn main() {
+pub fn main() {
     initialise_logger();
     panic::add_handler();
     let stderr = cli::stderr_buffer_writer();

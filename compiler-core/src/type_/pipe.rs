@@ -167,6 +167,26 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                     }
                 }
 
+                UntypedExpr::Echo {
+                    location,
+                    expression: None,
+                } => {
+                    self.expr_typer.environment.echo_found = true;
+                    // An echo that is not followed by an expression that is
+                    // used as a pipeline's step is just like the identity
+                    // function.
+                    // So it gets the type of the value coming from the previous
+                    // step of the pipeline.
+                    (
+                        PipelineAssignmentKind::Echo,
+                        TypedExpr::Echo {
+                            location,
+                            expression: None,
+                            type_: self.argument_type.clone(),
+                        },
+                    )
+                }
+
                 // right(left)
                 call => (
                     PipelineAssignmentKind::FunctionCall,

@@ -22,6 +22,7 @@ mod conditional_compilation;
 mod consts;
 mod custom_types;
 mod documentation;
+mod echo;
 mod external_fn;
 mod functions;
 mod guards;
@@ -117,7 +118,12 @@ pub fn compile_test_project(src: &str, src_path: &str, dep: Option<(&str, &str, 
     built_module.attach_doc_and_module_comments();
 
     let line_numbers = LineNumbers::new(src);
-    module(&built_module.ast, &line_numbers, &root).unwrap()
+    module(&built_module.ast, &line_numbers, &root)
+        .unwrap()
+        .replace(
+            std::include_str!("../../templates/echo.erl"),
+            "% ...omitted code from `templates/echo.erl`...",
+        )
 }
 
 #[macro_export]

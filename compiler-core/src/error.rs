@@ -290,6 +290,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
     CannotPublishTodo { unfinished: Vec<EcoString> },
 
+    #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
+    CannotPublishEcho { unfinished: Vec<EcoString> },
+
     #[error(
         "The modules {unfinished:?} contain internal types in their public API so cannot be published"
     )]
@@ -1014,6 +1017,25 @@ be removed.
 {}
 
 Please remove them and try again.
+",
+                    unfinished
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
+
+            Error::CannotPublishEcho { unfinished } => vec![Diagnostic {
+                title: "Cannot publish unfinished code".into(),
+                text: format!(
+                    "These modules contain echo expressions and cannot be published:
+
+{}
+
+`echo` is only meant for debug printing, please remove them and try again.
 ",
                     unfinished
                         .iter()
@@ -3455,6 +3477,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                         }),
                     }
                 },
+
                         TypeError::AllVariantsDeprecated { location } => {
                             let text = String::from("Consider deprecating the type as a whole.
 
@@ -3501,6 +3524,22 @@ Consider removing the deprecation attribute on the variant.");
                                 })
                             }
                         }
+
+                TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
+                    title: "Invalid echo use".to_string(),
+                    text: wrap("The `echo` keyword should be followed by a value to print."),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some("I was expecting a value after this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             }
         }).collect_vec(),
 

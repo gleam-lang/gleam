@@ -1,0 +1,13 @@
+---
+source: test-output/src/tests/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo Nil
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+Nil

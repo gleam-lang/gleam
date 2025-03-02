@@ -86,6 +86,15 @@ pub trait Visit<'ast> {
         visit_typed_expr(self, expr);
     }
 
+    fn visit_typed_expr_echo(
+        &mut self,
+        location: &'ast SrcSpan,
+        type_: &'ast Arc<Type>,
+        expression: &'ast Option<Box<TypedExpr>>,
+    ) {
+        visit_typed_expr_echo(self, location, type_, expression);
+    }
+
     fn visit_typed_expr_int(
         &mut self,
         location: &'ast SrcSpan,
@@ -817,6 +826,11 @@ where
         }
         TypedExpr::NegateInt { location, value } => v.visit_typed_expr_negate_int(location, value),
         TypedExpr::Invalid { location, type_ } => v.visit_typed_expr_invalid(location, type_),
+        TypedExpr::Echo {
+            location,
+            expression,
+            type_,
+        } => v.visit_typed_expr_echo(location, type_, expression),
     }
 }
 
@@ -1044,6 +1058,19 @@ pub fn visit_typed_expr_todo<'a, V>(
 {
     if let Some(message) = message {
         v.visit_typed_expr(message);
+    }
+}
+
+fn visit_typed_expr_echo<'a, V>(
+    v: &mut V,
+    _location: &'a SrcSpan,
+    _type_: &'a Arc<Type>,
+    expression: &'a Option<Box<TypedExpr>>,
+) where
+    V: Visit<'a> + ?Sized,
+{
+    if let Some(expression) = expression {
+        v.visit_typed_expr(expression)
     }
 }
 

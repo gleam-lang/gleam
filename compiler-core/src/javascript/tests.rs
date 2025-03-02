@@ -16,6 +16,7 @@ mod case;
 mod case_clause_guards;
 mod consts;
 mod custom_types;
+mod echo;
 mod externals;
 mod functions;
 mod generics;
@@ -196,21 +197,29 @@ pub fn compile(src: &str, deps: Vec<(&str, &str, &str)>) -> TypedModule {
         target_support: TargetSupport::NotEnforced,
         package_config: &config,
     }
-    .infer_module(ast, line_numbers, "".into())
+    .infer_module(ast, line_numbers, "src/module.gleam".into())
     .expect("should successfully infer")
 }
 
 pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     let line_numbers = LineNumbers::new(src);
-    module(
-        &ast,
-        &line_numbers,
-        Utf8Path::new(""),
-        &"".into(),
-        TargetSupport::Enforced,
-        TypeScriptDeclarations::None,
-    )
+    let stdlib_package = StdlibPackage::Present;
+    let output = module(ModuleConfig {
+        module: &ast,
+        line_numbers: &line_numbers,
+        src: &"".into(),
+        target_support: TargetSupport::Enforced,
+        typescript: TypeScriptDeclarations::None,
+        stdlib_package,
+        path: Utf8Path::new("src/module.gleam"),
+        project_root: "project/root".into(),
+    })?;
+
+    Ok(output.replace(
+        std::include_str!("../../templates/echo.mjs"),
+        "// ...omitted code from `templates/echo.mjs`...",
+    ))
 }
 
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
