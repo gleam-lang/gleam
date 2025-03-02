@@ -9,10 +9,10 @@ use crate::{
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
-        RecordConstructorArg, References, SrcSpan, Statement, TypeAlias, TypeAst,
-        TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition,
-        TypedExpr, TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction,
-        UntypedImport, UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
+        RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
+        TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
+        TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction, UntypedImport,
+        UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
     call_graph::{CallGraphNode, into_dependency_order},
@@ -22,8 +22,8 @@ use crate::{
     parse::SpannedString,
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
-        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
-        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
+        TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, Warning,
         environment::*,
         error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
@@ -340,12 +340,12 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 type_aliases,
                 documentation,
                 contains_echo: echo_found,
+                references: References {
+                    imported_modules: env.imported_modules.into_keys().collect(),
+                    value_references: env.references,
+                },
             },
             names: type_names,
-            references: References {
-                imported_modules: env.imported_modules.into_keys().collect(),
-                value_references: env.references,
-            },
         };
 
         match Vec1::try_from_vec(self.problems.take_errors()) {

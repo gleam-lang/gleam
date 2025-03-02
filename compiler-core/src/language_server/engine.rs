@@ -769,7 +769,8 @@ where
                     &params,
                     module_name,
                     name,
-                    &this.compiler.modules,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                     Named::Function,
                 ),
                 Located::Expression(TypedExpr::ModuleSelect {
@@ -782,7 +783,8 @@ where
                     &params,
                     module_name,
                     label,
-                    &this.compiler.modules,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                     Named::Function,
                 ),
                 Located::ModuleStatement(
@@ -795,7 +797,8 @@ where
                     &params,
                     &module.name,
                     name,
-                    &this.compiler.modules,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                     Named::Function,
                 ),
                 Located::Expression(TypedExpr::Var {
@@ -814,7 +817,8 @@ where
                     &params,
                     module_name,
                     name,
-                    &this.compiler.modules,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                     Named::CustomTypeVariant,
                 ),
                 Located::Expression(TypedExpr::ModuleSelect {
@@ -826,7 +830,8 @@ where
                     &params,
                     module_name,
                     label,
-                    &this.compiler.modules,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                     Named::CustomTypeVariant,
                 ),
                 Located::VariantConstructorDefinition(RecordConstructor { name, .. }) => {
@@ -834,7 +839,8 @@ where
                         &params,
                         &module.name,
                         name,
-                        &this.compiler.modules,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
                         Named::CustomTypeVariant,
                     )
                 }
@@ -845,7 +851,8 @@ where
                     &params,
                     &constructor.module,
                     &constructor.name,
-                    &this.compiler.modules,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
                     Named::CustomTypeVariant,
                 ),
                 _ => None,

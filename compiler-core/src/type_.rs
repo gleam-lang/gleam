@@ -891,12 +891,19 @@ pub struct ModuleInterface {
     pub documentation: Vec<EcoString>,
     /// Wether there's any echo in the module.
     pub contains_echo: bool,
+    pub references: References,
 }
 
 impl ModuleInterface {
     pub fn contains_todo(&self) -> bool {
         self.warnings.iter().any(|warning| warning.is_todo())
     }
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
+pub struct References {
+    pub imported_modules: HashSet<EcoString>,
+    pub value_references: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
