@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let c = \"constant\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let c = "constant"
+          ↑         
+}
+
+
+----- AFTER ACTION
+const string = "constant"
+
+pub fn main() {
+  let c = string
+}
