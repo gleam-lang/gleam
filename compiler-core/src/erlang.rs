@@ -1905,10 +1905,8 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
 fn echo<'a>(body: Document<'a>, location: &SrcSpan, env: &mut Env<'a>) -> Document<'a> {
     env.echo_used = true;
 
-    let relative_path = env
-        .src_path
-        .strip_prefix(env.project_root)
-        .unwrap_or(env.src_path)
+    let relative_path = dbg!(env.src_path.strip_prefix(env.project_root))
+        .unwrap_or(dbg!(env.src_path))
         .as_str();
 
     let relative_path_doc = EcoString::from(relative_path)
