@@ -283,7 +283,7 @@ impl<'a> Generator<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|(_, s)| maybe_escape_identifier_doc(s))
+                .map(|(_, s)| maybe_escape_identifier(s).to_doc())
                 .unwrap_or_else(|| eco_format!("x{i}").to_doc())
         }
 
@@ -435,9 +435,9 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
-                maybe_escape_identifier_doc(n)
+                maybe_escape_identifier(n).to_doc()
             });
-            let name = maybe_escape_identifier_doc(&i.name);
+            let name = maybe_escape_identifier(&i.name).to_doc();
             Member { name, alias }
         });
 
@@ -473,7 +473,7 @@ impl<'a> Generator<'a> {
     fn module_constant(
         &mut self,
         publicity: Publicity,
-        name: &'a str,
+        name: &'a EcoString,
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if publicity.is_private() {
@@ -487,7 +487,7 @@ impl<'a> Generator<'a> {
 
         Ok(docvec![
             head,
-            maybe_escape_identifier_doc(name),
+            maybe_escape_identifier(name),
             " = ",
             document,
             ";",
@@ -539,7 +539,7 @@ impl<'a> Generator<'a> {
 
         let document = docvec![
             head,
-            maybe_escape_identifier_doc(name.as_str()),
+            maybe_escape_identifier(name),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
@@ -637,7 +637,7 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             doc
         }
         Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
-        Some(name) => maybe_escape_identifier_doc(name),
+        Some(name) => maybe_escape_identifier(name).to_doc(),
     }))
 }
 
@@ -769,11 +769,11 @@ fn escape_identifier(word: &str) -> EcoString {
     eco_format!("{word}$")
 }
 
-fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
+fn maybe_escape_identifier(word: &EcoString) -> EcoString {
     if is_usable_js_identifier(word) {
-        word.to_doc()
+        word.clone()
     } else {
-        escape_identifier(word).to_doc()
+        escape_identifier(word)
     }
 }
 
