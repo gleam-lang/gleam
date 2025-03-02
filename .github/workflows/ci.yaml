@@ -156,7 +156,17 @@ jobs:
         uses: clechasseur/rs-cargo@v3
         with:
           command: test
-          args: "--workspace --target ${{ matrix.target }}"
+          # We only want to run the `test-output` when running integration tests.
+          # There's a caveat though: when `cargo-tool` is `cross` it uses a container
+          # and would result in these integration tests failing due to not finding
+          # the escript binary. So, in case `cargo-tool != cargo` we'll skip the
+          # `test-output` tests as well.
+          args: >-
+            --workspace
+            --target ${{ matrix.target }}
+            ${{ ((matrix.run-integration-tests && matrix.cargo-tool == 'cargo')
+                  && ' ')
+                  || '--exclude test-output' }}
           tool: ${{ matrix.cargo-tool }}
 
       - name: test/project_erlang (non-windows)
@@ -190,15 +200,6 @@ jobs:
           .\build\erlang-shipment\entrypoint.ps1 run
         working-directory: ./test/project_erlang_windows
         if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
-
-      - name: test-output
-        uses: clechasseur/rs-cargo@v3
-        with:
-          command: test
-          args: "--target ${{ matrix.target }}"
-          tool: ${{ matrix.cargo-tool }}
-          working-directory: "./test-output"
-        if: ${{ matrix.run-integration-tests }}
 
       - name: test/project_erlang export package-interface (non-windows)
         run: |

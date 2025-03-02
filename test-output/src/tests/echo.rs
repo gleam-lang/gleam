@@ -21,8 +21,8 @@ fn run_and_produce_pretty_snapshot(
     let paths = ProjectPaths::new(project_root);
 
     let output = run_and_capture_output(&paths, "main", target, runtime)
-        // Echo's output includes paths, so we need this to make sure tests do
-        // not fail when running on Windows.
+        // Since the echo output's contains a path we will replace the `\` with a `/`
+        // so that the snapshot doesn't fail on Windows in CI.
         .replace("src\\", "src/");
 
     let main_module_content =
@@ -65,6 +65,8 @@ fn run_and_capture_output(
 
     let mut process = std::process::Command::new(&program)
         .args(args)
+        .stdin(Stdio::null())
+        .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .envs(env.iter().map(|pair| (&pair.0, &pair.1)))
         .current_dir(paths.root())
