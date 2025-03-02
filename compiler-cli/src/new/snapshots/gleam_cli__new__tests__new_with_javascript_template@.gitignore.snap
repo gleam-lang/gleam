@@ -1,0 +1,8 @@
+---
+source: compiler-cli/src/new/tests.rs
+expression: "crate::fs::read(Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect(\"Non Utf8 Path\"),).unwrap()"
+---
+*.beam
+*.ez
+/build
+erl_crash.dump

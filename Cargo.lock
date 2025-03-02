@@ -1025,6 +1025,14 @@ checksum = "40ecd4077b5ae9fd2e9e169b102c6c330d0605168eb0e8bf79952b256dbefffd"
 name = "gleam"
 version = "1.8.1"
 dependencies = [
+ "gleam-cli",
+ "static_vcruntime",
+]
+
+[[package]]
+name = "gleam-cli"
+version = "1.8.1"
+dependencies = [
  "async-trait",
  "base16",
  "bytes",
@@ -1057,7 +1065,6 @@ dependencies = [
  "serde",
  "serde_json",
  "sha2",
- "static_vcruntime",
  "strum",
  "tar",
  "tempfile",

@@ -1,6 +1,7 @@
 [workspace]
 resolver = "2"
 members = [
+    "gleam-bin",
     "compiler-cli",
     "compiler-core",
     "compiler-wasm",
