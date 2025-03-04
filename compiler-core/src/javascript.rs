@@ -10,8 +10,8 @@ use num_bigint::BigInt;
 use num_traits::ToPrimitive;
 
 use crate::analyse::TargetSupport;
-use crate::build::Target;
 use crate::build::package_compiler::StdlibPackage;
+use crate::build::Target;
 use crate::codegen::TypeScriptDeclarations;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
     pretty::*,
 };
 use camino::Utf8Path;
-use ecow::{EcoString, eco_format};
+use ecow::{eco_format, EcoString};
 use expression::Context;
 use itertools::Itertools;
 
@@ -624,7 +624,6 @@ pub struct ModuleConfig<'a> {
     pub project_root: &'a Utf8Path,
 }
 
-#[allow(clippy::too_many_arguments)]
 pub fn module(config: ModuleConfig<'_>) -> Result<String, crate::Error> {
     let path = config.path.to_path_buf();
     let src = config.src.clone();
