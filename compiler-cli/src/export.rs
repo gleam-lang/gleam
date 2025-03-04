@@ -3,8 +3,10 @@ use gleam_core::{
     Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Target},
+    io::{Content, OutputFile},
     paths::ProjectPaths,
 };
+use serde_json;
 
 #[cfg(target_os = "windows")]
 static ENTRYPOINT_FILENAME: &str = "entrypoint.ps1";
@@ -149,5 +151,25 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
         &built.module_interfaces,
     );
     crate::fs::write_outputs_under(&[out], paths.root())?;
+    Ok(())
+}
+
+pub fn package_info(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
+    let toml = crate::fs::read(&paths.root_config())?;
+
+    match toml::from_str::<serde_json::Value>(&toml) {
+        Ok(json) => {
+            let info = serde_json::json!({"gleam.toml": json});
+            let out = OutputFile {
+                path: out,
+                content: Content::Text(
+                    serde_json::to_string(&info).expect("JSON package info serialisation"),
+                ),
+            };
+            crate::fs::write_outputs_under(&[out], paths.root())?;
+        }
+        Err(error) => println!("Error parsing {}: {}", &paths.root_config(), error),
+    }
+
     Ok(())
 }
