@@ -3,7 +3,6 @@ use std::{rc::Rc, sync::OnceLock};
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
-    Warning,
     analyse::TargetSupport,
     build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
@@ -12,6 +11,7 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
     warning::WarningEmitter,
+    Warning,
 };
 
 use crate::{
