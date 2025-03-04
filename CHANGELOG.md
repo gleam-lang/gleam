@@ -322,6 +322,10 @@
   characters.
   ([Richard Viney](https://github.com/richard-viney))
 
+- Fixed a bug where `gleam publish` wouldn't include gitignored or nested native
+  files.
+  ([PgBiel](https://github.com/PgBiel))
+
 ## v1.8.1 - 2025-02-11
 
 ### Bug fixes
