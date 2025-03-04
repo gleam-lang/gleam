@@ -405,10 +405,10 @@ where
         // order to properly parse an echo based on its position: if it is in a
         // pipeline then it isn't expected to be followed by an expression.
         // Otherwise, it's expected to be followed by an expression.
-        let mut right_after_pipe = false;
+        let mut expression_unit_context = ExpressionUnitContext::Other;
 
         loop {
-            match self.parse_expression_unit(right_after_pipe)? {
+            match self.parse_expression_unit(expression_unit_context)? {
                 Some(unit) => {
                     self.post_process_expression_unit(&unit, is_let_binding)?;
                     estack.push(unit)
@@ -434,7 +434,11 @@ where
                 break;
             };
 
-            right_after_pipe = t == Token::Pipe;
+            expression_unit_context = if t == Token::Pipe {
+                ExpressionUnitContext::FollowingPipe
+            } else {
+                ExpressionUnitContext::Other
+            };
 
             // Is Op
             self.advance();
@@ -483,7 +487,7 @@ where
     //   { expression_sequence }
     fn parse_expression_unit(
         &mut self,
-        right_after_pipe: bool,
+        context: ExpressionUnitContext,
     ) -> Result<Option<UntypedExpr>, ParseError> {
         let mut expr = match self.tok0.take() {
             Some((start, Token::String { value }, end)) => {
@@ -523,7 +527,7 @@ where
                 self.advance();
                 let mut message = None;
                 if self.maybe_one(&Token::As).is_some() {
-                    let msg_expr = self.expect_expression_unit(false)?;
+                    let msg_expr = self.expect_expression_unit(ExpressionUnitContext::Other)?;
                     end = msg_expr.location().end;
                     message = Some(Box::new(msg_expr));
                 }
@@ -538,7 +542,7 @@ where
                 self.advance();
                 let mut label = None;
                 if self.maybe_one(&Token::As).is_some() {
-                    let msg_expr = self.expect_expression_unit(false)?;
+                    let msg_expr = self.expect_expression_unit(ExpressionUnitContext::Other)?;
                     end = msg_expr.location().end;
                     label = Some(Box::new(msg_expr));
                 }
@@ -550,7 +554,7 @@ where
 
             Some((start, Token::Echo, end)) => {
                 self.advance();
-                if right_after_pipe {
+                if context == ExpressionUnitContext::FollowingPipe {
                     // If an echo is used as a step in a pipeline (`|> echo`)
                     // then it cannot be followed by an expression.
                     UntypedExpr::Echo {
@@ -674,7 +678,7 @@ where
                     &|s| {
                         Parser::parse_bit_array_segment(
                             s,
-                            &(|this| this.parse_expression_unit(false)),
+                            &(|this| this.parse_expression_unit(ExpressionUnitContext::Other)),
                             &Parser::expect_expression,
                             &bit_array_expr_int,
                         )
@@ -771,7 +775,7 @@ where
             // Boolean negation
             Some((start, Token::Bang, _end)) => {
                 self.advance();
-                match self.parse_expression_unit(false)? {
+                match self.parse_expression_unit(ExpressionUnitContext::Other)? {
                     Some(value) => UntypedExpr::NegateBool {
                         location: SrcSpan {
                             start,
@@ -791,7 +795,7 @@ where
             // Int negation
             Some((start, Token::Minus, _end)) => {
                 self.advance();
-                match self.parse_expression_unit(false)? {
+                match self.parse_expression_unit(ExpressionUnitContext::Other)? {
                     Some(value) => UntypedExpr::NegateInt {
                         location: SrcSpan {
                             start,
@@ -1046,7 +1050,8 @@ where
             AssignmentKind::Let | AssignmentKind::Generated => {}
             AssignmentKind::Assert { message, .. } => {
                 if self.maybe_one(&Token::As).is_some() {
-                    let message_expression = self.expect_expression_unit(false)?;
+                    let message_expression =
+                        self.expect_expression_unit(ExpressionUnitContext::Other)?;
                     end = message_expression.location().end;
                     *message = Some(Box::new(message_expression));
                 }
@@ -3311,9 +3316,9 @@ where
 
     fn expect_expression_unit(
         &mut self,
-        right_after_pipe: bool,
+        context: ExpressionUnitContext,
     ) -> Result<UntypedExpr, ParseError> {
-        if let Some(e) = self.parse_expression_unit(right_after_pipe)? {
+        if let Some(e) = self.parse_expression_unit(context)? {
             Ok(e)
         } else {
             self.next_tok_unexpected(vec!["An expression".into()])
@@ -4316,4 +4321,10 @@ pub fn parse_int_value(value: &str) -> Option<BigInt> {
     let value = value.trim_start_matches('_');
 
     BigInt::parse_bytes(value.as_bytes(), radix)
+}
+
+#[derive(Debug, PartialEq, Clone, Copy)]
+enum ExpressionUnitContext {
+    FollowingPipe,
+    Other,
 }
