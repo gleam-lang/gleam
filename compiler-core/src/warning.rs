@@ -1025,21 +1025,23 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                     panic_position: unreachable_code_kind,
                 } => {
                     let text = match unreachable_code_kind {
-                        PanicPosition::PreviousExpression => {
-                            "This code is unreachable because it comes after a `panic`."
-                        }
-                        PanicPosition::PreviousFunctionArgument => {
+                        PanicPosition::PreviousExpression =>
+                            "This code is unreachable because it comes after a `panic`.",
+                        PanicPosition::PreviousFunctionArgument =>
                             "This argument is unreachable because the previous one always panics. \
-Your code will crash before reaching this point."
-                        }
-                        PanicPosition::LastFunctionArgument => {
+Your code will crash before reaching this point.",
+                        PanicPosition::LastFunctionArgument =>
                             "This function call is unreachable because its last argument always panics. \
+<<<<<<< HEAD
 Your code will crash before reaching this point."
                         }
                         PanicPosition::EchoExpression => {
                             "This `echo` won't print anything because the expression it \
 should be printing always panics."
                         }
+=======
+Your code will crash before reaching this point.",
+>>>>>>> 8fbfe3026 (refactor: remove unnecessary changes)
                     };
 
                     Diagnostic {
