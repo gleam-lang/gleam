@@ -385,10 +385,19 @@ impl<'module> Generator<'module> {
             .iter()
             .find(|x| matches!(x, Opt::Size { .. }));
 
+        let unit = segment
+            .options
+            .iter()
+            .find_map(|option| match option {
+                Opt::Unit { value, .. } => Some(*value),
+                _ => None,
+            })
+            .unwrap_or(1);
+
         let (size_value, size) = match size {
             Some(Opt::Size { value: size, .. }) => {
                 let size_value = match *size.clone() {
-                    TypedExpr::Int { int_value, .. } => Some(int_value),
+                    TypedExpr::Int { int_value, .. } => Some(int_value * unit as usize),
                     _ => None,
                 };
 
@@ -409,7 +418,7 @@ impl<'module> Generator<'module> {
         };
 
         Ok(SizedBitArraySegmentDetails {
-            size,
+            size: size.group().append(" * ".to_doc().append(unit.to_doc())),
             size_value,
             endianness,
         })
@@ -1689,6 +1698,15 @@ fn sized_bit_array_segment_details<'a>(
         Endianness::Big
     };
 
+    let unit = segment
+        .options
+        .iter()
+        .find_map(|option| match option {
+            Opt::Unit { value, .. } => Some(*value),
+            _ => None,
+        })
+        .unwrap_or(1);
+
     let size = segment
         .options
         .iter()
@@ -1697,7 +1715,7 @@ fn sized_bit_array_segment_details<'a>(
     let (size_value, size) = match size {
         Some(Opt::Size { value: size, .. }) => {
             let size_value = match *size.clone() {
-                Constant::Int { int_value, .. } => Some(int_value),
+                Constant::Int { int_value, .. } => Some(int_value * unit as usize),
                 _ => None,
             };
 
@@ -1715,7 +1733,7 @@ fn sized_bit_array_segment_details<'a>(
     };
 
     Ok(SizedBitArraySegmentDetails {
-        size,
+        size: size.group().append(" * ".to_doc().append(unit.to_doc())),
         size_value,
         endianness,
     })
