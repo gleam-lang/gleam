@@ -81,6 +81,10 @@
   size.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- On the JavaScript target, bit arrays can now use the `unit` option to control
+  the units of the `size` option.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Build tool
 
 - The build tool now supports Git dependencies. For example:
