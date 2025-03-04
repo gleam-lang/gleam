@@ -2,8 +2,8 @@ use self::expression::CallKind;
 
 use super::*;
 use crate::ast::{
-    FunctionLiteralKind, ImplicitCallArgOrigin, PipelineAssignmentKind, Statement,
-    TypedPipelineAssignment, UntypedExpr, PIPE_VARIABLE,
+    FunctionLiteralKind, ImplicitCallArgOrigin, PIPE_VARIABLE, PipelineAssignmentKind, Statement,
+    TypedPipelineAssignment, UntypedExpr,
 };
 use vec1::Vec1;
 
@@ -165,6 +165,26 @@ impl<'a, 'b, 'c> PipeTyper<'a, 'b, 'c> {
                             self.infer_insert_pipe(fun, arguments, location),
                         ),
                     }
+                }
+
+                UntypedExpr::Echo {
+                    location,
+                    expression: None,
+                } => {
+                    self.expr_typer.environment.echo_found = true;
+                    // An echo that is not followed by an expression that is
+                    // used as a pipeline's step is just like the identity
+                    // function.
+                    // So it gets the type of the value coming from the previous
+                    // step of the pipeline.
+                    (
+                        PipelineAssignmentKind::Echo,
+                        TypedExpr::Echo {
+                            location,
+                            expression: None,
+                            type_: self.argument_type.clone(),
+                        },
+                    )
                 }
 
                 // right(left)

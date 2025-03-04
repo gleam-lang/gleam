@@ -11,6 +11,7 @@ use num_traits::ToPrimitive;
 
 use crate::analyse::TargetSupport;
 use crate::build::Target;
+use crate::build::package_compiler::StdlibPackage;
 use crate::codegen::TypeScriptDeclarations;
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -20,7 +21,7 @@ use crate::{
     pretty::*,
 };
 use camino::Utf8Path;
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use expression::Context;
 use itertools::Itertools;
 
@@ -43,30 +44,39 @@ pub enum JavaScriptCodegenTarget {
 pub struct Generator<'a> {
     line_numbers: &'a LineNumbers,
     module: &'a TypedModule,
+    project_root: &'a Utf8Path,
     tracker: UsageTracker,
     module_scope: im::HashMap<EcoString, usize>,
     current_module_name_segments_count: usize,
     target_support: TargetSupport,
     typescript: TypeScriptDeclarations,
+    stdlib_package: StdlibPackage,
 }
 
 impl<'a> Generator<'a> {
-    pub fn new(
-        line_numbers: &'a LineNumbers,
-        module: &'a TypedModule,
-        target_support: TargetSupport,
-        typescript: TypeScriptDeclarations,
-    ) -> Self {
+    pub fn new(config: ModuleConfig<'a>) -> Self {
+        let ModuleConfig {
+            target_support,
+            typescript,
+            stdlib_package,
+            module,
+            line_numbers,
+            src: _,
+            path: _,
+            project_root,
+        } = config;
         let current_module_name_segments_count = module.name.split('/').count();
 
         Self {
             current_module_name_segments_count,
             line_numbers,
+            project_root,
             module,
             tracker: UsageTracker::default(),
             module_scope: Default::default(),
             target_support,
             typescript,
+            stdlib_package,
         }
     }
 
@@ -128,7 +138,7 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "prepend", Some("listPrepend"));
         };
 
-        if self.tracker.custom_type_used {
+        if self.tracker.custom_type_used || self.tracker.echo_used {
             self.register_prelude_usage(&mut imports, "CustomType", Some("$CustomType"));
         };
 
@@ -156,7 +166,7 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toBitArray", None);
         }
 
-        if self.tracker.bit_array_slice_used {
+        if self.tracker.bit_array_slice_used || self.tracker.echo_used {
             self.register_prelude_usage(&mut imports, "bitArraySlice", None);
         }
 
@@ -164,7 +174,7 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "bitArraySliceToFloat", None);
         }
 
-        if self.tracker.bit_array_slice_to_int_used {
+        if self.tracker.bit_array_slice_to_int_used || self.tracker.echo_used {
             self.register_prelude_usage(&mut imports, "bitArraySliceToInt", None);
         }
 
@@ -184,17 +194,39 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "sizedFloat", None);
         };
 
+        let echo = if self.tracker.echo_used {
+            if StdlibPackage::Present == self.stdlib_package {
+                self.register_import(
+                    &mut imports,
+                    "gleam_stdlib",
+                    "dict",
+                    &Some((
+                        AssignName::Variable("stdlib$dict".into()),
+                        SrcSpan::default(),
+                    )),
+                    &[],
+                );
+            }
+            self.register_prelude_usage(&mut imports, "BitArray", Some("$BitArray"));
+            self.register_prelude_usage(&mut imports, "List", Some("$List"));
+            self.register_prelude_usage(&mut imports, "UtfCodepoint", Some("$UtfCodepoint"));
+            docvec![line(), std::include_str!("../templates/echo.mjs"), line()]
+        } else {
+            nil()
+        };
+
         // Put it all together
 
         if imports.is_empty() && statements.is_empty() {
-            Ok(docvec![type_reference, "export {}", line()])
+            Ok(docvec![type_reference, "export {}", line(), echo])
         } else if imports.is_empty() {
             statements.push(line());
-            Ok(docvec![type_reference, statements])
+            Ok(docvec![type_reference, statements, echo])
         } else if statements.is_empty() {
             Ok(docvec![
                 type_reference,
-                imports.into_doc(JavaScriptCodegenTarget::JavaScript)
+                imports.into_doc(JavaScriptCodegenTarget::JavaScript),
+                echo,
             ])
         } else {
             Ok(docvec![
@@ -202,7 +234,8 @@ impl<'a> Generator<'a> {
                 imports.into_doc(JavaScriptCodegenTarget::JavaScript),
                 line(),
                 statements,
-                line()
+                line(),
+                echo
             ])
         }
     }
@@ -283,8 +316,9 @@ impl<'a> Generator<'a> {
         fn parameter((i, arg): (usize, &TypedRecordConstructorArg)) -> Document<'_> {
             arg.label
                 .as_ref()
-                .map(|(_, s)| maybe_escape_identifier_doc(s))
-                .unwrap_or_else(|| eco_format!("x{i}").to_doc())
+                .map(|(_, s)| maybe_escape_identifier(s))
+                .unwrap_or_else(|| eco_format!("x{i}"))
+                .to_doc()
         }
 
         let head = if publicity.is_private() || opaque {
@@ -414,8 +448,8 @@ impl<'a> Generator<'a> {
         imports: &mut Imports<'a>,
         package: &'a str,
         module: &'a str,
-        as_name: &'a Option<(AssignName, SrcSpan)>,
-        unqualified: &'a [UnqualifiedImport],
+        as_name: &Option<(AssignName, SrcSpan)>,
+        unqualified: &[UnqualifiedImport],
     ) {
         let get_name = |module: &'a str| {
             module
@@ -435,9 +469,9 @@ impl<'a> Generator<'a> {
         let unqualified_imports = unqualified.iter().map(|i| {
             let alias = i.as_name.as_ref().map(|n| {
                 self.register_in_scope(n);
-                maybe_escape_identifier_doc(n)
+                maybe_escape_identifier(n).to_doc()
             });
-            let name = maybe_escape_identifier_doc(&i.name);
+            let name = maybe_escape_identifier(&i.name).to_doc();
             Member { name, alias }
         });
 
@@ -473,7 +507,7 @@ impl<'a> Generator<'a> {
     fn module_constant(
         &mut self,
         publicity: Publicity,
-        name: &'a str,
+        name: &'a EcoString,
         value: &'a TypedConstant,
     ) -> Output<'a> {
         let head = if publicity.is_private() {
@@ -487,7 +521,7 @@ impl<'a> Generator<'a> {
 
         Ok(docvec![
             head,
-            maybe_escape_identifier_doc(name),
+            maybe_escape_identifier(name),
             " = ",
             document,
             ";",
@@ -510,6 +544,8 @@ impl<'a> Generator<'a> {
             .collect();
         let mut generator = expression::Generator::new(
             self.module.name.clone(),
+            &self.module.type_info.src_path,
+            self.project_root,
             self.line_numbers,
             name.clone(),
             argument_names,
@@ -530,7 +566,7 @@ impl<'a> Generator<'a> {
             // and the target support is not enforced. In this case we do not error, instead
             // returning nothing which will cause no function to be generated.
             Err(error) if error.is_unsupported() && !self.target_support.is_enforced() => {
-                return None
+                return None;
             }
 
             // Some other error case which will be returned to the user.
@@ -539,7 +575,7 @@ impl<'a> Generator<'a> {
 
         let document = docvec![
             head,
-            maybe_escape_identifier_doc(name.as_str()),
+            maybe_escape_identifier(name.as_str()),
             fun_args(function.arguments.as_slice(), generator.tail_recursion_used),
             " {",
             docvec![line(), body].nest(INDENT).group(),
@@ -576,21 +612,24 @@ impl<'a> Generator<'a> {
     }
 }
 
-pub fn module(
-    module: &TypedModule,
-    line_numbers: &LineNumbers,
-    path: &Utf8Path,
-    src: &EcoString,
-    target_support: TargetSupport,
-    typescript: TypeScriptDeclarations,
-) -> Result<String, crate::Error> {
-    let document = Generator::new(line_numbers, module, target_support, typescript)
+#[derive(Debug)]
+pub struct ModuleConfig<'a> {
+    pub module: &'a TypedModule,
+    pub line_numbers: &'a LineNumbers,
+    pub src: &'a EcoString,
+    pub target_support: TargetSupport,
+    pub typescript: TypeScriptDeclarations,
+    pub stdlib_package: StdlibPackage,
+    pub path: &'a Utf8Path,
+    pub project_root: &'a Utf8Path,
+}
+
+pub fn module(config: ModuleConfig<'_>) -> Result<String, crate::Error> {
+    let path = config.path.to_path_buf();
+    let src = config.src.clone();
+    let document = Generator::new(config)
         .compile()
-        .map_err(|error| crate::Error::JavaScript {
-            path: path.to_path_buf(),
-            src: src.clone(),
-            error,
-        })?;
+        .map_err(|error| crate::Error::JavaScript { path, src, error })?;
     Ok(document.to_pretty_string(80))
 }
 
@@ -637,7 +676,7 @@ fn fun_args(args: &'_ [TypedArg], tail_recursion_used: bool) -> Document<'_> {
             doc
         }
         Some(name) if tail_recursion_used => eco_format!("loop${name}").to_doc(),
-        Some(name) => maybe_escape_identifier_doc(name),
+        Some(name) => maybe_escape_identifier(name).to_doc(),
     }))
 }
 
@@ -769,11 +808,11 @@ fn escape_identifier(word: &str) -> EcoString {
     eco_format!("{word}$")
 }
 
-fn maybe_escape_identifier_doc(word: &str) -> Document<'_> {
+fn maybe_escape_identifier(word: &str) -> EcoString {
     if is_usable_js_identifier(word) {
-        word.to_doc()
+        EcoString::from(word)
     } else {
-        escape_identifier(word).to_doc()
+        escape_identifier(word)
     }
 }
 
@@ -805,6 +844,7 @@ pub(crate) struct UsageTracker {
     pub string_bit_array_segment_used: bool,
     pub codepoint_bit_array_segment_used: bool,
     pub float_bit_array_segment_used: bool,
+    pub echo_used: bool,
 }
 
 fn bool(bool: bool) -> Document<'static> {

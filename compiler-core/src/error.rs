@@ -7,7 +7,7 @@ use crate::type_::error::{
     UnsafeRecordUpdateReason,
 };
 use crate::type_::printer::{Names, Printer};
-use crate::type_::{error::PatternMatchKind, FieldAccessUsage};
+use crate::type_::{FieldAccessUsage, error::PatternMatchKind};
 use crate::{ast::BinOp, parse::error::ParseErrorType, type_::Type};
 use crate::{bit_array, diagnostic::Level, javascript, type_::UnifyErrorSituation};
 use ecow::EcoString;
@@ -290,7 +290,12 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
     #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
     CannotPublishTodo { unfinished: Vec<EcoString> },
 
-    #[error("The modules {unfinished:?} contain internal types in their public API so cannot be published")]
+    #[error("The modules {unfinished:?} contain todo expressions and so cannot be published")]
+    CannotPublishEcho { unfinished: Vec<EcoString> },
+
+    #[error(
+        "The modules {unfinished:?} contain internal types in their public API so cannot be published"
+    )]
     CannotPublishLeakedInternalType { unfinished: Vec<EcoString> },
 
     #[error("Publishing packages to reserve names is not permitted")]
@@ -455,13 +460,18 @@ impl Error {
                 let mut conflicting_packages = HashSet::new();
                 collect_conflicting_packages(&derivation_tree, &mut conflicting_packages);
 
-                wrap_format!("Unable to find compatible versions for \
+                wrap_format!(
+                    "Unable to find compatible versions for \
 the version constraints in your gleam.toml. \
 The conflicting packages are:
 
 {}
 ",
-                    conflicting_packages.into_iter().map(|s| format!("- {s}")).join("\n"))
+                    conflicting_packages
+                        .into_iter()
+                        .map(|s| format!("- {s}"))
+                        .join("\n")
+                )
             }
 
             ResolutionError::ErrorRetrievingDependencies {
@@ -476,9 +486,7 @@ The conflicting packages are:
                 package,
                 version,
                 dependent,
-            } => format!(
-                "{package}@{version} has an impossible dependency on {dependent}",
-            ),
+            } => format!("{package}@{version} has an impossible dependency on {dependent}",),
 
             ResolutionError::SelfDependency { package, version } => {
                 format!("{package}@{version} somehow depends on itself.")
@@ -492,9 +500,9 @@ The conflicting packages are:
                 format!("Dependency resolution was cancelled. {err}")
             }
 
-            ResolutionError::Failure(err) => format!(
-                "An unrecoverable error happened while solving dependencies: {err}"
-            ),
+            ResolutionError::Failure(err) => {
+                format!("An unrecoverable error happened while solving dependencies: {err}")
+            }
         })
     }
 
@@ -1009,6 +1017,25 @@ be removed.
 {}
 
 Please remove them and try again.
+",
+                    unfinished
+                        .iter()
+                        .map(|name| format!("  - {}", name.as_str()))
+                        .join("\n")
+                ),
+                level: Level::Error,
+                hint: None,
+                location: None,
+            }],
+
+            Error::CannotPublishEcho { unfinished } => vec![Diagnostic {
+                title: "Cannot publish unfinished code".into(),
+                text: format!(
+                    "These modules contain echo expressions and cannot be published:
+
+{}
+
+`echo` is only meant for debug printing, please remove them and try again.
 ",
                     unfinished
                         .iter()
@@ -3450,6 +3477,7 @@ Try: _{}", kind_str.to_title_case(), name.to_snake_case()),
                         }),
                     }
                 },
+
                         TypeError::AllVariantsDeprecated { location } => {
                             let text = String::from("Consider deprecating the type as a whole.
 
@@ -3496,6 +3524,22 @@ Consider removing the deprecation attribute on the variant.");
                                 })
                             }
                         }
+
+                TypeError::EchoWithNoFollowingExpression { location } => Diagnostic {
+                    title: "Invalid echo use".to_string(),
+                    text: wrap("The `echo` keyword should be followed by a value to print."),
+                    hint: None,
+                    level: Level::Error,
+                    location: Some(Location {
+                        label: Label {
+                            text: Some("I was expecting a value after this".into()),
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
             }
         }).collect_vec(),
 

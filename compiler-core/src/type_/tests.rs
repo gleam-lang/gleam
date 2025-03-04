@@ -22,6 +22,7 @@ mod assert;
 mod assignments;
 mod conditional_compilation;
 mod custom_types;
+mod echo;
 mod errors;
 mod exhaustiveness;
 mod externals;
@@ -818,7 +819,6 @@ fn infer_module_type_retention_test() {
             package: "thepackage".into(),
             name: "ok".into(),
             is_internal: false,
-            // Core type constructors like String and Int are not included
             types: HashMap::new(),
             types_value_constructors: HashMap::from([
                 (
@@ -829,12 +829,15 @@ fn infer_module_type_retention_test() {
                             TypeValueConstructor {
                                 name: "True".into(),
                                 parameters: vec![],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "False".into(),
                                 parameters: vec![],
+                                documentation: None,
                             }
-                        ]
+                        ],
+                        opaque: Opaque::NotOpaque,
                     }
                 ),
                 (
@@ -846,15 +849,20 @@ fn infer_module_type_retention_test() {
                                 name: "Ok".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(1),
-                                }]
+                                    label: None,
+                                }],
+                                documentation: None,
                             },
                             TypeValueConstructor {
                                 name: "Error".into(),
                                 parameters: vec![TypeValueConstructorField {
                                     type_: generic_var(2),
-                                }]
+                                    label: None,
+                                }],
+                                documentation: None,
                             }
-                        ]
+                        ],
+                        opaque: Opaque::NotOpaque,
                     }
                 ),
                 (
@@ -863,8 +871,10 @@ fn infer_module_type_retention_test() {
                         type_parameters_ids: vec![],
                         variants: vec![TypeValueConstructor {
                             name: "Nil".into(),
-                            parameters: vec![]
-                        }]
+                            parameters: vec![],
+                            documentation: None,
+                        }],
+                        opaque: Opaque::NotOpaque,
                     }
                 )
             ]),
@@ -873,6 +883,9 @@ fn infer_module_type_retention_test() {
             line_numbers: LineNumbers::new(""),
             src_path: "".into(),
             minimum_required_version: Version::new(0, 1, 0),
+            type_aliases: HashMap::new(),
+            documentation: Vec::new(),
+            contains_echo: false,
         }
     );
 }

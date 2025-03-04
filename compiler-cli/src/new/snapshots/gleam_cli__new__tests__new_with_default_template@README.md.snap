@@ -1,0 +1,28 @@
+---
+source: compiler-cli/src/new/tests.rs
+expression: "crate::fs::read(Utf8PathBuf::from_path_buf(file_path.to_path_buf()).expect(\"Non Utf8 Path\"),).unwrap()"
+---
+# my_project
+
+[![Package Version](https://img.shields.io/hexpm/v/my_project)](https://hex.pm/packages/my_project)
+[![Hex Docs](https://img.shields.io/badge/hex-docs-ffaff3)](https://hexdocs.pm/my_project/)
+
+```sh
+gleam add my_project@1
+```
+```gleam
+import my_project
+
+pub fn main() {
+  // TODO: An example of the project in use
+}
+```
+
+Further documentation can be found at <https://hexdocs.pm/my_project>.
+
+## Development
+
+```sh
+gleam run   # Run the project
+gleam test  # Run the tests
+```

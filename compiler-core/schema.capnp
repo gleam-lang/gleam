@@ -30,6 +30,19 @@ struct Module {
   srcPath @7 :Text;
   isInternal @8 :Bool;
   requiredVersion @9 :Version;
+  typeAliases @10 :List(Property(TypeAliasConstructor));
+  documentation @11 :List(Text);
+  containsEcho @12 :Bool;
+}
+
+struct TypeAliasConstructor {
+    publicity @0 :Publicity;
+    module @1 :Text;
+    type @2 :Type;
+    arity @3 :UInt32;
+    deprecation @4 :Text;
+    documentation @5 :Text;
+    origin @6 :SrcSpan;
 }
 
 struct Version {
@@ -41,15 +54,18 @@ struct Version {
 struct TypesVariantConstructors {
   variants @0 :List(TypeValueConstructor);
   typeParametersIds @1 :List(UInt16);
+  opaque @2 :Bool;
 }
 
 struct TypeValueConstructor {
   name @0 :Text;
   parameters @1 :List(TypeValueConstructorParameter);
+  documentation @2 :Text;
 }
 
 struct TypeValueConstructorParameter {
   type @0 :Type;
+  label @1 :Text;
 }
 
 struct TypeConstructor {

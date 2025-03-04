@@ -17,7 +17,7 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
+    self, CallArg, CustomType, DefinitionLocation, Pattern, TypeAst, TypedArg, TypedDefinition,
     TypedExpr, TypedFunction, TypedPattern, TypedStatement,
 };
 use crate::type_::Type;
@@ -215,6 +215,7 @@ fn mode_includes_tests() {
 pub struct Package {
     pub config: PackageConfig,
     pub modules: Vec<Module>,
+    pub cached_module_names: Vec<EcoString>,
 }
 
 impl Package {
@@ -267,6 +268,8 @@ impl Module {
             .iter()
             .map(|span| Comment::from((span, self.code.as_str())).content.into())
             .collect();
+
+        self.ast.type_info.documentation = self.ast.documentation.clone();
 
         // Order statements to avoid misassociating doc comments after the
         // order has changed during compilation.
@@ -341,6 +344,11 @@ pub enum Located<'a> {
     Annotation(SrcSpan, std::sync::Arc<Type>),
     UnqualifiedImport(UnqualifiedImport<'a>),
     Label(SrcSpan, std::sync::Arc<Type>),
+    ModuleName {
+        location: SrcSpan,
+        name: &'a EcoString,
+        layer: ast::Layer,
+    },
 }
 
 impl<'a> Located<'a> {
@@ -395,6 +403,10 @@ impl<'a> Located<'a> {
             Self::Arg(_) => None,
             Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
             Self::Label(_, _) => None,
+            Self::ModuleName { name, .. } => Some(DefinitionLocation {
+                module: Some((*name).clone()),
+                span: SrcSpan::new(0, 0),
+            }),
         }
     }
 
@@ -410,6 +422,7 @@ impl<'a> Located<'a> {
             Located::ModuleStatement(definition) => None,
             Located::FunctionBody(function) => None,
             Located::UnqualifiedImport(unqualified_import) => None,
+            Located::ModuleName { .. } => None,
         }
     }
 

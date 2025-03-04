@@ -1,15 +1,17 @@
 use camino::{Utf8Path, Utf8PathBuf};
-use flate2::{write::GzEncoder, Compression};
+use ecow::EcoString;
+use flate2::{Compression, write::GzEncoder};
 use gleam_core::{
+    Error, Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
     config::{PackageConfig, SpdxLicense},
     docs::DocContext,
-    error::{wrap, SmallVersion},
+    error::{SmallVersion, wrap},
     hex,
     paths::{self, ProjectPaths},
     requirement::Requirement,
-    Error, Result,
+    type_,
 };
 use hexpm::version::{Range, Version};
 use itertools::Itertools;
@@ -32,6 +34,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
 
     let Tarball {
         mut compile_result,
+        cached_modules,
         data: package_tarball,
         src_files_added,
         generated_files_added,
@@ -46,6 +49,7 @@ pub fn command(paths: &ProjectPaths, replace: bool, i_am_sure: bool) -> Result<(
         &config,
         &mut compile_result,
         DocContext::HexPublish,
+        &cached_modules,
     )?)?;
 
     // Ask user if this is correct
@@ -256,6 +260,7 @@ core team.\n",
 
 struct Tarball {
     compile_result: Package,
+    cached_modules: im::HashMap<EcoString, type_::ModuleInterface>,
     data: Vec<u8>,
     src_files_added: Vec<Utf8PathBuf>,
     generated_files_added: Vec<(Utf8PathBuf, String)>,
@@ -322,18 +327,29 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         }
     }
 
-    // If any of the modules in the package contain a todo then refuse to
-    // publish as the package is not yet finished.
-    let unfinished = built
-        .root_package
-        .modules
-        .iter()
-        .filter(|module| module.ast.type_info.contains_todo())
-        .map(|module| module.name.clone())
-        .sorted()
-        .collect_vec();
-    if !unfinished.is_empty() {
-        return Err(Error::CannotPublishTodo { unfinished });
+    // If any of the modules in the package contain a todo or an echo then
+    // refuse to publish as the package is not yet finished.
+    let mut modules_containing_todo = vec![];
+    let mut modules_containing_echo = vec![];
+
+    for module in built.root_package.modules.iter() {
+        if module.ast.type_info.contains_todo() {
+            modules_containing_todo.push(module.name.clone());
+        } else if module.ast.type_info.contains_echo {
+            modules_containing_echo.push(module.name.clone());
+        }
+    }
+
+    if !modules_containing_todo.is_empty() {
+        return Err(Error::CannotPublishTodo {
+            unfinished: modules_containing_todo,
+        });
+    }
+
+    if !modules_containing_echo.is_empty() {
+        return Err(Error::CannotPublishEcho {
+            unfinished: modules_containing_echo,
+        });
     }
 
     // TODO: If any of the modules in the package contain a leaked internal type then
@@ -346,7 +362,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
         Target::Erlang => generated_erlang_files(paths, &built.root_package)?,
         Target::JavaScript => vec![],
     };
-    let src_files = project_files()?;
+    let src_files = project_files(Utf8Path::new(""))?;
     let contents_tar_gz = contents_tarball(&src_files, &generated_files)?;
     let version = "3";
     let metadata = metadata_config(&built.root_package.config, &src_files, &generated_files)?;
@@ -372,6 +388,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
     tracing::info!("Generated package Hex release tarball");
     Ok(Tarball {
         compile_result: built.root_package,
+        cached_modules: built.module_interfaces,
         data: tarball,
         src_files_added: src_files,
         generated_files_added: generated_files,
@@ -451,19 +468,16 @@ fn contents_tarball(
     Ok(contents_tar_gz)
 }
 
-// TODO: test
-// TODO: Don't include git-ignored native files
-fn project_files() -> Result<Vec<Utf8PathBuf>> {
-    let src = Utf8Path::new("src");
-    let mut files: Vec<Utf8PathBuf> = fs::gleam_files_excluding_gitignore(src)
-        .chain(fs::native_files(src)?)
+fn project_files(base_path: &Utf8Path) -> Result<Vec<Utf8PathBuf>> {
+    let src = base_path.join(Utf8Path::new("src"));
+    let mut files: Vec<Utf8PathBuf> = fs::gleam_files(&src)
+        .chain(fs::native_files(&src))
         .collect();
-    let private = Utf8Path::new("priv");
-    let mut private_files: Vec<Utf8PathBuf> =
-        fs::private_files_excluding_gitignore(private).collect();
+    let private = base_path.join(Utf8Path::new("priv"));
+    let mut private_files: Vec<Utf8PathBuf> = fs::private_files(&private).collect();
     files.append(&mut private_files);
     let mut add = |path| {
-        let path = Utf8PathBuf::from(path);
+        let path = base_path.join(path);
         if path.exists() {
             files.push(path);
         }
@@ -510,7 +524,7 @@ fn generated_erlang_files(
 
     // Erlang headers
     if include.is_dir() {
-        for file in fs::erlang_files(&include)? {
+        for file in fs::erlang_files(&include) {
             let name = file.file_name().expect("generated_files include file name");
             files.push((tar_include.join(name), fs::read(file)?));
         }
@@ -753,4 +767,115 @@ fn prevent_publish_git_dependency() {
 
 fn quotes(x: &str) -> String {
     format!(r#"<<"{x}">>"#)
+}
+
+#[test]
+fn exported_project_files_test() {
+    let tmp = tempfile::tempdir().unwrap();
+    let path = Utf8PathBuf::from_path_buf(tmp.path().join("my_project")).expect("Non Utf8 Path");
+
+    let exported_project_files = &[
+        "LICENCE",
+        "LICENCE.md",
+        "LICENCE.txt",
+        "LICENSE",
+        "LICENSE.md",
+        "LICENSE.txt",
+        "NOTICE",
+        "NOTICE.md",
+        "NOTICE.txt",
+        "README",
+        "README.md",
+        "README.txt",
+        "gleam.toml",
+        "priv/ignored",
+        "priv/wibble",
+        "priv/wobble.js",
+        "src/.hidden/hidden_ffi.erl",
+        "src/.hidden/hidden_ffi.mjs",
+        "src/.hidden_ffi.erl",
+        "src/.hidden_ffi.mjs",
+        "src/exported.gleam",
+        "src/exported_ffi.erl",
+        "src/exported_ffi.ex",
+        "src/exported_ffi.hrl",
+        "src/exported_ffi.js",
+        "src/exported_ffi.mjs",
+        "src/exported_ffi.ts",
+        "src/ignored.gleam",
+        "src/ignored_ffi.erl",
+        "src/ignored_ffi.mjs",
+        "src/nested/exported.gleam",
+        "src/nested/exported_ffi.erl",
+        "src/nested/exported_ffi.ex",
+        "src/nested/exported_ffi.hrl",
+        "src/nested/exported_ffi.js",
+        "src/nested/exported_ffi.mjs",
+        "src/nested/exported_ffi.ts",
+        "src/nested/ignored.gleam",
+        "src/nested/ignored_ffi.erl",
+        "src/nested/ignored_ffi.mjs",
+    ];
+
+    let unexported_project_files = &[
+        ".git/",
+        ".github/workflows/test.yml",
+        ".gitignore",
+        "build/",
+        "ignored.txt",
+        "src/.hidden/hidden.gleam", // Not a valid Gleam module path
+        "src/.hidden.gleam",        // Not a valid Gleam module name
+        "src/also-ignored.gleam",   // Not a valid Gleam module name
+        "test/exported_test.gleam",
+        "test/exported_test_ffi.erl",
+        "test/exported_test_ffi.ex",
+        "test/exported_test_ffi.hrl",
+        "test/exported_test_ffi.js",
+        "test/exported_test_ffi.mjs",
+        "test/exported_test_ffi.ts",
+        "test/ignored_test.gleam",
+        "test/ignored_test_ffi.erl",
+        "test/ignored_test_ffi.mjs",
+        "test/nested/exported_test.gleam",
+        "test/nested/exported_test_ffi.erl",
+        "test/nested/exported_test_ffi.ex",
+        "test/nested/exported_test_ffi.hrl",
+        "test/nested/exported_test_ffi.js",
+        "test/nested/exported_test_ffi.mjs",
+        "test/nested/exported_test_ffi.ts",
+        "test/nested/ignored.gleam",
+        "test/nested/ignored_test_ffi.erl",
+        "test/nested/ignored_test_ffi.mjs",
+        "unrelated-file.txt",
+    ];
+
+    let gitignore = "ignored*
+src/also-ignored.gleam";
+
+    for &file in exported_project_files
+        .iter()
+        .chain(unexported_project_files)
+    {
+        if file.ends_with("/") {
+            fs::mkdir(path.join(file)).unwrap();
+            continue;
+        }
+
+        let contents = match file {
+            ".gitignore" => gitignore,
+            _ => "",
+        };
+
+        fs::write(&path.join(file), contents).unwrap();
+    }
+
+    let mut chosen_exported_files = project_files(&path).unwrap();
+    chosen_exported_files.sort_unstable();
+
+    let expected_exported_files = exported_project_files
+        .iter()
+        .map(|s| path.join(s))
+        .collect_vec();
+
+    assert_eq!(expected_exported_files, chosen_exported_files);
 }

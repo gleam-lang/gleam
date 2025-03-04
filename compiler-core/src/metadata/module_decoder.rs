@@ -1,10 +1,11 @@
 #![allow(clippy::unnecessary_wraps)] // Needed for macro
 
-use capnp::text;
+use capnp::{text, text_list};
 use ecow::EcoString;
 use itertools::Itertools;
 
 use crate::{
+    Result,
     ast::{
         BitArrayOption, BitArraySegment, CallArg, Constant, Publicity, SrcSpan, TypedConstant,
         TypedConstantBitArraySegment, TypedConstantBitArraySegmentOption,
@@ -13,12 +14,12 @@ use crate::{
     line_numbers::LineNumbers,
     schema_capnp::{self as schema, *},
     type_::{
-        self, expression::Implementations, AccessorsMap, Deprecation, FieldMap, ModuleInterface,
-        RecordAccessor, Type, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
+        self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor, Type,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeValueConstructorField,
         TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        expression::Implementations,
     },
     uid::UniqueIdGenerator,
-    Result,
 };
 use std::{collections::HashMap, io::BufRead, sync::Arc};
 
@@ -83,6 +84,9 @@ impl ModuleDecoder {
             src_path: self.str(reader.get_src_path()?)?.into(),
             warnings: vec![],
             minimum_required_version: self.version(&reader.get_required_version()?),
+            type_aliases: read_hashmap!(reader.get_type_aliases()?, self, type_alias_constructor),
+            documentation: self.string_list(reader.get_documentation()?)?,
+            contains_echo: reader.get_contains_echo(),
         })
     }
 
@@ -90,10 +94,18 @@ impl ModuleDecoder {
         self.str(reader).map(|str| str.into())
     }
 
+    fn string_list(&self, reader: text_list::Reader<'_>) -> Result<Vec<EcoString>> {
+        let mut vec = Vec::with_capacity(reader.len() as usize);
+        for reader in reader.into_iter() {
+            vec.push(self.string(reader?)?);
+        }
+        Ok(vec)
+    }
+
     fn str<'a>(&self, reader: text::Reader<'a>) -> Result<&'a str> {
         reader
             .to_str()
-            .map_err(|_| capnp::Error::failed("String contains non-utf8 charaters".into()).into())
+            .map_err(|_| capnp::Error::failed("String contains non-utf8 characters".into()).into())
     }
 
     fn type_constructor(
@@ -117,6 +129,30 @@ impl ModuleDecoder {
             type_,
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+        })
+    }
+
+    fn type_alias_constructor(
+        &mut self,
+        reader: &type_alias_constructor::Reader<'_>,
+    ) -> Result<TypeAliasConstructor> {
+        let type_ = self.type_(&reader.get_type()?)?;
+        let deprecation = reader.get_deprecation()?;
+        let deprecation = if deprecation.is_empty() {
+            Deprecation::NotDeprecated
+        } else {
+            Deprecation::Deprecated {
+                message: self.string(deprecation)?,
+            }
+        };
+        Ok(TypeAliasConstructor {
+            publicity: self.publicity(reader.get_publicity()?)?,
+            origin: self.src_span(&reader.get_origin()?)?,
+            module: self.string(reader.get_module()?)?,
+            type_,
+            deprecation,
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+            arity: reader.get_arity() as usize,
         })
     }
 
@@ -189,9 +225,16 @@ impl ModuleDecoder {
             self,
             type_variant_constructor_type_parameter_id
         );
+        let opaque = if reader.get_opaque() {
+            Opaque::Opaque
+        } else {
+            Opaque::NotOpaque
+        };
+
         Ok(TypeVariantConstructors {
             variants,
             type_parameters_ids,
+            opaque,
         })
     }
 
@@ -210,6 +253,7 @@ impl ModuleDecoder {
                 self,
                 type_value_constructor_parameter
             ),
+            documentation: self.optional_string(self.str(reader.get_documentation()?)?),
         })
     }
 
@@ -219,6 +263,7 @@ impl ModuleDecoder {
     ) -> Result<TypeValueConstructorField> {
         Ok(TypeValueConstructorField {
             type_: self.type_(&reader.get_type()?)?,
+            label: self.optional_string(self.str(reader.get_label()?)?),
         })
     }
 

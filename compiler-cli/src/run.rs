@@ -35,6 +35,8 @@ pub fn command(
     which: Which,
     no_print_progress: bool,
 ) -> Result<(), Error> {
+    // Don't exit on ctrl+c as it is used by child erlang shell
+    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
     let command = setup(
         paths,
         arguments,
@@ -48,7 +50,7 @@ pub fn command(
     std::process::exit(status);
 }
 
-fn setup(
+pub fn setup(
     paths: &ProjectPaths,
     arguments: Vec<String>,
     target: Option<Target>,

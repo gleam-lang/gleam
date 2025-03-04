@@ -3637,9 +3637,13 @@ fn commented_constructors() {
 
 #[test]
 fn function_captures_test() {
-    assert_format!(
+    assert_format_rewrite!(
         "pub fn main() {
   run(_)
+}
+",
+        "pub fn main() {
+  run
 }
 "
     );
@@ -3651,9 +3655,13 @@ fn function_captures_test() {
 "
     );
 
-    assert_format!(
+    assert_format_rewrite!(
         "pub fn main() {
   run(1, 2, _, 4, 5)(_)
+}
+",
+        "pub fn main() {
+  run(1, 2, _, 4, 5)
 }
 "
     );
@@ -6388,6 +6396,118 @@ fn function_capture_formatted_like_regular_calls_in_a_pipe() {
     // a comment!
     a + b
   })
+}
+"#
+    );
+}
+
+#[test]
+fn echo() {
+    assert_format!(
+        "fn main() {
+  echo
+}
+"
+    );
+}
+
+#[test]
+fn echo_with_value() {
+    assert_format!(
+        r#"fn main() {
+  echo value
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_big_value_that_needs_to_be_split() {
+    assert_format!(
+        r#"fn main() {
+  echo [
+    this_is_a_long_list_and_requires_splitting,
+    wibble_wobble_woo,
+    multiple_lines,
+  ]
+}
+"#
+    );
+}
+
+#[test]
+fn echo_inside_a_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble
+  |> echo
+  |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_inside_a_single_line_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble |> echo |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_last_item_of_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble |> wobble |> echo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_as_last_item_of_multiline_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  wibble
+  |> wobble
+  |> echo
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_related_expression_on_following_line() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  panic as echo
+  "wibble"
+}
+"#,
+        r#"fn main() {
+  panic as echo "wibble"
+}
+"#
+    );
+}
+
+#[test]
+fn echo_with_following_value_in_a_pipeline() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  []
+  |> echo wibble
+  |> wobble
+}
+"#,
+        r#"fn main() {
+  []
+  |> echo
+  wibble
+  |> wobble
 }
 "#
     );

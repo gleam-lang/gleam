@@ -4,11 +4,11 @@ mod tests;
 use std::collections::{HashMap, HashSet};
 
 use camino::{Utf8Path, Utf8PathBuf};
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 
 use crate::{
-    io::{DirWalker, FileSystemReader, FileSystemWriter},
     Error, Result,
+    io::{DirWalker, FileSystemReader, FileSystemWriter},
 };
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -95,7 +95,7 @@ where
         }
 
         // Skip unknown file formats that are not supported native files
-        if !matches!(extension, "mjs" | "js" | "ts" | "hrl" | "erl" | "ex") {
+        if !crate::io::is_native_file_extension(extension) {
             return Ok(());
         }
 

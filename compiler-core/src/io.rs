@@ -402,7 +402,7 @@ impl Reader for WrappedReader {
 #[async_trait]
 pub trait HttpClient {
     async fn send(&self, request: http::Request<Vec<u8>>)
-        -> Result<http::Response<Vec<u8>>, Error>;
+    -> Result<http::Response<Vec<u8>>, Error>;
 }
 
 pub trait TarUnpacker {
@@ -444,6 +444,11 @@ pub trait TarUnpacker {
                 err: Some(e.to_string()),
             })
     }
+}
+
+#[inline]
+pub fn is_native_file_extension(extension: &str) -> bool {
+    matches!(extension, "erl" | "hrl" | "ex" | "js" | "mjs" | "ts")
 }
 
 pub fn ordered_map<S, K, V>(value: &HashMap<K, V>, serializer: S) -> Result<S::Ok, S::Error>

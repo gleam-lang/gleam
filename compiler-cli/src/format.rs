@@ -79,7 +79,7 @@ pub fn unformatted_files(files: Vec<String>) -> Result<Vec<Unformatted>> {
         })?;
 
         if path.is_dir() {
-            for path in crate::fs::gleam_files_excluding_gitignore(&path) {
+            for path in crate::fs::gleam_files(&path) {
                 format_file(&mut problem_files, path)?;
             }
         } else {

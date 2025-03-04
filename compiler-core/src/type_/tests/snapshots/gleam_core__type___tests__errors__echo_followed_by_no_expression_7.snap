@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\npub fn main() {\n  #(1, echo)\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  #(1, echo)
+}
+
+
+----- ERROR
+error: Invalid echo use
+  ┌─ /src/one/two.gleam:3:8
+  │
+3 │   #(1, echo)
+  │        ^^^^ I was expecting a value after this
+
+The `echo` keyword should be followed by a value to print.

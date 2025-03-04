@@ -1069,7 +1069,7 @@ fn make_wibble() -> wobble.Wibble { wobble.Wibble }
 
     assert_hover!(
         TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
-        find_position_of("-> wobble").under_char('o')
+        find_position_of("-> wobble.Wibble").under_char('i')
     );
 }
 
@@ -1131,7 +1131,7 @@ fn main(wibble: wubble.Wibble) {
 
     assert_hover!(
         TestProject::for_source(code).add_hex_module("wibble/wobble", "pub type Wibble { Wibble }"),
-        find_position_of(": wubble").under_char('e')
+        find_position_of(": wubble.Wibble").under_char('W')
     );
 }
 
@@ -1477,5 +1477,115 @@ pub fn main() {
 fn filter(list: List(a), fun: fn(a) -> Bool) -> List(a) { todo }
 ",
         find_position_of("fn(value)")
+    );
+}
+
+#[test]
+fn hover_over_module_name() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wibble()
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wibble.")
+    );
+}
+
+#[test]
+fn hover_over_module_with_path() {
+    let src = "
+import wibble/wobble
+
+pub fn main() {
+  wobble.wibble()
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble/wobble",
+            "
+//// The module documentation
+
+pub fn wibble() {
+  todo
+}
+"
+        ),
+        find_position_of("wobble.")
+    );
+}
+
+#[test]
+fn hover_over_module_name_in_annotation() {
+    let src = "
+import wibble
+
+pub fn main(w: wibble.Wibble) {
+  todo
+}
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+
+pub type Wibble
+"
+        ),
+        find_position_of("wibble.")
+    );
+}
+
+#[test]
+fn hover_over_imported_module() {
+    let src = "
+import wibble
+";
+    assert_hover!(
+        TestProject::for_source(src).add_hex_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+"
+        ),
+        find_position_of("wibble")
+    );
+}
+
+#[test]
+fn no_hexdocs_link_when_hovering_over_local_module() {
+    let src = "
+import wibble
+";
+    assert_hover!(
+        TestProject::for_source(src).add_module(
+            "wibble",
+            "
+//// This is the wibble module.
+//// Here is some documentation about it.
+//// This module does stuff
+"
+        ),
+        find_position_of("wibble")
     );
 }

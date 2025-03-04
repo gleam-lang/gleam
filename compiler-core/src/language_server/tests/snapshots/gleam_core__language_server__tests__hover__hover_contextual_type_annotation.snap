@@ -5,7 +5,7 @@ expression: "\nimport wibble/wobble\n\nfn make_wibble() -> wobble.Wibble { wobbl
 import wibble/wobble
 
 fn make_wibble() -> wobble.Wibble { wobble.Wibble }
-                    ▔↑▔▔▔▔▔▔▔▔▔▔▔                  
+                    ▔▔▔▔▔▔▔▔↑▔▔▔▔                  
 
 
 ----- Hover content -----

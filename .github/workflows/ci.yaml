@@ -107,6 +107,21 @@ jobs:
           mix local.hex --force
         if: ${{ runner.os == 'macOS' }} # setup-beam does not support macOS
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Setup Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: "2.2"
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.2"
+
       - name: Handle Rust dependencies caching
         uses: Swatinem/rust-cache@v2
         with:
@@ -116,7 +131,7 @@ jobs:
         uses: clechasseur/rs-cargo@v3
         with:
           command: install
-          args: "--path compiler-cli --target ${{ matrix.target }} --debug --locked --force"
+          args: "--path gleam-bin --target ${{ matrix.target }} --debug --locked --force"
           tool: ${{ matrix.cargo-tool }}
         if: ${{ matrix.run-integration-tests }}
 
@@ -141,7 +156,17 @@ jobs:
         uses: clechasseur/rs-cargo@v3
         with:
           command: test
-          args: "--workspace --target ${{ matrix.target }}"
+          # We only want to run the `test-output` when running integration tests.
+          # There's a caveat though: when `cargo-tool` is `cross` it uses a container
+          # and would result in these integration tests failing due to not finding
+          # the escript binary. So, in case `cargo-tool != cargo` we'll skip the
+          # `test-output` tests as well.
+          args: >-
+            --workspace
+            --target ${{ matrix.target }}
+            ${{ ((matrix.run-integration-tests && matrix.cargo-tool == 'cargo')
+                  && ' ')
+                  || '--exclude test-output' }}
           tool: ${{ matrix.cargo-tool }}
 
       - name: test/project_erlang (non-windows)
@@ -293,7 +318,7 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
+          node-version: "22"
 
       - name: Install wasm-pack
         run: |

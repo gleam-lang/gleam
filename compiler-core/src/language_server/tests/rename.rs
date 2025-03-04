@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use lsp_types::{Position, RenameParams, TextDocumentPositionParams, Url, WorkDoneProgressParams};
 
-use crate::language_server::tests::{find_position_of, TestProject};
+use crate::language_server::tests::{TestProject, find_position_of};
 
 use super::hover;
 

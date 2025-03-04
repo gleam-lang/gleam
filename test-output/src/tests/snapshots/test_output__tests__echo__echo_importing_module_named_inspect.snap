@@ -1,0 +1,15 @@
+---
+source: test-output/src/tests/echo.rs
+expression: output
+---
+--- main.gleam ----------------------
+import inspect
+
+pub fn main() {
+  echo inspect.x
+}
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:4[39m
+Nil

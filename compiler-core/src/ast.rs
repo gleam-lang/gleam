@@ -419,7 +419,9 @@ impl TypeAst {
                     None
                 })
                 .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Constructor(TypeAstConstructor { arguments, .. }) => type_
+            TypeAst::Constructor(TypeAstConstructor {
+                arguments, module, ..
+            }) => type_
                 .constructor_types()
                 .and_then(|arg_types| {
                     if let Some(arg) = arguments
@@ -432,6 +434,17 @@ impl TypeAst {
 
                     None
                 })
+                .or(module.as_ref().and_then(|(name, location)| {
+                    if location.contains(byte_index) {
+                        Some(Located::ModuleName {
+                            location: *location,
+                            name,
+                            layer: Layer::Type,
+                        })
+                    } else {
+                        None
+                    }
+                }))
                 .or(Some(Located::Annotation(self.location(), type_))),
             TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
                 .tuple_types()
@@ -1287,15 +1300,16 @@ impl CallArg<TypedExpr> {
                 .or_else(|| body.iter().find_map(|s| s.find_node(byte_index))),
             // In all other cases we're happy with the default behaviour.
             //
-            _ => {
-                if let Some(located) = self.value.find_node(byte_index) {
-                    Some(located)
-                } else if self.location.contains(byte_index) && self.label.is_some() {
-                    Some(Located::Label(self.location, self.value.type_()))
-                } else {
-                    None
+            _ => match self.value.find_node(byte_index) {
+                Some(located) => Some(located),
+                _ => {
+                    if self.location.contains(byte_index) && self.label.is_some() {
+                        Some(Located::Label(self.location, self.value.type_()))
+                    } else {
+                        None
+                    }
                 }
-            }
+            },
         }
     }
 
@@ -1312,7 +1326,7 @@ impl CallArg<TypedExpr> {
 
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
-            TypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            TypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
             _ => false,
         }
     }
@@ -1320,12 +1334,15 @@ impl CallArg<TypedExpr> {
 
 impl CallArg<TypedPattern> {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        if let Some(located) = self.value.find_node(byte_index) {
-            Some(located)
-        } else if self.location.contains(byte_index) && self.label.is_some() {
-            Some(Located::Label(self.location, self.value.type_()))
-        } else {
-            None
+        match self.value.find_node(byte_index) {
+            Some(located) => Some(located),
+            _ => {
+                if self.location.contains(byte_index) && self.label.is_some() {
+                    Some(Located::Label(self.location, self.value.type_()))
+                } else {
+                    None
+                }
+            }
         }
     }
 }
@@ -1333,7 +1350,7 @@ impl CallArg<TypedPattern> {
 impl CallArg<UntypedExpr> {
     pub fn is_capture_hole(&self) -> bool {
         match &self.value {
-            UntypedExpr::Var { ref name, .. } => name == CAPTURE_VARIABLE,
+            UntypedExpr::Var { name, .. } => name == CAPTURE_VARIABLE,
             _ => false,
         }
     }
@@ -2635,4 +2652,7 @@ pub enum PipelineAssignmentKind {
 
     /// In case `a |> b(c)` is desugared to `b(c)(a)`
     FunctionCall,
+
+    /// In case there's an echo in the middle of a pipeline `a |> echo`
+    Echo,
 }

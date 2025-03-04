@@ -1,11 +1,11 @@
 use crate::{
-    config,
+    CompilePackage, config,
     fs::{self, ConsoleWarningEmitter, ProjectIO},
-    CompilePackage,
 };
 use camino::Utf8Path;
 use ecow::EcoString;
 use gleam_core::{
+    Error, Result,
     build::{
         Mode, NullTelemetry, PackageCompiler, StaleTracker, Target, TargetCodegenConfiguration,
     },
@@ -14,7 +14,6 @@ use gleam_core::{
     type_::ModuleInterface,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
-    Error, Result,
 };
 use std::{collections::HashSet, rc::Rc};
 

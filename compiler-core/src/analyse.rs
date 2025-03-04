@@ -5,6 +5,7 @@ pub(crate) mod name;
 mod tests;
 
 use crate::{
+    GLEAM_CORE_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
         GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
@@ -14,26 +15,25 @@ use crate::{
         UntypedModule, UntypedModuleConstant, UntypedStatement, UntypedTypeAlias,
     },
     build::{Origin, Outcome, Target},
-    call_graph::{into_dependency_order, CallGraphNode},
+    call_graph::{CallGraphNode, into_dependency_order},
     config::PackageConfig,
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
     type_::{
-        self,
+        self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
+        RecordAccessor, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
+        ValueConstructorVariant, Warning,
         environment::*,
-        error::{convert_unify_error, Error, FeatureKind, MissingAnnotation, Named, Problems},
+        error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
         expression::{ExprTyper, FunctionDefinition, Implementations},
         fields::{FieldMap, FieldMapBuilder},
         hydrator::Hydrator,
         prelude::*,
-        AccessorsMap, Deprecation, ModuleInterface, PatternConstructor, RecordAccessor, Type,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, Warning,
     },
     uid::UniqueIdGenerator,
     warning::TypeWarningEmitter,
-    GLEAM_CORE_PACKAGE_NAME,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -300,6 +300,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             module_values: values,
             accessors,
             names: type_names,
+            module_type_aliases: type_aliases,
+            echo_found,
             ..
         } = env;
 
@@ -319,7 +321,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         let module = ast::Module {
-            documentation,
+            documentation: documentation.clone(),
             name: self.module_name.clone(),
             definitions: typed_statements,
             type_info: ModuleInterface {
@@ -335,6 +337,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 src_path: self.src_path,
                 warnings,
                 minimum_required_version: self.minimum_required_version,
+                type_aliases,
+                documentation,
+                contains_echo: echo_found,
             },
             names: type_names,
         };
@@ -847,27 +852,28 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .expect("Could not find preregistered type for function");
                     let preregistered_type = preregistered_fn.type_.clone();
 
-                    let args =
-                        if let Some((args_types, _return_type)) = preregistered_type.fn_types() {
-                            args.into_iter()
-                                .zip(&args_types)
-                                .map(|(argument, t)| {
-                                    if let Some((location, label)) = &argument.label {
-                                        self.check_name_case(*location, label, Named::Label);
-                                    }
+                    let args = match preregistered_type.fn_types() {
+                        Some((args_types, _return_type)) => args
+                            .into_iter()
+                            .zip(&args_types)
+                            .map(|(argument, t)| {
+                                if let Some((location, label)) = &argument.label {
+                                    self.check_name_case(*location, label, Named::Label);
+                                }
 
-                                    RecordConstructorArg {
-                                        label: argument.label,
-                                        ast: argument.ast,
-                                        location: argument.location,
-                                        type_: t.clone(),
-                                        doc: argument.doc,
-                                    }
-                                })
-                                .collect()
-                        } else {
+                                RecordConstructorArg {
+                                    label: argument.label,
+                                    ast: argument.ast,
+                                    location: argument.location,
+                                    type_: t.clone(),
+                                    doc: argument.doc,
+                                }
+                            })
+                            .collect(),
+                        _ => {
                             vec![]
-                        };
+                        }
+                    };
 
                     RecordConstructor {
                         location,
@@ -1006,7 +1012,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     }
                 };
 
-                fields.push(TypeValueConstructorField { type_: t.clone() });
+                fields.push(TypeValueConstructorField {
+                    type_: t.clone(),
+                    label: label.as_ref().map(|(_location, label)| label.clone()),
+                });
 
                 // Register the type for this parameter
                 args_types.push(t);
@@ -1082,6 +1091,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             constructors_data.push(TypeValueConstructor {
                 name: constructor.name.clone(),
                 parameters: fields,
+                documentation: constructor
+                    .documentation
+                    .as_ref()
+                    .map(|(_, documentation)| documentation.clone()),
             });
             environment.insert_variable(
                 constructor.name.clone(),
@@ -1098,10 +1111,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             );
         }
 
+        let opaque = if *opaque {
+            Opaque::Opaque
+        } else {
+            Opaque::NotOpaque
+        };
         // Now record the constructors for the type.
         environment.insert_type_to_constructors(
             name.clone(),
-            TypeVariantConstructors::new(constructors_data, type_parameters, hydrator),
+            TypeVariantConstructors::new(constructors_data, type_parameters, opaque, hydrator),
         );
 
         Ok(())
@@ -1229,6 +1247,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // in some fashion.
         let mut hydrator = Hydrator::new();
         let parameters = self.make_type_vars(args, &mut hydrator, environment);
+        let arity = parameters.len();
         let tryblock = || {
             hydrator.disallow_new_type_variables();
             let type_ = hydrator.type_from_ast(resolved_type, environment, &mut self.problems)?;
@@ -1244,10 +1263,23 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     origin: *location,
                     module: self.module_name.clone(),
                     parameters,
-                    type_,
+                    type_: type_.clone(),
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                },
+            )?;
+
+            environment.insert_type_alias(
+                name.clone(),
+                TypeAliasConstructor {
+                    origin: *location,
+                    module: self.module_name.clone(),
+                    type_,
+                    publicity: *publicity,
+                    deprecation: deprecation.clone(),
+                    documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    arity,
                 },
             )?;
 

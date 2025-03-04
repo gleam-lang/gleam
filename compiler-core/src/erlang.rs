@@ -10,6 +10,7 @@ use crate::build::Target;
 use crate::strings::convert_string_escape_chars;
 use crate::type_::is_prelude_module;
 use crate::{
+    Result,
     ast::{CustomType, Function, Import, ModuleConstant, TypeAlias, *},
     docvec,
     line_numbers::LineNumbers,
@@ -18,10 +19,9 @@ use crate::{
         ModuleValueConstructor, PatternConstructor, Type, TypeVar, TypedCallArg, ValueConstructor,
         ValueConstructorVariant,
     },
-    Result,
 };
 use camino::Utf8Path;
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use heck::ToSnakeCase;
 use im::HashSet;
 use itertools::Itertools;
@@ -46,19 +46,31 @@ fn module_name_atom(module: &str) -> Document<'static> {
 struct Env<'a> {
     module: &'a str,
     function: &'a str,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
     line_numbers: &'a LineNumbers,
     needs_function_docs: bool,
+    echo_used: bool,
     current_scope_vars: im::HashMap<String, usize>,
     erl_function_scope_vars: im::HashMap<String, usize>,
 }
 
 impl<'env> Env<'env> {
-    pub fn new(module: &'env str, function: &'env str, line_numbers: &'env LineNumbers) -> Self {
+    pub fn new(
+        module: &'env str,
+        src_path: &'env Utf8Path,
+        project_root: &'env Utf8Path,
+        function: &'env str,
+        line_numbers: &'env LineNumbers,
+    ) -> Self {
         let vars: im::HashMap<_, _> = std::iter::once(("_".into(), 0)).collect();
         Self {
             current_scope_vars: vars.clone(),
             erl_function_scope_vars: vars,
             needs_function_docs: false,
+            echo_used: false,
+            src_path,
+            project_root,
             line_numbers,
             function,
             module,
@@ -224,14 +236,10 @@ fn module_document<'a>(
     };
 
     let src_path_full = &module.type_info.src_path;
-    let src_path_relative = EcoString::from(
-        src_path_full
-            .strip_prefix(root)
-            .unwrap_or_else(|_| src_path_full)
-            .to_string(),
-    );
+    let src_path_relative = src_path_full.strip_prefix(root).unwrap_or(src_path_full);
 
     let mut needs_function_docs = false;
+    let mut echo_used = false;
     let mut statements = Vec::with_capacity(module.definitions.len());
     for definition in module.definitions.iter() {
         if let Some((statement_document, env)) = module_statement(
@@ -239,9 +247,11 @@ fn module_document<'a>(
             &module.name,
             module.type_info.is_internal,
             line_numbers,
-            &src_path_relative,
+            src_path_relative,
+            root,
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
+            echo_used = echo_used || env.echo_used;
             statements.push(statement_document);
         }
     }
@@ -282,6 +292,14 @@ fn module_document<'a>(
         type_defs,
         join(statements, lines(2)),
     ];
+
+    let module = if echo_used {
+        module
+            .append(lines(2))
+            .append(std::include_str!("../templates/echo.erl").to_doc())
+    } else {
+        module
+    };
 
     Ok(module.append(line()))
 }
@@ -406,7 +424,8 @@ fn module_statement<'a>(
     module: &'a str,
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
-    src_path: &EcoString,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
 ) -> Option<(Document<'a>, Env<'a>)> {
     match statement {
         Definition::TypeAlias(TypeAlias { .. })
@@ -419,7 +438,8 @@ fn module_statement<'a>(
             module,
             is_internal_module,
             line_numbers,
-            src_path.clone(),
+            src_path,
+            project_root,
         ),
     }
 }
@@ -429,7 +449,8 @@ fn module_function<'a>(
     module: &'a str,
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
-    src_path: EcoString,
+    src_path: &'a Utf8Path,
+    project_root: &'a Utf8Path,
 ) -> Option<(Document<'a>, Env<'a>)> {
     // Private external functions don't need to render anything, the underlying
     // Erlang implementation is used directly at the call site.
@@ -450,7 +471,7 @@ fn module_function<'a>(
     let function_name = escape_erlang_existing_name(function_name);
     let file_attribute = file_attribute(src_path, function, line_numbers);
 
-    let mut env = Env::new(module, function_name, line_numbers);
+    let mut env = Env::new(module, src_path, project_root, function_name, line_numbers);
     let var_usages = collect_type_var_usages(
         HashMap::new(),
         std::iter::once(&function.return_type).chain(function.arguments.iter().map(|a| &a.type_)),
@@ -489,16 +510,19 @@ fn module_function<'a>(
         // So the doc directive will look like this: `-doc(false).`
         env.needs_function_docs = true;
         docvec![attributes, line(), hidden_function_doc()]
-    } else if let Some((_, documentation)) = &function.documentation {
-        env.needs_function_docs = true;
-        let doc_lines = documentation
-            .trim_end()
-            .split('\n')
-            .map(EcoString::from)
-            .collect_vec();
-        docvec![attributes, line(), function_doc(&doc_lines)]
     } else {
-        attributes
+        match &function.documentation {
+            Some((_, documentation)) => {
+                env.needs_function_docs = true;
+                let doc_lines = documentation
+                    .trim_end()
+                    .split('\n')
+                    .map(EcoString::from)
+                    .collect_vec();
+                docvec![attributes, line(), function_doc(&doc_lines)]
+            }
+            _ => attributes,
+        }
     };
 
     Some((
@@ -517,12 +541,12 @@ fn module_function<'a>(
 }
 
 fn file_attribute<'a>(
-    path: EcoString,
+    path: &'a Utf8Path,
     function: &'a TypedFunction,
     line_numbers: &'a LineNumbers,
 ) -> Document<'a> {
     let line = line_numbers.line_number(function.location.start);
-    let path = path.replace("\\", "\\\\");
+    let path = EcoString::from(path.as_str()).replace("\\", "\\\\");
     docvec!["-file(\"", path, "\", ", line, ")."]
 }
 
@@ -1275,9 +1299,9 @@ fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) 
             ..
         } => function_reference(Some(module), name, *arity),
 
-        ValueConstructorVariant::ModuleFn {
-            arity, ref module, ..
-        } if module == env.module => function_reference(None, name, *arity),
+        ValueConstructorVariant::ModuleFn { arity, module, .. } if module == env.module => {
+            function_reference(None, name, *arity)
+        }
 
         ValueConstructorVariant::ModuleFn {
             arity,
@@ -1715,7 +1739,7 @@ fn docs_args_call<'a>(
                         ValueConstructorVariant::ModuleConstant {
                             literal:
                                 Constant::Var {
-                                    constructor: Some(ref constructor),
+                                    constructor: Some(constructor),
                                     ..
                                 },
                             ..
@@ -1723,18 +1747,18 @@ fn docs_args_call<'a>(
                     ..
                 },
             ..
-        } if constructor.variant.is_module_fn() => {
-            if let ValueConstructorVariant::ModuleFn {
+        } if constructor.variant.is_module_fn() => match &constructor.variant {
+            ValueConstructorVariant::ModuleFn {
                 external_erlang: Some((module, name)),
                 ..
             }
-            | ValueConstructorVariant::ModuleFn { module, name, .. } = &constructor.variant
-            {
+            | ValueConstructorVariant::ModuleFn { module, name, .. } => {
                 module_fn_with_args(module, name, args, env)
-            } else {
+            }
+            _ => {
                 unreachable!("The above clause guard ensures that this is a module fn")
             }
-        }
+        },
 
         TypedExpr::ModuleSelect {
             constructor:
@@ -1853,6 +1877,7 @@ fn needs_begin_end_wrapping(expression: &TypedExpr) -> bool {
         | TypedExpr::Tuple { .. }
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
+        | TypedExpr::Echo { .. }
         | TypedExpr::Panic { .. }
         | TypedExpr::BitArray { .. }
         | TypedExpr::NegateBool { .. }
@@ -1875,6 +1900,28 @@ fn panic<'a>(location: SrcSpan, message: Option<&'a TypedExpr>, env: &mut Env<'a
         None => string("`panic` expression evaluated."),
     };
     erlang_error("panic", &message, location, vec![], env)
+}
+
+fn echo<'a>(body: Document<'a>, location: &SrcSpan, env: &mut Env<'a>) -> Document<'a> {
+    env.echo_used = true;
+
+    let relative_path = env
+        .src_path
+        .strip_prefix(env.project_root)
+        .unwrap_or(env.src_path)
+        .as_str();
+
+    let relative_path_doc = EcoString::from(relative_path)
+        .replace("\\", "\\\\")
+        .to_doc();
+
+    let relative_path_doc = docvec!["\"", relative_path_doc, "\""];
+
+    "echo".to_doc().append(wrap_args(vec![
+        body,
+        relative_path_doc,
+        env.line_numbers.line_number(location.start).to_doc(),
+    ]))
 }
 
 fn erlang_error<'a>(
@@ -1932,6 +1979,17 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
         TypedExpr::Panic {
             location, message, ..
         } => panic(*location, message.as_deref(), env),
+
+        TypedExpr::Echo {
+            expression,
+            location,
+            ..
+        } => {
+            let expression = expression
+                .as_ref()
+                .expect("echo with no expression outside of pipe");
+            echo(expr(expression, env), location, env)
+        }
 
         TypedExpr::Int { value, .. } => int(value),
         TypedExpr::Float { value, .. } => float(value),
@@ -2028,15 +2086,45 @@ fn pipeline<'a>(
     let all_assignments = std::iter::once(first_value)
         .chain(assignments.iter().map(|(assignment, _kind)| assignment));
 
+    let echo_doc = |var_name: &Option<Document<'a>>, location: &SrcSpan, env: &mut Env<'a>| {
+        let name = var_name
+            .to_owned()
+            .expect("echo with no previous step in a pipe");
+        echo(name, location, env)
+    };
+
+    let mut prev_local_var_name = None;
     for a in all_assignments {
-        let body = maybe_block_expr(&a.value, env).group();
-        let name = env.next_local_var_name(&a.name);
-        documents.push(docvec![name, " = ", body]);
-        documents.push(','.to_doc());
+        match a.value.as_ref() {
+            // An echo in a pipeline won't result in an assignment, instead it
+            // just prints the previous variable assigned in the pipeline.
+            TypedExpr::Echo {
+                expression: None,
+                location,
+                ..
+            } => documents.push(echo_doc(&prev_local_var_name, location, env)),
+
+            // Otherwise we assign the intermediate pipe value to a variable.
+            _ => {
+                let body = maybe_block_expr(&a.value, env).group();
+                let name = env.next_local_var_name(&a.name);
+                prev_local_var_name = Some(name.clone());
+                documents.push(docvec![name, " = ", body]);
+            }
+        };
+        documents.push(",".to_doc());
         documents.push(line());
     }
 
-    documents.push(expr(finally, env));
+    match finally {
+        TypedExpr::Echo {
+            expression: None,
+            location,
+            ..
+        } => documents.push(echo_doc(&prev_local_var_name, location, env)),
+        _ => documents.push(expr(finally, env)),
+    }
+
     documents.to_doc()
 }
 

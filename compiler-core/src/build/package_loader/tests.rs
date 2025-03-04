@@ -1,14 +1,14 @@
-use ecow::{eco_format, EcoString};
+use ecow::{EcoString, eco_format};
 use hexpm::version::Version;
 
 use super::*;
 use crate::{
+    Warning,
     build::SourceFingerprint,
-    io::{memory::InMemoryFileSystem, FileSystemWriter},
+    io::{FileSystemWriter, memory::InMemoryFileSystem},
     line_numbers,
     parse::extra::ModuleExtra,
     warning::NullWarningEmitterIO,
-    Warning,
 };
 
 use std::time::Duration;
@@ -61,6 +61,9 @@ fn write_cache(
         src_path: Utf8PathBuf::from(format!("/src/{}.gleam", name)),
         warnings: vec![],
         minimum_required_version: Version::new(0, 1, 0),
+        type_aliases: Default::default(),
+        documentation: Default::default(),
+        contains_echo: false,
     };
     let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
     fs.write_bytes(

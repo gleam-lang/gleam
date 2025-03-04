@@ -1,12 +1,12 @@
 use crate::{
+    Result,
     analyse::TargetSupport,
-    build::{ErlangAppCodegenConfiguration, Module},
+    build::{ErlangAppCodegenConfiguration, Module, package_compiler::StdlibPackage},
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
-    javascript,
+    javascript::{self, ModuleConfig},
     line_numbers::LineNumbers,
-    Result,
 };
 use ecow::EcoString;
 use erlang::escape_atom_string;
@@ -167,6 +167,7 @@ pub enum TypeScriptDeclarations {
 pub struct JavaScript<'a> {
     output_directory: &'a Utf8Path,
     prelude_location: &'a Utf8Path,
+    project_root: &'a Utf8Path,
     typescript: TypeScriptDeclarations,
     target_support: TargetSupport,
 }
@@ -176,23 +177,30 @@ impl<'a> JavaScript<'a> {
         output_directory: &'a Utf8Path,
         typescript: TypeScriptDeclarations,
         prelude_location: &'a Utf8Path,
+        project_root: &'a Utf8Path,
         target_support: TargetSupport,
     ) -> Self {
         Self {
             prelude_location,
             output_directory,
             target_support,
+            project_root,
             typescript,
         }
     }
 
-    pub fn render(&self, writer: &impl FileSystemWriter, modules: &[Module]) -> Result<()> {
+    pub fn render(
+        &self,
+        writer: &impl FileSystemWriter,
+        modules: &[Module],
+        stdlib_package: StdlibPackage,
+    ) -> Result<()> {
         for module in modules {
             let js_name = module.name.clone();
             if self.typescript == TypeScriptDeclarations::Emit {
                 self.ts_declaration(writer, module, &js_name)?;
             }
-            self.js_module(writer, module, &js_name)?
+            self.js_module(writer, module, &js_name, stdlib_package)?
         }
         self.write_prelude(writer)?;
         Ok(())
@@ -243,18 +251,21 @@ impl<'a> JavaScript<'a> {
         writer: &impl FileSystemWriter,
         module: &Module,
         js_name: &str,
+        stdlib_package: StdlibPackage,
     ) -> Result<()> {
         let name = format!("{js_name}.mjs");
         let path = self.output_directory.join(name);
         let line_numbers = LineNumbers::new(&module.code);
-        let output = javascript::module(
-            &module.ast,
-            &line_numbers,
-            &module.input_path,
-            &module.code,
-            self.target_support,
-            self.typescript,
-        );
+        let output = javascript::module(ModuleConfig {
+            module: &module.ast,
+            line_numbers: &line_numbers,
+            path: &module.input_path,
+            project_root: self.project_root,
+            src: &module.code,
+            target_support: self.target_support,
+            typescript: self.typescript,
+            stdlib_package,
+        });
         tracing::debug!(name = ?js_name, "Generated js module");
         writer.write(&path, &output?)
     }

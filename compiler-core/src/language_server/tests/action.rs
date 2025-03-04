@@ -4613,8 +4613,8 @@ pub fn main(arg: CannotBeDestructured) {
 }
 
 #[test]
-fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body(
-) {
+fn pattern_match_on_argument_with_multiple_constructors_is_nicely_formatted_in_function_with_empty_body()
+ {
     assert_code_action!(
         PATTERN_MATCH_ON_ARGUMENT,
         "
@@ -5383,6 +5383,19 @@ fn woo(n) { todo }
         CONVERT_TO_FUNCTION_CALL,
         TestProject::for_source(src).add_module("wibble", "pub const wobble = 1"),
         find_position_of("woo").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_function_call_works_with_echo() {
+    assert_code_action!(
+        CONVERT_TO_FUNCTION_CALL,
+        "
+pub fn main() {
+  wibble.wobble |> echo
+}
+",
+        find_position_of("echo").to_selection()
     );
 }
 
