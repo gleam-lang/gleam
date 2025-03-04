@@ -1,4 +1,4 @@
-use std::sync::OnceLock;
+use std::{rc::Rc, sync::OnceLock};
 
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -10,9 +10,14 @@ use gleam_core::{
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
+    warning::WarningEmitter,
+    Warning,
 };
 
-use crate::{config::PackageKind, fs::ProjectIO};
+use crate::{
+    config::PackageKind,
+    fs::{ConsoleWarningEmitter, ProjectIO},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -122,8 +127,35 @@ pub fn setup(
 
     let built = crate::build::main(paths, options, manifest)?;
 
+    // Warn incase the module being run has been as internal
+    let warning_emitter = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
+
+    // Warn incase the module being run has been as internal
+    let internal_module = built.is_internal(&module.clone().into()).unwrap_or(false);
+    if internal_module {
+        let warning = Warning::InternalMain {
+            module: module.clone().into(),
+        };
+        warning_emitter.emit(warning);
+    }
+
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
+
+    // Warn incase the main function being run has been deprecated
+    if main_function.deprecation.is_deprecated() {
+        let deprecation_message = match main_function.deprecation {
+            gleam_core::type_::Deprecation::Deprecated { message } => Some(message),
+            gleam_core::type_::Deprecation::NotDeprecated => None,
+        };
+        if let Some(message) = deprecation_message {
+            let warning = Warning::DeprecatedMain { message };
+            warning_emitter.emit(warning);
+        }
+    }
+
+    // Don't exit on ctrl+c as it is used by child erlang shell
+    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     telemetry.running(&format!("{module}.main"));
 

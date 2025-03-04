@@ -4,6 +4,9 @@
 
 ### Compiler
 
+- Gleam will now warn when running a deprecated or internal module main function
+([Lioncat2002](https://github.com/Lioncat2002))
+
 - You can now use the `echo` keyword to debug print any value: `echo` can be
   followed by any expression and it will print it to stderr alongside the module
   it comes from and its line number. This:

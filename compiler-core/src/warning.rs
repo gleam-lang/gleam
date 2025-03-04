@@ -162,6 +162,12 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
+    InternalMain {
+        module: EcoString,
+    },
+    DeprecatedMain {
+        message: EcoString,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -220,6 +226,23 @@ pub enum DeprecatedSyntaxWarning {
 impl Warning {
     pub fn to_diagnostic(&self) -> Diagnostic {
         match self {
+            Warning::DeprecatedMain { message } => Diagnostic {
+                title: "Deprecated main function".into(),
+                text: message.into(),
+                level: diagnostic::Level::Warning,
+                location: None,
+                hint: None,
+            },
+            Warning::InternalMain { module } => {
+                let message = format!("The module {} has been marked internal", module);
+                Diagnostic {
+                    title: "Internal main function".into(),
+                    text: message,
+                    level: diagnostic::Level::Warning,
+                    location: None,
+                    hint: None,
+                }
+            }
             Warning::InvalidSource { path } => Diagnostic {
                 title: "Invalid module name".into(),
                 text: "\
