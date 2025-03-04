@@ -53,7 +53,8 @@
   ([Diemo Gebhardt](https://github.com/diemogebhardt))
 
 - Improved the styling of constructor argument descriptions in the generated
-  documentation. ([Nicd](https://git.ahlcode.fi/nicd))
+  documentation.
+  ([Nicd](https://git.ahlcode.fi/nicd))
 
 - Allow users to set the `GLEAM_CACERTS_PATH` environment variable to specify a
   path to a directory containing CA certificates to install Hex packages.
@@ -160,7 +161,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The Language Server now suggests a code action to generate a function to
+- The language server now suggests a code action to generate a function to
   encode a custom type as JSON using the `gleam_json` package. For example:
 
   ```gleam
@@ -188,7 +189,7 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The Language Server now suggests a code action to inline a variable
+- The language server now suggests a code action to inline a variable
   which is only used once. For example, this code:
 
   ```gleam
@@ -275,7 +276,7 @@
 
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
-- The Language Server now shows module documentation when hovering over a module
+- The language server now shows module documentation when hovering over a module
   name.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
@@ -313,6 +314,7 @@
 
 - Fixed a bug where `gleam export package-interface` would not properly generate
   the package interface file if some modules were cached.
+  ([Pedro Francisco](https://github.com/mine-tech-oficial)) and
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - Fixed a bug where pattern matching using a UTF-8 string constant would not
