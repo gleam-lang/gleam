@@ -108,6 +108,33 @@ pub enum UnknownField {
     NoFields,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
+pub enum TypeSuggestion {
+    Imported(EcoString),
+    Importable(EcoString),
+}
+
+impl TypeSuggestion {
+    pub fn suggestion(&self, type_: &str) -> String {
+        let name = self.name();
+        format!("Did you mean to import `{name}.{{type {type_}}}`?")
+    }
+
+    pub fn name(&self) -> &EcoString {
+        match self {
+            TypeSuggestion::Imported(name) | TypeSuggestion::Importable(name) => name,
+        }
+    }
+
+    pub fn last_name_component(&self) -> &str {
+        match self {
+            TypeSuggestion::Imported(name) | TypeSuggestion::Importable(name) => {
+                name.split('/').last().unwrap_or(name)
+            }
+        }
+    }
+}
+
 /// A suggestion for an unknown module
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ModuleSuggestion {
@@ -179,6 +206,7 @@ pub enum Error {
         location: SrcSpan,
         name: EcoString,
         hint: UnknownTypeHint,
+        suggestions: Vec<TypeSuggestion>,
     },
 
     UnknownModule {
@@ -1236,6 +1264,7 @@ pub enum UnknownTypeConstructorError {
     Type {
         name: EcoString,
         hint: UnknownTypeHint,
+        suggestions: Vec<TypeSuggestion>,
     },
 
     Module {
@@ -1257,10 +1286,15 @@ pub fn convert_get_type_constructor_error(
     module_location: Option<SrcSpan>,
 ) -> Error {
     match e {
-        UnknownTypeConstructorError::Type { name, hint } => Error::UnknownType {
+        UnknownTypeConstructorError::Type {
+            name,
+            hint,
+            suggestions,
+        } => Error::UnknownType {
             location: *location,
             name,
             hint,
+            suggestions,
         },
 
         UnknownTypeConstructorError::Module { name, suggestions } => Error::UnknownModule {
