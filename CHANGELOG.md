@@ -62,7 +62,7 @@
 
 - Improved the styling of constructor argument descriptions in the generated
   documentation.
-  ([Nicd](https://git.ahlcode.fi/nicd))
+  ([Mikko Ahlroth](https://git.ahlcode.fi/nicd))
 
 - Allow users to set the `GLEAM_CACERTS_PATH` environment variable to specify a
   path to a directory containing CA certificates to install Hex packages.
