@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Compiler
+
+- Made runtime warnings regarding the use of deprecated BitArray properties in
+  JavaScript FFI code more compact. They are now one line instead of three.
+  ([Richard Viney](https://github.com/richard-viney))
+
 ## v1.9.0-rc1 - 2025-03-04
 
 ### Compiler
