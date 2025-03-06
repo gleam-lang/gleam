@@ -3006,7 +3006,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
 
         // We generate a decoder for a type with a single constructor: it does not
         // require pattern matching on a tag as there's no variants to tell apart.
-        if rest.is_empty() && mode == EncodingMode::AsObjectWithNoTypeTag {
+        if rest.is_empty() && mode == EncodingMode::ObjectWithNoTypeTag {
             return self.constructor_decoder(mode, custom_type, first, 0);
         }
 
@@ -3014,7 +3014,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
         // variants, depending on the mode we might have to decode a type field or
         // plain strings!
         let module = self.printer.print_module(DECODE_MODULE);
-        let discriminant = if mode == EncodingMode::AsPlainString {
+        let discriminant = if mode == EncodingMode::PlainString {
             eco_format!("use variant <- {module}.then({module}.string)")
         } else {
             eco_format!("use variant <- {module}.field(\"type\", {module}.string)")
@@ -3053,7 +3053,7 @@ impl<'a> GenerateDynamicDecoder<'a> {
         // If the constructor was encoded as a plain string with no additional
         // fields it means there's nothing else to decode and we can just
         // succeed.
-        if mode == EncodingMode::AsPlainString {
+        if mode == EncodingMode::PlainString {
             return Some(eco_format!("{decode_module}.success({constructor_name})"));
         }
 
@@ -3346,20 +3346,20 @@ const JSON_PACKAGE_NAME: &str = "gleam_json";
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 enum EncodingMode {
-    AsPlainString,
-    AsObjectWithTypeTag,
-    AsObjectWithNoTypeTag,
+    PlainString,
+    ObjectWithTypeTag,
+    ObjectWithNoTypeTag,
 }
 
 impl EncodingMode {
     pub fn for_custom_type(type_: &CustomType<Arc<Type>>) -> Self {
         match type_.constructors.as_slice() {
-            [constructor] if constructor.arguments.is_empty() => EncodingMode::AsPlainString,
-            [_constructor] => EncodingMode::AsObjectWithNoTypeTag,
+            [constructor] if constructor.arguments.is_empty() => EncodingMode::PlainString,
+            [_constructor] => EncodingMode::ObjectWithNoTypeTag,
             constructors if constructors.iter().all(|c| c.arguments.is_empty()) => {
-                EncodingMode::AsPlainString
+                EncodingMode::PlainString
             }
-            _constructors => EncodingMode::AsObjectWithTypeTag,
+            _constructors => EncodingMode::ObjectWithTypeTag,
         }
     }
 }
@@ -3445,7 +3445,7 @@ impl<'a> GenerateJsonEncoder<'a> {
 
         // If the variant is encoded as a simple json string we just call the
         // `json.string` with the variant tag as an argument.
-        if mode == EncodingMode::AsPlainString {
+        if mode == EncodingMode::PlainString {
             return Some(eco_format!("{json_module}.string(\"{tag}\")"));
         }
 
@@ -3455,7 +3455,7 @@ impl<'a> GenerateJsonEncoder<'a> {
 
         // These aare the fields of the json object to encode.
         let mut fields = Vec::with_capacity(constructor.arguments.len());
-        if mode == EncodingMode::AsObjectWithTypeTag {
+        if mode == EncodingMode::ObjectWithTypeTag {
             // Any needed type tag is always going to be the first field in the object
             fields.push(eco_format!(
                 "{indent}  #(\"type\", {json_module}.string(\"{tag}\"))"
@@ -3472,7 +3472,7 @@ impl<'a> GenerateJsonEncoder<'a> {
             fields.push(encoder);
         }
 
-        let fields = fields.join(&format!(",\n"));
+        let fields = fields.join(",\n");
         Some(eco_format!(
             "{json_module}.object([
 {fields},
