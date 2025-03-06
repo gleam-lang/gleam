@@ -1048,3 +1048,49 @@ pub fn main() {
 }"#
     );
 }
+
+#[test]
+fn with_unit() {
+    assert_js!(
+        r#"
+fn main() {
+  <<1:size(2)-unit(2), 2:size(3)-unit(4)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn dynamic_size_with_unit() {
+    assert_js!(
+        r#"
+fn main() {
+  let size = 3
+  <<1:size(size)-unit(2)>>
+}
+"#,
+    );
+}
+
+#[test]
+fn pattern_with_unit() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let assert <<1:size(2)-unit(2), 2:size(3)-unit(4)>> = x
+}
+"#,
+    );
+}
+
+#[test]
+fn dynamic_size_pattern_with_unit() {
+    assert_js!(
+        r#"
+fn go(x) {
+  let size = 3
+  let assert <<1:size(size)-unit(2)>> = x
+}
+"#,
+    );
+}

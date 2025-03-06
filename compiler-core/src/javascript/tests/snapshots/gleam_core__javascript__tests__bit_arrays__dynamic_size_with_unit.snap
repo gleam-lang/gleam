@@ -1,0 +1,19 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn main() {\n  let size = 3\n  <<1:size(size)-unit(2)>>\n}\n"
+---
+----- SOURCE CODE
+
+fn main() {
+  let size = 3
+  <<1:size(size)-unit(2)>>
+}
+
+
+----- COMPILED JAVASCRIPT
+import { toBitArray, sizedInt } from "../gleam.mjs";
+
+function main() {
+  let size = 3;
+  return toBitArray([sizedInt(1, size * 2, true)]);
+}
