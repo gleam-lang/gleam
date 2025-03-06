@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble(field: String, field1: Int)\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble
+  Wobble(field: String, field1: Int)
+}
+
+
+----- AFTER ACTION
+import gleam/json
+
+pub type Wibble {
+  Wibble
+  Wobble(field: String, field1: Int)
+}
+
+fn encode_wibble(wibble: Wibble) -> json.Json {
+  case wibble {
+    Wibble -> json.object([
+      #("type", json.string("wibble")),
+    ])
+    Wobble(..) -> json.object([
+      #("type", json.string("wobble")),
+      #("field", json.string(wibble.field)),
+      #("field1", json.int(wibble.field1)),
+    ])
+  }
+}
