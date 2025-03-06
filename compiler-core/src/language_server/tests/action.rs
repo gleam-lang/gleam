@@ -5203,6 +5203,34 @@ pub type Wibble {
 }
 
 #[test]
+fn generate_json_encoder_for_variant_with_no_fields() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble
+}
+",
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
+fn generate_json_encoder_for_type_with_multiple_variants_with_no_fields() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble
+  Wobble
+  Woo
+}
+",
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_function_producing_another_function() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
