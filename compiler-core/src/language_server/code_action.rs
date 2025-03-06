@@ -2988,6 +2988,7 @@ fn can_be_constant(
         | TypedExpr::TupleIndex { .. }
         | TypedExpr::Todo { .. }
         | TypedExpr::Panic { .. }
+        | TypedExpr::Echo { .. }
         | TypedExpr::RecordUpdate { .. }
         | TypedExpr::NegateBool { .. }
         | TypedExpr::NegateInt { .. }
@@ -3200,6 +3201,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
                 | TypedExpr::TupleIndex { .. }
                 | TypedExpr::Todo { .. }
                 | TypedExpr::Panic { .. }
+                | TypedExpr::Echo { .. }
                 | TypedExpr::RecordUpdate { .. }
                 | TypedExpr::NegateBool { .. }
                 | TypedExpr::NegateInt { .. }
