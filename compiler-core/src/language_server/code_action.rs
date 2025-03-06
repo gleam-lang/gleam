@@ -3,10 +3,10 @@ use std::{collections::HashSet, iter, sync::Arc};
 use crate::{
     Error, STDLIB_PACKAGE_NAME,
     ast::{
-        self, AssignName, AssignmentKind, CallArg, FunctionLiteralKind, ImplicitCallArgOrigin,
-        Pattern, PipelineAssignmentKind, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
-        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
-        TypedStatement, TypedUse,
+        self, AssignName, AssignmentKind, CallArg, CustomType, FunctionLiteralKind,
+        ImplicitCallArgOrigin, Pattern, PipelineAssignmentKind, RecordConstructor, SrcSpan,
+        TodoKind, TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
+        TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
         visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
@@ -3320,6 +3320,26 @@ pub struct GenerateJsonEncoder<'a> {
 const JSON_MODULE: &str = "gleam/json";
 const JSON_PACKAGE_NAME: &str = "gleam_json";
 
+#[derive(Eq, PartialEq, Copy, Clone)]
+enum EncodingMode {
+    AsPlainString,
+    AsObjectWithTypeTag,
+    AsObjectWithNoTypeTag,
+}
+
+impl EncodingMode {
+    pub fn for_custom_type(type_: &CustomType<Arc<Type>>) -> Self {
+        match type_.constructors.as_slice() {
+            [constructor] if constructor.arguments.is_empty() => EncodingMode::AsPlainString,
+            [_constructor] => EncodingMode::AsObjectWithNoTypeTag,
+            constructors if constructors.iter().all(|c| c.arguments.is_empty()) => {
+                EncodingMode::AsPlainString
+            }
+            _constructors => EncodingMode::AsObjectWithTypeTag,
+        }
+    }
+}
+
 impl<'a> GenerateJsonEncoder<'a> {
     pub fn new(
         module: &'a Module,
@@ -3341,45 +3361,98 @@ impl<'a> GenerateJsonEncoder<'a> {
         self.visit_typed_module(&self.module.ast);
     }
 
-    fn generate_encoder(
+    fn encoder_body_for_custom_type(
         &mut self,
-        constructor: &'a TypedRecordConstructor,
+        record_name: EcoString,
+        custom_type: &CustomType<Arc<Type>>,
+    ) -> Option<EcoString> {
+        // We cannot generate a decoder for an external type with no constructors!
+        let constructors_size = custom_type.constructors.len();
+        let (first, rest) = custom_type.constructors.split_first()?;
+        let mode = EncodingMode::for_custom_type(custom_type);
+
+        // We generate an encoder for a type with a single constructor: it does not
+        // require pattern matching on the argument as we can access all its fields
+        // with the usual record access syntax.
+        if rest.is_empty() {
+            return self.constructor_encoder(mode, first, custom_type.name.clone(), record_name, 2);
+        }
+
+        // Otherwise we generate an encoder for a type with multiple constructors:
+        // it will need to pattern match on the various constructors and encode each
+        // one separately.
+        let mut branches = Vec::with_capacity(constructors_size);
+        for constructor in iter::once(first).chain(rest) {
+            let RecordConstructor { name, .. } = constructor;
+            let encoder = self.constructor_encoder(
+                mode,
+                constructor,
+                custom_type.name.clone(),
+                record_name.clone(),
+                4,
+            )?;
+            let unpacking = if constructor.arguments.is_empty() {
+                ""
+            } else {
+                "(..)"
+            };
+            branches.push(eco_format!("    {name}{unpacking} -> {encoder}"));
+        }
+
+        let branches = branches.join("\n");
+        Some(eco_format!(
+            "case {record_name} {{
+{branches}
+  }}",
+        ))
+    }
+
+    fn constructor_encoder(
+        &mut self,
+        mode: EncodingMode,
+        constructor: &TypedRecordConstructor,
         type_name: EcoString,
         record_name: EcoString,
-        variant_tag: Option<EcoString>,
-        indent: usize,
+        nesting: usize,
     ) -> Option<EcoString> {
-        let fields = constructor
-            .arguments
-            .iter()
-            .map(|argument| {
-                Some(RecordField {
-                    label: RecordLabel::Labeled(
-                        argument.label.as_ref().map(|(_, name)| name.as_str())?,
-                    ),
-                    type_: &argument.type_,
-                })
-            })
-            .collect::<Option<Vec<_>>>()?;
+        let json_module = self.printer.print_module(JSON_MODULE);
+        let tag = constructor.name.to_snake_case();
+        let indent = " ".repeat(nesting);
 
+        // If the variant is encoded as a simple json string we just call the
+        // `json.string` with the variant tag as an argument.
+        if mode == EncodingMode::AsPlainString {
+            return Some(eco_format!("{json_module}.string(\"{tag}\")"));
+        }
+
+        // Otherwise we turn it into an object with a `type` tag field.
         let mut encoder_printer =
             EncoderPrinter::new(&self.module.ast.names, type_name, self.module.name.clone());
 
-        let encoders = fields
-            .iter()
-            .map(|field| encoder_printer.encode_field(&record_name, field, indent + 2))
-            .join(",\n");
+        // These aare the fields of the json object to encode.
+        let mut fields = Vec::with_capacity(constructor.arguments.len());
+        if mode == EncodingMode::AsObjectWithTypeTag {
+            // Any needed type tag is always going to be the first field in the object
+            fields.push(eco_format!(
+                "{indent}  #(\"type\", {json_module}.string(\"{tag}\"))"
+            ));
+        }
 
-        let indent = " ".repeat(indent);
-        let json_module = self.printer.print_module(JSON_MODULE);
+        for argument in constructor.arguments.iter() {
+            let (_, label) = argument.label.as_ref()?;
+            let field = RecordField {
+                label: RecordLabel::Labeled(label),
+                type_: &argument.type_,
+            };
+            let encoder = encoder_printer.encode_field(&record_name, &field, nesting + 2);
+            fields.push(encoder);
+        }
 
+        let fields = fields.join(&format!(",\n"));
         Some(eco_format!(
-            "{json_module}.object([{tag}
-{encoders},
-{indent}])",
-            tag = variant_tag
-                .map(|tag| eco_format!("\n{indent}  #(\"type\", {json_module}.string(\"{tag}\")),"))
-                .unwrap_or_default()
+            "{json_module}.object([
+{fields},
+{indent}])"
         ))
     }
 }
@@ -3390,47 +3463,13 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
         if !overlaps(self.params.range, range) {
             return;
         }
-        let record_name: EcoString = custom_type.name.to_snake_case().into();
 
-        let Some(encoder) = (match custom_type.constructors.as_slice() {
-            // We can't generate an encoder for an external type
-            [] => return,
-            [constructor] => self.generate_encoder(
-                constructor,
-                custom_type.name.clone(),
-                record_name.clone(),
-                None,
-                2,
-            ),
-            constructors => constructors
-                .iter()
-                .map(|constructor| {
-                    Some(eco_format!(
-                        "    {name}(..) -> {encoder}",
-                        name = constructor.name,
-                        encoder = self.generate_encoder(
-                            constructor,
-                            custom_type.name.clone(),
-                            record_name.clone(),
-                            Some(constructor.name.to_snake_case().into()),
-                            4
-                        )?
-                    ))
-                })
-                .collect::<Option<Vec<_>>>()
-                .map(|cases| {
-                    eco_format!(
-                        "case {record_name} {{
-{cases}
-  }}",
-                        cases = cases.join("\n")
-                    )
-                }),
-        }) else {
+        let record_name = EcoString::from(custom_type.name.to_snake_case());
+        let name = eco_format!("encode_{record_name}");
+        let Some(encoder) = self.encoder_body_for_custom_type(record_name.clone(), custom_type)
+        else {
             return;
         };
-
-        let name = eco_format!("encode_{record_name}");
 
         let json_type = self.printer.print_type(&Type::Named {
             publicity: ast::Publicity::Public,
@@ -3441,25 +3480,23 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
             inferred_variant: None,
         });
 
-        let parameters = match custom_type.parameters.len() {
-            0 => EcoString::new(),
-            _ => eco_format!(
-                "({})",
-                custom_type
-                    .parameters
-                    .iter()
-                    .map(|(_, name)| name)
-                    .join(", ")
-            ),
+        let type_ = if custom_type.parameters.is_empty() {
+            custom_type.name.clone()
+        } else {
+            let parameters = custom_type
+                .parameters
+                .iter()
+                .map(|(_, name)| name)
+                .join(", ");
+            eco_format!("{}({})", custom_type.name, parameters)
         };
 
         let function = format!(
             "
 
-fn {name}({record_name}: {type_name}{parameters}) -> {json_type} {{
+fn {name}({record_name}: {type_}) -> {json_type} {{
   {encoder}
 }}",
-            type_name = custom_type.name,
         );
 
         self.edits.insert(custom_type.end_position, function);
