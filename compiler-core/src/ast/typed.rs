@@ -205,7 +205,8 @@ impl TypedExpr {
             | TypedExpr::RecordUpdate { .. }
             | TypedExpr::NegateBool { .. }
             | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. } => false,
+            | TypedExpr::Invalid { .. }
+            | TypedExpr::Echo { .. } => false,
         }
     }
 
