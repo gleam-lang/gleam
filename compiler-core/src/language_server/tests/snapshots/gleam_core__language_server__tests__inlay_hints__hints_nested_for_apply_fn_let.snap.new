@@ -1,7 +1,0 @@
----
-source: compiler-core/src/language_server/tests/inlay_hints.rs
-assertion_line: 120
-expression: hints
-snapshot_kind: text
----
-[]
