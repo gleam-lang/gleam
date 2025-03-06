@@ -4,17 +4,18 @@ use super::{
     progress::ConnectionProgressReporter,
 };
 use crate::{
+    Result,
     diagnostic::{Diagnostic, Level},
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
+        DownloadDependencies, MakeLocker,
         engine::{self, LanguageServerEngine},
         feedback::{Feedback, FeedbackBookKeeper},
         files::FileSystemProxy,
         router::Router,
-        src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+        src_span_to_lsp_range,
     },
     line_numbers::LineNumbers,
-    Result,
 };
 use camino::{Utf8Path, Utf8PathBuf};
 use debug_ignore::DebugIgnore;

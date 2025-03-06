@@ -1,6 +1,6 @@
 use crate::language_server::{
     configuration::{Configuration, InlayHintsConfig},
-    tests::{setup_engine, LanguageServerTestIO, TestProject},
+    tests::{LanguageServerTestIO, TestProject, setup_engine},
 };
 use lsp_types::{InlayHintParams, Position, Range};
 

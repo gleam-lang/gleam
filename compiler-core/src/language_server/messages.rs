@@ -33,13 +33,13 @@ pub enum Request {
     SignatureHelp(lsp::SignatureHelpParams),
     DocumentSymbol(lsp::DocumentSymbolParams),
     ShowInlayHints(lsp::InlayHintParams),
+    PrepareRename(lsp::TextDocumentPositionParams),
+    Rename(lsp::RenameParams),
 }
 
 #[derive(Debug)]
 pub enum Response {
     Configuration(Configuration),
-    PrepareRename(lsp::TextDocumentPositionParams),
-    Rename(lsp::RenameParams),
     FindReferences(lsp::ReferenceParams),
 }
 

@@ -369,7 +369,6 @@ pub opaque type Wibble {
     let _ = engine.compile_please();
     // update src to the one we want to test
     _ = io.src_module("app", src);
-
     let param = TextDocumentPositionParams::new(TestProject::build_path(), position);
     let response = engine.completion(param, src.into());
 

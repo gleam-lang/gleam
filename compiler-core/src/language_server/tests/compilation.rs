@@ -1,5 +1,6 @@
-use super::*;
 use crate::language_server::engine::Compilation;
+
+use super::*;
 
 #[test]
 fn compile_please() {

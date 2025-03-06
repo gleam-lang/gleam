@@ -1,11 +1,10 @@
 use crate::{
-    Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
         self, CustomType, Definition, DefinitionLocation, ModuleConstant, SrcSpan, TypedArg,
         TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
-    build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
+    build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -14,9 +13,10 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant, error::VariableOrigin, printer::Printer,
+        self, error::VariableOrigin, printer::Printer, Deprecation, ModuleInterface, Type,
+        TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
+    Error, Error, Result, Result, Warning, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -31,23 +31,22 @@ use std::{collections::HashSet, sync::Arc};
 
 use super::{
     code_action::{
-        AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
-        ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
-        GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder, InlineVariable,
-        InterpolateString, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        UseLabelShorthandSyntax, code_action_add_missing_patterns,
-        code_action_convert_qualified_constructor_to_unqualified,
+        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case,
+        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, ConvertFromUse,
+        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractVariable,
+        FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
+        InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
+        RedundantTupleInCaseSubject, UseLabelShorthandSyntax,
     },
     completer::Completer,
+    configuration::SharedConfig,
+    inlay_hints,
     reference::{
-        Referenced, find_module_value_references, find_variable_references, reference_for_ast_node,
+        find_module_value_references, find_variable_references, reference_for_ast_node, Referenced,
     },
-    rename::{
-        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
-    },
-    signature_help, src_span_to_lsp_range,
+    rename::{rename_local_variable, VariableRenameKind},
+    signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
 #[derive(Debug, PartialEq, Eq)]

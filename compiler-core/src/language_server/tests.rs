@@ -9,42 +9,35 @@ mod reference;
 mod rename;
 mod signature_help;
 
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, Mutex, RwLock},
+    time::SystemTime,
+};
+
+use ecow::EcoString;
+use hexpm::version::{Range, Version};
+
+use camino::{Utf8Path, Utf8PathBuf};
+use itertools::Itertools;
+use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
+
 use super::configuration::Configuration;
 use crate::{
+    Result,
     config::PackageConfig,
     io::{
-        memory::InMemoryFileSystem, BeamCompiler, Command, CommandExecutor, FileSystemReader,
-        FileSystemWriter, ReadDir, WrappedReader,
+        BeamCompiler, Command, CommandExecutor, FileSystemReader, FileSystemWriter, ReadDir,
+        WrappedReader, memory::InMemoryFileSystem,
     },
     language_server::{
-        engine::LanguageServerEngine, files::FileSystemProxy, progress::ProgressReporter,
-        DownloadDependencies, LockGuard, Locker, MakeLocker,
+        DownloadDependencies, LockGuard, Locker, MakeLocker, engine::LanguageServerEngine,
+        files::FileSystemProxy, progress::ProgressReporter,
     },
     line_numbers::LineNumbers,
     manifest::{Base16Checksum, Manifest, ManifestPackage, ManifestPackageSource},
     paths::ProjectPaths,
     requirement::Requirement,
-    Result,
-};
-use camino::{Utf8Path, Utf8PathBuf};
-use camino::{Utf8Path, Utf8PathBuf};
-use ecow::EcoString;
-use ecow::EcoString;
-use hexpm::version::{Range, Version};
-use hexpm::version::{Range, Version};
-use itertools::Itertools;
-use itertools::Itertools;
-use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
-use lsp_types::{Position, TextDocumentIdentifier, TextDocumentPositionParams, Url};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex, RwLock},
-    time::SystemTime,
-};
-use std::{
-    collections::{HashMap, HashSet},
-    sync::{Arc, Mutex, RwLock},
-    time::SystemTime,
 };
 
 pub const LSP_TEST_ROOT_PACKAGE_NAME: &str = "app";

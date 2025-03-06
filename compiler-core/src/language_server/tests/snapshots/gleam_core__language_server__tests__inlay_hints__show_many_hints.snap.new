@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/inlay_hints.rs
+assertion_line: 76
+expression: hints
+snapshot_kind: text
+---
+[
+  {
+    "position": {
+      "line": 13,
+      "character": 24
+    },
+    "label": "String",
+    "kind": 1,
+    "paddingLeft": true
+  },
+  {
+    "position": {
+      "line": 14,
+      "character": 25
+    },
+    "label": "String",
+    "kind": 1,
+    "paddingLeft": true
+  }
+]
