@@ -109,28 +109,33 @@ pub enum UnknownField {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TypeSuggestion {
+pub enum TypeOrVariableSuggestion {
     Imported(EcoString),
     Importable(EcoString),
 }
 
-impl TypeSuggestion {
-    pub fn suggestion(&self, type_: &str) -> String {
-        let name = self.name();
-        format!("Did you mean to import `{name}.{{type {type_}}}`?")
+impl TypeOrVariableSuggestion {
+    pub fn suggestion(&self, name: &str, is_type: bool) -> String {
+        let module = self.name();
+
+        if is_type {
+            format!("Did you mean to import `{module}.{{type {name}}}`?")
+        } else {
+            format!("Did you mean to import `{module}.{{{name}}}`")
+        }
     }
 
     pub fn name(&self) -> &EcoString {
         match self {
-            TypeSuggestion::Imported(name) | TypeSuggestion::Importable(name) => name,
+            TypeOrVariableSuggestion::Imported(name)
+            | TypeOrVariableSuggestion::Importable(name) => name,
         }
     }
 
     pub fn last_name_component(&self) -> &str {
         match self {
-            TypeSuggestion::Imported(name) | TypeSuggestion::Importable(name) => {
-                name.split('/').last().unwrap_or(name)
-            }
+            TypeOrVariableSuggestion::Imported(name)
+            | TypeOrVariableSuggestion::Importable(name) => name.split('/').last().unwrap_or(name),
         }
     }
 }
@@ -200,13 +205,14 @@ pub enum Error {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
+        suggestions: Vec<TypeOrVariableSuggestion>,
     },
 
     UnknownType {
         location: SrcSpan,
         name: EcoString,
         hint: UnknownTypeHint,
-        suggestions: Vec<TypeSuggestion>,
+        suggestions: Vec<TypeOrVariableSuggestion>,
     },
 
     UnknownModule {
@@ -1181,6 +1187,7 @@ pub enum UnknownValueConstructorError {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
+        suggestions: Vec<TypeOrVariableSuggestion>,
     },
 
     Module {
@@ -1206,11 +1213,13 @@ pub fn convert_get_value_constructor_error(
             name,
             variables,
             type_with_name_in_scope,
+            suggestions,
         } => Error::UnknownVariable {
             location,
             name,
             variables,
             type_with_name_in_scope,
+            suggestions,
         },
 
         UnknownValueConstructorError::Module { name, suggestions } => Error::UnknownModule {
@@ -1264,7 +1273,7 @@ pub enum UnknownTypeConstructorError {
     Type {
         name: EcoString,
         hint: UnknownTypeHint,
-        suggestions: Vec<TypeSuggestion>,
+        suggestions: Vec<TypeOrVariableSuggestion>,
     },
 
     Module {

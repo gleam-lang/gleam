@@ -392,7 +392,8 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self.suggest_modules_for_type(Imported::Type(name.clone())),
+                    suggestions: self
+                        .suggest_modules_for_type_or_value(Imported::Type(name.clone())),
                 }),
 
             Some((module_name, _)) => {
@@ -441,7 +442,8 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self.suggest_modules_for_type(Imported::Type(name.clone())),
+                    suggestions: self
+                        .suggest_modules_for_type_or_value(Imported::Type(name.clone())),
                 }
             }),
 
@@ -478,6 +480,8 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
+                    suggestions: self
+                        .suggest_modules_for_type_or_value(Imported::Value(name.clone())),
                 }
             }),
 
@@ -744,7 +748,10 @@ impl Environment<'_> {
     }
 
     /// Suggest modules to import or use, for an unqualified type
-    pub fn suggest_modules_for_type(&self, imported: Imported) -> Vec<TypeSuggestion> {
+    pub fn suggest_modules_for_type_or_value(
+        &self,
+        imported: Imported,
+    ) -> Vec<TypeOrVariableSuggestion> {
         let mut suggestions = self
             .importable_modules
             .iter()
@@ -758,10 +765,10 @@ impl Environment<'_> {
                         None
                     }
                     Imported::Type(name) if module_info.get_public_type(name).is_some() => {
-                        Some(TypeSuggestion::Importable(importable.clone()))
+                        Some(TypeOrVariableSuggestion::Importable(importable.clone()))
                     }
                     Imported::Value(name) if module_info.get_public_value(name).is_some() => {
-                        Some(TypeSuggestion::Importable(importable.clone()))
+                        Some(TypeOrVariableSuggestion::Importable(importable.clone()))
                     }
                     _ => None,
                 }
@@ -771,16 +778,16 @@ impl Environment<'_> {
         suggestions.extend(self.imported_modules.iter().filter_map(
             |(module, (_, module_info))| match &imported {
                 Imported::Type(name) if module_info.get_public_type(name).is_some() => {
-                    Some(TypeSuggestion::Imported(module.clone()))
+                    Some(TypeOrVariableSuggestion::Imported(module.clone()))
                 }
                 Imported::Value(name) if module_info.get_public_value(name).is_some() => {
-                    Some(TypeSuggestion::Imported(module.clone()))
+                    Some(TypeOrVariableSuggestion::Imported(module.clone()))
                 }
                 _ => None,
             },
         ));
 
-        // Filter and sort options based on edit distance.
+        // Filter and sort options based on if its already imported and on alphabetical order.
         suggestions.into_iter().sorted().collect()
     }
 
