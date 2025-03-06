@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let twelve = \"1\" <> \"2\"\n}"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let twelve = "1" <> "2"
+                   ↑     
+}
+
+
+----- AFTER ACTION
+const string = "1" <> "2"
+
+pub fn main() {
+  let twelve = string
+}
