@@ -10,7 +10,8 @@ use ecow::EcoString;
 use globset::{Glob, GlobSetBuilder};
 use hexpm::version::{self, Version};
 use http::Uri;
-use serde::Deserialize;
+use serde::ser::SerializeSeq;
+use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fmt::{self};
 use std::marker::PhantomData;
@@ -62,24 +63,41 @@ impl<'de> Deserialize<'de> for SpdxLicense {
     }
 }
 
+impl Serialize for SpdxLicense {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.licence)
+    }
+}
+
 impl AsRef<str> for SpdxLicense {
     fn as_ref(&self) -> &str {
         self.licence.as_str()
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
-    #[serde(with = "package_name")]
+    #[serde(deserialize_with = "package_name::deserialize")]
     pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
     #[serde(
         default,
-        rename = "gleam",
-        serialize_with = "serialise_range",
-        deserialize_with = "deserialise_range"
+        skip_serializing_if = "Option::is_none",
+        serialize_with = "serialise_hex_range",
+        deserialize_with = "deserialise_hex_range"
     )]
+    // gleam version field in Hex format (for [de]serialization purposes)
+    pub gleam: Option<version::Range>,
+    #[serde(
+        default,
+        skip_serializing,
+        deserialize_with = "deserialise_pubgrub_range"
+    )]
+    // gleam version field used internally by the compiler
     pub gleam_version: Option<pubgrub::range::Range<Version>>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
@@ -105,20 +123,30 @@ pub struct PackageConfig {
     pub internal_modules: Option<Vec<Glob>>,
 }
 
-pub fn serialise_range<S>(
-    range: Option<pubgrub::range::Range<Version>>,
-    serialiser: S,
+pub fn serialise_hex_range<S>(
+    range: &Option<version::Range>,
+    serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
     match range {
-        Some(range) => serialiser.serialize_some(&range.to_string()),
-        None => serialiser.serialize_none(),
+        Some(range) => serializer.serialize_str(&range.to_string()),
+        None => serializer.serialize_none(),
     }
 }
 
-pub fn deserialise_range<'de, D>(
+pub fn deserialise_hex_range<'de, D>(deserialiser: D) -> Result<Option<version::Range>, D::Error>
+where
+    D: serde::Deserializer<'de>,
+{
+    match Deserialize::deserialize(deserialiser)? {
+        Some(range_string) => Ok(Some(version::Range::new(range_string))),
+        None => Ok(None),
+    }
+}
+
+pub fn deserialise_pubgrub_range<'de, D>(
     deserialiser: D,
 ) -> Result<Option<pubgrub::range::Range<Version>>, D::Error>
 where
@@ -571,6 +599,7 @@ impl Default for PackageConfig {
         Self {
             name: Default::default(),
             version: default_version(),
+            gleam: Default::default(),
             gleam_version: Default::default(),
             description: Default::default(),
             documentation: Default::default(),
@@ -587,7 +616,7 @@ impl Default for PackageConfig {
     }
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct ErlangConfig {
     #[serde(default)]
     pub application_start_module: Option<EcoString>,
@@ -595,7 +624,7 @@ pub struct ErlangConfig {
     pub extra_applications: Vec<EcoString>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Default, Clone)]
 pub struct JavaScriptConfig {
     #[serde(default)]
     pub typescript_declarations: bool,
@@ -614,6 +643,24 @@ pub enum DenoFlag {
 impl Default for DenoFlag {
     fn default() -> Self {
         Self::Allow(Vec::new())
+    }
+}
+
+impl Serialize for DenoFlag {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match self {
+            DenoFlag::AllowAll => serializer.serialize_bool(true),
+            DenoFlag::Allow(items) => {
+                let mut seq = serializer.serialize_seq(Some(items.len()))?;
+                for e in items {
+                    seq.serialize_element(e)?;
+                }
+                seq.end()
+            }
+        }
     }
 }
 
@@ -656,66 +703,104 @@ where
     deserializer.deserialize_any(StringOrVec(PhantomData))
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Default, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct DenoConfig {
-    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "bool_or_seq_string_to_deno_flag"
+    )]
     pub allow_env: DenoFlag,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub allow_sys: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub allow_hrtime: bool,
-    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "bool_or_seq_string_to_deno_flag"
+    )]
     pub allow_net: DenoFlag,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub allow_ffi: bool,
-    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "bool_or_seq_string_to_deno_flag"
+    )]
     pub allow_read: DenoFlag,
-    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "bool_or_seq_string_to_deno_flag"
+    )]
     pub allow_run: DenoFlag,
-    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
+    #[serde(
+        default,
+        skip_serializing_if = "is_default",
+        deserialize_with = "bool_or_seq_string_to_deno_flag"
+    )]
     pub allow_write: DenoFlag,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub allow_all: bool,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub unstable: bool,
-    #[serde(default, deserialize_with = "uri_serde::deserialize_option")]
+    #[serde(
+        default,
+        serialize_with = "uri_serde::serialize_option",
+        deserialize_with = "uri_serde::deserialize_option"
+    )]
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<Uri>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+fn is_default<T: Default + PartialEq>(t: &T) -> bool {
+    *t == Default::default()
+}
+
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 #[serde(tag = "type", rename_all = "lowercase")]
 pub enum Repository {
     GitHub {
         user: String,
         repo: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     GitLab {
         user: String,
         repo: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     BitBucket {
         user: String,
         repo: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     Codeberg {
         user: String,
         repo: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     #[serde(alias = "forgejo")]
     Gitea {
         user: String,
         repo: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
-        #[serde(with = "uri_serde_default_https")]
+        #[serde(
+            serialize_with = "uri_serde::serialize",
+            deserialize_with = "uri_serde_default_https::deserialize"
+        )]
         host: Uri,
     },
     SourceHut {
         user: String,
         repo: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     Custom {
@@ -770,20 +855,20 @@ impl Default for Repository {
     }
 }
 
-#[derive(Deserialize, Default, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Default, Debug, PartialEq, Eq, Clone)]
 pub struct Docs {
     #[serde(default)]
     pub pages: Vec<DocsPage>,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct DocsPage {
     pub title: String,
     pub path: String,
     pub source: Utf8PathBuf,
 }
 
-#[derive(Deserialize, Debug, PartialEq, Eq, Clone)]
+#[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
 pub struct Link {
     pub title: String,
     #[serde(with = "uri_serde")]
@@ -821,6 +906,23 @@ mod uri_serde {
             }
             None => Ok(None),
         }
+    }
+
+    pub fn serialize_option<S>(uri: &Option<http::Uri>, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        match uri {
+            Some(uri) => serialize(uri, serializer),
+            None => serializer.serialize_unit(),
+        }
+    }
+
+    pub fn serialize<S>(uri: &http::Uri, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&uri.to_string())
     }
 }
 
@@ -899,4 +1001,48 @@ name = "1"
             .to_string(),
         "Package names may only contain lowercase letters, numbers, and underscores for key `name` at line 1 column 1"
     )
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string(&config).unwrap();
+    insta::assert_snapshot!(json);
 }
