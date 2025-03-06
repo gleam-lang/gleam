@@ -368,7 +368,7 @@ impl PackageInterface {
             version: package.config.version.to_string().into(),
             gleam_version_constraint: package
                 .config
-                .gleam_version
+                .gleam
                 .clone()
                 .map(|version| EcoString::from(version.to_string())),
             modules: package
