@@ -395,17 +395,24 @@ impl<'module> Generator<'module> {
             .unwrap_or(1);
 
         let (size_value, size) = match size {
-            Some(Opt::Size { value: size, .. }) => {
-                let size_value = match *size.clone() {
-                    TypedExpr::Int { int_value, .. } => Some(int_value * unit as usize),
-                    _ => None,
-                };
+            Some(Opt::Size { value: size, .. }) => match *size.clone() {
+                TypedExpr::Int { int_value, .. } => {
+                    let size_value = int_value * unit as usize;
+                    let size = eco_format!("{}", size_value).to_doc();
 
-                (
-                    size_value,
-                    self.not_in_tail_position(|r#gen| r#gen.wrap_expression(size))?,
-                )
-            }
+                    (Some(size_value), size)
+                }
+                _ => {
+                    let mut size =
+                        self.not_in_tail_position(|r#gen| r#gen.wrap_expression(size))?;
+
+                    if unit != 1 {
+                        size = size.group().append(" * ".to_doc().append(unit.to_doc()));
+                    }
+
+                    (None, size)
+                }
+            },
             _ => {
                 let size_value = if segment.type_ == crate::type_::int() {
                     8usize
@@ -418,7 +425,7 @@ impl<'module> Generator<'module> {
         };
 
         Ok(SizedBitArraySegmentDetails {
-            size: size.group().append(" * ".to_doc().append(unit.to_doc())),
+            size,
             size_value,
             endianness,
         })
@@ -1713,14 +1720,23 @@ fn sized_bit_array_segment_details<'a>(
         .find(|x| matches!(x, Opt::Size { .. }));
 
     let (size_value, size) = match size {
-        Some(Opt::Size { value: size, .. }) => {
-            let size_value = match *size.clone() {
-                Constant::Int { int_value, .. } => Some(int_value * unit as usize),
-                _ => None,
-            };
+        Some(Opt::Size { value: size, .. }) => match *size.clone() {
+            Constant::Int { int_value, .. } => {
+                let size_value = int_value * unit as usize;
+                let size = eco_format!("{}", size_value).to_doc();
 
-            (size_value, constant_expr_fun(tracker, size)?)
-        }
+                (Some(size_value), size)
+            }
+            _ => {
+                let mut size = constant_expr_fun(tracker, size)?;
+
+                if unit != 1 {
+                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
+                }
+
+                (None, size)
+            }
+        },
         _ => {
             let size_value = if segment.type_ == crate::type_::int() {
                 8usize
@@ -1733,7 +1749,7 @@ fn sized_bit_array_segment_details<'a>(
     };
 
     Ok(SizedBitArraySegmentDetails {
-        size: size.group().append(" * ".to_doc().append(unit.to_doc())),
+        size,
         size_value,
         endianness,
     })
