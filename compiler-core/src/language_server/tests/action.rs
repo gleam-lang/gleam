@@ -5231,6 +5231,20 @@ pub type Wibble {
 }
 
 #[test]
+fn generate_json_encoder_for_variants_with_mixed_fields() {
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        "
+pub type Wibble {
+  Wibble
+  Wobble(field: String, field1: Int)
+}
+",
+        find_position_of("type W").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_function_call_works_with_function_producing_another_function() {
     assert_code_action!(
         CONVERT_TO_FUNCTION_CALL,
