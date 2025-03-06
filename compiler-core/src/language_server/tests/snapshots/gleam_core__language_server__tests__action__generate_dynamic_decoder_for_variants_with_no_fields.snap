@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub type Wibble {\n  Wibble\n  Wobble\n  Woo\n}\n"
+---
+----- BEFORE ACTION
+
+pub type Wibble {
+    ↑            
+  Wibble
+  Wobble
+  Woo
+}
+
+
+----- AFTER ACTION
+import gleam/dynamic/decode
+
+pub type Wibble {
+  Wibble
+  Wobble
+  Woo
+}
+
+fn wibble_decoder() -> decode.Decoder(Wibble) {
+  use variant <- decode.then(decode.string)
+  case variant {
+    "wibble" -> decode.success(Wibble)
+    "wobble" -> decode.success(Wobble)
+    "woo" -> decode.success(Woo)
+    _ -> decode.failure(todo as "Zero value for Wibble", "Wibble")
+  }
+}

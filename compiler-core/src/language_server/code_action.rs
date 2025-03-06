@@ -2995,24 +2995,78 @@ impl<'a> GenerateDynamicDecoder<'a> {
         self.visit_typed_module(&self.module.ast);
     }
 
-    fn generate_decoder_for_variant(
+    fn custom_type_decoder_body(
         &mut self,
-        custom_type: &'a ast::TypedCustomType,
-        constructor: &'a TypedRecordConstructor,
-        indent: usize,
+        custom_type: &CustomType<Arc<Type>>,
     ) -> Option<EcoString> {
-        let fields = constructor
-            .arguments
-            .iter()
-            .map(|argument| {
-                Some(RecordField {
-                    label: RecordLabel::Labeled(
-                        argument.label.as_ref().map(|(_, name)| name.as_str())?,
-                    ),
-                    type_: &argument.type_,
-                })
-            })
-            .collect::<Option<Vec<_>>>()?;
+        // We cannot generate a decoder for an external type with no constructors!
+        let constructors_size = custom_type.constructors.len();
+        let (first, rest) = custom_type.constructors.split_first()?;
+        let mode = EncodingMode::for_custom_type(custom_type);
+
+        // We generate a decoder for a type with a single constructor: it does not
+        // require pattern matching on a tag as there's no variants to tell apart.
+        if rest.is_empty() && mode == EncodingMode::AsObjectWithNoTypeTag {
+            return self.constructor_decoder(mode, custom_type, first, 0);
+        }
+
+        // Otherwise we need to generate a decoder that has to tell apart different
+        // variants, depending on the mode we might have to decode a type field or
+        // plain strings!
+        let module = self.printer.print_module(DECODE_MODULE);
+        let discriminant = if mode == EncodingMode::AsPlainString {
+            eco_format!("use variant <- {module}.then({module}.string)")
+        } else {
+            eco_format!("use variant <- {module}.field(\"type\", {module}.string)")
+        };
+
+        let mut branches = Vec::with_capacity(constructors_size);
+        for constructor in iter::once(first).chain(rest) {
+            let body = self.constructor_decoder(mode, custom_type, constructor, 4)?;
+            let name = constructor.name.to_snake_case();
+            branches.push(eco_format!(r#"    "{name}" -> {body}"#));
+        }
+
+        let cases = branches.join("\n");
+        let type_name = &custom_type.name;
+        Some(eco_format!(
+            r#"{{
+  {discriminant}
+  case variant {{
+{cases}
+    _ -> {module}.failure(todo as "Zero value for {type_name}", "{type_name}")
+  }}
+}}"#,
+        ))
+    }
+
+    fn constructor_decoder(
+        &mut self,
+        mode: EncodingMode,
+        custom_type: &ast::TypedCustomType,
+        constructor: &TypedRecordConstructor,
+        nesting: usize,
+    ) -> Option<EcoString> {
+        let decode_module = self.printer.print_module(DECODE_MODULE);
+        let constructor_name = &constructor.name;
+
+        // If the constructor was encoded as a plain string with no additional
+        // fields it means there's nothing else to decode and we can just
+        // succeed.
+        if mode == EncodingMode::AsPlainString {
+            return Some(eco_format!("{decode_module}.success({constructor_name})"));
+        }
+
+        // Otherwise we have to decode all the constructor fields to build it.
+        let mut fields = Vec::with_capacity(constructor.arguments.len());
+        for argument in constructor.arguments.iter() {
+            let (_, name) = argument.label.as_ref()?;
+            let field = RecordField {
+                label: RecordLabel::Labeled(name),
+                type_: &argument.type_,
+            };
+            fields.push(field);
+        }
 
         let mut decoder_printer = DecoderPrinter::new(
             &self.module.ast.names,
@@ -3022,21 +3076,26 @@ impl<'a> GenerateDynamicDecoder<'a> {
 
         let decoders = fields
             .iter()
-            .map(|field| decoder_printer.decode_field(field, indent + 2))
+            .map(|field| decoder_printer.decode_field(field, nesting + 2))
             .join("\n");
-        let decode_module = self.printer.print_module(DECODE_MODULE);
 
-        let mut field_names = fields.iter().map(|field| field.label.variable_name());
+        let indent = " ".repeat(nesting);
 
-        Some(eco_format!(
-            "{{
+        Some(if decoders.is_empty() {
+            eco_format!("{decode_module}.success({constructor_name})")
+        } else {
+            let field_names = fields
+                .iter()
+                .map(|field| format!("{}:", field.label.variable_name()))
+                .join(", ");
+
+            eco_format!(
+                "{{
 {decoders}
-{indent}  {decode_module}.success({constructor_name}({fields}:))
+{indent}  {decode_module}.success({constructor_name}({field_names}))
 {indent}}}",
-            constructor_name = constructor.name,
-            fields = field_names.join(":, "),
-            indent = " ".repeat(indent),
-        ))
+            )
+        })
     }
 }
 
@@ -3048,42 +3107,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateDynamicDecoder<'ast> {
         }
 
         let name = eco_format!("{}_decoder", custom_type.name.to_snake_case());
-
-        let Some(function_body) = (match custom_type.constructors.as_slice() {
-            // We can't generate a decoder for an external type
-            [] => return,
-            [constructor] => self.generate_decoder_for_variant(custom_type, constructor, 0),
-            constructors => {
-                let Some(cases) = constructors
-                    .iter()
-                    .map(|constructor| {
-                        self.generate_decoder_for_variant(custom_type, constructor, 4)
-                            .map(|body| {
-                                eco_format!(
-                                    r#"    "{name}" -> {body}"#,
-                                    name = constructor.name.to_snake_case()
-                                )
-                            })
-                    })
-                    .collect::<Option<Vec<_>>>()
-                else {
-                    return;
-                };
-
-                let module = self.printer.print_module(DECODE_MODULE);
-                Some(eco_format!(
-                    r#"{{
-  use variant <- {module}.field("type", {module}.string)
-  case variant {{
-{cases}
-    _ -> {module}.failure(todo as "Zero value for {type_name}", "{type_name}")
-  }}
-}}"#,
-                    type_name = custom_type.name,
-                    cases = cases.join("\n")
-                ))
-            }
-        }) else {
+        let Some(function_body) = self.custom_type_decoder_body(custom_type) else {
             return;
         };
 
@@ -3361,7 +3385,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         self.visit_typed_module(&self.module.ast);
     }
 
-    fn encoder_body_for_custom_type(
+    fn custom_type_encoder_body(
         &mut self,
         record_name: EcoString,
         custom_type: &CustomType<Arc<Type>>,
@@ -3466,8 +3490,7 @@ impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
 
         let record_name = EcoString::from(custom_type.name.to_snake_case());
         let name = eco_format!("encode_{record_name}");
-        let Some(encoder) = self.encoder_body_for_custom_type(record_name.clone(), custom_type)
-        else {
+        let Some(encoder) = self.custom_type_encoder_body(record_name.clone(), custom_type) else {
             return;
         };
 
