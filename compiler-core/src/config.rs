@@ -25,10 +25,6 @@ fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
 }
 
-fn erlang_target() -> Target {
-    Target::Erlang
-}
-
 fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
@@ -99,27 +95,31 @@ pub struct PackageConfig {
     )]
     // gleam version field used internally by the compiler
     pub gleam_version: Option<pubgrub::range::Range<Version>>,
-    #[serde(default, alias = "licenses")]
+    #[serde(default, alias = "licenses", skip_serializing_if = "is_default")]
     pub licences: Vec<SpdxLicense>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub description: EcoString,
-    #[serde(default, alias = "docs")]
+    #[serde(default, alias = "docs", skip_serializing_if = "is_default")]
     pub documentation: Docs,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub dependencies: Dependencies,
-    #[serde(default, rename = "dev-dependencies")]
+    #[serde(
+        default,
+        rename = "dev-dependencies",
+        skip_serializing_if = "is_default"
+    )]
     pub dev_dependencies: Dependencies,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub repository: Repository,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub links: Vec<Link>,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub erlang: ErlangConfig,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub javascript: JavaScriptConfig,
-    #[serde(default = "erlang_target")]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub target: Target,
-    #[serde(default)]
+    #[serde(default, skip_serializing_if = "is_default")]
     pub internal_modules: Option<Vec<Glob>>,
 }
 
@@ -1037,6 +1037,18 @@ allow_ffi = true
 allow_env = ["DATABASE_URL"]
 allow_net = ["example.com:443"]
 allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string(&config).unwrap();
+    insta::assert_snapshot!(json);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
 "#;
 
     let config = toml::from_str::<PackageConfig>(&input).unwrap();
