@@ -1,0 +1,5 @@
+---
+source: compiler-core/src/config.rs
+expression: json
+---
+{"name":"my_project","version":"1.0.0"}
