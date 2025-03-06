@@ -44,13 +44,17 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
     fn visit_typed_expr_pipeline(
         &mut self,
         _location: &'ast SrcSpan,
-        _first_value: &'ast TypedPipelineAssignment,
+        first_value: &'ast TypedPipelineAssignment,
         assignments: &'ast [(TypedPipelineAssignment, PipelineAssignmentKind)],
         finally: &'ast TypedExpr,
         _finally_kind: &'ast PipelineAssignmentKind,
     ) {
         let mut prev_hint: Option<(u32, Option<InlayHint>)> = None;
-        for (assign, _) in assignments {
+
+        let assigments_values =
+            std::iter::once(first_value).chain(assignments.iter().map(|p| &p.0));
+
+        for assign in assigments_values {
             let this_line: u32 = self
                 .line_numbers
                 .line_and_column_number(assign.location.end)
