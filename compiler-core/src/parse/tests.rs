@@ -363,6 +363,28 @@ fn pointless_spread() {
     );
 }
 
+#[test]
+fn double_spread() {
+    assert_error!(
+        "let xs = [1] let ys = [2, 3] [..xs, ..ys]",
+        ParseError {
+            error: ParseErrorType::ListSpreadWithAnotherSpread,
+            location: SrcSpan { start: 36, end: 38 },
+        }
+    );
+}
+
+#[test]
+fn double_spread2() {
+    assert_error!(
+        "let xs = [1] let ys = [3, 4] [..xs, 2, ..ys]",
+        ParseError {
+            error: ParseErrorType::ListSpreadWithAnotherSpread,
+            location: SrcSpan { start: 39, end: 41 },
+        }
+    );
+}
+
 // https://github.com/gleam-lang/gleam/issues/1358
 #[test]
 fn lowcase_bool_in_pattern() {
@@ -834,6 +856,19 @@ fn list_spread_followed_by_extra_items() {
 pub fn main() -> Nil {
   let xs = [1, 2, 3]
   [1, 2, ..xs, 3 + 3, 4]
+}
+"#
+    );
+}
+
+#[test]
+fn list_spread_followed_by_another_spread() {
+    assert_module_error!(
+        r#"
+pub fn main() -> Nil {
+  let xs = [1, 2, 3]
+  let ys = [5, 6, 7]
+  [..xs, 4, ..ys]
 }
 "#
     );
