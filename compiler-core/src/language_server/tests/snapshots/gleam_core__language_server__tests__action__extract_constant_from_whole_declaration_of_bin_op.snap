@@ -1,0 +1,22 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let twelve = \"1\" <> \"2\"\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+pub fn main() {
+  let twelve = "1" <> "2"
+  ▔▔▔▔▔▔▔▔▔↑             
+  io.print(twelve)
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const twelve = "1" <> "2"
+
+pub fn main() {
+  io.print(twelve)
+}

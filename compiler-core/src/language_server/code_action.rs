@@ -2928,12 +2928,12 @@ pub struct ExtractConstant<'a> {
 
 /// Used when an expression can be extracted to a constant
 enum ExtractableToConstant {
-    /// Used for collections. This means that elements inside, are also
-    /// extractable as constants.
-    Collection,
-    /// Used for lone values. Literals in Gleam can be Ints, Floats, Strings
+    /// Used for collections and operator uses. This means that elements
+    /// inside, are also extractable as constants.
+    ComposedValue,
+    /// Used for single values. Literals in Gleam can be Ints, Floats, Strings
     /// and type variants (not records).
-    Value,
+    SingleValue,
     /// Used for whole variable assignments. If the right hand side of the
     /// expression can be extracted, the whole expression extracted and use the
     /// local variable as a constant.
@@ -3020,11 +3020,19 @@ fn can_be_constant(
                 type_::ValueConstructorVariant::Record { arity: 0, .. }
             ) || mc.contains(name)
         }
+
+        TypedExpr::BinOp {
+            name, left, right, ..
+        } => {
+            matches!(name, ast::BinOp::Concatenate)
+                && can_be_constant(module, left, Some(mc))
+                && can_be_constant(module, right, Some(mc))
+        }
+
         TypedExpr::Block { .. }
         | TypedExpr::Pipeline { .. }
         | TypedExpr::Fn { .. }
         | TypedExpr::Call { .. }
-        | TypedExpr::BinOp { .. }
         | TypedExpr::Case { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::ModuleSelect { .. }
@@ -3138,7 +3146,7 @@ impl<'a> ExtractConstant<'a> {
             }
 
             // Only  right hand side is replaced for collection or values
-            ExtractableToConstant::Collection | ExtractableToConstant::Value => {
+            ExtractableToConstant::ComposedValue | ExtractableToConstant::SingleValue => {
                 self.edits.replace(expr_span, String::from(new_const_name));
             }
         }
@@ -3186,6 +3194,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
             return;
         }
 
+        // Has to be variable because patterns can't be constants.
         if assignment.pattern.is_variable() && can_be_constant(self.module, &assignment.value, None)
         {
             self.type_of_extractable = Some(ExtractableToConstant::Assignment);
@@ -3217,27 +3226,31 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         }
 
         // Keep going down recursively if:
-        // - It's no extractable has been found yet (`None`)
+        // - It's no extractable has been found yet (`None`).
         // - It's a collection, which may or may not contain a value that can
-        //   be extracted (`Some(ExtractableToConstant::Collection)`)
+        //   be extracted.
+        // - It's a binary operator, which may or may not operate on
+        //   extractable values.
         if matches!(
             self.type_of_extractable,
-            None | Some(ExtractableToConstant::Collection)
+            None | Some(ExtractableToConstant::ComposedValue)
         ) && can_be_constant(self.module, expr, None)
         {
             self.type_of_extractable = match expr {
-                TypedExpr::Var { .. } => Some(ExtractableToConstant::Value),
-                TypedExpr::Int { .. } | TypedExpr::Float { .. } | TypedExpr::String { .. } => {
-                    Some(ExtractableToConstant::Value)
-                }
-                TypedExpr::List { .. } | TypedExpr::Tuple { .. } | TypedExpr::BitArray { .. } => {
-                    Some(ExtractableToConstant::Collection)
-                }
+                TypedExpr::Var { .. }
+                | TypedExpr::Int { .. }
+                | TypedExpr::Float { .. }
+                | TypedExpr::String { .. } => Some(ExtractableToConstant::SingleValue),
+
+                TypedExpr::List { .. }
+                | TypedExpr::Tuple { .. }
+                | TypedExpr::BitArray { .. }
+                | TypedExpr::BinOp { .. } => Some(ExtractableToConstant::ComposedValue),
+
                 TypedExpr::Block { .. }
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::Fn { .. }
                 | TypedExpr::Call { .. }
-                | TypedExpr::BinOp { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::RecordAccess { .. }
                 | TypedExpr::ModuleSelect { .. }

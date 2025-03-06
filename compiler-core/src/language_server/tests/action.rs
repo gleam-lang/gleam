@@ -4714,6 +4714,33 @@ pub fn main() {
 }
 
 #[test]
+fn extract_constant_from_declaration_of_bin_op() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let twelve = "1" <> "2"
+}"#,
+        find_position_of("<").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_whole_declaration_of_bin_op() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  let twelve = "1" <> "2"
+  io.print(twelve)
+}"#,
+        find_position_of("l")
+            .nth_occurrence(2)
+            .select_until(find_position_of("e").nth_occurrence(4))
+    );
+}
+
+#[test]
 fn extract_constant_from_declaration_of_int() {
     assert_code_action!(
         EXTRACT_CONSTANT,
@@ -5147,6 +5174,45 @@ pub fn main() {
         find_position_of("U")
             .nth_occurrence(2)
             .select_until(find_position_of("d").nth_occurrence(3))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_pattern() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let #(one, two) = #(1, 2)
+  one
+}"#,
+        find_position_of("l").select_until(find_position_of("(").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_fn_call() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/io
+
+pub fn main() {
+  io.print("constant")
+}"#,
+        find_position_of("p")
+            .nth_occurrence(3)
+            .select_until(find_position_of("t").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_bin_op() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let res = 64 < 32
+  res
+}"#,
+        find_position_of("<").to_selection()
     );
 }
 
