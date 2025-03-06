@@ -1,0 +1,32 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+expression: "\nfn go(x) {\n  let size = 3\n  let assert <<1:size(size)-unit(2)>> = x\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  let size = 3
+  let assert <<1:size(size)-unit(2)>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, bitArraySliceToInt } from "../gleam.mjs";
+
+function go(x) {
+  let size = 3;
+  if (
+    bitArraySliceToInt(x, 0, size * 2, true, false) !== 1 ||
+    !(x.bitSize == size * 2)
+  ) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      4,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  return x;
+}

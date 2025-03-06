@@ -8,6 +8,10 @@
   JavaScript FFI code more compact. They are now one line instead of three.
   ([Richard Viney](https://github.com/richard-viney))
 
+- On the JavaScript target, bit arrays can now use the `unit` option to control
+  the units of the `size` option.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.9.0-rc1 - 2025-03-04
 
 ### Compiler

@@ -944,20 +944,34 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             Endianness::Big
         };
 
+        let unit = segment
+            .options
+            .iter()
+            .find_map(|option| match option {
+                Opt::Unit { value, .. } => Some(*value),
+                _ => None,
+            })
+            .unwrap_or(1);
+
         let size = match segment
             .options
             .iter()
             .find(|x| matches!(x, Opt::Size { .. }))
         {
             Some(Opt::Size { value: size, .. }) => match &**size {
-                Pattern::Int { value, .. } => {
-                    Ok(BitArraySize::Literal(value.parse::<usize>().expect(
-                        "part of an Int node should always parse as integer",
-                    )))
-                }
-                Pattern::VarUsage { name, .. } => Ok(BitArraySize::Variable(
-                    self.expression_generator.local_var(name),
+                Pattern::Int { value, .. } => Ok(BitArraySize::Literal(
+                    value
+                        .parse::<usize>()
+                        .expect("part of an Int node should always parse as integer")
+                        * unit as usize,
                 )),
+                Pattern::VarUsage { name, .. } => {
+                    let mut variable = self.expression_generator.local_var(name);
+                    if unit != 1 {
+                        variable.push_str(&eco_format!(" * {unit}"));
+                    }
+                    Ok(BitArraySize::Variable(variable))
+                }
                 _ => Err(Error::Unsupported {
                     feature: "Non-constant size option in patterns".into(),
                     location: segment.location,
