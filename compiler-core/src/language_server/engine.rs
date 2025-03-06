@@ -1,5 +1,5 @@
 use crate::{
-    Error, Result, Warning,
+    Error, Error, Result, Result, Warning, Warning,
     analyse::{self, name::correct_name_case},
     ast::{
         self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
@@ -33,6 +33,7 @@ use lsp_types::{
 use std::{collections::HashSet, sync::Arc};
 
 use super::{
+    DownloadDependencies, MakeLocker,
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
         ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
@@ -44,9 +45,9 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    rename::{
-        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
-    },
+    configuration::SharedConfig,
+    inlay_hints,
+    rename::{VariableRenameKind, rename_local_variable},
     signature_help, src_span_to_lsp_range,
 };
 
