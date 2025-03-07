@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/io\n\npub fn main() {\n  io.debug(#(1, 2, 3))\n}"
+---
+----- BEFORE ACTION
+import gleam/io
+
+pub fn main() {
+  io.debug(#(1, 2, 3))
+           ▔↑         
+}
+
+
+----- AFTER ACTION
+import gleam/io
+
+const value = #(1, 2, 3)
+
+pub fn main() {
+  io.debug(value)
+}
