@@ -98,7 +98,9 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
     ) {
         if let crate::ast::FunctionLiteralKind::Anonymous { head } = kind {
             for arg in args {
-                self.push_binding_annotation(&arg.type_, &arg.location);
+                if arg.annotation.is_none() {
+                    self.push_binding_annotation(&arg.type_, &arg.location);
+                }
             }
 
             if return_annotation.is_none() {
