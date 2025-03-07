@@ -3,10 +3,10 @@ use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel};
 use crate::{
     ast::{
         PipelineAssignmentKind, SrcSpan, TypedExpr, TypedModule, TypedPipelineAssignment,
-        visit::{self, Visit},
+        visit::Visit,
     },
     line_numbers::LineNumbers,
-    type_,
+    type_::{self, Type},
 };
 
 use super::src_offset_to_lsp_position;
@@ -48,6 +48,25 @@ fn default_inlay_hint(line_numbers: &LineNumbers, offset: u32, label: String) ->
     }
 }
 
+impl InlayHintsVisitor<'_> {
+    pub fn push_binding_annotation(&mut self, type_: &Type, span: &SrcSpan) {
+        let label = format!(": {}", self.current_declaration_printer.print_type(type_));
+
+        let mut hint = default_inlay_hint(self.line_numbers, span.end, label);
+        hint.padding_left = Some(false);
+
+        self.hints.push(hint);
+    }
+
+    pub fn push_return_annotation(&mut self, type_: &Type, span: &SrcSpan) {
+        let label = format!("-> {}", self.current_declaration_printer.print_type(type_));
+
+        let hint = default_inlay_hint(self.line_numbers, span.end, label);
+
+        self.hints.push(hint);
+    }
+}
+
 impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
     fn visit_typed_function(&mut self, fun: &'ast crate::ast::TypedFunction) {
         // This must be reset on every statement
@@ -55,29 +74,12 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
 
         for arg in &fun.arguments {
             if arg.annotation.is_none() {
-                let label = format!(
-                    ": {}",
-                    self.current_declaration_printer
-                        .print_type(arg.type_.as_ref())
-                );
-
-                let mut hint = default_inlay_hint(self.line_numbers, arg.location.end, label);
-                hint.padding_left = Some(false);
-
-                self.hints.push(hint);
+                self.push_binding_annotation(&arg.type_, &arg.location);
             }
         }
 
         if fun.return_annotation.is_none() {
-            let label = format!(
-                "-> {}",
-                self.current_declaration_printer
-                    .print_type(fun.return_type.as_ref())
-            );
-
-            let hint = default_inlay_hint(self.line_numbers, fun.location.end, label);
-
-            self.hints.push(hint);
+            self.push_return_annotation(&fun.return_type, &fun.location);
         }
 
         for st in &fun.body {
@@ -88,37 +90,21 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
     fn visit_typed_expr_fn(
         &mut self,
         _location: &'ast SrcSpan,
-        type_: &'ast std::sync::Arc<type_::Type>,
+        type_: &'ast std::sync::Arc<Type>,
         kind: &'ast crate::ast::FunctionLiteralKind,
         args: &'ast [crate::ast::TypedArg],
         body: &'ast vec1::Vec1<crate::ast::TypedStatement>,
-        _return_annotation: &'ast Option<crate::ast::TypeAst>,
+        return_annotation: &'ast Option<crate::ast::TypeAst>,
     ) {
         if let crate::ast::FunctionLiteralKind::Anonymous { head } = kind {
             for arg in args {
-                if arg.annotation.is_none() {
-                    let label = format!(
-                        ": {}",
-                        self.current_declaration_printer
-                            .print_type(arg.type_.as_ref())
-                    );
-
-                    let mut hint = default_inlay_hint(self.line_numbers, arg.location.end, label);
-                    hint.padding_left = Some(false);
-
-                    self.hints.push(hint);
-                }
+                self.push_binding_annotation(&arg.type_, &arg.location);
             }
 
-            if let Some((_args, ret_type)) = type_.fn_types() {
-                let label = format!(
-                    "-> {}",
-                    self.current_declaration_printer
-                        .print_type(ret_type.as_ref())
-                );
-
-                let hint = default_inlay_hint(self.line_numbers, head.end, label);
-                self.hints.push(hint);
+            if return_annotation.is_none() {
+                if let Some((_args, ret_type)) = type_.fn_types() {
+                    self.push_return_annotation(&ret_type, head);
+                }
             }
         }
 
@@ -171,7 +157,7 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
                 },
             ));
 
-            visit::visit_typed_expr(self, &assign.value);
+            self.visit_typed_expr(&assign.value);
         }
 
         if let Some((prev_line, prev_hint)) = prev_hint {
@@ -194,7 +180,7 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
             }
         }
 
-        visit::visit_typed_expr(self, finally);
+        self.visit_typed_expr(finally);
     }
 }
 
