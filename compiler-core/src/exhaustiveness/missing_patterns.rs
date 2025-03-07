@@ -1,4 +1,4 @@
-use super::{Constructor, Decision, Match, Variable, printer::Printer};
+use super::{Decision, Match, RuntimeCheck, RuntimeCheckKind, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
 use std::collections::{HashMap, HashSet};
@@ -70,9 +70,9 @@ fn add_missing_patterns(
     environment: &Environment<'_>,
 ) {
     match node {
-        Decision::Success(_) => {}
+        Decision::Run { .. } => {}
 
-        Decision::Failure => {
+        Decision::Fail => {
             let mut mapping = HashMap::new();
             let printer = Printer::new(&environment.names);
 
@@ -98,78 +98,88 @@ fn add_missing_patterns(
             _ = missing.insert(pattern);
         }
 
-        Decision::Guard(_, _, fallback) => {
-            add_missing_patterns(fallback, subjects, terms, missing, environment);
+        Decision::Guard { if_false, .. } => {
+            add_missing_patterns(if_false, subjects, terms, missing, environment);
         }
 
-        Decision::Switch(variable, cases, fallback) => {
-            for case in cases {
-                match &case.constructor {
-                    Constructor::Int(_)
-                    | Constructor::Float(_)
-                    | Constructor::String(_)
-                    | Constructor::BitArray
-                    | Constructor::StringPrefix => {
-                        terms.push(Term::Infinite {
-                            variable: variable.clone(),
-                        });
-                    }
-
-                    Constructor::Tuple(_) => {
-                        let arguments = case.arguments.clone();
-                        terms.push(Term::Tuple {
-                            variable: variable.clone(),
-                            arguments,
-                        });
-                    }
-
-                    Constructor::Variant { type_, index } => {
-                        let (module, name) =
-                            type_.named_type_name().expect("Should be a named type");
-                        let name = environment
-                            .get_constructors_for_type(&module, &name)
-                            .expect("Custom type constructor must have custom type kind")
-                            .variants
-                            .get(*index as usize)
-                            .expect("Custom type constructor exist for type")
-                            .name
-                            .clone();
-                        terms.push(Term::Variant {
-                            variable: variable.clone(),
-                            name,
-                            module,
-                            arguments: case.arguments.clone(),
-                        });
-                    }
-                }
-
-                add_missing_patterns(&case.body, subjects, terms, missing, environment);
+        Decision::Switch {
+            var,
+            choices,
+            fallback,
+        } => {
+            for (check, body) in choices {
+                let term = check_to_term(var.clone(), check, environment);
+                terms.push(term);
+                add_missing_patterns(&body, subjects, terms, missing, environment);
                 _ = terms.pop();
             }
 
-            if let Some(node) = fallback {
-                add_missing_patterns(node, subjects, terms, missing, environment);
+            add_missing_patterns(fallback, subjects, terms, missing, environment);
+        }
+
+        Decision::ExhaustiveSwitch { var, choices } => {
+            for (check, body) in choices {
+                let term = check_to_term(var.clone(), check, environment);
+                terms.push(term);
+                add_missing_patterns(&body, subjects, terms, missing, environment);
+                _ = terms.pop();
+            }
+        }
+    }
+}
+
+fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>) -> Term {
+    match &check.kind {
+        RuntimeCheckKind::IsInt { .. }
+        | RuntimeCheckKind::IsFloat { .. }
+        | RuntimeCheckKind::IsString { .. }
+        | RuntimeCheckKind::IsBitArray { .. }
+        | RuntimeCheckKind::IsStringPrefix { .. } => Term::Infinite { variable },
+
+        RuntimeCheckKind::IsTuple { .. } => {
+            let arguments = check.args.clone();
+            Term::Tuple {
+                variable,
+                arguments,
             }
         }
 
-        Decision::List {
-            variable,
-            empty,
-            non_empty,
-        } => {
-            terms.push(Term::EmptyList {
-                variable: variable.clone(),
-            });
-            add_missing_patterns(empty, subjects, terms, missing, environment);
-            _ = terms.pop();
+        RuntimeCheckKind::IsVariant { index } => {
+            let (module, name) = variable
+                .type_
+                .named_type_name()
+                .expect("Should be a named type");
 
-            terms.push(Term::List {
-                variable: variable.clone(),
-                first: non_empty.first.clone(),
-                rest: non_empty.rest.clone(),
-            });
-            add_missing_patterns(&non_empty.decision, subjects, terms, missing, environment);
-            _ = terms.pop();
+            let name = env
+                .get_constructors_for_type(&module, &name)
+                .expect("Custom type constructor must have custom type kind")
+                .variants
+                .get(*index)
+                .expect("Custom type constructor exist for type")
+                .name
+                .clone();
+
+            Term::Variant {
+                variable,
+                name,
+                module,
+                arguments: check.args.clone(),
+            }
         }
+
+        RuntimeCheckKind::IsNonEmptyList => {
+            let (first, rest) = match check.args.as_slice() {
+                [first, rest] => (first.clone(), rest.clone()),
+                _ => unreachable!("list pattern with more than two arguments"),
+            };
+
+            Term::List {
+                variable,
+                first,
+                rest,
+            }
+        }
+
+        RuntimeCheckKind::IsEmptyList => Term::EmptyList { variable },
     }
 }

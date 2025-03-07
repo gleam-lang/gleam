@@ -1862,7 +1862,7 @@ impl Default for Inferred<()> {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum AssignName {
     Variable(EcoString),
     Discard(EcoString),
