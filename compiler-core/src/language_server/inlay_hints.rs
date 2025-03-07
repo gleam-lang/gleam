@@ -2,7 +2,7 @@ use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel};
 
 use crate::{
     ast::{
-        PipelineAssignmentKind, SrcSpan, TypedExpr, TypedModule, TypedPipelineAssignment,
+        PipelineAssignmentKind, SrcSpan, TypeAst, TypedExpr, TypedModule, TypedPipelineAssignment,
         visit::Visit,
     },
     line_numbers::LineNumbers,
@@ -49,7 +49,16 @@ fn default_inlay_hint(line_numbers: &LineNumbers, offset: u32, label: String) ->
 }
 
 impl InlayHintsVisitor<'_> {
-    pub fn push_binding_annotation(&mut self, type_: &Type, span: &SrcSpan) {
+    pub fn push_binding_annotation(
+        &mut self,
+        type_: &Type,
+        type_annotation_ast: Option<&TypeAst>,
+        span: &SrcSpan,
+    ) {
+        if type_annotation_ast.is_some() {
+            return;
+        }
+
         let label = format!(": {}", self.current_declaration_printer.print_type(type_));
 
         let mut hint = default_inlay_hint(self.line_numbers, span.end, label);
@@ -58,7 +67,16 @@ impl InlayHintsVisitor<'_> {
         self.hints.push(hint);
     }
 
-    pub fn push_return_annotation(&mut self, type_: &Type, span: &SrcSpan) {
+    pub fn push_return_annotation(
+        &mut self,
+        type_: &Type,
+        type_annotation_ast: Option<&TypeAst>,
+        span: &SrcSpan,
+    ) {
+        if type_annotation_ast.is_some() {
+            return;
+        }
+
         let label = format!("-> {}", self.current_declaration_printer.print_type(type_));
 
         let hint = default_inlay_hint(self.line_numbers, span.end, label);
@@ -73,14 +91,13 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         self.current_declaration_printer = type_::printer::Printer::new(self.module_names);
 
         for arg in &fun.arguments {
-            if arg.annotation.is_none() {
-                self.push_binding_annotation(&arg.type_, &arg.location);
-            }
+            self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
         }
-
-        if fun.return_annotation.is_none() {
-            self.push_return_annotation(&fun.return_type, &fun.location);
-        }
+        self.push_return_annotation(
+            &fun.return_type,
+            fun.return_annotation.as_ref(),
+            &fun.location,
+        );
 
         for st in &fun.body {
             self.visit_typed_statement(st);
@@ -94,19 +111,15 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         kind: &'ast crate::ast::FunctionLiteralKind,
         args: &'ast [crate::ast::TypedArg],
         body: &'ast vec1::Vec1<crate::ast::TypedStatement>,
-        return_annotation: &'ast Option<crate::ast::TypeAst>,
+        return_annotation: &'ast Option<TypeAst>,
     ) {
         if let crate::ast::FunctionLiteralKind::Anonymous { head } = kind {
             for arg in args {
-                if arg.annotation.is_none() {
-                    self.push_binding_annotation(&arg.type_, &arg.location);
-                }
+                self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
             }
 
-            if return_annotation.is_none() {
-                if let Some((_args, ret_type)) = type_.fn_types() {
-                    self.push_return_annotation(&ret_type, head);
-                }
+            if let Some((_args, ret_type)) = type_.fn_types() {
+                self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
             }
         }
 
