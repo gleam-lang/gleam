@@ -130,13 +130,13 @@ fn add_missing_patterns(
 
 fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>) -> Term {
     match &check.kind {
-        RuntimeCheckKind::IsInt { .. }
-        | RuntimeCheckKind::IsFloat { .. }
-        | RuntimeCheckKind::IsString { .. }
-        | RuntimeCheckKind::IsBitArray { .. }
-        | RuntimeCheckKind::IsStringPrefix { .. } => Term::Infinite { variable },
+        RuntimeCheckKind::Int { .. }
+        | RuntimeCheckKind::Float { .. }
+        | RuntimeCheckKind::String { .. }
+        | RuntimeCheckKind::BitArray { .. }
+        | RuntimeCheckKind::StringPrefix { .. } => Term::Infinite { variable },
 
-        RuntimeCheckKind::IsTuple { .. } => {
+        RuntimeCheckKind::Tuple { .. } => {
             let arguments = check.args.clone();
             Term::Tuple {
                 variable,
@@ -144,7 +144,7 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
             }
         }
 
-        RuntimeCheckKind::IsVariant { index } => {
+        RuntimeCheckKind::Variant { index } => {
             let (module, name) = variable
                 .type_
                 .named_type_name()
@@ -167,7 +167,7 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
             }
         }
 
-        RuntimeCheckKind::IsNonEmptyList => {
+        RuntimeCheckKind::NonEmptyList => {
             let (first, rest) = match check.args.as_slice() {
                 [first, rest] => (first.clone(), rest.clone()),
                 _ => unreachable!("list pattern with more than two arguments"),
@@ -180,6 +180,6 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
             }
         }
 
-        RuntimeCheckKind::IsEmptyList => Term::EmptyList { variable },
+        RuntimeCheckKind::EmptyList => Term::EmptyList { variable },
     }
 }
