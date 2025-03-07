@@ -1,9 +1,10 @@
 use crate::{
     Error, Result, Warning,
-    analyse::name::correct_name_case,
+    analyse::{self, name::correct_name_case},
     ast::{
-        self, ArgNames, CustomType, Definition, DefinitionLocation, ModuleConstant, Pattern,
-        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
+        self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
+        Pattern, RecordConstructor, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule,
+        TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -14,8 +15,10 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant, error::VariableOrigin, printer::Printer,
+        self, Deprecation, ModuleInterface, ModuleValueConstructor, Type, TypeConstructor,
+        ValueConstructor, ValueConstructorVariant,
+        error::{Named, VariableOrigin},
+        printer::Printer,
     },
 };
 use camino::Utf8PathBuf;
@@ -42,7 +45,7 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    rename::{VariableRenameKind, rename_local_variable},
+    rename::{VariableRenameKind, rename_local_variable, rename_module_value},
     signature_help, src_span_to_lsp_range,
 };
 
@@ -300,9 +303,8 @@ where
 
                 Located::FunctionBody(_) => Some(completer.completion_values()),
 
-                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_)) => {
-                    Some(completer.completion_types())
-                }
+                Located::ModuleStatement(Definition::TypeAlias(_) | Definition::CustomType(_))
+                | Located::VariantConstructorDefinition(_) => Some(completer.completion_types()),
 
                 // If the import completions returned no results and we are in an import then
                 // we should try to provide completions for unqualified values
@@ -562,6 +564,8 @@ where
                 )))
             };
 
+            let byte_index = lines.byte_index(params.position.line, params.position.character);
+
             Ok(match found {
                 Located::Expression(TypedExpr::Var {
                     constructor:
@@ -592,6 +596,13 @@ where
                         _ => None,
                     }),
                 Located::Pattern(Pattern::Assign { location, .. }) => success_response(*location),
+                Located::Pattern(Pattern::Constructor { name_location, .. }) => {
+                    if name_location.contains(byte_index) {
+                        success_response(*name_location)
+                    } else {
+                        None
+                    }
+                }
                 Located::Arg(arg) => match &arg.names {
                     ArgNames::Named { location, .. }
                     | ArgNames::NamedLabelled {
@@ -600,6 +611,50 @@ where
                     } => success_response(*location),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant { .. }
+                                | ValueConstructorVariant::ModuleFn { .. }
+                                | ValueConstructorVariant::Record { .. },
+                            ..
+                        },
+                    location,
+                    ..
+                }) => success_response(*location),
+                Located::Expression(TypedExpr::ModuleSelect {
+                    location,
+                    field_start,
+                    ..
+                }) => success_response(SrcSpan::new(*field_start, location.end)),
+                Located::ModuleStatement(
+                    Definition::Function(Function {
+                        name: Some((name_location, _)),
+                        ..
+                    })
+                    | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
+                )
+                | Located::VariantConstructorDefinition(RecordConstructor {
+                    name_location, ..
+                }) => {
+                    // When we locate a module statement, we don't know where exactly the cursor
+                    // is positioned. In this example, we want to rename the first but not the second:
+                    // ```gleam
+                    // pub fn something() {
+                    //   //   ^ Trigger rename
+                    // }
+                    //
+                    // pub fn something_else() {
+                    //   //^ Trigger rename
+                    // }
+                    // ```
+                    if name_location.contains(byte_index) {
+                        success_response(*name_location)
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             })
         })
@@ -694,6 +749,112 @@ where
                     ),
                     ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
                 },
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::ModuleConstant {
+                                    module: module_name,
+                                    ..
+                                }
+                                | ValueConstructorVariant::ModuleFn {
+                                    module: module_name,
+                                    ..
+                                },
+                            ..
+                        },
+                    name,
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Named::Function,
+                ),
+                Located::Expression(TypedExpr::ModuleSelect {
+                    module_name,
+                    label,
+                    constructor:
+                        ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. },
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    label,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Named::Function,
+                ),
+                Located::ModuleStatement(
+                    Definition::Function(Function {
+                        name: Some((_, name)),
+                        ..
+                    })
+                    | Definition::ModuleConstant(ModuleConstant { name, .. }),
+                ) => rename_module_value(
+                    &params,
+                    &module.name,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Named::Function,
+                ),
+                Located::Expression(TypedExpr::Var {
+                    constructor:
+                        ValueConstructor {
+                            variant:
+                                ValueConstructorVariant::Record {
+                                    module: module_name,
+                                    name,
+                                    ..
+                                },
+                            ..
+                        },
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Named::CustomTypeVariant,
+                ),
+                Located::Expression(TypedExpr::ModuleSelect {
+                    module_name,
+                    label,
+                    constructor: ModuleValueConstructor::Record { .. },
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    module_name,
+                    label,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Named::CustomTypeVariant,
+                ),
+                Located::VariantConstructorDefinition(RecordConstructor { name, .. }) => {
+                    rename_module_value(
+                        &params,
+                        &module.name,
+                        name,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
+                        Named::CustomTypeVariant,
+                    )
+                }
+                Located::Pattern(Pattern::Constructor {
+                    constructor: analyse::Inferred::Known(constructor),
+                    ..
+                }) => rename_module_value(
+                    &params,
+                    &constructor.module,
+                    &constructor.name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Named::CustomTypeVariant,
+                ),
                 _ => None,
             })
         })
@@ -750,6 +911,7 @@ where
                     ))
                 }
                 Located::ModuleStatement(_) => None,
+                Located::VariantConstructorDefinition(_) => None,
                 Located::UnqualifiedImport(UnqualifiedImport {
                     name,
                     module: module_name,

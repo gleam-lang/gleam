@@ -469,6 +469,7 @@ pub trait Visit<'ast> {
     fn visit_typed_pattern_constructor(
         &mut self,
         location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
         name: &'ast EcoString,
         arguments: &'ast Vec<CallArg<TypedPattern>>,
         module: &'ast Option<(EcoString, SrcSpan)>,
@@ -479,6 +480,7 @@ pub trait Visit<'ast> {
         visit_typed_pattern_constructor(
             self,
             location,
+            name_location,
             name,
             arguments,
             module,
@@ -1473,6 +1475,7 @@ where
         } => v.visit_typed_pattern_list(location, elements, tail, type_),
         Pattern::Constructor {
             location,
+            name_location,
             name,
             arguments,
             module,
@@ -1481,6 +1484,7 @@ where
             type_,
         } => v.visit_typed_pattern_constructor(
             location,
+            name_location,
             name,
             arguments,
             module,
@@ -1593,6 +1597,7 @@ pub fn visit_typed_pattern_list<'a, V>(
 pub fn visit_typed_pattern_constructor<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
+    _name_location: &'a SrcSpan,
     _name: &'a EcoString,
     arguments: &'a Vec<CallArg<TypedPattern>>,
     _module: &'a Option<(EcoString, SrcSpan)>,

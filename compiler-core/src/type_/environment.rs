@@ -69,6 +69,8 @@ pub struct Environment<'a> {
 
     /// Wether we ran into an `echo` or not while analysing the current module.
     pub echo_found: bool,
+
+    pub references: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
 }
 
 impl<'a> Environment<'a> {
@@ -122,6 +124,7 @@ impl<'a> Environment<'a> {
             names,
             module_type_aliases: HashMap::new(),
             echo_found: false,
+            references: HashMap::new(),
         }
     }
 }
@@ -806,6 +809,13 @@ impl Environment<'_> {
             .get(type_name)
             .and_then(|type_constructors| type_constructors.variants.get(variant_index as usize))
             .map(|variant| &variant.name)
+    }
+
+    pub fn register_reference(&mut self, module: EcoString, name: EcoString, location: SrcSpan) {
+        self.references
+            .entry((module, name))
+            .or_default()
+            .push(location);
     }
 }
 
