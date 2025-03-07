@@ -90,7 +90,7 @@ use id_arena::{Arena, Id};
 use itertools::Itertools;
 use std::{
     cell::RefCell,
-    collections::{HashMap, VecDeque},
+    collections::{HashMap, HashSet, VecDeque},
     hash::Hash,
     sync::Arc,
 };
@@ -706,10 +706,10 @@ pub enum Reachability {
 
 impl Match {
     pub fn is_reachable(&self, clause: usize) -> Reachability {
-        if self.diagnostics.match_impossible_variants.contains(&clause) {
-            Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant)
-        } else if self.diagnostics.reachable.contains(&clause) {
+        if self.diagnostics.reachable.contains(&clause) {
             Reachability::Reachable
+        } else if self.diagnostics.match_impossible_variants.contains(&clause) {
+            Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant)
         } else {
             Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern)
         }
@@ -730,11 +730,11 @@ pub struct Diagnostics {
     /// The right-hand sides that are reachable.
     /// If a right-hand side isn't in this list it means its pattern is
     /// redundant.
-    pub reachable: Vec<usize>,
+    pub reachable: HashSet<usize>,
 
     /// Clauses which match on variants of a type which the compiler
     /// can tell will never be present, due to variant inference.
-    pub match_impossible_variants: Vec<usize>,
+    pub match_impossible_variants: HashSet<usize>,
 }
 
 impl<'a> Compiler<'a> {
@@ -745,8 +745,8 @@ impl<'a> Compiler<'a> {
             variable_id,
             diagnostics: Diagnostics {
                 missing: false,
-                reachable: Vec::new(),
-                match_impossible_variants: Vec::new(),
+                reachable: HashSet::new(),
+                match_impossible_variants: HashSet::new(),
             },
         }
     }
@@ -765,7 +765,15 @@ impl<'a> Compiler<'a> {
     }
 
     fn mark_as_reached(&mut self, branch: &Branch) {
-        self.diagnostics.reachable.push(branch.branch_index)
+        let _ = self.diagnostics.reachable.insert(branch.branch_index);
+    }
+
+    fn mark_as_matching_impossible_variant(&mut self, branch: &Branch) {
+        let _ = self.diagnostics.reachable.remove(&branch.branch_index);
+        let _ = self
+            .diagnostics
+            .match_impossible_variants
+            .insert(branch.branch_index);
     }
 
     fn compile(&mut self, mut branches: VecDeque<Branch>) -> Decision {
@@ -916,9 +924,7 @@ impl<'a> Compiler<'a> {
                 .expect("no var patterns left");
 
             if kind.is_matching_on_unreachable_variant(branch_mode) {
-                self.diagnostics
-                    .match_impossible_variants
-                    .push(branch.branch_index);
+                self.mark_as_matching_impossible_variant(&branch);
                 continue;
             }
 
