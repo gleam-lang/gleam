@@ -4,9 +4,55 @@
 //! Adapted from Yorick Peterse's implementation at
 //! <https://github.com/yorickpeterse/pattern-matching-in-rust>. Thank you Yorick!
 //!
-//! Note that while this produces a decision tree, this tree is not suitable for
-//! use in code generation yet as it is incomplete. The tree is not correctly
-//! formed for:
+//! > This module comment (and all the following doc comments) are a rough
+//! > explanation. It's great to set some expectations on what to expect from
+//! > the following code and why the data looks the way it does.
+//! > If you want a more detailed explanation, the original paper is a lot more
+//! > detailed!
+//!
+//! A case to be compiled looks a bit different from the case expressions we're
+//! used to in Gleam: instead of having a variable to match on and a series of
+//! branches, a `CaseToCompile` is made up of a series of branches that can each
+//! contain multiple pattern checks. With a psedo-Gleam syntax, this is what it
+//! would look like:
+//!
+//! ```
+//! case {
+//!   a is Some, b is 1, c is _  -> todo
+//!   a is wibble -> todo
+//! }
+//! ```
+//!
+//! > You may wonder, why are we writing branches like this? Usually a case
+//! > expression matches on a single variable and each branch refers to it. For
+//! > example in gleam you'd write:
+//! >
+//! > ```gleam
+//! > case a {
+//! >   Some(_) -> todo
+//! >   None -> todo
+//! > }
+//! > ```
+//! >
+//! > In out representation that would turn into:
+//! >
+//! > ```
+//! > case {
+//! >   a is Some(_) -> todo
+//! >   a is None -> todo
+//! > }
+//! > ```
+//! >
+//! > This change makes it way easier to compile the pattern matching into a
+//! > decision tree, because now we can add multiple checks on different
+//! > variables in each branch.
+//!
+//! Starting from this data structure, we'll be splitting all the branches into
+//! a decision tree that can be used to perform exhaustiveness checking and code
+//! generation.
+//!
+//! At the moment this tree is not suitable for use in code generation yet as it
+//! is incomplete. The tree is not correctly formed for:
 //! - Bit strings
 //! - String prefixes
 //!
@@ -29,201 +75,606 @@
 //!
 
 mod missing_patterns;
-mod pattern;
-#[cfg(test)]
-mod pattern_tests;
 pub mod printer;
 
-use self::pattern::{Constructor, Pattern, PatternId};
 use crate::{
-    ast::AssignName,
+    ast::{AssignName, TypedClause, TypedPattern},
     type_::{
         Environment, Type, TypeValueConstructor, TypeValueConstructorField, TypeVar,
-        collapse_links,
-        error::{UnknownTypeConstructorError, UnreachableCaseClauseReason},
+        TypeVariantConstructors, collapse_links, error::UnreachableCaseClauseReason,
         is_prelude_module,
     },
 };
 use ecow::EcoString;
-use id_arena::Arena;
+use id_arena::{Arena, Id};
 use itertools::Itertools;
-use std::{cell::RefCell, collections::HashMap, sync::Arc};
+use std::{
+    cell::RefCell,
+    collections::{HashMap, VecDeque},
+    hash::Hash,
+    sync::Arc,
+};
 
-pub use self::pattern::PatternArena;
+/// A single branch composing a `case` expression to be compiled into a decision
+/// tree.
+///
+/// As shown in the module documentation, branches are a bit different from the
+/// usual branches we see in Gleam's case expressions. Each branch can perform
+/// multiple checks (each on a different variable, which appears in the check
+/// itself!):
+///
+/// ```
+/// a is Some, b is 1 if condition -> todo
+/// ─┬───────  ─┬──── ─┬──────────    ─┬──
+///  │          │      │               ╰── body: an arbitrary expression
+///  │          │      ╰── guard: an additional boolean condition
+///  ╰──────────┴── checks: check that a variable matches with a pattern
+/// ─┬────────────────────────────────────
+///  ╰── branch: one of the branches making up a pattern matching expression
+/// ```
+///
+/// As shown here a branch can also optionally include a guard with a boolean
+/// condition and is followed by a body that is to be executed if all the checks
+/// match (and the guard evaluates to true).
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+struct Branch {
+    /// Each branch is identified by a numeric index, so we can nicely
+    /// report errors once we find something's wrong with a branch.
+    ///
+    branch_index: usize,
 
-/// The body of code to evaluate in case of a match.
+    /// Each alternative pattern in an alternative pattern matching (e.g.
+    /// `one | two | three -> todo`) gets turned into its own branch in this
+    /// internal representation. So we also keep track of the index of the
+    /// alternative this comes from (0 being the first one and so on...)
+    ///
+    alternative_index: usize,
+    checks: Vec<PatternCheck>,
+    guard: Option<usize>,
+    body: Body,
+}
+
+impl Branch {
+    fn new(
+        branch_index: usize,
+        alternative_index: usize,
+        checks: Vec<PatternCheck>,
+        has_guard: bool,
+    ) -> Self {
+        Self {
+            branch_index,
+            alternative_index,
+            checks,
+            guard: if has_guard { Some(branch_index) } else { None },
+            body: Body::new(branch_index),
+        }
+    }
+
+    /// Removes and returns a `PatternCheck` on the given variable from this
+    /// branch.
+    ///
+    fn pop_check_on_var(&mut self, var: &Variable) -> Option<PatternCheck> {
+        let index = self.checks.iter().position(|check| check.var == *var)?;
+        Some(self.checks.remove(index))
+    }
+
+    fn add_check(&mut self, check: PatternCheck) {
+        self.checks.push(check);
+    }
+
+    /// To simplify compiling the pattern we can get rid of all catch-all
+    /// patterns that are guaranteed to match by turning those into assignments.
+    ///
+    /// What does this look like in practice?  Let's go over an example.
+    /// Let's say we have this case to compile:
+    ///
+    /// ```gleam
+    /// case a {
+    ///   Some(1) -> Some(2)
+    ///   otherwise -> otherwise
+    /// }
+    /// ```
+    ///
+    /// In our internal representation this would become:
+    ///
+    /// ```
+    /// case {
+    ///   a is Some(1) -> Some(2)
+    ///   a is otherwise -> otherwise
+    ///   ─┬────────────
+    ///    ╰── `a` will always match with this "catch all" variable pattern
+    /// }
+    /// ```
+    ///
+    /// Focusing on the last branch, we can remove that check that always matches
+    /// by keeping track in its body of the correspondence. So it would end up
+    /// looking like this:
+    ///
+    /// ```
+    /// case {
+    ///   a is Some(1) -> Some(2)
+    ///   ∅ -> {
+    ///   ┬
+    ///   ╰── This represents the fact that there's no checks left for this branch!
+    ///       So we can make another observation: if there's no checks left in a
+    ///       branch we know it will always match and we can produce a leaf in the
+    ///       decision tree (there's an exception when we have guards, but we'll
+    ///       get to it later)!
+    ///
+    ///     let otherwise = a
+    ///     ─┬───────────────
+    ///      ╰── And now we can understand what those `bindings` at the start of
+    ///          a body are: as we remove variable patterns, we will rewrite those
+    ///          as assignments at the top of the body of the corresponding branch.
+    ///
+    ///     otherwise
+    ///   }
+    /// }
+    /// ```
+    ///
+    fn move_unconditional_patterns(&mut self, compiler: &Compiler<'_>) {
+        self.checks.retain_mut(|check| {
+            loop {
+                match compiler.pattern(check.pattern) {
+                    // Variable patterns always match, so we move those to the body
+                    // and remove them from the branch's checks.
+                    Pattern::Variable { name } => {
+                        self.body.assign(name.clone(), check.var.clone());
+                        return false;
+                    }
+                    // A discard pattern always matches, but since the value is not
+                    // used we can just remove it without even adding an assignment
+                    // to the body!
+                    Pattern::Discard => return false,
+                    // Assigns are kind of special: they get turned into assignments
+                    // (shocking) but then we can't discard the pattern they wrap.
+                    // So we replace the assignment pattern with the one it's wrapping
+                    // and try again.
+                    Pattern::Assign { name, pattern } => {
+                        self.body.assign(name.clone(), check.var.clone());
+                        check.pattern = pattern.clone();
+                        continue;
+                    }
+                    // All other patterns are not unconditional, so we just keep them.
+                    _ => return true,
+                }
+            }
+        });
+    }
+}
+
+/// The body of a branch. It always starts with a series of variable assignments
+/// in the form: `let a = b`. As explained in `move_unconditional_patterns`' doc,
+/// each body starts with a series of assignments we keep track of as we're
+/// compiling each branch.
+///
 #[derive(Clone, Eq, PartialEq, Debug)]
 pub struct Body {
     /// Any variables to bind before running the code.
     ///
-    /// The tuples are in the form `(name, source)` (i.e `bla = source`).
+    /// The tuples are in the form `(name, value)`, so `(wibble, var)`
+    /// corresponds to `let wibble = var`.
+    ///
     bindings: Vec<(EcoString, Variable)>,
 
     /// The index of the clause in the case expression that should be run.
-    clause_index: u16,
+    ///
+    branch_index: usize,
 }
 
 impl Body {
-    pub fn new(clause_index: u16) -> Self {
+    pub fn new(branch_index: usize) -> Self {
         Self {
             bindings: vec![],
-            clause_index,
+            branch_index,
+        }
+    }
+
+    /// Adds a new assignment to the body, binding `let var = value`
+    ///
+    pub fn assign(&mut self, var: EcoString, value: Variable) {
+        self.bindings.push((var, value));
+    }
+}
+
+/// A user defined pattern such as `Some((x, 10))`.
+/// This is a bit simpler than the full fledged `TypedPattern` used for code analysis
+/// and only focuses on the relevant bits needed to perform exhaustiveness checking
+/// and code generation.
+///
+/// Using this simplified version of a pattern for the case compiler makes it a
+/// whole lot simpler and more efficient (patterns will have to be cloned, so
+/// we use an arena to allocate those and only store ids to make this operation
+/// extra cheap).
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+pub enum Pattern {
+    Discard,
+    Int {
+        value: EcoString,
+    },
+    Float {
+        value: EcoString,
+    },
+    String {
+        value: EcoString,
+    },
+    StringPrefix {
+        prefix: EcoString,
+        rest: Id<Pattern>,
+    },
+    Assign {
+        name: EcoString,
+        pattern: Id<Pattern>,
+    },
+    Variable {
+        name: EcoString,
+    },
+    Tuple {
+        elements: Vec<Id<Pattern>>,
+    },
+    Constructor {
+        variant_index: usize,
+        arguments: Vec<Id<Pattern>>,
+    },
+    List {
+        first: Id<Pattern>,
+        rest: Id<Pattern>,
+    },
+    EmptyList,
+    // TODO: Compile the matching within the bit strings
+    BitArray {
+        value: EcoString,
+    },
+}
+
+impl Pattern {
+    fn inner_patterns(&self) -> Vec<Id<Pattern>> {
+        match self {
+            Pattern::Discard
+            | Pattern::Int { .. }
+            | Pattern::Float { .. }
+            | Pattern::String { .. }
+            | Pattern::Assign { .. }
+            | Pattern::Variable { .. }
+            | Pattern::BitArray { .. }
+            | Pattern::EmptyList => vec![],
+
+            Pattern::StringPrefix { rest, .. } => vec![rest.clone()],
+
+            Pattern::Tuple { elements } => elements.clone(),
+            Pattern::Constructor { arguments, .. } => arguments.clone(),
+            Pattern::List { first, rest } => vec![first.clone(), rest.clone()],
         }
     }
 }
 
-/// A variable used in a match expression.
+/// A single check making up a branch, checking that a variable matches with a
+/// given pattern. For example, the following branch has 2 checks:
 ///
-/// In a real compiler these would probably be registers or some other kind of
-/// variable/temporary generated by your compiler.
+/// ```
+/// a is Some, b is 1 -> todo
+/// ┬    ─┬──
+/// │     ╰── This is the pattern being checked
+/// ╰── This is the variable being pattern matched on
+/// ─┬─────── ─┬────
+///  ╰─────────┴── Two `PatternCheck`s
+/// ```
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+struct PatternCheck {
+    var: Variable,
+    pattern: Id<Pattern>,
+}
+
+impl PatternCheck {
+    fn new(var: Variable, pattern: Id<Pattern>) -> Self {
+        Self { var, pattern }
+    }
+
+    /// Each pattern check (with a couple exceptions) can be turned into a
+    /// simpler `RuntimeCheck`: that is a check that can be performed at runtime
+    /// to make sure the `PatternCheck` can succeed on a specific value.
+    ///
+    fn to_runtime_check_kind(&self, compiler: &Compiler<'_>) -> Option<RuntimeCheckKind> {
+        let kind = match compiler.pattern(self.pattern) {
+            // These patterns are unconditional: they will always match and be moved
+            // out of a branch's checks. So there's no corresponding runtime check
+            // we can perform for them.
+            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
+            Pattern::Int { value } => {
+                let value = value.clone();
+                RuntimeCheckKind::IsInt { value }
+            }
+            Pattern::Float { value } => {
+                let value = value.clone();
+                RuntimeCheckKind::IsFloat { value }
+            }
+            Pattern::String { value } => {
+                let value = value.clone();
+                RuntimeCheckKind::IsString { value }
+            }
+            Pattern::StringPrefix { prefix, .. } => {
+                let prefix = prefix.clone();
+                RuntimeCheckKind::IsStringPrefix { prefix }
+            }
+            Pattern::Tuple { elements } => {
+                let size = elements.len();
+                RuntimeCheckKind::IsTuple { size }
+            }
+            Pattern::Constructor { variant_index, .. } => {
+                let index = *variant_index;
+                RuntimeCheckKind::IsVariant { index }
+            }
+            Pattern::BitArray { value } => {
+                let value = value.clone();
+                RuntimeCheckKind::IsBitArray { value }
+            }
+            Pattern::List { .. } => RuntimeCheckKind::IsNonEmptyList,
+            Pattern::EmptyList => RuntimeCheckKind::IsEmptyList,
+        };
+
+        Some(kind)
+    }
+}
+
+/// This is one of the checks we can take at runtime to decide how to move
+/// forward in the decision tree.
+///
+/// After performing a successful check on a value we will discover something
+/// about its shape: it might be an int, an variant of a custom type, ...
+/// Some values (like variants and lists) might hold onto additional data we
+/// will have to pattern match on: in order to do that we need a name to refer
+/// to those new variables we've discovered after performing a check. That's
+/// what `args` is for.
+///
+/// Let's have a look at an example. Imagine we have a pattern like this one:
+/// `a is Wibble(1, _, [])`; after performing a runtime check to make sure `a`
+/// is indeed a `Wibble`, we'll need to perform additional checks on it's
+/// arguments: that pattern will be replaced by three new ones `a0 is 1`,
+/// `a1 is _` and `a2 is []`. Those new variables are the `args`.
+///
+#[derive(Clone, Debug)]
+pub struct RuntimeCheck {
+    kind: RuntimeCheckKind,
+    args: Vec<Variable>,
+}
+
+#[derive(Eq, PartialEq, Clone, Hash, Debug)]
+pub enum RuntimeCheckKind {
+    IsInt { value: EcoString },
+    IsFloat { value: EcoString },
+    IsString { value: EcoString },
+    IsStringPrefix { prefix: EcoString },
+    IsTuple { size: usize },
+    IsBitArray { value: EcoString },
+    IsVariant { index: usize },
+    IsEmptyList,
+    IsNonEmptyList,
+}
+
+impl RuntimeCheck {
+    fn is_empty_list() -> RuntimeCheck {
+        RuntimeCheck {
+            kind: RuntimeCheckKind::IsEmptyList,
+            args: vec![],
+        }
+    }
+}
+
+/// A variable that can be matched on in a branch.
+///
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Variable {
     id: usize,
     type_: Arc<Type>,
 }
 
-/// A single case (or row) in a match expression/table.
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Row {
-    columns: Vec<Column>,
-    guard: Option<usize>,
-    body: Body,
-}
-
-impl Row {
-    pub fn new(columns: Vec<Column>, guard: Option<usize>, body: Body) -> Self {
-        Self {
-            columns,
-            guard,
-            body,
-        }
-    }
-
-    fn remove_column(&mut self, variable_id: usize) -> Option<Column> {
-        self.columns
-            .iter()
-            .position(|c| c.variable.id == variable_id)
-            .map(|idx| self.columns.remove(idx))
+impl Variable {
+    fn new(id: usize, type_: Arc<Type>) -> Self {
+        Self { id, type_ }
     }
 }
 
-/// A column in a pattern matching table.
+#[derive(Debug)]
+/// Different types need to be handled differently when compiling a case expression
+/// into a decision tree. There's some types that have infinite matching patterns
+/// (like ints, strings, ...) and thus will always need a fallback option.
 ///
-/// A column contains a single variable to test, and a pattern to test against
-/// that variable. A row may contain multiple columns, though this wouldn't be
-/// exposed to the source language (= it's an implementation detail).
-#[derive(Clone, Eq, PartialEq, Debug)]
-pub struct Column {
-    variable: Variable,
-    pattern: PatternId,
-}
-
-impl Column {
-    pub fn new(variable: Variable, pattern: PatternId) -> Self {
-        Self { variable, pattern }
-    }
-}
-
-/// A case in a decision tree to test against a variable.
-#[derive(Eq, PartialEq, Debug)]
-pub struct Case {
-    /// The constructor to test against an input variable.
-    constructor: Constructor,
-
-    /// Variables to introduce to the body of this case.
+/// Other types, like custom types, only have a well defined and finite number
+/// of patterns that could match: when matching on a `Result` we know that we can
+/// only have an `Ok(_)` and an `Error(_)`, anything else would end up being a
+/// type error!
+///
+/// So this enum is used to pick the correct strategy to compile a case that's
+/// performing a `PatternCheck` on a variable with a specific type.
+///
+enum BranchMode {
+    /// This covers numbers, functions, variables, bitarrays and strings.
     ///
-    /// At runtime these would be populated with the values a pattern is matched
-    /// against. For example, this pattern:
+    /// TODO)) In the future it won't be the case: strings and bitarrays will be
+    /// special cased to improve on exhaustiveness checking and to be used for
+    /// code generation.
     ///
-    /// ```text
-    /// case (10, 20, one) -> ...
-    /// ```
-    ///
-    /// Would result in three arguments, assigned the values `10`, `20` and
-    /// `one`.
-    ///
-    /// In a real compiler you'd assign these variables in your IR first, then
-    /// generate the code for the sub tree.
-    arguments: Vec<Variable>,
-
-    /// The sub tree of this case.
-    body: Decision,
-}
-
-impl Case {
-    fn new(constructor: Constructor, arguments: Vec<Variable>, body: Decision) -> Self {
-        Self {
-            constructor,
-            arguments,
-            body,
-        }
-    }
-}
-
-/// A decision tree
-#[derive(Eq, PartialEq, Debug)]
-pub enum Decision {
-    /// A pattern is matched and the right-hand value is to be returned.
-    Success(Body),
-
-    /// A pattern is missing.
-    Failure,
-
-    /// Checks if a guard evaluates to true, running the body if it does.
-    ///
-    /// The arguments are as follows:
-    ///
-    /// 1. The "condition" to evaluate. We just use a dummy value, but in a real
-    ///    compiler this would likely be an AST node of sorts.
-    /// 2. The body to evaluate if the guard matches.
-    /// 3. The sub tree to evaluate when the guard fails.
-    Guard(usize, Body, Box<Decision>),
-
-    /// Checks if a value is any of the given patterns.
-    ///
-    /// The values are as follows:
-    ///
-    /// 1. The variable to test.
-    /// 2. The cases to test against this variable.
-    /// 3. A fallback decision to take, in case none of the cases matched.
-    Switch(Variable, Vec<Case>, Option<Box<Decision>>),
-
-    /// Checks if a list is empty or non-empty.
+    Infinite,
+    Tuple {
+        elems: Vec<Arc<Type>>,
+    },
     List {
-        /// The variable to test.
-        variable: Variable,
-        /// The decision to take if the list is empty.
-        empty: Box<Decision>,
-        /// The decision to take if the list is non-empty.
-        non_empty: Box<NonEmptyListDecision>,
+        inner_type: Arc<Type>,
+    },
+    NamedType {
+        constructors: Vec<TypeValueConstructor>,
+        inferred_variant: Option<usize>,
     },
 }
 
-#[derive(Eq, PartialEq, Debug)]
-pub struct NonEmptyListDecision {
-    first: Variable,
-    rest: Variable,
-    decision: Decision,
+impl BranchMode {
+    fn is_infinite(&self) -> bool {
+        match self {
+            BranchMode::Infinite => true,
+            BranchMode::Tuple { .. } | BranchMode::List { .. } | BranchMode::NamedType { .. } => {
+                false
+            }
+        }
+    }
 }
 
-/// A type for storing diagnostics produced by the decision tree compiler.
-#[derive(Debug)]
-pub struct Diagnostics {
-    /// A flag indicating the match is missing one or more pattern.
-    pub missing: bool,
+impl Variable {
+    fn branch_mode(&self, env: &Environment<'_>) -> BranchMode {
+        match collapse_links(self.type_.clone()).as_ref() {
+            Type::Fn { .. } | Type::Var { .. } => BranchMode::Infinite,
+            Type::Named { module, name, .. }
+                if is_prelude_module(module)
+                    && (name == "Int"
+                        || name == "Float"
+                        || name == "BitArray"
+                        || name == "String") =>
+            {
+                BranchMode::Infinite
+            }
 
-    /// The right-hand sides that are reachable.
+            Type::Named {
+                module, name, args, ..
+            } if is_prelude_module(module) && name == "List" => BranchMode::List {
+                inner_type: args.first().expect("list has a type argument").clone(),
+            },
+
+            Type::Tuple { elems } => BranchMode::Tuple {
+                elems: elems.clone(),
+            },
+
+            Type::Named {
+                module,
+                name,
+                args,
+                inferred_variant,
+                ..
+            } => {
+                let constructors = ConstructorSpecialiser::specialise_constructors(
+                    env.get_constructors_for_type(module, name)
+                        .expect("Custom type variants must exist"),
+                    args.as_slice(),
+                );
+
+                let inferred_variant = inferred_variant.map(|i| i as usize);
+                BranchMode::NamedType {
+                    constructors,
+                    inferred_variant,
+                }
+            }
+        }
+    }
+}
+
+/// This is the decision tree that a pattern matching expression gets turned
+/// into: it's a tree-like structure where each path to a root node contains a
+/// series of checks to perform at runtime to understand if a value matches with
+/// a given pattern.
+///
+pub enum Decision {
+    /// This is the final node of the tree, once we get to this one we know we
+    /// have a body to run because a given pattern matched.
     ///
-    /// If a right-hand side isn't in this list it means its pattern is
-    /// redundant.
-    pub reachable: Vec<u16>,
+    // todo)) since the tree is not used for code generation, this field is unused.
+    // But it will be useful once we also use this for code gen purposes and not
+    // just for exhaustiveness checking
+    #[allow(dead_code)]
+    Run { body: Body },
 
-    /// Clauses which match on variants of a type which the compiler
-    /// can tell will never be present, due to variant inference.
-    pub match_impossible_variants: Vec<u16>,
+    /// We have to make this decision when we run into a branch that also has a
+    /// guard: if it is true we can finally run the body of the branch, stored in
+    /// `if_true`.
+    /// If it is false we might still have to take other decisions and so we might
+    /// have another `DecisionTree` to traverse, stored in `if_false`.
+    ///
+    // todo)) since the tree is not used for code generation, the `guard` and
+    // `if_true` fields are unused.
+    // But they will be useful once we also use this for code gen purposes and not
+    // just for exhaustiveness checking
+    #[allow(dead_code)]
+    Guard {
+        guard: usize,
+        if_true: Body,
+        if_false: Box<Decision>,
+    },
+
+    /// When reaching this node we'll have to see if any of the possible checks
+    /// in `choices` will succeed on `var`. If it does, we know that's the path
+    /// we have to go down to. If none of the checks matches, then we'll have to
+    /// go down the `fallback` branch.
+    ///
+    Switch {
+        var: Variable,
+        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        fallback: Box<Decision>,
+    },
+
+    /// This is similar to a `Switch` node: we're still picking a possible path
+    /// to follow based on a runtime check. The key difference is that we know
+    /// that one of those is always going to match and so there's no use for a
+    /// fallback branch.
+    ///
+    /// This is used when matching on custom types (and lists!) when we know
+    /// that there's a limited number of choices and exhaustiveness checking
+    /// ensures we'll always deal with all the possible cases.
+    ///
+    ExhaustiveSwitch {
+        var: Variable,
+        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+    },
+
+    /// This is a special node: it represents a missing pattern. If a tree
+    /// contains such a node, then we know that the patterns it was compiled
+    /// from are not exhaustive and the path leading to this node will describe
+    /// what kind of pattern doesn't match!
+    ///
+    Fail,
+}
+
+impl Decision {
+    pub fn run(body: Body) -> Self {
+        Decision::Run { body }
+    }
+
+    pub fn guard(guard: usize, if_true: Body, if_false: Self) -> Self {
+        Decision::Guard {
+            guard,
+            if_true,
+            if_false: Box::new(if_false),
+        }
+    }
+
+    pub fn switch(
+        var: Variable,
+        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        fallback: Decision,
+    ) -> Self {
+        Self::Switch {
+            var,
+            choices,
+            fallback: Box::new(fallback),
+        }
+    }
+
+    fn exhaustive_switch(var: Variable, choices: Vec<(RuntimeCheck, Box<Decision>)>) -> Decision {
+        Self::ExhaustiveSwitch { var, choices }
+    }
+}
+
+/// The `case` compiler itself (shocking, I know).
+///
+#[derive(Debug)]
+struct Compiler<'a> {
+    environment: &'a Environment<'a>,
+    patterns: Arena<Pattern>,
+    variable_id: usize,
+    diagnostics: Diagnostics,
 }
 
 /// The result of compiling a pattern match expression.
+///
 pub struct Match {
     pub tree: Decision,
     pub diagnostics: Diagnostics,
@@ -231,6 +682,7 @@ pub struct Match {
 }
 
 /// Whether a clause is reachable, or why it is unreachable.
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Reachability {
     Reachable,
@@ -239,7 +691,6 @@ pub enum Reachability {
 
 impl Match {
     pub fn is_reachable(&self, clause: usize) -> Reachability {
-        let clause = clause as u16;
         if self.diagnostics.reachable.contains(&clause) {
             Reachability::Reachable
         } else if self.diagnostics.match_impossible_variants.contains(&clause) {
@@ -254,23 +705,29 @@ impl Match {
     }
 }
 
-/// The `match` compiler itself (shocking, I know).
+/// A type for storing diagnostics produced by the decision tree compiler.
+///
 #[derive(Debug)]
-pub struct Compiler<'a> {
-    variable_id: usize,
-    diagnostics: Diagnostics,
-    patterns: Arena<Pattern>,
-    environment: &'a Environment<'a>,
-    subject_variables: Vec<Variable>,
+pub struct Diagnostics {
+    /// A flag indicating the match is missing one or more pattern.
+    pub missing: bool,
+
+    /// The right-hand sides that are reachable.
+    /// If a right-hand side isn't in this list it means its pattern is
+    /// redundant.
+    pub reachable: Vec<usize>,
+
+    /// Clauses which match on variants of a type which the compiler
+    /// can tell will never be present, due to variant inference.
+    pub match_impossible_variants: Vec<usize>,
 }
 
 impl<'a> Compiler<'a> {
-    pub fn new(environment: &'a Environment<'a>, patterns: Arena<Pattern>) -> Self {
+    fn new(environment: &'a Environment<'a>, variable_id: usize, patterns: Arena<Pattern>) -> Self {
         Self {
             environment,
             patterns,
-            variable_id: 0,
-            subject_variables: Vec::new(),
+            variable_id,
             diagnostics: Diagnostics {
                 missing: false,
                 reachable: Vec::new(),
@@ -279,699 +736,331 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    pub fn subject_variable(&mut self, type_: Arc<Type>) -> Variable {
-        let variable = self.new_variable(type_);
-        self.subject_variables.push(variable.clone());
-        variable
+    fn pattern(&self, pattern_id: Id<Pattern>) -> &Pattern {
+        self.patterns.get(pattern_id).expect("unknown pattern id")
     }
 
-    pub fn compile(mut self, rows: Vec<Row>) -> Match {
-        // If there are no rows, we get an immediate decision failure,
-        // which gives a pretty unhelpful error message. Instead, we
-        // run one pass of compiling to ensure we don't just suggest `_`
-        let tree = if rows.is_empty() {
-            // Even though we run a compile pass, an empty case expression is always
-            // invalid, so we make sure to report that here
-            self.diagnostics.missing = true;
-            let tree = self.compile_rows_for_variable(
-                self.subject_variables
-                    .first()
-                    .expect("Must have at least one subject")
-                    .clone(),
-                Vec::new(),
-            );
-            match tree {
-                // If there are no known constructors, we return failure since that
-                // better describes the state than an empty switch, and allows us to report
-                // `_` as the missing pattern.
-                Decision::Switch(_, cases, _) if cases.is_empty() => Decision::Failure,
-                _ => tree,
-            }
-        } else {
-            self.compile_rows(rows)
-        };
-        Match {
-            tree,
-            diagnostics: self.diagnostics,
-            subject_variables: self.subject_variables,
-        }
-    }
-
-    pub fn set_pattern_arena(&mut self, arena: Arena<Pattern>) {
-        self.patterns = arena;
-    }
-
-    fn pattern(&self, id: PatternId) -> &Pattern {
-        self.patterns.get(id).expect("Unknown pattern id")
-    }
-
-    fn flatten_or(&self, id: PatternId, row: Row) -> Vec<(PatternId, Row)> {
-        match self.pattern(id) {
-            Pattern::Or { left, right } => vec![(*left, row.clone()), (*right, row)],
-
-            Pattern::Int { .. }
-            | Pattern::List { .. }
-            | Pattern::Tuple { .. }
-            | Pattern::Float { .. }
-            | Pattern::Assign { .. }
-            | Pattern::String { .. }
-            | Pattern::Discard
-            | Pattern::Variable { .. }
-            | Pattern::EmptyList
-            | Pattern::BitArray { .. }
-            | Pattern::Constructor { .. }
-            | Pattern::StringPrefix { .. } => vec![(id, row)],
-        }
-    }
-
-    fn compile_rows(&mut self, rows: Vec<Row>) -> Decision {
-        if rows.is_empty() {
-            self.diagnostics.missing = true;
-            return Decision::Failure;
-        }
-
-        let mut rows = rows
-            .into_iter()
-            .map(|row| self.move_unconditional_patterns(row))
-            .collect::<Vec<_>>();
-
-        // There may be multiple rows, but if the first one has no patterns
-        // those extra rows are redundant, as a row without columns/patterns
-        // always matches.
-        let first_row_always_matches = rows.first().map(|c| c.columns.is_empty()).unwrap_or(false);
-        if first_row_always_matches {
-            let row = rows.remove(0);
-            self.diagnostics.reachable.push(row.body.clause_index);
-
-            return match row.guard {
-                Some(guard) => Decision::Guard(guard, row.body, Box::new(self.compile_rows(rows))),
-                None => Decision::Success(row.body),
-            };
-        }
-
-        // Get the most referred to variable across all rows
-        let mut counts = HashMap::new();
-        for row in rows.iter() {
-            for col in &row.columns {
-                *counts.entry(col.variable.id).or_insert(0_usize) += 1
-            }
-        }
-
-        let variable = rows
-            .first()
-            .expect("Must have at least one row, otherwise we don't reach this point")
-            .columns
-            .iter()
-            .map(|col| col.variable.clone())
-            .max_by_key(|var| counts.get(&var.id).copied().unwrap_or(0))
-            .expect("The first row must have at least one column");
-
-        self.compile_rows_for_variable(variable, rows)
-    }
-
-    fn compile_rows_for_variable(&mut self, variable: Variable, rows: Vec<Row>) -> Decision {
-        match self.branch_mode(variable) {
-            BranchMode::Infinite { variable } => {
-                let (cases, fallback) = self.compile_infinite_cases(rows, variable.clone());
-                Decision::Switch(variable, cases, Some(fallback))
-            }
-
-            BranchMode::Tuple { variable, types } => {
-                let variables = self.new_variables(&types);
-                let cases = vec![(Constructor::Tuple(types), variables, Vec::new())];
-                let cases = self.compile_constructor_cases(rows, variable.clone(), cases);
-                Decision::Switch(variable, cases, None)
-            }
-
-            BranchMode::List {
-                variable,
-                element_type,
-            } => self.compile_list_cases(rows, variable, element_type),
-
-            BranchMode::NamedType {
-                variable,
-                constructors,
-                inferred_variant,
-            } => {
-                let mut prepare_case_for_constructor =
-                    |constructor: &TypeValueConstructor, index| {
-                        let variant = Constructor::Variant {
-                            type_: variable.type_.clone(),
-                            index: index as u16,
-                        };
-                        // Make new variables for each of the fields of the variant,
-                        // so they can be used in the sub tree.
-                        let new_variables = constructor
-                            .parameters
-                            .iter()
-                            .map(|p| self.new_variable(p.type_.clone()))
-                            .collect_vec();
-                        (variant, new_variables, Vec::new())
-                    };
-
-                let cases = if let Some(variant) = inferred_variant {
-                    let case = prepare_case_for_constructor(
-                        constructors
-                            .get(variant as usize)
-                            .expect("Constructor must exist"),
-                        variant as usize,
-                    );
-                    vec![self.compile_constructor_case_for_known_variant(
-                        rows,
-                        variable.clone(),
-                        case,
-                        variant,
-                    )]
-                } else {
-                    let cases = constructors
-                        .iter()
-                        .enumerate()
-                        .map(|(index, constructor)| {
-                            prepare_case_for_constructor(constructor, index)
-                        })
-                        .collect();
-                    self.compile_constructor_cases(rows, variable.clone(), cases)
-                };
-                Decision::Switch(variable, cases, None)
-            }
-        }
-    }
-
-    /// String, ints and floats have an infinite number of constructors, so we
-    /// specialise the compilation of their patterns with this function.
-    fn compile_infinite_cases(
-        &mut self,
-        rows: Vec<Row>,
-        branch_var: Variable,
-    ) -> (Vec<Case>, Box<Decision>) {
-        let mut raw_cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)> = Vec::new();
-        let mut fallback_rows = Vec::new();
-        let mut tested: HashMap<TestKey, usize> = HashMap::new();
-
-        #[derive(Debug, PartialEq, Eq, Hash)]
-        enum TestKey {
-            Prefix(EcoString),
-            Exact(EcoString),
-        }
-
-        let branch_variable_id = branch_var.id;
-        for mut row in rows {
-            let col = match row.remove_column(branch_variable_id) {
-                // This row does not match on the branch variable, so we push it
-                // into the fallback rows to be tested later.
-                None => {
-                    fallback_rows.push(row.clone());
-                    for (_, _, rows) in &mut raw_cases {
-                        rows.push(row.clone());
-                    }
-                    continue;
-                }
-                // This row does match on the branch variable.
-                Some(col) => col,
-            };
-
-            for (pattern, mut row) in self.flatten_or(col.pattern, row) {
-                let (key, constructor) = match self.pattern(pattern) {
-                    Pattern::Int { value } => (
-                        TestKey::Exact(value.clone()),
-                        Constructor::Int(value.clone()),
-                    ),
-
-                    Pattern::Float { value } => (
-                        TestKey::Exact(value.clone()),
-                        Constructor::Float(value.clone()),
-                    ),
-
-                    Pattern::BitArray { value } => {
-                        (TestKey::Exact(value.clone()), Constructor::BitArray)
-                    }
-
-                    Pattern::String { value } => (
-                        TestKey::Exact(value.clone()),
-                        Constructor::String(value.clone()),
-                    ),
-
-                    Pattern::StringPrefix { prefix, rest } => {
-                        let prefix = prefix.clone();
-                        match rest {
-                            AssignName::Discard(_) => (),
-                            AssignName::Variable(name) => {
-                                let name = name.clone();
-                                let variable = Pattern::Variable { name: name.clone() };
-                                let pattern = self.patterns.alloc(variable);
-                                row.columns.push(Column::new(branch_var.clone(), pattern));
-                            }
-                        };
-                        (TestKey::Prefix(prefix.clone()), Constructor::StringPrefix)
-                    }
-
-                    pattern @ (Pattern::Constructor { .. }
-                    | Pattern::Assign { .. }
-                    | Pattern::Tuple { .. }
-                    | Pattern::Variable { .. }
-                    | Pattern::Discard
-                    | Pattern::EmptyList
-                    | Pattern::List { .. }
-                    | Pattern::Or { .. }) => panic!("Unexpected pattern {pattern:?}"),
-                };
-
-                match tested.get(&key) {
-                    // This value has already been tested, so this is a redundant test.
-                    // Add the row to the previous test rather than duplicating it.
-                    Some(index) => {
-                        let case = raw_cases.get_mut(*index).expect("Case must exist");
-                        case.2.push(row);
-                    }
-                    // This is the first time testing the tag, so we add a case for it.
-                    None => {
-                        _ = tested.insert(key, raw_cases.len());
-                        let mut rows = fallback_rows.clone();
-                        rows.push(row);
-                        raw_cases.push((constructor, Vec::new(), rows));
-                    }
-                }
-            }
-        }
-
-        let cases = raw_cases
-            .into_iter()
-            .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
-            .collect();
-
-        (cases, Box::new(self.compile_rows(fallback_rows)))
-    }
-
-    /// Compiles the cases and sub cases for the constructor located at the
-    /// column of the branching variable.
+    /// Returns a new fresh variable (i.e. guaranteed to have a unique `variable_id`)
+    /// with the given type.
     ///
-    /// What exactly this method does may be a bit hard to understand from the
-    /// code, as there's simply quite a bit going on. Roughly speaking, it does
-    /// the following:
-    ///
-    /// 1. It takes the column we're branching on (based on the branching
-    ///    variable) and removes it from every row.
-    /// 2. We add additional columns to this row, if the constructor takes any
-    ///    arguments (which we'll handle in a nested match).
-    /// 3. We turn the resulting list of rows into a list of cases, then compile
-    ///    those into decision (sub) trees.
-    ///
-    /// If a row didn't include the branching variable, we copy that row into
-    /// the list of rows for every constructor to test.
-    ///
-    /// For this to work, the `cases` variable must be prepared such that it has
-    /// a triple for every constructor we need to handle. For an ADT with 10
-    /// constructors, that means 10 triples. This is needed so this method can
-    /// assign the correct sub matches to these constructors.
-    ///
-    /// Types with infinite constructors (e.g. int and string) are handled
-    /// separately; they don't need most of this work anyway.
-    fn compile_constructor_cases(
-        &mut self,
-        rows: Vec<Row>,
-        branch_var: Variable,
-        mut cases: Vec<(Constructor, Vec<Variable>, Vec<Row>)>,
-    ) -> Vec<Case> {
-        for mut row in rows {
-            let column = match row.remove_column(branch_var.id) {
-                // This row had the branching variable, so we compile it below.
-                Some(column) => column,
-
-                // This row didn't have the branching variable, meaning it does
-                // not match on this constructor. In this case we copy the row
-                // into each of the other cases.
-                None => {
-                    for (_, _, other_case_rows) in &mut cases {
-                        other_case_rows.push(row.clone());
-                    }
-                    continue;
-                }
-            };
-
-            for (pattern, row) in self.flatten_or(column.pattern, row) {
-                // We should only be able to reach constructors here for well
-                // typed code. Invalid patterns should have been caught by
-                // earlier analysis.
-                let (index, args) = match self.pattern(pattern) {
-                    Pattern::Constructor {
-                        constructor,
-                        arguments,
-                    } => (constructor.index(), arguments.clone()),
-
-                    Pattern::Tuple { elements } => (0, elements.clone()),
-
-                    pattern @ (Pattern::Or { .. }
-                    | Pattern::Int { .. }
-                    | Pattern::List { .. }
-                    | Pattern::Float { .. }
-                    | Pattern::String { .. }
-                    | Pattern::Assign { .. }
-                    | Pattern::Discard
-                    | Pattern::Variable { .. }
-                    | Pattern::BitArray { .. }
-                    | Pattern::EmptyList
-                    | Pattern::StringPrefix { .. }) => panic!("Unexpected pattern {pattern:?}"),
-                };
-
-                let mut columns = row.columns;
-
-                let case = cases.get_mut(index as usize).expect("Case must exist");
-                for (var, pattern) in case.1.iter().zip(args.into_iter()) {
-                    columns.push(Column::new(var.clone(), pattern));
-                }
-                case.2.push(Row::new(columns, row.guard, row.body));
-            }
-        }
-
-        cases
-            .into_iter()
-            .map(|(cons, vars, rows)| Case::new(cons, vars, self.compile_rows(rows)))
-            .collect()
-    }
-
-    /// The same logic as `compile_constructor_cases`, but for when matching on a type
-    /// whose variant we've inferred. This means we only need to prepare one case,
-    /// the one that we've inferred, and we can mark any other variants in the pattern
-    /// as unreachable due to variant inference.
-    ///
-    fn compile_constructor_case_for_known_variant(
-        &mut self,
-        rows: Vec<Row>,
-        branch_var: Variable,
-        mut case: (Constructor, Vec<Variable>, Vec<Row>),
-        variant: u16,
-    ) -> Case {
-        for mut row in rows {
-            let column = match row.remove_column(branch_var.id) {
-                Some(column) => column,
-
-                None => {
-                    case.2.push(row);
-                    continue;
-                }
-            };
-
-            for (pattern, row) in self.flatten_or(column.pattern, row) {
-                // We should only be able to reach constructors here for well
-                // typed code. Invalid patterns should have been caught by
-                // earlier analysis.
-                let (index, args) = match self.pattern(pattern) {
-                    Pattern::Constructor {
-                        constructor,
-                        arguments,
-                    } => (constructor.index(), arguments.clone()),
-
-                    pattern @ (Pattern::Or { .. }
-                    | Pattern::Int { .. }
-                    | Pattern::List { .. }
-                    | Pattern::Float { .. }
-                    | Pattern::String { .. }
-                    | Pattern::Assign { .. }
-                    | Pattern::Discard
-                    | Pattern::Variable { .. }
-                    | Pattern::BitArray { .. }
-                    | Pattern::EmptyList
-                    | Pattern::StringPrefix { .. }
-                    | Pattern::Tuple { .. }) => panic!("Unexpected pattern {pattern:?}"),
-                };
-
-                // If the constructor we are matching on is not the one that we have
-                // inferred, it's safe to just skip it and mark it as unreachable.
-                if variant != index {
-                    self.diagnostics
-                        .match_impossible_variants
-                        .push(row.body.clause_index);
-                    continue;
-                }
-
-                let mut columns = row.columns;
-                for (var, pattern) in case.1.iter().zip(args.into_iter()) {
-                    columns.push(Column::new(var.clone(), pattern));
-                }
-                case.2.push(Row::new(columns, row.guard, row.body));
-            }
-        }
-
-        let (cons, vars, rows) = case;
-        Case::new(cons, vars, self.compile_rows(rows))
-    }
-
-    fn compile_list_cases(
-        &mut self,
-        rows: Vec<Row>,
-        branch_var: Variable,
-        element_type: Arc<Type>,
-    ) -> Decision {
-        let mut empty_rows = vec![];
-        let mut non_empty_rows = vec![];
-        let first_var = self.new_variable(element_type);
-        let rest_var = self.new_variable(branch_var.type_.clone());
-
-        for mut row in rows {
-            let column = match row.remove_column(branch_var.id) {
-                // This row had the branching variable, so we compile it below.
-                Some(column) => column,
-
-                // This row didn't have the branching variable, meaning it does
-                // not match on this constructor. In this case we copy the row
-                // into each of the other cases.
-                None => {
-                    empty_rows.push(row.clone());
-                    non_empty_rows.push(row.clone());
-                    continue;
-                }
-            };
-
-            for (pattern, row) in self.flatten_or(column.pattern, row) {
-                let mut columns = row.columns;
-
-                // We should only be able to reach list patterns here for well
-                // typed code. Invalid patterns should have been caught by
-                // earlier analysis.
-                match self.pattern(pattern) {
-                    Pattern::EmptyList => {
-                        empty_rows.push(Row::new(columns, row.guard, row.body));
-                    }
-
-                    Pattern::List { first, rest } => {
-                        columns.push(Column::new(first_var.clone(), *first));
-                        columns.push(Column::new(rest_var.clone(), *rest));
-                        non_empty_rows.push(Row::new(columns, row.guard, row.body));
-                    }
-
-                    pattern @ (Pattern::Or { .. }
-                    | Pattern::Int { .. }
-                    | Pattern::Float { .. }
-                    | Pattern::Tuple { .. }
-                    | Pattern::String { .. }
-                    | Pattern::Discard
-                    | Pattern::Assign { .. }
-                    | Pattern::Variable { .. }
-                    | Pattern::BitArray { .. }
-                    | Pattern::Constructor { .. }
-                    | Pattern::StringPrefix { .. }) => {
-                        panic!("Unexpected non-list pattern {pattern:?}")
-                    }
-                };
-            }
-        }
-
-        Decision::List {
-            variable: branch_var,
-            empty: Box::new(self.compile_rows(empty_rows)),
-            non_empty: Box::new(NonEmptyListDecision {
-                first: first_var,
-                rest: rest_var,
-                decision: self.compile_rows(non_empty_rows),
-            }),
-        }
-    }
-
-    /// Moves variable-only patterns/tests into the right-hand side/body of a
-    /// case.
-    ///
-    /// This turns cases like this:
-    ///
-    /// ```text
-    /// case one -> print(one)
-    /// case _ -> print("nothing")
-    /// ```
-    ///
-    /// Into this:
-    ///
-    /// ```text
-    /// case -> {
-    ///     let one = it
-    ///     print(one)
-    /// }
-    /// case -> {
-    ///     print("nothing")
-    /// }
-    /// ```
-    ///
-    /// Where `it` is a variable holding the value `case one` is compared
-    /// against, and the case/row has no patterns (i.e. always matches).
-    fn move_unconditional_patterns(&self, row: Row) -> Row {
-        let mut bindings = row.body.bindings;
-        let mut columns = Vec::new();
-        let mut iterator = row.columns.into_iter();
-        let mut next = iterator.next();
-
-        while let Some(column) = next {
-            match self.pattern(column.pattern) {
-                Pattern::Discard => {
-                    next = iterator.next();
-                }
-
-                Pattern::Variable { name: bind } => {
-                    next = iterator.next();
-                    bindings.push((bind.clone(), column.variable));
-                }
-
-                Pattern::Assign { name, pattern } => {
-                    next = Some(Column::new(column.variable.clone(), *pattern));
-                    bindings.push((name.clone(), column.variable));
-                }
-
-                Pattern::Or { .. }
-                | Pattern::Int { .. }
-                | Pattern::List { .. }
-                | Pattern::Float { .. }
-                | Pattern::Tuple { .. }
-                | Pattern::String { .. }
-                | Pattern::EmptyList
-                | Pattern::BitArray { .. }
-                | Pattern::Constructor { .. }
-                | Pattern::StringPrefix { .. } => {
-                    next = iterator.next();
-                    columns.push(column);
-                }
-            }
-        }
-
-        Row {
-            columns,
-            guard: row.guard,
-            body: Body {
-                bindings,
-                clause_index: row.body.clause_index,
-            },
-        }
-    }
-
-    /// Given a variable, returns the kind of branch associated with
-    /// that variable.
-    fn branch_mode(&self, variable: Variable) -> BranchMode {
-        match collapse_links(variable.type_.clone()).as_ref() {
-            Type::Fn { .. } | Type::Var { .. } => BranchMode::Infinite { variable },
-
-            Type::Named { module, name, .. }
-                if is_prelude_module(module)
-                    && (name == "Int"
-                        || name == "Float"
-                        || name == "String"
-                        || name == "BitArray") =>
-            {
-                BranchMode::Infinite { variable }
-            }
-
-            Type::Named {
-                module, name, args, ..
-            } if is_prelude_module(module) && name == "List" => BranchMode::List {
-                variable,
-                element_type: args.first().expect("Lists have 1 argument").clone(),
-            },
-
-            Type::Named {
-                module,
-                name,
-                args,
-                inferred_variant,
-                ..
-            } => {
-                let constructors = self
-                    .instantiated_custom_type_info(module, name, args.as_slice())
-                    .expect("Custom type variants must exist");
-
-                BranchMode::NamedType {
-                    variable,
-                    constructors,
-                    inferred_variant: *inferred_variant,
-                }
-            }
-
-            Type::Tuple { elems } => BranchMode::Tuple {
-                variable,
-                types: elems.clone(),
-            },
-        }
-    }
-
-    /// Returns a new variable to use in the decision tree.
-    ///
-    /// In a real compiler you'd have to ensure these variables don't conflict
-    /// with other variables.
-    fn new_variable(&mut self, type_: Arc<Type>) -> Variable {
-        let var = Variable {
-            id: self.variable_id,
-            type_,
-        };
-
+    fn fresh_variable(&mut self, type_: Arc<Type>) -> Variable {
+        let var = Variable::new(self.variable_id, type_);
         self.variable_id += 1;
         var
     }
 
-    /// Get the constructors for a named type, with any type parameters instantiated with the
-    /// specific types being used in this case (as given in `type_arguments`).
-    ///
-    /// This instantiation is done as otherwise when traversing the tree when we encounter one of
-    /// these parameterised types we would be using a generic type variable an not the actual type,
-    /// which would result in the patterns being handled incorrectly and likely causing a panic.
-    ///
-    fn instantiated_custom_type_info(
-        &self,
-        module: &EcoString,
-        name: &EcoString,
-        type_arguments: &[Arc<Type>],
-    ) -> Result<Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
-        let constructors = self.environment.get_constructors_for_type(module, name)?;
-        let specialiser = ConstructorSpecialiser::new(
-            constructors.type_parameters_ids.as_slice(),
-            type_arguments,
-        );
-        Ok(constructors
-            .variants
-            .iter()
-            .map(|v| specialiser.specialise_type_value_constructor(v))
-            .collect_vec())
+    fn mark_as_reached(&mut self, branch: &Branch) {
+        self.diagnostics.reachable.push(branch.branch_index)
     }
 
-    fn new_variables(&mut self, type_ids: &[Arc<Type>]) -> Vec<Variable> {
-        type_ids
-            .iter()
-            .map(|t| self.new_variable(t.clone()))
-            .collect()
+    fn compile(&mut self, mut branches: VecDeque<Branch>) -> Decision {
+        branches
+            .iter_mut()
+            .for_each(|branch| branch.move_unconditional_patterns(self));
+
+        let Some(first_branch) = branches.front() else {
+            // If there's no branches, that means we have a pattern that is not
+            // exhaustive as there's nothing that could match!
+            self.diagnostics.missing = true;
+            return Decision::Fail;
+        };
+
+        self.mark_as_reached(first_branch);
+
+        // In order to compile the branches, we need to pick a `PatternCheck` from
+        // the first branch, and use the variable it's pattern matching on to create
+        // a new node in the tree. All the branches will be split into different
+        // possible paths of this tree.
+        match find_pivot_check(first_branch, &branches) {
+            Some(PatternCheck { var, .. }) => self.split_and_compile_with_pivot_var(var, branches),
+
+            // If the branch has no remaining checks, it means that we've moved all
+            // its variable patterns as assignments into the body and there's no
+            // additional checks remaining. So the only thing left that could result
+            // in the match failing is the additional guard.
+            None => match first_branch.guard {
+                // If there's no guard we're in the following situation:
+                // `∅ -> body`. It means that this branch will always match no
+                // matter what, all the remaining branches are just discarded and
+                // we can produce a terminating node to run the body
+                // unconditionally.
+                None => Decision::run(first_branch.body.clone()),
+                // If we have a guard we're in this scenario:
+                // `∅ if condition -> body`. We can produce a `Guard` node:
+                // if the condition evaluates to `True` we can run its body.
+                // Otherwise, we'll have to keep looking at the remaining branches
+                // to know what to do if this branch doesn't match.
+                Some(guard) => {
+                    let if_true = first_branch.body.clone();
+                    // All the remaining branches will be compiled and end up
+                    // in the path of the tree to choose if the guard is false.
+                    let _ = branches.pop_front();
+                    let if_false = self.compile(branches);
+                    Decision::guard(guard, if_true, if_false)
+                }
+            },
+        }
+    }
+
+    fn split_and_compile_with_pivot_var(
+        &mut self,
+        pivot_var: Variable,
+        branches: VecDeque<Branch>,
+    ) -> Decision {
+        // We first try and come up with a list of all the runtime checks we might
+        // have to perform on the variable at runtime. In most cases it's a limited
+        // number of checks that we know before hand (for example, when matching
+        // on a list, or on a custom type).
+        let branch_mode = pivot_var.branch_mode(self.environment);
+        let known_checks = match &branch_mode {
+            // If the type being matched on is infinite there's no known runtime
+            // check we could come up with in advance. So we'll build them as
+            // we go.
+            BranchMode::Infinite => vec![],
+
+            // If the type is a tuple there's only one runtime check we could
+            // perform that actually makes sense.
+            BranchMode::Tuple { elems } => vec![self.is_tuple_check(&elems)],
+
+            // If the type being matched on is a list we know the resulting
+            // decision tree node is only ever going to have two different paths:
+            // one to follow if the list is empty, and one to follow if it's not.
+            BranchMode::List { inner_type } => {
+                vec![
+                    RuntimeCheck::is_empty_list(),
+                    self.is_list_check(inner_type.clone()),
+                ]
+            }
+
+            // If we know that a specific variant is inferred we will require just
+            // that one and not all the other ones we know for sure are not going to
+            // be there.
+            BranchMode::NamedType {
+                constructors,
+                inferred_variant: Some(index),
+            } => {
+                let constructor = constructors
+                    .get(*index)
+                    .expect("wrong index for inferred variant");
+                vec![self.is_variant_check(*index, constructor)]
+            }
+
+            // Otherwise we know we'll need a check for each of its possible variants.
+            BranchMode::NamedType { constructors, .. } => constructors
+                .iter()
+                .enumerate()
+                .map(|(index, constructor)| self.is_variant_check(index, constructor))
+                .collect_vec(),
+        };
+
+        // We then split all the branches using these checks and compile the
+        // choices they've been split up into.
+        let mut splitter = BranchSplitter::from_checks(known_checks);
+        self.split_branches(&mut splitter, branches, pivot_var.clone());
+        let choices = splitter
+            .choices
+            .into_iter()
+            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
+            .collect_vec();
+
+        if branch_mode.is_infinite() {
+            // If the branching is infinite, that means we always need to also have
+            // a fallback (imagine you're pattern matching on an `Int` and put no
+            // `_` at the end of the case expression).
+            let fallback = self.compile(splitter.fallback);
+            Decision::switch(pivot_var, choices, fallback)
+        } else {
+            // Otherwise we know that one of the possible runtime checks is always
+            // going to succeed and there's no need to also have a fallback branch.
+            Decision::exhaustive_switch(pivot_var, choices)
+        }
+    }
+
+    fn split_branches(
+        &mut self,
+        splitter: &mut BranchSplitter,
+        branches: VecDeque<Branch>,
+        pivot_var: Variable,
+    ) {
+        for mut branch in branches {
+            let Some(pattern_check) = branch.pop_check_on_var(&pivot_var) else {
+                // If the branch doesn't perform any check on the pivot variable, it means
+                // it could still match no matter what shape `pivot_var` has. So we must
+                // add it as a fallback branch, that is a branch that is still relevant
+                // for all possible paths in the decision tree.
+                splitter.add_fallback_branch(branch);
+                continue;
+            };
+
+            // If it does check the same variable, we know that this branch is only relevant
+            // for some specific shape of `pivot_var`, determined by the runtime check that
+            // it is performing.
+            let kind = pattern_check
+                .to_runtime_check_kind(self)
+                .expect("no var patterns left");
+
+            // We now replace the pattern check we've just removed with the new ones we might
+            // have discovered.
+            //
+            // This is a tricky part, so let's have a look at an example: let's say this is
+            // the pattern check `a is Wibble(1, _, [])`.
+            // After making the runtime check that `a` is indeed a `Wibble` we're still
+            // left with many things to consider! We'll need to also make sure that `a`'s
+            // fields match with the respective patterns `1`, `_` and `[]`.
+            // So we would have to add new pattern checks to this branch:
+            // `a_0 is 1`, `a_1 is _` and `a_2 is []` (where `a_n` are fresh names we use
+            // to refer to `a`'s fields).
+            let args_patterns = self.pattern(pattern_check.pattern).inner_patterns();
+            let args = match splitter.get_overlapping_runtime_check(&kind) {
+                Some(RuntimeCheck { args, .. }) => args,
+                None => vec![],
+            };
+
+            (args.clone().into_iter().zip(args_patterns))
+                .map(|(arg, pattern)| PatternCheck::new(arg, pattern))
+                .for_each(|check| branch.add_check(check));
+
+            splitter.add_checked_branch(RuntimeCheck { kind, args }, branch);
+        }
+    }
+
+    /// Builds an `IsVariant` runtime check, coming up with new fresh variable names
+    /// for its arguments.
+    ///
+    fn is_variant_check(
+        &mut self,
+        index: usize,
+        constructor: &TypeValueConstructor,
+    ) -> RuntimeCheck {
+        RuntimeCheck {
+            kind: RuntimeCheckKind::IsVariant { index },
+            args: constructor
+                .parameters
+                .iter()
+                .map(|p| p.type_.clone())
+                .map(|type_| self.fresh_variable(type_))
+                .collect_vec(),
+        }
+    }
+
+    /// Builds an `IsNonEmptyList` runtime check, coming up with fresh variable
+    /// names for its arguments.
+    ///
+    fn is_list_check(&mut self, inner_type: Arc<Type>) -> RuntimeCheck {
+        RuntimeCheck {
+            kind: RuntimeCheckKind::IsNonEmptyList,
+            args: vec![
+                self.fresh_variable(inner_type.clone()),
+                self.fresh_variable(Arc::new(Type::list(inner_type))),
+            ],
+        }
+    }
+
+    /// Builds an `IsTuple` runtime check, coming up with fresh variable
+    /// names for its arguments.
+    ///
+    fn is_tuple_check(&mut self, elems: &Vec<Arc<Type>>) -> RuntimeCheck {
+        RuntimeCheck {
+            kind: RuntimeCheckKind::IsTuple { size: elems.len() },
+            args: elems
+                .iter()
+                .map(|type_| self.fresh_variable(type_.clone()))
+                .collect_vec(),
+        }
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
-enum BranchMode {
-    Infinite {
-        variable: Variable,
-    },
-    Tuple {
-        variable: Variable,
-        types: Vec<Arc<Type>>,
-    },
-    List {
-        variable: Variable,
-        element_type: Arc<Type>,
-    },
-    NamedType {
-        variable: Variable,
-        /// The constructors for this type. For example, `Result` has `Ok` and `Error`.
-        constructors: Vec<TypeValueConstructor>,
-        inferred_variant: Option<u16>,
-    },
+/// Returns a pattern check from `first_branch` to be used as a pivot to split all
+/// the `branches`.
+///
+fn find_pivot_check(first_branch: &Branch, branches: &VecDeque<Branch>) -> Option<PatternCheck> {
+    // To try and minimise code duplication, we use the following heuristic: we
+    // choose the check matching on the variable that is referenced the most
+    // across all checks in all branches.
+    let mut var_references = HashMap::new();
+    for branch in branches {
+        for check in &branch.checks {
+            let _ = var_references
+                .entry(check.var.id)
+                .and_modify(|references| *references += 1)
+                .or_insert(0);
+        }
+    }
+
+    first_branch
+        .checks
+        .iter()
+        .max_by_key(|check| var_references.get(&check.var.id).cloned().unwrap_or(0))
+        .cloned()
+}
+
+/// A handy data structure we use to split branches in different possible paths
+/// based on a check.
+///
+struct BranchSplitter {
+    pub choices: Vec<(RuntimeCheck, VecDeque<Branch>)>,
+    pub fallback: VecDeque<Branch>,
+    /// This is used to allow quickly looking up a choice in the `choices`
+    /// vector, without loosing track of the checks' order.
+    indices: HashMap<RuntimeCheckKind, usize>,
+}
+
+impl BranchSplitter {
+    /// Creates a new splitter with the given starting checks.
+    ///
+    fn from_checks(checks: Vec<RuntimeCheck>) -> Self {
+        let mut choices = Vec::with_capacity(checks.len());
+        let mut indices = HashMap::new();
+
+        for (index, RuntimeCheck { kind, args }) in checks.into_iter().enumerate() {
+            let _ = indices.insert(kind.clone(), index);
+            choices.push((RuntimeCheck { kind, args }, VecDeque::new()));
+        }
+
+        Self {
+            fallback: VecDeque::new(),
+            choices,
+            indices,
+        }
+    }
+
+    /// Add a fallback branch: this is a branch that is relevant to all possible
+    /// paths as it could still run, no matter the result of any of the `Check`s
+    /// we've stored!
+    ///
+    fn add_fallback_branch(&mut self, branch: Branch) {
+        self.choices
+            .iter_mut()
+            .for_each(|(_, branches)| branches.push_back(branch.clone()));
+        self.fallback.push_back(branch);
+    }
+
+    /// Add a branch that we know will only ever run if the `check` is true.
+    ///
+    fn add_checked_branch(&mut self, check: RuntimeCheck, branch: Branch) {
+        match self.indices.get(&check.kind) {
+            Some(index) => {
+                let (_, branches) = self
+                    .choices
+                    .get_mut(*index)
+                    .expect("check to already be a choice");
+                branches.push_back(branch);
+            }
+
+            None => {
+                let _ = self.indices.insert(check.kind.clone(), self.choices.len());
+                let mut branches = self.fallback.clone();
+                branches.push_back(branch);
+                self.choices.push((check, branches));
+            }
+        }
+    }
+
+    fn get_overlapping_runtime_check(&self, kind: &RuntimeCheckKind) -> Option<RuntimeCheck> {
+        let index = self.indices.get(kind)?;
+        let (runtime_check, _) = self.choices.get(*index)?;
+        Some(runtime_check.clone())
+    }
 }
 
 pub struct ConstructorSpecialiser {
@@ -979,6 +1068,18 @@ pub struct ConstructorSpecialiser {
 }
 
 impl ConstructorSpecialiser {
+    fn specialise_constructors(
+        constructors: &TypeVariantConstructors,
+        type_arguments: &[Arc<Type>],
+    ) -> Vec<TypeValueConstructor> {
+        let specialiser = Self::new(constructors.type_parameters_ids.as_slice(), type_arguments);
+        constructors
+            .variants
+            .iter()
+            .map(|v| specialiser.specialise_type_value_constructor(v))
+            .collect_vec()
+    }
+
     fn new(parameters: &[u64], type_arguments: &[Arc<Type>]) -> Self {
         let specialised_types = parameters
             .iter()
@@ -1056,5 +1157,213 @@ impl ConstructorSpecialiser {
                 None => TypeVar::Generic { id: *id },
             },
         }
+    }
+}
+
+/// Intermiate data structure that's used to set up everything that's needed by
+/// the pattern matching compiler and get a case expression ready to be compiled,
+/// while hiding the intricacies of handling an arena to record different patterns.
+///
+pub struct CaseToCompile {
+    patterns: Arena<Pattern>,
+    branches: Vec<Branch>,
+    subject_variables: Vec<Variable>,
+    variable_id: usize,
+}
+
+impl CaseToCompile {
+    pub fn new(subject_types: &[Arc<Type>]) -> Self {
+        let mut variable_id = 0;
+        let subject_variables = subject_types
+            .iter()
+            .map(|type_| {
+                let id = variable_id;
+                variable_id += 1;
+                Variable::new(id, type_.clone())
+            })
+            .collect_vec();
+
+        Self {
+            patterns: Arena::new(),
+            branches: vec![],
+            subject_variables,
+            variable_id,
+        }
+    }
+
+    /// Registers a `TypedClause` as one of the branches to be compiled.
+    ///
+    /// If you don't have a clause and just have a simple `TypedPattern` you want
+    /// to generate a decision tree for you can use `add_pattern`.
+    ///
+    pub fn add_clause(&mut self, branch: &TypedClause) {
+        let branch_index = self.branches.len();
+        let all_patterns =
+            std::iter::once(&branch.pattern).chain(branch.alternative_patterns.iter());
+
+        for (alternative_index, patterns) in all_patterns.enumerate() {
+            let mut checks = Vec::with_capacity(patterns.len());
+
+            // We're doing the zipping ourselves instead of using iters.zip as the
+            // borrow checker would complain and the only workaround would be to
+            // allocate an entire new vector each time.
+            for i in 0..patterns.len() {
+                let pattern = self.register(patterns.get(i).expect("pattern index"));
+                let var = self
+                    .subject_variables
+                    .get(i)
+                    .expect("wrong number of subjects")
+                    .clone();
+
+                checks.push(PatternCheck::new(var, pattern))
+            }
+
+            let has_guard = branch.guard.is_some();
+            let branch = Branch::new(branch_index, alternative_index, checks, has_guard);
+            self.branches.push(branch);
+        }
+    }
+
+    /// Add a single pattern as a branch to be compiled.
+    ///
+    /// This is useful in case one wants to check exhaustiveness of a single
+    /// pattern without having a fully fledged `TypedClause` to pass to the `add_clause`
+    /// method. For example, in `let` destructurings.
+    ///
+    pub fn add_pattern(&mut self, pattern: &TypedPattern) {
+        let branch_index = self.branches.len();
+        let pattern = self.register(pattern);
+        let var = self
+            .subject_variables
+            .first()
+            .expect("wrong number of subject variables for pattern")
+            .clone();
+        let checks = vec![PatternCheck::new(var, pattern)];
+        let branch = Branch::new(branch_index, 0, checks, false);
+        self.branches.push(branch);
+    }
+
+    pub fn compile(self, env: &Environment<'_>) -> Match {
+        let mut compiler = Compiler::new(env, self.variable_id, self.patterns);
+
+        let decision = if self.branches.is_empty() {
+            let var = self
+                .subject_variables
+                .first()
+                .expect("case with no subjects")
+                .clone();
+
+            compiler.split_and_compile_with_pivot_var(var, VecDeque::new())
+        } else {
+            compiler.compile(self.branches.into())
+        };
+
+        Match {
+            tree: decision,
+            diagnostics: compiler.diagnostics,
+            subject_variables: self.subject_variables,
+        }
+    }
+
+    /// Registers a typed pattern (and all its sub-patterns) into this
+    /// `CaseToCompile`'s pattern arena, returning an id to get the pattern back.
+    ///
+    fn register(&mut self, pattern: &TypedPattern) -> Id<Pattern> {
+        match pattern {
+            TypedPattern::Invalid { .. } => self.insert(Pattern::Discard),
+            TypedPattern::Discard { .. } => self.insert(Pattern::Discard),
+
+            TypedPattern::Int { value, .. } => {
+                let value = value.clone();
+                self.insert(Pattern::Int { value })
+            }
+
+            TypedPattern::Float { value, .. } => {
+                let value = value.clone();
+                self.insert(Pattern::Float { value })
+            }
+
+            TypedPattern::String { value, .. } => {
+                let value = value.clone();
+                self.insert(Pattern::String { value })
+            }
+
+            TypedPattern::Variable { name, .. } => {
+                let name = name.clone();
+                self.insert(Pattern::Variable { name })
+            }
+
+            TypedPattern::Assign { name, pattern, .. } => {
+                let name = name.clone();
+                let pattern = self.register(pattern);
+                self.insert(Pattern::Assign { name, pattern })
+            }
+
+            TypedPattern::Tuple { elems, .. } => {
+                let elements = elems.iter().map(|elem| self.register(elem)).collect_vec();
+                self.insert(Pattern::Tuple { elements })
+            }
+
+            TypedPattern::List { elements, tail, .. } => {
+                let mut list = match tail {
+                    Some(tail) => self.register(tail),
+                    None => self.insert(Pattern::EmptyList),
+                };
+                for element in elements.iter().rev() {
+                    let first = self.register(element);
+                    list = self.insert(Pattern::List { first, rest: list });
+                }
+                list
+            }
+
+            TypedPattern::Constructor {
+                arguments,
+                constructor,
+                ..
+            } => {
+                let variant_index =
+                    constructor.expect_ref("must be inferred").constructor_index as usize;
+                let arguments = arguments
+                    .iter()
+                    .map(|argument| self.register(&argument.value))
+                    .collect_vec();
+                self.insert(Pattern::Constructor {
+                    variant_index,
+                    arguments,
+                })
+            }
+
+            TypedPattern::BitArray { location, .. } => {
+                // TODO: in future support bit strings fully and check the
+                // exhaustiveness of their segment patterns.
+                // For now we use the location to give each bit string a pattern
+                // a unique value.
+                self.insert(Pattern::BitArray {
+                    value: format!("{}:{}", location.start, location.end).into(),
+                })
+            }
+
+            TypedPattern::StringPrefix {
+                left_side_string,
+                right_side_assignment,
+                ..
+            } => {
+                let prefix = left_side_string.clone();
+                let rest_pattern = match right_side_assignment {
+                    AssignName::Variable(name) => Pattern::Variable { name: name.clone() },
+                    AssignName::Discard(_) => Pattern::Discard,
+                };
+                let rest = self.insert(rest_pattern);
+                self.insert(Pattern::StringPrefix { prefix, rest })
+            }
+
+            TypedPattern::VarUsage { .. } => {
+                unreachable!("Cannot convert VarUsage to exhaustiveness pattern")
+            }
+        }
+    }
+
+    fn insert(&mut self, pattern: Pattern) -> Id<Pattern> {
+        self.patterns.alloc(pattern)
     }
 }

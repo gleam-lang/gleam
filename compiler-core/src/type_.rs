@@ -231,6 +231,17 @@ impl Type {
         }
     }
 
+    pub fn list(inner_type: Arc<Self>) -> Self {
+        Type::Named {
+            publicity: Publicity::Public,
+            package: PRELUDE_PACKAGE_NAME.into(),
+            module: PRELUDE_MODULE_NAME.into(),
+            name: LIST.into(),
+            args: vec![inner_type],
+            inferred_variant: None,
+        }
+    }
+
     #[must_use]
     fn is_fun(&self) -> bool {
         match self {

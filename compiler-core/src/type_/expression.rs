@@ -16,7 +16,6 @@ use crate::{
     reference::ReferenceKind,
 };
 use hexpm::version::Version;
-use id_arena::Arena;
 use im::hashmap;
 use itertools::Itertools;
 use num_bigint::BigInt;
@@ -3995,25 +3994,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subject: Arc<Type>,
         pattern: &TypedPattern,
     ) -> Result<(), Error> {
-        use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
-
-        let mut compiler = Compiler::new(self.environment, Arena::new());
-        let mut arena = PatternArena::new();
-
-        let subject_variable = compiler.subject_variable(subject.clone());
-
-        let mut rows = Vec::with_capacity(1);
-
-        let pattern = arena.register(pattern);
-        let column = Column::new(subject_variable.clone(), pattern);
-        let guard = None;
-        let body = Body::new(0);
-        let row = Row::new(vec![column], guard, body);
-        rows.push(row);
-
-        // Perform exhaustiveness checking, building a decision tree
-        compiler.set_pattern_arena(arena.into_inner());
-        let output = compiler.compile(rows);
+        let mut case = exhaustiveness::CaseToCompile::new(&vec![subject]);
+        case.add_pattern(pattern);
+        let output = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
@@ -4032,43 +4015,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subject_types: &[Arc<Type>],
         clauses: &[TypedClause],
     ) -> Result<(), Error> {
-        use exhaustiveness::{Body, Column, Compiler, PatternArena, Row};
-
-        let mut compiler = Compiler::new(self.environment, Arena::new());
-        let mut arena = PatternArena::new();
-
-        let subject_variables = subject_types
-            .iter()
-            .map(|t| compiler.subject_variable(t.clone()))
-            .collect_vec();
-
-        let mut rows = Vec::with_capacity(clauses.iter().map(Clause::pattern_count).sum::<usize>());
-
-        for (clause_index, clause) in clauses.iter().enumerate() {
-            let mut add = |multi_pattern: &[TypedPattern]| {
-                let mut columns = Vec::with_capacity(multi_pattern.len());
-                for (subject_index, pattern) in multi_pattern.iter().enumerate() {
-                    let pattern = arena.register(pattern);
-                    let var = subject_variables
-                        .get(subject_index)
-                        .expect("Subject variable")
-                        .clone();
-                    columns.push(Column::new(var, pattern));
-                }
-                let guard = clause.guard.as_ref().map(|_| clause_index);
-                let body = Body::new(clause_index as u16);
-                rows.push(Row::new(columns, guard, body));
-            };
-
-            add(&clause.pattern);
-            for multi_pattern in &clause.alternative_patterns {
-                add(multi_pattern);
-            }
-        }
-
-        // Perform exhaustiveness checking, building a decision tree
-        compiler.set_pattern_arena(arena.into_inner());
-        let output = compiler.compile(rows);
+        let mut case = exhaustiveness::CaseToCompile::new(subject_types);
+        clauses.iter().for_each(|clause| case.add_clause(clause));
+        let output = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
