@@ -385,34 +385,34 @@ impl PatternCheck {
             Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
             Pattern::Int { value } => {
                 let value = value.clone();
-                RuntimeCheckKind::IsInt { value }
+                RuntimeCheckKind::Int { value }
             }
             Pattern::Float { value } => {
                 let value = value.clone();
-                RuntimeCheckKind::IsFloat { value }
+                RuntimeCheckKind::Float { value }
             }
             Pattern::String { value } => {
                 let value = value.clone();
-                RuntimeCheckKind::IsString { value }
+                RuntimeCheckKind::String { value }
             }
             Pattern::StringPrefix { prefix, .. } => {
                 let prefix = prefix.clone();
-                RuntimeCheckKind::IsStringPrefix { prefix }
+                RuntimeCheckKind::StringPrefix { prefix }
             }
             Pattern::Tuple { elements } => {
                 let size = elements.len();
-                RuntimeCheckKind::IsTuple { size }
+                RuntimeCheckKind::Tuple { size }
             }
             Pattern::Constructor { variant_index, .. } => {
                 let index = *variant_index;
-                RuntimeCheckKind::IsVariant { index }
+                RuntimeCheckKind::Variant { index }
             }
             Pattern::BitArray { value } => {
                 let value = value.clone();
-                RuntimeCheckKind::IsBitArray { value }
+                RuntimeCheckKind::BitArray { value }
             }
-            Pattern::List { .. } => RuntimeCheckKind::IsNonEmptyList,
-            Pattern::EmptyList => RuntimeCheckKind::IsEmptyList,
+            Pattern::List { .. } => RuntimeCheckKind::NonEmptyList,
+            Pattern::EmptyList => RuntimeCheckKind::EmptyList,
         };
 
         Some(kind)
@@ -443,21 +443,21 @@ pub struct RuntimeCheck {
 
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
 pub enum RuntimeCheckKind {
-    IsInt { value: EcoString },
-    IsFloat { value: EcoString },
-    IsString { value: EcoString },
-    IsStringPrefix { prefix: EcoString },
-    IsTuple { size: usize },
-    IsBitArray { value: EcoString },
-    IsVariant { index: usize },
-    IsEmptyList,
-    IsNonEmptyList,
+    Int { value: EcoString },
+    Float { value: EcoString },
+    String { value: EcoString },
+    StringPrefix { prefix: EcoString },
+    Tuple { size: usize },
+    BitArray { value: EcoString },
+    Variant { index: usize },
+    EmptyList,
+    NonEmptyList,
 }
 
 impl RuntimeCheck {
     fn is_empty_list() -> RuntimeCheck {
         RuntimeCheck {
-            kind: RuntimeCheckKind::IsEmptyList,
+            kind: RuntimeCheckKind::EmptyList,
             args: vec![],
         }
     }
@@ -933,7 +933,7 @@ impl<'a> Compiler<'a> {
         constructor: &TypeValueConstructor,
     ) -> RuntimeCheck {
         RuntimeCheck {
-            kind: RuntimeCheckKind::IsVariant { index },
+            kind: RuntimeCheckKind::Variant { index },
             args: constructor
                 .parameters
                 .iter()
@@ -948,7 +948,7 @@ impl<'a> Compiler<'a> {
     ///
     fn is_list_check(&mut self, inner_type: Arc<Type>) -> RuntimeCheck {
         RuntimeCheck {
-            kind: RuntimeCheckKind::IsNonEmptyList,
+            kind: RuntimeCheckKind::NonEmptyList,
             args: vec![
                 self.fresh_variable(inner_type.clone()),
                 self.fresh_variable(Arc::new(Type::list(inner_type))),
@@ -959,9 +959,9 @@ impl<'a> Compiler<'a> {
     /// Builds an `IsTuple` runtime check, coming up with fresh variable
     /// names for its arguments.
     ///
-    fn is_tuple_check(&mut self, elems: &Vec<Arc<Type>>) -> RuntimeCheck {
+    fn is_tuple_check(&mut self, elems: &[Arc<Type>]) -> RuntimeCheck {
         RuntimeCheck {
-            kind: RuntimeCheckKind::IsTuple { size: elems.len() },
+            kind: RuntimeCheckKind::Tuple { size: elems.len() },
             args: elems
                 .iter()
                 .map(|type_| self.fresh_variable(type_.clone()))
