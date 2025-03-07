@@ -233,7 +233,7 @@ impl Branch {
                     // and try again.
                     Pattern::Assign { name, pattern } => {
                         self.body.assign(name.clone(), check.var.clone());
-                        check.pattern = pattern.clone();
+                        check.pattern = *pattern;
                         continue;
                     }
                     // All other patterns are not unconditional, so we just keep them.
@@ -341,11 +341,11 @@ impl Pattern {
             | Pattern::BitArray { .. }
             | Pattern::EmptyList => vec![],
 
-            Pattern::StringPrefix { rest, .. } => vec![rest.clone()],
+            Pattern::StringPrefix { rest, .. } => vec![*rest],
 
             Pattern::Tuple { elements } => elements.clone(),
             Pattern::Constructor { arguments, .. } => arguments.clone(),
-            Pattern::List { first, rest } => vec![first.clone(), rest.clone()],
+            Pattern::List { first, rest } => vec![*first, *rest],
         }
     }
 }
@@ -820,7 +820,7 @@ impl<'a> Compiler<'a> {
 
             // If the type is a tuple there's only one runtime check we could
             // perform that actually makes sense.
-            BranchMode::Tuple { elems } => vec![self.is_tuple_check(&elems)],
+            BranchMode::Tuple { elems } => vec![self.is_tuple_check(elems)],
 
             // If the type being matched on is a list we know the resulting
             // decision tree node is only ever going to have two different paths:

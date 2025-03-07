@@ -113,7 +113,7 @@ ignored.*";
         super::write(&path.join(file), contents).unwrap();
     }
 
-    let mut chosen_files = super::erlang_files(&path).collect_vec();
+    let mut chosen_files = super::erlang_files(path).collect_vec();
     chosen_files.sort_unstable();
 
     let expected_files = included_files.iter().map(|s| path.join(s)).collect_vec();

@@ -44,7 +44,7 @@ fn run_and_capture_output(
     target: Option<Target>,
     runtime: Option<Runtime>,
 ) -> String {
-    let _ = fs::delete_directory(&paths.build_directory()).expect("delete build directory content");
+    fs::delete_directory(&paths.build_directory()).expect("delete build directory content");
 
     let Command {
         program,
@@ -53,7 +53,7 @@ fn run_and_capture_output(
         cwd: _,
         stdio: _,
     } = run::setup(
-        &paths,
+        paths,
         vec![],
         target,
         runtime,

@@ -110,7 +110,7 @@ fn add_missing_patterns(
             for (check, body) in choices {
                 let term = check_to_term(var.clone(), check, environment);
                 terms.push(term);
-                add_missing_patterns(&body, subjects, terms, missing, environment);
+                add_missing_patterns(body, subjects, terms, missing, environment);
                 _ = terms.pop();
             }
 
@@ -121,7 +121,7 @@ fn add_missing_patterns(
             for (check, body) in choices {
                 let term = check_to_term(var.clone(), check, environment);
                 terms.push(term);
-                add_missing_patterns(&body, subjects, terms, missing, environment);
+                add_missing_patterns(body, subjects, terms, missing, environment);
                 _ = terms.pop();
             }
         }

@@ -3851,7 +3851,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         subject: Arc<Type>,
         pattern: &TypedPattern,
     ) -> Result<(), Error> {
-        let mut case = exhaustiveness::CaseToCompile::new(&vec![subject]);
+        let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
 
