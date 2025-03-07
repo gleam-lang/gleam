@@ -463,6 +463,21 @@ impl RuntimeCheck {
     }
 }
 
+impl RuntimeCheckKind {
+    fn is_matching_on_unreachable_variant(&self, branch_mode: &BranchMode) -> bool {
+        match (self, branch_mode) {
+            (
+                Self::Variant { index },
+                BranchMode::NamedType {
+                    inferred_variant: Some(variant),
+                    ..
+                },
+            ) if index != variant => true,
+            _ => false,
+        }
+    }
+}
+
 /// A variable that can be matched on in a branch.
 ///
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -691,10 +706,10 @@ pub enum Reachability {
 
 impl Match {
     pub fn is_reachable(&self, clause: usize) -> Reachability {
-        if self.diagnostics.reachable.contains(&clause) {
-            Reachability::Reachable
-        } else if self.diagnostics.match_impossible_variants.contains(&clause) {
+        if self.diagnostics.match_impossible_variants.contains(&clause) {
             Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant)
+        } else if self.diagnostics.reachable.contains(&clause) {
+            Reachability::Reachable
         } else {
             Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern)
         }
@@ -856,7 +871,7 @@ impl<'a> Compiler<'a> {
         // We then split all the branches using these checks and compile the
         // choices they've been split up into.
         let mut splitter = BranchSplitter::from_checks(known_checks);
-        self.split_branches(&mut splitter, branches, pivot_var.clone());
+        self.split_branches(&mut splitter, branches, pivot_var.clone(), &branch_mode);
         let choices = splitter
             .choices
             .into_iter()
@@ -881,6 +896,7 @@ impl<'a> Compiler<'a> {
         splitter: &mut BranchSplitter,
         branches: VecDeque<Branch>,
         pivot_var: Variable,
+        branch_mode: &BranchMode,
     ) {
         for mut branch in branches {
             let Some(pattern_check) = branch.pop_check_on_var(&pivot_var) else {
@@ -898,6 +914,13 @@ impl<'a> Compiler<'a> {
             let kind = pattern_check
                 .to_runtime_check_kind(self)
                 .expect("no var patterns left");
+
+            if kind.is_matching_on_unreachable_variant(branch_mode) {
+                self.diagnostics
+                    .match_impossible_variants
+                    .push(branch.branch_index);
+                continue;
+            }
 
             // We now replace the pattern check we've just removed with the new ones we might
             // have discovered.
@@ -1168,6 +1191,8 @@ pub struct CaseToCompile {
     patterns: Arena<Pattern>,
     branches: Vec<Branch>,
     subject_variables: Vec<Variable>,
+    /// The number of clauses in this case to compile.
+    number_of_clauses: usize,
     variable_id: usize,
 }
 
@@ -1186,6 +1211,7 @@ impl CaseToCompile {
         Self {
             patterns: Arena::new(),
             branches: vec![],
+            number_of_clauses: 0,
             subject_variables,
             variable_id,
         }
@@ -1197,7 +1223,6 @@ impl CaseToCompile {
     /// to generate a decision tree for you can use `add_pattern`.
     ///
     pub fn add_clause(&mut self, branch: &TypedClause) {
-        let branch_index = self.branches.len();
         let all_patterns =
             std::iter::once(&branch.pattern).chain(branch.alternative_patterns.iter());
 
@@ -1219,9 +1244,11 @@ impl CaseToCompile {
             }
 
             let has_guard = branch.guard.is_some();
-            let branch = Branch::new(branch_index, alternative_index, checks, has_guard);
+            let branch = Branch::new(self.number_of_clauses, alternative_index, checks, has_guard);
             self.branches.push(branch);
         }
+
+        self.number_of_clauses += 1;
     }
 
     /// Add a single pattern as a branch to be compiled.
@@ -1231,7 +1258,6 @@ impl CaseToCompile {
     /// method. For example, in `let` destructurings.
     ///
     pub fn add_pattern(&mut self, pattern: &TypedPattern) {
-        let branch_index = self.branches.len();
         let pattern = self.register(pattern);
         let var = self
             .subject_variables
@@ -1239,7 +1265,8 @@ impl CaseToCompile {
             .expect("wrong number of subject variables for pattern")
             .clone();
         let checks = vec![PatternCheck::new(var, pattern)];
-        let branch = Branch::new(branch_index, 0, checks, false);
+        let branch = Branch::new(self.number_of_clauses, 0, checks, false);
+        self.number_of_clauses += 1;
         self.branches.push(branch);
     }
 
