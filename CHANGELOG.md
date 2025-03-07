@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.9.0-rc2 - 2025-03-07
 
 ### Compiler
 
