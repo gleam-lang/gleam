@@ -16,7 +16,7 @@
 //! contain multiple pattern checks. With a psedo-Gleam syntax, this is what it
 //! would look like:
 //!
-//! ```
+//! ```text
 //! case {
 //!   a is Some, b is 1, c is _  -> todo
 //!   a is wibble -> todo
@@ -36,7 +36,7 @@
 //! >
 //! > In out representation that would turn into:
 //! >
-//! > ```
+//! > ```text
 //! > case {
 //! >   a is Some(_) -> todo
 //! >   a is None -> todo
@@ -103,7 +103,7 @@ use std::{
 /// multiple checks (each on a different variable, which appears in the check
 /// itself!):
 ///
-/// ```
+/// ```text
 /// a is Some, b is 1 if condition -> todo
 /// ─┬───────  ─┬──── ─┬──────────    ─┬──
 ///  │          │      │               ╰── body: an arbitrary expression
@@ -178,7 +178,7 @@ impl Branch {
     ///
     /// In our internal representation this would become:
     ///
-    /// ```
+    /// ```text
     /// case {
     ///   a is Some(1) -> Some(2)
     ///   a is otherwise -> otherwise
@@ -191,7 +191,7 @@ impl Branch {
     /// by keeping track in its body of the correspondence. So it would end up
     /// looking like this:
     ///
-    /// ```
+    /// ```text
     /// case {
     ///   a is Some(1) -> Some(2)
     ///   ∅ -> {
@@ -353,7 +353,7 @@ impl Pattern {
 /// A single check making up a branch, checking that a variable matches with a
 /// given pattern. For example, the following branch has 2 checks:
 ///
-/// ```
+/// ```text
 /// a is Some, b is 1 -> todo
 /// ┬    ─┬──
 /// │     ╰── This is the pattern being checked
