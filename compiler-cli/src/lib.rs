@@ -129,6 +129,7 @@ struct TreeOptions {
 #[derive(Parser, Debug)]
 #[command(
     version,
+    name = "gleam",
     next_display_order = None,
     help_template = "\
 {before-help}{name} {version}
