@@ -14,6 +14,10 @@
   `gleam --version`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug in the `generate json encoder` and `generate dynamic decoder` that
+  would result in generating invalid code for variants with no fields.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.9.0-rc1 - 2025-03-04
 
 ### Compiler
