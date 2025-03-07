@@ -526,7 +526,7 @@ enum BranchMode {
 }
 
 impl BranchMode {
-    fn is_infinite(&self) -> bool {
+    fn needs_fallback(&self) -> bool {
         match self {
             BranchMode::Infinite => true,
             BranchMode::Tuple { .. } | BranchMode::List { .. } | BranchMode::NamedType { .. } => {
@@ -886,7 +886,7 @@ impl<'a> Compiler<'a> {
             .map(|(check, branches)| (check, Box::new(self.compile(branches))))
             .collect_vec();
 
-        if branch_mode.is_infinite() {
+        if branch_mode.needs_fallback() {
             // If the branching is infinite, that means we always need to also have
             // a fallback (imagine you're pattern matching on an `Int` and put no
             // `_` at the end of the case expression).
