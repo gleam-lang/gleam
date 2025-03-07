@@ -892,6 +892,13 @@ impl<'a> Compiler<'a> {
             // `_` at the end of the case expression).
             let fallback = self.compile(splitter.fallback);
             Decision::switch(pivot_var, choices, fallback)
+        } else if choices.is_empty() {
+            // If the branching doesn't need any fallback but we ended up with no
+            // checks it means we're trying to pattern match on an external type
+            // but haven't provided a catch-all case.
+            // That's never going to match, so we produce a failure node.
+            self.diagnostics.missing = true;
+            Decision::Fail
         } else {
             // Otherwise we know that one of the possible runtime checks is always
             // going to succeed and there's no need to also have a fallback branch.
