@@ -8,6 +8,12 @@
   JavaScript FFI code more compact. They are now one line instead of three.
   ([Richard Viney](https://github.com/richard-viney))
 
+### Bug fixes
+
+- Fixed a bug that would result in displaying the wrong name when running
+  `gleam --version`.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.9.0-rc1 - 2025-03-04
 
 ### Compiler
