@@ -193,6 +193,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/jamesmacaulay">James MacAulay</a> -
   <a href="https://github.com/janpieper">Jan Pieper</a> -
   <a href="https://github.com/monzool">Jan Skriver Sørensen</a> -
+  <a href="https://github.com/MightyGoldenOctopus">Jean-Adrien Ducastaing</a> -
   <a href="https://github.com/jlgeering">Jean-Luc Geering</a> -
   <a href="https://github.com/okkdev">Jen Stehlik</a> -
   <a href="https://github.com/jiangplus">jiangplus</a> -
@@ -273,7 +274,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/nathanielknight">Nathaniel Knight</a> -
   <a href="https://github.com/Kuuuuuuuu">Nayuki</a> -
   <a href="https://github.com/NFIBrokerage">NFIBrokerage</a> -
-  <a href="https://github.com/arcanemachine">Nicholas Moen</a> -
   <a href="https://github.com/nchapman">Nick Chapman</a> -
   <a href="https://github.com/ndreynolds">Nick Reynolds</a> -
   <a href="https://github.com/NicklasXYZ">Nicklas Sindlev Andersen</a> -
@@ -289,7 +289,6 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/CanadaHonk">Oliver Medhurst</a> -
   <a href="https://github.com/otosky">Oliver Tosky</a> -
   <a href="https://github.com/optizio">optizio</a> -
-  <a href="https://github.com/daslaf">Osman Cea</a> -
   <a href="https://github.com/Davorak">Patrick Wheeler</a> -
   <a href="https://github.com/pguse">Paul Guse</a> -
   <a href="https://github.com/biernacki">Pawel Biernacki</a> -
@@ -361,6 +360,7 @@ Thank you to our sponsors! Gleam would not be possible without you.
   <a href="https://github.com/ThisGuyCodes">Travis Johnson</a> -
   <a href="https://github.com/TristanCacqueray">Tristan de Cacqueray</a> -
   <a href="https://github.com/tsloughter">Tristan Sloughter</a> -
+  <a href="https://github.com/lucamtudor">Tudor Luca</a> -
   <a href="https://github.com/tymak">tymak</a> -
   <a href="https://github.com/upsidedownsweetfood">upsidedowncake</a> -
   <a href="https://github.com/vvzen">Valerio Viperino</a> -
