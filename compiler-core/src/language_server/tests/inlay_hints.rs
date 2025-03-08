@@ -141,6 +141,56 @@ fn hints_in_use() {
 }
 
 #[test]
+fn show_hints_in_params() {
+    let src = r#"
+      fn example_fn(
+        flex_type_arg,
+        b: do_not_show_this,
+      ) { 0 }
+      "#;
+
+    let hints = parameter_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
+fn show_hints_in_return() {
+    let src = r#"
+      fn example_fn() { 0 }
+      "#;
+
+    let hints = return_hints(src);
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
+fn show_correct_type_names_in_functions() {
+    let src = r#"
+
+      fn complex(
+        x, // expected: 'b'
+        y: rigid_type_var, // expected: 'rigid_type_var'
+      ) { // expected: 'fn(b, rigid_type_var) -> #(b, rigid_type_var, a)'
+        fn(
+          z, // expected: 'a'
+        ) { // expected: '#(b, rigid_type_var, a)'
+          #(x, y, z)
+        }
+      }
+      "#;
+
+    let hints = inlay_hints_for_config(
+        src,
+        InlayHintsConfig {
+            parameter_types: true,
+            return_types: true,
+            ..Default::default()
+        },
+    );
+    insta::assert_snapshot!(hints);
+}
+
+#[test]
 fn do_not_show_hints_by_default() {
     let src = r#"
           const int_val = 0
@@ -169,6 +219,26 @@ fn pipeline_hints(src: &str) -> String {
         src,
         InlayHintsConfig {
             pipelines: true,
+            ..Default::default()
+        },
+    )
+}
+
+fn parameter_hints(src: &str) -> String {
+    inlay_hints_for_config(
+        src,
+        InlayHintsConfig {
+            parameter_types: true,
+            ..Default::default()
+        },
+    )
+}
+
+fn return_hints(src: &str) -> String {
+    inlay_hints_for_config(
+        src,
+        InlayHintsConfig {
+            return_types: true,
             ..Default::default()
         },
     )
