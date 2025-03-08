@@ -20,7 +20,7 @@ fn no_hints_when_same_line() {
     }
 "#;
 
-    let hints = inlay_hints(src);
+    let hints = pipeline_hints(src);
     insta::assert_snapshot!(hints);
 }
 
@@ -48,7 +48,7 @@ fn no_hints_when_value_is_literal() {
     }
 "#;
 
-    let hints = inlay_hints(src);
+    let hints = pipeline_hints(src);
     insta::assert_snapshot!(hints);
 }
 
@@ -72,7 +72,7 @@ fn show_many_hints() {
           }
       "#;
 
-    let hints = inlay_hints(src);
+    let hints = pipeline_hints(src);
     insta::assert_snapshot!(hints);
 }
 
@@ -95,7 +95,7 @@ fn hints_nested_in_case_block() {
           }
       "#;
 
-    let hints = inlay_hints(src);
+    let hints = pipeline_hints(src);
     insta::assert_snapshot!(hints);
 }
 
@@ -116,7 +116,7 @@ fn hints_nested_for_apply_fn_let() {
           }
       "#;
 
-    let hints = inlay_hints(src);
+    let hints = pipeline_hints(src);
     insta::assert_snapshot!(hints);
 }
 
@@ -136,7 +136,7 @@ fn hints_in_use() {
           }
       "#;
 
-    let hints = inlay_hints(src);
+    let hints = pipeline_hints(src);
     insta::assert_snapshot!(hints);
 }
 
@@ -160,25 +160,29 @@ fn do_not_show_hints_by_default() {
           }
       "#;
 
-    let hints = inlay_hints_for_config(src, Configuration::default());
+    let hints = inlay_hints_for_config(src, InlayHintsConfig::default());
     insta::assert_snapshot!(hints);
 }
 
-fn inlay_hints(src: &str) -> String {
+fn pipeline_hints(src: &str) -> String {
     inlay_hints_for_config(
         src,
-        Configuration {
-            inlay_hints: InlayHintsConfig { pipelines: true },
+        InlayHintsConfig {
+            pipelines: true,
+            ..Default::default()
         },
     )
 }
 
-fn inlay_hints_for_config(src: &str, user_config: Configuration) -> String {
+fn inlay_hints_for_config(src: &str, inlay_hints_config: InlayHintsConfig) -> String {
     let io = LanguageServerTestIO::new();
     let mut engine = setup_engine(&io);
     {
         let mut config = engine.user_config.write().expect("cannot write config");
-        *config = user_config;
+        *config = Configuration {
+            inlay_hints: inlay_hints_config,
+            ..Default::default()
+        };
     }
 
     _ = io.src_module("app", src);
