@@ -250,6 +250,8 @@ impl Hydrator {
                             name: name.clone(),
                             location: *location,
                             hint,
+                            suggestions: environment
+                                .suggest_modules_for_type_or_value(Imported::Type(name.clone())),
                         })
                     }
                 }
