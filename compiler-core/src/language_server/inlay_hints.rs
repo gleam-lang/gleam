@@ -9,28 +9,15 @@ use crate::{
     type_::{self, Type},
 };
 
-use super::src_offset_to_lsp_position;
+use super::{configuration::InlayHintsConfig, src_offset_to_lsp_position};
 
 struct InlayHintsVisitor<'a> {
+    config: InlayHintsConfig,
     module_names: &'a type_::printer::Names,
     current_declaration_printer: type_::printer::Printer<'a>,
 
     hints: Vec<InlayHint>,
     line_numbers: &'a LineNumbers,
-}
-
-impl<'a> InlayHintsVisitor<'a> {
-    fn new(
-        line_numbers: &'a LineNumbers,
-        module_names: &'a type_::printer::Names,
-    ) -> InlayHintsVisitor<'a> {
-        InlayHintsVisitor {
-            module_names,
-            current_declaration_printer: type_::printer::Printer::new(module_names),
-            hints: vec![],
-            line_numbers,
-        }
-    }
 }
 
 fn default_inlay_hint(line_numbers: &LineNumbers, offset: u32, label: String) -> InlayHint {
@@ -90,17 +77,22 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         // This must be reset on every statement
         self.current_declaration_printer = type_::printer::Printer::new(self.module_names);
 
-        for arg in &fun.arguments {
-            self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
-        }
-        self.push_return_annotation(
-            &fun.return_type,
-            fun.return_annotation.as_ref(),
-            &fun.location,
-        );
-
         for st in &fun.body {
             self.visit_typed_statement(st);
+        }
+
+        if self.config.parameter_types {
+            for arg in &fun.arguments {
+                self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
+            }
+        }
+
+        if self.config.return_types {
+            self.push_return_annotation(
+                &fun.return_type,
+                fun.return_annotation.as_ref(),
+                &fun.location,
+            );
         }
     }
 
@@ -113,18 +105,24 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         body: &'ast vec1::Vec1<crate::ast::TypedStatement>,
         return_annotation: &'ast Option<TypeAst>,
     ) {
-        if let crate::ast::FunctionLiteralKind::Anonymous { head } = kind {
+        for st in body {
+            self.visit_typed_statement(st);
+        }
+
+        let crate::ast::FunctionLiteralKind::Anonymous { head } = kind else {
+            return;
+        };
+
+        if self.config.parameter_types {
             for arg in args {
                 self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
             }
+        }
 
+        if self.config.return_types {
             if let Some((_args, ret_type)) = type_.fn_types() {
                 self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
             }
-        }
-
-        for st in body {
-            self.visit_typed_statement(st);
         }
     }
 
@@ -136,6 +134,16 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         finally: &'ast TypedExpr,
         _finally_kind: &'ast PipelineAssignmentKind,
     ) {
+        self.visit_typed_pipeline_assignment(first_value);
+        for (assignment, _kind) in assignments {
+            self.visit_typed_pipeline_assignment(assignment);
+        }
+        self.visit_typed_expr(finally);
+
+        if !self.config.pipelines {
+            return;
+        }
+
         let mut prev_hint: Option<(u32, Option<InlayHint>)> = None;
 
         let assigments_values =
@@ -171,8 +179,6 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
                     Some(this_hint)
                 },
             ));
-
-            self.visit_typed_expr(&assign.value);
         }
 
         if let Some((prev_line, prev_hint)) = prev_hint {
@@ -194,13 +200,22 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
                 self.hints.push(hint);
             }
         }
-
-        self.visit_typed_expr(finally);
     }
 }
 
-pub fn get_inlay_hints(typed_module: TypedModule, line_numbers: &LineNumbers) -> Vec<InlayHint> {
-    let mut visitor = InlayHintsVisitor::new(line_numbers, &typed_module.names);
+pub fn get_inlay_hints(
+    config: InlayHintsConfig,
+    typed_module: TypedModule,
+    line_numbers: &LineNumbers,
+) -> Vec<InlayHint> {
+    let mut visitor = InlayHintsVisitor {
+        config,
+        module_names: &typed_module.names,
+        current_declaration_printer: type_::printer::Printer::new(&typed_module.names),
+        hints: vec![],
+        line_numbers,
+    };
+
     visitor.visit_typed_module(&typed_module);
     visitor.hints
 }
