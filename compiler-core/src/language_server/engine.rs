@@ -559,17 +559,15 @@ where
                 return Ok(vec![]);
             };
 
-            if !config.inlay_hints.pipelines {
-                return Ok(vec![]);
-            }
-
             let Some(module) = this.module_for_uri(&params.text_document.uri) else {
                 return Ok(vec![]);
             };
 
-            let line_numbers = LineNumbers::new(&module.code);
-
-            let hints = inlay_hints::get_inlay_hints(module.ast.clone(), &line_numbers);
+            let hints = inlay_hints::get_inlay_hints(
+                config.inlay_hints.clone(),
+                module.ast.clone(),
+                &LineNumbers::new(&module.code),
+            );
 
             Ok(hints)
         })
