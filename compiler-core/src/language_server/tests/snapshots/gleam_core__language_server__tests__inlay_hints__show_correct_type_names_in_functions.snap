@@ -1,0 +1,42 @@
+---
+source: compiler-core/src/language_server/tests/inlay_hints.rs
+expression: hints
+---
+[
+  {
+    "position": {
+      "line": 6,
+      "character": 11
+    },
+    "label": ": a",
+    "kind": 1,
+    "paddingLeft": false
+  },
+  {
+    "position": {
+      "line": 7,
+      "character": 9
+    },
+    "label": "-> #(b, rigid_type_var, a)",
+    "kind": 1,
+    "paddingLeft": true
+  },
+  {
+    "position": {
+      "line": 2,
+      "character": 9
+    },
+    "label": ": b",
+    "kind": 1,
+    "paddingLeft": false
+  },
+  {
+    "position": {
+      "line": 4,
+      "character": 7
+    },
+    "label": "-> fn(a) -> #(b, rigid_type_var, a)",
+    "kind": 1,
+    "paddingLeft": true
+  }
+]

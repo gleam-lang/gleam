@@ -166,14 +166,13 @@ fn show_hints_in_return() {
 #[test]
 fn show_correct_type_names_in_functions() {
     let src = r#"
-
       fn complex(
-        x, // expected: 'b'
-        y: rigid_type_var, // expected: 'rigid_type_var'
-      ) { // expected: 'fn(b, rigid_type_var) -> #(b, rigid_type_var, a)'
+        x, //: b
+        y: rigid_type_var, //: rigid_type_var
+      ) { //-> fn(a, rigid_type_var) -> #(b, rigid_type_var, a)
         fn(
-          z, // expected: 'a'
-        ) { // expected: '#(b, rigid_type_var, a)'
+          z, //: a
+        ) { //-> #(b, rigid_type_var, a)
           #(x, y, z)
         }
       }
