@@ -65,19 +65,6 @@
   and Erlang.
   ([LostKobrakai](https://github.com/lostkobrakai))
 
-- HexDocs documentation of Gleam packages now uses the ExDocs search data model,
-  allowing for global indexing of Gleam packages in HexDocs, and
-  making Gleam packages discoverable through global search of HexDocs.
-  ([Diemo Gebhardt](https://github.com/diemogebhardt))
-
-- Improved the styling of constructor argument descriptions in the generated
-  documentation.
-  ([Mikko Ahlroth](https://git.ahlcode.fi/nicd))
-
-- Allow users to set the `GLEAM_CACERTS_PATH` environment variable to specify a
-  path to a directory containing CA certificates to install Hex packages.
-  ([winstxnhdw](https://github.com/winstxnhdw))
-
 - On the JavaScript target, bit array expressions and patterns no longer need to
   be byte aligned, and the `bits` segment type is now supported in patterns.
   ([Richard Viney](https://github.com/richard-viney))
@@ -105,6 +92,19 @@
 - The build tool now refuses to publish any incomplete package that has any
   `echo` debug printing left.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- HexDocs documentation of Gleam packages now uses the ExDocs search data model,
+  allowing for global indexing of Gleam packages in HexDocs, and
+  making Gleam packages discoverable through global search of HexDocs.
+  ([Diemo Gebhardt](https://github.com/diemogebhardt))
+
+- Improved the styling of constructor argument descriptions in the generated
+  documentation.
+  ([Mikko Ahlroth](https://git.ahlcode.fi/nicd))
+
+- Allow users to set the `GLEAM_CACERTS_PATH` environment variable to specify a
+  path to a directory containing CA certificates to install Hex packages.
+  ([winstxnhdw](https://github.com/winstxnhdw))
 
 ### Language server
 
