@@ -22,7 +22,8 @@ use crate::{
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
     io::{
-        CommandExecutor, FileSystemReader, FileSystemWriter, gleam_cache_files, gleam_source_files,
+        CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension,
+        gleam_cache_files,
     },
     metadata, type_,
     uid::UniqueIdGenerator,
@@ -202,26 +203,6 @@ where
         Ok(module)
     }
 
-    pub fn is_gleam_path(&self, path: &Utf8Path, dir: &Utf8Path) -> bool {
-        use regex::Regex;
-        use std::cell::OnceCell;
-        const RE: OnceCell<Regex> = OnceCell::new();
-
-        RE.get_or_init(|| {
-            Regex::new(&format!(
-                "^({module}{slash})*{module}\\.gleam$",
-                module = "[a-z][_a-z0-9]*",
-                slash = "(/|\\\\)",
-            ))
-            .expect("is_gleam_path() RE regex")
-        })
-        .is_match(
-            path.strip_prefix(dir)
-                .expect("is_gleam_path(): strip_prefix")
-                .as_str(),
-        )
-    }
-
     fn read_sources_and_caches(&self) -> Result<HashMap<EcoString, Input>> {
         let span = tracing::info_span!("load");
         let _enter = span.enter();
@@ -243,19 +224,14 @@ where
         };
 
         // Src
-        for path in gleam_source_files(&self.io, &src) {
-            // If the there is a .gleam file with a path that would be an
-            // invalid module name it does not get loaded. For example, if it
-            // has a uppercase letter in it.
-            // Emit a warning so that the programmer understands why it has been
-            // skipped.
-            if !self.is_gleam_path(&path, &src) {
-                self.warnings.emit(crate::Warning::InvalidSource { path });
-                continue;
+        for file in GleamFile::iterate_files_in_directory(&self.io, &src) {
+            match file {
+                Ok(file) => {
+                    let input = loader.load(file.path)?; // TODO
+                    inputs.insert(input)?;
+                }
+                Err(warning) => self.warnings.emit(warning),
             }
-
-            let input = loader.load(path)?;
-            inputs.insert(input)?;
         }
 
         // Test
@@ -264,13 +240,14 @@ where
             loader.origin = Origin::Test;
             loader.source_directory = &test;
 
-            for path in gleam_source_files(&self.io, &test) {
-                if !self.is_gleam_path(&path, &test) {
-                    self.warnings.emit(crate::Warning::InvalidSource { path });
-                    continue;
+            for file in GleamFile::iterate_files_in_directory(&self.io, &test) {
+                match file {
+                    Ok(file) => {
+                        let input = loader.load(file.path)?; // TODO
+                        inputs.insert(input)?;
+                    }
+                    Err(warning) => self.warnings.emit(warning),
                 }
-                let input = loader.load(path)?;
-                inputs.insert(input)?;
             }
         }
 
@@ -1713,5 +1690,72 @@ impl<'a> Inputs<'a> {
         }
 
         Ok(())
+    }
+}
+
+/// Strong typing for a Gleam source file (`.gleam`)
+struct GleamFile {
+    pub path: Utf8PathBuf,
+}
+
+impl GleamFile {
+    /// Iterates over Gleam source files (`.gleam`) in a certain directory.
+    /// Symlinks are followed.
+    /// If the there is a .gleam file with a path that would be an
+    /// invalid module name it should not be loaded. For example, if it
+    /// has a uppercase letter in it.
+    pub fn iterate_files_in_directory<'b>(
+        io: &'b impl FileSystemReader,
+        dir: &'b Utf8Path,
+    ) -> impl Iterator<Item = Result<Self, crate::Warning>> + 'b {
+        tracing::trace!("gleam_source_files {:?}", dir);
+        files_with_extension(io, dir, "gleam").map(move |path| {
+            if (Self::is_gleam_path(&path, &dir)) {
+                Ok(GleamFile { path })
+            } else {
+                Err(crate::Warning::InvalidSource { path })
+            }
+        })
+    }
+
+    pub fn module_name(&self, package_path: &Utf8Path) -> EcoString {
+        // self.path is similar to:
+        // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
+
+        // my/module.gleam
+        let mut module_path = self
+            .path
+            .strip_prefix(package_path)
+            .expect("Stripping package prefix from module path")
+            .to_path_buf();
+
+        // my/module
+        let _ = module_path.set_extension("");
+
+        // Stringify
+        let name = module_path.to_string();
+
+        // normalise windows paths
+        name.replace("\\", "/").into()
+    }
+
+    fn is_gleam_path(path: &Utf8Path, dir: &Utf8Path) -> bool {
+        use regex::Regex;
+        use std::cell::OnceCell;
+        const RE: OnceCell<Regex> = OnceCell::new();
+
+        RE.get_or_init(|| {
+            Regex::new(&format!(
+                "^({module}{slash})*{module}\\.gleam$",
+                module = "[a-z][_a-z0-9]*",
+                slash = "(/|\\\\)",
+            ))
+            .expect("is_gleam_path() RE regex")
+        })
+        .is_match(
+            path.strip_prefix(dir)
+                .expect("is_gleam_path(): strip_prefix")
+                .as_str(),
+        )
     }
 }
