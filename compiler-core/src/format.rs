@@ -2730,8 +2730,7 @@ impl<'comments> Formatter<'comments> {
             // it's nested onto a new line:
             //
             // ```gleam
-            // echo
-            //   first
+            // echo first
             //   |> wobble
             //   |> wibble
             // ```
@@ -2745,13 +2744,7 @@ impl<'comments> Formatter<'comments> {
             // |> wibble
             // ```
             //
-            UntypedExpr::PipeLine { .. } => docvec![
-                "echo",
-                break_("", " ").nest(INDENT),
-                self.expr(expression).nest(INDENT)
-            ]
-            .group(),
-
+            UntypedExpr::PipeLine { .. } => docvec!["echo ", self.expr(expression).nest(INDENT)],
             _ => docvec!["echo ", self.expr(expression)],
         }
     }
