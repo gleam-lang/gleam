@@ -21,10 +21,7 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
-    io::{
-        CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension,
-        gleam_cache_files,
-    },
+    io::{CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata, type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
@@ -114,8 +111,9 @@ where
         let mut inputs = self.read_sources_and_caches()?;
 
         // Check for any removed modules, by looking at cache files that don't exist in inputs
-        for cache_file in gleam_cache_files(&self.io, &self.artefact_directory) {
-            let module = module_name(&self.artefact_directory, &cache_file);
+        for cache_file in CacheFile::iterate_files_in_directory(&self.io, &self.artefact_directory)
+        {
+            let module = module_name(&self.artefact_directory, &cache_file.path);
             if (!inputs.contains_key(&module)) {
                 self.stale_modules.add(module);
             }
@@ -1757,5 +1755,22 @@ impl GleamFile {
                 .expect("is_gleam_path(): strip_prefix")
                 .as_str(),
         )
+    }
+}
+
+/// Strong typing for a cache file (`.cache`)
+struct CacheFile {
+    pub path: Utf8PathBuf,
+}
+
+impl CacheFile {
+    /// Iterates over Gleam cache files (`.cache`) in a certain directory.
+    /// Symlinks are followed.
+    pub fn iterate_files_in_directory<'a>(
+        io: &'a impl FileSystemReader,
+        dir: &'a Utf8Path,
+    ) -> impl Iterator<Item = CacheFile> + 'a {
+        tracing::trace!("gleam_cache_files {:?}", dir);
+        files_with_extension(io, dir, "cache").map(|path| CacheFile { path })
     }
 }
