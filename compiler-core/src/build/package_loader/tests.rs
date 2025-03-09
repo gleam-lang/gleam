@@ -363,3 +363,17 @@ fn invalid_nested_module_name_in_test() {
         }],
     );
 }
+
+#[test]
+fn cache_files_are_removed_when_source_removed() {
+    let fs = InMemoryFileSystem::new();
+    let root = Utf8Path::new("/");
+    let artefact = Utf8Path::new("/artefact");
+
+    // Source is removed, cache is present
+    write_cache(&fs, "nested/one", 0, vec![], TEST_SOURCE_1);
+
+    _ = run_loader(fs.clone(), root, artefact);
+
+    assert_eq!(fs.files().len(), 0);
+}

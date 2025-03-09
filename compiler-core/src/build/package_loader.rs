@@ -111,10 +111,12 @@ where
         let mut inputs = self.read_sources_and_caches()?;
 
         // Check for any removed modules, by looking at cache files that don't exist in inputs.
-        // TODO: Write test Delete the cache files for removed modules.
+        // Delete the cache files for removed modules and mark them as stale
+        // to trigger refreshing dependent modules.
         for module in CacheFiles::modules_with_meta_files(&self.io, &self.artefact_directory) {
             if (!inputs.contains_key(&module)) {
-                //CacheFiles::new(&self.artefact_directory, &module).delete(&self.io);
+                tracing::debug!(%module, "module_removed");
+                CacheFiles::new(&self.artefact_directory, &module).delete(&self.io);
                 self.stale_modules.add(module);
             }
         }
@@ -267,7 +269,7 @@ where
         // We need to delete any existing cache files for this module.
         // While we figured it out this time because the module has stale dependencies,
         // next time the dependencies might no longer be stale, but we still need to be able to tell
-        // that this module needs to be recompiled until it sucessfully compiles at least once.
+        // that this module needs to be recompiled until it successfully compiles at least once.
         // This can happen if the stale dependency includes breaking changes.
         CacheFiles::new(&self.artefact_directory, &cached.name).delete(&self.io);
 
@@ -1719,7 +1721,6 @@ impl GleamFile {
     }
 
     fn module_name(path: &Utf8Path, dir: &Utf8Path) -> EcoString {
-        // self.path is similar to:
         // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
         // my/module.gleam
