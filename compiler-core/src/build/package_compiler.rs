@@ -594,25 +594,6 @@ fn analyse(
     Outcome::Ok(modules)
 }
 
-pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
-    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
-
-    // my/module.gleam
-    let mut module_path = full_module_path
-        .strip_prefix(package_path)
-        .expect("Stripping package prefix from module path")
-        .to_path_buf();
-
-    // my/module
-    let _ = module_path.set_extension("");
-
-    // Stringify
-    let name = module_path.to_string();
-
-    // normalise windows paths
-    name.replace("\\", "/").into()
-}
-
 #[derive(Debug)]
 pub(crate) enum Input {
     New(UncompiledModule),

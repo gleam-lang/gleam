@@ -17,7 +17,7 @@ use vec1::Vec1;
 use crate::{
     Error, Result,
     ast::SrcSpan,
-    build::{Module, Origin, module_loader::ModuleLoader, package_compiler::module_name},
+    build::{Module, Origin, module_loader::ModuleLoader},
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
@@ -113,7 +113,7 @@ where
         // Check for any removed modules, by looking at cache files that don't exist in inputs
         for cache_file in CacheFile::iterate_files_in_directory(&self.io, &self.artefact_directory)
         {
-            let module = module_name(&self.artefact_directory, &cache_file.path);
+            let module = cache_file.module_name;
             if (!inputs.contains_key(&module)) {
                 self.stale_modules.add(module);
             }
@@ -1766,6 +1766,7 @@ impl GleamFile {
 /// Strong typing for a cache file (`.cache`)
 struct CacheFile {
     pub path: Utf8PathBuf,
+    pub module_name: EcoString,
 }
 
 impl CacheFile {
@@ -1776,6 +1777,29 @@ impl CacheFile {
         dir: &'a Utf8Path,
     ) -> impl Iterator<Item = CacheFile> + 'a {
         tracing::trace!("gleam_cache_files {:?}", dir);
-        files_with_extension(io, dir, "cache").map(|path| CacheFile { path })
+        files_with_extension(io, dir, "cache").map(move |path| CacheFile {
+            module_name: Self::module_name(&dir, &path),
+            path,
+        })
+    }
+
+    // TODO: This is not correct! Will TDD it later.
+    fn module_name(dir: &Utf8Path, path: &Utf8Path) -> EcoString {
+        // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
+
+        // my/module.gleam
+        let mut module_path = path
+            .strip_prefix(dir)
+            .expect("Stripping package prefix from module path")
+            .to_path_buf();
+
+        // my/module
+        let _ = module_path.set_extension("");
+
+        // Stringify
+        let name = module_path.to_string();
+
+        // normalise windows paths
+        name.replace("\\", "/").into()
     }
 }
