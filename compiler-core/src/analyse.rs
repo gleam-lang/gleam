@@ -342,7 +342,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 contains_echo: echo_found,
                 references: References {
                     imported_modules: env.imported_modules.into_keys().collect(),
-                    value_references: env.references,
+                    value_references: env.references.into_locations(),
                 },
             },
             names: type_names,
@@ -426,7 +426,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         environment.insert_module_value(name.clone(), variant);
 
-        environment.register_reference(
+        environment.references.register_reference(
             environment.current_module.clone(),
             name.clone(),
             name_location,
@@ -526,6 +526,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .zip(&prereg_args_types)
             .map(|(a, t)| a.set_type(t.clone()))
             .collect_vec();
+
+        environment
+            .references
+            .enter_function(environment.current_module.clone(), name.clone());
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -645,7 +649,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation.clone(),
         );
 
-        environment.register_reference(
+        environment.references.register_reference(
             environment.current_module.clone(),
             name.clone(),
             name_location,
@@ -1100,7 +1104,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             );
 
-            environment.register_reference(
+            environment.references.register_reference(
                 environment.current_module.clone(),
                 constructor.name.clone(),
                 constructor.name_location,
