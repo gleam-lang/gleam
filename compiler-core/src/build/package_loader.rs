@@ -1683,7 +1683,7 @@ impl<'a> Inputs<'a> {
     }
 }
 
-/// Strong typing for a Gleam source file (`.gleam`)
+/// A Gleam source file (`.gleam`) and the module name deduced from it
 pub struct GleamFile {
     pub path: Utf8PathBuf,
     pub module_name: EcoString,
@@ -1760,8 +1760,8 @@ impl GleamFile {
     }
 }
 
-/// Strong typing for a cache file (`.cache`) and the related meta file (`.cache_meta`).
-/// These files might exist or might not exist, depending on how the instance is constructed.
+/// The collection of cache files paths related to a module.
+/// These files are not guaranteed to exist.
 pub struct CacheFiles {
     pub cache_path: Utf8PathBuf,
     pub meta_path: Utf8PathBuf,
@@ -1802,7 +1802,7 @@ impl CacheFiles {
         io: &'a impl FileSystemReader,
         dir: &'a Utf8Path,
     ) -> impl Iterator<Item = EcoString> + 'a {
-        tracing::trace!("CacheFiles::iterate_files_in_directory {:?}", dir);
+        tracing::trace!("CacheFiles::modules_with_meta_files {:?}", dir);
         files_with_extension(io, dir, "cache_meta").map(move |path| Self::module_name(&dir, &path))
     }
 
