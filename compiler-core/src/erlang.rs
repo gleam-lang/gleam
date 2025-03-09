@@ -1988,7 +1988,7 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             let expression = expression
                 .as_ref()
                 .expect("echo with no expression outside of pipe");
-            echo(expr(expression, env), location, env)
+            echo(maybe_block_expr(expression, env), location, env)
         }
 
         TypedExpr::Int { value, .. } => int(value),
