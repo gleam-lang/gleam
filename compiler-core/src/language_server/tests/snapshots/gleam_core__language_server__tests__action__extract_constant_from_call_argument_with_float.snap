@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "import gleam/float\n\npub fn main() {\n  float.ceiling(1.9998)\n}"
+---
+----- BEFORE ACTION
+import gleam/float
+
+pub fn main() {
+  float.ceiling(1.9998)
+                ▔▔▔▔▔↑ 
+}
+
+
+----- AFTER ACTION
+import gleam/float
+
+const float = 1.9998
+
+pub fn main() {
+  float.ceiling(float)
+}
