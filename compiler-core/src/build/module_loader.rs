@@ -49,12 +49,11 @@ where
     /// `.timestamp` file in the artefact directory.
     pub fn load(&self, file: GleamFile) -> Result<Input> {
         let name = file.module_name.clone();
-        let artefact = name.replace("/", "@");
         let source_mtime = self.io.modification_time(&file.path)?;
 
         let read_source = |name| self.read_source(file.path.clone(), name, source_mtime);
 
-        let meta = match self.read_cache_metadata(&artefact)? {
+        let meta = match self.read_cache_metadata(&file)? {
             Some(meta) => meta,
             None => return read_source(name).map(Input::New),
         };
@@ -86,13 +85,10 @@ where
         Ok(Input::Cached(self.cached(file, meta)))
     }
 
-    /// Read the timestamp file from the artefact directory for the given
-    /// artefact slug. If the file does not exist, return `None`.
-    fn read_cache_metadata(&self, artefact: &str) -> Result<Option<CacheMetadata>> {
-        let meta_path = self
-            .artefact_directory
-            .join(artefact)
-            .with_extension("cache_meta");
+    /// Read the cache metadata file from the artefact directory for the given
+    /// source file. If the file does not exist, return `None`.
+    fn read_cache_metadata(&self, source_file: &GleamFile) -> Result<Option<CacheMetadata>> {
+        let meta_path = source_file.cache_files(&self.artefact_directory).meta_path;
 
         if !self.io.is_file(&meta_path) {
             return Ok(None);
