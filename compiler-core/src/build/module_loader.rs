@@ -10,7 +10,7 @@ use serde::{Deserialize, Serialize};
 
 use super::{
     Mode, Origin, SourceFingerprint, Target,
-    package_compiler::{CacheMetadata, CachedModule, Input, UncompiledModule, module_name},
+    package_compiler::{CacheMetadata, CachedModule, Input, UncompiledModule},
     package_loader::{CodegenRequired, GleamFile},
 };
 use crate::{
