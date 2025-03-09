@@ -21,7 +21,7 @@ use crate::{
     config::PackageConfig,
     dep_tree,
     error::{FileIoAction, FileKind, ImportCycleLocationDetails},
-    io::{CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
+    io::{self, CommandExecutor, FileSystemReader, FileSystemWriter, files_with_extension},
     metadata, type_,
     uid::UniqueIdGenerator,
     warning::WarningEmitter,
@@ -111,7 +111,7 @@ where
         let mut inputs = self.read_sources_and_caches()?;
 
         // Check for any removed modules, by looking at cache files that don't exist in inputs
-        for cache_file in CacheFile::iterate_files_in_directory(&self.io, &self.artefact_directory)
+        for cache_file in CacheFiles::iterate_files_in_directory(&self.io, &self.artefact_directory)
         {
             let module = cache_file.module_name;
             if (!inputs.contains_key(&module)) {
@@ -178,15 +178,13 @@ where
     }
 
     fn load_cached_module(&self, info: CachedModule) -> Result<type_::ModuleInterface, Error> {
-        let dir = self.artefact_directory;
-        let name = info.name.replace("/", "@");
-        let path = dir.join(name.as_ref()).with_extension("cache");
-        let bytes = self.io.read_bytes(&path)?;
+        let cache_files = CacheFiles::new(&self.artefact_directory, &info.name);
+        let bytes = self.io.read_bytes(&cache_files.cache_path)?;
         let mut module = metadata::ModuleDecoder::new(self.ids.clone()).read(bytes.as_slice())?;
 
         // Load warnings
         if self.cached_warnings.should_use() {
-            let path = dir.join(name.as_ref()).with_extension("cache_warnings");
+            let path = cache_files.warnings_path;
             if self.io.exists(&path) {
                 let bytes = self.io.read_bytes(&path)?;
                 module.warnings = bincode::deserialize(&bytes).map_err(|e| Error::FileIo {
@@ -266,18 +264,12 @@ where
     fn load_stale_module(&self, cached: CachedModule) -> Result<UncompiledModule> {
         let mtime = self.io.modification_time(&cached.source_path)?;
 
-        // We need to delete any existing cache_meta files for this module.
+        // We need to delete any existing cache files for this module.
         // While we figured it out this time because the module has stale dependencies,
         // next time the dependencies might no longer be stale, but we still need to be able to tell
         // that this module needs to be recompiled until it sucessfully compiles at least once.
         // This can happen if the stale dependency includes breaking changes.
-        let artefact = cached.name.replace("/", "@");
-        let meta_path = self
-            .artefact_directory
-            .join(artefact.as_str())
-            .with_extension("cache_meta");
-
-        let _ = self.io.delete_file(&meta_path);
+        CacheFiles::new(&self.artefact_directory, &cached.name).delete(&self.io);
 
         read_source(
             self.io.clone(),
@@ -1722,6 +1714,10 @@ impl GleamFile {
         })
     }
 
+    pub fn cache_files(&self, artefact_directory: &Utf8Path) -> CacheFiles {
+        CacheFiles::new(artefact_directory, &self.module_name)
+    }
+
     fn module_name(path: &Utf8Path, dir: &Utf8Path) -> EcoString {
         // self.path is similar to:
         // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
@@ -1763,24 +1759,55 @@ impl GleamFile {
     }
 }
 
-/// Strong typing for a cache file (`.cache`)
-struct CacheFile {
-    pub path: Utf8PathBuf,
+/// Strong typing for a cache file (`.cache`) and the related meta file (`.cache_meta`).
+/// These files might exist or might not exist, depending on how the instance is constructed.
+pub struct CacheFiles {
+    pub cache_path: Utf8PathBuf,
+    pub meta_path: Utf8PathBuf,
+    pub warnings_path: Utf8PathBuf,
     pub module_name: EcoString,
 }
 
-impl CacheFile {
-    /// Iterates over Gleam cache files (`.cache`) in a certain directory.
+impl CacheFiles {
+    pub fn new(artefact_directory: &Utf8Path, module_name: &EcoString) -> Self {
+        let file_name = module_name.replace("/", "@");
+        let path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache");
+        let meta_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache_meta");
+        let warnings_path = artefact_directory
+            .join(file_name.as_str())
+            .with_extension("cache_warnings");
+        Self {
+            cache_path: path,
+            meta_path,
+            warnings_path,
+            module_name: module_name.clone(), // TODO: Do we need to store this?
+        }
+    }
+
+    pub fn delete(&self, io: &dyn io::FileSystemWriter) {
+        // TODO: Should we check for errors here?
+        let _ = io.delete_file(&self.cache_path);
+        let _ = io.delete_file(&self.meta_path);
+        let _ = io.delete_file(&self.warnings_path);
+    }
+
+    /// Iterates over Gleam cache files in the given directory.
     /// Symlinks are followed.
+    /// Will return files that have both the .cache and .cache_meta files existing.
+    // TODO: Which should be the canonical file, or should we keep checking the existence of both?
     pub fn iterate_files_in_directory<'a>(
         io: &'a impl FileSystemReader,
         dir: &'a Utf8Path,
-    ) -> impl Iterator<Item = CacheFile> + 'a {
-        tracing::trace!("gleam_cache_files {:?}", dir);
-        files_with_extension(io, dir, "cache").map(move |path| CacheFile {
-            module_name: Self::module_name(&dir, &path),
-            path,
-        })
+    ) -> impl Iterator<Item = CacheFiles> + 'a {
+        tracing::trace!("CacheFile::iterate_files_in_directory {:?}", dir);
+        files_with_extension(io, dir, "cache")
+            .map(move |path| CacheFiles::new(dir, &Self::module_name(&dir, &path)))
+            // Check that both the .cache and .cache_meta files exist
+            .filter(|file| io.is_file(&file.meta_path))
     }
 
     // TODO: This is not correct! Will TDD it later.

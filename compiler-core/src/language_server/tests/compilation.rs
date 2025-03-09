@@ -119,7 +119,7 @@ fn compile_recompile() {
     // This time it does not compile the module again, instead using the
     // cache from the previous run.
     let response = engine.compile_please();
-    assert!(response.result.is_ok());
+    assert_eq!(response.result, Ok(()));
     assert!(response.warnings.is_empty());
     assert_eq!(response.compilation, Compilation::Yes(vec![]));
 
