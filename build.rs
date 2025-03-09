@@ -1,11 +1,11 @@
 fn main() {
-    // protobuf_codegen::Codegen::new()
-    //     .protoc()
-    //     .include("proto")
-    //     .input("proto/signed.proto")
-    //     .input("proto/package.proto")
-    //     .input("proto/versions.proto")
-    //     .out_dir("src/proto")
-    //     .run()
-    //     .expect("Failed to generate protobuf code from .proto files.");
+    prost_build::compile_protos(
+        &[
+            "proto/signed.proto",
+            "proto/package.proto",
+            "proto/versions.proto",
+        ],
+        &["proto/"],
+    )
+    .expect("Failed to generate prost code from .proto files.");
 }

@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Replaced protobuf dependency with prost to avoid a security vulnerability.
+
 ## v3.2.0 - 2025-03-07
 
 - Updated protobuf to 3.7.1 and regenerated code from .proto files

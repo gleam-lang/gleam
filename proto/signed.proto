@@ -1,5 +1,7 @@
 syntax = "proto2";
 
+package signed;
+
 message Signed {
   // Signed contents
   required bytes payload = 1;

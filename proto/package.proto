@@ -1,5 +1,7 @@
 syntax = "proto2";
 
+package package;
+
 message Package {
   // All releases of the package
   repeated Release releases = 1;
