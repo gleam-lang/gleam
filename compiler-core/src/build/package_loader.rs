@@ -216,7 +216,6 @@ where
             codegen: self.codegen,
             package_name: self.package_name,
             artefact_directory: self.artefact_directory,
-            source_directory: &src,
             origin: Origin::Src,
             incomplete_modules: self.incomplete_modules,
         };
@@ -225,7 +224,7 @@ where
         for file in GleamFile::iterate_files_in_directory(&self.io, &src) {
             match file {
                 Ok(file) => {
-                    let input = loader.load(file.path)?; // TODO
+                    let input = loader.load(file)?;
                     inputs.insert(input)?;
                 }
                 Err(warning) => self.warnings.emit(warning),
@@ -236,12 +235,11 @@ where
         if self.mode.includes_tests() {
             let test = self.root.join("test");
             loader.origin = Origin::Test;
-            loader.source_directory = &test;
 
             for file in GleamFile::iterate_files_in_directory(&self.io, &test) {
                 match file {
                     Ok(file) => {
-                        let input = loader.load(file.path)?; // TODO
+                        let input = loader.load(file)?;
                         inputs.insert(input)?;
                     }
                     Err(warning) => self.warnings.emit(warning),
@@ -1692,11 +1690,19 @@ impl<'a> Inputs<'a> {
 }
 
 /// Strong typing for a Gleam source file (`.gleam`)
-struct GleamFile {
+pub struct GleamFile {
     pub path: Utf8PathBuf,
+    pub module_name: EcoString,
 }
 
 impl GleamFile {
+    pub fn new(dir: &Utf8Path, path: Utf8PathBuf) -> Self {
+        Self {
+            module_name: Self::module_name(&path, &dir),
+            path,
+        }
+    }
+
     /// Iterates over Gleam source files (`.gleam`) in a certain directory.
     /// Symlinks are followed.
     /// If the there is a .gleam file with a path that would be an
@@ -1709,21 +1715,20 @@ impl GleamFile {
         tracing::trace!("gleam_source_files {:?}", dir);
         files_with_extension(io, dir, "gleam").map(move |path| {
             if (Self::is_gleam_path(&path, &dir)) {
-                Ok(GleamFile { path })
+                Ok(Self::new(dir, path))
             } else {
                 Err(crate::Warning::InvalidSource { path })
             }
         })
     }
 
-    pub fn module_name(&self, package_path: &Utf8Path) -> EcoString {
+    fn module_name(path: &Utf8Path, dir: &Utf8Path) -> EcoString {
         // self.path is similar to:
         // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
 
         // my/module.gleam
-        let mut module_path = self
-            .path
-            .strip_prefix(package_path)
+        let mut module_path = path
+            .strip_prefix(dir)
             .expect("Stripping package prefix from module path")
             .to_path_buf();
 
