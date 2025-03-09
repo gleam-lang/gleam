@@ -110,11 +110,11 @@ where
         // which should be loaded.
         let mut inputs = self.read_sources_and_caches()?;
 
-        // Check for any removed modules, by looking at cache files that don't exist in inputs
-        for cache_file in CacheFiles::iterate_files_in_directory(&self.io, &self.artefact_directory)
-        {
-            let module = cache_file.module_name;
+        // Check for any removed modules, by looking at cache files that don't exist in inputs.
+        // TODO: Write test Delete the cache files for removed modules.
+        for module in CacheFiles::modules_with_meta_files(&self.io, &self.artefact_directory) {
             if (!inputs.contains_key(&module)) {
+                //CacheFiles::new(&self.artefact_directory, &module).delete(&self.io);
                 self.stale_modules.add(module);
             }
         }
@@ -1765,13 +1765,12 @@ pub struct CacheFiles {
     pub cache_path: Utf8PathBuf,
     pub meta_path: Utf8PathBuf,
     pub warnings_path: Utf8PathBuf,
-    pub module_name: EcoString,
 }
 
 impl CacheFiles {
     pub fn new(artefact_directory: &Utf8Path, module_name: &EcoString) -> Self {
         let file_name = module_name.replace("/", "@");
-        let path = artefact_directory
+        let cache_path = artefact_directory
             .join(file_name.as_str())
             .with_extension("cache");
         let meta_path = artefact_directory
@@ -1780,11 +1779,11 @@ impl CacheFiles {
         let warnings_path = artefact_directory
             .join(file_name.as_str())
             .with_extension("cache_warnings");
+
         Self {
-            cache_path: path,
+            cache_path,
             meta_path,
             warnings_path,
-            module_name: module_name.clone(), // TODO: Do we need to store this?
         }
     }
 
@@ -1795,19 +1794,15 @@ impl CacheFiles {
         let _ = io.delete_file(&self.warnings_path);
     }
 
-    /// Iterates over Gleam cache files in the given directory.
+    /// Iterates over `.cache_meta` files in the given directory,
+    /// and returns the respective module names.
     /// Symlinks are followed.
-    /// Will return files that have both the .cache and .cache_meta files existing.
-    // TODO: Which should be the canonical file, or should we keep checking the existence of both?
-    pub fn iterate_files_in_directory<'a>(
+    pub fn modules_with_meta_files<'a>(
         io: &'a impl FileSystemReader,
         dir: &'a Utf8Path,
-    ) -> impl Iterator<Item = CacheFiles> + 'a {
-        tracing::trace!("CacheFile::iterate_files_in_directory {:?}", dir);
-        files_with_extension(io, dir, "cache")
-            .map(move |path| CacheFiles::new(dir, &Self::module_name(&dir, &path)))
-            // Check that both the .cache and .cache_meta files exist
-            .filter(|file| io.is_file(&file.meta_path))
+    ) -> impl Iterator<Item = EcoString> + 'a {
+        tracing::trace!("CacheFiles::iterate_files_in_directory {:?}", dir);
+        files_with_extension(io, dir, "cache_meta").map(move |path| Self::module_name(&dir, &path))
     }
 
     // TODO: This is not correct! Will TDD it later.
