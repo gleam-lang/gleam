@@ -71,7 +71,7 @@ fn run_and_capture_output(
         .envs(env.iter().map(|pair| (&pair.0, &pair.1)))
         .current_dir(paths.root())
         .spawn()
-        .expect("spawn run process");
+        .unwrap_or_else(|e| panic!("Failed to spawn process '{}': {}", &program, &e));
 
     let mut stderr = process.stderr.take().expect("take stderr");
     let mut output = String::new();
