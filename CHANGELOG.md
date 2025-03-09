@@ -282,7 +282,7 @@
   "wibble " <> todo <> " wobble"
   ```
 
-  And if the cursor is selecting a valid gleam name, the language server will
+  And if the cursor is selecting a valid Gleam name, the language server will
   offer to interpolate it as a variable:
 
   ```gleam
