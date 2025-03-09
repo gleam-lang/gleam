@@ -95,6 +95,7 @@ mod call_graph;
 mod dep_tree;
 mod exhaustiveness;
 pub(crate) mod graph;
+mod reference;
 
 pub use error::{Error, Result};
 pub use warning::Warning;
