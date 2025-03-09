@@ -274,16 +274,6 @@ pub trait FileSystemReader {
     fn canonicalise(&self, path: &Utf8Path) -> Result<Utf8PathBuf, Error>;
 }
 
-/// Iterates over Gleam cache files (`.cache`) in a certain directory.
-/// Symlinks are followed.
-pub fn gleam_cache_files<'a>(
-    io: &'a impl FileSystemReader,
-    dir: &'a Utf8Path,
-) -> impl Iterator<Item = Utf8PathBuf> + 'a {
-    tracing::trace!("gleam_cache_files {:?}", dir);
-    files_with_extension(io, dir, "cache")
-}
-
 /// Iterates over files with the given extension in a certain directory.
 /// Symlinks are followed.
 pub fn files_with_extension<'a>(
