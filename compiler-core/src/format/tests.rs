@@ -6523,8 +6523,7 @@ fn echo_printing_multiline_pipeline() {
 }
 "#,
         r#"fn main() {
-  echo
-    first
+  echo first
     |> wibble
     |> wobble
 }
