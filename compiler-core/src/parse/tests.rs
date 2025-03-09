@@ -520,6 +520,11 @@ fn repeated_echos() {
 }
 
 #[test]
+fn echo_at_start_of_pipeline_wraps_the_whole_thing() {
+    assert_parse!("echo 1 |> wibble |> wobble");
+}
+
+#[test]
 fn no_let_binding_snapshot_1() {
     assert_error!("wibble = 4");
 }
