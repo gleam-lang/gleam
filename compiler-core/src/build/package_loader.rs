@@ -1805,23 +1805,19 @@ impl CacheFiles {
         files_with_extension(io, dir, "cache_meta").map(move |path| Self::module_name(&dir, &path))
     }
 
-    // TODO: This is not correct! Will TDD it later.
     fn module_name(dir: &Utf8Path, path: &Utf8Path) -> EcoString {
-        // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
+        // /path/to/artefact/dir/my@module.cache_meta
 
-        // my/module.gleam
+        // my@module.cache_meta
         let mut module_path = path
             .strip_prefix(dir)
             .expect("Stripping package prefix from module path")
             .to_path_buf();
 
-        // my/module
+        // my@module
         let _ = module_path.set_extension("");
 
-        // Stringify
-        let name = module_path.to_string();
-
-        // normalise windows paths
-        name.replace("\\", "/").into()
+        // my/module
+        module_path.to_string().replace("@", "/").into()
     }
 }
