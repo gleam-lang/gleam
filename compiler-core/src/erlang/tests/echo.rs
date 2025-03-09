@@ -106,3 +106,33 @@ pub fn wibble(n) { n }
 "#
     )
 }
+
+#[test]
+pub fn pipeline_printed_by_echo_is_wrapped_in_begin_end_block() {
+    assert_erl!(
+        r#"
+pub fn main() {
+  echo
+    123
+    |> wibble
+    |> wibble
+}
+
+pub fn wibble(n) { n }
+"#
+    )
+}
+
+#[test]
+pub fn record_update_printed_by_echo_is_wrapped_in_begin_end_block() {
+    assert_erl!(
+        r#"
+pub type Wobble { Wobble(id: Int, name: String) }
+
+pub fn main() {
+  let wobble = Wobble(1, "wobble")
+  echo Wobble(..wobble, id: 1)
+}
+"#
+    )
+}
