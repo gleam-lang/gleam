@@ -1,4 +1,5 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
