@@ -817,7 +817,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
-                self.environment.register_reference(
+                self.environment.references.register_reference(
                     constructor.module.clone(),
                     constructor.name.clone(),
                     name_location,
