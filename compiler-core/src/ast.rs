@@ -12,7 +12,7 @@ pub use self::untyped::{FunctionLiteralKind, UntypedExpr};
 pub use self::constant::{Constant, TypedConstant, UntypedConstant};
 
 use crate::analyse::Inferred;
-use crate::build::{Located, Target};
+use crate::build::{Located, Target, module_erlang_name};
 use crate::parse::SpannedString;
 use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
@@ -51,6 +51,12 @@ pub struct Module<Info, Statements> {
     pub type_info: Info,
     pub definitions: Vec<Statements>,
     pub names: Names,
+}
+
+impl<Info, Statements> Module<Info, Statements> {
+    pub fn erlang_name(&self) -> EcoString {
+        module_erlang_name(&self.name)
+    }
 }
 
 impl TypedModule {

@@ -6,7 +6,7 @@ mod pattern;
 #[cfg(test)]
 mod tests;
 
-use crate::build::Target;
+use crate::build::{Target, module_erlang_name};
 use crate::strings::convert_string_escape_chars;
 use crate::type_::is_prelude_module;
 use crate::{
@@ -182,7 +182,7 @@ fn module_document<'a>(
 
     let header = "-module("
         .to_doc()
-        .append(module.name.replace("/", "@"))
+        .append(module.erlang_name())
         .append(").")
         .append(line());
 
@@ -1790,7 +1790,7 @@ fn docs_args_call<'a>(
             // This also enables an optimisation in the Erlang compiler in which
             // some Erlang BIFs can be replaced with literals if their arguments
             // are literals, such as `binary_to_atom`.
-            atom_string(module.replace("/", "@").to_string())
+            atom_string(module_erlang_name(module).to_string())
                 .append(":")
                 .append(atom_string(name.to_string()))
                 .append(args)
