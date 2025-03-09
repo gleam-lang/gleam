@@ -45,7 +45,9 @@ fn write_cache(
         fingerprint: SourceFingerprint::new(src),
         line_numbers: line_numbers.clone(),
     };
-    let path = Utf8Path::new("/artefact").join(format!("{name}.cache_meta"));
+
+    let artefact_name = name.replace("/", "@");
+    let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache_meta"));
     fs.write_bytes(&path, &cache_metadata.to_binary()).unwrap();
 
     let cache = crate::type_::ModuleInterface {
@@ -66,7 +68,7 @@ fn write_cache(
         contains_echo: false,
         references: Default::default(),
     };
-    let path = Utf8Path::new("/artefact").join(format!("{name}.cache"));
+    let path = Utf8Path::new("/artefact").join(format!("{artefact_name}.cache"));
     fs.write_bytes(
         &path,
         &metadata::ModuleEncoder::new(&cache).encode().unwrap(),
@@ -229,7 +231,7 @@ fn module_is_stale_if_deps_removed() {
     let artefact = Utf8Path::new("/artefact");
 
     // Source is removed, cache is present
-    write_cache(&fs, "one", 0, vec![], TEST_SOURCE_1);
+    write_cache(&fs, "nested/one", 0, vec![], TEST_SOURCE_1);
 
     // Cache is fresh but dep is removed
     write_src(&fs, "/src/two.gleam", 1, "import one");
@@ -237,8 +239,8 @@ fn module_is_stale_if_deps_removed() {
         &fs,
         "two",
         2,
-        vec![(EcoString::from("one"), SrcSpan { start: 0, end: 0 })],
-        "import one",
+        vec![(EcoString::from("nested/one"), SrcSpan { start: 0, end: 0 })],
+        "import nested/one",
     );
 
     let loaded = run_loader(fs, root, artefact);
