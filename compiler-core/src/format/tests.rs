@@ -6512,3 +6512,32 @@ fn echo_with_following_value_in_a_pipeline() {
 "#
     );
 }
+
+#[test]
+fn echo_printing_multiline_pipeline() {
+    assert_format_rewrite!(
+        r#"fn main() {
+  echo first
+  |> wibble
+  |> wobble
+}
+"#,
+        r#"fn main() {
+  echo
+    first
+    |> wibble
+    |> wobble
+}
+"#
+    );
+}
+
+#[test]
+fn echo_printing_one_line_pipeline() {
+    assert_format!(
+        r#"fn main() {
+  echo first |> wibble |> wobble
+}
+"#
+    );
+}

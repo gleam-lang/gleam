@@ -973,14 +973,9 @@ impl<'comments> Formatter<'comments> {
             } => docvec!["todo as ", self.expr(l)],
 
             UntypedExpr::Echo {
-                expression: None,
+                expression,
                 location: _,
-            } => "echo".to_doc(),
-
-            UntypedExpr::Echo {
-                expression: Some(e),
-                location: _,
-            } => docvec!["echo ", self.expr(e)],
+            } => self.echo(expression),
 
             UntypedExpr::PipeLine { expressions, .. } => self.pipeline(expressions, false),
 
@@ -1478,6 +1473,24 @@ impl<'comments> Formatter<'comments> {
         }
     }
 
+    fn spans_multiple_lines(&self, start: u32, end: u32) -> bool {
+        self.new_lines
+            .binary_search_by(|newline| {
+                if *newline <= start {
+                    Ordering::Less
+                } else if *newline >= end {
+                    Ordering::Greater
+                } else {
+                    // If the newline is in between the pipe start and end
+                    // then we've found it!
+                    Ordering::Equal
+                }
+            })
+            // If we couldn't find any newline between the start and end of
+            // the pipeline then we will try and keep it on a single line.
+            .is_ok()
+    }
+
     fn pipeline<'a>(
         &mut self,
         expressions: &'a Vec1<UntypedExpr>,
@@ -1491,22 +1504,7 @@ impl<'comments> Formatter<'comments> {
 
         let pipeline_start = expressions.first().location().start;
         let pipeline_end = expressions.last().location().end;
-        let try_to_keep_on_one_line = self
-            .new_lines
-            .binary_search_by(|newline| {
-                if *newline <= pipeline_start {
-                    Ordering::Less
-                } else if *newline >= pipeline_end {
-                    Ordering::Greater
-                } else {
-                    // If the newline is in between the pipe start and end
-                    // then we've found it!
-                    Ordering::Equal
-                }
-            })
-            // If we couldn't find any newline between the start and end of
-            // the pipeline then we will try and keep it on a single line.
-            .is_err();
+        let try_to_keep_on_one_line = !self.spans_multiple_lines(pipeline_start, pipeline_end);
 
         for expr in expressions.iter().skip(1) {
             let comments = self.pop_comments(expr.location().start);
@@ -2719,6 +2717,43 @@ impl<'comments> Formatter<'comments> {
         }
         let doc = concat(doc);
         Some(doc.force_break())
+    }
+
+    fn echo<'a>(&mut self, expression: &'a Option<Box<UntypedExpr>>) -> Document<'a> {
+        let Some(expression) = expression else {
+            return "echo".to_doc();
+        };
+
+        match expression.as_ref() {
+            // When a pipeline gets broken on multiple lines we don't want it to
+            // be on the same line as echo, or it would look confusing; instead
+            // it's nested onto a new line:
+            //
+            // ```gleam
+            // echo
+            //   first
+            //   |> wobble
+            //   |> wibble
+            // ```
+            //
+            // So it's easier to see echo is printing the whole thing. Otherwise,
+            // it would look like echo is printing just the first item:
+            //
+            // ```gleam
+            // echo first
+            // |> wobble
+            // |> wibble
+            // ```
+            //
+            UntypedExpr::PipeLine { .. } => docvec![
+                "echo",
+                break_("", " ").nest(INDENT),
+                self.expr(expression).nest(INDENT)
+            ]
+            .group(),
+
+            _ => docvec!["echo ", self.expr(expression)],
+        }
     }
 }
 
