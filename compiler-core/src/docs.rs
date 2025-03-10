@@ -479,7 +479,7 @@ pub fn generate_json_package_interface(
     }
 }
 
-pub fn generate_json_package_info(path: Utf8PathBuf, config: &PackageConfig) -> OutputFile {
+pub fn generate_json_package_information(path: Utf8PathBuf, config: &PackageConfig) -> OutputFile {
     OutputFile {
         path,
         content: Content::Text(

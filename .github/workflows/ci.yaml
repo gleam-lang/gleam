@@ -215,9 +215,9 @@ jobs:
         working-directory: ./test/project_erlang_windows
         if: ${{ runner.os == 'Windows' && matrix.run-integration-tests }}
 
-      - name: test/project_erlang export package-info
+      - name: test/project_erlang export package-information
         run: |
-          gleam export package-info --out="gleam.json"
+          gleam export package-information --out="gleam.json"
           cat gleam.json
         working-directory: ./test/project_erlang
 
