@@ -28,18 +28,18 @@ pub fn main() {
 -- mod.gleam
 
 pub type Wibble {
-  Number(Int)
+  Constructor(Int)
 }
 
 fn wibble() {
-  Number(81)
+  Constructor(81)
 }
 
 
 -- app.gleam
 
-import mod.{Number}
+import mod.{Constructor as Number}
 
 pub fn main() {
-  #(Number(75), mod.Number(57))
+  #(Number(75), mod.Constructor(57))
 }
