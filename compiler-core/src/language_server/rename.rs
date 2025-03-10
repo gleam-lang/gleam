@@ -8,6 +8,7 @@ use crate::{
     ast::{self, SrcSpan, TypedModule, visit::Visit},
     build::Module,
     line_numbers::LineNumbers,
+    reference::ReferenceKind,
     type_::{ModuleInterface, ValueConstructor, ValueConstructorVariant, error::Named},
 };
 
@@ -65,13 +66,21 @@ pub fn rename_local_variable(
     Some(workspace_edit(uri, edits.edits))
 }
 
+pub enum RenameTarget {
+    Qualified,
+    Unqualified,
+    Definition,
+}
+
 pub fn rename_module_value(
     params: &RenameParams,
+    current_module: &Module,
     module_name: &EcoString,
     name: &EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
     name_kind: Named,
+    target: RenameTarget,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         // We don't care about the actual error here, just whether the name is valid,
@@ -83,6 +92,13 @@ pub fn rename_module_value(
     .is_err()
     {
         return None;
+    }
+
+    match target {
+        RenameTarget::Unqualified if module_name != &current_module.name => {
+            return alias_references_in_module(params, current_module, module_name, name);
+        }
+        RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
     }
 
     let mut workspace_edit = WorkspaceEdit {
@@ -164,6 +180,40 @@ fn url_from_path(path: &str) -> Option<Url> {
     let uri = Url::parse(&format!("file://{path}")).ok();
 
     uri
+}
+
+fn alias_references_in_module(
+    params: &RenameParams,
+    module: &Module,
+    module_name: &EcoString,
+    name: &EcoString,
+) -> Option<WorkspaceEdit> {
+    let references = module
+        .ast
+        .type_info
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))?;
+
+    let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
+
+    references
+        .iter()
+        .for_each(|reference| match reference.kind {
+            ReferenceKind::Qualified => {}
+            ReferenceKind::Unqualified => {
+                edits.replace(reference.location, params.new_name.clone())
+            }
+            ReferenceKind::Import => {
+                edits.insert(reference.location.end, format!(" as {}", params.new_name))
+            }
+            ReferenceKind::Definition => {}
+        });
+
+    Some(workspace_edit(
+        params.text_document_position.text_document.uri.clone(),
+        edits.edits,
+    ))
 }
 
 pub fn find_variable_references(
