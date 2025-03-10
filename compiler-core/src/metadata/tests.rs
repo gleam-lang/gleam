@@ -10,6 +10,7 @@ use crate::{
     },
     build::Origin,
     line_numbers::LineNumbers,
+    reference::{Reference, ReferenceKind},
     type_::{
         self, Deprecation, ModuleInterface, Opaque, References, Type, TypeAliasConstructor,
         TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
@@ -1858,18 +1859,45 @@ fn module_with_references() {
             value_references: [
                 (
                     ("some_module".into(), "some_function".into()),
-                    vec![SrcSpan::new(1, 6), SrcSpan::new(7, 11)],
+                    vec![
+                        Reference {
+                            location: SrcSpan::new(1, 6),
+                            kind: ReferenceKind::Definition,
+                        },
+                        Reference {
+                            location: SrcSpan::new(7, 11),
+                            kind: ReferenceKind::Unqualified,
+                        },
+                    ],
                 ),
                 (
                     ("some_other_module".into(), "some_constant".into()),
-                    vec![SrcSpan::new(6, 9), SrcSpan::new(90, 108)],
+                    vec![
+                        Reference {
+                            location: SrcSpan::new(6, 9),
+                            kind: ReferenceKind::Import,
+                        },
+                        Reference {
+                            location: SrcSpan::new(90, 108),
+                            kind: ReferenceKind::Unqualified,
+                        },
+                    ],
                 ),
                 (
                     ("some_other_module".into(), "SomeTypeVariant".into()),
                     vec![
-                        SrcSpan::new(26, 35),
-                        SrcSpan::new(152, 204),
-                        SrcSpan::new(0, 8),
+                        Reference {
+                            location: SrcSpan::new(26, 35),
+                            kind: ReferenceKind::Qualified,
+                        },
+                        Reference {
+                            location: SrcSpan::new(152, 204),
+                            kind: ReferenceKind::Qualified,
+                        },
+                        Reference {
+                            location: SrcSpan::new(0, 8),
+                            kind: ReferenceKind::Qualified,
+                        },
                     ],
                 ),
             ]

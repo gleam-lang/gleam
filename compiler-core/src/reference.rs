@@ -7,6 +7,22 @@ use petgraph::{
     stable_graph::{NodeIndex, StableGraph},
 };
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ReferenceKind {
+    Qualified,
+    Unqualified,
+    Import,
+    Definition,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Reference {
+    pub location: SrcSpan,
+    pub kind: ReferenceKind,
+}
+
+pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
+
 #[derive(Debug, Default)]
 pub struct ReferenceTracker {
     /// A call-graph which tracks which values are referenced by which other value,
@@ -17,7 +33,7 @@ pub struct ReferenceTracker {
 
     /// The locations of the references to each value in this module, used for
     /// renaming and go-to reference.
-    reference_locations: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
+    reference_locations: ReferenceMap,
 }
 
 impl ReferenceTracker {
@@ -27,7 +43,7 @@ impl ReferenceTracker {
 }
 
 impl ReferenceTracker {
-    pub fn into_locations(self) -> HashMap<(EcoString, EcoString), Vec<SrcSpan>> {
+    pub fn into_locations(self) -> ReferenceMap {
         self.reference_locations
     }
 
@@ -47,12 +63,18 @@ impl ReferenceTracker {
         self.current_function = self.get_or_create_node(module, name);
     }
 
-    pub fn register_reference(&mut self, module: EcoString, name: EcoString, location: SrcSpan) {
+    pub fn register_reference(
+        &mut self,
+        module: EcoString,
+        name: EcoString,
+        location: SrcSpan,
+        kind: ReferenceKind,
+    ) {
         let target = self.get_or_create_node(module.clone(), name.clone());
         self.reference_locations
             .entry((module, name))
             .or_default()
-            .push(location);
+            .push(Reference { location, kind });
 
         _ = self.graph.add_edge(self.current_function, target, ());
     }

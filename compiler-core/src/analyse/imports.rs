@@ -3,6 +3,7 @@ use ecow::EcoString;
 use crate::{
     ast::{SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
+    reference::ReferenceKind,
     type_::{
         EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
         ValueConstructorVariant,
@@ -175,6 +176,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     module.clone(),
                     import_name.clone(),
                     import.imported_name_location,
+                    ReferenceKind::Import,
                 );
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
@@ -189,6 +191,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     module.clone(),
                     import_name.clone(),
                     import.imported_name_location,
+                    ReferenceKind::Import,
                 );
             }
             _ => self.environment.init_usage(
