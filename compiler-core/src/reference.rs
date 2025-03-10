@@ -49,8 +49,7 @@ impl ReferenceTracker {
 
     pub fn register_reference(&mut self, module: EcoString, name: EcoString, location: SrcSpan) {
         let target = self.get_or_create_node(module.clone(), name.clone());
-        _ = self
-            .reference_locations
+        self.reference_locations
             .entry((module, name))
             .or_default()
             .push(location);
