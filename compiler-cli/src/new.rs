@@ -96,7 +96,7 @@ gleam add {project_name}@1
 ```gleam
 import {project_name}
 
-pub fn main() {{
+pub fn main() -> Nil {{
   // TODO: An example of the project in use
 }}
 ```
@@ -124,7 +124,7 @@ erl_crash.dump
             Self::SrcModule => Some(format!(
                 r#"import gleam/io
 
-pub fn main() {{
+pub fn main() -> Nil {{
   io.println("Hello from {project_name}!")
 }}
 "#,
@@ -134,7 +134,7 @@ pub fn main() {{
                 r#"import gleeunit
 import gleeunit/should
 
-pub fn main() {
+pub fn main() -> Nil {
   gleeunit.main()
 }
 

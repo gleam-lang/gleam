@@ -51,7 +51,7 @@ fn new_with_default_template() {
     .unwrap();
     creator.run().unwrap();
 
-    insta::glob!(path, "my_project/*.*", |file_path| {
+    insta::glob!(&path, "my_project/[^.]**/*.*", |file_path| {
         if !file_path.is_dir() {
             insta::assert_snapshot!(
                 crate::fs::read(
@@ -81,7 +81,7 @@ fn new_with_javascript_template() {
     .unwrap();
     creator.run().unwrap();
 
-    insta::glob!(path, "my_project/*.*", |file_path| {
+    insta::glob!(&path, "my_project/[^.]**/*.*", |file_path| {
         if !file_path.is_dir() {
             insta::assert_snapshot!(
                 crate::fs::read(

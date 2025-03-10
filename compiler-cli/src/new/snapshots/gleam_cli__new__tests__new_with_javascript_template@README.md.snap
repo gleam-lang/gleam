@@ -13,7 +13,7 @@ gleam add my_project@1
 ```gleam
 import my_project
 
-pub fn main() {
+pub fn main() -> Nil {
   // TODO: An example of the project in use
 }
 ```
