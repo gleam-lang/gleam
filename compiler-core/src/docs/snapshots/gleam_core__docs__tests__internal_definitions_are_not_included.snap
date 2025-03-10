@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile(config, modules)"
-snapshot_kind: text
 ---
 //// app.html
 
@@ -225,6 +224,7 @@ snapshot_kind: text
         </ul>
 
         
+
 
 
 
