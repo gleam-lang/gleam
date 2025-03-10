@@ -1,4 +1,6 @@
 use crate::analyse::{ModuleAnalyzerConstructor, TargetSupport};
+use crate::build::package_loader::CacheFiles;
+use crate::io::files_with_extension;
 use crate::line_numbers::{self, LineNumbers};
 use crate::type_::PRELUDE_MODULE_NAME;
 use crate::{
@@ -285,17 +287,13 @@ where
 
         tracing::debug!("writing_module_caches");
         for module in modules {
-            let module_name = module.name.replace("/", "@");
+            let cache_files = CacheFiles::new(&artefact_dir, &module.name);
 
-            // Write metadata file
-            let name = format!("{}.cache", &module_name);
-            let path = artefact_dir.join(name);
+            // Write cache file
             let bytes = ModuleEncoder::new(&module.ast.type_info).encode()?;
-            self.io.write_bytes(&path, &bytes)?;
+            self.io.write_bytes(&cache_files.cache_path, &bytes)?;
 
-            // Write cache info
-            let name = format!("{}.cache_meta", &module_name);
-            let path = artefact_dir.join(name);
+            // Write cache metadata
             let info = CacheMetadata {
                 mtime: module.mtime,
                 codegen_performed: self.perform_codegen,
@@ -303,18 +301,17 @@ where
                 fingerprint: SourceFingerprint::new(&module.code),
                 line_numbers: module.ast.type_info.line_numbers.clone(),
             };
-            self.io.write_bytes(&path, &info.to_binary())?;
+            self.io
+                .write_bytes(&cache_files.meta_path, &info.to_binary())?;
 
             // Write warnings.
             // Dependency packages don't get warnings persisted as the
             // programmer doesn't want to be told every time about warnings they
             // cannot fix directly.
             if self.cached_warnings.should_use() {
-                let name = format!("{}.cache_warnings", &module_name);
-                let path = artefact_dir.join(name);
                 let warnings = &module.ast.type_info.warnings;
                 let data = bincode::serialize(warnings).expect("Serialise warnings");
-                self.io.write_bytes(&path, &data)?;
+                self.io.write_bytes(&cache_files.warnings_path, &data)?;
             }
         }
         Ok(())
@@ -591,25 +588,6 @@ fn analyse(
     }
 
     Outcome::Ok(modules)
-}
-
-pub(crate) fn module_name(package_path: &Utf8Path, full_module_path: &Utf8Path) -> EcoString {
-    // /path/to/project/_build/default/lib/the_package/src/my/module.gleam
-
-    // my/module.gleam
-    let mut module_path = full_module_path
-        .strip_prefix(package_path)
-        .expect("Stripping package prefix from module path")
-        .to_path_buf();
-
-    // my/module
-    let _ = module_path.set_extension("");
-
-    // Stringify
-    let name = module_path.to_string();
-
-    // normalise windows paths
-    name.replace("\\", "/").into()
 }
 
 #[derive(Debug)]
