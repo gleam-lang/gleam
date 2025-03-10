@@ -10,6 +10,12 @@
 
 ### Formatter
 
+### Bug fixes
+
+## v1.9.1 - 2025-03-10
+
+### Formatter
+
 - Improved the formatting of pipelines printed with `echo`.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
