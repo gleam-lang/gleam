@@ -8,10 +8,11 @@ use crate::{
     ast::{self, SrcSpan, TypedModule, visit::Visit},
     build::Module,
     line_numbers::LineNumbers,
-    type_::{ValueConstructor, ValueConstructorVariant, error::Named},
+    reference::ReferenceKind,
+    type_::{ModuleInterface, ValueConstructor, ValueConstructorVariant, error::Named},
 };
 
-use super::TextEdits;
+use super::{TextEdits, compiler::ModuleSourceInformation};
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     let mut changes = HashMap::new();
@@ -63,6 +64,176 @@ pub fn rename_local_variable(
         .for_each(|location| edits.replace(location, params.new_name.clone()));
 
     Some(workspace_edit(uri, edits.edits))
+}
+
+pub enum RenameTarget {
+    Qualified,
+    Unqualified,
+    Definition,
+}
+
+pub struct Renamed<'a> {
+    pub module_name: &'a EcoString,
+    pub name: &'a EcoString,
+    pub name_kind: Named,
+    pub target_kind: RenameTarget,
+}
+
+pub fn rename_module_value(
+    params: &RenameParams,
+    current_module: &Module,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+    renamed: Renamed<'_>,
+) -> Option<WorkspaceEdit> {
+    if name::check_name_case(
+        // We don't care about the actual error here, just whether the name is valid,
+        // so we just use the default span.
+        SrcSpan::default(),
+        &params.new_name.as_str().into(),
+        renamed.name_kind,
+    )
+    .is_err()
+    {
+        return None;
+    }
+
+    match renamed.target_kind {
+        RenameTarget::Unqualified if renamed.module_name != &current_module.name => {
+            return alias_references_in_module(
+                params,
+                current_module,
+                renamed.module_name,
+                renamed.name,
+            );
+        }
+        RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
+    }
+
+    match modules.get(renamed.module_name) {
+        // We can't rename values from other packages if we are not aliasing an unqualified import.
+        Some(module) if module.package != current_module.ast.type_info.package => return None,
+        Some(_) | None => {}
+    }
+
+    let mut workspace_edit = WorkspaceEdit {
+        changes: Some(HashMap::new()),
+        document_changes: None,
+        change_annotations: None,
+    };
+
+    for module in modules.values() {
+        if &module.name == renamed.module_name
+            || module
+                .references
+                .imported_modules
+                .contains(renamed.module_name)
+        {
+            let Some(source_information) = sources.get(&module.name) else {
+                continue;
+            };
+
+            rename_references_in_module(
+                module,
+                source_information,
+                &mut workspace_edit,
+                renamed.module_name,
+                renamed.name,
+                params.new_name.clone(),
+            );
+        }
+    }
+
+    Some(workspace_edit)
+}
+
+fn rename_references_in_module(
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+    workspace_edit: &mut WorkspaceEdit,
+    module_name: &EcoString,
+    name: &EcoString,
+    new_name: String,
+) {
+    let Some(references) = module
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))
+    else {
+        return;
+    };
+
+    let mut edits = TextEdits::new(&source_information.line_numbers);
+
+    references
+        .iter()
+        .for_each(|reference| edits.replace(reference.location, new_name.clone()));
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return;
+    };
+
+    _ = workspace_edit
+        .changes
+        .as_mut()
+        .map(|changes| changes.insert(uri, edits.edits));
+}
+
+fn url_from_path(path: &str) -> Option<Url> {
+    // The targets for which `from_file_path` is defined
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
+    let uri = Url::from_file_path(path).ok();
+
+    #[cfg(not(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    )))]
+    let uri = Url::parse(&format!("file://{path}")).ok();
+
+    uri
+}
+
+fn alias_references_in_module(
+    params: &RenameParams,
+    module: &Module,
+    module_name: &EcoString,
+    name: &EcoString,
+) -> Option<WorkspaceEdit> {
+    let references = module
+        .ast
+        .type_info
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))?;
+
+    let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
+
+    references
+        .iter()
+        .for_each(|reference| match reference.kind {
+            ReferenceKind::Qualified => {}
+            ReferenceKind::Unqualified => {
+                edits.replace(reference.location, params.new_name.clone())
+            }
+            ReferenceKind::Import => {
+                edits.insert(reference.location.end, format!(" as {}", params.new_name))
+            }
+            ReferenceKind::Definition => {}
+        });
+
+    Some(workspace_edit(
+        params.text_document_position.text_document.uri.clone(),
+        edits.edits,
+    ))
 }
 
 pub fn find_variable_references(

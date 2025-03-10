@@ -12,6 +12,7 @@ use crate::{
     ast::{
         AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
     },
+    reference::ReferenceKind,
     type_::expression::FunctionDefinition,
 };
 use std::sync::Arc;
@@ -648,6 +649,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             Pattern::Constructor {
                 location,
                 module,
+                name_location,
                 name,
                 arguments: mut pattern_args,
                 spread,
@@ -816,6 +818,17 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
+                self.environment.references.register_reference(
+                    constructor.module.clone(),
+                    constructor.name.clone(),
+                    name_location,
+                    if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else {
+                        ReferenceKind::Unqualified
+                    },
+                );
+
                 let instantiated_constructor_type =
                     self.environment
                         .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
@@ -862,6 +875,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                             Ok(Pattern::Constructor {
                                 location,
+                                name_location,
                                 module,
                                 name,
                                 arguments: pattern_args,
@@ -897,6 +911,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                             Ok(Pattern::Constructor {
                                 location,
+                                name_location,
                                 module,
                                 name,
                                 arguments: vec![],

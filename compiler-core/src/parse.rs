@@ -1771,13 +1771,15 @@ where
         &mut self,
         module: Option<(u32, EcoString, u32)>,
     ) -> Result<UntypedPattern, ParseError> {
-        let (mut start, name, end) = self.expect_upname()?;
-        let (args, spread, end) = self.parse_constructor_pattern_args(end)?;
+        let (name_start, name, name_end) = self.expect_upname()?;
+        let mut start = name_start;
+        let (args, spread, end) = self.parse_constructor_pattern_args(name_end)?;
         if let Some((s, _, _)) = module {
             start = s;
         }
         Ok(Pattern::Constructor {
             location: SrcSpan { start, end },
+            name_location: SrcSpan::new(name_start, name_end),
             arguments: args,
             module: module.map(|(start, n, end)| (n, SrcSpan { start, end })),
             name,
@@ -2723,6 +2725,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        imported_name_location: location,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
@@ -2739,6 +2742,7 @@ where
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        imported_name_location: location,
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {
@@ -2751,11 +2755,12 @@ where
 
                 Some((start, Token::Type, _)) => {
                     self.advance();
-                    let (_, name, end) = self.expect_upname()?;
+                    let (name_start, name, end) = self.expect_upname()?;
                     let location = SrcSpan { start, end };
                     let mut import = UnqualifiedImport {
                         name,
                         location,
+                        imported_name_location: SrcSpan::new(name_start, end),
                         as_name: None,
                     };
                     if self.maybe_one(&Token::As).is_some() {

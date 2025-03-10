@@ -5,6 +5,7 @@ use crate::{
         Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
+    reference::{Reference, ReferenceKind},
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
@@ -52,6 +53,7 @@ impl<'a> ModuleEncoder<'a> {
         self.set_version(&mut module);
         self.set_module_documentation(&mut module);
         self.set_module_type_aliases(&mut module);
+        self.set_module_references(&mut module);
 
         capnp::serialize_packed::write_message(&mut buffer, &message).expect("capnp encode");
         Ok(buffer)
@@ -197,6 +199,43 @@ impl<'a> ModuleEncoder<'a> {
         }
     }
 
+    fn set_module_references(&mut self, module: &mut module::Builder<'_>) {
+        let references = &self.data.references;
+        let mut builder = module.reborrow().init_references();
+        let mut imported_modules = builder
+            .reborrow()
+            .init_imported_modules(references.imported_modules.len() as u32);
+        for (i, module) in references.imported_modules.iter().enumerate() {
+            imported_modules.set(i as u32, module);
+        }
+
+        let mut value_references = builder
+            .reborrow()
+            .init_value_references(references.value_references.len() as u32);
+        for (i, ((module, name), references)) in references.value_references.iter().enumerate() {
+            let mut builder = value_references.reborrow().get(i as u32);
+            builder.set_module(module);
+            builder.set_name(name);
+            let mut references_builder =
+                builder.reborrow().init_references(references.len() as u32);
+            for (i, reference) in references.iter().enumerate() {
+                let builder = references_builder.reborrow().get(i as u32);
+                self.build_reference(builder, reference);
+            }
+        }
+    }
+
+    fn build_reference(&mut self, mut builder: reference::Builder<'_>, reference: &Reference) {
+        let mut kind = builder.reborrow().init_kind();
+        match reference.kind {
+            ReferenceKind::Qualified => kind.set_qualified(()),
+            ReferenceKind::Unqualified => kind.set_unqualified(()),
+            ReferenceKind::Import => kind.set_import(()),
+            ReferenceKind::Definition => kind.set_definition(()),
+        }
+        self.build_src_span(builder.init_location(), reference.location);
+    }
+
     fn set_version(&mut self, module: &mut module::Builder<'_>) {
         let mut version = module.reborrow().init_required_version();
         version.set_major(self.data.minimum_required_version.major);
@@ -336,12 +375,14 @@ impl<'a> ModuleEncoder<'a> {
                 module,
                 documentation: doc,
                 implementations,
+                name,
             } => {
                 let mut builder = builder.init_module_constant();
                 builder.set_documentation(doc.as_ref().map(EcoString::as_str).unwrap_or_default());
                 self.build_src_span(builder.reborrow().init_location(), *location);
                 self.build_constant(builder.reborrow().init_literal(), literal);
                 builder.reborrow().set_module(module);
+                builder.reborrow().set_name(name);
                 self.build_implementations(builder.init_implementations(), *implementations)
             }
 

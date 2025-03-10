@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub const something = 10\n\npub fn main() {\n  something + { 4 * something }\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+import app
+
+fn wibble() {
+  app.something
+}
+
+
+-- app.gleam
+
+pub const something = 10
+
+pub fn main() {
+  something + { 4 * something }
+  ↑                            
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+import app
+
+fn wibble() {
+  app.ten
+}
+
+
+-- app.gleam
+
+pub const ten = 10
+
+pub fn main() {
+  ten + { 4 * ten }
+}
