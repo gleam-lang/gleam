@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v3.3.0 - 2025-03-10
 
 - Replaced protobuf dependency with prost to avoid a security vulnerability.
 
