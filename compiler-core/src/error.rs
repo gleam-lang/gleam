@@ -1,4 +1,5 @@
 #![allow(clippy::unwrap_used, clippy::expect_used)]
+use crate::ast::Layer;
 use crate::build::{Outcome, Runtime, Target};
 use crate::diagnostic::{Diagnostic, ExtraLabel, Label, Location};
 use crate::type_::collapse_links;
@@ -2294,7 +2295,7 @@ but no type in scope with that name."
                         title: "Unknown type".into(),
                         text,
                         hint: match label_text {
-                            None => suggestions.first().map(|suggestion| suggestion.suggestion(name, true)),
+                            None => suggestions.first().map(|suggestion| suggestion.suggestion(name, Layer::Type)),
                             Some(_) => None
                         },
                         level: Level::Error,
@@ -2331,7 +2332,7 @@ but no type in scope with that name."
                     Diagnostic {
                         title: "Unknown variable".into(),
                         text,
-                        hint: suggestions.first().map(|suggestion| suggestion.suggestion(name, false)),
+                        hint: suggestions.first().map(|suggestion| suggestion.suggestion(name, Layer::Value)),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
