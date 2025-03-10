@@ -1,0 +1,26 @@
+---
+source: test-output/src/tests/echo.rs
+assertion_line: 191
+expression: output
+snapshot_kind: text
+---
+--- main.gleam ----------------------
+pub fn main() {
+  echo #(to_atom("UP"), 1, 2)
+  echo #(to_atom("down"), 12.34)
+  echo #(to_atom("Both"), "ok")
+}
+
+pub type Atom
+
+@external(erlang, "erlang", "binary_to_atom")
+pub fn to_atom(string: String) -> Atom
+
+
+--- gleam run output ----------------
+[90msrc/main.gleam:2[39m
+#(atom.create_from_string("UP"), 1, 2)
+[90msrc/main.gleam:3[39m
+Down(12.34)
+[90msrc/main.gleam:4[39m
+#(atom.create_from_string("Both"), "ok")

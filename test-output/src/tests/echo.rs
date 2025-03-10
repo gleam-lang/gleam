@@ -185,3 +185,8 @@ fn echo_string() {
 fn echo_tuple() {
     assert_echo!("echo_tuple");
 }
+
+#[test]
+fn echo_non_record_atom_tag() {
+    assert_echo!(Target::Erlang, "echo_non_record_atom_tag");
+}

@@ -88,17 +88,24 @@ inspect@list(List) ->
 inspect@map(Map) ->
     Fields = [
         [<<"#(">>, echo@inspect(Key), <<", ">>, echo@inspect(Value), <<")">>]
-     || {Key, Value} <- maps:to_list(Map)
+        || {Key, Value} <- maps:to_list(Map)
     ],
     ["dict.from_list([", lists:join(", ", Fields), "])"].
 
 inspect@record(Record) ->
-    [Atom | ArgsList] = erlang:tuple_to_list(Record),
-    Args = lists:join(", ", lists:map(fun echo@inspect/1, ArgsList)),
-    [echo@inspect(Atom), "(", Args, ")"].
+    [Atom | ArgsList] = Tuple = erlang:tuple_to_list(Record),
+    case inspect@maybe_gleam_atom(Atom, none, <<>>) of
+        {ok, Tag} ->
+            Args = lists:join(", ", lists:map(fun echo@inspect/1, ArgsList)),
+            [Tag, "(", Args, ")"];
+        _ ->
+            inspect@tuple(Tuple)
+    end.
 
+inspect@tuple(Tuple) when erlang:is_tuple(Tuple) ->
+    inspect@tuple(erlang:tuple_to_list(Tuple));
 inspect@tuple(Tuple) ->
-    Elements = lists:map(fun echo@inspect/1, erlang:tuple_to_list(Tuple)),
+    Elements = lists:map(fun echo@inspect/1, Tuple),
     ["#(", lists:join(", ", Elements), ")"].
 
 inspect@function(Function) ->
@@ -147,6 +154,9 @@ inspect@proper_or_improper_list(List) ->
             {improper, [echo@inspect(First), " | ", echo@inspect(ImproperRest)]}
     end.
 
+inspect@maybe_gleam_atom(Atom, PrevChar, Acc) when erlang:is_atom(Atom) ->
+    Binary = erlang:atom_to_binary(Atom),
+    inspect@maybe_gleam_atom(Binary, PrevChar, Acc);
 inspect@maybe_gleam_atom(Atom, PrevChar, Acc) ->
     case {Atom, PrevChar} of
         {<<>>, none} ->
