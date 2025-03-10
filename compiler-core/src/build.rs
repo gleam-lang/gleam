@@ -42,7 +42,6 @@ use strum::{Display, EnumIter, EnumString, EnumVariantNames, VariantNames};
 use vec1::Vec1;
 
 #[derive(
-    Default,
     Debug,
     Serialize,
     Deserialize,
@@ -59,7 +58,6 @@ use vec1::Vec1;
 pub enum Target {
     #[strum(serialize = "erlang", serialize = "erl")]
     #[serde(rename = "erlang", alias = "erl")]
-    #[default]
     Erlang,
     #[strum(serialize = "javascript", serialize = "js")]
     #[serde(rename = "javascript", alias = "js")]

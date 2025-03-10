@@ -25,6 +25,10 @@ fn default_version() -> Version {
     Version::parse("0.1.0").expect("default version")
 }
 
+fn erlang_target() -> Target {
+    Target::Erlang
+}
+
 fn default_javascript_runtime() -> Runtime {
     Runtime::NodeJs
 }
@@ -117,7 +121,7 @@ pub struct PackageConfig {
     pub erlang: ErlangConfig,
     #[serde(default, skip_serializing_if = "is_default")]
     pub javascript: JavaScriptConfig,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default = "erlang_target")]
     pub target: Target,
     #[serde(default, skip_serializing_if = "is_default")]
     pub internal_modules: Option<Vec<Glob>>,
