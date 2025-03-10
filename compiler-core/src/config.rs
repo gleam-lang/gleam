@@ -1046,3 +1046,15 @@ allow_read = ["./database.sqlite"]
     let json = serde_json::to_string(&config).unwrap();
     insta::assert_snapshot!(json);
 }
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    insta::assert_snapshot!(json);
+}
