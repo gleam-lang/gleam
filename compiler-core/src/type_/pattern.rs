@@ -12,6 +12,7 @@ use crate::{
     ast::{
         AssignName, BitArrayOption, ImplicitCallArgOrigin, Layer, UntypedPatternBitArraySegment,
     },
+    reference::ReferenceKind,
     type_::expression::FunctionDefinition,
 };
 use std::sync::Arc;
@@ -821,6 +822,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     constructor.module.clone(),
                     constructor.name.clone(),
                     name_location,
+                    if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else {
+                        ReferenceKind::Unqualified
+                    },
                 );
 
                 let instantiated_constructor_type =

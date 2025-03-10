@@ -13,6 +13,7 @@ use crate::{
     },
     build::Target,
     exhaustiveness::{self, Reachability},
+    reference::ReferenceKind,
 };
 use hexpm::version::Version;
 use id_arena::Arena;
@@ -1078,6 +1079,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             name,
                             &constructor.variant,
                             *location,
+                            ReferenceKind::Unqualified,
                         )
                     }
                 }
@@ -1106,6 +1108,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     module_name.clone(),
                     label.clone(),
                     SrcSpan::new(field_start, location.end),
+                    ReferenceKind::Qualified,
                 );
                 TypedExpr::ModuleSelect {
                     location,
@@ -2335,6 +2338,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             module_name.clone(),
                             label.clone(),
                             location,
+                            ReferenceKind::Qualified,
                         );
 
                         Ok(ClauseGuard::ModuleSelect {
@@ -3009,7 +3013,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             register_reference,
             ReferenceRegistration::RegisterReferences
         ) {
-            self.register_value_constructor_reference(name, &variant, *location);
+            self.register_value_constructor_reference(
+                name,
+                &variant,
+                *location,
+                if module.is_some() {
+                    ReferenceKind::Qualified
+                } else {
+                    ReferenceKind::Unqualified
+                },
+            );
         }
 
         // Instantiate generic variables into unbound variables for this usage
@@ -3027,6 +3040,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         referenced_name: &EcoString,
         variant: &ValueConstructorVariant,
         location: SrcSpan,
+        kind: ReferenceKind,
     ) {
         match variant {
             // If the referenced name is different to the name of the original
@@ -3046,7 +3060,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
                 .environment
                 .references
-                .register_reference(module.clone(), name.clone(), location),
+                .register_reference(module.clone(), name.clone(), location, kind),
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::LocalConstant { .. } => {}
         }

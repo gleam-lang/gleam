@@ -12,6 +12,7 @@ use crate::{
     },
     build::Origin,
     line_numbers::LineNumbers,
+    reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor,
@@ -127,15 +128,32 @@ impl ModuleDecoder {
     fn value_references(
         &self,
         reader: capnp::struct_list::Reader<'_, value_reference::Owned>,
-    ) -> Result<HashMap<(EcoString, EcoString), Vec<SrcSpan>>> {
+    ) -> Result<ReferenceMap> {
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {
             let module = self.string(prop.get_module()?)?;
             let name = self.string(prop.get_name()?)?;
-            let references = read_vec!(prop.get_references()?, self, src_span);
+            let references = read_vec!(prop.get_references()?, self, reference);
             let _ = map.insert((module, name), references);
         }
         Ok(map)
+    }
+
+    fn reference(&self, reader: &reference::Reader<'_>) -> Result<Reference> {
+        Ok(Reference {
+            location: self.src_span(&reader.get_location()?)?,
+            kind: self.reference_kind(&reader.get_kind()?)?,
+        })
+    }
+
+    fn reference_kind(&self, reader: &reference_kind::Reader<'_>) -> Result<ReferenceKind> {
+        use reference_kind::Which;
+        Ok(match reader.which()? {
+            Which::Qualified(_) => ReferenceKind::Qualified,
+            Which::Unqualified(_) => ReferenceKind::Unqualified,
+            Which::Import(_) => ReferenceKind::Import,
+            Which::Definition(_) => ReferenceKind::Definition,
+        })
     }
 
     fn type_constructor(

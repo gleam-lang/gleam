@@ -131,7 +131,7 @@ fn rename_references_in_module(
 
     references
         .iter()
-        .for_each(|location| edits.replace(*location, new_name.clone()));
+        .for_each(|reference| edits.replace(reference.location, new_name.clone()));
 
     let Some(uri) = url_from_path(source_information.path.as_str()) else {
         return;
