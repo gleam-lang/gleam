@@ -44,7 +44,21 @@ struct References {
 struct ValueReference {
   module @0 :Text;
   name @1 :Text;
-  references @2 :List(SrcSpan);
+  references @2 :List(Reference);
+}
+
+struct Reference {
+  location @0 :SrcSpan;
+  kind @1 :ReferenceKind;
+}
+
+struct ReferenceKind {
+  union {
+    qualified @0 :Void;
+    unqualified @1 :Void;
+    import @2 :Void;
+    definition @3 :Void;
+  }
 }
 
 struct TypeAliasConstructor {

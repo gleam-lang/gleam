@@ -20,6 +20,7 @@ use crate::{
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
+    reference::ReferenceKind,
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
         RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
@@ -430,6 +431,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment.current_module.clone(),
             name.clone(),
             name_location,
+            ReferenceKind::Definition,
         );
 
         if publicity.is_private() {
@@ -653,6 +655,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment.current_module.clone(),
             name.clone(),
             name_location,
+            ReferenceKind::Definition,
         );
 
         Definition::Function(Function {
@@ -1108,6 +1111,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 environment.current_module.clone(),
                 constructor.name.clone(),
                 constructor.name_location,
+                ReferenceKind::Definition,
             );
 
             if value_constructor_publicity.is_private() {

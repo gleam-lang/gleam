@@ -31,6 +31,7 @@ use crate::{
     bit_array,
     build::{Origin, Target},
     line_numbers::LineNumbers,
+    reference::ReferenceMap,
     type_::expression::Implementations,
 };
 use error::*;
@@ -903,7 +904,7 @@ impl ModuleInterface {
 #[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct References {
     pub imported_modules: HashSet<EcoString>,
-    pub value_references: HashMap<(EcoString, EcoString), Vec<SrcSpan>>,
+    pub value_references: ReferenceMap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

@@ -5,6 +5,7 @@ use crate::{
         Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
+    reference::{Reference, ReferenceKind},
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
@@ -219,9 +220,20 @@ impl<'a> ModuleEncoder<'a> {
                 builder.reborrow().init_references(references.len() as u32);
             for (i, reference) in references.iter().enumerate() {
                 let builder = references_builder.reborrow().get(i as u32);
-                self.build_src_span(builder, *reference);
+                self.build_reference(builder, reference);
             }
         }
+    }
+
+    fn build_reference(&mut self, mut builder: reference::Builder<'_>, reference: &Reference) {
+        let mut kind = builder.reborrow().init_kind();
+        match reference.kind {
+            ReferenceKind::Qualified => kind.set_qualified(()),
+            ReferenceKind::Unqualified => kind.set_unqualified(()),
+            ReferenceKind::Import => kind.set_import(()),
+            ReferenceKind::Definition => kind.set_definition(()),
+        }
+        self.build_src_span(builder.init_location(), reference.location);
     }
 
     fn set_version(&mut self, module: &mut module::Builder<'_>) {
