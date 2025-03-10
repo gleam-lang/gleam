@@ -315,7 +315,7 @@ pub enum ExportTarget {
         output: Utf8PathBuf,
     },
     /// Package information (gleam.toml) in JSON format
-    PackageInfo {
+    PackageInformation {
         #[arg(long = "out", required = true)]
         /// The path to write the JSON file to
         output: Utf8PathBuf,
@@ -669,9 +669,9 @@ fn parse_and_run_command() -> Result<(), Error> {
             let paths = find_project_paths()?;
             export::package_interface(&paths, output)
         }
-        Command::Export(ExportTarget::PackageInfo { output }) => {
+        Command::Export(ExportTarget::PackageInformation { output }) => {
             let paths = find_project_paths()?;
-            export::package_info(&paths, output)
+            export::package_information(&paths, output)
         }
     }
 }
