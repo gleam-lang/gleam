@@ -110,6 +110,12 @@ pub fn rename_module_value(
         RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
     }
 
+    match modules.get(renamed.module_name) {
+        // We can't rename values from other packages if we are not aliasing an unqualified import.
+        Some(module) if module.package != current_module.ast.type_info.package => return None,
+        Some(_) | None => {}
+    }
+
     let mut workspace_edit = WorkspaceEdit {
         changes: Some(HashMap::new()),
         document_changes: None,

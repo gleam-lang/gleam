@@ -576,6 +576,23 @@ pub fn main() {
 }
 
 #[test]
+fn no_rename_function_from_other_package() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wobble()
+}
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src).add_hex_module("wibble", "pub fn wobble() { todo }"),
+        "something",
+        find_position_of("wobble").to_selection()
+    );
+}
+
+#[test]
 fn rename_constant_from_definition() {
     assert_rename!(
         (
@@ -755,6 +772,23 @@ const value = 10
 ",
         "Ten",
         find_position_of("value").to_selection()
+    );
+}
+
+#[test]
+fn no_rename_constant_from_other_package() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.wobble
+}
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src).add_hex_module("wibble", "pub const wobble = 2"),
+        "something",
+        find_position_of("wobble").to_selection()
     );
 }
 
@@ -1020,5 +1054,22 @@ pub fn main(t) {
 ",
         "Renamed",
         find_position_of("X ->").to_selection()
+    );
+}
+
+#[test]
+fn no_rename_type_variant_from_other_package() {
+    let src = "
+import wibble
+
+pub fn main() {
+  wibble.Wibble(10)
+}
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble(Int) }"),
+        "Constructor",
+        find_position_of("Wibble").to_selection()
     );
 }
