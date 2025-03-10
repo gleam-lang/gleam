@@ -246,10 +246,14 @@ pub struct Module {
 }
 
 impl Module {
+    pub fn erlang_name(&self) -> EcoString {
+        module_erlang_name(&self.name)
+    }
+
     pub fn compiled_erlang_path(&self) -> Utf8PathBuf {
-        let mut path = self.name.replace("/", "@");
-        path.push_str(".erl");
-        Utf8PathBuf::from(path.as_ref())
+        let mut path = Utf8PathBuf::from(&module_erlang_name(&self.name));
+        assert!(path.set_extension("erl"), "Couldn't set file extension");
+        path
     }
 
     pub fn is_test(&self) -> bool {
@@ -319,6 +323,10 @@ impl Module {
             }
         }
     }
+}
+
+pub fn module_erlang_name(gleam_name: &EcoString) -> EcoString {
+    gleam_name.replace("/", "@")
 }
 
 #[derive(Debug, Clone, PartialEq)]

@@ -1,7 +1,9 @@
 use crate::{
     Result,
     analyse::TargetSupport,
-    build::{ErlangAppCodegenConfiguration, Module, package_compiler::StdlibPackage},
+    build::{
+        ErlangAppCodegenConfiguration, Module, module_erlang_name, package_compiler::StdlibPackage,
+    },
     config::PackageConfig,
     erlang,
     io::FileSystemWriter,
@@ -38,7 +40,7 @@ impl<'a> Erlang<'a> {
         root: &Utf8Path,
     ) -> Result<()> {
         for module in modules {
-            let erl_name = module.name.replace("/", "@");
+            let erl_name = module.erlang_name();
             self.erlang_module(&writer, module, &erl_name, root)?;
             self.erlang_record_headers(&writer, module, &erl_name)?;
         }
@@ -107,12 +109,12 @@ impl<'a> ErlangApp<'a> {
             .erlang
             .application_start_module
             .as_ref()
-            .map(|module| tuple("mod", &format!("{{'{}', []}}", module.replace("/", "@"))))
+            .map(|module| tuple("mod", &format!("{{'{}', []}}", module_erlang_name(module))))
             .unwrap_or_default();
 
         let modules = modules
             .iter()
-            .map(|m| m.name.replace("/", "@"))
+            .map(|m| m.erlang_name())
             .chain(native_modules)
             .unique()
             .sorted()
