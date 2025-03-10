@@ -156,6 +156,7 @@ fn package_from_module(module: Module) -> Package {
                 ],
                 build: Some("build".into()),
             },
+            gleam: Some(hexpm::version::Range::new("1.0.0".into())),
             gleam_version: Some(
                 hexpm::version::Range::new("1.0.0".into())
                     .to_pubgrub()
