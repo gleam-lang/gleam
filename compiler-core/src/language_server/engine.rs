@@ -45,7 +45,7 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    rename::{VariableRenameKind, rename_local_variable, rename_module_value},
+    rename::{RenameTarget, VariableRenameKind, rename_local_variable, rename_module_value},
     signature_help, src_span_to_lsp_range,
 };
 
@@ -767,11 +767,13 @@ where
                     ..
                 }) => rename_module_value(
                     &params,
+                    module,
                     module_name,
                     name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Named::Function,
+                    RenameTarget::Unqualified,
                 ),
                 Located::Expression(TypedExpr::ModuleSelect {
                     module_name,
@@ -781,11 +783,13 @@ where
                     ..
                 }) => rename_module_value(
                     &params,
+                    module,
                     module_name,
                     label,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Named::Function,
+                    RenameTarget::Qualified,
                 ),
                 Located::ModuleStatement(
                     Definition::Function(Function {
@@ -795,11 +799,13 @@ where
                     | Definition::ModuleConstant(ModuleConstant { name, .. }),
                 ) => rename_module_value(
                     &params,
+                    module,
                     &module.name,
                     name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Named::Function,
+                    RenameTarget::Definition,
                 ),
                 Located::Expression(TypedExpr::Var {
                     constructor:
@@ -815,11 +821,13 @@ where
                     ..
                 }) => rename_module_value(
                     &params,
+                    module,
                     module_name,
                     name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Named::CustomTypeVariant,
+                    RenameTarget::Unqualified,
                 ),
                 Located::Expression(TypedExpr::ModuleSelect {
                     module_name,
@@ -828,32 +836,43 @@ where
                     ..
                 }) => rename_module_value(
                     &params,
+                    module,
                     module_name,
                     label,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Named::CustomTypeVariant,
+                    RenameTarget::Qualified,
                 ),
                 Located::VariantConstructorDefinition(RecordConstructor { name, .. }) => {
                     rename_module_value(
                         &params,
+                        module,
                         &module.name,
                         name,
                         this.compiler.project_compiler.get_importable_modules(),
                         &this.compiler.sources,
                         Named::CustomTypeVariant,
+                        RenameTarget::Definition,
                     )
                 }
                 Located::Pattern(Pattern::Constructor {
                     constructor: analyse::Inferred::Known(constructor),
+                    module: module_select,
                     ..
                 }) => rename_module_value(
                     &params,
+                    module,
                     &constructor.module,
                     &constructor.name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Named::CustomTypeVariant,
+                    if module_select.is_some() {
+                        RenameTarget::Qualified
+                    } else {
+                        RenameTarget::Unqualified
+                    },
                 ),
                 _ => None,
             })

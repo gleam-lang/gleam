@@ -25,17 +25,17 @@ pub fn main() {
 ----- AFTER RENAME
 -- mod.gleam
 
-pub const ten = 10
+pub const something = 10
 
 fn wibble() {
-  ten
+  something
 }
 
 
 -- app.gleam
 
-import mod.{ten}
+import mod.{something as ten}
 
 pub fn main() {
-  ten + mod.ten
+  ten + mod.something
 }

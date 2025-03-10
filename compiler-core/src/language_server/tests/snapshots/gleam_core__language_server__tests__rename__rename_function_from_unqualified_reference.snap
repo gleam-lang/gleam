@@ -24,16 +24,16 @@ pub fn main() {
 ----- AFTER RENAME
 -- mod.gleam
 
-pub fn some_function() {
-  some_function()
+pub fn wibble() {
+  wibble()
 }
 
 
 -- app.gleam
 
-import mod.{some_function}
+import mod.{wibble as some_function}
 
 pub fn main() {
   some_function()
-  mod.some_function()
+  mod.wibble()
 }
