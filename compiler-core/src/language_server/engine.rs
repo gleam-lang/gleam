@@ -45,7 +45,9 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    rename::{RenameTarget, VariableRenameKind, rename_local_variable, rename_module_value},
+    rename::{
+        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
+    },
     signature_help, src_span_to_lsp_range,
 };
 
@@ -768,12 +770,14 @@ where
                 }) => rename_module_value(
                     &params,
                     module,
-                    module_name,
-                    name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
-                    Named::Function,
-                    RenameTarget::Unqualified,
+                    Renamed {
+                        module_name,
+                        name,
+                        name_kind: Named::Function,
+                        target_kind: RenameTarget::Unqualified,
+                    },
                 ),
                 Located::Expression(TypedExpr::ModuleSelect {
                     module_name,
@@ -784,12 +788,14 @@ where
                 }) => rename_module_value(
                     &params,
                     module,
-                    module_name,
-                    label,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
-                    Named::Function,
-                    RenameTarget::Qualified,
+                    Renamed {
+                        module_name,
+                        name: label,
+                        name_kind: Named::Function,
+                        target_kind: RenameTarget::Qualified,
+                    },
                 ),
                 Located::ModuleStatement(
                     Definition::Function(Function {
@@ -800,12 +806,14 @@ where
                 ) => rename_module_value(
                     &params,
                     module,
-                    &module.name,
-                    name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
-                    Named::Function,
-                    RenameTarget::Definition,
+                    Renamed {
+                        module_name: &module.name,
+                        name,
+                        name_kind: Named::Function,
+                        target_kind: RenameTarget::Definition,
+                    },
                 ),
                 Located::Expression(TypedExpr::Var {
                     constructor:
@@ -822,12 +830,14 @@ where
                 }) => rename_module_value(
                     &params,
                     module,
-                    module_name,
-                    name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
-                    Named::CustomTypeVariant,
-                    RenameTarget::Unqualified,
+                    Renamed {
+                        module_name,
+                        name,
+                        name_kind: Named::CustomTypeVariant,
+                        target_kind: RenameTarget::Unqualified,
+                    },
                 ),
                 Located::Expression(TypedExpr::ModuleSelect {
                     module_name,
@@ -837,23 +847,27 @@ where
                 }) => rename_module_value(
                     &params,
                     module,
-                    module_name,
-                    label,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
-                    Named::CustomTypeVariant,
-                    RenameTarget::Qualified,
+                    Renamed {
+                        module_name,
+                        name: label,
+                        name_kind: Named::CustomTypeVariant,
+                        target_kind: RenameTarget::Qualified,
+                    },
                 ),
                 Located::VariantConstructorDefinition(RecordConstructor { name, .. }) => {
                     rename_module_value(
                         &params,
                         module,
-                        &module.name,
-                        name,
                         this.compiler.project_compiler.get_importable_modules(),
                         &this.compiler.sources,
-                        Named::CustomTypeVariant,
-                        RenameTarget::Definition,
+                        Renamed {
+                            module_name: &module.name,
+                            name,
+                            name_kind: Named::CustomTypeVariant,
+                            target_kind: RenameTarget::Definition,
+                        },
                     )
                 }
                 Located::Pattern(Pattern::Constructor {
@@ -863,15 +877,17 @@ where
                 }) => rename_module_value(
                     &params,
                     module,
-                    &constructor.module,
-                    &constructor.name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
-                    Named::CustomTypeVariant,
-                    if module_select.is_some() {
-                        RenameTarget::Qualified
-                    } else {
-                        RenameTarget::Unqualified
+                    Renamed {
+                        module_name: &constructor.module,
+                        name: &constructor.name,
+                        name_kind: Named::CustomTypeVariant,
+                        target_kind: if module_select.is_some() {
+                            RenameTarget::Qualified
+                        } else {
+                            RenameTarget::Unqualified
+                        },
                     },
                 ),
                 _ => None,

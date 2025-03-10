@@ -72,31 +72,40 @@ pub enum RenameTarget {
     Definition,
 }
 
+pub struct Renamed<'a> {
+    pub module_name: &'a EcoString,
+    pub name: &'a EcoString,
+    pub name_kind: Named,
+    pub target_kind: RenameTarget,
+}
+
 pub fn rename_module_value(
     params: &RenameParams,
     current_module: &Module,
-    module_name: &EcoString,
-    name: &EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
-    name_kind: Named,
-    target: RenameTarget,
+    renamed: Renamed<'_>,
 ) -> Option<WorkspaceEdit> {
     if name::check_name_case(
         // We don't care about the actual error here, just whether the name is valid,
         // so we just use the default span.
         SrcSpan::default(),
         &params.new_name.as_str().into(),
-        name_kind,
+        renamed.name_kind,
     )
     .is_err()
     {
         return None;
     }
 
-    match target {
-        RenameTarget::Unqualified if module_name != &current_module.name => {
-            return alias_references_in_module(params, current_module, module_name, name);
+    match renamed.target_kind {
+        RenameTarget::Unqualified if renamed.module_name != &current_module.name => {
+            return alias_references_in_module(
+                params,
+                current_module,
+                renamed.module_name,
+                renamed.name,
+            );
         }
         RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
     }
@@ -108,7 +117,12 @@ pub fn rename_module_value(
     };
 
     for module in modules.values() {
-        if &module.name == module_name || module.references.imported_modules.contains(module_name) {
+        if &module.name == renamed.module_name
+            || module
+                .references
+                .imported_modules
+                .contains(renamed.module_name)
+        {
             let Some(source_information) = sources.get(&module.name) else {
                 continue;
             };
@@ -117,8 +131,8 @@ pub fn rename_module_value(
                 module,
                 source_information,
                 &mut workspace_edit,
-                module_name,
-                name,
+                renamed.module_name,
+                renamed.name,
                 params.new_name.clone(),
             );
         }
