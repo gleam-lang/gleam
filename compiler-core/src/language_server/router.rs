@@ -1,4 +1,3 @@
-use super::{configuration::SharedConfig, feedback::FeedbackBookKeeper};
 use crate::{
     Error, Result,
     build::SourceFingerprint,
@@ -10,11 +9,14 @@ use crate::{
     },
     paths::ProjectPaths,
 };
-use camino::{Utf8Path, Utf8PathBuf};
 use std::{
     collections::{HashMap, hash_map::Entry},
     time::SystemTime,
 };
+
+use camino::{Utf8Path, Utf8PathBuf};
+
+use super::{configuration::SharedConfig, feedback::FeedbackBookKeeper};
 
 /// The language server instance serves a language client, typically a text
 /// editor. The editor could have multiple Gleam projects open at once, so run
