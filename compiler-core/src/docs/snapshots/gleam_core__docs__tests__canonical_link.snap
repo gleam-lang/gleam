@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMarkdownPagesOpts::default())"
-snapshot_kind: text
 ---
 //// LICENSE.html
 
