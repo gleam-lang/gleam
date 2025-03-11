@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\npub fn main() {\n  labelled\n}\n\npub fn labelled(a: Int, label b: String) -> Int { 1 }\n"
+---
+pub fn main() {
+  labelled
+  ▔▔↑▔▔▔▔▔
+}
+
+pub fn labelled(a: Int, label b: String) -> Int { 1 }
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn(Int, label: String) -> Int\n```\n",
+    ),
+)

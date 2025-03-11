@@ -14,8 +14,10 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant, error::VariableOrigin, printer::Printer,
+        self, Deprecation, FieldMap, ModuleInterface, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant,
+        error::VariableOrigin,
+        printer::{Names, Printer},
     },
 };
 use camino::Utf8PathBuf;
@@ -27,7 +29,10 @@ use lsp_types::{
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::Arc,
+};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -1069,10 +1074,18 @@ fn hover_for_function_head(
         .map(|(_, doc)| doc)
         .unwrap_or(&empty_str);
     let function_type = get_function_type(fun);
-    let formatted_type = Printer::new(&module.ast.names).print_type(&function_type);
+
+    let index_to_label = fun
+        .arguments
+        .iter()
+        .enumerate()
+        .filter_map(|(i, arg)| arg.names.get_label().map(|label| (i as u32, label)))
+        .collect::<HashMap<_, _>>();
+
+    let type_ = Printer::new(&module.ast.names).print_with_labels(&function_type, index_to_label);
     let contents = format!(
         "```gleam
-{formatted_type}
+{type_}
 ```
 {documentation}"
     );
@@ -1143,7 +1156,7 @@ fn hover_for_module_constant(
     module: &Module,
 ) -> Hover {
     let empty_str = EcoString::from("");
-    let type_ = Printer::new(&module.ast.names).print_type(&constant.type_);
+    let type_ = print_type_with_field_map(&module.ast.names, &constant.type_, constant.field_map());
     let documentation = constant
         .documentation
         .as_ref()
@@ -1171,7 +1184,12 @@ fn hover_for_expression(
         .unwrap_or("".to_string());
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.names).print_type(expression.type_().as_ref());
+    let type_ = print_type_with_field_map(
+        &module.ast.names,
+        &expression.type_(),
+        expression.field_map(),
+    );
+
     let contents = format!(
         "```gleam
 {type_}
@@ -1199,7 +1217,7 @@ fn hover_for_imported_value(
     });
 
     // Show the type of the hovered node to the user
-    let type_ = Printer::new(&module.ast.names).print_type(value.type_.as_ref());
+    let type_ = print_type_with_field_map(&module.ast.names, &value.type_, value.field_map());
     let contents = format!(
         "```gleam
 {type_}
@@ -1209,6 +1227,19 @@ fn hover_for_imported_value(
     Hover {
         contents: HoverContents::Scalar(MarkedString::String(contents)),
         range: Some(src_span_to_lsp_range(*location, &line_numbers)),
+    }
+}
+
+fn print_type_with_field_map(
+    names: &Names,
+    type_: &Type,
+    field_map: Option<&FieldMap>,
+) -> EcoString {
+    let mut printer = Printer::new(names);
+    if let Some(field_map) = field_map {
+        printer.print_with_labels(type_, field_map.indices_to_labels())
+    } else {
+        printer.print_type(type_)
     }
 }
 

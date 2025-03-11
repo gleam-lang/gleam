@@ -18,7 +18,7 @@ use crate::type_::error::VariableOrigin;
 use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
-    self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
+    self, Deprecation, FieldMap, ModuleValueConstructor, PatternConstructor, Type, ValueConstructor,
 };
 use std::sync::Arc;
 
@@ -745,6 +745,23 @@ pub struct ModuleConstant<T, ConstantRecordTag> {
     pub type_: T,
     pub deprecation: Deprecation,
     pub implementations: Implementations,
+}
+
+impl TypedModuleConstant {
+    pub(crate) fn field_map(&self) -> Option<&FieldMap> {
+        match self.value.as_ref() {
+            Constant::Record { field_map, .. } => field_map.as_ref(),
+            Constant::Int { .. }
+            | Constant::Float { .. }
+            | Constant::String { .. }
+            | Constant::Tuple { .. }
+            | Constant::List { .. }
+            | Constant::BitArray { .. }
+            | Constant::Var { .. }
+            | Constant::StringConcatenation { .. }
+            | Constant::Invalid { .. } => None,
+        }
+    }
 }
 
 pub type UntypedCustomType = CustomType<()>;

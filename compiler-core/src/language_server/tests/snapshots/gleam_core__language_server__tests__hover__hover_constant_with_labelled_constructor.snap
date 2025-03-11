@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/hover.rs
+expression: "\npub const wibble = Labelled\n\npub type Labelled {\n  Labelled(Int, label: String)\n}\n"
+---
+pub const wibble = Labelled
+▔▔▔▔▔▔▔▔▔▔▔↑▔▔▔▔           
+
+pub type Labelled {
+  Labelled(Int, label: String)
+}
+
+
+----- Hover content -----
+Scalar(
+    String(
+        "```gleam\nfn(Int, label: String) -> Labelled\n```\n",
+    ),
+)

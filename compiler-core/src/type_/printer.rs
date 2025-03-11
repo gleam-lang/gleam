@@ -1,7 +1,10 @@
 use bimap::BiMap;
 use ecow::{EcoString, eco_format};
 use im::HashMap;
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::{HashMap as MutHashMap, HashSet},
+    sync::Arc,
+};
 
 use crate::type_::{Type, TypeVar};
 
@@ -314,9 +317,22 @@ impl<'a> Printer<'a> {
         }
     }
 
+    /// Prints the type of the expression, also adding labels if it's a function
+    /// with any labelled arguments.
+    ///
+    pub fn print_with_labels(
+        &mut self,
+        type_: &Type,
+        index_to_label: MutHashMap<u32, &EcoString>,
+    ) -> EcoString {
+        let mut buffer = EcoString::new();
+        self.print(type_, &index_to_label, &mut buffer, PrintMode::Normal);
+        buffer
+    }
+
     pub fn print_type(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
-        self.print(type_, &mut buffer, PrintMode::Normal);
+        self.print(type_, &MutHashMap::new(), &mut buffer, PrintMode::Normal);
         buffer
     }
 
@@ -329,11 +345,22 @@ impl<'a> Printer<'a> {
 
     pub fn print_type_without_aliases(&mut self, type_: &Type) -> EcoString {
         let mut buffer = EcoString::new();
-        self.print(type_, &mut buffer, PrintMode::ExpandAliases);
+        self.print(
+            type_,
+            &MutHashMap::new(),
+            &mut buffer,
+            PrintMode::ExpandAliases,
+        );
         buffer
     }
 
-    fn print(&mut self, type_: &Type, buffer: &mut EcoString, print_mode: PrintMode) {
+    fn print(
+        &mut self,
+        type_: &Type,
+        index_to_label: &MutHashMap<u32, &EcoString>,
+        buffer: &mut EcoString,
+        print_mode: PrintMode,
+    ) {
         match type_ {
             Type::Named {
                 name, args, module, ..
@@ -356,20 +383,22 @@ impl<'a> Printer<'a> {
 
                 if !args.is_empty() {
                     buffer.push('(');
-                    self.print_arguments(args, buffer, print_mode);
+                    self.print_arguments(args, index_to_label, buffer, print_mode);
                     buffer.push(')');
                 }
             }
 
             Type::Fn { args, retrn } => {
                 buffer.push_str("fn(");
-                self.print_arguments(args, buffer, print_mode);
+                self.print_arguments(args, index_to_label, buffer, print_mode);
                 buffer.push_str(") -> ");
-                self.print(retrn, buffer, print_mode);
+                self.print(retrn, index_to_label, buffer, print_mode);
             }
 
             Type::Var { type_, .. } => match *type_.borrow() {
-                TypeVar::Link { ref type_, .. } => self.print(type_, buffer, print_mode),
+                TypeVar::Link { ref type_, .. } => {
+                    self.print(type_, index_to_label, buffer, print_mode)
+                }
                 TypeVar::Unbound { id, .. } | TypeVar::Generic { id, .. } => {
                     buffer.push_str(&self.type_variable(id))
                 }
@@ -377,7 +406,7 @@ impl<'a> Printer<'a> {
 
             Type::Tuple { elems, .. } => {
                 buffer.push_str("#(");
-                self.print_arguments(elems, buffer, print_mode);
+                self.print_arguments(elems, index_to_label, buffer, print_mode);
                 buffer.push(')');
             }
         }
@@ -401,11 +430,15 @@ impl<'a> Printer<'a> {
     fn print_arguments(
         &mut self,
         args: &[Arc<Type>],
+        index_to_label: &MutHashMap<u32, &EcoString>,
         typ_str: &mut EcoString,
         print_mode: PrintMode,
     ) {
         for (i, arg) in args.iter().enumerate() {
-            self.print(arg, typ_str, print_mode);
+            if let Some(label) = index_to_label.get(&(i as u32)) {
+                typ_str.push_str(&format!("{label}: "));
+            }
+            self.print(arg, index_to_label, typ_str, print_mode);
             if i < args.len() - 1 {
                 typ_str.push_str(", ");
             }
