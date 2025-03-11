@@ -18,6 +18,11 @@
 
 - Fixed a bug where tuples with atoms in the first position could be
   incorrectly formatted by `echo`.
+  ([Louis Pilfold](https://github.com/lpil))
+
+- Fixed a bug where unlabelled arguments would be allowed after labelled arguments
+  in variant constructor definitions.
+  ([Surya Rose](https://github.com/GearsDatapacks))
 
 ## v1.9.1 - 2025-03-10
 

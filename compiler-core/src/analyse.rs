@@ -28,7 +28,7 @@ use crate::{
         environment::*,
         error::{Error, FeatureKind, MissingAnnotation, Named, Problems, convert_unify_error},
         expression::{ExprTyper, FunctionDefinition, Implementations},
-        fields::{FieldMap, FieldMapBuilder},
+        fields::FieldMapBuilder,
         hydrator::Hydrator,
         prelude::*,
     },
@@ -996,12 +996,16 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 continue;
             }
 
-            let mut field_map = FieldMap::new(constructor.arguments.len() as u32);
+            let mut field_map_builder = FieldMapBuilder::new(constructor.arguments.len() as u32);
             let mut args_types = Vec::with_capacity(constructor.arguments.len());
             let mut fields = Vec::with_capacity(constructor.arguments.len());
 
-            for (i, RecordConstructorArg { label, ast, .. }) in
-                constructor.arguments.iter().enumerate()
+            for RecordConstructorArg {
+                label,
+                ast,
+                location,
+                ..
+            } in constructor.arguments.iter()
             {
                 // Build a type from the annotation AST
                 let t = match hydrator.type_from_ast(ast, environment, &mut self.problems) {
@@ -1020,17 +1024,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 // Register the type for this parameter
                 args_types.push(t);
 
-                // Register the label for this parameter, if there is one
-                if let Some((location, label)) = label {
-                    if field_map.insert(label.clone(), i as u32).is_err() {
-                        self.problems.error(Error::DuplicateField {
-                            label: label.clone(),
-                            location: *location,
-                        });
-                    };
+                let (label_location, label) = match label {
+                    Some((location, label)) => (*location, Some(label)),
+                    None => (*location, None),
+                };
+
+                // Register the label for this parameter
+                if let Err(error) = field_map_builder.add(label, label_location) {
+                    self.problems.error(error);
                 }
             }
-            let field_map = field_map.into_option();
+            let field_map = field_map_builder.finish();
             // Insert constructor function into module scope
             let mut type_ = type_.deref().clone();
             type_.set_custom_type_variant(index as u16);
