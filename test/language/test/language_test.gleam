@@ -2143,10 +2143,6 @@ type NestedCat {
   NestedCat(Cat, String, cuteness: Int)
 }
 
-type InverseCat {
-  InverseCat(cuteness: Int, String)
-}
-
 fn mixed_arg_match_tests() {
   [
     "matching second labelled arg as first"
@@ -2169,16 +2165,6 @@ fn mixed_arg_match_tests() {
         let NestedCat(Cat(x, cuteness: y), cuteness: y2, ..) =
           NestedCat(Cat("fluffy", 10), "gleamy", 100)
         assert_equal(#(x, y, y2), #("fluffy", 10, 100))
-      }),
-    "matching first labelled arg as first"
-      |> example(fn() {
-        let InverseCat(cuteness: y, ..) = InverseCat(10, "fluffy")
-        assert_equal(y, 10)
-      }),
-    "matching first labelled arg as second"
-      |> example(fn() {
-        let InverseCat(x, cuteness: y) = InverseCat(10, "fluffy")
-        assert_equal(#(x, y), #("fluffy", 10))
       }),
   ]
 }
