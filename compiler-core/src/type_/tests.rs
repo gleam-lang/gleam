@@ -3080,3 +3080,14 @@ type Wibble {
 "
     );
 }
+
+#[test]
+fn unlabelled_argument_not_allowed_after_labelled_argument() {
+    assert_module_error!(
+        "
+pub type Bad {
+  Bad(labelled: Int, Float)
+}
+"
+    );
+}
