@@ -592,11 +592,13 @@ pub enum Decision {
     /// This is the final node of the tree, once we get to this one we know we
     /// have a body to run because a given pattern matched.
     ///
-    // todo)) since the tree is not used for code generation, this field is unused.
-    // But it will be useful once we also use this for code gen purposes and not
-    // just for exhaustiveness checking
-    #[allow(dead_code)]
-    Run { body: Body },
+    Run {
+        // todo)) since the tree is not used for code generation, this field is unused.
+        // But it will be useful once we also use this for code gen purposes and not
+        // just for exhaustiveness checking
+        #[allow(dead_code)]
+        body: Body,
+    },
 
     /// We have to make this decision when we run into a branch that also has a
     /// guard: if it is true we can finally run the body of the branch, stored in
@@ -604,13 +606,14 @@ pub enum Decision {
     /// If it is false we might still have to take other decisions and so we might
     /// have another `DecisionTree` to traverse, stored in `if_false`.
     ///
-    // todo)) since the tree is not used for code generation, the `guard` and
-    // `if_true` fields are unused.
-    // But they will be useful once we also use this for code gen purposes and not
-    // just for exhaustiveness checking
-    #[allow(dead_code)]
     Guard {
+        // todo)) since the tree is not used for code generation, the `guard` and
+        // `if_true` fields are unused.
+        // But they will be useful once we also use this for code gen purposes and not
+        // just for exhaustiveness checking
+        #[allow(dead_code)]
         guard: usize,
+        #[allow(dead_code)]
         if_true: Body,
         if_false: Box<Decision>,
     },
