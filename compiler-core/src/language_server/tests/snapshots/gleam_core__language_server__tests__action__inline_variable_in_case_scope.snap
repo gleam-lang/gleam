@@ -1,8 +1,6 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-assertion_line: 5199
 expression: "\nimport gleam/io\n\npub fn main(x) {\n  case x {\n    True -> {\n      let message = \"Hello!\"\n      io.println(message)\n    }\n    False -> Nil\n  }\n}\n"
-snapshot_kind: text
 ---
 ----- BEFORE ACTION
 

@@ -1,6 +1,5 @@
 ---
 source: test-project-compiler/src/generated_tests.rs
-assertion_line: 21
 expression: "./cases/with_dep"
 ---
 //// with_dep/build/prod/erlang/example/_gleam_artefacts/example@@main.erl

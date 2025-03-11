@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/errors.rs
 expression: "let assert [-1.8e308, b] = [x, y]"
-snapshot_kind: text
 ---
 ----- SOURCE CODE
 let assert [-1.8e308, b] = [x, y]

@@ -1,7 +1,6 @@
 ---
 source: compiler-core/src/docs/tests.rs
 expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMarkdownPagesOpts { hex_publish: Some(DocContext::Build) })"
-snapshot_kind: text
 ---
 //// LICENSE.html
 
