@@ -122,7 +122,7 @@ struct Branch {
     /// Each branch is identified by a numeric index, so we can nicely
     /// report errors once we find something's wrong with a branch.
     ///
-    branch_index: usize,
+    clause_index: usize,
 
     /// Each alternative pattern in an alternative pattern matching (e.g.
     /// `one | two | three -> todo`) gets turned into its own branch in this
@@ -137,17 +137,17 @@ struct Branch {
 
 impl Branch {
     fn new(
-        branch_index: usize,
+        clause_index: usize,
         alternative_index: usize,
         checks: Vec<PatternCheck>,
         has_guard: bool,
     ) -> Self {
         Self {
-            branch_index,
+            clause_index,
             alternative_index,
             checks,
-            guard: if has_guard { Some(branch_index) } else { None },
-            body: Body::new(branch_index),
+            guard: if has_guard { Some(clause_index) } else { None },
+            body: Body::new(clause_index),
         }
     }
 
@@ -260,14 +260,14 @@ pub struct Body {
 
     /// The index of the clause in the case expression that should be run.
     ///
-    branch_index: usize,
+    clause_index: usize,
 }
 
 impl Body {
-    pub fn new(branch_index: usize) -> Self {
+    pub fn new(clause_index: usize) -> Self {
         Self {
             bindings: vec![],
-            branch_index,
+            clause_index,
         }
     }
 
@@ -765,15 +765,15 @@ impl<'a> Compiler<'a> {
     }
 
     fn mark_as_reached(&mut self, branch: &Branch) {
-        let _ = self.diagnostics.reachable.insert(branch.branch_index);
+        let _ = self.diagnostics.reachable.insert(branch.clause_index);
     }
 
     fn mark_as_matching_impossible_variant(&mut self, branch: &Branch) {
-        let _ = self.diagnostics.reachable.remove(&branch.branch_index);
+        let _ = self.diagnostics.reachable.remove(&branch.clause_index);
         let _ = self
             .diagnostics
             .match_impossible_variants
-            .insert(branch.branch_index);
+            .insert(branch.clause_index);
     }
 
     fn compile(&mut self, mut branches: VecDeque<Branch>) -> Decision {
