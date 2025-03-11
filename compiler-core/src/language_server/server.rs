@@ -115,7 +115,7 @@ where
                     *config = updated_config;
                 }
 
-                let _ = self.inlay_hints_refresh();
+                self.inlay_hints_refresh();
             }
         }
     }
@@ -332,7 +332,7 @@ where
         }
     }
 
-    fn inlay_hints_refresh(&mut self) -> Feedback {
+    fn inlay_hints_refresh(&mut self) {
         let supports_refresh = self
             .initialise_params
             .capabilities
@@ -349,7 +349,6 @@ where
         if supports_refresh {
             self.send_request("workspace/inlayHint/refresh", (), None);
         }
-        Feedback::default()
     }
 
     fn request_configuration(&mut self) -> Feedback {
