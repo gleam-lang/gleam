@@ -149,7 +149,10 @@ pub enum UntypedExpr {
 impl UntypedExpr {
     pub fn location(&self) -> SrcSpan {
         match self {
-            Self::PipeLine { expressions, .. } => expressions.last().location(),
+            Self::PipeLine { expressions, .. } => expressions
+                .first()
+                .location()
+                .merge(&expressions.last().location()),
 
             Self::Fn { location, .. }
             | Self::Var { location, .. }
