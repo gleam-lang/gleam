@@ -66,6 +66,9 @@
   project's `gleam.toml` as a JSON file.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
+- Deprecate `HEXPM_USER` and `HEXPM_PASS` in favour of `HEXPM_API_KEY`.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now allows renaming of functions, constants,

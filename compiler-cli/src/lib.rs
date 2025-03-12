@@ -167,9 +167,11 @@ enum Command {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - HEXPM_USER: (optional, deprecated) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional, deprecated) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
+    /// Warning: HEXPM_USER and HEXPM_USER will eventually be deprecated in favour of HEXPM_API_KEY
     #[command(verbatim_doc_comment)]
     Publish {
         #[arg(long)]
@@ -398,9 +400,11 @@ enum Hex {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - HEXPM_USER: (optional, deprecated) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional, deprecated) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
+    /// Warning: HEXPM_USER and HEXPM_USER will eventually be deprecated in favour of HEXPM_API_KEY
     #[command(verbatim_doc_comment)]
     Retire {
         package: String,
@@ -417,9 +421,11 @@ enum Hex {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - HEXPM_USER: (optional, deprecated) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional, deprecated) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
+    /// Warning: HEXPM_USER and HEXPM_USER will eventually be deprecated in favour of HEXPM_API_KEY
     #[command(verbatim_doc_comment)]
     Unretire { package: String, version: String },
 
@@ -427,9 +433,11 @@ enum Hex {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - HEXPM_USER: (optional, deprecated) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional, deprecated) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
+    /// Warning: HEXPM_USER and HEXPM_USER will eventually be deprecated in favour of HEXPM_API_KEY
     #[command(verbatim_doc_comment)]
     Revert {
         #[arg(long)]
@@ -459,9 +467,11 @@ enum Docs {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - HEXPM_USER: (optional, deprecated) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional, deprecated) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
+    /// Warning: HEXPM_USER and HEXPM_USER will eventually be deprecated in favour of HEXPM_API_KEY
     #[command(verbatim_doc_comment)]
     Publish,
 
@@ -469,9 +479,11 @@ enum Docs {
     ///
     /// This command uses this environment variables:
     ///
-    /// - HEXPM_USER: (optional) The Hex username to authenticate with.
-    /// - HEXPM_PASS: (optional) The Hex password to authenticate with.
+    /// - HEXPM_USER: (optional, deprecated) The Hex username to authenticate with.
+    /// - HEXPM_PASS: (optional, deprecated) The Hex password to authenticate with.
     /// - HEXPM_API_KEY: (optional) A Hex API key to use instead of authenticating.
+    ///
+    /// Warning: HEXPM_USER and HEXPM_USER will eventually be deprecated in favour of HEXPM_API_KEY
     #[command(verbatim_doc_comment)]
     Remove {
         /// The name of the package
