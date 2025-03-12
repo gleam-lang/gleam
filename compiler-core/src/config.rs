@@ -1043,8 +1043,9 @@ allow_read = ["./database.sqlite"]
 "#;
 
     let config = toml::from_str::<PackageConfig>(&input).unwrap();
-    let json = serde_json::to_string(&config).unwrap();
-    insta::assert_snapshot!(json);
+    let json = serde_json::to_string_pretty(&config).unwrap();
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }
 
 #[test]
@@ -1056,5 +1057,6 @@ version = "1.0.0"
 
     let config = toml::from_str::<PackageConfig>(&input).unwrap();
     let json = serde_json::to_string_pretty(&config).unwrap();
-    insta::assert_snapshot!(json);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }
