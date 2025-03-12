@@ -28,6 +28,9 @@ outputs:
       ${{ steps.build.outputs.archive }}
       ${{ steps.build.outputs.archive }}.sha256
       ${{ steps.build.outputs.archive }}.sha512
+      ${{ steps.build.outputs.archive }}.sigstore
+      ${{ steps.build.outputs.archive }}.sbom.spdx.json
+      ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
 
 runs:
   using: "composite"
@@ -38,6 +41,12 @@ runs:
         toolchain: ${{ inputs.toolchain }}
         target: ${{ inputs.target }}
         cache-key: v1-${{ inputs.target }}
+
+    - name: Install Cargo SBoM
+      shell: bash
+      # The `cargo-sbom` version is specified in the next line. Change it to
+      # keep it up-to-date.
+      run: cargo install cargo-sbom@~0.9.1
 
     - name: Build WASM release binary
       if: ${{ inputs.target != 'wasm32-unknown-unknown' }}
@@ -124,6 +133,29 @@ runs:
         TARGET: "${{ inputs.target }}"
         ARCHIVE: "${{ steps.build.outputs.archive }}"
 
+    # By using `cargo-sbom``, we create two formats of Build SBoMs
+    # (SPDX and CycloneDX) for the gleam build.
+    # We store those files alongside the build artifacts on the GitHub Release
+    # page and also use them to create Container SBoMs for Docker images.
+    # 
+    # Why is this helpful?
+    # * It gives us and our users complete visibility into which dependencies
+    #   and which versions are present in the build / container image.
+    # * The SBoM can be fed into vulnerability scanners so that anyone can check
+    #   if any dependencies have known security issues.
+    - name: Generate Build SBoM
+      shell: bash
+      run: |
+        cargo-sbom \
+          --output-format spdx_json_2_3 \
+          > "$ARCHIVE.sbom.spdx.json"
+
+        cargo-sbom \
+          --output-format cyclone_dx_json_1_4 \
+          > "$ARCHIVE.sbom.cyclonedx.json"
+      env:
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+
     - name: Hash Build Archive
       shell: bash
       run: |
@@ -131,6 +163,42 @@ runs:
         openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
       env:
         ARCHIVE: "${{ steps.build.outputs.archive }}"
+
+    # We provide SLSA Provenance for the distribution build. This attests to
+    # where, when, and how the asset or image was built.
+    #
+    # Why is this helpful?
+    # * It provides a record of the exact Git commit (git sha) and GitHub
+    #   Actions workflow used to produce a release.
+    # * Users or automated systems can verify that the artifact you’re
+    #   downloading was indeed built from the official Gleam repo, on a
+    #   particular date, using the correct pipeline and not tampered with later.
+    # * The attestation is published to a transparency log for extra
+    #   verification: https://github.com/gleam-lang/gleam/attestations/
+    #
+    # For more information, see:
+    # * https://github.com/actions/attest
+    # * https://github.com/actions/attest-sbom
+    - name: Attest Distribution Assets with SBoM
+      id: attest-sbom
+      uses: actions/attest-sbom@v2
+      with:
+        subject-path: |
+          ${{ steps.build.outputs.archive }}
+          ${{ steps.build.outputs.archive }}.sbom.spdx.json
+          ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
+        sbom-path: "${{ steps.build.outputs.archive }}.sbom.spdx.json"
+
+    # The provenanve information is stored alongside the built artifact with
+    # the `.sigstore` file extension.
+    - name: "Copy SBoM provenance"
+      id: sbom-provenance
+      shell: bash
+      run: |
+        cp "$ATTESTATION" "$ARCHIVE.sigstore"
+      env:
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+        ATTESTATION: "${{ steps.attest-sbom.outputs.bundle-path }}"
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
@@ -140,4 +208,7 @@ runs:
           ${{ steps.build.outputs.archive }}
           ${{ steps.build.outputs.archive }}.sha256
           ${{ steps.build.outputs.archive }}.sha512
+          ${{ steps.build.outputs.archive }}.sigstore
+          ${{ steps.build.outputs.archive }}.sbom.spdx.json
+          ${{ steps.build.outputs.archive }}.sbom.cyclonedx.json
         overwrite: true

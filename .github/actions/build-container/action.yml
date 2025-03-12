@@ -15,7 +15,7 @@ runs:
     uses: robinraju/release-downloader@v1
     with:
       releaseId: "${{ inputs.release-id }}"
-      fileName: "gleam-${{ inputs.version }}-{x86_64-unknown-linux-musl,aarch64-unknown-linux-musl}.tar.gz"
+      fileName: "gleam-${{ inputs.version }}-{x86_64-unknown-linux-musl,aarch64-unknown-linux-musl}.*"
 
   - name: "Unpack release files into correct location"
     shell: bash
@@ -32,6 +32,11 @@ runs:
 
         # Move files into place
         mv gleam "gleam-$SHORT"
+
+        # The SBoM is added to the images so that the Docker Scout Scanner is
+        # able to find the info about the gleam binary since it was not
+        # installed by the operating system package manager.
+        mv "gleam-$VERSION-$LONG.tar.gz.sbom.spdx.json" "gleam-$SHORT.sbom.spdx.json"
 
         # Delete Unused Files
         rm -rf "gleam-$VERSION-$LONG*"
@@ -74,6 +79,31 @@ runs:
       platforms: linux/amd64,linux/arm64
       file: containers/${{ matrix.base-image }}.dockerfile
       push: true
+
+      # Enabling `provenance` will cause the action to create SLSA build
+      # provenance and push it alongside the tagged image. In practical terms,
+      # we're adding info to the tag that attests to where, when, and how the
+      # asset and image was built.
+      #
+      # For more info on Docker Attestations, see:
+      # https://docs.docker.com/build/ci/github-actions/attestations/
+      provenance: true
+
+      # Enabling `sbom` will trigger an SBoM Scan using Docker Scout:
+      # https://docs.docker.com/scout/how-tos/view-create-sboms/
+      # The scan will detect any operating system packages as well as the Gleam
+      # Build SBoM added into the Docker Container.
+      #
+      # Why is this helpful?
+      # * If you build services on top of these container images, you can track
+      #   all dependencies that ship with Gleam, plus the rest of your stack in
+      #   the image.
+      # * This makes it easier to do image-level vulnerability scans and
+      #   compliance checks.
+      #
+      # For more info on Docker SBoMs, see:
+      # https://docs.docker.com/build/metadata/attestations/sbom/
+      sbom: true
       tags: ${{ steps.versions.outputs.container-tag }}
       labels: |
         org.opencontainers.image.title=gleam
