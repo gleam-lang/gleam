@@ -1739,6 +1739,17 @@ impl SrcSpan {
         byte_index >= self.start && byte_index <= self.end
     }
 
+    /// Merges two spans into a new one that starts at the start of the smaller
+    /// one and ends at the end of the bigger one. For example:
+    ///
+    /// ```txt
+    /// wibble    wobble
+    /// ─┬────    ─┬────
+    ///  │         ╰─ one span
+    ///  ╰─ the other span
+    /// ─┬──────────────
+    ///  ╰─ the span you get by merging the two
+    /// ```
     pub fn merge(&self, with: &SrcSpan) -> SrcSpan {
         Self {
             start: self.start.min(with.start),
