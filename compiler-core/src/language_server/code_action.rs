@@ -2918,8 +2918,8 @@ pub struct ExtractConstant<'a> {
     selected_expression: Option<SrcSpan>,
     /// The location of the start of the function containing the expression
     container_function_start: Option<u32>,
-    /// The type of expression being extracted
-    type_of_extractable: Option<ExtractableToConstant>,
+    /// The variant of the extractable expression being extracted (if any)
+    variant_of_extractable: Option<ExtractableToConstant>,
     /// The name of the newly created constant
     name_to_use: Option<EcoString>,
     /// The right hand side expression of the newly created constant
@@ -3084,7 +3084,7 @@ impl<'a> ExtractConstant<'a> {
             edits: TextEdits::new(line_numbers),
             selected_expression: None,
             container_function_start: None,
-            type_of_extractable: None,
+            variant_of_extractable: None,
             name_to_use: None,
             value_to_use: None,
         }
@@ -3102,7 +3102,7 @@ impl<'a> ExtractConstant<'a> {
         ) = (
             self.selected_expression,
             self.container_function_start,
-            self.type_of_extractable,
+            self.variant_of_extractable,
             self.name_to_use,
             self.value_to_use,
         )
@@ -3197,7 +3197,7 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         // Has to be variable because patterns can't be constants.
         if assignment.pattern.is_variable() && can_be_constant(self.module, &assignment.value, None)
         {
-            self.type_of_extractable = Some(ExtractableToConstant::Assignment);
+            self.variant_of_extractable = Some(ExtractableToConstant::Assignment);
             self.selected_expression = Some(expr_location);
             self.name_to_use = match &assignment.pattern {
                 Pattern::Variable { name, .. } => Some(name.clone()),
@@ -3232,11 +3232,11 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
         // - It's a binary operator, which may or may not operate on
         //   extractable values.
         if matches!(
-            self.type_of_extractable,
+            self.variant_of_extractable,
             None | Some(ExtractableToConstant::ComposedValue)
         ) && can_be_constant(self.module, expr, None)
         {
-            self.type_of_extractable = match expr {
+            self.variant_of_extractable = match expr {
                 TypedExpr::Var { .. }
                 | TypedExpr::Int { .. }
                 | TypedExpr::Float { .. }
