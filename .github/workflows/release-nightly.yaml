@@ -12,6 +12,8 @@ env:
 permissions:
   contents: write
   packages: write
+  id-token: write
+  attestations: write
 
 jobs:
   # Check if the actions already ran in the last 24 hours
@@ -48,6 +50,8 @@ jobs:
             *.tar.gz
             *.sha256
             *.sha512
+            *.sigstore
+            *.sbom.*.json
 
   build-release:
     name: build-release
