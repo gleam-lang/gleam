@@ -162,6 +162,10 @@ pub enum Warning {
         src: EcoString,
         warning: DeprecatedSyntaxWarning,
     },
+
+    DeprecatedEnvironmentVariable {
+        name: String,
+    },
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Copy)]
@@ -354,7 +358,7 @@ To match on all possible lists, use the `_` catch-all pattern instead.",
                 }
             }
 
-            Self::Type { path, warning, src } => match warning {
+            Warning::Type { path, warning, src } => match warning {
                 type_::Warning::Todo {
                     kind,
                     location,
@@ -1144,6 +1148,14 @@ information.",
                         extra_labels: Vec::new(),
                     }),
                 },
+            },
+
+            Warning::DeprecatedEnvironmentVariable { name } => Diagnostic {
+                title: "Use of deprecated environment variable".into(),
+                text: wrap(&format!("The environment variable `{name}` is deprecated.")),
+                hint: None,
+                level: diagnostic::Level::Warning,
+                location: None,
             },
         }
     }
