@@ -12,12 +12,12 @@ use crate::{Dependency, Package, Release};
 use self::parser::Parser;
 use pubgrub::{
     error::PubGrubError,
-    solver::{choose_package_with_fewest_versions, Dependencies},
+    solver::{Dependencies, choose_package_with_fewest_versions},
     type_aliases::Map,
 };
 use serde::{
-    de::{self, Deserializer},
     Deserialize, Serialize,
+    de::{self, Deserializer},
 };
 
 pub use pubgrub::report as pubgrub_report;

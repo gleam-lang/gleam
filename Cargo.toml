@@ -2,7 +2,7 @@
 name = "hexpm"
 version = "3.3.0"
 authors = ["Louis Pilfold <louis@lpil.uk>"]
-edition = "2021"
+edition = "2024"
 
 readme = "README.md"
 license = "Apache-2.0"
