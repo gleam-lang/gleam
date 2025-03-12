@@ -1,4 +1,4 @@
-use super::{Decision, Match, RuntimeCheck, RuntimeCheckKind, Variable, printer::Printer};
+use super::{Decision, Match, RuntimeCheck, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
 use std::collections::{HashMap, HashSet};
@@ -129,22 +129,19 @@ fn add_missing_patterns(
 }
 
 fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>) -> Term {
-    match &check.kind {
-        RuntimeCheckKind::Int { .. }
-        | RuntimeCheckKind::Float { .. }
-        | RuntimeCheckKind::String { .. }
-        | RuntimeCheckKind::BitArray { .. }
-        | RuntimeCheckKind::StringPrefix { .. } => Term::Infinite { variable },
+    match check {
+        RuntimeCheck::Int { .. }
+        | RuntimeCheck::Float { .. }
+        | RuntimeCheck::String { .. }
+        | RuntimeCheck::BitArray { .. }
+        | RuntimeCheck::StringPrefix { .. } => Term::Infinite { variable },
 
-        RuntimeCheckKind::Tuple { .. } => {
-            let arguments = check.args.clone();
-            Term::Tuple {
-                variable,
-                arguments,
-            }
-        }
+        RuntimeCheck::Tuple { args, .. } => Term::Tuple {
+            variable,
+            arguments: args.clone(),
+        },
 
-        RuntimeCheckKind::Variant { index } => {
+        RuntimeCheck::Variant { index, args } => {
             let (module, name) = variable
                 .type_
                 .named_type_name()
@@ -163,23 +160,19 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
                 variable,
                 name,
                 module,
-                arguments: check.args.clone(),
+                arguments: args.clone(),
             }
         }
 
-        RuntimeCheckKind::NonEmptyList => {
-            let (first, rest) = match check.args.as_slice() {
-                [first, rest] => (first.clone(), rest.clone()),
-                _ => unreachable!("list pattern with more than two arguments"),
-            };
+        RuntimeCheck::NonEmptyList {
+            first_arg,
+            rest_arg,
+        } => Term::List {
+            variable,
+            first: first_arg.clone(),
+            rest: rest_arg.clone(),
+        },
 
-            Term::List {
-                variable,
-                first,
-                rest,
-            }
-        }
-
-        RuntimeCheckKind::EmptyList => Term::EmptyList { variable },
+        RuntimeCheck::EmptyList => Term::EmptyList { variable },
     }
 }
