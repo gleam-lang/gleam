@@ -5135,6 +5135,19 @@ pub fn main() {
 }
 
 #[test]
+fn extract_constant_from_nil() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let x = Nil
+  x
+}
+"#,
+        find_position_of("l").select_until(find_position_of("x"))
+    );
+}
+
+#[test]
 fn extract_constant_from_non_record_variant_1() {
     assert_code_action!(
         EXTRACT_CONSTANT,
@@ -5190,7 +5203,7 @@ fn do_not_extract_constant_from_pattern() {
 }
 
 #[test]
-fn do_not_extract_constant_from_fn_call() {
+fn do_not_extract_constant_from_fn_call_1() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
         r#"import gleam/io
@@ -5201,6 +5214,22 @@ pub fn main() {
         find_position_of("p")
             .nth_occurrence(3)
             .select_until(find_position_of("t").nth_occurrence(2))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_fn_call_2() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"import gleam/list
+
+pub fn main() {
+  let first = list.first([1, 2, 3])
+  first
+}"#,
+        find_position_of("l")
+            .nth_occurrence(3)
+            .select_until(find_position_of("t").nth_occurrence(4))
     );
 }
 
