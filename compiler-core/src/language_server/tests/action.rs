@@ -5815,3 +5815,16 @@ pub fn main() {
         find_position_of("wobble").to_selection()
     );
 }
+
+#[test]
+fn convert_to_pipe_when_first_arg_is_a_pipe_itself() {
+    assert_code_action!(
+        CONVERT_TO_PIPE,
+        "
+pub fn main() {
+  wibble(wobble |> woo, waa)
+}
+",
+        find_position_of("wibble").to_selection()
+    );
+}
