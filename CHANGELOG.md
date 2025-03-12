@@ -20,9 +20,13 @@
   incorrectly formatted by `echo`.
   ([Louis Pilfold](https://github.com/lpil))
 
-- Fixed a bug where unlabelled arguments would be allowed after labelled arguments
-  in variant constructor definitions.
+- Fixed a bug where unlabelled arguments would be allowed after labelled
+  arguments in variant constructor definitions.
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- Fixed a bug where using the "Convert to pipe" code action on a function whose
+  first argument is itself a pipe would result in invalid code.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ## v1.9.1 - 2025-03-10
 
