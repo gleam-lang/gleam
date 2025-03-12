@@ -978,7 +978,7 @@ impl<'a> Compiler<'a> {
             // as they might be overlapping even when they're different!
             let runtime_check = match splitter.get_overlapping_runtime_check(&kind) {
                 Some(runtime_check) => runtime_check,
-                None => self.to_runtime_check(kind, branch_mode),
+                None => self.kind_to_runtime_check(kind, branch_mode),
             };
 
             self.new_pattern_checks(&runtime_check, pattern_check.pattern)
