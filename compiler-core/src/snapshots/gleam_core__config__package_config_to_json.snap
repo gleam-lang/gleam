@@ -1,5 +1,114 @@
 ---
 source: compiler-core/src/config.rs
-expression: json
+expression: output
 ---
-{"name":"my_project","version":"1.0.0","gleam":">= 0.30.0","licences":["Apache-2.0","MIT"],"description":"Pretty complex config","documentation":{"pages":[{"title":"My Page","path":"my-page.html","source":"./path/to/my-page.md"}]},"dependencies":{"my_other_project":{"path":"../my_other_project"},"gleam_stdlib":{"version":">= 0.18.0 and < 2.0.0"}},"dev-dependencies":{"gleeunit":{"version":">= 1.0.0 and < 2.0.0"}},"repository":{"type":"github","user":"example","repo":"my_dep"},"links":[{"title":"Home page","href":"https://example.com/"}],"erlang":{"application_start_module":"my_app/application","extra_applications":["inets","ssl"]},"javascript":{"typescript_declarations":true,"runtime":"nodejs","deno":{"allow_env":["DATABASE_URL"],"allow_net":["example.com:443"],"allow_ffi":true,"allow_read":["./database.sqlite"]}},"target":"erlang","internal_modules":["my_app/internal"]}
+--- GLEAM.TOML
+
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+
+
+--- EXPORTED JSON
+
+{
+  "name": "my_project",
+  "version": "1.0.0",
+  "gleam": ">= 0.30.0",
+  "licences": [
+    "Apache-2.0",
+    "MIT"
+  ],
+  "description": "Pretty complex config",
+  "documentation": {
+    "pages": [
+      {
+        "title": "My Page",
+        "path": "my-page.html",
+        "source": "./path/to/my-page.md"
+      }
+    ]
+  },
+  "dependencies": {
+    "my_other_project": {
+      "path": "../my_other_project"
+    },
+    "gleam_stdlib": {
+      "version": ">= 0.18.0 and < 2.0.0"
+    }
+  },
+  "dev-dependencies": {
+    "gleeunit": {
+      "version": ">= 1.0.0 and < 2.0.0"
+    }
+  },
+  "repository": {
+    "type": "github",
+    "user": "example",
+    "repo": "my_dep"
+  },
+  "links": [
+    {
+      "title": "Home page",
+      "href": "https://example.com/"
+    }
+  ],
+  "erlang": {
+    "application_start_module": "my_app/application",
+    "extra_applications": [
+      "inets",
+      "ssl"
+    ]
+  },
+  "javascript": {
+    "typescript_declarations": true,
+    "runtime": "nodejs",
+    "deno": {
+      "allow_env": [
+        "DATABASE_URL"
+      ],
+      "allow_net": [
+        "example.com:443"
+      ],
+      "allow_ffi": true,
+      "allow_read": [
+        "./database.sqlite"
+      ]
+    }
+  },
+  "target": "erlang",
+  "internal_modules": [
+    "my_app/internal"
+  ]
+}
