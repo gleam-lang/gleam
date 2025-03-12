@@ -384,6 +384,7 @@ impl Environment<'_> {
         &mut self,
         module_alias: &Option<(EcoString, SrcSpan)>,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Result<&TypeConstructor, UnknownTypeConstructorError> {
         match module_alias {
             None => self
@@ -392,6 +393,8 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
+                    suggestions: self
+                        .suggest_modules_for_type_or_value(Imported::Type(name.clone()), arity),
                 }),
 
             Some((module_name, _)) => {
@@ -429,6 +432,7 @@ impl Environment<'_> {
         &self,
         module: &EcoString,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Result<&TypeVariantConstructors, UnknownTypeConstructorError> {
         let module = if module.is_empty() || *module == self.current_module {
             None
@@ -440,6 +444,8 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
+                    suggestions: self
+                        .suggest_modules_for_type_or_value(Imported::Type(name.clone()), arity),
                 }
             }),
 
@@ -468,6 +474,7 @@ impl Environment<'_> {
         &mut self,
         module: Option<&EcoString>,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Result<&ValueConstructor, UnknownValueConstructorError> {
         match module {
             None => self.scope.get(name).ok_or_else(|| {
@@ -476,6 +483,8 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
+                    suggestions: self
+                        .suggest_modules_for_type_or_value(Imported::Value(name.clone()), arity),
                 }
             }),
 
@@ -505,8 +514,9 @@ impl Environment<'_> {
         &self,
         module: &EcoString,
         name: &EcoString,
+        arity: Option<usize>,
     ) -> Vec<&EcoString> {
-        self.get_constructors_for_type(module, name)
+        self.get_constructors_for_type(module, name, arity)
             .iter()
             .flat_map(|c| &c.variants)
             .filter_map(|variant| {
@@ -739,6 +749,69 @@ impl Environment<'_> {
             .filter(|&t| PIPE_VARIABLE != t)
             .cloned()
             .collect()
+    }
+
+    /// Suggest modules to import or use, for an unqualified type
+    pub fn suggest_modules_for_type_or_value(
+        &self,
+        imported: Imported,
+        arity: Option<usize>,
+    ) -> Vec<TypeOrVariableSuggestion> {
+        let mut suggestions = self
+            .importable_modules
+            .iter()
+            .filter_map(|(importable, module_info)| {
+                match &imported {
+                    // Don't suggest importing modules if they are already imported
+                    _ if self
+                        .imported_modules
+                        .contains_key(importable.split('/').last().unwrap_or(importable)) =>
+                    {
+                        None
+                    }
+                    Imported::Type(name)
+                        if module_info.get_public_type(name).is_some()
+                            && (arity.is_none()
+                                || module_info.get_public_type(name).unwrap().parameters.len()
+                                    == arity.unwrap()) =>
+                    {
+                        Some(TypeOrVariableSuggestion::Importable(importable.clone()))
+                    }
+                    Imported::Value(name)
+                        if module_info.get_public_value(name).is_some()
+                            && module_info.get_public_value(name).unwrap().type_.fn_arity()
+                                == arity =>
+                    {
+                        Some(TypeOrVariableSuggestion::Importable(importable.clone()))
+                    }
+                    _ => None,
+                }
+            })
+            .collect_vec();
+
+        suggestions.extend(self.imported_modules.iter().filter_map(
+            |(module, (_, module_info))| match &imported {
+                Imported::Type(name)
+                    if module_info.get_public_type(name).is_some()
+                        && (arity.is_none()
+                            || module_info.get_public_type(name).unwrap().parameters.len()
+                                == arity.unwrap()) =>
+                {
+                    Some(TypeOrVariableSuggestion::Imported(module.clone()))
+                }
+                Imported::Value(name)
+                    if module_info.get_public_value(name).is_some()
+                        && module_info.get_public_value(name).unwrap().type_.fn_arity()
+                            == arity =>
+                {
+                    Some(TypeOrVariableSuggestion::Imported(module.clone()))
+                }
+                _ => None,
+            },
+        ));
+
+        // Filter and sort options based on if its already imported and on alphabetical order.
+        suggestions.into_iter().sorted().collect()
     }
 
     /// Suggest modules to import or use, for an unknown module
