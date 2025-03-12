@@ -1,7 +1,15 @@
 ---
 source: compiler-core/src/config.rs
-expression: json
+expression: output
 ---
+--- GLEAM.TOML
+
+name = "my_project"
+version = "1.0.0"
+
+
+--- EXPORTED JSON
+
 {
   "name": "my_project",
   "version": "1.0.0",
