@@ -465,13 +465,11 @@ impl RuntimeCheck {
             } => RuntimeCheckKind::StringPrefix {
                 prefix: prefix.clone(),
             },
-            RuntimeCheck::Tuple { size, args: _ } => RuntimeCheckKind::Tuple { size: size.clone() },
+            RuntimeCheck::Tuple { size, args: _ } => RuntimeCheckKind::Tuple { size: *size },
             RuntimeCheck::BitArray { value } => RuntimeCheckKind::BitArray {
                 value: value.clone(),
             },
-            RuntimeCheck::Variant { index, args: _ } => RuntimeCheckKind::Variant {
-                index: index.clone(),
-            },
+            RuntimeCheck::Variant { index, args: _ } => RuntimeCheckKind::Variant { index: *index },
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
             RuntimeCheck::NonEmptyList {
                 first_arg: _,
@@ -1058,7 +1056,7 @@ impl<'a> Compiler<'a> {
     /// All the type information needed to create these variables is in the
     /// `branch_mode` arg.
     ///
-    fn to_runtime_check(
+    fn kind_to_runtime_check(
         &mut self,
         kind: RuntimeCheckKind,
         branch_mode: &BranchMode,
