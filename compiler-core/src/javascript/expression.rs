@@ -20,6 +20,12 @@ use std::sync::Arc;
 pub enum Position {
     Tail,
     NotTail,
+    /// We are compiling an expression inside a block, meaning we must assign
+    /// to the `_block` variable at the end of the scope, because blocks are not
+    /// expressions in JS.
+    /// Since JS doesn't have variable shadowing, we must store the name of the
+    /// variable being used, which will include the incrementing counter.
+    /// For example, `block$2`
     Assign(EcoString),
 }
 
@@ -465,8 +471,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         result
     }
 
-    /// Wrap an expression in an immediately invoked function expression if
-    /// required due to being a JS statement
+    /// Use the `_block` variable if the expression is JS statement.
     pub fn wrap_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::Panic { .. }
@@ -488,9 +493,9 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
     }
 
-    /// Wrap an expression in an immediately invoked function expression if
-    /// required due to being a JS statement, or in parens if required due to
-    /// being an operator or a function literal.
+    /// Wrap an expression using the `_block` variable if required due to being
+    /// a JS statement, or in parens if required due to being an operator or
+    /// a function literal.
     pub fn child_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::BinOp { name, .. } if name.is_operator_to_wrap() => {}
