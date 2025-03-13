@@ -1,5 +1,5 @@
 use crate::{
-    Error, Error, Result, Result, Warning, Warning,
+    Error, Result, Warning,
     analyse::{self, name::correct_name_case},
     ast::{
         self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
@@ -47,7 +47,9 @@ use super::{
     completer::Completer,
     configuration::SharedConfig,
     inlay_hints,
-    rename::{VariableRenameKind, rename_local_variable},
+    rename::{
+        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
+    },
     signature_help, src_span_to_lsp_range,
 };
 
