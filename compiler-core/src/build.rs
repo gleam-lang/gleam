@@ -334,7 +334,7 @@ pub enum Located<'a> {
     Pattern(&'a TypedPattern),
     PatternSpread {
         spread_location: SrcSpan,
-        arguments: &'a Vec<CallArg<TypedPattern>>,
+        pattern: &'a TypedPattern,
     },
     Statement(&'a TypedStatement),
     Expression(&'a TypedExpr),
