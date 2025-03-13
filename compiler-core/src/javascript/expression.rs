@@ -631,6 +631,9 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn statements(&mut self, statements: &'a [TypedStatement]) -> Output<'a> {
+        // If there are any statements that need to be printed at statement level, that's
+        // for an outer scope so we don't want to print them inside this one.
+        let statement_level = std::mem::take(&mut self.statement_level);
         let count = statements.len();
         let mut documents = Vec::with_capacity(count * 3);
         for (i, statement) in statements.iter().enumerate() {
@@ -644,6 +647,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 documents.push(self.statement(statement)?);
             }
         }
+        self.statement_level = statement_level;
         if count == 1 {
             Ok(documents.to_doc())
         } else {
