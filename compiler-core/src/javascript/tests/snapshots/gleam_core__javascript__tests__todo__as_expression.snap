@@ -14,8 +14,10 @@ fn go(f) {
 import { makeError } from "../gleam.mjs";
 
 function go(f) {
-  let boop = (() => {
-    throw makeError("todo", "my/mod", 3, "go", "I should do this", {})
-  })();
-  return f((() => { throw makeError("todo", "my/mod", 4, "go", "Boom", {}) })());
+  let _block;
+  throw makeError("todo", "my/mod", 3, "go", "I should do this", {})
+  let boop = _block;
+  let _block$1;
+  throw makeError("todo", "my/mod", 4, "go", "Boom", {})
+  return f(_block$1);
 }

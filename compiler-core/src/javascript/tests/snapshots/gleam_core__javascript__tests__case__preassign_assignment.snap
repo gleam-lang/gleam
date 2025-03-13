@@ -15,13 +15,13 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  let y = (() => {
-    let $ = x();
-    if ($) {
-      return 1;
-    } else {
-      return 0;
-    }
-  })();
+  let _block;
+  let $ = x();
+  if ($) {
+    _block = 1;
+  } else {
+    _block = 0;
+  }
+  let y = _block;
   return y;
 }

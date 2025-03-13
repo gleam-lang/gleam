@@ -15,12 +15,12 @@ fn go(x) {
 
 ----- COMPILED JAVASCRIPT
 function go(x) {
-  let y = (() => {
-    if (x) {
-      return 1;
-    } else {
-      return 0;
-    }
-  })();
+  let _block;
+  if (x) {
+    _block = 1;
+  } else {
+    _block = 0;
+  }
+  let y = _block;
   return y;
 }
