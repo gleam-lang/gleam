@@ -4941,6 +4941,10 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToPipe<'ast> {
         fun: &'ast TypedExpr,
         args: &'ast [TypedCallArg],
     ) {
+        if args.iter().any(|arg| arg.is_capture_hole()) {
+            return;
+        }
+
         // If we're visiting the typed function produced by typing a use, we
         // skip the thing itself and only visit its arguments and called
         // function, that is the body of the use.

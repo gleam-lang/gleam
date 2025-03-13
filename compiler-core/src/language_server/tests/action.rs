@@ -5790,6 +5790,33 @@ pub fn main() {
 }
 
 #[test]
+fn convert_to_pipe_does_not_work_on_function_with_capture() {
+    assert_no_code_actions!(
+        CONVERT_TO_PIPE,
+        "import gleam/int
+
+pub fn main() {
+  let sum = int.add(1, _)
+  sum
+}
+",
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn convert_to_pipe_does_not_work_on_record_with_capture() {
+    assert_no_code_actions!(
+        CONVERT_TO_PIPE,
+        "pub fn main() {
+  Ok(_)
+}
+",
+        find_position_of("O").to_selection()
+    );
+}
+
+#[test]
 fn convert_to_pipe_works_inside_body_of_use() {
     assert_code_action!(
         CONVERT_TO_PIPE,
