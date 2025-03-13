@@ -1,5 +1,5 @@
 use crate::{
-    analyse::name::correct_name_case,
+    analyse::{self, name::correct_name_case},
     ast::{
         self, CustomType, Definition, DefinitionLocation, ModuleConstant, SrcSpan, TypedArg,
         TypedExpr, TypedFunction, TypedModule, TypedPattern,
@@ -16,7 +16,7 @@ use crate::{
         self, error::VariableOrigin, printer::Printer, Deprecation, ModuleInterface, Type,
         TypeConstructor, ValueConstructor, ValueConstructorVariant,
     },
-    Error, Error, Result, Result, Warning, Warning,
+    Error, Error, Error, Result, Result, Result, Warning, Warning, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -45,7 +45,9 @@ use super::{
     reference::{
         find_module_value_references, find_variable_references, reference_for_ast_node, Referenced,
     },
-    rename::{rename_local_variable, VariableRenameKind},
+    rename::{
+        rename_local_variable, rename_module_value, RenameTarget, Renamed, VariableRenameKind,
+    },
     signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
 };
 
