@@ -321,6 +321,9 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
 
     #[error("Failed to decrypt data")]
     FailedToDecrypt { detail: String },
+
+    #[error("Failed to decrypt API key")]
+    FailedToDecryptApiKey { detail: String },
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -1480,6 +1483,21 @@ The error from the encryption library was:
 );
                 vec![Diagnostic {
                     title: "Failed to decrypt data".into(),
+                    text,
+                    hint: None,
+                    level: Level::Error,
+                    location: None,
+                }]
+            }
+
+            Error::FailedToDecryptApiKey { detail } => {
+                let text = wrap_format!("Unable to decrypt the local Hex token with the given password.
+The error from the encryption library was:
+
+    {detail}"
+);
+                vec![Diagnostic {
+                    title: "Failed to decrypt Hex token".into(),
                     text,
                     hint: None,
                     level: Level::Error,

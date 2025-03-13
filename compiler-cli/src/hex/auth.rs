@@ -111,7 +111,10 @@ encrypt your Hex API key.
             return Ok(None);
         };
         let password = self.ask_local_password()?;
-        let unencrypted = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)?;
+        let unencrypted = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)
+            .map_err(|e| Error::FailedToDecryptApiKey {
+                detail: e.to_string(),
+            })?;
         Ok(Some(UnencryptedApiKey { unencrypted }))
     }
 

@@ -66,6 +66,9 @@
   project's `gleam.toml` as a JSON file.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
+- Improve error message when giving the wrong password for a local token.
+  ([Samuel Cristobal](https://github.com/scristobal))
+
 ### Language server
 
 - The language server now allows renaming of functions, constants,
