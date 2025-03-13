@@ -550,6 +550,20 @@ where
         })
     }
 
+    /// Check whether a particular module is in the same package as this one
+    fn is_same_package(&self, current_module: &Module, module_name: &str) -> bool {
+        let other_module = self
+            .compiler
+            .project_compiler
+            .get_importable_modules()
+            .get(module_name);
+        match other_module {
+            // We can't rename values from other packages if we are not aliasing an unqualified import.
+            Some(module) => module.package == current_module.ast.type_info.package,
+            None => false,
+        }
+    }
+
     pub fn prepare_rename(
         &mut self,
         params: lsp::TextDocumentPositionParams,
@@ -558,6 +572,10 @@ where
             let (lines, found) = match this.node_at_position(&params) {
                 Some(value) => value,
                 None => return Ok(None),
+            };
+
+            let Some(current_module) = this.module_for_uri(&params.text_document.uri) else {
+                return Ok(None);
             };
 
             let success_response = |location| {
@@ -598,8 +616,18 @@ where
                         _ => None,
                     }),
                 Located::Pattern(Pattern::Assign { location, .. }) => success_response(*location),
-                Located::Pattern(Pattern::Constructor { name_location, .. }) => {
-                    if name_location.contains(byte_index) {
+                Located::Pattern(Pattern::Constructor {
+                    name_location,
+                    module,
+                    ..
+                }) => {
+                    // We can't rename values from other packages if we are not aliasing an unqualified import.
+                    let rename_allowed = if let Some((name, _location)) = module {
+                        this.is_same_package(current_module, name)
+                    } else {
+                        true
+                    };
+                    if name_location.contains(byte_index) && rename_allowed {
                         success_response(*name_location)
                     } else {
                         None
@@ -628,8 +656,16 @@ where
                 Located::Expression(TypedExpr::ModuleSelect {
                     location,
                     field_start,
+                    module_name,
                     ..
-                }) => success_response(SrcSpan::new(*field_start, location.end)),
+                }) => {
+                    // We can't rename values from other packages if we are not aliasing an unqualified import.
+                    if this.is_same_package(current_module, module_name) {
+                        success_response(SrcSpan::new(*field_start, location.end))
+                    } else {
+                        None
+                    }
+                }
                 Located::ModuleStatement(
                     Definition::Function(Function {
                         name: Some((name_location, _)),
