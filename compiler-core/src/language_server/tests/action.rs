@@ -79,6 +79,7 @@ const CONVERT_TO_FUNCTION_CALL: &str = "Convert to function call";
 const INLINE_VARIABLE: &str = "Inline variable";
 const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INTERPOLATE_STRING: &str = "Interpolate string";
+const REPLACE_SPREAD_WITH_IGNORED_FIELDS: &str = "Replace `..` with ignored fields";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -113,6 +114,90 @@ macro_rules! assert_no_code_actions {
         let result = actions_with_title(all_titles, $project, range);
         assert_eq!(expected, result);
     };
+}
+
+#[test]
+fn replace_spread_with_ignored_labelled_fields() {
+    assert_code_action!(
+        REPLACE_SPREAD_WITH_IGNORED_FIELDS,
+        r#"
+pub type Wibble { Wibble(Int, label1: String, label2: Int) }
+
+pub fn main() {
+  let Wibble(_, ..) = todo
+}"#,
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn replace_spread_with_ignored_positional_fields() {
+    assert_code_action!(
+        REPLACE_SPREAD_WITH_IGNORED_FIELDS,
+        r#"
+pub type Wibble { Wibble(Int, label1: String, label2: Int) }
+
+pub fn main() {
+  let Wibble(label1:, label2:, ..) = todo
+}"#,
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn replace_spread_with_all_positional_fields() {
+    assert_code_action!(
+        REPLACE_SPREAD_WITH_IGNORED_FIELDS,
+        r#"
+pub type Wibble { Wibble(Int, String) }
+
+pub fn main() {
+  let Wibble(..) = todo
+}"#,
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn replace_spread_with_ignored_mixed_fields() {
+    assert_code_action!(
+        REPLACE_SPREAD_WITH_IGNORED_FIELDS,
+        r#"
+pub type Wibble { Wibble(Int, String, label1: String, label2: Int) }
+
+pub fn main() {
+  let Wibble(_, label2:, ..) = todo
+}"#,
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn replace_spread_with_all_ignored_fields() {
+    assert_code_action!(
+        REPLACE_SPREAD_WITH_IGNORED_FIELDS,
+        r#"
+pub type Wibble { Wibble(Int, label1: String, label2: Int) }
+
+pub fn main() {
+  let Wibble(..) = todo
+}"#,
+        find_position_of("..").to_selection()
+    );
+}
+
+#[test]
+fn replace_spread_with_ignored_fields_never_calls_a_positional_arg_as_a_labelled_one() {
+    assert_code_action!(
+        REPLACE_SPREAD_WITH_IGNORED_FIELDS,
+        r#"
+pub type Wibble { Wibble(Int, int: Int) }
+
+pub fn main() {
+  let Wibble(..) = todo
+}"#,
+        find_position_of("..").to_selection()
+    );
 }
 
 #[test]
