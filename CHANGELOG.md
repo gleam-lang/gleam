@@ -15,8 +15,8 @@
 
 ### Language server
 
-- The language server now allows renaming of functions and constants across modules.
-  For example:
+- The language server now allows renaming of functions and constants across
+  modules. For example:
 
   ```gleam
   // wibble.gleam
@@ -48,6 +48,35 @@
   ```
 
   ([Surya Rose](https://github.com/GearsDatapacks))
+
+- The language server can now offer a code action to replace a `..` in a pattern
+  with all the fields that are being ignored. For example triggering the code
+  action on this spread:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(id: Int, name: String, moves: List(String))
+  }
+
+  pub fn main() {
+    let Pokemon(..) = todo
+    //          ^ If you put your cursor here
+  }
+  ```
+
+  Would generate the following code:
+
+  ```gleam
+  pub type Pokemon {
+    Pokemon(id: Int, name: String, moves: List(String))
+  }
+
+  pub fn main() {
+    let Pokemon(id:, name:, moves:) = todo
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
 ### Formatter
 
