@@ -3,8 +3,8 @@ use crate::{
     analyse::{self, name::correct_name_case},
     ast::{
         self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
-        Pattern, RecordConstructor, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule,
-        TypedPattern,
+        Pattern, PatternUnusedArguments, RecordConstructor, SrcSpan, TypedArg, TypedExpr,
+        TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -1024,7 +1024,12 @@ where
                     let range = Some(src_span_to_lsp_range(spread_location, &lines));
 
                     let mut printer = Printer::new(&module.ast.names);
-                    let (positional, labelled) = pattern.unused_arguments().unwrap_or_default();
+
+                    let PatternUnusedArguments {
+                        positional,
+                        labelled,
+                    } = pattern.unused_arguments().unwrap_or_default();
+
                     let positional = positional
                         .iter()
                         .map(|type_| format!("- `{}`", printer.print_type(type_)))
