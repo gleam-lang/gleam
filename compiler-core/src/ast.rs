@@ -2034,7 +2034,7 @@ impl TypedPattern {
                 Some(spread_location) if spread_location.contains(byte_index) => {
                     Some(Located::PatternSpread {
                         spread_location: *spread_location,
-                        arguments,
+                        pattern: self,
                     })
                 }
 
@@ -2053,6 +2053,38 @@ impl TypedPattern {
                 .or(Some(Located::Pattern(self))),
         }
         .or(Some(Located::Pattern(self)))
+    }
+
+    /// If the pattern is a `Constructor` with a spread, it returns a tuple with
+    /// all the ignored fields. Split in unlabelled and labelled ones.
+    ///
+    pub(crate) fn unused_arguments(&self) -> Option<(Vec<Arc<Type>>, Vec<(EcoString, Arc<Type>)>)> {
+        let TypedPattern::Constructor {
+            arguments,
+            spread: Some(_),
+            ..
+        } = self
+        else {
+            return None;
+        };
+
+        let mut positional = vec![];
+        let mut labelled = vec![];
+        for argument in arguments {
+            // We only want to display the arguments that were ignored using `..`.
+            // Any argument ignored that way is marked as implicit, so if it is
+            // not implicit we just ignore it.
+            if !argument.is_implicit() {
+                continue;
+            }
+            let type_ = argument.value.type_();
+            match &argument.label {
+                Some(label) => labelled.push((label.clone(), type_)),
+                None => positional.push(type_),
+            }
+        }
+
+        Some((positional, labelled))
     }
 }
 impl<A> HasLocation for Pattern<A> {
