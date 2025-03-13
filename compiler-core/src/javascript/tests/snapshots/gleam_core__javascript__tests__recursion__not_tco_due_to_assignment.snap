@@ -15,9 +15,11 @@ pub fn main(x) {
 
 ----- COMPILED JAVASCRIPT
 export function main(x) {
-  let z = (() => {
+  let _block;
+  {
     let y = x;
-    return main(y - 1);
-  })();
+    _block = main(y - 1);
+  }
+  let z = _block;
   return z;
 }

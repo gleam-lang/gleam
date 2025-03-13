@@ -21,9 +21,9 @@ export function version(n) {
 }
 
 export function main() {
-  let version$1 = (() => {
-    let _pipe = 1;
-    return version(_pipe);
-  })();
+  let _block;
+  let _pipe = 1;
+  _block = version(_pipe);
+  let version$1 = _block;
   return version$1;
 }

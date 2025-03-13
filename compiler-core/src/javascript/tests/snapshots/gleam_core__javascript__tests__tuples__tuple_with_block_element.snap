@@ -17,11 +17,10 @@ fn go() {
 
 ----- COMPILED JAVASCRIPT
 function go() {
-  return [
-    "1",
-    (() => {
-      "2";
-      return "3";
-    })(),
-  ];
+  let _block;
+  {
+    "2";
+    _block = "3";
+  }
+  return ["1", _block];
 }

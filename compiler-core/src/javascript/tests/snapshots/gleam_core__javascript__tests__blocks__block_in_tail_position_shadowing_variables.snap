@@ -16,6 +16,8 @@ fn b() {
 ----- COMPILED JAVASCRIPT
 function b() {
   let x = 1;
-  let x$1 = 2;
-  return x$1 + 1;
+  {
+    let x$1 = 2;
+    return x$1 + 1;
+  }
 }
