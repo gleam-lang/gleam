@@ -2058,7 +2058,7 @@ impl TypedPattern {
     /// If the pattern is a `Constructor` with a spread, it returns a tuple with
     /// all the ignored fields. Split in unlabelled and labelled ones.
     ///
-    pub(crate) fn unused_arguments(&self) -> Option<(Vec<Arc<Type>>, Vec<(EcoString, Arc<Type>)>)> {
+    pub(crate) fn unused_arguments(&self) -> Option<PatternUnusedArguments> {
         let TypedPattern::Constructor {
             arguments,
             spread: Some(_),
@@ -2084,9 +2084,19 @@ impl TypedPattern {
             }
         }
 
-        Some((positional, labelled))
+        Some(PatternUnusedArguments {
+            positional,
+            labelled,
+        })
     }
 }
+
+#[derive(Debug, Default)]
+pub struct PatternUnusedArguments {
+    pub positional: Vec<Arc<Type>>,
+    pub labelled: Vec<(EcoString, Arc<Type>)>,
+}
+
 impl<A> HasLocation for Pattern<A> {
     fn location(&self) -> SrcSpan {
         self.location()
