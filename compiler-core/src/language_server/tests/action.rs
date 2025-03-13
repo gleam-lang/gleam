@@ -5191,6 +5191,49 @@ pub fn main() {
 }
 
 #[test]
+fn extract_constant_from_record_variant_1() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub type Auth {
+  Verified(String)
+  Unverified
+}
+
+pub fn main() {
+  let u = Verified("User")
+  let v = verify(something, u)
+
+  v
+}"#,
+        find_position_of("l").select_until(find_position_of("u").nth_occurrence(4))
+    );
+}
+
+#[test]
+fn extract_constant_from_record_variant_2() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub type Auth {
+  Verified(Int)
+  Unverified
+}
+
+const auth = True
+
+const id = 1234
+
+pub fn main() {
+  let v = verify(auth, Verified(id))
+
+  v
+}"#,
+        find_position_of("V")
+            .nth_occurrence(2)
+            .select_until(find_position_of("(").nth_occurrence(4))
+    );
+}
+
+#[test]
 fn do_not_extract_constant_from_pattern() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
@@ -5396,6 +5439,74 @@ pub fn main() {
         find_position_of("l")
             .nth_occurrence(3)
             .select_until(find_position_of("c"))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_record_1() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"type Pair {
+  Pair(Int, Int)
+}
+
+pub fn main() {
+  let c = list.unzip([Pair(1, 2), Pair(3, todo)])
+  c
+}"#,
+        find_position_of("P").nth_occurrence(4).to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_record_2() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"type Couple {
+  Couple(l: Float, r: Float)
+}
+
+pub fn main() {
+  #(Couple(1.25, 1.0), Couple(0.25, todo))
+}"#,
+        find_position_of("C").nth_occurrence(4).to_selection()
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_record_update() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"type Couple {
+  Couple(l: Int, r: Int)
+}
+
+pub fn main() {
+  let c = Couple(1, 2)
+  let cc = Couple(..c, 2)
+  cc
+}"#,
+        find_position_of("C")
+            .nth_occurrence(4)
+            .select_until(find_position_of("e").nth_occurrence(7))
+    );
+}
+
+#[test]
+fn do_not_extract_constant_from_record_capture() {
+    assert_no_code_actions!(
+        EXTRACT_CONSTANT,
+        r#"type Couple {
+  Couple(l: Int, r: Int)
+}
+
+pub fn main() {
+  let c = Couple(1, _)
+  c
+}"#,
+        find_position_of("C")
+            .nth_occurrence(3)
+            .select_until(find_position_of("e").nth_occurrence(5))
     );
 }
 
