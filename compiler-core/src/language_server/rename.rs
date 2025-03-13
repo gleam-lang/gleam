@@ -59,9 +59,9 @@ pub fn rename_local_variable(
         }
     }
 
-    references
-        .into_iter()
-        .for_each(|location| edits.replace(location, params.new_name.clone()));
+    for location in references {
+        edits.replace(location, params.new_name.clone());
+    }
 
     Some(workspace_edit(uri, edits.edits))
 }
@@ -165,18 +165,17 @@ fn rename_references_in_module(
 
     let mut edits = TextEdits::new(&source_information.line_numbers);
 
-    references
-        .iter()
-        .for_each(|reference| edits.replace(reference.location, new_name.clone()));
+    for reference in references {
+        edits.replace(reference.location, new_name.clone());
+    }
 
     let Some(uri) = url_from_path(source_information.path.as_str()) else {
         return;
     };
 
-    _ = workspace_edit
-        .changes
-        .as_mut()
-        .map(|changes| changes.insert(uri, edits.edits));
+    if let Some(changes) = workspace_edit.changes.as_mut() {
+        _ = changes.insert(uri, edits.edits);
+    }
 }
 
 fn url_from_path(path: &str) -> Option<Url> {
@@ -217,9 +216,8 @@ fn alias_references_in_module(
 
     let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
 
-    references
-        .iter()
-        .for_each(|reference| match reference.kind {
+    for reference in references {
+        match reference.kind {
             ReferenceKind::Qualified => {}
             ReferenceKind::Unqualified => {
                 edits.replace(reference.location, params.new_name.clone())
@@ -228,7 +226,8 @@ fn alias_references_in_module(
                 edits.insert(reference.location.end, format!(" as {}", params.new_name))
             }
             ReferenceKind::Definition => {}
-        });
+        }
+    }
 
     Some(workspace_edit(
         params.text_document_position.text_document.uri.clone(),
