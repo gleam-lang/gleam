@@ -3021,6 +3021,15 @@ fn can_be_constant(
             ) || mc.contains(name)
         }
 
+        // Extract record types as long as arguments can be constant
+        TypedExpr::Call { args, type_, .. } => {
+            matches!(type_.as_ref(), Type::Named { .. })
+                && args
+                    .iter()
+                    .all(|arg| can_be_constant(module, &arg.value, module_constants))
+        }
+
+        // Extract concat binary operation if both sides can be constants
         TypedExpr::BinOp {
             name, left, right, ..
         } => {
@@ -3032,7 +3041,6 @@ fn can_be_constant(
         TypedExpr::Block { .. }
         | TypedExpr::Pipeline { .. }
         | TypedExpr::Fn { .. }
-        | TypedExpr::Call { .. }
         | TypedExpr::Case { .. }
         | TypedExpr::RecordAccess { .. }
         | TypedExpr::ModuleSelect { .. }
@@ -3245,12 +3253,12 @@ impl<'ast> ast::visit::Visit<'ast> for ExtractConstant<'ast> {
                 TypedExpr::List { .. }
                 | TypedExpr::Tuple { .. }
                 | TypedExpr::BitArray { .. }
-                | TypedExpr::BinOp { .. } => Some(ExtractableToConstant::ComposedValue),
+                | TypedExpr::BinOp { .. }
+                | TypedExpr::Call { .. } => Some(ExtractableToConstant::ComposedValue),
 
                 TypedExpr::Block { .. }
                 | TypedExpr::Pipeline { .. }
                 | TypedExpr::Fn { .. }
-                | TypedExpr::Call { .. }
                 | TypedExpr::Case { .. }
                 | TypedExpr::RecordAccess { .. }
                 | TypedExpr::ModuleSelect { .. }
