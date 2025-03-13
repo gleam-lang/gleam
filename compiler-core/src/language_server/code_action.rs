@@ -4,9 +4,10 @@ use crate::{
     Error, STDLIB_PACKAGE_NAME,
     ast::{
         self, AssignName, AssignmentKind, CallArg, CustomType, FunctionLiteralKind,
-        ImplicitCallArgOrigin, Pattern, PipelineAssignmentKind, RecordConstructor, SrcSpan,
-        TodoKind, TypedArg, TypedAssignment, TypedExpr, TypedModuleConstant, TypedPattern,
-        TypedPipelineAssignment, TypedRecordConstructor, TypedStatement, TypedUse,
+        ImplicitCallArgOrigin, Pattern, PatternUnusedArguments, PipelineAssignmentKind,
+        RecordConstructor, SrcSpan, TodoKind, TypedArg, TypedAssignment, TypedExpr,
+        TypedModuleConstant, TypedPattern, TypedPipelineAssignment, TypedRecordConstructor,
+        TypedStatement, TypedUse,
         visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
@@ -5370,7 +5371,11 @@ impl<'ast> ast::visit::Visit<'ast> for ReplaceSpreadWithIgnoredFields<'ast> {
             ..
         } = pattern
         {
-            if let Some((positional, labelled)) = pattern.unused_arguments() {
+            if let Some(PatternUnusedArguments {
+                positional,
+                labelled,
+            }) = pattern.unused_arguments()
+            {
                 // If there's any unused argument that's being ignored we want to
                 // suggest the code action.
                 let first_labelled_argument_start = arguments
