@@ -16,13 +16,13 @@ pub fn main() {
 ----- COMPILED JAVASCRIPT
 export function main() {
   let text = "first defined";
-  let other = (() => {
-    let $ = "defined again";
-    {
-      let text$1 = $;
-      return undefined;
-    }
-  })();
+  let _block;
+  let $ = "defined again";
+  {
+    let text$1 = $;
+    _block = undefined;
+  }
+  let other = _block;
   let text$1 = "a third time";
   return text$1;
 }

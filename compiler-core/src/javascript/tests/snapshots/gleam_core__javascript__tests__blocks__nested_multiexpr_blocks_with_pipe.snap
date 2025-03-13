@@ -25,14 +25,18 @@ function add1(a) {
 }
 
 function go() {
-  let x = (() => {
+  let _block;
+  {
     1;
-    let _pipe = (() => {
+    let _block$1;
+    {
       2;
       let _pipe = 3;
-      return add1(_pipe);
-    })();
-    return add1(_pipe);
-  })();
+      _block$1 = add1(_pipe);
+    }
+    let _pipe$1 = _block$1;
+    _block = add1(_pipe$1);
+  }
+  let x = _block;
   return x;
 }

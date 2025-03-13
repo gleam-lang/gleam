@@ -16,6 +16,8 @@ fn b() {
 ----- COMPILED JAVASCRIPT
 function b() {
   let x = 1;
-  undefined;
-  return x + 1;
+  {
+    undefined;
+    return x + 1;
+  }
 }

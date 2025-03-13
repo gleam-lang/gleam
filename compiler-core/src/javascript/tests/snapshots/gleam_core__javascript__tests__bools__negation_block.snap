@@ -12,8 +12,10 @@ pub fn negate(x) {
 
 ----- COMPILED JAVASCRIPT
 export function negate(x) {
-  return !(() => {
+  let _block;
+  {
     123;
-    return x;
-  })();
+    _block = x;
+  }
+  return !_block;
 }

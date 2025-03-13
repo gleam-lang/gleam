@@ -16,12 +16,12 @@ pub fn bad() {
 ----- COMPILED JAVASCRIPT
 export function bad() {
   return (state) => {
-    let state$1 = (() => {
-      let $ = undefined;
-      {
-        return state;
-      }
-    })();
+    let _block;
+    let $ = undefined;
+    {
+      _block = state;
+    }
+    let state$1 = _block;
     return state$1;
   };
 }

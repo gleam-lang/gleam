@@ -17,9 +17,9 @@ import * as $wibble from "../wibble.mjs";
 import { println } from "../wibble.mjs";
 
 export function main() {
-  let println$1 = (() => {
-    let _pipe = "oh dear";
-    return println(_pipe);
-  })();
+  let _block;
+  let _pipe = "oh dear";
+  _block = println(_pipe);
+  let println$1 = _block;
   return println$1;
 }

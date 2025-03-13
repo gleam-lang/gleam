@@ -17,11 +17,11 @@ fn main(f, a, b) {
 
 ----- COMPILED JAVASCRIPT
 function main(f, a, b) {
-  return (() => {
-    let _pipe = a;
-    return f(_pipe);
-  })() + (() => {
-    let _pipe = b;
-    return f(_pipe);
-  })();
+  let _block;
+  let _pipe = a;
+  _block = f(_pipe);
+  let _block$1;
+  let _pipe$1 = b;
+  _block$1 = f(_pipe$1);
+  return _block + _block$1;
 }

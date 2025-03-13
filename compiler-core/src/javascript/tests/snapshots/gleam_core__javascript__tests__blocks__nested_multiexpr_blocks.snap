@@ -18,10 +18,14 @@ fn go() {
 
 ----- COMPILED JAVASCRIPT
 function go() {
-  let x = (() => {
+  let _block;
+  {
     1;
-    2;
-    return 3;
-  })();
+    {
+      2;
+      _block = 3;
+    }
+  }
+  let x = _block;
   return x;
 }

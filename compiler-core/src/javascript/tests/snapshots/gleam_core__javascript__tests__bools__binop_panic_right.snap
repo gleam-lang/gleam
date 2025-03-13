@@ -11,14 +11,14 @@ pub fn negate(x) {
 import { makeError } from "../gleam.mjs";
 
 export function negate(x) {
-  return x && (() => {
-    throw makeError(
-      "panic",
-      "my/mod",
-      2,
-      "negate",
-      "`panic` expression evaluated.",
-      {}
-    )
-  })();
+  let _block;
+  throw makeError(
+    "panic",
+    "my/mod",
+    2,
+    "negate",
+    "`panic` expression evaluated.",
+    {}
+  )
+  return x && _block;
 }

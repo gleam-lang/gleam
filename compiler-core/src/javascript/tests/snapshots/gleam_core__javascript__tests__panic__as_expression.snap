@@ -14,26 +14,24 @@ fn go(f) {
 import { makeError } from "../gleam.mjs";
 
 function go(f) {
-  let boop = (() => {
-    throw makeError(
-      "panic",
-      "my/mod",
-      3,
-      "go",
-      "`panic` expression evaluated.",
-      {}
-    )
-  })();
-  return f(
-    (() => {
-      throw makeError(
-        "panic",
-        "my/mod",
-        4,
-        "go",
-        "`panic` expression evaluated.",
-        {}
-      )
-    })(),
-  );
+  let _block;
+  throw makeError(
+    "panic",
+    "my/mod",
+    3,
+    "go",
+    "`panic` expression evaluated.",
+    {}
+  )
+  let boop = _block;
+  let _block$1;
+  throw makeError(
+    "panic",
+    "my/mod",
+    4,
+    "go",
+    "`panic` expression evaluated.",
+    {}
+  )
+  return f(_block$1);
 }

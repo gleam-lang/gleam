@@ -45,11 +45,13 @@ function go(x, wibble) {
   let a$2 = x[0];
   let b = a$2;
   wibble(b);
-  let c = (() => {
+  let _block;
+  {
     let a$3 = a$2;
-    return [a$3, b];
-  })();
-  wibble(a$2);
+    _block = [a$3, b];
+  }
+  let c = _block;
+  wibble(a$3);
   let x$1 = c;
   return x$1;
 }
