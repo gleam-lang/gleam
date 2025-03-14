@@ -4,6 +4,7 @@ mod completion;
 mod definition;
 mod document_symbols;
 mod hover;
+mod reference;
 mod rename;
 mod signature_help;
 

@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\npub type Wibble { Wibble }\n\npub fn main() {\n  Wibble\n}\n"
+---
+-- mod.gleam
+
+import app.{Wibble}
+            ▔▔▔▔▔▔ 
+
+fn wobble() {
+  app.Wibble
+      ▔▔▔▔▔▔
+}
+
+fn other() {
+  Wibble
+  ▔▔▔▔▔▔
+}
+
+
+-- app.gleam
+
+pub type Wibble { Wibble }
+                  ↑▔▔▔▔▔  
+
+pub fn main() {
+  Wibble
+  ▔▔▔▔▔▔
+}
