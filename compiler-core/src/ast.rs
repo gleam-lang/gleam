@@ -34,6 +34,7 @@ pub const RECORD_UPDATE_VARIABLE: &str = "_record";
 pub const ASSERT_FAIL_VARIABLE: &str = "_assert_fail";
 pub const ASSERT_SUBJECT_VARIABLE: &str = "_assert_subject";
 pub const CAPTURE_VARIABLE: &str = "_capture";
+pub const BLOCK_VARIABLE: &str = "_block";
 
 pub trait HasLocation {
     fn location(&self) -> SrcSpan;

@@ -11,14 +11,14 @@ pub fn negate(x) {
 import { makeError } from "../gleam.mjs";
 
 export function negate(x) {
-  return !(() => {
-    throw makeError(
-      "todo",
-      "my/mod",
-      2,
-      "negate",
-      "`todo` expression evaluated. This code has not yet been implemented.",
-      {}
-    )
-  })();
+  let _block;
+  throw makeError(
+    "todo",
+    "my/mod",
+    2,
+    "negate",
+    "`todo` expression evaluated. This code has not yet been implemented.",
+    {}
+  )
+  return !_block;
 }

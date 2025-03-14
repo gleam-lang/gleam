@@ -14,11 +14,11 @@ fn go(x, y) {
 
 ----- COMPILED JAVASCRIPT
 function go(x, y) {
-  return (() => {
-    if (x === 0) {
-      return y;
-    } else {
-      return y;
-    }
-  })()();
+  let _block;
+  if (x === 0) {
+    _block = y;
+  } else {
+    _block = y;
+  }
+  return _block();
 }

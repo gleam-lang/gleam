@@ -487,3 +487,20 @@ pub fn main() {
 "
     );
 }
+
+// During the implementation of https://github.com/gleam-lang/gleam/pull/4337,
+// a bug was found where this code would compile incorrectly.
+#[test]
+fn two_pipes_in_a_row() {
+    assert_js!(
+        "
+pub type Function(a) {
+  Function(fn() -> a)
+}
+
+pub fn main() {
+  [fn() { 1 } |> Function, fn() { 2 } |> Function]
+}
+"
+    );
+}

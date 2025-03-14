@@ -33,7 +33,7 @@ enum Index<'a> {
 
 #[derive(Debug)]
 pub(crate) struct Generator<'module_ctx, 'expression_gen, 'a> {
-    pub expression_generator: &'expression_gen mut expression::Generator<'module_ctx>,
+    pub expression_generator: &'expression_gen mut expression::Generator<'module_ctx, 'a>,
     path: Vec<Index<'a>>,
     checks: Vec<Check<'a>>,
     assignments: Vec<Assignment<'a>>,
@@ -176,7 +176,7 @@ struct SizedBitArraySegmentDetails {
 
 impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, 'a> {
     pub fn new(
-        expression_generator: &'expression_gen mut expression::Generator<'module_ctx>,
+        expression_generator: &'expression_gen mut expression::Generator<'module_ctx, 'a>,
     ) -> Self {
         Self {
             path: vec![],
@@ -1260,7 +1260,7 @@ impl<'a> Check<'a> {
 }
 
 pub(crate) fn assign_subject<'a>(
-    expression_generator: &mut expression::Generator<'_>,
+    expression_generator: &mut expression::Generator<'_, 'a>,
     subject: &'a TypedExpr,
 ) -> (Document<'a>, Option<Document<'a>>) {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
@@ -1286,7 +1286,7 @@ pub(crate) fn assign_subject<'a>(
 }
 
 pub(crate) fn assign_subjects<'a>(
-    expression_generator: &mut expression::Generator<'_>,
+    expression_generator: &mut expression::Generator<'_, 'a>,
     subjects: &'a [TypedExpr],
 ) -> Vec<(Document<'a>, Option<Document<'a>>)> {
     let mut out = Vec::with_capacity(subjects.len());

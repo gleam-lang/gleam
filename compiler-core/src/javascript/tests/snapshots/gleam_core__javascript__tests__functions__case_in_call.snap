@@ -13,13 +13,11 @@ pub fn main(f, x) {
 
 ----- COMPILED JAVASCRIPT
 export function main(f, x) {
-  return f(
-    (() => {
-      if (x === 1) {
-        return 2;
-      } else {
-        return 0;
-      }
-    })(),
-  );
+  let _block;
+  if (x === 1) {
+    _block = 2;
+  } else {
+    _block = 0;
+  }
+  return f(_block);
 }
