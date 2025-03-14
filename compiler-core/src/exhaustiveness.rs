@@ -303,7 +303,7 @@ pub enum Pattern {
     },
     StringPrefix {
         prefix: EcoString,
-        rest_pattern: Id<Pattern>,
+        rest: Id<Pattern>,
     },
     Assign {
         name: EcoString,
@@ -313,15 +313,15 @@ pub enum Pattern {
         name: EcoString,
     },
     Tuple {
-        elems_patterns: Vec<Id<Pattern>>,
+        elems: Vec<Id<Pattern>>,
     },
     Variant {
         index: usize,
-        args_patterns: Vec<Id<Pattern>>,
+        args: Vec<Id<Pattern>>,
     },
-    List {
-        first_pattern: Id<Pattern>,
-        rest_pattern: Id<Pattern>,
+    NonEmptyList {
+        first: Id<Pattern>,
+        rest: Id<Pattern>,
     },
     EmptyList,
     // TODO: Compile the matching within the bit strings
@@ -353,14 +353,12 @@ impl Pattern {
             Pattern::StringPrefix { prefix, .. } => RuntimeCheckKind::StringPrefix {
                 prefix: prefix.clone(),
             },
-            Pattern::Tuple { elems_patterns } => RuntimeCheckKind::Tuple {
-                size: elems_patterns.len(),
-            },
+            Pattern::Tuple { elems } => RuntimeCheckKind::Tuple { size: elems.len() },
             Pattern::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
             Pattern::BitArray { value } => RuntimeCheckKind::BitArray {
                 value: value.clone(),
             },
-            Pattern::List { .. } => RuntimeCheckKind::NonEmptyList,
+            Pattern::NonEmptyList { .. } => RuntimeCheckKind::NonEmptyList,
             Pattern::EmptyList => RuntimeCheckKind::EmptyList,
         };
 
@@ -441,11 +439,11 @@ pub enum RuntimeCheck {
         index: usize,
         args: Vec<Variable>,
     },
-    EmptyList,
-    List {
+    NonEmptyList {
         first_arg: Variable,
         rest_arg: Variable,
     },
+    EmptyList,
 }
 
 impl RuntimeCheck {
@@ -472,7 +470,7 @@ impl RuntimeCheck {
             },
             RuntimeCheck::Variant { index, args: _ } => RuntimeCheckKind::Variant { index: *index },
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
-            RuntimeCheck::List {
+            RuntimeCheck::NonEmptyList {
                 first_arg: _,
                 rest_arg: _,
             } => RuntimeCheckKind::NonEmptyList,
@@ -1037,35 +1035,39 @@ impl<'a> Compiler<'a> {
             // After making sure a value is not an empty list we'll have to perform
             // additional checks on its first item and on the tail.
             (
-                Pattern::List {
-                    first_pattern,
-                    rest_pattern,
-                },
-                RuntimeCheck::List {
+                Pattern::NonEmptyList { first, rest },
+                RuntimeCheck::NonEmptyList {
                     first_arg,
                     rest_arg,
                 },
-            ) => vec![first_arg.is(*first_pattern), rest_arg.is(*rest_pattern)],
+            ) => vec![first_arg.is(*first), rest_arg.is(*rest)],
 
             // After making sure a value is a specific variant we'll have to check each
             // of its arguments respects the given patterns (as shown in the doc example for
             // this function!)
-            (Pattern::Variant { args_patterns, .. }, RuntimeCheck::Variant { args, .. }) => {
-                (args.iter().zip(args_patterns))
-                    .map(|(arg, pattern)| arg.is(*pattern))
-                    .collect_vec()
-            }
+            (
+                Pattern::Variant {
+                    args: args_patterns,
+                    ..
+                },
+                RuntimeCheck::Variant { args, .. },
+            ) => (args.iter().zip(args_patterns))
+                .map(|(arg, pattern)| arg.is(*pattern))
+                .collect_vec(),
 
             // Tuples are exactly the same as variants: after making sure we're dealing with
             // a tuple, we will have to check that each of its elements matches the given
             // pattern: `a is #(1, _)` will result in the following checks
             // `a0 is 1, a1 is _` (where `a0` and `a1` are fresh variable names we use to
             // refer to each of the tuple's elements).
-            (Pattern::Tuple { elems_patterns }, RuntimeCheck::Tuple { args, .. }) => {
-                (args.iter().zip(elems_patterns))
-                    .map(|(arg, pattern)| arg.is(*pattern))
-                    .collect_vec()
-            }
+            (
+                Pattern::Tuple {
+                    elems: elems_patterns,
+                },
+                RuntimeCheck::Tuple { args, .. },
+            ) => (args.iter().zip(elems_patterns))
+                .map(|(arg, pattern)| arg.is(*pattern))
+                .collect_vec(),
 
             // Strings are quite fun: if we've checked at runtime a string starts with a given
             // prefix and we want to check that it's some overlapping literal value we'll still
@@ -1109,7 +1111,7 @@ impl<'a> Compiler<'a> {
             (
                 Pattern::StringPrefix {
                     prefix: prefix1,
-                    rest_pattern: rest1,
+                    rest: rest1,
                 },
                 RuntimeCheck::StringPrefix {
                     prefix: prefix0,
@@ -1147,7 +1149,7 @@ impl<'a> Compiler<'a> {
     /// names for its arguments.
     ///
     fn is_list_check(&mut self, inner_type: Arc<Type>) -> RuntimeCheck {
-        RuntimeCheck::List {
+        RuntimeCheck::NonEmptyList {
             first_arg: self.fresh_variable(inner_type.clone()),
             rest_arg: self.fresh_variable(Arc::new(Type::list(inner_type))),
         }
@@ -1177,10 +1179,10 @@ impl<'a> Compiler<'a> {
     /// Allocates a new `StringPrefix` pattern with the given prefix and pattern
     /// for the rest of the string.
     ///
-    fn string_prefix_pattern(&mut self, prefix: &str, rest_pattern: Id<Pattern>) -> Id<Pattern> {
+    fn string_prefix_pattern(&mut self, prefix: &str, rest: Id<Pattern>) -> Id<Pattern> {
         self.patterns.alloc(Pattern::StringPrefix {
             prefix: EcoString::from(prefix),
-            rest_pattern,
+            rest,
         })
     }
 }
@@ -1618,8 +1620,8 @@ impl CaseToCompile {
             }
 
             TypedPattern::Tuple { elems, .. } => {
-                let elems_patterns = elems.iter().map(|elem| self.register(elem)).collect_vec();
-                self.insert(Pattern::Tuple { elems_patterns })
+                let elems = elems.iter().map(|elem| self.register(elem)).collect_vec();
+                self.insert(Pattern::Tuple { elems })
             }
 
             TypedPattern::List { elements, tail, .. } => {
@@ -1628,11 +1630,8 @@ impl CaseToCompile {
                     None => self.insert(Pattern::EmptyList),
                 };
                 for element in elements.iter().rev() {
-                    let first_pattern = self.register(element);
-                    list = self.insert(Pattern::List {
-                        first_pattern,
-                        rest_pattern: list,
-                    });
+                    let first = self.register(element);
+                    list = self.insert(Pattern::NonEmptyList { first, rest: list });
                 }
                 list
             }
@@ -1643,14 +1642,11 @@ impl CaseToCompile {
                 ..
             } => {
                 let index = constructor.expect_ref("must be inferred").constructor_index as usize;
-                let args_patterns = arguments
+                let args = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
-                self.insert(Pattern::Variant {
-                    index,
-                    args_patterns,
-                })
+                self.insert(Pattern::Variant { index, args })
             }
 
             TypedPattern::BitArray { location, .. } => {
@@ -1673,11 +1669,8 @@ impl CaseToCompile {
                     AssignName::Variable(name) => Pattern::Variable { name: name.clone() },
                     AssignName::Discard(_) => Pattern::Discard,
                 };
-                let rest_pattern = self.insert(rest_pattern);
-                self.insert(Pattern::StringPrefix {
-                    prefix,
-                    rest_pattern,
-                })
+                let rest = self.insert(rest_pattern);
+                self.insert(Pattern::StringPrefix { prefix, rest })
             }
 
             TypedPattern::VarUsage { .. } => {
