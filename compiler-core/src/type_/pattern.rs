@@ -102,8 +102,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     // This variable was defined in the Initial multi-pattern
                     Some(initial) if self.initial_pattern_vars.contains(name) => {
                         assigned.push(name.into());
-                        let initial_typ = initial.type_.clone();
-                        unify(initial_typ, type_.clone())?;
+                        let initial_type = initial.type_.clone();
+                        unify(initial_type, type_.clone())?;
                         unify_constructor_variants(Arc::make_mut(&mut initial.type_), &type_);
                         Ok(())
                     }
@@ -783,7 +783,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
                 }
 
-                let constructor_typ = cons.type_.clone();
+                let constructor_type = cons.type_.clone();
                 let constructor = match &cons.variant {
                     ValueConstructorVariant::Record {
                         name,
@@ -833,7 +833,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 let instantiated_constructor_type =
                     self.environment
-                        .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
+                        .instantiate(constructor_type, &mut hashmap![], self.hydrator);
                 match instantiated_constructor_type.deref() {
                     Type::Fn { args, return_ } => {
                         if args.len() == pattern_args.len() {

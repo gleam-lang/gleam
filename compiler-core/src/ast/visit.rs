@@ -1016,7 +1016,7 @@ pub fn visit_typed_expr_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _field_start: &'a u32,
-    _typ: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
     _label: &'a EcoString,
     _module_name: &'a EcoString,
     _module_alias: &'a EcoString,
