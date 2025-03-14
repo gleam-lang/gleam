@@ -259,3 +259,21 @@ fn b() {
 "#
     );
 }
+
+#[test]
+fn shadowed_variable_in_nested_scope() {
+    assert_js!(
+        "
+pub fn main() {
+  {
+    let x = 1
+    let _ = {
+      let x = 2
+      x
+    }
+    x
+  }
+}
+"
+    )
+}
