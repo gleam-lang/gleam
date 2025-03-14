@@ -558,13 +558,16 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
+
+
+
   
   <li><a href="#one">one</a></li>
   
+
+
 </ul>
 
 
@@ -926,13 +929,16 @@ expression: "compile_with_markdown_pages(config, modules, pages,\nCompileWithMar
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
+
+
+
   
   <li><a href="#one">one</a></li>
   
+
+
 </ul>
 
 

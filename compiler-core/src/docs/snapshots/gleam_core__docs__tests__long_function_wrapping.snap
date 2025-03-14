@@ -234,13 +234,16 @@ expression: "compile(config, modules)"
 
 
 
-
-
-<h2>Functions</h2>
+<h2>Values</h2>
 <ul>
+
+
+
   
   <li><a href="#lazy_or">lazy_or</a></li>
   
+
+
 </ul>
 
 
