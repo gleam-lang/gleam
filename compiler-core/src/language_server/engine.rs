@@ -931,6 +931,13 @@ where
         })
     }
 
+    pub fn find_references(
+        &mut self,
+        _params: lsp::ReferenceParams,
+    ) -> Response<Option<Vec<SrcSpan>>> {
+        self.respond(|_this| Ok(None))
+    }
+
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {
         let result = handler(self);
         let warnings = self.take_warnings();
