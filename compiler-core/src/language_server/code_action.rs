@@ -5404,3 +5404,109 @@ impl<'ast> ast::visit::Visit<'ast> for FillUnusedFields<'ast> {
         ast::visit::visit_typed_pattern(self, pattern);
     }
 }
+
+/// Code action to remove an echo.
+///
+pub struct RemoveEcho<'a> {
+    module: &'a Module,
+    params: &'a CodeActionParams,
+    edits: TextEdits<'a>,
+    echo_span_to_delete: Option<SrcSpan>,
+    // We need to keep a reference to the two latest pipeline assignments we
+    // run into to properly delete an echo that's inside a pipeline.
+    latest_pipe_step: Option<SrcSpan>,
+    second_to_latest_pipe_step: Option<SrcSpan>,
+}
+
+impl<'a> RemoveEcho<'a> {
+    pub fn new(
+        module: &'a Module,
+        line_numbers: &'a LineNumbers,
+        params: &'a CodeActionParams,
+    ) -> Self {
+        Self {
+            module,
+            params,
+            edits: TextEdits::new(line_numbers),
+            echo_span_to_delete: None,
+            latest_pipe_step: None,
+            second_to_latest_pipe_step: None,
+        }
+    }
+
+    pub fn code_actions(mut self) -> Vec<CodeAction> {
+        self.visit_typed_module(&self.module.ast);
+
+        let Some(echo_span_to_delete) = self.echo_span_to_delete else {
+            return vec![];
+        };
+
+        self.edits.delete(echo_span_to_delete);
+
+        let mut action = Vec::with_capacity(1);
+        CodeActionBuilder::new("Remove `echo`")
+            .kind(CodeActionKind::REFACTOR_REWRITE)
+            .changes(self.params.text_document.uri.clone(), self.edits.edits)
+            .preferred(false)
+            .push_to(&mut action);
+        action
+    }
+}
+
+impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
+    fn visit_typed_expr_echo(
+        &mut self,
+        location: &'ast SrcSpan,
+        _type_: &'ast Arc<Type>,
+        expression: &'ast Option<Box<TypedExpr>>,
+    ) {
+        println!("echo");
+        // We also want to trigger the action if we're hovering over the expression
+        // being printed. So we create a unique span starting from the start of echo
+        // end ending at the end of the expression.
+        //
+        // ```
+        // echo 1 + 2
+        // ^^^^^^^^^^ This is `location`, we want to trigger the action if we're
+        //            inside it, not just the keyword
+        // ```
+        //
+        let echo_range = self.edits.src_span_to_lsp_range(*location);
+        if !within(self.params.range, echo_range) {
+            return;
+        }
+
+        if let Some(expr) = expression {
+            // If there's an expression we delete everything we find until its
+            // start (excluded).
+            let span_to_delete = SrcSpan::new(location.start, expr.location().start);
+            self.echo_span_to_delete = Some(span_to_delete);
+            ast::visit::visit_typed_expr(self, expr)
+        } else {
+            // Othwerise we know we're inside a pipeline, we take the closest step
+            // that is not echo itself and delete everything from its end until the
+            // end of the echo keyword:
+            //
+            // ```txt
+            // wibble |> echo |> wobble
+            //       ^^^^^^^^ This span right here
+            // ```
+            let step_preceding_echo = self
+                .latest_pipe_step
+                .filter(|l| l != location)
+                .or(self.second_to_latest_pipe_step);
+            if let Some(step_preceding_echo) = step_preceding_echo {
+                let span_to_delete = SrcSpan::new(step_preceding_echo.end, location.start + 4);
+                self.echo_span_to_delete = Some(span_to_delete);
+            }
+        }
+    }
+
+    fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {
+        if self.latest_pipe_step.is_some() {
+            self.second_to_latest_pipe_step = self.latest_pipe_step;
+        }
+        self.latest_pipe_step = Some(assignment.location);
+        ast::visit::visit_typed_pipeline_assignment(self, assignment);
+    }
+}
