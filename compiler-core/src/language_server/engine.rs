@@ -1,10 +1,9 @@
 use crate::{
     Error, Result, Warning,
-    analyse::{self, name::correct_name_case},
+    analyse::name::correct_name_case,
     ast::{
-        self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
-        Pattern, RecordConstructor, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule,
-        TypedPattern,
+        self, CustomType, Definition, DefinitionLocation, ModuleConstant, SrcSpan, TypedArg,
+        TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -15,10 +14,8 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, Deprecation, ModuleInterface, ModuleValueConstructor, Type, TypeConstructor,
-        ValueConstructor, ValueConstructorVariant,
-        error::{Named, VariableOrigin},
-        printer::Printer,
+        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant, error::VariableOrigin, printer::Printer,
     },
 };
 use camino::Utf8PathBuf;
@@ -45,6 +42,7 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
+    reference::{Referenced, reference_for_ast_node},
     rename::{
         RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
     },
@@ -586,109 +584,31 @@ where
 
             let byte_index = lines.byte_index(params.position.line, params.position.character);
 
-            Ok(match found {
-                Located::Expression(TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            variant: ValueConstructorVariant::LocalVariable { origin, location },
-                            ..
-                        },
-                    ..
-                })
-                | Located::Pattern(Pattern::Variable {
-                    origin, location, ..
-                }) => match origin {
-                    VariableOrigin::Variable(_)
-                    | VariableOrigin::AssignmentPattern
-                    | VariableOrigin::LabelShorthand(_) => success_response(*location),
-                    VariableOrigin::Generated => None,
+            Ok(match reference_for_ast_node(found, &current_module.name) {
+                Some(Referenced::LocalVariable {
+                    location, origin, ..
+                }) if location.contains(byte_index) => match origin {
+                    Some(VariableOrigin::Generated) => None,
+                    Some(
+                        VariableOrigin::Variable(_)
+                        | VariableOrigin::AssignmentPattern
+                        | VariableOrigin::LabelShorthand(_),
+                    )
+                    | None => success_response(location),
                 },
-                Located::Pattern(Pattern::VarUsage { constructor, .. }) => constructor
-                    .as_ref()
-                    .and_then(|constructor| match &constructor.variant {
-                        ValueConstructorVariant::LocalVariable { origin, location } => match origin
-                        {
-                            VariableOrigin::Variable(_)
-                            | VariableOrigin::AssignmentPattern
-                            | VariableOrigin::LabelShorthand(_) => success_response(*location),
-                            VariableOrigin::Generated => None,
-                        },
-                        _ => None,
-                    }),
-                Located::Pattern(Pattern::Assign { location, .. }) => success_response(*location),
-                Located::Pattern(Pattern::Constructor {
-                    name_location,
+                Some(Referenced::ModuleValue {
                     module,
+                    location,
+                    target_kind,
                     ..
-                }) => {
+                }) if location.contains(byte_index) => {
                     // We can't rename values from other packages if we are not aliasing an unqualified import.
-                    let rename_allowed = if let Some((name, _location)) = module {
-                        this.is_same_package(current_module, name)
-                    } else {
-                        true
+                    let rename_allowed = match target_kind {
+                        RenameTarget::Qualified => this.is_same_package(current_module, &module),
+                        RenameTarget::Unqualified | RenameTarget::Definition => true,
                     };
-                    if name_location.contains(byte_index) && rename_allowed {
-                        success_response(*name_location)
-                    } else {
-                        None
-                    }
-                }
-                Located::Arg(arg) => match &arg.names {
-                    ArgNames::Named { location, .. }
-                    | ArgNames::NamedLabelled {
-                        name_location: location,
-                        ..
-                    } => success_response(*location),
-                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
-                },
-                Located::Expression(TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            variant:
-                                ValueConstructorVariant::ModuleConstant { .. }
-                                | ValueConstructorVariant::ModuleFn { .. }
-                                | ValueConstructorVariant::Record { .. },
-                            ..
-                        },
-                    location,
-                    ..
-                }) => success_response(*location),
-                Located::Expression(TypedExpr::ModuleSelect {
-                    location,
-                    field_start,
-                    module_name,
-                    ..
-                }) => {
-                    // We can't rename values from other packages if we are not aliasing an unqualified import.
-                    if this.is_same_package(current_module, module_name) {
-                        success_response(SrcSpan::new(*field_start, location.end))
-                    } else {
-                        None
-                    }
-                }
-                Located::ModuleStatement(
-                    Definition::Function(Function {
-                        name: Some((name_location, _)),
-                        ..
-                    })
-                    | Definition::ModuleConstant(ModuleConstant { name_location, .. }),
-                )
-                | Located::VariantConstructorDefinition(RecordConstructor {
-                    name_location, ..
-                }) => {
-                    // When we locate a module statement, we don't know where exactly the cursor
-                    // is positioned. In this example, we want to rename the first but not the second:
-                    // ```gleam
-                    // pub fn something() {
-                    //   //   ^ Trigger rename
-                    // }
-                    //
-                    // pub fn something_else() {
-                    //   //^ Trigger rename
-                    // }
-                    // ```
-                    if name_location.contains(byte_index) {
-                        success_response(*name_location)
+                    if rename_allowed {
+                        success_response(location)
                     } else {
                         None
                     }
@@ -711,204 +631,27 @@ where
                 return Ok(None);
             };
 
-            Ok(match found {
-                Located::Expression(TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            variant: ValueConstructorVariant::LocalVariable { location, origin },
-                            ..
-                        },
+            Ok(match reference_for_ast_node(found, &module.name) {
+                Some(Referenced::LocalVariable {
+                    origin,
+                    definition_location,
                     ..
-                })
-                | Located::Pattern(Pattern::Variable {
-                    location, origin, ..
-                }) => match origin {
-                    VariableOrigin::Variable(_) | VariableOrigin::AssignmentPattern => {
-                        rename_local_variable(
-                            module,
-                            &lines,
-                            &params,
-                            *location,
-                            VariableRenameKind::Variable,
-                        )
-                    }
-                    VariableOrigin::LabelShorthand(_) => rename_local_variable(
-                        module,
-                        &lines,
-                        &params,
-                        *location,
-                        VariableRenameKind::LabelShorthand,
-                    ),
-                    VariableOrigin::Generated => None,
-                },
-                Located::Pattern(Pattern::VarUsage { constructor, .. }) => constructor
-                    .as_ref()
-                    .and_then(|constructor| match &constructor.variant {
-                        ValueConstructorVariant::LocalVariable { location, origin } => match origin
-                        {
-                            VariableOrigin::Variable(_) | VariableOrigin::AssignmentPattern => {
-                                rename_local_variable(
-                                    module,
-                                    &lines,
-                                    &params,
-                                    *location,
-                                    VariableRenameKind::Variable,
-                                )
-                            }
-                            VariableOrigin::LabelShorthand(_) => rename_local_variable(
-                                module,
-                                &lines,
-                                &params,
-                                *location,
-                                VariableRenameKind::LabelShorthand,
-                            ),
-                            VariableOrigin::Generated => None,
-                        },
-                        _ => None,
-                    }),
-                Located::Pattern(Pattern::Assign { location, .. }) => rename_local_variable(
-                    module,
-                    &lines,
-                    &params,
-                    *location,
-                    VariableRenameKind::Variable,
-                ),
-                Located::Arg(arg) => match &arg.names {
-                    ArgNames::Named { location, .. }
-                    | ArgNames::NamedLabelled {
-                        name_location: location,
-                        ..
-                    } => rename_local_variable(
-                        module,
-                        &lines,
-                        &params,
-                        *location,
-                        VariableRenameKind::Variable,
-                    ),
-                    ArgNames::Discard { .. } | ArgNames::LabelledDiscard { .. } => None,
-                },
-                Located::Expression(TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            variant:
-                                ValueConstructorVariant::ModuleConstant {
-                                    module: module_name,
-                                    ..
-                                }
-                                | ValueConstructorVariant::ModuleFn {
-                                    module: module_name,
-                                    ..
-                                },
-                            ..
-                        },
-                    name,
-                    ..
-                }) => rename_module_value(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name,
-                        name,
-                        name_kind: Named::Function,
-                        target_kind: RenameTarget::Unqualified,
-                    },
-                ),
-                Located::Expression(TypedExpr::ModuleSelect {
-                    module_name,
-                    label,
-                    constructor:
-                        ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. },
-                    ..
-                }) => rename_module_value(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name,
-                        name: label,
-                        name_kind: Named::Function,
-                        target_kind: RenameTarget::Qualified,
-                    },
-                ),
-                Located::ModuleStatement(
-                    Definition::Function(Function {
-                        name: Some((_, name)),
-                        ..
-                    })
-                    | Definition::ModuleConstant(ModuleConstant { name, .. }),
-                ) => rename_module_value(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name: &module.name,
-                        name,
-                        name_kind: Named::Function,
-                        target_kind: RenameTarget::Definition,
-                    },
-                ),
-                Located::Expression(TypedExpr::Var {
-                    constructor:
-                        ValueConstructor {
-                            variant:
-                                ValueConstructorVariant::Record {
-                                    module: module_name,
-                                    name,
-                                    ..
-                                },
-                            ..
-                        },
-                    ..
-                }) => rename_module_value(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name,
-                        name,
-                        name_kind: Named::CustomTypeVariant,
-                        target_kind: RenameTarget::Unqualified,
-                    },
-                ),
-                Located::Expression(TypedExpr::ModuleSelect {
-                    module_name,
-                    label,
-                    constructor: ModuleValueConstructor::Record { .. },
-                    ..
-                }) => rename_module_value(
-                    &params,
-                    module,
-                    this.compiler.project_compiler.get_importable_modules(),
-                    &this.compiler.sources,
-                    Renamed {
-                        module_name,
-                        name: label,
-                        name_kind: Named::CustomTypeVariant,
-                        target_kind: RenameTarget::Qualified,
-                    },
-                ),
-                Located::VariantConstructorDefinition(RecordConstructor { name, .. }) => {
-                    rename_module_value(
-                        &params,
-                        module,
-                        this.compiler.project_compiler.get_importable_modules(),
-                        &this.compiler.sources,
-                        Renamed {
-                            module_name: &module.name,
-                            name,
-                            name_kind: Named::CustomTypeVariant,
-                            target_kind: RenameTarget::Definition,
-                        },
-                    )
+                }) => {
+                    let rename_kind = match origin {
+                        Some(VariableOrigin::Generated) => return Ok(None),
+                        Some(VariableOrigin::LabelShorthand(_)) => {
+                            VariableRenameKind::LabelShorthand
+                        }
+                        Some(VariableOrigin::AssignmentPattern | VariableOrigin::Variable(_))
+                        | None => VariableRenameKind::Variable,
+                    };
+                    rename_local_variable(module, &lines, &params, definition_location, rename_kind)
                 }
-                Located::Pattern(Pattern::Constructor {
-                    constructor: analyse::Inferred::Known(constructor),
-                    module: module_select,
+                Some(Referenced::ModuleValue {
+                    module: module_name,
+                    target_kind,
+                    name,
+                    name_kind,
                     ..
                 }) => rename_module_value(
                     &params,
@@ -916,17 +659,13 @@ where
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
                     Renamed {
-                        module_name: &constructor.module,
-                        name: &constructor.name,
-                        name_kind: Named::CustomTypeVariant,
-                        target_kind: if module_select.is_some() {
-                            RenameTarget::Qualified
-                        } else {
-                            RenameTarget::Unqualified
-                        },
+                        module_name: &module_name,
+                        name: &name,
+                        name_kind,
+                        target_kind,
                     },
                 ),
-                _ => None,
+                None => None,
             })
         })
     }
