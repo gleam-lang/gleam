@@ -8,8 +8,36 @@
   the units of the `size` option.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- On the JavaScript target, blocks and various other expressions no longer compile to
-  immediately invoked function expressions.
+- The compiler can now tell if string branches are unreachable. For example, the
+  following code:
+
+  ```gleam
+  case a_string {
+    "Hello, " <> name -> name
+    "Hello, Jak" -> "Jak"
+    _ -> "Stranger"
+  }
+  ```
+
+  Will raise the following warning:
+
+  ```
+  warning: Unreachable case clause
+    ┌─ /src/greet.gleam:7:5
+    │
+  7 │     "Hello, Jak" -> "Jak"
+    │     ^^^^^^^^^^^^^^^^^^^^^
+
+  This case clause cannot be reached as a previous clause matches the same
+  values.
+
+  Hint: It can be safely removed.
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
+- On the JavaScript target, blocks and various other expressions no longer
+  compile to immediately invoked function expressions.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 - On the JavaScript target, bit arrays can now use 16-bit floats in expressions
@@ -116,7 +144,6 @@
 - Fixed a bug where using the "Convert to pipe" code action on a function or
   record capture produces invalid code.
   ([Matias Carlander](https://github.com/matiascr))
-
 
 ## v1.9.1 - 2025-03-10
 
