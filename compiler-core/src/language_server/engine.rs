@@ -715,14 +715,17 @@ where
                             .collect(),
                     ),
                 },
-                Some(Referenced::ModuleValue { module, name, .. }) => {
-                    Some(find_module_value_references(
-                        module,
-                        name,
-                        this.compiler.project_compiler.get_importable_modules(),
-                        &this.compiler.sources,
-                    ))
-                }
+                Some(Referenced::ModuleValue {
+                    module,
+                    name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => Some(find_module_value_references(
+                    module,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                )),
                 _ => None,
             })
         })
