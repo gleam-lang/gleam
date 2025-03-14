@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/type_/tests/exhaustiveness.rs
+expression: "pub fn main() {\n  let string = \"\"\n  case string {\n    \"wib\" <> rest -> rest\n    \"wibble\" <> rest -> rest\n    _ -> \"a\"\n  }\n}"
+---
+----- SOURCE CODE
+pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}
+
+----- WARNING
+warning: Unreachable case clause
+  ┌─ /src/warning/wrn.gleam:5:5
+  │
+5 │     "wibble" <> rest -> rest
+  │     ^^^^^^^^^^^^^^^^^^^^^^^^
+
+This case clause cannot be reached as a previous clause matches the same
+values.
+
+Hint: It can be safely removed.
