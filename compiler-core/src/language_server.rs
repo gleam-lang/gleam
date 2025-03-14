@@ -7,6 +7,7 @@ mod feedback;
 mod files;
 mod messages;
 mod progress;
+mod reference;
 mod rename;
 mod router;
 mod server;
