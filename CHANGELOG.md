@@ -65,6 +65,11 @@
   first argument is itself a pipe would result in invalid code.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where using the "Convert to pipe" code action on a function or
+  record capture produces invalid code.
+  ([Matias Carlander](https://github.com/matiascr))
+  
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
