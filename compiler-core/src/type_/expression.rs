@@ -1469,7 +1469,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
-        let value_typ = value.type_();
+        let value_type = value.type_();
 
         let kind = self.infer_assignment_kind(kind.clone());
 
@@ -1482,7 +1482,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             &self.hydrator,
             self.problems,
         );
-        let unify_result = pattern_typer.unify(pattern, value_typ.clone(), None);
+        let unify_result = pattern_typer.unify(pattern, value_type.clone(), None);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
@@ -1492,7 +1492,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let pattern = match unify_result {
             Ok(pattern) => pattern,
             Err(error) => {
-                self.error_pattern_with_rigid_names(pattern_location, error, value_typ.clone())
+                self.error_pattern_with_rigid_names(pattern_location, error, value_type.clone())
             }
         };
 
@@ -1502,8 +1502,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 .type_from_ast(annotation)
                 .map(|t| self.instantiate(t, &mut hashmap![]))
             {
-                Ok(ann_typ) => {
-                    if let Err(error) = unify(ann_typ, value_typ.clone())
+                Ok(ann_type) => {
+                    if let Err(error) = unify(ann_type, value_type.clone())
                         .map_err(|e| convert_unify_error(e, value.type_defining_location()))
                     {
                         self.problems.error(error);
