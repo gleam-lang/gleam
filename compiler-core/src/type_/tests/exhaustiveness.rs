@@ -1371,3 +1371,117 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+fn unreachable_string_pattern_after_prefix() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_string_pattern_after_prefix() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_string_pattern_after_prefix_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wibble" <> rest -> rest
+    "wib" -> "a"
+    _ -> "b"
+  }
+}"#
+    );
+}
+
+#[test]
+fn unreachable_prefix_pattern_after_prefix() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_prefix_pattern_after_prefix() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn reachable_prefix_pattern_after_prefix_1() {
+    assert_no_warnings!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wibble" <> rest -> rest
+    "wib" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn multiple_unreachable_prefix_patterns() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
+
+#[test]
+fn multiple_unreachable_prefix_patterns_1() {
+    assert_warning!(
+        r#"pub fn main() {
+  let string = ""
+  case string {
+    "wib" <> rest if True -> rest
+    "wibble" <> rest -> rest
+    "wibblest" <> rest -> rest
+    _ -> "a"
+  }
+}"#
+    );
+}
