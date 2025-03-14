@@ -933,7 +933,9 @@ impl<'a> Compiler<'a> {
         name: &EcoString,
         type_arguments: &[Arc<Type>],
     ) -> Result<Vec<TypeValueConstructor>, UnknownTypeConstructorError> {
-        let constructors = self.environment.get_constructors_for_type(module, name)?;
+        let constructors =
+            self.environment
+                .get_constructors_for_type(module, name, Some(type_arguments.len()))?;
         let specialiser = ConstructorSpecialiser::new(
             constructors.type_parameters_ids.as_slice(),
             type_arguments,

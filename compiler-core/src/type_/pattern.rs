@@ -428,7 +428,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .any(|type_| type_ == &name),
                         suggestions: self
                             .environment
-                            .suggest_modules_for_type_or_value(Imported::Value(name.clone())),
+                            .suggest_modules_for_type_or_value(Imported::Value(name.clone()), None),
                     })?;
                 self.environment.increment_usage(&name);
                 let type_ =
@@ -661,7 +661,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
                 let cons = self
                     .environment
-                    .get_value_constructor(module.as_ref().map(|(module, _)| module), &name)
+                    .get_value_constructor(
+                        module.as_ref().map(|(module, _)| module),
+                        &name,
+                        Some(pattern_args.len()),
+                    )
                     .map_err(|e| {
                         convert_get_value_constructor_error(
                             e,

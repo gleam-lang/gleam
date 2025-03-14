@@ -127,7 +127,7 @@ fn add_missing_patterns(
                         let (module, name) =
                             type_.named_type_name().expect("Should be a named type");
                         let name = environment
-                            .get_constructors_for_type(&module, &name)
+                            .get_constructors_for_type(&module, &name, type_.fn_arity())
                             .expect("Custom type constructor must have custom type kind")
                             .variants
                             .get(*index as usize)
