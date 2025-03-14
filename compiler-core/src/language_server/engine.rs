@@ -3,8 +3,8 @@ use crate::{
     analyse::{self, name::correct_name_case},
     ast::{
         self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
-        Pattern, RecordConstructor, SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule,
-        TypedPattern,
+        Pattern, PatternUnusedArguments, RecordConstructor, SrcSpan, TypedArg, TypedExpr,
+        TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
@@ -39,7 +39,7 @@ use super::{
         ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
         GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder, InlineVariable,
         InterpolateString, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        UseLabelShorthandSyntax, code_action_add_missing_patterns,
+        ReplaceSpreadWithIgnoredFields, UseLabelShorthandSyntax, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
@@ -385,6 +385,9 @@ where
             actions.extend(ConvertFromUse::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
+            actions.extend(
+                ReplaceSpreadWithIgnoredFields::new(module, &lines, &params).code_actions(),
+            );
             actions.extend(InterpolateString::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
@@ -1016,38 +1019,36 @@ where
                 Located::Pattern(pattern) => Some(hover_for_pattern(pattern, lines, module)),
                 Located::PatternSpread {
                     spread_location,
-                    arguments,
+                    pattern,
                 } => {
                     let range = Some(src_span_to_lsp_range(spread_location, &lines));
 
-                    let mut positional = vec![];
-                    let mut labelled = vec![];
-                    for argument in arguments {
-                        // We only want to display the arguments that were ignored using `..`.
-                        // Any argument ignored that way is marked as implicit, so if it is
-                        // not implicit we just ignore it.
-                        if !argument.is_implicit() {
-                            continue;
-                        }
+                    let mut printer = Printer::new(&module.ast.names);
 
-                        let type_ = Printer::new(&module.ast.names)
-                            .print_type(argument.value.type_().as_ref());
-                        match &argument.label {
-                            Some(label) => labelled.push(format!("- `{label}: {type_}`")),
-                            None => positional.push(format!("- `{type_}`")),
-                        }
-                    }
+                    let PatternUnusedArguments {
+                        positional,
+                        labelled,
+                    } = pattern.unused_arguments().unwrap_or_default();
 
-                    let positional = positional.join("\n");
-                    let labelled = labelled.join("\n");
+                    let positional = positional
+                        .iter()
+                        .map(|type_| format!("- `{}`", printer.print_type(type_)))
+                        .join("\n");
+                    let labelled = labelled
+                        .iter()
+                        .map(|(label, type_)| {
+                            format!("- `{}: {}`", label, printer.print_type(type_))
+                        })
+                        .join("\n");
+
                     let content = match (positional.is_empty(), labelled.is_empty()) {
-                        (true, false) => format!("Unused labelled fields:\n{labelled}"),
-                        (false, true) => format!("Unused positional fields:\n{positional}"),
+                        (true, false) => format!("Ignored labelled fields:\n{labelled}"),
+                        (false, true) => format!("Ignored positional fields:\n{positional}"),
                         (_, _) => format!(
-                            "Unused positional fields:
+                            "Ignored positional fields:
 {positional}
 
-Unused labelled fields:
+Ignored labelled fields:
 {labelled}"
                         ),
                     };
