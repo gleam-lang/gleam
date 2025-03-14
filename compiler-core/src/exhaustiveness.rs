@@ -88,6 +88,7 @@ use crate::{
 use ecow::EcoString;
 use id_arena::{Arena, Id};
 use itertools::Itertools;
+use radix_trie::{Trie, TrieCommon};
 use std::{
     cell::RefCell,
     collections::{HashMap, HashSet, VecDeque},
@@ -302,7 +303,7 @@ pub enum Pattern {
     },
     StringPrefix {
         prefix: EcoString,
-        rest: Id<Pattern>,
+        rest_pattern: Id<Pattern>,
     },
     Assign {
         name: EcoString,
@@ -312,21 +313,72 @@ pub enum Pattern {
         name: EcoString,
     },
     Tuple {
-        elements: Vec<Id<Pattern>>,
+        elems_patterns: Vec<Id<Pattern>>,
     },
-    Constructor {
-        variant_index: usize,
-        arguments: Vec<Id<Pattern>>,
+    Variant {
+        index: usize,
+        args_patterns: Vec<Id<Pattern>>,
     },
     List {
-        first: Id<Pattern>,
-        rest: Id<Pattern>,
+        first_pattern: Id<Pattern>,
+        rest_pattern: Id<Pattern>,
     },
     EmptyList,
     // TODO: Compile the matching within the bit strings
     BitArray {
         value: EcoString,
     },
+}
+
+impl Pattern {
+    /// Each pattern (with a couple exceptions) can be turned into a
+    /// simpler `RuntimeCheck`: that is a check that can be performed at runtime
+    /// to make sure a `PatternCheck` can succeed on a specific value.
+    ///
+    fn to_runtime_check_kind(&self) -> Option<RuntimeCheckKind> {
+        let kind = match self {
+            // These patterns are unconditional: they will always match and be moved
+            // out of a branch's checks. So there's no corresponding runtime check
+            // we can perform for them.
+            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
+            Pattern::Int { value } => RuntimeCheckKind::Int {
+                value: value.clone(),
+            },
+            Pattern::Float { value } => RuntimeCheckKind::Float {
+                value: value.clone(),
+            },
+            Pattern::String { value } => RuntimeCheckKind::String {
+                value: value.clone(),
+            },
+            Pattern::StringPrefix { prefix, .. } => RuntimeCheckKind::StringPrefix {
+                prefix: prefix.clone(),
+            },
+            Pattern::Tuple { elems_patterns } => RuntimeCheckKind::Tuple {
+                size: elems_patterns.len(),
+            },
+            Pattern::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
+            Pattern::BitArray { value } => RuntimeCheckKind::BitArray {
+                value: value.clone(),
+            },
+            Pattern::List { .. } => RuntimeCheckKind::NonEmptyList,
+            Pattern::EmptyList => RuntimeCheckKind::EmptyList,
+        };
+
+        Some(kind)
+    }
+
+    fn is_matching_on_unreachable_variant(&self, branch_mode: &BranchMode) -> bool {
+        match (self, branch_mode) {
+            (
+                Self::Variant { index, .. },
+                BranchMode::NamedType {
+                    inferred_variant: Some(variant),
+                    ..
+                },
+            ) if index != variant => true,
+            _ => false,
+        }
+    }
 }
 
 /// A single check making up a branch, checking that a variable matches with a
@@ -345,57 +397,6 @@ pub enum Pattern {
 struct PatternCheck {
     var: Variable,
     pattern: Id<Pattern>,
-}
-
-impl PatternCheck {
-    fn new(var: Variable, pattern: Id<Pattern>) -> Self {
-        Self { var, pattern }
-    }
-
-    /// Each pattern check (with a couple exceptions) can be turned into a
-    /// simpler `RuntimeCheck`: that is a check that can be performed at runtime
-    /// to make sure the `PatternCheck` can succeed on a specific value.
-    ///
-    fn to_runtime_check_kind(&self, compiler: &Compiler<'_>) -> Option<RuntimeCheckKind> {
-        let kind = match compiler.pattern(self.pattern) {
-            // These patterns are unconditional: they will always match and be moved
-            // out of a branch's checks. So there's no corresponding runtime check
-            // we can perform for them.
-            Pattern::Discard | Pattern::Variable { .. } | Pattern::Assign { .. } => return None,
-            Pattern::Int { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::Int { value }
-            }
-            Pattern::Float { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::Float { value }
-            }
-            Pattern::String { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::String { value }
-            }
-            Pattern::StringPrefix { prefix, .. } => {
-                let prefix = prefix.clone();
-                RuntimeCheckKind::StringPrefix { prefix }
-            }
-            Pattern::Tuple { elements } => {
-                let size = elements.len();
-                RuntimeCheckKind::Tuple { size }
-            }
-            Pattern::Constructor { variant_index, .. } => {
-                let index = *variant_index;
-                RuntimeCheckKind::Variant { index }
-            }
-            Pattern::BitArray { value } => {
-                let value = value.clone();
-                RuntimeCheckKind::BitArray { value }
-            }
-            Pattern::List { .. } => RuntimeCheckKind::NonEmptyList,
-            Pattern::EmptyList => RuntimeCheckKind::EmptyList,
-        };
-
-        Some(kind)
-    }
 }
 
 /// This is one of the checks we can take at runtime to decide how to move
@@ -441,7 +442,7 @@ pub enum RuntimeCheck {
         args: Vec<Variable>,
     },
     EmptyList,
-    NonEmptyList {
+    List {
         first_arg: Variable,
         rest_arg: Variable,
     },
@@ -471,7 +472,7 @@ impl RuntimeCheck {
             },
             RuntimeCheck::Variant { index, args: _ } => RuntimeCheckKind::Variant { index: *index },
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
-            RuntimeCheck::NonEmptyList {
+            RuntimeCheck::List {
                 first_arg: _,
                 rest_arg: _,
             } => RuntimeCheckKind::NonEmptyList,
@@ -492,21 +493,6 @@ pub enum RuntimeCheckKind {
     NonEmptyList,
 }
 
-impl RuntimeCheckKind {
-    fn is_matching_on_unreachable_variant(&self, branch_mode: &BranchMode) -> bool {
-        match (self, branch_mode) {
-            (
-                Self::Variant { index },
-                BranchMode::NamedType {
-                    inferred_variant: Some(variant),
-                    ..
-                },
-            ) if index != variant => true,
-            _ => false,
-        }
-    }
-}
-
 /// A variable that can be matched on in a branch.
 ///
 #[derive(Eq, PartialEq, Clone, Debug)]
@@ -518,6 +504,13 @@ pub struct Variable {
 impl Variable {
     fn new(id: usize, type_: Arc<Type>) -> Self {
         Self { id, type_ }
+    }
+
+    fn is(&self, pattern: Id<Pattern>) -> PatternCheck {
+        PatternCheck {
+            var: self.clone(),
+            pattern,
+        }
     }
 }
 
@@ -955,108 +948,22 @@ impl<'a> Compiler<'a> {
                 continue;
             };
 
-            // If it does check the same variable, we know that this branch is only relevant
-            // for some specific shape of `pivot_var`, determined by the runtime check that
-            // it is performing.
-            let kind = pattern_check
-                .to_runtime_check_kind(self)
-                .expect("no var patterns left");
-
-            if kind.is_matching_on_unreachable_variant(branch_mode) {
+            let checked_pattern = self.pattern(pattern_check.pattern).clone();
+            if checked_pattern.is_matching_on_unreachable_variant(branch_mode) {
                 self.mark_as_matching_impossible_variant(&branch);
                 continue;
             }
 
-            // We now replace the pattern check we've just removed with the new
-            // ones we might have discovered.
-            //
-            // If a check is already there we don't generate a new one with
-            // fresh variables, but reuse the existing one!
-            //
-            // TODO)) this might have to be slightly updated once we perform
-            // code generation for string patterns that are a bit trickier to split
-            // as they might be overlapping even when they're different!
-            let runtime_check = match splitter.get_overlapping_runtime_check(&kind) {
-                Some(runtime_check) => runtime_check,
-                None => self.kind_to_runtime_check(kind, branch_mode),
-            };
-
-            self.new_pattern_checks(&runtime_check, pattern_check.pattern)
-                .into_iter()
-                .for_each(|check| branch.add_check(check));
-
-            splitter.add_checked_branch(runtime_check, branch);
+            splitter.add_checked_branch(checked_pattern, branch, branch_mode, self);
         }
     }
 
-    /// Comes up with new checks to perform after the given runtime check succeeds for
-    /// the given pattern being matched.
-    ///
-    /// This is a tricky part, so let's have a look at an example: let's say this is
-    /// the pattern check `a is Wibble(1, _, [])`.
-    /// After making the runtime check that `a` is indeed a `Wibble` we're still
-    /// left with many things to consider! We'll need to also make sure that `a`'s
-    /// fields match with the respective patterns `1`, `_` and `[]`.
-    /// So we would have to add new pattern checks to this branch:
-    /// `a_0 is 1`, `a_1 is _` and `a_2 is []` (where `a_n` are fresh names we use
-    /// to refer to `a`'s fields).
-    ///
-    fn new_pattern_checks(
-        &mut self,
-        runtime_check: &RuntimeCheck,
-        pattern: Id<Pattern>,
-    ) -> Vec<PatternCheck> {
-        match (runtime_check, self.pattern(pattern)) {
-            // None of these patterns introduces new arguments we need to be matching on!
-            (
-                RuntimeCheck::Int { .. }
-                | RuntimeCheck::Float { .. }
-                | RuntimeCheck::String { .. }
-                | RuntimeCheck::BitArray { .. }
-                | RuntimeCheck::EmptyList,
-                _,
-            ) => vec![],
-
-            // A check on a string prefix introduces just a single new pattern: that is
-            // the one on the remaining bit.
-            (RuntimeCheck::StringPrefix { rest_arg, .. }, Pattern::StringPrefix { rest, .. }) => {
-                vec![PatternCheck::new(rest_arg.clone(), *rest)]
-            }
-            (RuntimeCheck::StringPrefix { .. }, _) => vec![],
-
-            // A check on a tuple introduces a new pattern for each of the elements making
-            // up the tuple. The same goes for variants, we have to introduce a new check
-            // for each of its fields, as shown in the doc comment above.
-            (RuntimeCheck::Tuple { args, .. }, Pattern::Tuple { elements: ps })
-            | (RuntimeCheck::Variant { args, .. }, Pattern::Constructor { arguments: ps, .. }) => {
-                (args.iter().zip(ps))
-                    .map(|(arg, pattern)| PatternCheck::new(arg.clone(), *pattern))
-                    .collect_vec()
-            }
-            (RuntimeCheck::Tuple { .. } | RuntimeCheck::Variant { .. }, _) => vec![],
-
-            // A check on a non empty list introduces two new patterns: one for the head of
-            // the list and one for the tail!
-            (
-                RuntimeCheck::NonEmptyList {
-                    first_arg,
-                    rest_arg,
-                },
-                Pattern::List { first, rest },
-            ) => vec![
-                PatternCheck::new(first_arg.clone(), *first),
-                PatternCheck::new(rest_arg.clone(), *rest),
-            ],
-            (RuntimeCheck::NonEmptyList { .. }, _) => vec![],
-        }
-    }
-
-    /// Turns a `RuntimeCheckKind` into a proper `RuntimeCheck` by coming up with
+    /// Turns a `RuntimeCheckKind` into a new `RuntimeCheck` by coming up with
     /// the needed new fresh variables.
     /// All the type information needed to create these variables is in the
     /// `branch_mode` arg.
     ///
-    fn kind_to_runtime_check(
+    fn fresh_runtime_check(
         &mut self,
         kind: RuntimeCheckKind,
         branch_mode: &BranchMode,
@@ -1095,6 +1002,128 @@ impl<'a> Compiler<'a> {
         }
     }
 
+    /// Comes up with new pattern cecks that have to match in case a given
+    /// runtime check succeeds for the given pattern.
+    ///
+    /// Let's make an example: when we have a pattern - say `a is Wibble(1, [])` -
+    /// we come up with a runtime check to perform on it. For our example the
+    /// runtime check is to make sure that `a` is indeed a `Wibble` variant.
+    /// However, after successfully performing that check we're left with much to
+    /// do! We know that `a` is `Wibble` but now we'll have to make sure that its
+    /// inner arguments also match the given patterns. So the new additional checks
+    /// we have to add are `a0 is 1, a1 is []` (where `a0` and `a1` are the fresh
+    /// variable names we use to refer to the constructor's arguments).
+    ///
+    fn new_checks(
+        &mut self,
+        for_pattern: &Pattern,
+        after_succeding_check: &RuntimeCheck,
+    ) -> Vec<PatternCheck> {
+        match (for_pattern, after_succeding_check) {
+            // These patterns never result in adding new checks. After a runtime
+            // check matches on them there's nothing else to discover.
+            (
+                Pattern::Discard
+                | Pattern::Assign { .. }
+                | Pattern::Variable { .. }
+                | Pattern::Int { .. }
+                | Pattern::Float { .. }
+                | Pattern::BitArray { .. }
+                | Pattern::EmptyList,
+                _,
+            )
+            | (Pattern::String { .. }, RuntimeCheck::String { .. }) => vec![],
+
+            // After making sure a value is not an empty list we'll have to perform
+            // additional checks on its first item and on the tail.
+            (
+                Pattern::List {
+                    first_pattern,
+                    rest_pattern,
+                },
+                RuntimeCheck::List {
+                    first_arg,
+                    rest_arg,
+                },
+            ) => vec![first_arg.is(*first_pattern), rest_arg.is(*rest_pattern)],
+
+            // After making sure a value is a specific variant we'll have to check each
+            // of its arguments respects the given patterns (as shown in the doc example for
+            // this function!)
+            (Pattern::Variant { args_patterns, .. }, RuntimeCheck::Variant { args, .. }) => {
+                (args.iter().zip(args_patterns))
+                    .map(|(arg, pattern)| arg.is(*pattern))
+                    .collect_vec()
+            }
+
+            // Tuples are exactly the same as variants: after making sure we're dealing with
+            // a tuple, we will have to check that each of its elements matches the given
+            // pattern: `a is #(1, _)` will result in the following checks
+            // `a0 is 1, a1 is _` (where `a0` and `a1` are fresh variable names we use to
+            // refer to each of the tuple's elements).
+            (Pattern::Tuple { elems_patterns }, RuntimeCheck::Tuple { args, .. }) => {
+                (args.iter().zip(elems_patterns))
+                    .map(|(arg, pattern)| arg.is(*pattern))
+                    .collect_vec()
+            }
+
+            // Strings are quite fun: if we've checked at runtime a string starts with a given
+            // prefix and we want to check that it's some overlapping literal value we'll still
+            // have some amount of work to perform.
+            //
+            // Let's have a look at an example: the pattern we care about is `a is "wibble"`
+            // and we've just successfully ran the runtime check for `a is "wib" <> rest`.
+            // So we know the string already starts with `"wib"` what we have to check now
+            // is that the remaining part `rest` is `"ble"`.
+            (
+                Pattern::String { value },
+                RuntimeCheck::StringPrefix {
+                    prefix, rest_arg, ..
+                },
+            ) => {
+                let remaining = value.strip_prefix(prefix.as_str()).unwrap_or(value);
+                vec![rest_arg.is(self.string_pattern(remaining))]
+            }
+
+            // String prefixes are similar to strings, but a bit more involved. Let's say we're
+            // checking the pattern:
+            //
+            // ```text
+            // "wibblest" <> rest1
+            // ─┬────────
+            //  ╰── We will refer to this as `prefix1`
+            // ```
+            //
+            // And we know that the following overlapping runtime check has already succeeded:
+            //
+            // ```text
+            // "wibble" <> rest0
+            // ─┬──────
+            //  ╰── We will refer to this as `prefix0`
+            // ```
+            //
+            // We're lucky because we now know quite a bit about the shape of the string. Since
+            // we know it already starts with `"wibble"` we can just check that the remaining
+            // part after that starts with the missing part of the prefix:
+            // `prefix0 is "st" <> rest1`.
+            (
+                Pattern::StringPrefix {
+                    prefix: prefix1,
+                    rest_pattern: rest1,
+                },
+                RuntimeCheck::StringPrefix {
+                    prefix: prefix0,
+                    rest_arg: rest0,
+                },
+            ) => {
+                let remaining = prefix1.strip_prefix(prefix0.as_str()).unwrap_or(prefix1);
+                vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+            }
+
+            (_, _) => unreachable!("invalid pattern overlapping"),
+        }
+    }
+
     /// Builds an `IsVariant` runtime check, coming up with new fresh variable names
     /// for its arguments.
     ///
@@ -1118,7 +1147,7 @@ impl<'a> Compiler<'a> {
     /// names for its arguments.
     ///
     fn is_list_check(&mut self, inner_type: Arc<Type>) -> RuntimeCheck {
-        RuntimeCheck::NonEmptyList {
+        RuntimeCheck::List {
             first_arg: self.fresh_variable(inner_type.clone()),
             rest_arg: self.fresh_variable(Arc::new(Type::list(inner_type))),
         }
@@ -1135,6 +1164,24 @@ impl<'a> Compiler<'a> {
                 .map(|type_| self.fresh_variable(type_.clone()))
                 .collect_vec(),
         }
+    }
+
+    /// Allocates a new `StringPattern` with the given value.
+    ///
+    fn string_pattern(&mut self, value: &str) -> Id<Pattern> {
+        self.patterns.alloc(Pattern::String {
+            value: EcoString::from(value),
+        })
+    }
+
+    /// Allocates a new `StringPrefix` pattern with the given prefix and pattern
+    /// for the rest of the string.
+    ///
+    fn string_prefix_pattern(&mut self, prefix: &str, rest_pattern: Id<Pattern>) -> Id<Pattern> {
+        self.patterns.alloc(Pattern::StringPrefix {
+            prefix: EcoString::from(prefix),
+            rest_pattern,
+        })
     }
 }
 
@@ -1171,6 +1218,14 @@ struct BranchSplitter {
     /// This is used to allow quickly looking up a choice in the `choices`
     /// vector, without loosing track of the checks' order.
     indices: HashMap<RuntimeCheckKind, usize>,
+
+    /// This is used to store the indices of just the prefix checks as they have
+    /// different rules from all the other `RuntimeCheckKinds` whose indices are
+    /// instead stored in the `indices` field.
+    ///
+    /// We discuss this in more detail in the `index_of_overlapping_runtime_check`
+    /// function!
+    prefix_indices: Trie<String, usize>,
 }
 
 impl BranchSplitter {
@@ -1189,6 +1244,7 @@ impl BranchSplitter {
             fallback: VecDeque::new(),
             choices,
             indices,
+            prefix_indices: Trie::new(),
         }
     }
 
@@ -1203,32 +1259,126 @@ impl BranchSplitter {
         self.fallback.push_back(branch);
     }
 
-    /// Add a branch that we know will only ever run if the `check` is true.
+    /// Given a branch and the pattern its using to check on the pivot variable,
+    /// adds it to the paths where it's relevant, that is where we know from
+    /// previous checks that this pattern has a chance of matching.
     ///
-    fn add_checked_branch(&mut self, check: RuntimeCheck, branch: Branch) {
-        match self.indices.get(&check.kind()) {
-            Some(index) => {
-                let (_, branches) = self
-                    .choices
-                    .get_mut(*index)
-                    .expect("check to already be a choice");
-                branches.push_back(branch);
-            }
+    fn add_checked_branch(
+        &mut self,
+        pattern: Pattern,
+        branch: Branch,
+        branch_mode: &BranchMode,
+        compiler: &mut Compiler<'_>,
+    ) {
+        let kind = pattern
+            .to_runtime_check_kind()
+            .expect("no unconditional patterns left");
 
-            None => {
-                let _ = self.indices.insert(check.kind(), self.choices.len());
-                let mut branches = self.fallback.clone();
+        let indices_of_overlapping_checks = self.indices_of_overlapping_checks(&kind);
+        if indices_of_overlapping_checks.is_empty() {
+            // This is a new choice we haven't yet discovered as it is not overlapping
+            // with any of the existing ones. So we add it as a possible new path
+            // we might have to go down to in the decision tree.
+            self.save_index_of_new_choice(kind.clone());
+            let mut branches = self.fallback.clone();
+            branches.push_back(branch);
+            let check = compiler.fresh_runtime_check(kind, branch_mode);
+            self.choices.push((check, branches));
+        } else {
+            // Otherwise, we know that the check for this branch overlaps with
+            // (possibly more than one) existing checks and so is relevant only
+            // as part of those existing paths.
+            // We'll add the branch with its newly discovered checks only to those
+            // paths.
+            for index in indices_of_overlapping_checks {
+                let (overlapping_check, branches) = self
+                    .choices
+                    .get_mut(index)
+                    .expect("check to already be a choice");
+
+                let mut branch = branch.clone();
+                for new_check in compiler.new_checks(&pattern, overlapping_check) {
+                    branch.add_check(new_check);
+                }
                 branches.push_back(branch);
-                self.choices.push((check, branches));
             }
         }
     }
 
-    fn get_overlapping_runtime_check(&self, kind: &RuntimeCheckKind) -> Option<RuntimeCheck> {
-        let index = self.indices.get(kind)?;
-        let (runtime_check, _) = self.choices.get(*index)?;
-        Some(runtime_check.clone())
+    fn save_index_of_new_choice(&mut self, kind: RuntimeCheckKind) {
+        let _ = match kind {
+            RuntimeCheckKind::Int { .. }
+            | RuntimeCheckKind::Float { .. }
+            | RuntimeCheckKind::String { .. }
+            | RuntimeCheckKind::Tuple { .. }
+            | RuntimeCheckKind::BitArray { .. }
+            | RuntimeCheckKind::Variant { .. }
+            | RuntimeCheckKind::EmptyList
+            | RuntimeCheckKind::NonEmptyList => self.indices.insert(kind, self.choices.len()),
+
+            RuntimeCheckKind::StringPrefix { prefix } => self
+                .prefix_indices
+                .insert(prefix.to_string(), self.choices.len()),
+        };
     }
+
+    fn indices_of_overlapping_checks(&self, kind: &RuntimeCheckKind) -> Vec<usize> {
+        match kind {
+            // All these checks will only overlap with a check that is exactly the
+            // same, so we just look up their index in the `indices` map using the
+            // kind as the lookup.
+            RuntimeCheckKind::Int { .. }
+            | RuntimeCheckKind::Float { .. }
+            | RuntimeCheckKind::Tuple { .. }
+            | RuntimeCheckKind::BitArray { .. }
+            | RuntimeCheckKind::Variant { .. }
+            | RuntimeCheckKind::EmptyList
+            | RuntimeCheckKind::NonEmptyList => {
+                self.indices.get(kind).cloned().into_iter().collect_vec()
+            }
+
+            // String patterns are a bit more tricky as they might end up overlapping
+            // even if they're not exactly the same kind of check! Let's have a look
+            // at an example. Say we're compiling these branches:
+            //
+            // ```
+            // a is "wibble" <> rest -> todo
+            // a is "wibbler" <> rest -> todo
+            // ```
+            //
+            // We use the first (and only) check in the first branch as the pivot and
+            // now we have to decide where to put the next branch. Is it matching with
+            // the first one or completely unrelated?
+            // Since `"wibbler"` starts with `"wibble"` we know it's overlapping and
+            // it cannot possibly match if the previous one doesn't!
+            //
+            // So when we find a `String`/`StringPrefix` pattern we look for a prefix
+            // among the ones we have discovered so far that could match with it.
+            // That is, we look for a prefix of the pattern we're checking in the prefix
+            // trie.
+            RuntimeCheckKind::StringPrefix { prefix: value } => {
+                ancestors_values(&self.prefix_indices, value).collect_vec()
+            }
+
+            // Strings are almost exactly the same, except they could also have an exact
+            // match with other string patterns. So a string pattern could overlap with
+            // another string pattern (if they're matching on the same value), or with
+            // one or more string prefix patterns with a matching prefix.
+            RuntimeCheckKind::String { value } => {
+                let first_index = self.indices.get(kind).cloned();
+                first_index
+                    .into_iter()
+                    .chain(ancestors_values(&self.prefix_indices, value))
+                    .collect_vec()
+            }
+        }
+    }
+}
+
+fn ancestors_values(trie: &Trie<String, usize>, key: &str) -> impl Iterator<Item = usize> {
+    trie.get_ancestor(key)
+        .into_iter()
+        .flat_map(|ancestor| ancestor.values().copied())
 }
 
 pub struct ConstructorSpecialiser {
@@ -1382,10 +1532,8 @@ impl CaseToCompile {
                 let var = self
                     .subject_variables
                     .get(i)
-                    .expect("wrong number of subjects")
-                    .clone();
-
-                checks.push(PatternCheck::new(var, pattern))
+                    .expect("wrong number of subjects");
+                checks.push(var.is(pattern))
             }
 
             let has_guard = branch.guard.is_some();
@@ -1407,10 +1555,8 @@ impl CaseToCompile {
         let var = self
             .subject_variables
             .first()
-            .expect("wrong number of subject variables for pattern")
-            .clone();
-        let checks = vec![PatternCheck::new(var, pattern)];
-        let branch = Branch::new(self.number_of_clauses, 0, checks, false);
+            .expect("wrong number of subject variables for pattern");
+        let branch = Branch::new(self.number_of_clauses, 0, vec![var.is(pattern)], false);
         self.number_of_clauses += 1;
         self.branches.push(branch);
     }
@@ -1472,8 +1618,8 @@ impl CaseToCompile {
             }
 
             TypedPattern::Tuple { elems, .. } => {
-                let elements = elems.iter().map(|elem| self.register(elem)).collect_vec();
-                self.insert(Pattern::Tuple { elements })
+                let elems_patterns = elems.iter().map(|elem| self.register(elem)).collect_vec();
+                self.insert(Pattern::Tuple { elems_patterns })
             }
 
             TypedPattern::List { elements, tail, .. } => {
@@ -1482,8 +1628,11 @@ impl CaseToCompile {
                     None => self.insert(Pattern::EmptyList),
                 };
                 for element in elements.iter().rev() {
-                    let first = self.register(element);
-                    list = self.insert(Pattern::List { first, rest: list });
+                    let first_pattern = self.register(element);
+                    list = self.insert(Pattern::List {
+                        first_pattern,
+                        rest_pattern: list,
+                    });
                 }
                 list
             }
@@ -1493,15 +1642,14 @@ impl CaseToCompile {
                 constructor,
                 ..
             } => {
-                let variant_index =
-                    constructor.expect_ref("must be inferred").constructor_index as usize;
-                let arguments = arguments
+                let index = constructor.expect_ref("must be inferred").constructor_index as usize;
+                let args_patterns = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
-                self.insert(Pattern::Constructor {
-                    variant_index,
-                    arguments,
+                self.insert(Pattern::Variant {
+                    index,
+                    args_patterns,
                 })
             }
 
@@ -1525,8 +1673,11 @@ impl CaseToCompile {
                     AssignName::Variable(name) => Pattern::Variable { name: name.clone() },
                     AssignName::Discard(_) => Pattern::Discard,
                 };
-                let rest = self.insert(rest_pattern);
-                self.insert(Pattern::StringPrefix { prefix, rest })
+                let rest_pattern = self.insert(rest_pattern);
+                self.insert(Pattern::StringPrefix {
+                    prefix,
+                    rest_pattern,
+                })
             }
 
             TypedPattern::VarUsage { .. } => {
