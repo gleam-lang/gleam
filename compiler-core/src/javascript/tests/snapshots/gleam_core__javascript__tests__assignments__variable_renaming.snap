@@ -51,7 +51,7 @@ function go(x, wibble) {
     _block = [a$3, b];
   }
   let c = _block;
-  wibble(a$3);
+  wibble(a$2);
   let x$1 = c;
   return x$1;
 }

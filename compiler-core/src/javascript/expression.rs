@@ -471,6 +471,32 @@ impl<'module, 'a> Generator<'module, 'a> {
         result
     }
 
+    fn wrap_block<CompileFn>(&mut self, compile: CompileFn) -> Output<'a>
+    where
+        CompileFn: Fn(&mut Self) -> Output<'a>,
+    {
+        let block_variable = self.next_local_var(&BLOCK_VARIABLE.into());
+
+        // Save initial state
+        let scope_position = std::mem::replace(
+            &mut self.scope_position,
+            Position::Assign(block_variable.clone()),
+        );
+        let function_position = std::mem::replace(&mut self.function_position, Position::NotTail);
+
+        // Generate the expression
+        let statement_doc = compile(self)?;
+        self.statement_level
+            .push(docvec!["let ", block_variable.clone(), ";"]);
+        self.statement_level.push(statement_doc);
+
+        // Reset
+        self.scope_position = scope_position;
+        self.function_position = function_position;
+
+        Ok(self.wrap_return(block_variable.to_doc()))
+    }
+
     /// Use the `_block` variable if the expression is JS statement.
     pub fn wrap_expression(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
@@ -478,17 +504,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             | TypedExpr::Todo { .. }
             | TypedExpr::Case { .. }
             | TypedExpr::Pipeline { .. }
-            | TypedExpr::RecordUpdate { .. } => {
-                let block_variable = self.next_local_var(&BLOCK_VARIABLE.into());
-                let statement_doc = self.not_in_tail_position(|this| {
-                    this.scope_position = Position::Assign(block_variable.clone());
-                    this.expression(expression)
-                })?;
-                self.statement_level
-                    .push(docvec!["let ", block_variable.clone(), ";"]);
-                self.statement_level.push(statement_doc);
-                Ok(self.wrap_return(block_variable.to_doc()))
-            }
+            | TypedExpr::RecordUpdate { .. } => self.wrap_block(|this| this.expression(expression)),
             _ => self.expression(expression),
         }
     }
@@ -604,19 +620,19 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
         } else {
             match &self.scope_position {
-                Position::Tail | Position::Assign(_) => return self.block_document(statements),
-                Position::NotTail => {}
-            }
+                Position::Tail | Position::Assign(_) => self.block_document(statements),
+                Position::NotTail => self.wrap_block(|this| {
+                    // Save previous scope
+                    let current_scope_vars = this.current_scope_vars.clone();
 
-            let block_variable = self.next_local_var(&BLOCK_VARIABLE.into());
-            let statements = self.not_in_tail_position(|this| {
-                this.scope_position = Position::Assign(block_variable.clone());
-                this.block_document(statements)
-            })?;
-            self.statement_level
-                .push(docvec!["let ", block_variable.clone(), ";"]);
-            self.statement_level.push(statements);
-            Ok(self.wrap_return(block_variable.to_doc()))
+                    let document = this.block_document(statements)?;
+
+                    // Restore previous state
+                    this.current_scope_vars = current_scope_vars;
+
+                    Ok(document)
+                }),
+            }
         }
     }
 

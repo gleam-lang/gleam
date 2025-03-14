@@ -34,8 +34,8 @@ function go() {
       let _pipe = 3;
       _block$1 = add1(_pipe);
     }
-    let _pipe$1 = _block$1;
-    _block = add1(_pipe$1);
+    let _pipe = _block$1;
+    _block = add1(_pipe);
   }
   let x = _block;
   return x;
