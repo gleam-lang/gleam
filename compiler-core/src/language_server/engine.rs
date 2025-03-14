@@ -42,7 +42,9 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    reference::{Referenced, reference_for_ast_node},
+    reference::{
+        Referenced, find_module_value_references, find_variable_references, reference_for_ast_node,
+    },
     rename::{
         RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
     },
@@ -672,9 +674,58 @@ where
 
     pub fn find_references(
         &mut self,
-        _params: lsp::ReferenceParams,
-    ) -> Response<Option<Vec<SrcSpan>>> {
-        self.respond(|_this| Ok(None))
+        params: lsp::ReferenceParams,
+    ) -> Response<Option<Vec<lsp::Location>>> {
+        self.respond(|this| {
+            let position = &params.text_document_position;
+
+            let (lines, found) = match this.node_at_position(position) {
+                Some(value) => value,
+                None => return Ok(None),
+            };
+
+            let uri = position.text_document.uri.clone();
+
+            let Some(module) = this.module_for_uri(&uri) else {
+                return Ok(None);
+            };
+
+            let byte_index = lines.byte_index(position.position.line, position.position.character);
+
+            Ok(match reference_for_ast_node(found, &module.name) {
+                Some(Referenced::LocalVariable {
+                    origin,
+                    definition_location,
+                    location,
+                }) if location.contains(byte_index) => match origin {
+                    Some(VariableOrigin::Generated) => None,
+                    Some(
+                        VariableOrigin::LabelShorthand(_)
+                        | VariableOrigin::AssignmentPattern
+                        | VariableOrigin::Variable(_),
+                    )
+                    | None => Some(
+                        find_variable_references(&module.ast, definition_location)
+                            .into_iter()
+                            .chain(std::iter::once(definition_location))
+                            .map(|location| lsp::Location {
+                                uri: uri.clone(),
+                                range: src_span_to_lsp_range(location, &lines),
+                            })
+                            .collect(),
+                    ),
+                },
+                Some(Referenced::ModuleValue { module, name, .. }) => {
+                    Some(find_module_value_references(
+                        module,
+                        name,
+                        this.compiler.project_compiler.get_importable_modules(),
+                        &this.compiler.sources,
+                    ))
+                }
+                _ => None,
+            })
+        })
     }
 
     fn respond<T>(&mut self, handler: impl FnOnce(&mut Self) -> Result<T>) -> Response<T> {

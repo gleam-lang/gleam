@@ -5,14 +5,17 @@ use lsp_types::{RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
     analyse::name,
-    ast::{self, SrcSpan, TypedModule, visit::Visit},
+    ast::SrcSpan,
     build::Module,
     line_numbers::LineNumbers,
     reference::ReferenceKind,
-    type_::{ModuleInterface, ValueConstructor, ValueConstructorVariant, error::Named},
+    type_::{ModuleInterface, error::Named},
 };
 
-use super::{TextEdits, compiler::ModuleSourceInformation};
+use super::{
+    TextEdits, compiler::ModuleSourceInformation, reference::find_variable_references,
+    url_from_path,
+};
 
 fn workspace_edit(uri: Url, edits: Vec<TextEdit>) -> WorkspaceEdit {
     let mut changes = HashMap::new();
@@ -172,29 +175,6 @@ fn rename_references_in_module(
     }
 }
 
-fn url_from_path(path: &str) -> Option<Url> {
-    // The targets for which `from_file_path` is defined
-    #[cfg(any(
-        unix,
-        windows,
-        target_os = "redox",
-        target_os = "wasi",
-        target_os = "hermit"
-    ))]
-    let uri = Url::from_file_path(path).ok();
-
-    #[cfg(not(any(
-        unix,
-        windows,
-        target_os = "redox",
-        target_os = "wasi",
-        target_os = "hermit"
-    )))]
-    let uri = Url::parse(&format!("file://{path}")).ok();
-
-    uri
-}
-
 fn alias_references_in_module(
     params: &RenameParams,
     module: &Module,
@@ -227,78 +207,4 @@ fn alias_references_in_module(
         params.text_document_position.text_document.uri.clone(),
         edits.edits,
     ))
-}
-
-pub fn find_variable_references(
-    module: &TypedModule,
-    definition_location: SrcSpan,
-) -> Vec<SrcSpan> {
-    let mut finder = FindVariableReferences {
-        references: Vec::new(),
-        definition_location,
-    };
-    finder.visit_typed_module(module);
-    finder.references
-}
-
-struct FindVariableReferences {
-    references: Vec<SrcSpan>,
-    definition_location: SrcSpan,
-}
-
-impl<'ast> Visit<'ast> for FindVariableReferences {
-    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
-        if fun.full_location().contains(self.definition_location.start) {
-            ast::visit::visit_typed_function(self, fun);
-        }
-    }
-
-    fn visit_typed_expr_var(
-        &mut self,
-        location: &'ast SrcSpan,
-        constructor: &'ast ValueConstructor,
-        _name: &'ast EcoString,
-    ) {
-        match constructor.variant {
-            ValueConstructorVariant::LocalVariable {
-                location: definition_location,
-                ..
-            } if definition_location == self.definition_location => self.references.push(*location),
-            _ => {}
-        }
-    }
-
-    fn visit_typed_clause_guard_var(
-        &mut self,
-        location: &'ast SrcSpan,
-        _name: &'ast EcoString,
-        _type_: &'ast std::sync::Arc<crate::type_::Type>,
-        definition_location: &'ast SrcSpan,
-    ) {
-        if *definition_location == self.definition_location {
-            self.references.push(*location)
-        }
-    }
-
-    fn visit_typed_pattern_var_usage(
-        &mut self,
-        location: &'ast SrcSpan,
-        _name: &'ast EcoString,
-        constructor: &'ast Option<ValueConstructor>,
-        _type_: &'ast std::sync::Arc<crate::type_::Type>,
-    ) {
-        let variant = match constructor {
-            Some(constructor) => &constructor.variant,
-            None => return,
-        };
-        match variant {
-            ValueConstructorVariant::LocalVariable {
-                location: definition_location,
-                ..
-            } if *definition_location == self.definition_location => {
-                self.references.push(*location)
-            }
-            _ => {}
-        }
-    }
 }

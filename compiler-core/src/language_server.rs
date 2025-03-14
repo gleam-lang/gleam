@@ -114,3 +114,26 @@ fn path(uri: &Url) -> Utf8PathBuf {
     #[cfg(not(any(unix, windows, target_os = "redox", target_os = "wasi")))]
     return Utf8PathBuf::from_path_buf(uri.path().into()).expect("Non Utf8 Path");
 }
+
+fn url_from_path(path: &str) -> Option<Url> {
+    // The targets for which `from_file_path` is defined
+    #[cfg(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    ))]
+    let uri = Url::from_file_path(path).ok();
+
+    #[cfg(not(any(
+        unix,
+        windows,
+        target_os = "redox",
+        target_os = "wasi",
+        target_os = "hermit"
+    )))]
+    let uri = Url::parse(&format!("file://{path}")).ok();
+
+    uri
+}
