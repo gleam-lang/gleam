@@ -1,0 +1,83 @@
+name: "Build Gleam"
+description: "Build Gleam Container"
+inputs:
+  version:
+    description: "Build Version"
+    required: true
+  release-id:
+    description: "Release ID"
+    required: true
+
+runs:
+  using: composite
+  steps:
+  - name: Download Gleam release assets
+    uses: robinraju/release-downloader@v1
+    with:
+      releaseId: "${{ inputs.release-id }}"
+      fileName: "gleam-${{ inputs.version }}-{x86_64-unknown-linux-musl,aarch64-unknown-linux-musl}.tar.gz"
+
+  - name: "Unpack release files into correct location"
+    shell: bash
+    run: |
+      declare -A ARCH
+      ARCH["amd64"]="x86_64-unknown-linux-musl"
+      ARCH["arm64"]="aarch64-unknown-linux-musl"
+
+      for SHORT in "${!ARCH[@]}"; do
+        LONG="${ARCH[$SHORT]}"
+
+        # Unpack Release
+        tar xf "gleam-$VERSION-$LONG.tar.gz"
+
+        # Move files into place
+        mv gleam "gleam-$SHORT"
+
+        # Delete Unused Files
+        rm -rf "gleam-$VERSION-$LONG*"
+      done
+    env:
+      VERSION: "${{ inputs.version }}"
+
+  - name: Authenticate with GitHub container registry
+    uses: docker/login-action@v3
+    with:
+      registry: ghcr.io
+      username: ${{ github.actor }}
+      password: ${{ github.token }}
+
+  - name: Set up Docker Buildx
+    uses: docker/setup-buildx-action@v3
+
+  - name: Build version and tags
+    shell: bash
+    id: versions
+    run: |
+      # Strip `v` prefix from version
+      BARE_VERSION=$(echo "$VERSION" | sed -e 's|^v/\(.*\)|\1|')
+
+      # Build version with platform
+      PLATFORM_VERSION=$BARE_VERSION-${{ matrix.base-image }}
+
+      # Build container tag
+      TAG=ghcr.io/${{ github.repository }}:$PLATFORM_VERSION
+
+      echo "platform-version=$PLATFORM_VERSION" >> $GITHUB_OUTPUT
+      echo "container-tag=$TAG" >> $GITHUB_OUTPUT
+    env:
+      VERSION: "${{ inputs.version }}"
+
+  - name: Build and push
+    uses: docker/build-push-action@v6
+    with:
+      context: .
+      platforms: linux/amd64,linux/arm64
+      file: containers/${{ matrix.base-image }}.dockerfile
+      push: true
+      tags: ${{ steps.versions.outputs.container-tag }}
+      labels: |
+        org.opencontainers.image.title=gleam
+        org.opencontainers.image.url=https://gleam.run
+        org.opencontainers.image.source=https://github.com/gleam-lang/gleam
+        org.opencontainers.image.version=${{ steps.versions.outputs.platform-version }}
+        org.opencontainers.image.licenses=Apache-2.0

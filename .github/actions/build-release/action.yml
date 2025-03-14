@@ -1,0 +1,143 @@
+name: "Build Gleam"
+description: "Build Gleam Release"
+inputs:
+  version:
+    description: "Build Version"
+    required: true
+  toolchain:
+    description: "Cargo Toolchain"
+    required: true
+  target:
+    description: "Cargo Installation Target"
+    required: true
+  cargo-tool:
+    description: "Cargo Tool used for Build (for example, `cross`)"
+    required: true
+  expected-binary-architecture:
+    description: "Expected Binary Architecture"
+    required: false
+    default: ""
+
+outputs:
+  archive:
+    description: "Path to build asset"
+    value: "${{ steps.build.outputs.archive }}"
+  files:
+    description: "Path to all files"
+    value: |
+      ${{ steps.build.outputs.archive }}
+      ${{ steps.build.outputs.archive }}.sha256
+      ${{ steps.build.outputs.archive }}.sha512
+
+runs:
+  using: "composite"
+  steps:
+    - name: Install Rust toolchain
+      uses: actions-rust-lang/setup-rust-toolchain@v1
+      with:
+        toolchain: ${{ inputs.toolchain }}
+        target: ${{ inputs.target }}
+        cache-key: v1-${{ inputs.target }}
+
+    - name: Build WASM release binary
+      if: ${{ inputs.target != 'wasm32-unknown-unknown' }}
+      uses: clechasseur/rs-cargo@v3
+      with:
+        command: build
+        args: --release --target ${{ inputs.target }}
+        tool: ${{ inputs.cargo-tool }}
+
+    - name: Install wasm-pack
+      if: ${{ inputs.target == 'wasm32-unknown-unknown' }}
+      shell: bash
+      run: curl -sSL https://rustwasm.github.io/wasm-pack/installer/init.sh | sh
+
+    - name: Build WASM release binary
+      if: ${{ inputs.target == 'wasm32-unknown-unknown' }}
+      shell: bash
+      run: wasm-pack build --release --target web compiler-wasm
+
+    - name: Verify binary architecture
+      if: ${{ inputs.expected-binary-architecture }}
+      shell: bash
+      run: |
+        BINARY_PATH="target/${{ inputs.target }}/release/gleam"
+        if [[ "${{ inputs.target }}" == *"windows"* ]]; then
+          BINARY_PATH="${BINARY_PATH}.exe"
+        fi
+
+        if ! file -b "$BINARY_PATH" | grep -q "${{ inputs.expected-binary-architecture }}"; then
+          echo "error: Architecture mismatch"
+          echo "Expected architecture: '${{ inputs.expected-binary-architecture }}'"
+          echo "Found binary type: '$(file -b "$BINARY_PATH")'"
+          exit 1
+        fi
+        echo "ok: Architecture match"
+
+    - name: Build archive
+      id: build
+      shell: bash
+      run: |
+        case "$TARGET" in
+          *windows*)
+            ARCHIVE="gleam-$VERSION-$TARGET.zip"
+            cp "target/$TARGET/release/gleam.exe" "gleam.exe"
+            7z a "$ARCHIVE" "gleam.exe"
+            rm gleam.exe
+            ;;
+          wasm*)
+            ARCHIVE="gleam-$VERSION-browser.tar.gz"
+            tar -C compiler-wasm/pkg/ -czvf $ARCHIVE .
+            rm -rf compiler-wasm/pkg/
+            ;;
+          *)
+            ARCHIVE="gleam-$VERSION-$TARGET.tar.gz"
+            cp "target/$TARGET/release/gleam" "gleam"
+            tar -czvf "$ARCHIVE" "gleam"
+            rm gleam
+            ;;
+        esac
+
+        echo "archive=$ARCHIVE" >> $GITHUB_OUTPUT
+      env:
+        TARGET: "${{ inputs.target }}"
+        VERSION: "${{ inputs.version }}"
+
+    - name: Ensure binary successfully boots
+      if: ${{ inputs.expected-binary-architecture }}
+      shell: bash
+      run: |
+        case "$TARGET" in
+          x86_64-pc-windows-msvc)
+            7z x "$ARCHIVE"
+            ./gleam.exe --version
+            ;;
+          aarch64*)
+            echo "We cannot test an ARM binary on a AMD64 runner"
+            ;;
+          *)
+            tar -xvzf "$ARCHIVE"
+            ./gleam --version
+            ;;
+        esac
+      env:
+        TARGET: "${{ inputs.target }}"
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+
+    - name: Hash Build Archive
+      shell: bash
+      run: |
+        openssl dgst -r -sha256 -out "$ARCHIVE".sha256 "$ARCHIVE"
+        openssl dgst -r -sha512 -out "$ARCHIVE".sha512 "$ARCHIVE"
+      env:
+        ARCHIVE: "${{ steps.build.outputs.archive }}"
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: release-${{ matrix.target }}
+        path: |
+          ${{ steps.build.outputs.archive }}
+          ${{ steps.build.outputs.archive }}.sha256
+          ${{ steps.build.outputs.archive }}.sha512
+        overwrite: true
