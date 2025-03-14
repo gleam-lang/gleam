@@ -85,6 +85,10 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now supports finding references to values, both within
+  a module and across multiple modules.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes
