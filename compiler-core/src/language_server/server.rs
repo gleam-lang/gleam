@@ -109,6 +109,7 @@ where
             Request::PrepareRename(param) => self.prepare_rename(param),
             Request::Rename(param) => self.rename(param),
             Request::GoToTypeDefinition(param) => self.goto_type_definition(param),
+            Request::FindReferences(param) => self.find_references(param),
         };
 
         self.publish_feedback(feedback);
@@ -355,6 +356,11 @@ where
         self.respond_with_engine(path, |engine| engine.rename(params))
     }
 
+    fn find_references(&mut self, params: lsp_types::ReferenceParams) -> (Json, Feedback) {
+        let path = super::path(&params.text_document_position.text_document.uri);
+        self.respond_with_engine(path, |engine| engine.find_references(params))
+    }
+
     fn cache_file_in_memory(&mut self, path: Utf8PathBuf, text: String) -> Feedback {
         self.project_changed(&path);
         if let Err(error) = self.io.write_mem_cache(&path, &text) {
@@ -430,7 +436,7 @@ fn initialisation_handshake(connection: &lsp_server::Connection) -> InitializePa
         definition_provider: Some(lsp::OneOf::Left(true)),
         type_definition_provider: Some(lsp::TypeDefinitionProviderCapability::Simple(true)),
         implementation_provider: None,
-        references_provider: None,
+        references_provider: Some(lsp::OneOf::Left(true)),
         document_highlight_provider: None,
         document_symbol_provider: Some(lsp::OneOf::Left(true)),
         workspace_symbol_provider: None,
