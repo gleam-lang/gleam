@@ -49,6 +49,45 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server now offers a code action to remove `echo`. For example:
+
+  ```gleam
+  pub fn main() {
+    [1, 2, 3]
+    |> echo
+    // ^^^^ If you put your cursor over here
+    |> list.filter(int.is_even)
+  }
+  ```
+
+  Triggering the code action would remove the `echo` pipeline step:
+
+  ```gleam
+  pub fn main() {
+    [1, 2, 3]
+    |> list.filter(int.is_even)
+  }
+  ```
+
+  This would also work with `echo` used before an expression:
+
+  ```gleam
+  pub fn main() {
+    echo 1 + 2
+  //^^^^^^^^^^ If hovering anywhere over here
+  }
+  ```
+
+  Triggering the code action would remove the `echo`:
+
+  ```gleam
+  pub fn main() {
+    1 + 2
+  }
+  ```
+
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ### Formatter
 
 ### Bug fixes
@@ -68,7 +107,6 @@
 - Fixed a bug where using the "Convert to pipe" code action on a function or
   record capture produces invalid code.
   ([Matias Carlander](https://github.com/matiascr))
-  
 
 ## v1.9.1 - 2025-03-10
 
