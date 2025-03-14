@@ -504,6 +504,16 @@ impl Variable {
         Self { id, type_ }
     }
 
+    /// Builds a `PatternCheck` that checks this variable matches the given pattern.
+    /// So we can build pattern checks the same way we informally describe them:
+    /// ```text
+    /// var is pattern
+    /// ```
+    /// With this builder method would become:
+    /// ```rs
+    /// var.is(pattern)
+    /// ```
+    ///
     fn is(&self, pattern: Id<Pattern>) -> PatternCheck {
         PatternCheck {
             var: self.clone(),
