@@ -4864,9 +4864,11 @@ fn extract_constant_from_declaration_of_tuple() {
     assert_code_action!(
         EXTRACT_CONSTANT,
         r#"pub fn main() {
-  let c = #("one", "two", "three")
+  let #(one, two, three) = #("one", "two", "three")
 }"#,
-        find_position_of("#").select_until(find_position_of("(").nth_occurrence(2))
+        find_position_of("#")
+            .nth_occurrence(2)
+            .select_until(find_position_of("(").nth_occurrence(3))
     );
 }
 

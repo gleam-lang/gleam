@@ -1,11 +1,11 @@
 ---
 source: compiler-core/src/language_server/tests/action.rs
-expression: "pub fn main() {\n  let c = #(\"one\", \"two\", \"three\")\n}"
+expression: "pub fn main() {\n  let #(one, two, three) = #(\"one\", \"two\", \"three\")\n}"
 ---
 ----- BEFORE ACTION
 pub fn main() {
-  let c = #("one", "two", "three")
-          ▔↑                      
+  let #(one, two, three) = #("one", "two", "three")
+                           ▔↑                      
 }
 
 
@@ -13,5 +13,5 @@ pub fn main() {
 const value = #("one", "two", "three")
 
 pub fn main() {
-  let c = value
+  let #(one, two, three) = value
 }
