@@ -1,19 +1,24 @@
+use std::collections::HashMap;
+
 use ecow::EcoString;
+use lsp_types::Location;
 
 use crate::{
     analyse,
     ast::{
-        ArgNames, Definition, Function, ModuleConstant, Pattern, RecordConstructor, SrcSpan,
-        TypedExpr,
+        self, ArgNames, Definition, Function, ModuleConstant, Pattern, RecordConstructor, SrcSpan,
+        TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
     type_::{
-        ModuleValueConstructor, ValueConstructor, ValueConstructorVariant,
+        ModuleInterface, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
     },
 };
 
-use super::rename::RenameTarget;
+use super::{
+    compiler::ModuleSourceInformation, rename::RenameTarget, src_span_to_lsp_range, url_from_path,
+};
 
 pub enum Referenced {
     LocalVariable {
@@ -196,5 +201,133 @@ pub fn reference_for_ast_node(
             },
         }),
         _ => None,
+    }
+}
+
+pub fn find_module_value_references(
+    module_name: EcoString,
+    name: EcoString,
+    modules: &im::HashMap<EcoString, ModuleInterface>,
+    sources: &HashMap<EcoString, ModuleSourceInformation>,
+) -> Vec<Location> {
+    let mut reference_locations = Vec::new();
+
+    for module in modules.values() {
+        if module.name == module_name || module.references.imported_modules.contains(&module_name) {
+            let Some(source_information) = sources.get(&module.name) else {
+                continue;
+            };
+
+            find_value_references_in_module(
+                &module_name,
+                &name,
+                module,
+                source_information,
+                &mut reference_locations,
+            );
+        }
+    }
+
+    reference_locations
+}
+
+fn find_value_references_in_module(
+    module_name: &EcoString,
+    name: &EcoString,
+    module: &ModuleInterface,
+    source_information: &ModuleSourceInformation,
+    reference_locations: &mut Vec<Location>,
+) {
+    let Some(references) = module
+        .references
+        .value_references
+        .get(&(module_name.clone(), name.clone()))
+    else {
+        return;
+    };
+
+    let Some(uri) = url_from_path(source_information.path.as_str()) else {
+        return;
+    };
+
+    for reference in references {
+        reference_locations.push(Location {
+            uri: uri.clone(),
+            range: src_span_to_lsp_range(reference.location, &source_information.line_numbers),
+        });
+    }
+}
+
+pub fn find_variable_references(
+    module: &TypedModule,
+    definition_location: SrcSpan,
+) -> Vec<SrcSpan> {
+    let mut finder = FindVariableReferences {
+        references: Vec::new(),
+        definition_location,
+    };
+    finder.visit_typed_module(module);
+    finder.references
+}
+
+struct FindVariableReferences {
+    references: Vec<SrcSpan>,
+    definition_location: SrcSpan,
+}
+
+impl<'ast> Visit<'ast> for FindVariableReferences {
+    fn visit_typed_function(&mut self, fun: &'ast ast::TypedFunction) {
+        if fun.full_location().contains(self.definition_location.start) {
+            ast::visit::visit_typed_function(self, fun);
+        }
+    }
+
+    fn visit_typed_expr_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        constructor: &'ast ValueConstructor,
+        _name: &'ast EcoString,
+    ) {
+        match constructor.variant {
+            ValueConstructorVariant::LocalVariable {
+                location: definition_location,
+                ..
+            } if definition_location == self.definition_location => self.references.push(*location),
+            _ => {}
+        }
+    }
+
+    fn visit_typed_clause_guard_var(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        _type_: &'ast std::sync::Arc<crate::type_::Type>,
+        definition_location: &'ast SrcSpan,
+    ) {
+        if *definition_location == self.definition_location {
+            self.references.push(*location)
+        }
+    }
+
+    fn visit_typed_pattern_var_usage(
+        &mut self,
+        location: &'ast SrcSpan,
+        _name: &'ast EcoString,
+        constructor: &'ast Option<ValueConstructor>,
+        _type_: &'ast std::sync::Arc<crate::type_::Type>,
+    ) {
+        let variant = match constructor {
+            Some(constructor) => &constructor.variant,
+            None => return,
+        };
+        match variant {
+            ValueConstructorVariant::LocalVariable {
+                location: definition_location,
+                ..
+            } if *definition_location == self.definition_location => {
+                self.references.push(*location)
+            }
+            _ => {}
+        }
     }
 }

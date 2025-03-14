@@ -31,7 +31,7 @@ use super::{
     compiler::LspProjectCompiler,
     edits::{add_newlines_after_import, get_import_edit, position_of_first_definition_if_import},
     engine::{overlaps, within},
-    rename::find_variable_references,
+    reference::find_variable_references,
     src_span_to_lsp_range,
 };
 
