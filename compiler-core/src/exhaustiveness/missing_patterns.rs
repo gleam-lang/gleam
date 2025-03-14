@@ -164,7 +164,7 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
             }
         }
 
-        RuntimeCheck::List {
+        RuntimeCheck::NonEmptyList {
             first_arg,
             rest_arg,
         } => Term::List {
