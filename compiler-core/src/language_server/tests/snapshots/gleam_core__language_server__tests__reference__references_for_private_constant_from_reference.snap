@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\nconst wibble = 10\n\npub fn main() {\n  let _ = wibble\n  wibble + 4\n}\n\nfn wobble() {\n  wibble + wobble()\n}\n"
+---
+-- app.gleam
+
+const wibble = 10
+      ▔▔▔▔▔▔     
+
+pub fn main() {
+  let _ = wibble
+          ↑▔▔▔▔▔
+  wibble + 4
+  ▔▔▔▔▔▔    
+}
+
+fn wobble() {
+  wibble + wobble()
+  ▔▔▔▔▔▔           
+}

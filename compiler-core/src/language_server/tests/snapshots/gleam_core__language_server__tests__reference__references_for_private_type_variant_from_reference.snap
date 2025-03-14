@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/language_server/tests/reference.rs
+expression: "\ntype Wibble { Wibble }\n\nfn main() {\n  let _ = Wibble\n  Wibble\n}\n\nfn wobble() {\n  Wibble\n  wobble()\n}\n"
+---
+-- app.gleam
+
+type Wibble { Wibble }
+              ▔▔▔▔▔▔  
+
+fn main() {
+  let _ = Wibble
+          ↑▔▔▔▔▔
+  Wibble
+  ▔▔▔▔▔▔
+}
+
+fn wobble() {
+  Wibble
+  ▔▔▔▔▔▔
+  wobble()
+}
