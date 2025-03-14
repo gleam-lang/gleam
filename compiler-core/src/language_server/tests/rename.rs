@@ -1073,3 +1073,49 @@ pub fn main() {
         find_position_of("Wibble").to_selection()
     );
 }
+
+#[test]
+fn rename_value_in_nested_module() {
+    assert_rename!(
+        (
+            "sub/mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import sub/mod
+
+pub fn main() {
+  mod.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble").to_selection()
+    );
+}
+
+#[test]
+fn rename_value_in_aliased_module() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub fn wibble() {
+  wibble()
+}
+"
+        ),
+        "
+import mod as the_module
+
+pub fn main() {
+  the_module.wibble()
+}
+",
+        "some_function",
+        find_position_of("wibble").to_selection()
+    );
+}

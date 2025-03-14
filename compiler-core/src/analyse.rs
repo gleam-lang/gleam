@@ -342,7 +342,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 documentation,
                 contains_echo: echo_found,
                 references: References {
-                    imported_modules: env.imported_modules.into_keys().collect(),
+                    imported_modules: env
+                        .imported_modules
+                        .values()
+                        .map(|(_location, module)| module.name.clone())
+                        .collect(),
                     value_references: env.references.into_locations(),
                 },
             },
