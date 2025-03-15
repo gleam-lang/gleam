@@ -13,6 +13,7 @@ version = "1.0.0"
 {
   "name": "my_project",
   "version": "1.0.0",
+  "gleam": null,
   "licences": [],
   "description": "",
   "documentation": {

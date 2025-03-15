@@ -8,7 +8,7 @@ use hexpm::version::Identifier;
 use crate::{
     analyse::TargetSupport,
     build::{Module, Origin, Package, Target},
-    config::{Docs, ErlangConfig, JavaScriptConfig, PackageConfig, Repository},
+    config::{Docs, ErlangConfig, GleamVersion, JavaScriptConfig, PackageConfig, Repository},
     line_numbers::LineNumbers,
     type_::PRELUDE_MODULE_NAME,
     uid::UniqueIdGenerator,
@@ -156,12 +156,7 @@ fn package_from_module(module: Module) -> Package {
                 ],
                 build: Some("build".into()),
             },
-            gleam: Some(hexpm::version::Range::new("1.0.0".into())),
-            gleam_version: Some(
-                hexpm::version::Range::new("1.0.0".into())
-                    .to_pubgrub()
-                    .unwrap(),
-            ),
+            gleam_version: Some(GleamVersion::new("1.0.0".to_string()).unwrap()),
             licences: vec![],
             description: "description".into(),
             documentation: Docs { pages: vec![] },

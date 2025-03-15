@@ -5,7 +5,7 @@ use gleam_core::{
     Error, Result,
     analyse::TargetSupport,
     build::{Codegen, Compile, Mode, Options, Package, Target},
-    config::{PackageConfig, SpdxLicense},
+    config::{GleamVersion, PackageConfig, SpdxLicense},
     docs::DocContext,
     error::{SmallVersion, wrap},
     hex,
@@ -307,7 +307,7 @@ fn do_build_hex_tarball(paths: &ProjectPaths, config: &mut PackageConfig) -> Res
                 std::cmp::max(minimum_required_version, Version::new(1, 0, 0));
             let inferred_version_range =
                 pubgrub::range::Range::higher_than(minimum_required_version);
-            config.gleam_version = Some(inferred_version_range);
+            config.gleam_version = Some(GleamVersion::from_pubgrub(inferred_version_range));
         }
         // Otherwise we need to check that the annotated version range is
         // correct and includes the minimum required version.
