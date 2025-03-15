@@ -1521,16 +1521,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
         let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
         match (&kind, exhaustiveness_check) {
+            // The pattern is exhaustive in a let assignment, there's no problem here.
             (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
+
+            // If the pattern is not exhaustive and we're not asserting we want to
+            // report the error!
             (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
                 self.problems.error(e);
             }
+
+            // If we're asserting but the pattern already covers all cases then the
+            // `assert` is redundant and can be safely removed.
             (AssignmentKind::Assert { location, .. }, Ok(_)) => {
                 self.problems.warning(Warning::RedundantAssertAssignment {
                     location: *location,
                 })
             }
-            (AssignmentKind::Assert { .. }, _) => {}
+
+            // Otherwise we just don't care, asserting will ignore the any missing
+            // pattern error.
+            (AssignmentKind::Assert { .. }, Err(_)) => {}
         }
 
         Assignment {
@@ -4001,6 +4011,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         })
     }
 
+    /// Returns `Ok(())` if the let is exhaustive, returns an `InexhaustiveLetAssignment`
+    /// error if the given pattern doesn't cover all possible cases.
+    ///
     fn check_let_exhaustiveness(
         &self,
         location: SrcSpan,
@@ -4013,13 +4026,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         // Error for missing clauses that would cause a crash
         if output.diagnostics.missing {
-            return Err(Error::InexhaustiveLetAssignment {
+            Err(Error::InexhaustiveLetAssignment {
                 location,
                 missing: output.missing_patterns(self.environment),
-            });
+            })
+        } else {
+            Ok(())
         }
-
-        Ok(())
     }
 
     fn check_case_exhaustiveness(
