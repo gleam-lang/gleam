@@ -5,7 +5,7 @@ use crate::{
     ast::{PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
-    reference::ReferenceTracker,
+    reference::{ReferenceTracker, ValueKind},
     uid::UniqueIdGenerator,
 };
 
@@ -139,10 +139,6 @@ pub struct UnusedModuleAlias {
 /// For Keeping track of entity usages and knowing which error to display.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum EntityKind {
-    PrivateConstant,
-    // String here is the type constructor's type name
-    PrivateTypeConstructor(EcoString),
-    PrivateFunction,
     ImportedConstructor,
     ImportedType,
     ImportedValue,
@@ -651,23 +647,15 @@ impl Environment<'_> {
 
     /// Increments an entity's usage in the current or nearest enclosing scope
     pub fn increment_usage(&mut self, name: &EcoString) {
-        let mut name = name.clone();
+        let name = name.clone();
 
-        while let Some((kind, _, used)) = self
+        if let Some((_, _, used)) = self
             .entity_usages
             .iter_mut()
             .rev()
             .find_map(|scope| scope.get_mut(&name))
         {
             *used = true;
-
-            match kind {
-                // If a type constructor is used, we consider its type also used
-                EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
-                    name = type_name.clone();
-                }
-                _ => break,
-            }
         }
     }
 
@@ -696,6 +684,25 @@ impl Environment<'_> {
                 });
             }
         }
+
+        for (name, info) in self.references.unused_values() {
+            let warning = match info.kind {
+                ValueKind::Function => Warning::UnusedPrivateFunction {
+                    location: info.origin,
+                    name,
+                },
+                ValueKind::Constant => Warning::UnusedPrivateModuleConstant {
+                    location: info.origin,
+                    name,
+                },
+                ValueKind::TypeVariant => Warning::UnusedConstructor {
+                    location: info.origin,
+                    name,
+                    imported: false,
+                },
+            };
+            problems.warning(warning);
+        }
     }
 
     fn handle_unused(
@@ -715,15 +722,6 @@ impl Environment<'_> {
                     imported: true,
                     location,
                 },
-                EntityKind::PrivateConstant => {
-                    Warning::UnusedPrivateModuleConstant { name, location }
-                }
-                EntityKind::PrivateTypeConstructor(_) => Warning::UnusedConstructor {
-                    name,
-                    imported: false,
-                    location,
-                },
-                EntityKind::PrivateFunction => Warning::UnusedPrivateFunction { name, location },
                 EntityKind::PrivateType => Warning::UnusedType {
                     name,
                     imported: false,
