@@ -1013,7 +1013,7 @@ pub fn visit_typed_expr_module_select<'a, V>(
     _v: &mut V,
     _location: &'a SrcSpan,
     _field_start: &'a u32,
-    _typ: &'a Arc<Type>,
+    _type_: &'a Arc<Type>,
     _label: &'a EcoString,
     _module_name: &'a EcoString,
     _module_alias: &'a EcoString,
@@ -1063,7 +1063,7 @@ pub fn visit_typed_expr_todo<'a, V>(
     }
 }
 
-fn visit_typed_expr_echo<'a, V>(
+pub fn visit_typed_expr_echo<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
