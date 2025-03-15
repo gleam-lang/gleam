@@ -15,7 +15,6 @@ pub struct Lexer<T: Iterator<Item = (u32, char)>> {
     chr1: Option<char>,
     loc0: u32,
     loc1: u32,
-    location: u32,
 }
 pub type Spanned = (u32, Token, u32);
 pub type LexResult = Result<Spanned, LexicalError>;
@@ -119,7 +118,6 @@ where
         let mut lxr = Lexer {
             chars: input,
             pending: Vec::new(),
-            location: 0,
             chr0: None,
             chr1: None,
             loc0: 0,
@@ -127,7 +125,6 @@ where
         };
         let _ = lxr.next_char();
         let _ = lxr.next_char();
-        lxr.location = 0;
         lxr
     }
 
