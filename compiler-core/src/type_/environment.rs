@@ -779,8 +779,13 @@ impl Environment<'_> {
                     }
                     Imported::Value(name)
                         if module_info.get_public_value(name).is_some()
-                            && module_info.get_public_value(name).unwrap().type_.fn_arity()
-                                == arity =>
+                            && (arity.is_none()
+                                || module_info
+                                    .get_public_value(name)
+                                    .unwrap()
+                                    .type_
+                                    .fn_arity()
+                                    == arity) =>
                     {
                         Some(TypeOrVariableSuggestion::Importable(importable.clone()))
                     }
@@ -801,15 +806,15 @@ impl Environment<'_> {
                 }
                 Imported::Value(name)
                     if module_info.get_public_value(name).is_some()
-                        && module_info.get_public_value(name).unwrap().type_.fn_arity()
-                            == arity =>
+                        && (arity.is_none()
+                            || module_info.get_public_value(name).unwrap().type_.fn_arity()
+                                == arity) =>
                 {
                     Some(TypeOrVariableSuggestion::Imported(module.clone()))
                 }
                 _ => None,
             },
         ));
-
         // Filter and sort options based on if its already imported and on alphabetical order.
         suggestions.into_iter().sorted().collect()
     }
