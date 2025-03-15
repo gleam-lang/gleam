@@ -78,27 +78,57 @@ impl AsRef<str> for SpdxLicense {
     }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub struct GleamVersion {
+    pubgrub: pubgrub::range::Range<Version>,
+    hex: version::Range,
+}
+
+impl GleamVersion {
+    pub fn from_pubgrub(range: pubgrub::range::Range<Version>) -> Self {
+        Self {
+            hex: version::Range::new(range.to_string()),
+            pubgrub: range,
+        }
+    }
+
+    pub fn as_pubgrub(&self) -> pubgrub::range::Range<Version> {
+        self.pubgrub.clone()
+    }
+
+    pub fn new(spec: String) -> Result<GleamVersion> {
+        let hex = version::Range::new(spec.to_string());
+        let pubgrub = hex.to_pubgrub().map_err(|e| Error::InvalidVersionFormat {
+            input: spec,
+            error: e.to_string(),
+        })?;
+
+        Ok(Self { pubgrub, hex })
+    }
+
+    pub fn lowest_version(&self) -> Option<Version> {
+        self.pubgrub.lowest_version()
+    }
+
+    pub fn hex(&self) -> &version::Range {
+        &self.hex
+    }
+}
+
 #[derive(Deserialize, Serialize, Debug, PartialEq, Clone)]
 pub struct PackageConfig {
     #[serde(deserialize_with = "package_name::deserialize")]
     pub name: EcoString,
     #[serde(default = "default_version")]
     pub version: Version,
+
     #[serde(
         default,
-        skip_serializing_if = "Option::is_none",
-        serialize_with = "serialise_hex_range",
-        deserialize_with = "deserialise_hex_range"
+        rename = "gleam",
+        deserialize_with = "deserialise_gleam_version",
+        serialize_with = "serialise_gleam_version"
     )]
-    // gleam version field in Hex format (for [de]serialization purposes)
-    pub gleam: Option<version::Range>,
-    #[serde(
-        default,
-        skip_serializing,
-        deserialize_with = "deserialise_pubgrub_range"
-    )]
-    // gleam version field used internally by the compiler
-    pub gleam_version: Option<pubgrub::range::Range<Version>>,
+    pub gleam_version: Option<GleamVersion>,
     #[serde(default, alias = "licenses")]
     pub licences: Vec<SpdxLicense>,
     #[serde(default)]
@@ -123,41 +153,30 @@ pub struct PackageConfig {
     pub internal_modules: Option<Vec<Glob>>,
 }
 
-pub fn serialise_hex_range<S>(
-    range: &Option<version::Range>,
+pub fn serialise_gleam_version<S>(
+    gleam_gersion: &Option<GleamVersion>,
     serializer: S,
 ) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
-    match range {
-        Some(range) => serializer.serialize_str(&range.to_string()),
+    match gleam_gersion {
+        Some(version) => serializer.serialize_str(&version.hex.to_string()),
         None => serializer.serialize_none(),
     }
 }
 
-pub fn deserialise_hex_range<'de, D>(deserialiser: D) -> Result<Option<version::Range>, D::Error>
+pub fn deserialise_gleam_version<'de, D>(deserialiser: D) -> Result<Option<GleamVersion>, D::Error>
 where
     D: serde::Deserializer<'de>,
 {
     match Deserialize::deserialize(deserialiser)? {
-        Some(range_string) => Ok(Some(version::Range::new(range_string))),
-        None => Ok(None),
-    }
-}
+        Some(range_string) => {
+            let hex = version::Range::new(range_string);
+            let pubgrub = hex.clone().to_pubgrub().map_err(serde::de::Error::custom)?;
 
-pub fn deserialise_pubgrub_range<'de, D>(
-    deserialiser: D,
-) -> Result<Option<pubgrub::range::Range<Version>>, D::Error>
-where
-    D: serde::Deserializer<'de>,
-{
-    match Deserialize::deserialize(deserialiser)? {
-        Some(range_string) => Ok(Some(
-            version::Range::new(range_string)
-                .to_pubgrub()
-                .map_err(serde::de::Error::custom)?,
-        )),
+            Ok(Some(GleamVersion { hex, pubgrub }))
+        }
         None => Ok(None),
     }
 }
@@ -251,7 +270,8 @@ impl PackageConfig {
     // Checks to see if the gleam version specified in the config is compatible
     // with the current compiler version
     pub fn check_gleam_compatibility(&self) -> Result<(), Error> {
-        if let Some(range) = &self.gleam_version {
+        if let Some(version) = &self.gleam_version {
+            let range = &version.pubgrub;
             let compiler_version =
                 Version::parse(COMPILER_VERSION).expect("Parse compiler semantic version");
 
@@ -599,7 +619,6 @@ impl Default for PackageConfig {
         Self {
             name: Default::default(),
             version: default_version(),
-            gleam: Default::default(),
             gleam_version: Default::default(),
             description: Default::default(),
             documentation: Default::default(),

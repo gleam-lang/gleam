@@ -1,14 +1,14 @@
 [workspace]
 resolver = "2"
 members = [
-    "gleam-bin",
-    "compiler-cli",
-    "compiler-core",
-    "compiler-wasm",
-    "test-helpers-rs",
-    "test-output",
-    "test-package-compiler",
-    "test-project-compiler",
+  "gleam-bin",
+  "compiler-cli",
+  "compiler-core",
+  "compiler-wasm",
+  "test-helpers-rs",
+  "test-output",
+  "test-package-compiler",
+  "test-project-compiler",
 ]
 
 # common dependencies
