@@ -2,8 +2,8 @@ use hexpm::version::Version;
 use pubgrub::range::Range;
 
 use crate::{
-    assert_js, assert_js_error, assert_js_no_warnings_with_gleam_version,
-    assert_js_warnings_with_gleam_version, assert_ts_def,
+    assert_js, assert_js_no_warnings_with_gleam_version, assert_js_warnings_with_gleam_version,
+    assert_ts_def,
 };
 
 #[test]
@@ -787,8 +787,8 @@ fn go(x) {
 }
 
 #[test]
-fn match_float_16_bit_error() {
-    assert_js_error!(
+fn match_float_16_bit() {
+    assert_js!(
         r#"
 fn go(x) {
   let assert <<a:float-size(16)>> = x

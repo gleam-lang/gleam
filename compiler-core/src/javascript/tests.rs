@@ -88,15 +88,6 @@ macro_rules! assert_js {
 }
 
 #[macro_export]
-macro_rules! assert_js_error {
-    ($src:expr $(,)?) => {{
-        let error = $crate::javascript::tests::expect_js_error($src, vec![]);
-        let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    }};
-}
-
-#[macro_export]
 macro_rules! assert_ts_def {
     (($dep_1_package:expr, $dep_1_name:expr, $dep_1_src:expr), ($dep_2_package:expr, $dep_2_name:expr, $dep_2_src:expr), $src:expr $(,)?) => {{
         let compiled = $crate::javascript::tests::compile_ts(
@@ -225,20 +216,4 @@ pub fn compile_js(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, cr
 pub fn compile_ts(src: &str, deps: Vec<(&str, &str, &str)>) -> Result<String, crate::Error> {
     let ast = compile(src, deps);
     ts_declaration(&ast, Utf8Path::new(""), &src.into())
-}
-
-pub fn expect_js_error(src: &str, deps: Vec<(&str, &str, &str)>) -> String {
-    let error = compile_js(src, deps).expect_err("should not compile");
-    println!("er: {error:#?}");
-    let better_error = match error {
-        crate::Error::JavaScript {
-            error: inner_error, ..
-        } => crate::Error::JavaScript {
-            src: src.into(),
-            path: Utf8PathBuf::from("/src/javascript/error.gleam"),
-            error: inner_error,
-        },
-        _ => panic!("expected js error, got {error:#?}"),
-    };
-    better_error.pretty_string()
 }
