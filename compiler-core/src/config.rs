@@ -1065,6 +1065,9 @@ allow_read = ["./database.sqlite"]
     let json = serde_json::to_string_pretty(&config).unwrap();
     let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
     insta::assert_snapshot!(output);
+
+    let roundtrip = serde_json::from_str::<PackageConfig>(&json).unwrap();
+    assert_eq!(config, roundtrip);
 }
 
 #[test]
