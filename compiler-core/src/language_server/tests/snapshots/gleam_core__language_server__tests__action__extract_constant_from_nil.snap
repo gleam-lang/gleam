@@ -1,0 +1,18 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "pub fn main() {\n  let x = Nil\n  x\n}\n"
+---
+----- BEFORE ACTION
+pub fn main() {
+  let x = Nil
+  ▔▔▔▔↑      
+  x
+}
+
+
+----- AFTER ACTION
+const x = Nil
+
+pub fn main() {
+  x
+}
