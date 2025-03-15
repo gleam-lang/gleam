@@ -989,14 +989,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             }
         }?;
 
-        // 16-bit floats are not supported
-        if segment.type_ == crate::type_::float() && size.is_constant_value(16) {
-            return Err(Error::Unsupported {
-                feature: "Float width of 16 bits in patterns".into(),
-                location: segment.location,
-            });
-        }
-
         let is_signed = segment
             .options
             .iter()

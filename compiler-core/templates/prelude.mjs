@@ -416,10 +416,10 @@ export function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
   const floatSize = end - start;
 
   // Check size is valid
-  if (floatSize !== 32 && floatSize !== 64) {
+  if (floatSize !== 16 && floatSize !== 32 && floatSize !== 64) {
     const msg =
-      `Sized floats must be 32-bit or 64-bit on JavaScript, ` +
-      `got size of ${floatSize} bits`;
+      `Sized floats must be 16-bit, 32-bit or 64-bit, got size of ` +
+      `${floatSize} bits`;
     throw new globalThis.Error(msg);
   }
 
@@ -437,8 +437,10 @@ export function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
 
     if (floatSize === 64) {
       return view.getFloat64(0, !isBigEndian);
-    } else {
+    } else if (floatSize === 32) {
       return view.getFloat32(0, !isBigEndian);
+    } else if (floatSize === 16) {
+      return fp16UintToNumber(view.getUint16(0, !isBigEndian));
     }
   }
 
@@ -457,8 +459,10 @@ export function bitArraySliceToFloat(bitArray, start, end, isBigEndian) {
   const view = new DataView(alignedBytes.buffer);
   if (floatSize === 64) {
     return view.getFloat64(0, !isBigEndian);
-  } else {
+  } else if (floatSize === 32) {
     return view.getFloat32(0, !isBigEndian);
+  } else {
+    return fp16UintToNumber(view.getUint16(0, !isBigEndian));
   }
 }
 
@@ -713,11 +717,14 @@ export function toBitArray(segments) {
  * @returns {Uint8Array}
  */
 export function sizedFloat(value, size, isBigEndian) {
-  if (size !== 32 && size !== 64) {
+  if (size !== 16 && size !== 32 && size !== 64) {
     const msg =
-      `Sized floats must be 32-bit or 64-bit on JavaScript, ` +
-      `got size of ${size} bits`;
+      `Sized floats must be 16-bit, 32-bit or 64-bit, got size of ${size} bits`;
     throw new globalThis.Error(msg);
+  }
+
+  if (size === 16) {
+    return numberToFp16Uint(value, isBigEndian);
   }
 
   const buffer = new Uint8Array(size / 8);
@@ -1223,6 +1230,80 @@ function intFromUnalignedSliceUsingBigInt(
   // Convert the result into a JS number. This may cause quantizing/error on
   // values outside JavaScript's safe integer range.
   return Number(value);
+}
+
+/**
+ * Interprets a 16-bit unsigned integer value as a 16-bit floating point value.
+ * 
+ * @param {number} intValue
+ * @returns {number}
+ */
+function fp16UintToNumber(intValue) {
+  const sign = intValue >= 0x8000 ? -1 : 1;
+  const exponent = (intValue & 0x7c00) >> 10;
+  const fraction = intValue & 0x03ff;
+
+  let value;
+  if (exponent === 0) {
+    value = 6.103515625e-5 * (fraction / 0x400);
+  } else if (exponent === 0x1f) {
+    value = fraction === 0 ? Infinity : NaN;
+  } else {
+    value = Math.pow(2, exponent - 15) * (1 + fraction / 0x400);
+  }
+
+  return sign * value;
+}
+
+/**
+ * Converts a floating point number to bytes for a 16-bit floating point value.
+ *
+ * @param {number} intValue
+ * @param {boolean} isBigEndian
+ * @returns {Uint8Array}
+ */
+function numberToFp16Uint(value, isBigEndian) {
+  const buffer = new Uint8Array(2);
+
+  if (isNaN(value)) {
+    buffer[1] = 0x7e;
+  } else if (value === Infinity) {
+    buffer[1] = 0x7c;
+  } else if (value === -Infinity) {
+    buffer[1] = 0xfc;
+  } else if (value === 0) {
+    // Both values are already zero
+  } else {
+    const sign = value < 0 ? 1 : 0;
+    value = Math.abs(value);
+
+    let exponent = Math.floor(Math.log2(value));
+    let fraction = value / Math.pow(2, exponent) - 1;
+
+    exponent += 15;
+
+    if (exponent <= 0) {
+      exponent = 0;
+      fraction = value / Math.pow(2, -14);
+    } else if (exponent >= 31) {
+      exponent = 31;
+      fraction = 0;
+    }
+
+    fraction = Math.round(fraction * 1024);
+
+    buffer[1] =
+      (sign << 7) | ((exponent & 0x1f) << 2) | ((fraction >> 8) & 0x03);
+    buffer[0] = fraction & 0xff;
+  }
+
+  if (isBigEndian) {
+    const a = buffer[0];
+    buffer[0] = buffer[1];
+    buffer[1] = a;
+  }
+
+  return buffer;
 }
 
 /**
