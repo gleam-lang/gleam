@@ -639,6 +639,21 @@ assertEqual(
 
 // sizedFloat()
 
+assertEqual(sizedFloat(0.0, 16, true), new Uint8Array([0x00, 0x00]));
+assertEqual(sizedFloat(1.0, 16, true), new Uint8Array([0x3c, 0x00]));
+assertEqual(sizedFloat(-1.0, 16, false), new Uint8Array([0x00, 0xbc]));
+assertEqual(sizedFloat(1.234375, 16, true), new Uint8Array([0x3c, 0xf0]));
+assertEqual(sizedFloat(-65_504.0, 16, false), new Uint8Array([0xff, 0xfb]));
+assertEqual(
+  sizedFloat(-0.00001519918441772461, 16, true),
+  new Uint8Array([0x80, 0xff]),
+);
+assertEqual(sizedFloat(Infinity, 16, true), new Uint8Array([0x7c, 0x00]));
+assertEqual(sizedFloat(-Infinity, 16, false), new Uint8Array([0x00, 0xfc]));
+assertEqual(sizedFloat(NaN, 16, true), new Uint8Array([0x7e, 0x00]));
+assertEqual(sizedFloat(1_000_000.0, 16, true), new Uint8Array([0x7c, 0x00]));
+assertEqual(sizedFloat(-1_000_000.0, 16, true), new Uint8Array([0xfc, 0x00]));
+
 assertEqual(sizedFloat(16.25, 32, true), new Uint8Array([65, 130, 0, 0]));
 assertEqual(sizedFloat(-16.25, 32, false), new Uint8Array([0, 0, 130, 193]));
 assertEqual(
@@ -767,6 +782,70 @@ assertEqual(
     true,
   ),
   1.0714967429001753e-19,
+);
+
+assertEqual(
+  bitArraySliceToFloat(new BitArray(new Uint8Array([0x00, 0x00])), 0, 16, true),
+  0.0,
+);
+assertEqual(
+  bitArraySliceToFloat(new BitArray(new Uint8Array([0x3c, 0x00])), 0, 16, true),
+  1.0,
+);
+assertEqual(
+  bitArraySliceToFloat(
+    new BitArray(new Uint8Array([0x00, 0xbc])),
+    0,
+    16,
+    false,
+  ),
+  -1.0,
+);
+assertEqual(
+  bitArraySliceToFloat(
+    new BitArray(new Uint8Array([0xf0, 0x3c])),
+    0,
+    16,
+    false,
+  ),
+  1.234375,
+);
+assertEqual(
+  bitArraySliceToFloat(new BitArray(new Uint8Array([0xfb, 0xff])), 0, 16, true),
+  -65_504.0,
+);
+assertEqual(
+  bitArraySliceToFloat(
+    new BitArray(new Uint8Array([0xff, 0x80])),
+    0,
+    16,
+    false,
+  ),
+  -0.00001519918441772461,
+);
+assertEqual(
+  bitArraySliceToFloat(new BitArray(new Uint8Array([0x7c, 0x00])), 0, 16, true),
+  Infinity,
+);
+assertEqual(
+  bitArraySliceToFloat(
+    new BitArray(new Uint8Array([0x00, 0xfc])),
+    0,
+    16,
+    false,
+  ),
+  -Infinity,
+);
+assertEqual(
+  isNaN(
+    bitArraySliceToFloat(
+      new BitArray(new Uint8Array([0x7e, 0x00])),
+      0,
+      16,
+      true,
+    ),
+  ),
+  true,
 );
 
 // bitArraySliceToInt()
