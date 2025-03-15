@@ -1,0 +1,39 @@
+---
+source: compiler-core/src/config.rs
+expression: output
+---
+--- GLEAM.TOML
+
+name = "my_project"
+version = "1.0.0"
+
+
+--- EXPORTED JSON
+
+{
+  "name": "my_project",
+  "version": "1.0.0",
+  "gleam": null,
+  "licences": [],
+  "description": "",
+  "documentation": {
+    "pages": []
+  },
+  "dependencies": {},
+  "dev-dependencies": {},
+  "repository": {
+    "type": "none"
+  },
+  "links": [],
+  "erlang": {
+    "application_start_module": null,
+    "extra_applications": []
+  },
+  "javascript": {
+    "typescript_declarations": false,
+    "runtime": "nodejs",
+    "deno": {}
+  },
+  "target": "erlang",
+  "internal_modules": null
+}

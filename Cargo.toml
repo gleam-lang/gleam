@@ -23,7 +23,7 @@ regex = "1"
 termcolor = "1"
 # Data (de)serialisation
 serde = { version = "1", features = ["derive", "rc"] }
-serde_json = "1"
+serde_json = { version = "1", features = ["preserve_order"] }
 # toml config file parsing
 toml = "0"
 walkdir = "2"
