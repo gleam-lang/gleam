@@ -5513,10 +5513,9 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
     fn visit_typed_expr_echo(
         &mut self,
         location: &'ast SrcSpan,
-        _type_: &'ast Arc<Type>,
+        type_: &'ast Arc<Type>,
         expression: &'ast Option<Box<TypedExpr>>,
     ) {
-        println!("echo");
         // We also want to trigger the action if we're hovering over the expression
         // being printed. So we create a unique span starting from the start of echo
         // end ending at the end of the expression.
@@ -5532,12 +5531,11 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
             return;
         }
 
-        if let Some(expr) = expression {
+        if let Some(expression) = expression {
             // If there's an expression we delete everything we find until its
             // start (excluded).
-            let span_to_delete = SrcSpan::new(location.start, expr.location().start);
+            let span_to_delete = SrcSpan::new(location.start, expression.location().start);
             self.echo_span_to_delete = Some(span_to_delete);
-            ast::visit::visit_typed_expr(self, expr)
         } else {
             // Othwerise we know we're inside a pipeline, we take the closest step
             // that is not echo itself and delete everything from its end until the
@@ -5556,6 +5554,8 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
                 self.echo_span_to_delete = Some(span_to_delete);
             }
         }
+
+        ast::visit::visit_typed_expr_echo(self, location, type_, expression);
     }
 
     fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {

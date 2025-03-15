@@ -1066,7 +1066,7 @@ pub fn visit_typed_expr_todo<'a, V>(
     }
 }
 
-fn visit_typed_expr_echo<'a, V>(
+pub fn visit_typed_expr_echo<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
