@@ -1,0 +1,30 @@
+---
+source: compiler-core/src/javascript/tests/bit_arrays.rs
+assertion_line: 791
+expression: "\nfn go(x) {\n  let assert <<a:float-size(16)>> = x\n}\n"
+snapshot_kind: text
+---
+----- SOURCE CODE
+
+fn go(x) {
+  let assert <<a:float-size(16)>> = x
+}
+
+
+----- COMPILED JAVASCRIPT
+import { makeError, bitArraySliceToFloat } from "../gleam.mjs";
+
+function go(x) {
+  if (!(x.bitSize == 16)) {
+    throw makeError(
+      "let_assert",
+      "my/mod",
+      3,
+      "go",
+      "Pattern match failed, no pattern matched the value.",
+      { value: x }
+    )
+  }
+  let a = bitArraySliceToFloat(x, 0, 16, true);
+  return x;
+}

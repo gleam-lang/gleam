@@ -1001,6 +1001,20 @@ fn bit_array_tests() -> List(Test) {
           <<-489_391_639_457_909_760:56>> == <<53, 84, 229, 150, 16, 180, 0>>,
         )
       }),
+    "<<0, 0>> == <<0.0:float-16>>"
+      |> example(fn() { assert_equal(True, <<0, 0>> == <<0.0:float-16>>) }),
+    "<<0x00, 0xbc> == <<-1.0:float-16-little>>"
+      |> example(fn() {
+        assert_equal(True, <<0x00, 0xbc>> == <<-1.0:float-16-little>>)
+      }),
+    "<<0xf0, 0x3c> == <<1.234375:float-16-little>>"
+      |> example(fn() {
+        assert_equal(True, <<0xf0, 0x3c>> == <<1.234375:float-16-little>>)
+      }),
+    "<<0xfb, 0xff> == <<-65_504.0:float-16>>"
+      |> example(fn() {
+        assert_equal(True, <<0xfb, 0xff>> == <<-65_504.0:float-16>>)
+      }),
     "<<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>"
       |> example(fn() {
         assert_equal(True, <<63, 240, 0, 0, 0, 0, 0, 0>> == <<1.0:float>>)
@@ -1964,6 +1978,27 @@ fn bit_array_match_tests() {
           let assert <<a:64-float-little>> = <<
             61, 10, 215, 163, 112, 61, 18, 64,
           >>
+          a
+        })
+      }),
+    "let <<a:float-16>> = <<0x0C, 0x00>>"
+      |> example(fn() {
+        assert_equal(0.0, {
+          let assert <<a:float-16>> = <<0, 0>>
+          a
+        })
+      }),
+    "let <<a:float-16>> = <<0x3C, 0xF0>>"
+      |> example(fn() {
+        assert_equal(1.234375, {
+          let assert <<a:float-16>> = <<0x3C, 0xF0>>
+          a
+        })
+      }),
+    "let <<a:float-16-little>> = <<0xFF, 0xFB>>"
+      |> example(fn() {
+        assert_equal(-65_504.0, {
+          let assert <<a:float-16-little>> = <<0xFF, 0xFB>>
           a
         })
       }),
