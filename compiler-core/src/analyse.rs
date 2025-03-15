@@ -20,7 +20,7 @@ use crate::{
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
-    reference::ReferenceKind,
+    reference::{ReferenceKind, ValueKind},
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
         RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
@@ -385,6 +385,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
 
+        environment
+            .references
+            .register_value(&name, ValueKind::Constant, location, publicity);
+
         let definition = FunctionDefinition {
             has_body: true,
             has_erlang_external: false,
@@ -441,15 +445,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name_location,
             ReferenceKind::Definition,
         );
-
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateConstant,
-                location,
-                &mut self.problems,
-            );
-        }
 
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
@@ -539,7 +534,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         environment
             .references
-            .enter_function(environment.current_module.clone(), name.clone());
+            .register_value(&name, ValueKind::Function, location, publicity);
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -1096,21 +1091,19 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             );
 
+            environment.references.register_value(
+                &name,
+                ValueKind::TypeVariant,
+                constructor.location,
+                value_constructor_publicity,
+            );
+
             environment.references.register_value_reference(
                 environment.current_module.clone(),
                 constructor.name.clone(),
                 constructor.name_location,
                 ReferenceKind::Definition,
             );
-
-            if value_constructor_publicity.is_private() {
-                environment.init_usage(
-                    constructor.name.clone(),
-                    EntityKind::PrivateTypeConstructor(name.clone()),
-                    constructor.location,
-                    &mut self.problems,
-                );
-            }
 
             constructors_data.push(TypeValueConstructor {
                 name: constructor.name.clone(),
@@ -1458,14 +1451,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             *publicity,
             deprecation.clone(),
         );
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateFunction,
-                *location,
-                &mut self.problems,
-            );
-        };
         Ok(())
     }
 
