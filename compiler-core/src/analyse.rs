@@ -203,7 +203,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let env = Environment::new(
             self.ids.clone(),
             self.package_config.name.clone(),
-            self.package_config.gleam_version.clone(),
+            self.package_config
+                .gleam_version
+                .clone()
+                .map(|version| version.as_pubgrub()),
             self.module_name.clone(),
             self.target,
             self.importable_modules,

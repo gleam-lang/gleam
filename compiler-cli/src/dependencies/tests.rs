@@ -1182,7 +1182,6 @@ fn package_config(
     PackageConfig {
         name: "the_package".into(),
         version: Version::parse("1.0.0").unwrap(),
-        gleam: None,
         gleam_version: None,
         licences: vec![],
         description: "".into(),

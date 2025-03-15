@@ -3,7 +3,7 @@ use crate::{
     analyse::TargetSupport,
     ast::{TypedModule, TypedStatement, UntypedExpr, UntypedModule},
     build::{Origin, Outcome, Target},
-    config::PackageConfig,
+    config::{GleamVersion, PackageConfig},
     error::Error,
     type_::{build_prelude, expression::FunctionDefinition, pretty::Printer},
     uid::UniqueIdGenerator,
@@ -486,7 +486,7 @@ pub fn compile_module_with_opts(
     ast.name = module_name.into();
     let mut config = PackageConfig::default();
     config.name = "thepackage".into();
-    config.gleam_version = gleam_version;
+    config.gleam_version = gleam_version.map(|v| GleamVersion::from_pubgrub(v));
 
     let warnings = TypeWarningEmitter::new("/src/warning/wrn.gleam".into(), src.into(), emitter);
     let inference_result = crate::analyse::ModuleAnalyzerConstructor::<()> {
