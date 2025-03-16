@@ -1,0 +1,41 @@
+---
+source: compiler-core/src/language_server/tests/rename.rs
+expression: "\npub type Wibble { Wibble }\n\npub fn main() {\n  Wibble\n}\n"
+---
+----- BEFORE RENAME
+-- mod.gleam
+
+import app.{Wibble as Wobble}
+
+fn wobble() {
+  Wobble
+}
+
+
+-- app.gleam
+
+pub type Wibble { Wibble }
+                  ↑       
+
+pub fn main() {
+  Wibble
+}
+
+
+----- AFTER RENAME
+-- mod.gleam
+
+import app.{Wubble as Wobble}
+
+fn wobble() {
+  Wobble
+}
+
+
+-- app.gleam
+
+pub type Wibble { Wubble }
+
+pub fn main() {
+  Wubble
+}

@@ -232,6 +232,7 @@ impl<'a> ModuleEncoder<'a> {
             ReferenceKind::Unqualified => kind.set_unqualified(()),
             ReferenceKind::Import => kind.set_import(()),
             ReferenceKind::Definition => kind.set_definition(()),
+            ReferenceKind::Alias => kind.set_alias(()),
         }
         self.build_src_span(builder.init_location(), reference.location);
     }

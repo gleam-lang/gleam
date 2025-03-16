@@ -3042,18 +3042,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         kind: ReferenceKind,
     ) {
         match variant {
-            // If the referenced name is different to the name of the original
-            // value, that means we are referencing it via an alias and don't
-            // want to track this reference.
             ValueConstructorVariant::ModuleFn {
-                name: value_name, ..
+                module,
+                name: value_name,
+                ..
             }
             | ValueConstructorVariant::Record {
-                name: value_name, ..
+                module,
+                name: value_name,
+                ..
             }
             | ValueConstructorVariant::ModuleConstant {
-                name: value_name, ..
-            } if value_name != referenced_name => {}
+                module,
+                name: value_name,
+                ..
+            } if value_name != referenced_name => self.environment.references.register_reference(
+                module.clone(),
+                value_name.clone(),
+                location,
+                ReferenceKind::Alias,
+            ),
             ValueConstructorVariant::ModuleFn { name, module, .. }
             | ValueConstructorVariant::Record { name, module, .. }
             | ValueConstructorVariant::ModuleConstant { name, module, .. } => self

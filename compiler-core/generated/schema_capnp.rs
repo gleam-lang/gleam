@@ -2158,7 +2158,7 @@ pub mod reference {
 }
 
 pub mod reference_kind {
-  pub use self::Which::{Qualified,Unqualified,Import,Definition};
+  pub use self::Which::{Qualified,Unqualified,Import,Definition,Alias};
 
   #[derive(Copy, Clone)]
   pub struct Owned(());
@@ -2243,6 +2243,11 @@ pub mod reference_kind {
             ()
           ))
         }
+        4 => {
+          ::core::result::Result::Ok(Alias(
+            ()
+          ))
+        }
         x => ::core::result::Result::Err(::capnp::NotInSchema(x))
       }
     }
@@ -2317,6 +2322,10 @@ pub mod reference_kind {
       self.builder.set_data_field::<u16>(0, 3);
     }
     #[inline]
+    pub fn set_alias(&mut self, _value: ())  {
+      self.builder.set_data_field::<u16>(0, 4);
+    }
+    #[inline]
     pub fn which(self) -> ::core::result::Result<WhichBuilder, ::capnp::NotInSchema> {
       match self.builder.get_data_field::<u16>(0) {
         0 => {
@@ -2339,6 +2348,11 @@ pub mod reference_kind {
             ()
           ))
         }
+        4 => {
+          ::core::result::Result::Ok(Alias(
+            ()
+          ))
+        }
         x => ::core::result::Result::Err(::capnp::NotInSchema(x))
       }
     }
@@ -2353,17 +2367,17 @@ pub mod reference_kind {
   impl Pipeline  {
   }
   mod _private {
-    pub static ENCODED_NODE: [::capnp::Word; 81] = [
+    pub static ENCODED_NODE: [::capnp::Word; 96] = [
       ::capnp::word(0, 0, 0, 0, 5, 0, 6, 0),
       ::capnp::word(201, 38, 14, 81, 37, 76, 28, 166),
       ::capnp::word(13, 0, 0, 0, 1, 0, 1, 0),
       ::capnp::word(190, 237, 188, 253, 156, 169, 51, 181),
-      ::capnp::word(0, 0, 7, 0, 0, 0, 4, 0),
+      ::capnp::word(0, 0, 7, 0, 0, 0, 5, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(21, 0, 0, 0, 218, 0, 0, 0),
       ::capnp::word(33, 0, 0, 0, 7, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(29, 0, 0, 0, 231, 0, 0, 0),
+      ::capnp::word(29, 0, 0, 0, 31, 1, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(115, 99, 104, 101, 109, 97, 46, 99),
@@ -2371,35 +2385,42 @@ pub mod reference_kind {
       ::capnp::word(101, 114, 101, 110, 99, 101, 75, 105),
       ::capnp::word(110, 100, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 1, 0, 1, 0),
-      ::capnp::word(16, 0, 0, 0, 3, 0, 4, 0),
+      ::capnp::word(20, 0, 0, 0, 3, 0, 4, 0),
       ::capnp::word(0, 0, 255, 255, 0, 0, 0, 0),
       ::capnp::word(0, 0, 1, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(97, 0, 0, 0, 82, 0, 0, 0),
+      ::capnp::word(125, 0, 0, 0, 82, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(96, 0, 0, 0, 3, 0, 1, 0),
-      ::capnp::word(108, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(124, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(136, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(1, 0, 254, 255, 0, 0, 0, 0),
       ::capnp::word(0, 0, 1, 0, 1, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(105, 0, 0, 0, 98, 0, 0, 0),
+      ::capnp::word(133, 0, 0, 0, 98, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(104, 0, 0, 0, 3, 0, 1, 0),
-      ::capnp::word(116, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(132, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(144, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(2, 0, 253, 255, 0, 0, 0, 0),
       ::capnp::word(0, 0, 1, 0, 2, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(113, 0, 0, 0, 58, 0, 0, 0),
+      ::capnp::word(141, 0, 0, 0, 58, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(108, 0, 0, 0, 3, 0, 1, 0),
-      ::capnp::word(120, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(136, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(148, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(3, 0, 252, 255, 0, 0, 0, 0),
       ::capnp::word(0, 0, 1, 0, 3, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(117, 0, 0, 0, 90, 0, 0, 0),
+      ::capnp::word(145, 0, 0, 0, 90, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
-      ::capnp::word(116, 0, 0, 0, 3, 0, 1, 0),
-      ::capnp::word(128, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(144, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(156, 0, 0, 0, 2, 0, 1, 0),
+      ::capnp::word(4, 0, 251, 255, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 1, 0, 4, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(153, 0, 0, 0, 50, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(148, 0, 0, 0, 3, 0, 1, 0),
+      ::capnp::word(160, 0, 0, 0, 2, 0, 1, 0),
       ::capnp::word(113, 117, 97, 108, 105, 102, 105, 101),
       ::capnp::word(100, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
@@ -2435,6 +2456,14 @@ pub mod reference_kind {
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
       ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(97, 108, 105, 97, 115, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
+      ::capnp::word(0, 0, 0, 0, 0, 0, 0, 0),
     ];
     pub fn get_field_types(index: u16) -> ::capnp::introspect::Type {
       match index {
@@ -2442,6 +2471,7 @@ pub mod reference_kind {
         1 => <() as ::capnp::introspect::Introspect>::introspect(),
         2 => <() as ::capnp::introspect::Introspect>::introspect(),
         3 => <() as ::capnp::introspect::Introspect>::introspect(),
+        4 => <() as ::capnp::introspect::Introspect>::introspect(),
         _ => panic!("invalid field index {}", index),
       }
     }
@@ -2455,8 +2485,8 @@ pub mod reference_kind {
       members_by_name: MEMBERS_BY_NAME,
     };
     pub static NONUNION_MEMBERS : &[u16] = &[];
-    pub static MEMBERS_BY_DISCRIMINANT : &[u16] = &[0,1,2,3];
-    pub static MEMBERS_BY_NAME : &[u16] = &[3,2,0,1];
+    pub static MEMBERS_BY_DISCRIMINANT : &[u16] = &[0,1,2,3,4];
+    pub static MEMBERS_BY_NAME : &[u16] = &[4,3,2,0,1];
     pub const TYPE_ID: u64 = 0xa61c_4c25_510e_26c9;
   }
   pub enum Which {
@@ -2464,6 +2494,7 @@ pub mod reference_kind {
     Unqualified(()),
     Import(()),
     Definition(()),
+    Alias(()),
   }
   pub type WhichReader = Which;
   pub type WhichBuilder = Which;
