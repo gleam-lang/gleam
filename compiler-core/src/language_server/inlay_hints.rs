@@ -132,7 +132,7 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         }
 
         if self.config.function_return_types {
-            if let Some((_args, ret_type)) = type_.fn_types() {
+            if let Some((_arguments, ret_type)) = type_.fn_types() {
                 self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
             }
         }
