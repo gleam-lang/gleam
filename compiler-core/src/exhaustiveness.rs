@@ -214,7 +214,7 @@ impl Branch {
     /// }
     /// ```
     ///
-    fn move_unconditional_patterns(&mut self, compiler: &Compiler<'_>) {
+    fn move_unconditional_patterns(&mut self, compiler: &mut Compiler<'_>) {
         self.checks.retain_mut(|check| {
             loop {
                 match compiler.pattern(check.pattern) {
@@ -237,6 +237,22 @@ impl Branch {
                         check.pattern = *pattern;
                         continue;
                     }
+                    // There's a special case of assignments when it comes to string
+                    // prefix patterns. We can give a name to a literal prefix like this:
+                    // `"0" as digit <> rest`.
+                    // We also want to move this special case of an assignment to the
+                    // branch body!
+                    Pattern::StringPrefix {
+                        prefix,
+                        prefix_name,
+                        rest: _,
+                    } => {
+                        if let Some(variable) = std::mem::take(prefix_name) {
+                            self.body
+                                .assign_literal_string(variable.clone(), prefix.clone());
+                        }
+                        return true;
+                    }
                     // All other patterns are not unconditional, so we just keep them.
                     _ => return true,
                 }
@@ -257,11 +273,25 @@ pub struct Body {
     /// The tuples are in the form `(name, value)`, so `(wibble, var)`
     /// corresponds to `let wibble = var`.
     ///
-    bindings: Vec<(EcoString, Variable)>,
+    bindings: Vec<(EcoString, BoundValue)>,
 
     /// The index of the clause in the case expression that should be run.
     ///
     clause_index: usize,
+}
+
+/// A value that can appear on the right hand side of one of the assignments we
+/// find at the top of a body.
+///
+#[derive(Clone, Eq, PartialEq, Debug)]
+enum BoundValue {
+    /// `let a = variable`
+    ///
+    Variable(Variable),
+
+    /// `let a = "a literal string"`
+    ///
+    LiteralString(EcoString),
 }
 
 impl Body {
@@ -272,10 +302,15 @@ impl Body {
         }
     }
 
-    /// Adds a new assignment to the body, binding `let var = value`
+    /// Adds a new assignment to the body, binding `let variable = value`
     ///
-    pub fn assign(&mut self, var: EcoString, value: Variable) {
-        self.bindings.push((var, value));
+    pub fn assign(&mut self, variable: EcoString, value: Variable) {
+        self.bindings.push((variable, BoundValue::Variable(value)));
+    }
+
+    fn assign_literal_string(&mut self, variable: EcoString, value: EcoString) {
+        self.bindings
+            .push((variable, BoundValue::LiteralString(value)));
     }
 }
 
@@ -303,6 +338,7 @@ pub enum Pattern {
     },
     StringPrefix {
         prefix: EcoString,
+        prefix_name: Option<EcoString>,
         rest: Id<Pattern>,
     },
     Assign {
@@ -782,8 +818,10 @@ impl<'a> Compiler<'a> {
         }
     }
 
-    fn pattern(&self, pattern_id: Id<Pattern>) -> &Pattern {
-        self.patterns.get(pattern_id).expect("unknown pattern id")
+    fn pattern(&mut self, pattern_id: Id<Pattern>) -> &mut Pattern {
+        self.patterns
+            .get_mut(pattern_id)
+            .expect("unknown pattern id")
     }
 
     /// Returns a new fresh variable (i.e. guaranteed to have a unique `variable_id`)
@@ -1122,6 +1160,7 @@ impl<'a> Compiler<'a> {
             (
                 Pattern::StringPrefix {
                     prefix: prefix1,
+                    prefix_name: _,
                     rest: rest1,
                 },
                 RuntimeCheck::StringPrefix {
@@ -1193,6 +1232,7 @@ impl<'a> Compiler<'a> {
     fn string_prefix_pattern(&mut self, prefix: &str, rest: Id<Pattern>) -> Id<Pattern> {
         self.patterns.alloc(Pattern::StringPrefix {
             prefix: EcoString::from(prefix),
+            prefix_name: None,
             rest,
         })
     }
@@ -1672,16 +1712,24 @@ impl CaseToCompile {
 
             TypedPattern::StringPrefix {
                 left_side_string,
+                left_side_assignment,
                 right_side_assignment,
                 ..
             } => {
                 let prefix = left_side_string.clone();
+                let prefix_name = left_side_assignment
+                    .as_ref()
+                    .map(|(label, _)| label.clone());
                 let rest_pattern = match right_side_assignment {
                     AssignName::Variable(name) => Pattern::Variable { name: name.clone() },
                     AssignName::Discard(_) => Pattern::Discard,
                 };
                 let rest = self.insert(rest_pattern);
-                self.insert(Pattern::StringPrefix { prefix, rest })
+                self.insert(Pattern::StringPrefix {
+                    prefix,
+                    prefix_name,
+                    rest,
+                })
             }
 
             TypedPattern::VarUsage { .. } => {
