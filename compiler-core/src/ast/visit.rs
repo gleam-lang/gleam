@@ -623,8 +623,8 @@ where
         TypeAst::Var(super::TypeAstVar { location, name }) => {
             v.visit_type_ast_var(location, name);
         }
-        TypeAst::Tuple(super::TypeAstTuple { location, elems }) => {
-            v.visit_type_ast_tuple(location, elems);
+        TypeAst::Tuple(super::TypeAstTuple { location, elements }) => {
+            v.visit_type_ast_tuple(location, elements);
         }
         TypeAst::Hole(super::TypeAstHole { location, name }) => {
             v.visit_type_ast_hole(location, name);

@@ -190,8 +190,8 @@ impl Hydrator {
                 Ok(return_type)
             }
 
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => Ok(tuple(
-                elems
+            TypeAst::Tuple(TypeAstTuple { elements, .. }) => Ok(tuple(
+                elements
                     .iter()
                     .map(|t| self.type_from_ast(t, environment, problems))
                     .try_collect()?,

@@ -739,8 +739,8 @@ impl<'comments> Formatter<'comments> {
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 
-            TypeAst::Tuple(TypeAstTuple { elems, location }) => {
-                "#".to_doc().append(self.type_arguments(elems, location))
+            TypeAst::Tuple(TypeAstTuple { elements, location }) => {
+                "#".to_doc().append(self.type_arguments(elements, location))
             }
         }
         .group()

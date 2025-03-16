@@ -291,7 +291,7 @@ pub struct TypeAstVar {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeAstTuple {
     pub location: SrcSpan,
-    pub elems: Vec<TypeAst>,
+    pub elements: Vec<TypeAst>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -372,15 +372,18 @@ impl TypeAst {
                 }) => name == o_name,
                 _ => false,
             },
-            TypeAst::Tuple(TypeAstTuple { elems, location: _ }) => match other {
+            TypeAst::Tuple(TypeAstTuple {
+                elements,
+                location: _,
+            }) => match other {
                 TypeAst::Tuple(TypeAstTuple {
-                    elems: o_elems,
+                    elements: other_elements,
                     location: _,
                 }) => {
-                    elems.len() == o_elems.len()
-                        && elems
+                    elements.len() == other_elements.len()
+                        && elements
                             .iter()
-                            .zip(o_elems)
+                            .zip(other_elements)
                             .all(|a| a.0.is_logically_equal(a.1))
                 }
                 _ => false,
@@ -447,10 +450,10 @@ impl TypeAst {
                     }
                 }))
                 .or(Some(Located::Annotation(self.location(), type_))),
-            TypeAst::Tuple(TypeAstTuple { elems, .. }) => type_
+            TypeAst::Tuple(TypeAstTuple { elements, .. }) => type_
                 .tuple_types()
                 .and_then(|elem_types| {
-                    if let Some(e) = elems
+                    if let Some(e) = elements
                         .iter()
                         .zip(elem_types)
                         .find_map(|(e, e_type)| e.find_node(byte_index, e_type.clone()))
@@ -472,9 +475,9 @@ impl TypeAst {
             TypeAst::Hole(hole) => buffer.push_str(&hole.name),
             TypeAst::Tuple(tuple) => {
                 buffer.push_str("#(");
-                for (i, elem) in tuple.elems.iter().enumerate() {
+                for (i, elem) in tuple.elements.iter().enumerate() {
                     elem.print(buffer);
-                    if i < tuple.elems.len() - 1 {
+                    if i < tuple.elements.len() - 1 {
                         buffer.push_str(", ");
                     }
                 }
@@ -564,7 +567,7 @@ fn type_ast_print_tuple() {
     let mut buffer = EcoString::new();
     let ast = TypeAst::Tuple(TypeAstTuple {
         location: SrcSpan { start: 1, end: 1 },
-        elems: vec![
+        elements: vec![
             TypeAst::Constructor(TypeAstConstructor {
                 name: "SomeType".into(),
                 module: Some(("some_module".into(), SrcSpan { start: 1, end: 1 })),

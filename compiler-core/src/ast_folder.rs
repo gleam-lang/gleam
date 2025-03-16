@@ -192,7 +192,7 @@ pub trait TypeAstFolder {
             }
 
             TypeAst::Tuple(mut t) => {
-                t.elems = self.fold_all_types(t.elems);
+                t.elements = self.fold_all_types(t.elements);
                 TypeAst::Tuple(t)
             }
 
