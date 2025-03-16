@@ -76,7 +76,8 @@ allow_read = ["./database.sqlite"]
   "repository": {
     "type": "github",
     "user": "example",
-    "repo": "my_dep"
+    "repo": "my_dep",
+    "path": null
   },
   "links": [
     {
@@ -98,13 +99,20 @@ allow_read = ["./database.sqlite"]
       "allow_env": [
         "DATABASE_URL"
       ],
+      "allow_sys": false,
+      "allow_hrtime": false,
       "allow_net": [
         "example.com:443"
       ],
       "allow_ffi": true,
       "allow_read": [
         "./database.sqlite"
-      ]
+      ],
+      "allow_run": [],
+      "allow_write": [],
+      "allow_all": false,
+      "unstable": false,
+      "location": null
     }
   },
   "target": "erlang",

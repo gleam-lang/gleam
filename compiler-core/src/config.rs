@@ -724,57 +724,32 @@ where
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Default, Clone)]
 pub struct DenoConfig {
-    #[serde(
-        default,
-        skip_serializing_if = "is_default",
-        deserialize_with = "bool_or_seq_string_to_deno_flag"
-    )]
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_env: DenoFlag,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
     pub allow_sys: bool,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
     pub allow_hrtime: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "is_default",
-        deserialize_with = "bool_or_seq_string_to_deno_flag"
-    )]
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_net: DenoFlag,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
     pub allow_ffi: bool,
-    #[serde(
-        default,
-        skip_serializing_if = "is_default",
-        deserialize_with = "bool_or_seq_string_to_deno_flag"
-    )]
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_read: DenoFlag,
-    #[serde(
-        default,
-        skip_serializing_if = "is_default",
-        deserialize_with = "bool_or_seq_string_to_deno_flag"
-    )]
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_run: DenoFlag,
-    #[serde(
-        default,
-        skip_serializing_if = "is_default",
-        deserialize_with = "bool_or_seq_string_to_deno_flag"
-    )]
+    #[serde(default, deserialize_with = "bool_or_seq_string_to_deno_flag")]
     pub allow_write: DenoFlag,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
     pub allow_all: bool,
-    #[serde(default, skip_serializing_if = "is_default")]
+    #[serde(default)]
     pub unstable: bool,
     #[serde(
         default,
         serialize_with = "uri_serde::serialize_option",
         deserialize_with = "uri_serde::deserialize_option"
     )]
-    #[serde(skip_serializing_if = "Option::is_none")]
     pub location: Option<Uri>,
-}
-
-fn is_default<T: Default + PartialEq>(t: &T) -> bool {
-    *t == Default::default()
 }
 
 #[derive(Deserialize, Serialize, Debug, PartialEq, Eq, Clone)]
@@ -783,32 +758,27 @@ pub enum Repository {
     GitHub {
         user: String,
         repo: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     GitLab {
         user: String,
         repo: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     BitBucket {
         user: String,
         repo: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     Codeberg {
         user: String,
         repo: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     #[serde(alias = "forgejo")]
     Gitea {
         user: String,
         repo: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
         #[serde(
             serialize_with = "uri_serde::serialize",
@@ -819,7 +789,6 @@ pub enum Repository {
     SourceHut {
         user: String,
         repo: String,
-        #[serde(skip_serializing_if = "Option::is_none")]
         path: Option<String>,
     },
     Custom {
