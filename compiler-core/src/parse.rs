@@ -2625,8 +2625,8 @@ where
 
     // For parsing a comma separated "list" of types, for tuple, constructor, and function
     fn parse_types(&mut self) -> Result<Vec<TypeAst>, ParseError> {
-        let elems = Parser::series_of(self, &|p| Parser::parse_type(p), Some(&Token::Comma))?;
-        Ok(elems)
+        let elements = Parser::series_of(self, &|p| Parser::parse_type(p), Some(&Token::Comma))?;
+        Ok(elements)
     }
 
     //

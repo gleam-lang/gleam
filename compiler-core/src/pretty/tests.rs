@@ -255,8 +255,8 @@ fn nest_if_broken_test() {
 
 #[test]
 fn let_left_side_fits_test() {
-    let elems = break_("", "").append("1").nest(2).append(break_("", ""));
-    let list = "[".to_doc().append(elems).append("]").group();
+    let elements = break_("", "").append("1").nest(2).append(break_("", ""));
+    let list = "[".to_doc().append(elements).append("]").group();
     let doc = list.clone().append(" = ").append(list);
 
     assert_eq!(

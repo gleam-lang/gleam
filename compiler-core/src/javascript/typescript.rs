@@ -120,9 +120,9 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
 
 /// Prints a Gleam tuple in the TypeScript equivalent syntax
 ///
-fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+fn tuple<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
     break_("", "")
-        .append(join(elems, break_(",", ", ")))
+        .append(join(elements, break_(",", ", ")))
         .nest(INDENT)
         .append(break_("", ""))
         .surround("[", "]")
