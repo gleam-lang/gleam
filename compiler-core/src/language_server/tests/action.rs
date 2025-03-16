@@ -5236,6 +5236,60 @@ pub fn main() {
 }
 
 #[test]
+fn extract_constant_from_inside_block() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  let fahrenheit = {
+    let degrees = 64 + 32
+    degrees
+  }
+}"#,
+        find_position_of("32").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_inside_case() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main(result) {
+  case result {
+    Ok(value) -> value + 1
+    Error(_) -> panic
+  }
+}"#,
+        find_position_of("1").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_inside_use_1() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"pub fn main() {
+  use x <- result.try(todo)
+  Ok(123)
+}"#,
+        find_position_of("Ok").to_selection()
+    );
+}
+
+#[test]
+fn extract_constant_from_inside_use_2() {
+    assert_code_action!(
+        EXTRACT_CONSTANT,
+        r#"const number = 123
+
+pub fn main() {
+  use x <- result.try(todo)
+  Ok(number)
+}"#,
+        find_position_of("Ok").to_selection()
+    );
+}
+
+#[test]
 fn do_not_extract_constant_from_pattern() {
     assert_no_code_actions!(
         EXTRACT_CONSTANT,
