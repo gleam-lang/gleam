@@ -15,7 +15,7 @@ fn wobble() {
 -- app.gleam
 
 pub type Wibble { Wibble }
-                  ↑       
+                  ↑▔▔▔▔▔  
 
 pub fn main() {
   Wibble

@@ -1141,6 +1141,6 @@ pub fn main() {
 }
 ",
         "Wubble",
-        find_position_of("Wibble }").to_selection()
+        find_position_of("Wibble }")
     );
 }
