@@ -6,12 +6,12 @@ use lsp_types::Location;
 use crate::{
     analyse,
     ast::{
-        self, ArgNames, Definition, Function, ModuleConstant, Pattern, RecordConstructor, SrcSpan,
-        TypedExpr, TypedModule, visit::Visit,
+        self, ArgNames, CustomType, Definition, Function, ModuleConstant, Pattern,
+        RecordConstructor, SrcSpan, TypedExpr, TypedModule, visit::Visit,
     },
     build::Located,
     type_::{
-        ModuleInterface, ModuleValueConstructor, ValueConstructor, ValueConstructorVariant,
+        ModuleInterface, ModuleValueConstructor, Type, ValueConstructor, ValueConstructorVariant,
         error::{Named, VariableOrigin},
     },
 };
@@ -31,6 +31,12 @@ pub enum Referenced {
         name: EcoString,
         location: SrcSpan,
         name_kind: Named,
+        target_kind: RenameTarget,
+    },
+    ModuleType {
+        module: EcoString,
+        name: EcoString,
+        location: SrcSpan,
         target_kind: RenameTarget,
     },
 }
@@ -205,15 +211,50 @@ pub fn reference_for_ast_node(
                 RenameTarget::Unqualified
             },
         }),
+        Located::Annotation { ast, type_ } => match type_.as_ref() {
+            Type::Named { module, name, .. } => {
+                let target_kind = match ast {
+                    ast::TypeAst::Constructor(constructor) => {
+                        if constructor.module.is_some() {
+                            RenameTarget::Qualified
+                        } else {
+                            RenameTarget::Unqualified
+                        }
+                    }
+                    ast::TypeAst::Fn(_)
+                    | ast::TypeAst::Var(_)
+                    | ast::TypeAst::Tuple(_)
+                    | ast::TypeAst::Hole(_) => RenameTarget::Unqualified,
+                };
+                Some(Referenced::ModuleType {
+                    module: module.clone(),
+                    name: name.clone(),
+                    location: ast.location(),
+                    target_kind,
+                })
+            }
+            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
+        },
+        Located::ModuleStatement(Definition::CustomType(CustomType {
+            name,
+            name_location,
+            ..
+        })) => Some(Referenced::ModuleType {
+            module: current_module.clone(),
+            name: name.clone(),
+            location: *name_location,
+            target_kind: RenameTarget::Definition,
+        }),
         _ => None,
     }
 }
 
-pub fn find_module_value_references(
+pub fn find_module_references(
     module_name: EcoString,
     name: EcoString,
     modules: &im::HashMap<EcoString, ModuleInterface>,
     sources: &HashMap<EcoString, ModuleSourceInformation>,
+    layer: ast::Layer,
 ) -> Vec<Location> {
     let mut reference_locations = Vec::new();
 
@@ -223,12 +264,13 @@ pub fn find_module_value_references(
                 continue;
             };
 
-            find_value_references_in_module(
+            find_references_in_module(
                 &module_name,
                 &name,
                 module,
                 source_information,
                 &mut reference_locations,
+                layer,
             );
         }
     }
@@ -236,18 +278,20 @@ pub fn find_module_value_references(
     reference_locations
 }
 
-fn find_value_references_in_module(
+fn find_references_in_module(
     module_name: &EcoString,
     name: &EcoString,
     module: &ModuleInterface,
     source_information: &ModuleSourceInformation,
     reference_locations: &mut Vec<Location>,
+    layer: ast::Layer,
 ) {
-    let Some(references) = module
-        .references
-        .value_references
-        .get(&(module_name.clone(), name.clone()))
-    else {
+    let reference_map = match layer {
+        ast::Layer::Value => &module.references.value_references,
+        ast::Layer::Type => &module.references.type_references,
+    };
+
+    let Some(references) = reference_map.get(&(module_name.clone(), name.clone())) else {
         return;
     };
 
@@ -306,7 +350,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         &mut self,
         location: &'ast SrcSpan,
         _name: &'ast EcoString,
-        _type_: &'ast std::sync::Arc<crate::type_::Type>,
+        _type_: &'ast std::sync::Arc<Type>,
         definition_location: &'ast SrcSpan,
     ) {
         if *definition_location == self.definition_location {
@@ -319,7 +363,7 @@ impl<'ast> Visit<'ast> for FindVariableReferences {
         location: &'ast SrcSpan,
         _name: &'ast EcoString,
         constructor: &'ast Option<ValueConstructor>,
-        _type_: &'ast std::sync::Arc<crate::type_::Type>,
+        _type_: &'ast std::sync::Arc<Type>,
     ) {
         let variant = match constructor {
             Some(constructor) => &constructor.variant,

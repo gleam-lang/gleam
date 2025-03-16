@@ -113,7 +113,8 @@ impl ModuleDecoder {
     fn references(&self, reader: references::Reader<'_>) -> Result<References> {
         Ok(References {
             imported_modules: self.string_set(reader.get_imported_modules()?)?,
-            value_references: self.value_references(reader.get_value_references()?)?,
+            value_references: self.reference_map(reader.get_value_references()?)?,
+            type_references: self.reference_map(reader.get_type_references()?)?,
         })
     }
 
@@ -125,9 +126,9 @@ impl ModuleDecoder {
         Ok(set)
     }
 
-    fn value_references(
+    fn reference_map(
         &self,
-        reader: capnp::struct_list::Reader<'_, value_reference::Owned>,
+        reader: capnp::struct_list::Reader<'_, reference_map::Owned>,
     ) -> Result<ReferenceMap> {
         let mut map = HashMap::with_capacity(reader.len() as usize);
         for prop in reader.into_iter() {

@@ -1106,7 +1106,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // We only register the reference here, if we know that this is a module access.
                 // Otherwise we would register module access even if we are actually accessing
                 // the field on a record
-                self.environment.references.register_reference(
+                self.environment.references.register_value_reference(
                     module_name.clone(),
                     label.clone(),
                     SrcSpan::new(field_start, location.end),
@@ -2336,7 +2336,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     constructor,
                 } => match constructor {
                     ModuleValueConstructor::Constant { literal, .. } => {
-                        self.environment.references.register_reference(
+                        self.environment.references.register_value_reference(
                             module_name.clone(),
                             label.clone(),
                             location,
@@ -3070,7 +3070,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
                 .environment
                 .references
-                .register_reference(module.clone(), name.clone(), location, kind),
+                .register_value_reference(module.clone(), name.clone(), location, kind),
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::LocalConstant { .. } => {}
         }

@@ -38,10 +38,11 @@ struct Module {
 
 struct References {
   importedModules @0 :List(Text);
-  valueReferences @1 :List(ValueReference);
+  valueReferences @1 :List(ReferenceMap);
+  typeReferences @2 :List(ReferenceMap);
 }
 
-struct ValueReference {
+struct ReferenceMap {
   module @0 :Text;
   name @1 :Text;
   references @2 :List(Reference);

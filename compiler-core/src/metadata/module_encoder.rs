@@ -5,7 +5,7 @@ use crate::{
         Constant, Publicity, SrcSpan, TypedConstant, TypedConstantBitArraySegment,
         TypedConstantBitArraySegmentOption,
     },
-    reference::{Reference, ReferenceKind},
+    reference::{Reference, ReferenceKind, ReferenceMap},
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
@@ -209,11 +209,23 @@ impl<'a> ModuleEncoder<'a> {
             imported_modules.set(i as u32, module);
         }
 
-        let mut value_references = builder
+        let value_references = builder
             .reborrow()
             .init_value_references(references.value_references.len() as u32);
-        for (i, ((module, name), references)) in references.value_references.iter().enumerate() {
-            let mut builder = value_references.reborrow().get(i as u32);
+        self.build_reference_map(value_references, &references.value_references);
+        let type_references = builder
+            .reborrow()
+            .init_type_references(references.type_references.len() as u32);
+        self.build_reference_map(type_references, &references.type_references);
+    }
+
+    fn build_reference_map(
+        &mut self,
+        mut builder: capnp::struct_list::Builder<'_, reference_map::Owned>,
+        map: &ReferenceMap,
+    ) {
+        for (i, ((module, name), references)) in map.iter().enumerate() {
+            let mut builder = builder.reborrow().get(i as u32);
             builder.set_module(module);
             builder.set_name(name);
             let mut references_builder =

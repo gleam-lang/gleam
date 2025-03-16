@@ -15,7 +15,9 @@ use crate::{
     paths::ProjectPaths,
     type_::{
         self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
-        ValueConstructorVariant, error::VariableOrigin, printer::Printer,
+        ValueConstructorVariant,
+        error::{Named, VariableOrigin},
+        printer::Printer,
     },
 };
 use camino::Utf8PathBuf;
@@ -43,10 +45,10 @@ use super::{
     },
     completer::Completer,
     reference::{
-        Referenced, find_module_value_references, find_variable_references, reference_for_ast_node,
+        Referenced, find_module_references, find_variable_references, reference_for_ast_node,
     },
     rename::{
-        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
+        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_entity,
     },
     signature_help, src_span_to_lsp_range,
 };
@@ -323,7 +325,7 @@ where
 
                 Located::Arg(_) => None,
 
-                Located::Annotation(_, _) => Some(completer.completion_types()),
+                Located::Annotation { .. } => Some(completer.completion_types()),
 
                 Located::Label(_, _) => None,
 
@@ -599,13 +601,21 @@ where
                     )
                     | None => success_response(location),
                 },
-                Some(Referenced::ModuleValue {
-                    module,
-                    location,
-                    target_kind,
-                    ..
-                }) if location.contains(byte_index) => {
-                    // We can't rename values from other packages if we are not aliasing an unqualified import.
+                Some(
+                    Referenced::ModuleValue {
+                        module,
+                        location,
+                        target_kind,
+                        ..
+                    }
+                    | Referenced::ModuleType {
+                        module,
+                        location,
+                        target_kind,
+                        ..
+                    },
+                ) if location.contains(byte_index) => {
+                    // We can't rename types or values from other packages if we are not aliasing an unqualified import.
                     let rename_allowed = match target_kind {
                         RenameTarget::Qualified => this.is_same_package(current_module, &module),
                         RenameTarget::Unqualified | RenameTarget::Definition => true,
@@ -656,7 +666,7 @@ where
                     name,
                     name_kind,
                     ..
-                }) => rename_module_value(
+                }) => rename_module_entity(
                     &params,
                     module,
                     this.compiler.project_compiler.get_importable_modules(),
@@ -666,6 +676,25 @@ where
                         name: &name,
                         name_kind,
                         target_kind,
+                        layer: ast::Layer::Value,
+                    },
+                ),
+                Some(Referenced::ModuleType {
+                    module: module_name,
+                    target_kind,
+                    name,
+                    ..
+                }) => rename_module_entity(
+                    &params,
+                    module,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    Renamed {
+                        module_name: &module_name,
+                        name: &name,
+                        name_kind: Named::Type,
+                        target_kind,
+                        layer: ast::Layer::Type,
                     },
                 ),
                 None => None,
@@ -721,11 +750,24 @@ where
                     name,
                     location,
                     ..
-                }) if location.contains(byte_index) => Some(find_module_value_references(
+                }) if location.contains(byte_index) => Some(find_module_references(
                     module,
                     name,
                     this.compiler.project_compiler.get_importable_modules(),
                     &this.compiler.sources,
+                    ast::Layer::Value,
+                )),
+                Some(Referenced::ModuleType {
+                    module,
+                    name,
+                    location,
+                    ..
+                }) if location.contains(byte_index) => Some(find_module_references(
+                    module,
+                    name,
+                    this.compiler.project_compiler.get_importable_modules(),
+                    &this.compiler.sources,
+                    ast::Layer::Type,
                 )),
                 _ => None,
             })
@@ -864,13 +906,13 @@ Unused labelled fields:
                 )),
                 Located::Arg(arg) => Some(hover_for_function_argument(arg, lines, module)),
                 Located::FunctionBody(_) => None,
-                Located::Annotation(annotation, type_) => {
+                Located::Annotation { ast, type_ } => {
                     let type_constructor = type_constructor_from_modules(
                         this.compiler.project_compiler.get_importable_modules(),
                         type_.clone(),
                     );
                     Some(hover_for_annotation(
-                        annotation,
+                        ast.location(),
                         &type_,
                         type_constructor,
                         lines,

@@ -17,7 +17,7 @@ pub use self::project_compiler::{Built, Options, ProjectCompiler};
 pub use self::telemetry::{NullTelemetry, Telemetry};
 
 use crate::ast::{
-    self, CallArg, CustomType, DefinitionLocation, TypedArg, TypedDefinition, TypedExpr,
+    self, CallArg, CustomType, DefinitionLocation, TypeAst, TypedArg, TypedDefinition, TypedExpr,
     TypedFunction, TypedPattern, TypedRecordConstructor, TypedStatement,
 };
 use crate::type_::Type;
@@ -342,7 +342,10 @@ pub enum Located<'a> {
     VariantConstructorDefinition(&'a TypedRecordConstructor),
     FunctionBody(&'a TypedFunction),
     Arg(&'a TypedArg),
-    Annotation(SrcSpan, std::sync::Arc<Type>),
+    Annotation {
+        ast: &'a TypeAst,
+        type_: std::sync::Arc<Type>,
+    },
     UnqualifiedImport(UnqualifiedImport<'a>),
     Label(SrcSpan, std::sync::Arc<Type>),
     ModuleName {
@@ -406,7 +409,7 @@ impl<'a> Located<'a> {
                 }
             }),
             Self::Arg(_) => None,
-            Self::Annotation(_, type_) => self.type_location(importable_modules, type_.clone()),
+            Self::Annotation { type_, .. } => self.type_location(importable_modules, type_.clone()),
             Self::Label(_, _) => None,
             Self::ModuleName { name, .. } => Some(DefinitionLocation {
                 module: Some((*name).clone()),
@@ -421,7 +424,7 @@ impl<'a> Located<'a> {
             Located::Statement(statement) => Some(statement.type_()),
             Located::Expression(typed_expr) => Some(typed_expr.type_()),
             Located::Arg(arg) => Some(arg.type_.clone()),
-            Located::Label(_, type_) | Located::Annotation(_, type_) => Some(type_.clone()),
+            Located::Label(_, type_) | Located::Annotation { type_, .. } => Some(type_.clone()),
 
             Located::PatternSpread { .. } => None,
             Located::ModuleStatement(definition) => None,
