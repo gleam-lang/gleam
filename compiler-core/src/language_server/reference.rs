@@ -122,11 +122,13 @@ pub fn reference_for_ast_node(
             label,
             constructor: ModuleValueConstructor::Fn { .. } | ModuleValueConstructor::Constant { .. },
             location,
+            field_start,
             ..
         }) => Some(Referenced::ModuleValue {
             module: module_name.clone(),
             name: label.clone(),
-            location: *location,
+
+            location: SrcSpan::new(*field_start, location.end),
             name_kind: Named::Function,
             target_kind: RenameTarget::Qualified,
         }),
@@ -167,23 +169,26 @@ pub fn reference_for_ast_node(
             label,
             constructor: ModuleValueConstructor::Record { .. },
             location,
+            field_start,
             ..
         }) => Some(Referenced::ModuleValue {
             module: module_name.clone(),
             name: label.clone(),
-            location: *location,
+            location: SrcSpan::new(*field_start, location.end),
             name_kind: Named::CustomTypeVariant,
             target_kind: RenameTarget::Qualified,
         }),
-        Located::VariantConstructorDefinition(RecordConstructor { name, location, .. }) => {
-            Some(Referenced::ModuleValue {
-                module: current_module.clone(),
-                name: name.clone(),
-                location: *location,
-                name_kind: Named::CustomTypeVariant,
-                target_kind: RenameTarget::Definition,
-            })
-        }
+        Located::VariantConstructorDefinition(RecordConstructor {
+            name,
+            name_location,
+            ..
+        }) => Some(Referenced::ModuleValue {
+            module: current_module.clone(),
+            name: name.clone(),
+            location: *name_location,
+            name_kind: Named::CustomTypeVariant,
+            target_kind: RenameTarget::Definition,
+        }),
         Located::Pattern(Pattern::Constructor {
             constructor: analyse::Inferred::Known(constructor),
             module: module_select,
