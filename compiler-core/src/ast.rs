@@ -247,18 +247,6 @@ impl<A> RecordConstructor<A> {
     pub fn put_doc(&mut self, new_doc: (u32, EcoString)) {
         self.documentation = Some(new_doc);
     }
-
-    pub fn argument_labels(&self) -> Vec<&str> {
-        self.arguments
-            .iter()
-            .filter_map(|argument| {
-                argument
-                    .label
-                    .as_ref()
-                    .map(|(_location, label)| label.as_str())
-            })
-            .collect()
-    }
 }
 
 pub type TypedRecordConstructorArg = RecordConstructorArg<Arc<Type>>;

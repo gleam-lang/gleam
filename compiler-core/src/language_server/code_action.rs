@@ -3414,7 +3414,13 @@ impl<'a> GenerateJsonEncoder<'a> {
                 &eco_format!(
                     "let {name}({fields}:) = {record_name}\n  ",
                     name = first.name,
-                    fields = first.argument_labels().join(":, ")
+                    fields = first
+                        .arguments
+                        .iter()
+                        .filter_map(|argument| {
+                            argument.label.as_ref().map(|(_location, label)| label)
+                        })
+                        .join(":, ")
                 )
             };
             return Some(eco_format!("{unpacking}{encoder}"));
@@ -3431,7 +3437,16 @@ impl<'a> GenerateJsonEncoder<'a> {
             let unpacking = if constructor.arguments.is_empty() {
                 ""
             } else {
-                &eco_format!("({}:)", constructor.argument_labels().join(":, "))
+                &eco_format!(
+                    "({}:)",
+                    constructor
+                        .arguments
+                        .iter()
+                        .filter_map(|argument| {
+                            argument.label.as_ref().map(|(_location, label)| label)
+                        })
+                        .join(":, ")
+                )
             };
             branches.push(eco_format!("    {name}{unpacking} -> {encoder}"));
         }
