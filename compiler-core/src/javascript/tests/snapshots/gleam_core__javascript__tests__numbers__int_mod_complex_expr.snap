@@ -16,12 +16,15 @@ fn go() {
 import { remainderInt } from "../gleam.mjs";
 
 function go() {
-  let _block;
-  let $ = 1 >= 0;
-  if ($) {
-    _block = 2;
-  } else {
-    _block = 4;
-  }
-  return remainderInt(_block, 2);
+  return remainderInt(
+    (() => {
+      let $ = 1 >= 0;
+      if ($) {
+        return 2;
+      } else {
+        return 4;
+      }
+    })(),
+    2
+  );
 }

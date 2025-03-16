@@ -16,12 +16,15 @@ fn go() {
 import { divideFloat } from "../gleam.mjs";
 
 function go() {
-  let _block;
-  let $ = 1.0 >= 0.0;
-  if ($) {
-    _block = 2.0;
-  } else {
-    _block = 4.0;
-  }
-  return divideFloat(_block, 2.0);
+  return divideFloat(
+    (() => {
+      let $ = 1.0 >= 0.0;
+      if ($) {
+        return 2.0;
+      } else {
+        return 4.0;
+      }
+    })(),
+    2.0
+  );
 }

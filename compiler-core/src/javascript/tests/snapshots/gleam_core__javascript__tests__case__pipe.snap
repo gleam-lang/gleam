@@ -14,10 +14,10 @@ fn go(x, f) {
 
 ----- COMPILED JAVASCRIPT
 function go(x, f) {
-  let _block;
-  let _pipe = x;
-  _block = f(_pipe);
-  let $ = _block;
+  let $ = (() => {
+    let _pipe = x;
+    return f(_pipe);
+  })();
   if ($ === 0) {
     return 1;
   } else {

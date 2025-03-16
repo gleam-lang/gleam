@@ -24,14 +24,16 @@ function go(f) {
     {}
   )
   let boop = _block;
-  let _block$1;
-  throw makeError(
-    "panic",
-    "my/mod",
-    4,
-    "go",
-    "`panic` expression evaluated.",
-    {}
-  )
-  return f(_block$1);
+  return f(
+    (() => {
+      throw makeError(
+        "panic",
+        "my/mod",
+        4,
+        "go",
+        "`panic` expression evaluated.",
+        {}
+      )
+    })(),
+  );
 }
