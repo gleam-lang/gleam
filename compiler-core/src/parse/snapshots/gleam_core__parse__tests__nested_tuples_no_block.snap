@@ -14,13 +14,13 @@ expression: "\nlet tup = #(#(5, 6))\ntup.0.1\n"
                     start: 11,
                     end: 21,
                 },
-                elems: [
+                elements: [
                     Tuple {
                         location: SrcSpan {
                             start: 13,
                             end: 20,
                         },
-                        elems: [
+                        elements: [
                             Int {
                                 location: SrcSpan {
                                     start: 15,

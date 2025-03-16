@@ -206,8 +206,8 @@ impl<'a> CallGraphBuilder<'a> {
                 }
             }
 
-            UntypedExpr::Tuple { elems, .. } => {
-                for expression in elems {
+            UntypedExpr::Tuple { elements, .. } => {
+                for expression in elements {
                     self.expression(expression);
                 }
             }
