@@ -70,6 +70,96 @@ macro_rules! assert_hover {
 }
 
 #[test]
+fn hover_function_with_labelled_arguments() {
+    let code = "
+pub fn main() {
+  labelled
+}
+
+pub fn labelled(a: Int, label b: String) -> Int { 1 }
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("labelled").under_char('b')
+    );
+}
+
+#[test]
+fn hover_constructor_with_labelled_arguments() {
+    let code = "
+pub fn main() {
+    Labelled
+}
+
+pub type Labelled {
+  Labelled(Int, label: String)
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("Labelled").under_char('b')
+    );
+}
+
+#[test]
+fn hover_constant_with_labelled_constructor() {
+    let code = "
+pub const wibble = Labelled
+
+pub type Labelled {
+  Labelled(Int, label: String)
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("wibble").under_char('i')
+    );
+}
+
+#[test]
+fn hover_imported_labelled_function() {
+    let code = "
+import wibble.{wobble}
+";
+
+    assert_hover!(
+        TestProject::for_source(code)
+            .add_dep_module("wibble", "pub fn wobble(a: Int, label b: String) {}"),
+        find_position_of("wobble").under_char('i')
+    );
+}
+
+#[test]
+fn hover_imported_labelled_constructor() {
+    let code = "
+import wibble.{Wobble}
+";
+
+    assert_hover!(
+        TestProject::for_source(code)
+            .add_dep_module("wibble", "pub type Wobble { Wobble(Int, label: String) }"),
+        find_position_of("Wobble").under_char('i')
+    );
+}
+
+#[test]
+fn hover_labelled_function_head() {
+    let code = "
+pub fn main(a, label b) {
+  a + b
+}
+";
+
+    assert_hover!(
+        TestProject::for_source(code),
+        find_position_of("main").under_char('i')
+    );
+}
+
+#[test]
 fn hover_function_definition() {
     assert_hover!(
         "
