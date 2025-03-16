@@ -599,11 +599,11 @@ impl Environment<'_> {
                 })
             }
 
-            Type::Fn { args, retrn, .. } => fn_(
+            Type::Fn { args, return_, .. } => fn_(
                 args.iter()
                     .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect(),
-                self.instantiate(retrn.clone(), ids, hydrator),
+                self.instantiate(return_.clone(), ids, hydrator),
             ),
 
             Type::Tuple { elements } => tuple(
@@ -931,12 +931,12 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
         (
             Type::Fn {
                 args: args1,
-                retrn: retrn1,
+                return_: return1,
                 ..
             },
             Type::Fn {
                 args: args2,
-                retrn: retrn2,
+                return_: return2,
                 ..
             },
         ) => {
@@ -949,8 +949,8 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
                     .map_err(|_| unify_wrong_arguments(&t1, a, &t2, b, i))?;
             }
 
-            unify(retrn1.clone(), retrn2.clone())
-                .map_err(|_| unify_wrong_returns(&t1, retrn1, &t2, retrn2))
+            unify(return1.clone(), return2.clone())
+                .map_err(|_| unify_wrong_returns(&t1, return1, &t2, return2))
         }
 
         _ => Err(UnifyError::CouldNotUnify {

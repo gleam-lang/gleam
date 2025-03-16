@@ -600,10 +600,10 @@ impl<'a> ModuleEncoder<'a> {
 
     fn build_type(&mut self, builder: schema::type_::Builder<'_>, type_: &Type) {
         match type_ {
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 let mut fun = builder.init_fn();
                 self.build_types(fun.reborrow().init_arguments(args.len() as u32), args);
-                self.build_type(fun.init_return(), retrn)
+                self.build_type(fun.init_return(), return_)
             }
 
             Type::Named {

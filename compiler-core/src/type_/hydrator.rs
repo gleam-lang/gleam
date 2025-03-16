@@ -199,15 +199,15 @@ impl Hydrator {
 
             TypeAst::Fn(TypeAstFn {
                 arguments: args,
-                return_: retrn,
+                return_,
                 ..
             }) => {
                 let args = args
                     .iter()
                     .map(|t| self.type_from_ast(t, environment, problems))
                     .try_collect()?;
-                let retrn = self.type_from_ast(retrn, environment, problems)?;
-                Ok(fn_(args, retrn))
+                let return_ = self.type_from_ast(return_, environment, problems)?;
+                Ok(fn_(args, return_))
             }
 
             TypeAst::Var(TypeAstVar { name, location }) => {

@@ -731,14 +731,14 @@ impl<'comments> Formatter<'comments> {
 
             TypeAst::Fn(TypeAstFn {
                 arguments: args,
-                return_: retrn,
+                return_,
                 location,
             }) => "fn"
                 .to_doc()
                 .append(self.type_arguments(args, location))
                 .group()
                 .append(" ->")
-                .append(break_("", " ").append(self.type_ast(retrn)).nest(INDENT)),
+                .append(break_("", " ").append(self.type_ast(return_)).nest(INDENT)),
 
             TypeAst::Var(TypeAstVar { name, .. }) => name.to_doc(),
 

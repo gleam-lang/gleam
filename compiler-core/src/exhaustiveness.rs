@@ -1458,9 +1458,9 @@ impl ConstructorSpecialiser {
                 inferred_variant: *inferred_variant,
             },
 
-            Type::Fn { args, retrn } => Type::Fn {
+            Type::Fn { args, return_ } => Type::Fn {
                 args: args.iter().map(|a| self.specialise_type(a)).collect(),
-                retrn: retrn.clone(),
+                return_: return_.clone(),
             },
 
             Type::Var { type_ } => Type::Var {

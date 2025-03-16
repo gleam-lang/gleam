@@ -104,11 +104,11 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
                 generic_ids(arg, ids)
             }
         }
-        Type::Fn { args, retrn } => {
+        Type::Fn { args, return_ } => {
             for arg in args {
                 generic_ids(arg, ids)
             }
-            generic_ids(retrn, ids);
+            generic_ids(return_, ids);
         }
         Type::Tuple { elements } => {
             for element in elements {
@@ -303,11 +303,11 @@ impl<'a> TypeScriptGenerator<'a> {
                     self.collect_imports_for_type(arg, imports);
                 }
             }
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 for arg in args {
                     self.collect_imports_for_type(arg, imports);
                 }
-                self.collect_imports_for_type(retrn, imports);
+                self.collect_imports_for_type(return_, imports);
             }
             Type::Tuple { elements } => {
                 for element in elements {
@@ -648,7 +648,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 name, args, module, ..
             } => self.print_type_app(name, args, module, generic_usages),
 
-            Type::Fn { args, retrn } => self.print_fn(args, retrn, generic_usages),
+            Type::Fn { args, return_ } => self.print_fn(args, return_, generic_usages),
 
             Type::Tuple { elements } => tuple(
                 elements
@@ -670,7 +670,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 name, args, module, ..
             } => self.print_type_app(name, args, module, None),
 
-            Type::Fn { args, retrn } => self.print_fn(args, retrn, None),
+            Type::Fn { args, return_ } => self.print_fn(args, return_, None),
 
             Type::Tuple { elements } => {
                 tuple(elements.iter().map(|element| self.do_print(element, None)))
@@ -782,7 +782,7 @@ impl<'a> TypeScriptGenerator<'a> {
     fn print_fn(
         &mut self,
         args: &[Arc<Type>],
-        retrn: &Type,
+        return_: &Type,
         generic_usages: Option<&HashMap<u64, u64>>,
     ) -> Document<'static> {
         docvec![
@@ -793,7 +793,7 @@ impl<'a> TypeScriptGenerator<'a> {
                 self.do_print(a, generic_usages)
             ])),
             " => ",
-            self.do_print(retrn, generic_usages)
+            self.do_print(return_, generic_usages)
         ]
     }
 
