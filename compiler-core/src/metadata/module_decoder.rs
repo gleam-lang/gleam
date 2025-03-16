@@ -239,8 +239,8 @@ impl ModuleDecoder {
     }
 
     fn type_tuple(&mut self, reader: &schema::type_::tuple::Reader<'_>) -> Result<Arc<Type>> {
-        let elems = read_vec!(&reader.get_elements()?, self, type_);
-        Ok(Arc::new(Type::Tuple { elems }))
+        let elements = read_vec!(&reader.get_elements()?, self, type_);
+        Ok(Arc::new(Type::Tuple { elements }))
     }
 
     fn type_var(&mut self, reader: &schema::type_::var::Reader<'_>) -> Result<Arc<Type>> {

@@ -511,9 +511,9 @@ fn type_to_definition_locations<'a>(
 
         // In case of tuples we get the locations of the wrapped types.
         //
-        Type::Tuple { elems } => elems
+        Type::Tuple { elements } => elements
             .iter()
-            .flat_map(|elem| type_to_definition_locations(elem.clone(), importable_modules))
+            .flat_map(|element| type_to_definition_locations(element.clone(), importable_modules))
             .collect_vec(),
     }
 }

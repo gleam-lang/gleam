@@ -626,9 +626,9 @@ impl<'a> ModuleEncoder<'a> {
                 self.build_types(app.reborrow().init_parameters(args.len() as u32), args);
             }
 
-            Type::Tuple { elems } => self.build_types(
-                builder.init_tuple().init_elements(elems.len() as u32),
-                elems,
+            Type::Tuple { elements } => self.build_types(
+                builder.init_tuple().init_elements(elements.len() as u32),
+                elements,
             ),
 
             Type::Var { type_ } => match type_.borrow().deref() {

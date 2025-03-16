@@ -175,7 +175,9 @@ mod tests {
     fn make_variable(id: usize) -> Variable {
         Variable {
             id,
-            type_: Arc::new(Type::Tuple { elems: Vec::new() }),
+            type_: Arc::new(Type::Tuple {
+                elements: Vec::new(),
+            }),
         }
     }
 

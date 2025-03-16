@@ -375,9 +375,9 @@ impl<'a> Printer<'a> {
                 }
             },
 
-            Type::Tuple { elems, .. } => {
+            Type::Tuple { elements, .. } => {
                 buffer.push_str("#(");
-                self.print_arguments(elems, buffer, print_mode);
+                self.print_arguments(elements, buffer, print_mode);
                 buffer.push(')');
             }
         }
@@ -548,7 +548,7 @@ fn test_tuple_type() {
     let mut printer = Printer::new(&names);
 
     let type_ = Type::Tuple {
-        elems: vec![
+        elements: vec![
             Arc::new(Type::Named {
                 name: "Int".into(),
                 args: vec![],

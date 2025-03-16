@@ -110,9 +110,9 @@ fn generic_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             generic_ids(retrn, ids);
         }
-        Type::Tuple { elems } => {
-            for elem in elems {
-                generic_ids(elem, ids)
+        Type::Tuple { elements } => {
+            for element in elements {
+                generic_ids(element, ids)
             }
         }
     }
@@ -309,9 +309,9 @@ impl<'a> TypeScriptGenerator<'a> {
                 }
                 self.collect_imports_for_type(retrn, imports);
             }
-            Type::Tuple { elems } => {
-                for elem in elems {
-                    self.collect_imports_for_type(elem, imports);
+            Type::Tuple { elements } => {
+                for element in elements {
+                    self.collect_imports_for_type(element, imports);
                 }
             }
             Type::Var { type_ } => {
@@ -650,7 +650,9 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Type::Fn { args, retrn } => self.print_fn(args, retrn, generic_usages),
 
-            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.do_print(e, generic_usages))),
+            Type::Tuple { elements } => {
+                tuple(elements.iter().map(|e| self.do_print(e, generic_usages)))
+            }
         }
     }
 
@@ -668,7 +670,7 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Type::Fn { args, retrn } => self.print_fn(args, retrn, None),
 
-            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.do_print(e, None))),
+            Type::Tuple { elements } => tuple(elements.iter().map(|e| self.do_print(e, None))),
         }
     }
 

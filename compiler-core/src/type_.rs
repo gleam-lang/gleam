@@ -109,7 +109,7 @@ pub enum Type {
     /// can have a different type, so the `tuple` type is the sum of all the
     /// contained types.
     ///
-    Tuple { elems: Vec<Arc<Type>> },
+    Tuple { elements: Vec<Arc<Type>> },
 }
 
 impl Type {
@@ -191,7 +191,7 @@ impl Type {
     /// Gets the types inside of a tuple. Returns `None` if the type is not a tuple.
     pub fn tuple_types(&self) -> Option<Vec<Arc<Self>>> {
         match self {
-            Self::Tuple { elems } => Some(elems.clone()),
+            Self::Tuple { elements } => Some(elements.clone()),
             Self::Var { type_, .. } => type_.borrow().tuple_types(),
             _ => None,
         }
@@ -339,8 +339,8 @@ impl Type {
                 inferred_variant, ..
             } => *inferred_variant = None,
             Type::Var { type_ } => type_.borrow_mut().generalise_custom_type_variant(),
-            Type::Tuple { elems } => {
-                for element in elems {
+            Type::Tuple { elements } => {
+                for element in elements {
                     Arc::make_mut(element).generalise_custom_type_variant();
                 }
             }
@@ -440,7 +440,7 @@ impl Type {
 
             Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
 
-            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_private_type()),
+            Self::Tuple { elements, .. } => elements.iter().find_map(|t| t.find_private_type()),
 
             Self::Fn { retrn, args, .. } => retrn
                 .find_private_type()
@@ -462,7 +462,7 @@ impl Type {
 
             Self::Named { args, .. } => args.iter().find_map(|t| t.find_internal_type()),
 
-            Self::Tuple { elems, .. } => elems.iter().find_map(|t| t.find_internal_type()),
+            Self::Tuple { elements, .. } => elements.iter().find_map(|t| t.find_internal_type()),
 
             Self::Fn { retrn, args, .. } => retrn
                 .find_internal_type()
@@ -546,11 +546,16 @@ impl Type {
             (one @ Type::Tuple { .. }, Type::Var { type_ }) => {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
-            (Type::Tuple { elems }, Type::Tuple { elems: other_elems }) => {
-                elems.len() == other_elems.len()
-                    && elems
+            (
+                Type::Tuple { elements },
+                Type::Tuple {
+                    elements: other_elements,
+                },
+            ) => {
+                elements.len() == other_elements.len()
+                    && elements
                         .iter()
-                        .zip(other_elems)
+                        .zip(other_elements)
                         .all(|(one, other)| one.same_as(other))
             }
         }
@@ -1411,9 +1416,9 @@ fn unify_unbound_type(type_: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
             unify_unbound_type(retrn.clone(), own_id)
         }
 
-        Type::Tuple { elems, .. } => {
-            for elem in elems {
-                unify_unbound_type(elem.clone(), own_id)?
+        Type::Tuple { elements, .. } => {
+            for element in elements {
+                unify_unbound_type(element.clone(), own_id)?
             }
             Ok(())
         }
@@ -1500,7 +1505,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             generalise(retrn.clone()),
         ),
 
-        Type::Tuple { elems } => tuple(elems.iter().map(|t| generalise(t.clone())).collect()),
+        Type::Tuple { elements } => tuple(elements.iter().map(|t| generalise(t.clone())).collect()),
     }
 }
 

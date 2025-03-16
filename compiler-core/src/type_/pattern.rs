@@ -595,19 +595,21 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             },
 
             Pattern::Tuple { elements, location } => match collapse_links(type_.clone()).deref() {
-                Type::Tuple { elems: type_elems } => {
-                    if elements.len() != type_elems.len() {
+                Type::Tuple {
+                    elements: type_elements,
+                } => {
+                    if elements.len() != type_elements.len() {
                         return Err(Error::IncorrectArity {
                             labels: vec![],
                             location,
-                            expected: type_elems.len(),
+                            expected: type_elements.len(),
                             given: elements.len(),
                         });
                     }
 
                     let elements = elements
                         .into_iter()
-                        .zip(type_elems)
+                        .zip(type_elements)
                         .map(|(pattern, type_)| self.unify(pattern, type_.clone(), None))
                         .try_collect()?;
                     Ok(Pattern::Tuple { elements, location })

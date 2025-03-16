@@ -3972,10 +3972,10 @@ where
             }
             // We don't want to suggest this action for empty tuple as it
             // doesn't make a lot of sense to match on those.
-            Type::Tuple { elems } if elems.is_empty() => None,
-            Type::Tuple { elems } => Some(vec1![eco_format!(
+            Type::Tuple { elements } if elements.is_empty() => None,
+            Type::Tuple { elements } => Some(vec1![eco_format!(
                 "#({})",
-                (0..elems.len() as u32)
+                (0..elements.len() as u32)
                     .map(|i| format!("value_{i}"))
                     .join(", ")
             )]),

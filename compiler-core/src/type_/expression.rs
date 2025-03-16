@@ -1162,8 +1162,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         let tuple = self.infer(tuple)?;
         match collapse_links(tuple.type_()).as_ref() {
-            Type::Tuple { elems } => {
-                let type_ = elems
+            Type::Tuple { elements } => {
+                let type_ = elements
                     .get(index as usize)
                     .ok_or_else(|| Error::OutOfBoundsTupleIndex {
                         location: SrcSpan {
@@ -1171,7 +1171,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             end: location.end,
                         },
                         index,
-                        size: elems.len(),
+                        size: elements.len(),
                     })?
                     .clone();
                 Ok(TypedExpr::TupleIndex {
@@ -1829,13 +1829,13 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => {
                 let tuple = self.infer_clause_guard(*tuple)?;
                 match tuple.type_().as_ref() {
-                    Type::Tuple { elems } => {
-                        let type_ = elems
+                    Type::Tuple { elements } => {
+                        let type_ = elements
                             .get(index as usize)
                             .ok_or(Error::OutOfBoundsTupleIndex {
                                 location,
                                 index,
-                                size: elems.len(),
+                                size: elements.len(),
                             })?
                             .clone();
                         Ok(ClauseGuard::TupleIndex {
