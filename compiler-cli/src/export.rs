@@ -6,15 +6,13 @@ use gleam_core::{
     paths::ProjectPaths,
 };
 
-#[cfg(target_os = "windows")]
-static ENTRYPOINT_FILENAME: &str = "entrypoint.ps1";
-#[cfg(not(target_os = "windows"))]
-static ENTRYPOINT_FILENAME: &str = "entrypoint.sh";
+static ENTRYPOINT_FILENAME_POWERSHELL: &str = "entrypoint.ps1";
+static ENTRYPOINT_FILENAME_BOURNE_SHELL: &str = "entrypoint.sh";
 
-#[cfg(target_os = "windows")]
-static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.ps1");
-#[cfg(not(target_os = "windows"))]
-static ENTRYPOINT_TEMPLATE: &str = include_str!("../templates/erlang-shipment-entrypoint.sh");
+static ENTRYPOINT_TEMPLATE_POWERSHELL: &str =
+    include_str!("../templates/erlang-shipment-entrypoint.ps1");
+static ENTRYPOINT_TEMPLATE_BOURNE_SHELL: &str =
+    include_str!("../templates/erlang-shipment-entrypoint.sh");
 
 // TODO: start in embedded mode
 // TODO: test
@@ -78,23 +76,36 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         }
     }
 
-    // Write entrypoint script
-    let entrypoint = out.join(ENTRYPOINT_FILENAME);
-    let text =
-        ENTRYPOINT_TEMPLATE.replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
-    crate::fs::write(&entrypoint, &text)?;
-    crate::fs::make_executable(&entrypoint)?;
+    for (entrypoint_filename, entrypoint_template_path) in [
+        (
+            ENTRYPOINT_FILENAME_POWERSHELL,
+            ENTRYPOINT_TEMPLATE_POWERSHELL,
+        ),
+        (
+            ENTRYPOINT_FILENAME_BOURNE_SHELL,
+            ENTRYPOINT_TEMPLATE_BOURNE_SHELL,
+        ),
+    ] {
+        // Write entrypoint script
+        let entrypoint = out.join(entrypoint_filename);
+        let text = entrypoint_template_path
+            .replace("$PACKAGE_NAME_FROM_GLEAM", &built.root_package.config.name);
+        crate::fs::write(&entrypoint, &text)?;
+        crate::fs::make_executable(&entrypoint)?;
+    }
 
     crate::cli::print_exported(&built.root_package.config.name);
 
     println!(
         "
-Your Erlang shipment has been generated to {out}.
+Your Erlang shipment has been generated to {out}."
+    );
 
-It can be copied to a compatible server with Erlang installed and run with
-the {ENTRYPOINT_FILENAME} script.
-
-    {entrypoint}
+    println!(
+        "
+It can be copied to a compatible server with Erlang installed and run with one of the following scripts:
+    - {ENTRYPOINT_FILENAME_POWERSHELL} (PowerShell script)
+    - {ENTRYPOINT_FILENAME_BOURNE_SHELL} (Bourne Shell script)
 ",
     );
 
