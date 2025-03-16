@@ -546,7 +546,7 @@ enum BranchMode {
     ///
     Infinite,
     Tuple {
-        elems: Vec<Arc<Type>>,
+        elements: Vec<Arc<Type>>,
     },
     List {
         inner_type: Arc<Type>,
@@ -589,7 +589,7 @@ impl Variable {
             },
 
             Type::Tuple { elems } => BranchMode::Tuple {
-                elems: elems.clone(),
+                elements: elems.clone(),
             },
 
             Type::Named {
@@ -878,7 +878,7 @@ impl<'a> Compiler<'a> {
 
             // If the type is a tuple there's only one runtime check we could
             // perform that actually makes sense.
-            BranchMode::Tuple { elems } => vec![self.is_tuple_check(elems)],
+            BranchMode::Tuple { elements } => vec![self.is_tuple_check(elements)],
 
             // If the type being matched on is a list we know the resulting
             // decision tree node is only ever going to have two different paths:
@@ -995,8 +995,8 @@ impl<'a> Compiler<'a> {
                 prefix: prefix.clone(),
                 rest_arg: self.fresh_variable(string()),
             },
-            (RuntimeCheckKind::Tuple { .. }, BranchMode::Tuple { elems }) => {
-                self.is_tuple_check(elems)
+            (RuntimeCheckKind::Tuple { .. }, BranchMode::Tuple { elements }) => {
+                self.is_tuple_check(elements)
             }
             (RuntimeCheckKind::Variant { index }, BranchMode::NamedType { constructors, .. }) => {
                 self.is_variant_check(
@@ -1163,10 +1163,10 @@ impl<'a> Compiler<'a> {
     /// Builds an `IsTuple` runtime check, coming up with fresh variable
     /// names for its arguments.
     ///
-    fn is_tuple_check(&mut self, elems: &[Arc<Type>]) -> RuntimeCheck {
+    fn is_tuple_check(&mut self, elements: &[Arc<Type>]) -> RuntimeCheck {
         RuntimeCheck::Tuple {
-            size: elems.len(),
-            args: elems
+            size: elements.len(),
+            args: elements
                 .iter()
                 .map(|type_| self.fresh_variable(type_.clone()))
                 .collect_vec(),
