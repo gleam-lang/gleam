@@ -5291,7 +5291,7 @@ impl<'a> FillUnusedFields<'a> {
             return vec![];
         };
 
-        // We add all the missing positional arguments as `_` before the first
+        // We add all the missing positional arguments before the first
         // labelled one (and so after all the already existing positional ones).
         if !positional.is_empty() {
             // We want to make sure that all positional args will have a name
