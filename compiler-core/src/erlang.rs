@@ -2063,7 +2063,9 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             name, left, right, ..
         } => bin_op(name, left, right, env),
 
-        TypedExpr::Tuple { elems, .. } => tuple(elems.iter().map(|e| maybe_block_expr(e, env))),
+        TypedExpr::Tuple { elements, .. } => {
+            tuple(elements.iter().map(|e| maybe_block_expr(e, env)))
+        }
 
         TypedExpr::BitArray { segments, .. } => bit_array(
             segments

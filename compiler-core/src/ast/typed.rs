@@ -109,7 +109,7 @@ pub enum TypedExpr {
     Tuple {
         location: SrcSpan,
         type_: Arc<Type>,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     TupleIndex {
@@ -281,7 +281,8 @@ impl TypedExpr {
             // if during iteration, an element is encountered with a start index
             // beyond the index under search.
             Self::Tuple {
-                elems: expressions, ..
+                elements: expressions,
+                ..
             } => {
                 for expression in expressions {
                     if expression.location().start > byte_index {
@@ -415,7 +416,8 @@ impl TypedExpr {
             // if during iteration, an element is encountered with a start index
             // beyond the index under search.
             Self::Tuple {
-                elems: expressions, ..
+                elements: expressions,
+                ..
             } => {
                 for expression in expressions {
                     if expression.location().start > byte_index {
