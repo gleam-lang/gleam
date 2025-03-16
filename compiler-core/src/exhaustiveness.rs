@@ -313,7 +313,7 @@ pub enum Pattern {
         name: EcoString,
     },
     Tuple {
-        elems: Vec<Id<Pattern>>,
+        elements: Vec<Id<Pattern>>,
     },
     Variant {
         index: usize,
@@ -353,7 +353,9 @@ impl Pattern {
             Pattern::StringPrefix { prefix, .. } => RuntimeCheckKind::StringPrefix {
                 prefix: prefix.clone(),
             },
-            Pattern::Tuple { elems } => RuntimeCheckKind::Tuple { size: elems.len() },
+            Pattern::Tuple { elements } => RuntimeCheckKind::Tuple {
+                size: elements.len(),
+            },
             Pattern::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
             Pattern::BitArray { value } => RuntimeCheckKind::BitArray {
                 value: value.clone(),
@@ -1070,14 +1072,11 @@ impl<'a> Compiler<'a> {
             // pattern: `a is #(1, _)` will result in the following checks
             // `a0 is 1, a1 is _` (where `a0` and `a1` are fresh variable names we use to
             // refer to each of the tuple's elements).
-            (
-                Pattern::Tuple {
-                    elems: elems_patterns,
-                },
-                RuntimeCheck::Tuple { args, .. },
-            ) => (args.iter().zip(elems_patterns))
-                .map(|(arg, pattern)| arg.is(*pattern))
-                .collect_vec(),
+            (Pattern::Tuple { elements }, RuntimeCheck::Tuple { args, .. }) => {
+                (args.iter().zip(elements))
+                    .map(|(arg, pattern)| arg.is(*pattern))
+                    .collect_vec()
+            }
 
             // Strings are quite fun: if we've checked at runtime a string starts with a given
             // prefix and we want to check that it's some overlapping literal value we'll still
@@ -1630,8 +1629,8 @@ impl CaseToCompile {
             }
 
             TypedPattern::Tuple { elems, .. } => {
-                let elems = elems.iter().map(|elem| self.register(elem)).collect_vec();
-                self.insert(Pattern::Tuple { elems })
+                let elements = elems.iter().map(|elem| self.register(elem)).collect_vec();
+                self.insert(Pattern::Tuple { elements })
             }
 
             TypedPattern::List { elements, tail, .. } => {
