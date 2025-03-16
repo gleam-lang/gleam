@@ -2,9 +2,8 @@ use crate::{
     Error, Result, Warning,
     analyse::name::correct_name_case,
     ast::{
-        self, ArgNames, CustomType, Definition, DefinitionLocation, Function, ModuleConstant,
-        Pattern, PatternUnusedArguments, RecordConstructor, SrcSpan, TypedArg, TypedExpr,
-        TypedFunction, TypedModule, TypedPattern,
+        self, CustomType, Definition, DefinitionLocation, ModuleConstant, PatternUnusedArguments,
+        SrcSpan, TypedArg, TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
     build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
