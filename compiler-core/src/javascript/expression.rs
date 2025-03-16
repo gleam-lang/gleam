@@ -244,7 +244,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 })
             }
 
-            TypedExpr::Tuple { elems, .. } => self.tuple(elems),
+            TypedExpr::Tuple { elements, .. } => self.tuple(elements),
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {

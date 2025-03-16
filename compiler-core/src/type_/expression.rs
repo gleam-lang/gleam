@@ -939,14 +939,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
     fn infer_tuple(
         &mut self,
-        elems: Vec<UntypedExpr>,
+        elements: Vec<UntypedExpr>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let elems: Vec<_> = elems.into_iter().map(|e| self.infer(e)).try_collect()?;
-        let type_ = tuple(elems.iter().map(HasType::type_).collect());
+        let elements: Vec<_> = elements.into_iter().map(|e| self.infer(e)).try_collect()?;
+        let type_ = tuple(elements.iter().map(HasType::type_).collect());
         Ok(TypedExpr::Tuple {
             location,
-            elems,
+            elements,
             type_,
         })
     }
@@ -4127,7 +4127,7 @@ fn check_subject_for_redundant_match(
     case_used_like_if: bool,
 ) -> Option<Warning> {
     match subject {
-        TypedExpr::Tuple { elems, .. } if !elems.is_empty() => {
+        TypedExpr::Tuple { elements, .. } if !elements.is_empty() => {
             Some(Warning::CaseMatchOnLiteralCollection {
                 kind: LiteralCollectionKind::Tuple,
                 location: subject.location(),

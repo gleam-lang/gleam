@@ -135,14 +135,14 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
     ) {
         for (subject_idx, subject) in subjects.iter().enumerate() {
             let TypedExpr::Tuple {
-                location, elems, ..
+                location, elements, ..
             } = subject
             else {
                 continue;
             };
 
             // Ignore empty tuple
-            if elems.is_empty() {
+            if elements.is_empty() {
                 continue;
             }
 
@@ -162,14 +162,14 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
                 continue;
             }
 
-            self.delete_tuple_tokens(*location, elems.last().map(|elem| elem.location()));
+            self.delete_tuple_tokens(*location, elements.last().map(|elem| elem.location()));
 
             for clause in clauses {
                 match clause.pattern.get(subject_idx) {
                     Some(Pattern::Tuple { location, elems }) => self
                         .delete_tuple_tokens(*location, elems.last().map(|elem| elem.location())),
                     Some(Pattern::Discard { location, .. }) => {
-                        self.discard_tuple_items(*location, elems.len())
+                        self.discard_tuple_items(*location, elements.len())
                     }
                     _ => panic!("safe: we've just checked all patterns must be discards/tuples"),
                 }

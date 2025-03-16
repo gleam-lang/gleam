@@ -792,8 +792,8 @@ where
         TypedExpr::Tuple {
             location,
             type_,
-            elems,
-        } => v.visit_typed_expr_tuple(location, type_, elems),
+            elements,
+        } => v.visit_typed_expr_tuple(location, type_, elements),
         TypedExpr::TupleIndex {
             location,
             type_,
