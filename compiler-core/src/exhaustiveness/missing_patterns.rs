@@ -31,11 +31,11 @@ pub enum Term {
         variable: Variable,
         name: EcoString,
         module: EcoString,
-        arguments: Vec<Variable>,
+        fields: Vec<Variable>,
     },
     Tuple {
         variable: Variable,
-        arguments: Vec<Variable>,
+        elements: Vec<Variable>,
     },
     Infinite {
         variable: Variable,
@@ -136,12 +136,12 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
         | RuntimeCheck::BitArray { .. }
         | RuntimeCheck::StringPrefix { .. } => Term::Infinite { variable },
 
-        RuntimeCheck::Tuple { args, .. } => Term::Tuple {
+        RuntimeCheck::Tuple { elements, .. } => Term::Tuple {
             variable,
-            arguments: args.clone(),
+            elements: elements.clone(),
         },
 
-        RuntimeCheck::Variant { index, args } => {
+        RuntimeCheck::Variant { index, fields } => {
             let (module, name) = variable
                 .type_
                 .named_type_name()
@@ -160,17 +160,14 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
                 variable,
                 name,
                 module,
-                arguments: args.clone(),
+                fields: fields.clone(),
             }
         }
 
-        RuntimeCheck::NonEmptyList {
-            first_arg,
-            rest_arg,
-        } => Term::List {
+        RuntimeCheck::NonEmptyList { first, rest } => Term::List {
             variable,
-            first: first_arg.clone(),
-            rest: rest_arg.clone(),
+            first: first.clone(),
+            rest: rest.clone(),
         },
 
         RuntimeCheck::EmptyList => Term::EmptyList { variable },

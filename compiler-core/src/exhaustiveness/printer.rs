@@ -50,7 +50,7 @@ impl<'a> Printer<'a> {
             Term::Variant {
                 name,
                 module,
-                arguments,
+                fields,
                 ..
             } => {
                 let (module, name) = match self.names.named_constructor(module, name) {
@@ -67,11 +67,11 @@ impl<'a> Printer<'a> {
                 }
                 buffer.push_str(name);
 
-                if arguments.is_empty() {
+                if fields.is_empty() {
                     return;
                 }
                 buffer.push('(');
-                for (i, variable) in arguments.iter().enumerate() {
+                for (i, variable) in fields.iter().enumerate() {
                     if i != 0 {
                         buffer.push_str(", ");
                     }
@@ -89,9 +89,9 @@ impl<'a> Printer<'a> {
                 }
                 buffer.push(')');
             }
-            Term::Tuple { arguments, .. } => {
+            Term::Tuple { elements, .. } => {
                 buffer.push_str("#(");
-                for (i, variable) in arguments.iter().enumerate() {
+                for (i, variable) in elements.iter().enumerate() {
                     if i != 0 {
                         buffer.push_str(", ");
                     }
@@ -201,7 +201,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
-            arguments: Vec::new(),
+            fields: Vec::new(),
         };
 
         let terms = &[term];
@@ -227,7 +227,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Wibble".into(),
             module: "module".into(),
-            arguments: vec![var1.clone(), var2.clone()],
+            fields: vec![var1.clone(), var2.clone()],
         };
 
         let terms = &[
@@ -256,7 +256,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Rectangle".into(),
             module: "mod".into(),
-            arguments: Vec::new(),
+            fields: Vec::new(),
         };
 
         let terms = &[term];
@@ -283,7 +283,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
-            arguments: vec![arg.clone()],
+            fields: vec![arg.clone()],
         };
 
         let terms = &[term, Term::Infinite { variable: arg }];
@@ -308,7 +308,7 @@ mod tests {
             variable: subjects[0].clone(),
             name: "Regex".into(),
             module: "regex".into(),
-            arguments: vec![arg.clone()],
+            fields: vec![arg.clone()],
         };
 
         let terms = &[
@@ -317,7 +317,7 @@ mod tests {
                 variable: arg,
                 name: "None".into(),
                 module: "gleam".into(),
-                arguments: vec![],
+                fields: vec![],
             },
         ];
         let mapping = get_mapping(terms);
@@ -350,7 +350,7 @@ mod tests {
                 variable: var1,
                 name: "Type".into(),
                 module: "module".into(),
-                arguments: Vec::new(),
+                fields: Vec::new(),
             },
             Term::List {
                 variable: var2,
@@ -383,13 +383,13 @@ mod tests {
                 variable: subjects[0].clone(),
                 name: "Ok".into(),
                 module: "gleam".into(),
-                arguments: vec![make_variable(3)],
+                fields: vec![make_variable(3)],
             },
             Term::Variant {
                 variable: subjects[2].clone(),
                 name: "False".into(),
                 module: "gleam".into(),
-                arguments: Vec::new(),
+                fields: Vec::new(),
             },
         ];
         let mapping = get_mapping(terms);
