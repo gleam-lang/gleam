@@ -35,9 +35,9 @@ use super::{
     code_action::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
         ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
-        GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder, InlineVariable,
-        InterpolateString, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        FillUnusedFields, UseLabelShorthandSyntax, code_action_add_missing_patterns,
+        FillUnusedFields, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
+        InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
+        RedundantTupleInCaseSubject, UseLabelShorthandSyntax, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
@@ -386,9 +386,7 @@ where
             actions.extend(ConvertFromUse::new(module, &lines, &params).code_actions());
             actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
-            actions.extend(
-                FillUnusedFields::new(module, &lines, &params).code_actions(),
-            );
+            actions.extend(FillUnusedFields::new(module, &lines, &params).code_actions());
             actions.extend(InterpolateString::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
             actions.extend(GenerateFunction::new(module, &lines, &params).code_actions());
@@ -843,13 +841,13 @@ where
                         .join("\n");
 
                     let content = match (positional.is_empty(), labelled.is_empty()) {
-                        (true, false) => format!("Ignored labelled fields:\n{labelled}"),
-                        (false, true) => format!("Ignored positional fields:\n{positional}"),
+                        (true, false) => format!("Unused labelled fields:\n{labelled}"),
+                        (false, true) => format!("Unused positional fields:\n{positional}"),
                         (_, _) => format!(
-                            "Ignored positional fields:
+                            "Unused positional fields:
 {positional}
 
-Ignored labelled fields:
+Unused labelled fields:
 {labelled}"
                         ),
                     };

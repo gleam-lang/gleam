@@ -20,6 +20,6 @@ pub fn main(thing: Thing) {
 ----- Hover content -----
 Scalar(
     String(
-        "Ignored labelled fields:\n- `value: Wobble`",
+        "Unused labelled fields:\n- `value: Wobble`",
     ),
 )
