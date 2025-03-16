@@ -18,8 +18,8 @@ pub struct InlayHintsConfig {
     pub pipelines: bool,
 
     /// Whether to show type inlay hints of function parameters
-    pub parameter_types: bool,
+    pub function_parameter_types: bool,
 
     /// Whether to show type inlay hints of return types of functions
-    pub return_types: bool,
+    pub function_return_types: bool,
 }

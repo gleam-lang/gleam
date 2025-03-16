@@ -81,13 +81,13 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
             self.visit_typed_statement(st);
         }
 
-        if self.config.parameter_types {
+        if self.config.function_parameter_types {
             for arg in &fun.arguments {
                 self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
             }
         }
 
-        if self.config.return_types {
+        if self.config.function_return_types {
             self.push_return_annotation(
                 &fun.return_type,
                 fun.return_annotation.as_ref(),
@@ -113,13 +113,13 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
             return;
         };
 
-        if self.config.parameter_types {
+        if self.config.function_parameter_types {
             for arg in args {
                 self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
             }
         }
 
-        if self.config.return_types {
+        if self.config.function_return_types {
             if let Some((_args, ret_type)) = type_.fn_types() {
                 self.push_return_annotation(&ret_type, return_annotation.as_ref(), head);
             }

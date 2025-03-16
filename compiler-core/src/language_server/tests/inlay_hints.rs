@@ -181,8 +181,8 @@ fn show_correct_type_names_in_functions() {
     let hints = inlay_hints_for_config(
         src,
         InlayHintsConfig {
-            parameter_types: true,
-            return_types: true,
+            function_parameter_types: true,
+            function_return_types: true,
             ..Default::default()
         },
     );
@@ -227,7 +227,7 @@ fn parameter_hints(src: &str) -> String {
     inlay_hints_for_config(
         src,
         InlayHintsConfig {
-            parameter_types: true,
+            function_parameter_types: true,
             ..Default::default()
         },
     )
@@ -237,7 +237,7 @@ fn return_hints(src: &str) -> String {
     inlay_hints_for_config(
         src,
         InlayHintsConfig {
-            return_types: true,
+            function_return_types: true,
             ..Default::default()
         },
     )
