@@ -162,13 +162,13 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
                 continue;
             }
 
-            self.delete_tuple_tokens(*location, elements.last().map(|elem| elem.location()));
+            self.delete_tuple_tokens(*location, elements.last().map(|element| element.location()));
 
             for clause in clauses {
                 match clause.pattern.get(subject_idx) {
                     Some(Pattern::Tuple { location, elements }) => self.delete_tuple_tokens(
                         *location,
-                        elements.last().map(|elem| elem.location()),
+                        elements.last().map(|element| element.location()),
                     ),
                     Some(Pattern::Discard { location, .. }) => {
                         self.discard_tuple_items(*location, elements.len())

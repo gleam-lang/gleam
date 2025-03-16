@@ -235,11 +235,20 @@ impl<'module, 'a> Generator<'module, 'a> {
                     Some(tail) => {
                         r#gen.tracker.prepend_used = true;
                         let tail = r#gen.wrap_expression(tail)?;
-                        prepend(elements.iter().map(|e| r#gen.wrap_expression(e)), tail)
+                        prepend(
+                            elements
+                                .iter()
+                                .map(|element| r#gen.wrap_expression(element)),
+                            tail,
+                        )
                     }
                     None => {
                         r#gen.tracker.list_used = true;
-                        list(elements.iter().map(|e| r#gen.wrap_expression(e)))
+                        list(
+                            elements
+                                .iter()
+                                .map(|element| r#gen.wrap_expression(element)),
+                        )
                     }
                 })
             }
@@ -1531,7 +1540,7 @@ pub(crate) fn guard_constant_expression<'a>(
         Constant::Tuple { elements, .. } => array(
             elements
                 .iter()
-                .map(|e| guard_constant_expression(assignments, tracker, e)),
+                .map(|element| guard_constant_expression(assignments, tracker, element)),
         ),
 
         Constant::List { elements, .. } => {
@@ -1539,7 +1548,7 @@ pub(crate) fn guard_constant_expression<'a>(
             list(
                 elements
                     .iter()
-                    .map(|e| guard_constant_expression(assignments, tracker, e)),
+                    .map(|element| guard_constant_expression(assignments, tracker, element)),
             )
         }
         Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
@@ -1631,7 +1640,7 @@ pub(crate) fn constant_expression<'a>(
         Constant::Tuple { elements, .. } => array(
             elements
                 .iter()
-                .map(|e| constant_expression(context, tracker, e)),
+                .map(|element| constant_expression(context, tracker, element)),
         ),
 
         Constant::List { elements, .. } => {
@@ -1639,7 +1648,7 @@ pub(crate) fn constant_expression<'a>(
             let list = list(
                 elements
                     .iter()
-                    .map(|e| constant_expression(context, tracker, e)),
+                    .map(|element| constant_expression(context, tracker, element)),
             )?;
 
             match context {

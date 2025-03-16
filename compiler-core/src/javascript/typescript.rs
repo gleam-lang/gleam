@@ -650,9 +650,11 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Type::Fn { args, retrn } => self.print_fn(args, retrn, generic_usages),
 
-            Type::Tuple { elements } => {
-                tuple(elements.iter().map(|e| self.do_print(e, generic_usages)))
-            }
+            Type::Tuple { elements } => tuple(
+                elements
+                    .iter()
+                    .map(|element| self.do_print(element, generic_usages)),
+            ),
         }
     }
 
@@ -670,7 +672,9 @@ impl<'a> TypeScriptGenerator<'a> {
 
             Type::Fn { args, retrn } => self.print_fn(args, retrn, None),
 
-            Type::Tuple { elements } => tuple(elements.iter().map(|e| self.do_print(e, None))),
+            Type::Tuple { elements } => {
+                tuple(elements.iter().map(|element| self.do_print(element, None)))
+            }
         }
     }
 

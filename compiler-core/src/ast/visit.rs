@@ -671,8 +671,8 @@ pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elements: 
 where
     V: Visit<'a> + ?Sized,
 {
-    for elem in elements {
-        v.visit_type_ast(elem);
+    for element in elements {
+        v.visit_type_ast(element);
     }
 }
 
@@ -1032,8 +1032,8 @@ pub fn visit_typed_expr_tuple<'a, V>(
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for elem in elements {
-        v.visit_typed_expr(elem);
+    for element in elements {
+        v.visit_typed_expr(element);
     }
 }
 
@@ -1626,8 +1626,8 @@ pub fn visit_typed_pattern_tuple<'a, V>(
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for elem in elements {
-        v.visit_typed_pattern(elem);
+    for element in elements {
+        v.visit_typed_pattern(element);
     }
 }
 

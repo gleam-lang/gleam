@@ -1468,7 +1468,10 @@ impl ConstructorSpecialiser {
             },
 
             Type::Tuple { elements } => Type::Tuple {
-                elements: elements.iter().map(|e| self.specialise_type(e)).collect(),
+                elements: elements
+                    .iter()
+                    .map(|element| self.specialise_type(element))
+                    .collect(),
             },
         })
     }
@@ -1633,7 +1636,7 @@ impl CaseToCompile {
             TypedPattern::Tuple { elements, .. } => {
                 let elements = elements
                     .iter()
-                    .map(|elem| self.register(elem))
+                    .map(|element| self.register(element))
                     .collect_vec();
                 self.insert(Pattern::Tuple { elements })
             }

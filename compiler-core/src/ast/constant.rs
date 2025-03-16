@@ -79,7 +79,7 @@ impl TypedConstant {
             Constant::String { .. } | Constant::StringConcatenation { .. } => type_::string(),
             Constant::BitArray { .. } => type_::bits(),
             Constant::Tuple { elements, .. } => {
-                type_::tuple(elements.iter().map(|e| e.type_()).collect())
+                type_::tuple(elements.iter().map(|element| element.type_()).collect())
             }
             Constant::List { type_, .. }
             | Constant::Record { type_, .. }
