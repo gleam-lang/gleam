@@ -51,8 +51,8 @@
 
 ### Language server
 
-- The language server now allows renaming of functions and constants across
-  modules. For example:
+- The language server now allows renaming of functions, constants,
+  custom type variants and custom types across modules. For example:
 
   ```gleam
   // wibble.gleam
@@ -150,8 +150,8 @@
 
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The language server now supports finding references to values, both within
-  a module and across multiple modules.
+- The language server now supports finding references to values and types,
+  both within a module and across multiple modules.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
 ### Formatter
