@@ -317,7 +317,7 @@ pub enum Pattern {
     },
     Variant {
         index: usize,
-        args: Vec<Id<Pattern>>,
+        fields: Vec<Id<Pattern>>,
     },
     NonEmptyList {
         first: Id<Pattern>,
@@ -1057,15 +1057,11 @@ impl<'a> Compiler<'a> {
             // After making sure a value is a specific variant we'll have to check each
             // of its arguments respects the given patterns (as shown in the doc example for
             // this function!)
-            (
-                Pattern::Variant {
-                    args: args_patterns,
-                    ..
-                },
-                RuntimeCheck::Variant { args, .. },
-            ) => (args.iter().zip(args_patterns))
-                .map(|(arg, pattern)| arg.is(*pattern))
-                .collect_vec(),
+            (Pattern::Variant { fields, .. }, RuntimeCheck::Variant { args, .. }) => {
+                (args.iter().zip(fields))
+                    .map(|(arg, pattern)| arg.is(*pattern))
+                    .collect_vec()
+            }
 
             // Tuples are exactly the same as variants: after making sure we're dealing with
             // a tuple, we will have to check that each of its elements matches the given
@@ -1651,11 +1647,11 @@ impl CaseToCompile {
                 ..
             } => {
                 let index = constructor.expect_ref("must be inferred").constructor_index as usize;
-                let args = arguments
+                let fields = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
-                self.insert(Pattern::Variant { index, args })
+                self.insert(Pattern::Variant { index, fields })
             }
 
             TypedPattern::BitArray { location, .. } => {
