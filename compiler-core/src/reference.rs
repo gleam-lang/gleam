@@ -34,7 +34,10 @@ pub struct ReferenceTracker {
 
     /// The locations of the references to each value in this module, used for
     /// renaming and go-to reference.
-    reference_locations: ReferenceMap,
+    pub value_references: ReferenceMap,
+    /// The locations of the references to each type in this module, used for
+    /// renaming and go-to reference.
+    pub type_references: ReferenceMap,
 }
 
 impl ReferenceTracker {
@@ -44,10 +47,6 @@ impl ReferenceTracker {
 }
 
 impl ReferenceTracker {
-    pub fn into_locations(self) -> ReferenceMap {
-        self.reference_locations
-    }
-
     fn get_or_create_node(&mut self, module: EcoString, name: EcoString) -> NodeIndex {
         let key: (EcoString, EcoString) = (module, name);
         match self.names.get(&key) {
@@ -64,7 +63,7 @@ impl ReferenceTracker {
         self.current_function = self.get_or_create_node(module, name);
     }
 
-    pub fn register_reference(
+    pub fn register_value_reference(
         &mut self,
         module: EcoString,
         name: EcoString,
@@ -72,11 +71,24 @@ impl ReferenceTracker {
         kind: ReferenceKind,
     ) {
         let target = self.get_or_create_node(module.clone(), name.clone());
-        self.reference_locations
+        self.value_references
             .entry((module, name))
             .or_default()
             .push(Reference { location, kind });
 
         _ = self.graph.add_edge(self.current_function, target, ());
+    }
+
+    pub fn register_type_reference(
+        &mut self,
+        module: EcoString,
+        name: EcoString,
+        location: SrcSpan,
+        kind: ReferenceKind,
+    ) {
+        self.type_references
+            .entry((module, name))
+            .or_default()
+            .push(Reference { location, kind });
     }
 }

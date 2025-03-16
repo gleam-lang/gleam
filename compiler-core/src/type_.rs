@@ -925,6 +925,7 @@ impl ModuleInterface {
 pub struct References {
     pub imported_modules: HashSet<EcoString>,
     pub value_references: ReferenceMap,
+    pub type_references: ReferenceMap,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

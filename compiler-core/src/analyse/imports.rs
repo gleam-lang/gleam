@@ -102,6 +102,13 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             &type_info.parameters,
         );
 
+        self.environment.references.register_value_reference(
+            type_info.module.clone(),
+            imported_name.clone(),
+            import.imported_name_location,
+            ReferenceKind::Import,
+        );
+
         if let Err(e) = self
             .environment
             .insert_type_constructor(imported_name.clone(), type_info)
@@ -172,7 +179,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     name.clone(),
                     used_name.clone(),
                 );
-                self.environment.references.register_reference(
+                self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
                     import.imported_name_location,
@@ -187,7 +194,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     location,
                     self.problems,
                 );
-                self.environment.references.register_reference(
+                self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
                     import.imported_name_location,

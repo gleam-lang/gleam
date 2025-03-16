@@ -347,7 +347,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                         .values()
                         .map(|(_location, module)| module.name.clone())
                         .collect(),
-                    value_references: env.references.into_locations(),
+                    value_references: env.references.value_references,
+                    type_references: env.references.type_references,
                 },
             },
             names: type_names,
@@ -431,7 +432,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         environment.insert_module_value(name.clone(), variant);
 
-        environment.references.register_reference(
+        environment.references.register_value_reference(
             environment.current_module.clone(),
             name.clone(),
             name_location,
@@ -655,7 +656,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             deprecation.clone(),
         );
 
-        environment.references.register_reference(
+        environment.references.register_value_reference(
             environment.current_module.clone(),
             name.clone(),
             name_location,
@@ -1111,7 +1112,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             );
 
-            environment.references.register_reference(
+            environment.references.register_value_reference(
                 environment.current_module.clone(),
                 constructor.name.clone(),
                 constructor.name_location,
@@ -1240,6 +1241,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment.current_module.clone(),
             name.clone(),
             name.clone(),
+        );
+
+        environment.references.register_type_reference(
+            environment.current_module.clone(),
+            name.clone(),
+            *name_location,
+            ReferenceKind::Definition,
         );
 
         if *opaque && constructors.is_empty() {

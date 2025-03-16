@@ -1338,8 +1338,8 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
         if overlaps(self.params.range, range) {
             if let Some((module_alias, _)) = module {
                 if let Some(import) = self.module.find_node(location.end).and_then(|node| {
-                    if let Located::Annotation(_, ty) = node {
-                        if let Some((module, _)) = ty.named_type_name() {
+                    if let Located::Annotation { type_, .. } = node {
+                        if let Some((module, _)) = type_.named_type_name() {
                             return self.get_module_import(&module, name, ast::Layer::Type);
                         }
                     }

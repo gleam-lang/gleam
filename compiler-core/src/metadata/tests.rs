@@ -1902,6 +1902,24 @@ fn module_with_references() {
                 ),
             ]
             .into(),
+            type_references: [(
+                ("some_other_module".into(), "TypeVariant".into()),
+                vec![
+                    Reference {
+                        location: SrcSpan::new(26, 35),
+                        kind: ReferenceKind::Qualified,
+                    },
+                    Reference {
+                        location: SrcSpan::new(152, 204),
+                        kind: ReferenceKind::Unqualified,
+                    },
+                    Reference {
+                        location: SrcSpan::new(0, 8),
+                        kind: ReferenceKind::Definition,
+                    },
+                ],
+            )]
+            .into(),
         },
     };
 

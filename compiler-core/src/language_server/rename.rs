@@ -5,7 +5,7 @@ use lsp_types::{RenameParams, TextEdit, Url, WorkspaceEdit};
 
 use crate::{
     analyse::name,
-    ast::SrcSpan,
+    ast::{self, SrcSpan},
     build::Module,
     line_numbers::LineNumbers,
     reference::ReferenceKind,
@@ -80,9 +80,10 @@ pub struct Renamed<'a> {
     pub name: &'a EcoString,
     pub name_kind: Named,
     pub target_kind: RenameTarget,
+    pub layer: ast::Layer,
 }
 
-pub fn rename_module_value(
+pub fn rename_module_entity(
     params: &RenameParams,
     current_module: &Module,
     modules: &im::HashMap<EcoString, ModuleInterface>,
@@ -108,6 +109,7 @@ pub fn rename_module_value(
                 current_module,
                 renamed.module_name,
                 renamed.name,
+                renamed.layer,
             );
         }
         RenameTarget::Unqualified | RenameTarget::Qualified | RenameTarget::Definition => {}
@@ -137,6 +139,7 @@ pub fn rename_module_value(
                 renamed.module_name,
                 renamed.name,
                 params.new_name.clone(),
+                renamed.layer,
             );
         }
     }
@@ -151,12 +154,14 @@ fn rename_references_in_module(
     module_name: &EcoString,
     name: &EcoString,
     new_name: String,
+    layer: ast::Layer,
 ) {
-    let Some(references) = module
-        .references
-        .value_references
-        .get(&(module_name.clone(), name.clone()))
-    else {
+    let reference_map = match layer {
+        ast::Layer::Value => &module.references.value_references,
+        ast::Layer::Type => &module.references.type_references,
+    };
+
+    let Some(references) = reference_map.get(&(module_name.clone(), name.clone())) else {
         return;
     };
 
@@ -187,13 +192,14 @@ fn alias_references_in_module(
     module: &Module,
     module_name: &EcoString,
     name: &EcoString,
+    layer: ast::Layer,
 ) -> Option<WorkspaceEdit> {
-    let references = module
-        .ast
-        .type_info
-        .references
-        .value_references
-        .get(&(module_name.clone(), name.clone()))?;
+    let reference_map = match layer {
+        ast::Layer::Value => &module.ast.type_info.references.value_references,
+        ast::Layer::Type => &module.ast.type_info.references.type_references,
+    };
+
+    let references = reference_map.get(&(module_name.clone(), name.clone()))?;
 
     let mut edits = TextEdits::new(&module.ast.type_info.line_numbers);
 
