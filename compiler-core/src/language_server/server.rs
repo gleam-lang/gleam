@@ -118,7 +118,7 @@ where
                     *config = updated_config;
                 }
 
-                self.inlay_hints_refresh();
+                self.send_inlay_hints_refresh();
             }
         }
     }
@@ -336,7 +336,7 @@ where
         }
     }
 
-    fn inlay_hints_refresh(&mut self) {
+    fn send_inlay_hints_refresh(&mut self) {
         let supports_refresh = self
             .initialise_params
             .capabilities
