@@ -3059,12 +3059,14 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 module,
                 name: value_name,
                 ..
-            } if value_name != referenced_name => self.environment.references.register_reference(
-                module.clone(),
-                value_name.clone(),
-                location,
-                ReferenceKind::Alias,
-            ),
+            } if value_name != referenced_name => {
+                self.environment.references.register_value_reference(
+                    module.clone(),
+                    value_name.clone(),
+                    location,
+                    ReferenceKind::Alias,
+                )
+            }
             ValueConstructorVariant::ModuleFn { name, module, .. }
             | ValueConstructorVariant::Record { name, module, .. }
             | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
