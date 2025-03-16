@@ -248,9 +248,9 @@ pub trait Visit<'ast> {
         &mut self,
         location: &'ast SrcSpan,
         type_: &'ast Arc<Type>,
-        elems: &'ast [TypedExpr],
+        elements: &'ast [TypedExpr],
     ) {
-        visit_typed_expr_tuple(self, location, type_, elems);
+        visit_typed_expr_tuple(self, location, type_, elements);
     }
 
     fn visit_typed_expr_tuple_index(
@@ -497,9 +497,9 @@ pub trait Visit<'ast> {
     fn visit_typed_pattern_tuple(
         &mut self,
         location: &'ast SrcSpan,
-        elems: &'ast Vec<TypedPattern>,
+        elements: &'ast Vec<TypedPattern>,
     ) {
-        visit_typed_pattern_tuple(self, location, elems);
+        visit_typed_pattern_tuple(self, location, elements);
     }
 
     fn visit_typed_pattern_bit_array(
@@ -561,8 +561,8 @@ pub trait Visit<'ast> {
         visit_type_ast_var(self, location, name);
     }
 
-    fn visit_type_ast_tuple(&mut self, location: &'ast SrcSpan, elems: &'ast Vec<TypeAst>) {
-        visit_type_ast_tuple(self, location, elems);
+    fn visit_type_ast_tuple(&mut self, location: &'ast SrcSpan, elements: &'ast Vec<TypeAst>) {
+        visit_type_ast_tuple(self, location, elements);
     }
 
     fn visit_type_ast_hole(&mut self, location: &'ast SrcSpan, name: &'ast EcoString) {
@@ -667,11 +667,11 @@ where
     // No further traversal needed for variables
 }
 
-pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elems: &'a Vec<TypeAst>)
+pub fn visit_type_ast_tuple<'a, V>(v: &mut V, _location: &'a SrcSpan, elements: &'a Vec<TypeAst>)
 where
     V: Visit<'a> + ?Sized,
 {
-    for elem in elems {
+    for elem in elements {
         v.visit_type_ast(elem);
     }
 }
@@ -1028,11 +1028,11 @@ pub fn visit_typed_expr_tuple<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
     _type_: &'a Arc<Type>,
-    elems: &'a [TypedExpr],
+    elements: &'a [TypedExpr],
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for elem in elems {
+    for elem in elements {
         v.visit_typed_expr(elem);
     }
 }
@@ -1622,11 +1622,11 @@ where
 pub fn visit_typed_pattern_tuple<'a, V>(
     v: &mut V,
     _location: &'a SrcSpan,
-    elems: &'a Vec<TypedPattern>,
+    elements: &'a Vec<TypedPattern>,
 ) where
     V: Visit<'a> + ?Sized,
 {
-    for elem in elems {
+    for elem in elements {
         v.visit_typed_pattern(elem);
     }
 }

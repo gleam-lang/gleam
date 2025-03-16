@@ -723,17 +723,17 @@ fn string_length_utf8_bytes(str: &EcoString) -> usize {
     convert_string_escape_chars(str).len()
 }
 
-fn tuple<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    join(elems, break_(",", ", "))
+fn tuple<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    join(elements, break_(",", ", "))
         .nest(INDENT)
         .surround("{", "}")
         .group()
 }
 
 fn const_string_concatenate_bit_array<'a>(
-    elems: impl IntoIterator<Item = Document<'a>>,
+    elements: impl IntoIterator<Item = Document<'a>>,
 ) -> Document<'a> {
-    join(elems, break_(",", ", "))
+    join(elements, break_(",", ", "))
         .nest(INDENT)
         .surround("<<", ">>")
         .group()
@@ -834,8 +834,8 @@ fn string_concatenate_argument<'a>(value: &'a TypedExpr, env: &mut Env<'a>) -> D
     }
 }
 
-fn bit_array<'a>(elems: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
-    join(elems, break_(",", ", "))
+fn bit_array<'a>(elements: impl IntoIterator<Item = Document<'a>>) -> Document<'a> {
+    join(elements, break_(",", ", "))
         .nest(INDENT)
         .surround("<<", ">>")
         .group()
@@ -1251,16 +1251,16 @@ fn expr_list<'a>(
     list(elements, tail.as_ref().map(|e| maybe_block_expr(e, env)))
 }
 
-fn list<'a>(elems: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
-    let elems = match tail {
-        Some(tail) if elems.is_empty() => return tail.to_doc(),
+fn list<'a>(elements: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
+    let elements = match tail {
+        Some(tail) if elements.is_empty() => return tail.to_doc(),
 
-        Some(tail) => elems.append(break_(" |", " | ")).append(tail),
+        Some(tail) => elements.append(break_(" |", " | ")).append(tail),
 
-        None => elems,
+        None => elements,
     };
 
-    elems.to_doc().nest(INDENT).surround("[", "]").group()
+    elements.to_doc().nest(INDENT).surround("[", "]").group()
 }
 
 fn var<'a>(name: &'a str, constructor: &'a ValueConstructor, env: &mut Env<'a>) -> Document<'a> {
