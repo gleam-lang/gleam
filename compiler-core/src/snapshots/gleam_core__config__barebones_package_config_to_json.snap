@@ -32,7 +32,19 @@ version = "1.0.0"
   "javascript": {
     "typescript_declarations": false,
     "runtime": "nodejs",
-    "deno": {}
+    "deno": {
+      "allow_env": [],
+      "allow_sys": false,
+      "allow_hrtime": false,
+      "allow_net": [],
+      "allow_ffi": false,
+      "allow_read": [],
+      "allow_run": [],
+      "allow_write": [],
+      "allow_all": false,
+      "unstable": false,
+      "location": null
+    }
   },
   "target": "erlang",
   "internal_modules": null
