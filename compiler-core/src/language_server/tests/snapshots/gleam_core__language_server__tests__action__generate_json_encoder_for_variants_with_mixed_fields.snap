@@ -24,10 +24,10 @@ fn encode_wibble(wibble: Wibble) -> json.Json {
     Wibble -> json.object([
       #("type", json.string("wibble")),
     ])
-    Wobble(..) -> json.object([
+    Wobble(field:, field1:) -> json.object([
       #("type", json.string("wobble")),
-      #("field", json.string(wibble.field)),
-      #("field1", json.int(wibble.field1)),
+      #("field", json.string(field)),
+      #("field1", json.int(field1)),
     ])
   }
 }

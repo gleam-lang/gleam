@@ -22,9 +22,10 @@ pub type LinkedList {
 }
 
 fn encode_linked_list(linked_list: LinkedList) -> json.Json {
+  let LinkedList(value:, next:) = linked_list
   json.object([
-    #("value", json.int(linked_list.value)),
-    #("next", case linked_list.next {
+    #("value", json.int(value)),
+    #("next", case next {
       option.None -> json.null()
       Some(value) -> encode_linked_list(value)
     }),

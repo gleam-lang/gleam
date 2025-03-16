@@ -18,10 +18,11 @@ pub type Person {
 }
 
 fn encode_person(person: Person) -> json.Json {
+  let Person(name:, age:, height:, is_cool:) = person
   json.object([
-    #("name", json.string(person.name)),
-    #("age", json.int(person.age)),
-    #("height", json.float(person.height)),
-    #("is_cool", json.bool(person.is_cool)),
+    #("name", json.string(name)),
+    #("age", json.int(age)),
+    #("height", json.float(height)),
+    #("is_cool", json.bool(is_cool)),
   ])
 }
