@@ -536,11 +536,11 @@ impl Variable {
 /// performing a `PatternCheck` on a variable with a specific type.
 ///
 enum BranchMode {
-    /// This covers numbers, functions, variables, bitarrays and strings.
+    /// This covers numbers, functions, variables, and bitarrays.
     ///
-    /// TODO)) In the future it won't be the case: strings and bitarrays will be
-    /// special cased to improve on exhaustiveness checking and to be used for
-    /// code generation.
+    /// TODO)) In the future it won't be the case: bitarrays will be special
+    /// cased to improve on exhaustiveness checking and to be used for code
+    /// generation.
     ///
     Infinite,
     Tuple {
