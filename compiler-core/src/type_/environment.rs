@@ -558,7 +558,7 @@ impl Environment<'_> {
             } => {
                 let args = args
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
+                    .map(|type_| self.instantiate(type_.clone(), ids, hydrator))
                     .collect();
                 Arc::new(Type::Named {
                     publicity: *publicity,
@@ -601,7 +601,7 @@ impl Environment<'_> {
 
             Type::Fn { args, return_, .. } => fn_(
                 args.iter()
-                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
+                    .map(|type_| self.instantiate(type_.clone(), ids, hydrator))
                     .collect(),
                 self.instantiate(return_.clone(), ids, hydrator),
             ),
@@ -609,7 +609,7 @@ impl Environment<'_> {
             Type::Tuple { elements } => tuple(
                 elements
                     .iter()
-                    .map(|t| self.instantiate(t.clone(), ids, hydrator))
+                    .map(|type_| self.instantiate(type_.clone(), ids, hydrator))
                     .collect(),
             ),
         }

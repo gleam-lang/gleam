@@ -193,7 +193,7 @@ impl Hydrator {
             TypeAst::Tuple(TypeAstTuple { elements, .. }) => Ok(tuple(
                 elements
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment, problems))
+                    .map(|type_| self.type_from_ast(type_, environment, problems))
                     .try_collect()?,
             )),
 
@@ -204,7 +204,7 @@ impl Hydrator {
             }) => {
                 let args = args
                     .iter()
-                    .map(|t| self.type_from_ast(t, environment, problems))
+                    .map(|type_| self.type_from_ast(type_, environment, problems))
                     .try_collect()?;
                 let return_ = self.type_from_ast(return_, environment, problems)?;
                 Ok(fn_(args, return_))

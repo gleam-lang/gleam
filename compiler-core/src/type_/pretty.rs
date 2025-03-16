@@ -145,7 +145,7 @@ impl Printer {
         }
 
         let args = join(
-            args.iter().map(|t| self.print(t).group()),
+            args.iter().map(|type_| self.print(type_).group()),
             break_(",", ", "),
         );
         break_("", "")
