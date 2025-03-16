@@ -2560,16 +2560,17 @@ where
             // Constructor function
             Some((start, Token::UpName { name }, end)) => {
                 self.advance();
-                self.parse_type_name_finish(start, None, name, end)
+                self.parse_type_name_finish(start, start, None, name, end)
             }
 
             // Constructor Module or type Variable
             Some((start, Token::Name { name: mod_name }, end)) => {
                 self.advance();
                 if self.maybe_one(&Token::Dot).is_some() {
-                    let (_, upname, upname_e) = self.expect_upname()?;
+                    let (name_start, upname, upname_e) = self.expect_upname()?;
                     self.parse_type_name_finish(
                         start,
+                        name_start,
                         Some((mod_name, SrcSpan { start, end })),
                         upname,
                         upname_e,
@@ -2593,6 +2594,7 @@ where
     fn parse_type_name_finish(
         &mut self,
         start: u32,
+        name_start: u32,
         module: Option<(EcoString, SrcSpan)>,
         name: EcoString,
         end: u32,
@@ -2609,6 +2611,10 @@ where
                 }
                 Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                     location: SrcSpan { start, end: par_e },
+                    name_location: SrcSpan {
+                        start: name_start,
+                        end,
+                    },
                     module,
                     name,
                     arguments: args,
@@ -2616,6 +2622,10 @@ where
             }
             _ => Ok(Some(TypeAst::Constructor(TypeAstConstructor {
                 location: SrcSpan { start, end },
+                name_location: SrcSpan {
+                    start: name_start,
+                    end,
+                },
                 module,
                 name,
                 arguments: vec![],

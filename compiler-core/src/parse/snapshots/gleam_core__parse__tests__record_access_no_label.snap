@@ -50,6 +50,10 @@ Parsed {
                                                     start: 34,
                                                     end: 40,
                                                 },
+                                                name_location: SrcSpan {
+                                                    start: 34,
+                                                    end: 40,
+                                                },
                                                 module: None,
                                                 name: "String",
                                                 arguments: [],

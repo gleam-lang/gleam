@@ -102,9 +102,9 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             &type_info.parameters,
         );
 
-        self.environment.references.register_value_reference(
+        self.environment.references.register_type_reference(
             type_info.module.clone(),
-            imported_name.clone(),
+            import.name.clone(),
             import.imported_name_location,
             ReferenceKind::Import,
         );

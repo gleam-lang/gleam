@@ -114,6 +114,7 @@ impl Hydrator {
         match ast {
             TypeAst::Constructor(TypeAstConstructor {
                 location,
+                name_location,
                 module,
                 name,
                 arguments: args,
@@ -130,7 +131,6 @@ impl Hydrator {
                     parameters,
                     type_: return_type,
                     deprecation,
-                    module: type_module,
                     ..
                 } = environment
                     .get_type_constructor(module, name)
@@ -143,16 +143,21 @@ impl Hydrator {
                     })?
                     .clone();
 
-                environment.references.register_type_reference(
-                    type_module,
-                    name.clone(),
-                    *location,
-                    if module.is_some() {
+                if let Some((type_module, type_name)) = return_type.named_type_name() {
+                    let reference_kind = if module.is_some() {
                         ReferenceKind::Qualified
+                    } else if name != &type_name {
+                        ReferenceKind::Alias
                     } else {
                         ReferenceKind::Unqualified
-                    },
-                );
+                    };
+                    environment.references.register_type_reference(
+                        type_module,
+                        type_name,
+                        *name_location,
+                        reference_kind,
+                    );
+                }
 
                 match deprecation {
                     Deprecation::NotDeprecated => {}

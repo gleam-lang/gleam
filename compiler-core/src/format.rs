@@ -705,6 +705,7 @@ impl<'comments> Formatter<'comments> {
         name: &'a str,
         args: &'a [TypeAst],
         location: &SrcSpan,
+        _name_location: &SrcSpan,
     ) -> Document<'a> {
         let head = module
             .as_ref()
@@ -727,7 +728,8 @@ impl<'comments> Formatter<'comments> {
                 arguments: args,
                 module,
                 location,
-            }) => self.type_ast_constructor(module, name, args, location),
+                name_location,
+            }) => self.type_ast_constructor(module, name, args, location, name_location),
 
             TypeAst::Fn(TypeAstFn {
                 arguments: args,
