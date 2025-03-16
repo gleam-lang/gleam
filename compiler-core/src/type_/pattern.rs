@@ -835,7 +835,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     self.environment
                         .instantiate(constructor_typ, &mut hashmap![], self.hydrator);
                 match instantiated_constructor_type.deref() {
-                    Type::Fn { args, retrn } => {
+                    Type::Fn { args, return_ } => {
                         if args.len() == pattern_args.len() {
                             let pattern_args = pattern_args
                                 .into_iter()
@@ -863,11 +863,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                     })
                                 })
                                 .try_collect()?;
-                            unify(type_.clone(), retrn.clone())
+                            unify(type_.clone(), return_.clone())
                                 .map_err(|e| convert_unify_error(e, location))?;
 
                             if let Some((variable_to_infer, inferred_variant)) =
-                                subject_variable.zip(retrn.custom_type_inferred_variant())
+                                subject_variable.zip(return_.custom_type_inferred_variant())
                             {
                                 self.set_subject_variable_variant(
                                     variable_to_infer,
@@ -883,7 +883,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                                 arguments: pattern_args,
                                 constructor: Inferred::Known(constructor),
                                 spread,
-                                type_: retrn.clone(),
+                                type_: return_.clone(),
                             })
                         } else {
                             Err(Error::IncorrectArity {

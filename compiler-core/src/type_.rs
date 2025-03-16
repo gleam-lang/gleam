@@ -98,7 +98,7 @@ pub enum Type {
     ///
     Fn {
         args: Vec<Arc<Type>>,
-        retrn: Arc<Type>,
+        return_: Arc<Type>,
     },
 
     /// A type variable. See the contained `TypeVar` enum for more information.
@@ -115,7 +115,7 @@ pub enum Type {
 impl Type {
     pub fn is_result_constructor(&self) -> bool {
         match self {
-            Type::Fn { retrn, .. } => retrn.is_result(),
+            Type::Fn { return_, .. } => return_.is_result(),
             Type::Var { type_ } => type_.borrow().is_result(),
             _ => false,
         }
@@ -174,7 +174,7 @@ impl Type {
 
     pub fn return_type(&self) -> Option<Arc<Self>> {
         match self {
-            Self::Fn { retrn, .. } => Some(retrn.clone()),
+            Self::Fn { return_, .. } => Some(return_.clone()),
             Self::Var { type_ } => type_.borrow().return_type(),
             _ => None,
         }
@@ -182,7 +182,7 @@ impl Type {
 
     pub fn fn_types(&self) -> Option<(Vec<Arc<Self>>, Arc<Self>)> {
         match self {
-            Self::Fn { args, retrn, .. } => Some((args.clone(), retrn.clone())),
+            Self::Fn { args, return_, .. } => Some((args.clone(), return_.clone())),
             Self::Var { type_ } => type_.borrow().fn_types(),
             _ => None,
         }
@@ -344,11 +344,11 @@ impl Type {
                     Arc::make_mut(element).generalise_custom_type_variant();
                 }
             }
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 for argument in args {
                     Arc::make_mut(argument).generalise_custom_type_variant();
                 }
-                Arc::make_mut(retrn).generalise_custom_type_variant();
+                Arc::make_mut(return_).generalise_custom_type_variant();
             }
         }
     }
@@ -442,7 +442,7 @@ impl Type {
 
             Self::Tuple { elements, .. } => elements.iter().find_map(|t| t.find_private_type()),
 
-            Self::Fn { retrn, args, .. } => retrn
+            Self::Fn { return_, args, .. } => return_
                 .find_private_type()
                 .or_else(|| args.iter().find_map(|t| t.find_private_type())),
 
@@ -464,7 +464,7 @@ impl Type {
 
             Self::Tuple { elements, .. } => elements.iter().find_map(|t| t.find_internal_type()),
 
-            Self::Fn { retrn, args, .. } => retrn
+            Self::Fn { return_, args, .. } => return_
                 .find_internal_type()
                 .or_else(|| args.iter().find_map(|t| t.find_internal_type())),
 
@@ -526,10 +526,10 @@ impl Type {
                 type_.as_ref().borrow().same_as_other_type(one)
             }
             (
-                Type::Fn { args, retrn },
+                Type::Fn { args, return_ },
                 Type::Fn {
                     args: other_args,
-                    retrn: other_retrn,
+                    return_: other_return,
                 },
             ) => {
                 args.len() == other_args.len()
@@ -537,7 +537,7 @@ impl Type {
                         .iter()
                         .zip(other_args)
                         .all(|(one, other)| one.same_as(other))
-                    && retrn.same_as(other_retrn)
+                    && return_.same_as(other_return)
             }
 
             (Type::Var { type_ }, other) => type_.as_ref().borrow().same_as_other_type(other),
@@ -1409,11 +1409,11 @@ fn unify_unbound_type(type_: Arc<Type>, own_id: u64) -> Result<(), UnifyError> {
             Ok(())
         }
 
-        Type::Fn { args, retrn } => {
+        Type::Fn { args, return_ } => {
             for arg in args {
                 unify_unbound_type(arg.clone(), own_id)?;
             }
-            unify_unbound_type(retrn.clone(), own_id)
+            unify_unbound_type(return_.clone(), own_id)
         }
 
         Type::Tuple { elements, .. } => {
@@ -1440,31 +1440,31 @@ fn match_fun_type(
 
             TypeVar::Unbound { .. } => {
                 let args: Vec<_> = (0..arity).map(|_| environment.new_unbound_var()).collect();
-                let retrn = environment.new_unbound_var();
-                Some((args, retrn))
+                let return_ = environment.new_unbound_var();
+                Some((args, return_))
             }
 
             TypeVar::Generic { .. } => None,
         };
 
-        if let Some((args, retrn)) = new_value {
+        if let Some((args, return_)) = new_value {
             *type_.borrow_mut() = TypeVar::Link {
-                type_: fn_(args.clone(), retrn.clone()),
+                type_: fn_(args.clone(), return_.clone()),
             };
-            return Ok((args, retrn));
+            return Ok((args, return_));
         }
     }
 
-    if let Type::Fn { args, retrn } = type_.deref() {
+    if let Type::Fn { args, return_ } = type_.deref() {
         return if args.len() != arity {
             Err(MatchFunTypeError::IncorrectArity {
                 expected: args.len(),
                 given: arity,
                 args: args.clone(),
-                return_type: retrn.clone(),
+                return_type: return_.clone(),
             })
         } else {
-            Ok((args.clone(), retrn.clone()))
+            Ok((args.clone(), return_.clone()))
         };
     }
 
@@ -1500,9 +1500,9 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             })
         }
 
-        Type::Fn { args, retrn } => fn_(
+        Type::Fn { args, return_ } => fn_(
             args.iter().map(|t| generalise(t.clone())).collect(),
-            generalise(retrn.clone()),
+            generalise(return_.clone()),
         ),
 
         Type::Tuple { elements } => tuple(elements.iter().map(|t| generalise(t.clone())).collect()),

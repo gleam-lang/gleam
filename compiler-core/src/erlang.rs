@@ -643,14 +643,14 @@ where
 fn fun_spec<'a>(
     name: &'a str,
     args: impl IntoIterator<Item = Document<'a>>,
-    retrn: Document<'a>,
+    return_: Document<'a>,
 ) -> Document<'a> {
     "-spec "
         .to_doc()
         .append(atom(name))
         .append(wrap_args(args))
         .append(" -> ")
-        .append(retrn)
+        .append(return_)
         .append(".")
         .append(line())
         .group()
@@ -2421,11 +2421,11 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
                 }
             }
         },
-        Type::Fn { args, retrn } => {
+        Type::Fn { args, return_ } => {
             for arg in args {
                 type_var_ids(arg, ids)
             }
-            type_var_ids(retrn, ids);
+            type_var_ids(return_, ids);
         }
         Type::Tuple { elements } => {
             for element in elements {
@@ -2517,7 +2517,7 @@ impl<'a> TypePrinter<'a> {
                 name, module, args, ..
             } => self.print_type_app(module, name, args),
 
-            Type::Fn { args, retrn } => self.print_fn(args, retrn),
+            Type::Fn { args, return_ } => self.print_fn(args, return_),
 
             Type::Tuple { elements } => tuple(elements.iter().map(|element| self.print(element))),
         }
@@ -2576,14 +2576,14 @@ impl<'a> TypePrinter<'a> {
         }
     }
 
-    fn print_fn(&self, args: &[Arc<Type>], retrn: &Type) -> Document<'static> {
+    fn print_fn(&self, args: &[Arc<Type>], return_: &Type) -> Document<'static> {
         let args = join(args.iter().map(|a| self.print(a)), ", ".to_doc());
-        let retrn = self.print(retrn);
+        let return_ = self.print(return_);
         "fun(("
             .to_doc()
             .append(args)
             .append(") -> ")
-            .append(retrn)
+            .append(return_)
             .append(")")
     }
 

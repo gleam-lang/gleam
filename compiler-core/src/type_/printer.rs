@@ -361,11 +361,11 @@ impl<'a> Printer<'a> {
                 }
             }
 
-            Type::Fn { args, retrn } => {
+            Type::Fn { args, return_ } => {
                 buffer.push_str("fn(");
                 self.print_arguments(args, buffer, print_mode);
                 buffer.push_str(") -> ");
-                self.print(retrn, buffer, print_mode);
+                self.print(return_, buffer, print_mode);
             }
 
             Type::Var { type_, .. } => match *type_.borrow() {
@@ -597,7 +597,7 @@ fn test_fn_type() {
                 inferred_variant: None,
             }),
         ],
-        retrn: Arc::new(Type::Named {
+        return_: Arc::new(Type::Named {
             name: "Bool".into(),
             args: vec![],
             module: "gleam".into(),

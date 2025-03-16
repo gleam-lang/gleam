@@ -421,7 +421,7 @@ fn find_node_call() {
     let statement = compile_expression("fn(_, _) { 1 }(1, 2)");
     let expr = get_bare_expression(&statement);
 
-    let retrn = TypedExpr::Int {
+    let return_ = TypedExpr::Int {
         location: SrcSpan { start: 11, end: 12 },
         value: "1".into(),
         int_value: 1.into(),
@@ -442,7 +442,7 @@ fn find_node_call() {
         type_: type_::int(),
     };
 
-    assert_eq!(expr.find_node(11), Some(Located::Expression(&retrn)));
+    assert_eq!(expr.find_node(11), Some(Located::Expression(&return_)));
     assert_eq!(expr.find_node(15), Some(Located::Expression(&arg1)));
     assert_eq!(expr.find_node(16), Some(Located::Expression(&arg1)));
     assert_eq!(expr.find_node(17), Some(Located::Expression(expr)));

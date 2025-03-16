@@ -157,8 +157,8 @@ pub fn tuple(elements: Vec<Arc<Type>>) -> Arc<Type> {
     Arc::new(Type::Tuple { elements })
 }
 
-pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {
-    Arc::new(Type::Fn { retrn, args })
+pub fn fn_(args: Vec<Arc<Type>>, return_: Arc<Type>) -> Arc<Type> {
+    Arc::new(Type::Fn { return_, args })
 }
 
 pub fn named(

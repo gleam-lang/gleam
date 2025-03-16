@@ -2785,7 +2785,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         let record_type = record.type_();
         // The record constructor needs to be a function.
         let (args_types, return_type) = match constructor.type_().as_ref() {
-            Type::Fn { args, retrn } => (args.clone(), retrn.clone()),
+            Type::Fn { args, return_ } => (args.clone(), return_.clone()),
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),
@@ -2813,7 +2813,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // not some unrelated other type. This should not affect our returned type, so we
         // instantiate a new copy of the generic return type for our value constructor.
         let return_type_copy = match value_constructor.type_.as_ref() {
-            Type::Fn { retrn, .. } => self.instantiate(retrn.clone(), &mut hashmap![]),
+            Type::Fn { return_, .. } => self.instantiate(return_.clone(), &mut hashmap![]),
             _ => {
                 return Err(Error::RecordUpdateInvalidConstructor {
                     location: constructor.location(),

@@ -70,13 +70,13 @@ impl Printer {
                 }
             }
 
-            Type::Fn { args, retrn } => "fn("
+            Type::Fn { args, return_ } => "fn("
                 .to_doc()
                 .append(self.args_to_gleam_doc(args))
                 .append(") ->")
                 .append(
                     break_("", " ")
-                        .append(self.print(retrn))
+                        .append(self.print(return_))
                         .nest(INDENT)
                         .group(),
                 ),
@@ -311,7 +311,7 @@ fn pretty_print_test() {
                     inferred_variant: None,
                 }),
             ],
-            retrn: Arc::new(Type::Named {
+            return_: Arc::new(Type::Named {
                 args: vec![],
                 module: "whatever".into(),
                 package: "whatever".into(),

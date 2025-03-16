@@ -2537,14 +2537,14 @@ where
                     Parser::series_of(self, &|x| Parser::parse_type(x), Some(&Token::Comma))?;
                 let _ = self.expect_one_following_series(&Token::RightParen, "a type")?;
                 let (arr_s, arr_e) = self.expect_one(&Token::RArrow)?;
-                let retrn = self.parse_type()?;
-                match retrn {
-                    Some(retrn) => Ok(Some(TypeAst::Fn(TypeAstFn {
+                let return_ = self.parse_type()?;
+                match return_ {
+                    Some(return_) => Ok(Some(TypeAst::Fn(TypeAstFn {
                         location: SrcSpan {
                             start,
-                            end: retrn.location().end,
+                            end: return_.location().end,
                         },
-                        return_: Box::new(retrn),
+                        return_: Box::new(return_),
                         arguments: args,
                     }))),
                     _ => parse_error(

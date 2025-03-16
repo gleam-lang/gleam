@@ -490,11 +490,11 @@ fn type_to_definition_locations<'a>(
         // For fn types we just get the locations of their arguments and return
         // type.
         //
-        Type::Fn { args, retrn } => args
+        Type::Fn { args, return_ } => args
             .iter()
             .flat_map(|arg| type_to_definition_locations(arg.clone(), importable_modules))
             .chain(type_to_definition_locations(
-                retrn.clone(),
+                return_.clone(),
                 importable_modules,
             ))
             .collect_vec(),
