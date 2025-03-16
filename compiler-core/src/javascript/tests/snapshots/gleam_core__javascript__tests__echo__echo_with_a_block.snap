@@ -24,14 +24,12 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  return echo(
-    (() => {
-      undefined;
-      return 1;
-    })(),
-    "src/module.gleam",
-    3,
-  );
+  let _block;
+  {
+    undefined;
+    _block = 1;
+  }
+  return echo(_block, "src/module.gleam", 3);
 }
 
 // ...omitted code from `templates/echo.mjs`...
