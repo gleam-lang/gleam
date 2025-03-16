@@ -438,13 +438,15 @@ impl Type {
                 ..
             } => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|t| t.find_private_type()),
+            Self::Named { args, .. } => args.iter().find_map(|type_| type_.find_private_type()),
 
-            Self::Tuple { elements, .. } => elements.iter().find_map(|t| t.find_private_type()),
+            Self::Tuple { elements, .. } => {
+                elements.iter().find_map(|type_| type_.find_private_type())
+            }
 
             Self::Fn { return_, args, .. } => return_
                 .find_private_type()
-                .or_else(|| args.iter().find_map(|t| t.find_private_type())),
+                .or_else(|| args.iter().find_map(|type_| type_.find_private_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } => None,
@@ -460,13 +462,15 @@ impl Type {
         match self {
             Self::Named { publicity, .. } if publicity.is_internal() => Some(self.clone()),
 
-            Self::Named { args, .. } => args.iter().find_map(|t| t.find_internal_type()),
+            Self::Named { args, .. } => args.iter().find_map(|type_| type_.find_internal_type()),
 
-            Self::Tuple { elements, .. } => elements.iter().find_map(|t| t.find_internal_type()),
+            Self::Tuple { elements, .. } => {
+                elements.iter().find_map(|type_| type_.find_internal_type())
+            }
 
             Self::Fn { return_, args, .. } => return_
                 .find_internal_type()
-                .or_else(|| args.iter().find_map(|t| t.find_internal_type())),
+                .or_else(|| args.iter().find_map(|type_| type_.find_internal_type())),
 
             Self::Var { type_, .. } => match type_.borrow().deref() {
                 TypeVar::Unbound { .. } | TypeVar::Generic { .. } => None,
@@ -1489,7 +1493,7 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
             args,
             inferred_variant: _,
         } => {
-            let args = args.iter().map(|t| generalise(t.clone())).collect();
+            let args = args.iter().map(|type_| generalise(type_.clone())).collect();
             Arc::new(Type::Named {
                 publicity: *publicity,
                 module: module.clone(),
@@ -1501,11 +1505,16 @@ pub fn generalise(t: Arc<Type>) -> Arc<Type> {
         }
 
         Type::Fn { args, return_ } => fn_(
-            args.iter().map(|t| generalise(t.clone())).collect(),
+            args.iter().map(|type_| generalise(type_.clone())).collect(),
             generalise(return_.clone()),
         ),
 
-        Type::Tuple { elements } => tuple(elements.iter().map(|t| generalise(t.clone())).collect()),
+        Type::Tuple { elements } => tuple(
+            elements
+                .iter()
+                .map(|type_| generalise(type_.clone()))
+                .collect(),
+        ),
     }
 }
 

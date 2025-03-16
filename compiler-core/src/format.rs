@@ -750,7 +750,7 @@ impl<'comments> Formatter<'comments> {
     }
 
     fn type_arguments<'a>(&mut self, args: &'a [TypeAst], location: &SrcSpan) -> Document<'a> {
-        let args = args.iter().map(|t| self.type_ast(t)).collect_vec();
+        let args = args.iter().map(|type_| self.type_ast(type_)).collect_vec();
         self.wrap_args(args, location.end)
     }
 

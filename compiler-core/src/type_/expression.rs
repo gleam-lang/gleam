@@ -835,7 +835,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         } = arg;
         let type_ = annotation
             .clone()
-            .map(|t| self.type_from_ast(&t))
+            .map(|type_| self.type_from_ast(&type_))
             .unwrap_or_else(|| Ok(self.new_unbound_var()))?;
 
         // If we know the expected type of the argument from its contextual
@@ -1503,7 +1503,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         if let Some(annotation) = &annotation {
             match self
                 .type_from_ast(annotation)
-                .map(|t| self.instantiate(t, &mut hashmap![]))
+                .map(|type_| self.instantiate(type_, &mut hashmap![]))
             {
                 Ok(ann_typ) => {
                     if let Err(error) = unify(ann_typ, value_typ.clone())
