@@ -401,13 +401,13 @@ impl<'a> Printer<'a> {
     fn print_arguments(
         &mut self,
         args: &[Arc<Type>],
-        typ_str: &mut EcoString,
+        type_str: &mut EcoString,
         print_mode: PrintMode,
     ) {
         for (i, arg) in args.iter().enumerate() {
-            self.print(arg, typ_str, print_mode);
+            self.print(arg, type_str, print_mode);
             if i < args.len() - 1 {
-                typ_str.push_str(", ");
+                type_str.push_str(", ");
             }
         }
     }
