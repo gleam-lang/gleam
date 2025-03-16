@@ -9,7 +9,7 @@ pub fn main() {
   let wibble = 10
   let wibble = wibble / 2
   wibble
-  ↑     
+  ↑▔▔▔▔▔
 }
 
 

@@ -18,7 +18,7 @@ import mod.{something}
 
 pub fn main() {
   something + mod.something
-  ↑                        
+  ↑▔▔▔▔▔▔▔▔                
 }
 
 

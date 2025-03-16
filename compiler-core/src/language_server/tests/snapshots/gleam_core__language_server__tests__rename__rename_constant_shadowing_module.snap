@@ -8,7 +8,7 @@ expression: "\nimport gleam/list\n\nconst list = []\n\npub fn main() {\n  list.m
 import gleam/list
 
 const list = []
-      ↑        
+      ↑▔▔▔     
 
 pub fn main() {
   list.map(todo, todo)

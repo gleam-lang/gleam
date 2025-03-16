@@ -7,7 +7,7 @@ expression: "\npub fn main() {\n  let assert Error(12 as something) = Error(12)\
 
 pub fn main() {
   let assert Error(12 as something) = Error(12)
-                         ↑                     
+                         ↑▔▔▔▔▔▔▔▔             
   something
 }
 

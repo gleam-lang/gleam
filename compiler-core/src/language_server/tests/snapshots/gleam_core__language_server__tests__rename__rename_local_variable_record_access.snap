@@ -12,7 +12,7 @@ type Wibble {
 pub fn main() {
   let wibble = Wibble(wibble: 1)
   wibble.wibble
-  ↑            
+  ↑▔▔▔▔▔       
 }
 
 

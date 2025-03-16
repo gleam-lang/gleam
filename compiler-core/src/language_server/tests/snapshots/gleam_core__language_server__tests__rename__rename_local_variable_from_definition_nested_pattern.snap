@@ -7,7 +7,7 @@ expression: "\npub fn main() {\n  let assert Ok([_, wibble, ..]) = Error(12)\n  
 
 pub fn main() {
   let assert Ok([_, wibble, ..]) = Error(12)
-                    ↑                       
+                    ↑▔▔▔▔▔                  
   wibble
 }
 

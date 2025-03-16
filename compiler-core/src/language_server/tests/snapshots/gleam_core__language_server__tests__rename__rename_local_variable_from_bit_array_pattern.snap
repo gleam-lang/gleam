@@ -10,7 +10,7 @@ pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
 
   case bits {
     <<pref:bits-size(prefix_size), _:bits>> if pref == prefix -> True
-                     ↑                                               
+                     ↑▔▔▔▔▔▔▔▔▔▔                                     
     _ -> False
   }
 }

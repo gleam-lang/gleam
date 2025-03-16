@@ -7,7 +7,7 @@ expression: "\npub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {\n 
 
 pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
   let prefix_size = bit_size(prefix)
-      ↑                             
+      ↑▔▔▔▔▔▔▔▔▔▔                   
 
   case bits {
     <<pref:bits-size(prefix_size), _:bits>> if pref == prefix -> True
