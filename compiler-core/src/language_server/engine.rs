@@ -37,7 +37,7 @@ use super::{
         ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
         GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder, InlineVariable,
         InterpolateString, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
-        ReplaceSpreadWithIgnoredFields, UseLabelShorthandSyntax, code_action_add_missing_patterns,
+        FillUnusedFields, UseLabelShorthandSyntax, code_action_add_missing_patterns,
         code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
         code_action_inexhaustive_let_to_case,
@@ -387,7 +387,7 @@ where
             actions.extend(ConvertToUse::new(module, &lines, &params).code_actions());
             actions.extend(ExpandFunctionCapture::new(module, &lines, &params).code_actions());
             actions.extend(
-                ReplaceSpreadWithIgnoredFields::new(module, &lines, &params).code_actions(),
+                FillUnusedFields::new(module, &lines, &params).code_actions(),
             );
             actions.extend(InterpolateString::new(module, &lines, &params).code_actions());
             actions.extend(ExtractVariable::new(module, &lines, &params).code_actions());
