@@ -234,7 +234,7 @@ impl TypedExpr {
 
             Self::Echo { expression, .. } => expression
                 .as_ref()
-                .and_then(|e| e.find_node(byte_index))
+                .and_then(|expression| expression.find_node(byte_index))
                 .or_else(|| self.self_if_contains_location(byte_index)),
 
             Self::Todo { kind, .. } => match kind {
@@ -490,7 +490,7 @@ impl TypedExpr {
 
             Self::Echo { expression, .. } => expression
                 .as_ref()
-                .and_then(|e| e.find_statement(byte_index)),
+                .and_then(|expression| expression.find_statement(byte_index)),
 
             Self::BitArray { segments, .. } => segments
                 .iter()

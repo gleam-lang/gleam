@@ -397,12 +397,17 @@ pub fn gleam_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .standard_filters(false)
-        .filter_entry(|e| !is_gleam_build_dir(e))
+        .filter_entry(|entry| !is_gleam_build_dir(entry))
         .build()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
         .map(ignore::DirEntry::into_path)
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
         .filter(move |d| is_gleam_path(d, dir))
 }
 
@@ -412,12 +417,17 @@ pub fn native_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
     ignore::WalkBuilder::new(dir)
         .follow_links(true)
         .standard_filters(false)
-        .filter_entry(|e| !is_gleam_build_dir(e))
+        .filter_entry(|entry| !is_gleam_build_dir(entry))
         .build()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
         .map(ignore::DirEntry::into_path)
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             is_native_file_extension(extension)
@@ -431,9 +441,14 @@ pub fn private_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
         .standard_filters(false)
         .build()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
         .map(ignore::DirEntry::into_path)
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
 }
 
 /// Walks through all `.erl` and `.hrl` files in the directory, even if ignored.
@@ -443,9 +458,14 @@ pub fn erlang_files(dir: &Utf8Path) -> impl Iterator<Item = Utf8PathBuf> + '_ {
         .standard_filters(false)
         .build()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().map(|t| t.is_file()).unwrap_or(false))
+        .filter(|entry| {
+            entry
+                .file_type()
+                .map(|type_| type_.is_file())
+                .unwrap_or(false)
+        })
         .map(ignore::DirEntry::into_path)
-        .map(|pb| Utf8PathBuf::from_path_buf(pb).expect("Non Utf-8 Path"))
+        .map(|path| Utf8PathBuf::from_path_buf(path).expect("Non Utf-8 Path"))
         .filter(|path| {
             let extension = path.extension().unwrap_or_default();
             extension == "erl" || extension == "hrl"
