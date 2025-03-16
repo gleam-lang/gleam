@@ -512,7 +512,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
             }
 
             UntypedExpr::Tuple { location, elements } => {
-                let elements = elements.into_iter().map(|e| self.fold_expr(e)).collect();
+                let elements = elements
+                    .into_iter()
+                    .map(|element| self.fold_expr(element))
+                    .collect();
                 UntypedExpr::Tuple { location, elements }
             }
 
@@ -1053,7 +1056,7 @@ pub trait UntypedConstantFolder {
             } => {
                 let elements = elements
                     .into_iter()
-                    .map(|e| self.fold_constant(e))
+                    .map(|element| self.fold_constant(element))
                     .collect();
                 Constant::List {
                     location,

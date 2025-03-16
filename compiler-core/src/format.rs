@@ -599,7 +599,10 @@ impl<'comments> Formatter<'comments> {
             Some(_) | None => flex_break(",", ", "),
         };
 
-        let elements = join(elements.iter().map(|e| self.const_expr(e)), comma);
+        let elements = join(
+            elements.iter().map(|element| self.const_expr(element)),
+            comma,
+        );
 
         let doc = break_("[", "[").append(elements).nest(INDENT);
 
@@ -647,7 +650,7 @@ impl<'comments> Formatter<'comments> {
             };
         }
 
-        let args_docs = elements.iter().map(|e| self.const_expr(e));
+        let args_docs = elements.iter().map(|element| self.const_expr(element));
         let tuple_doc = break_("#(", "#(")
             .append(join(args_docs, break_(",", ", ")).next_break_fits(NextBreakFitsMode::Disabled))
             .nest(INDENT);
@@ -2178,7 +2181,10 @@ impl<'comments> Formatter<'comments> {
             Pattern::Tuple {
                 elements, location, ..
             } => {
-                let args = elements.iter().map(|e| self.pattern(e)).collect_vec();
+                let args = elements
+                    .iter()
+                    .map(|element| self.pattern(element))
+                    .collect_vec();
                 "#".to_doc()
                     .append(self.wrap_args(args, location.end))
                     .group()
@@ -2228,7 +2234,10 @@ impl<'comments> Formatter<'comments> {
                 None => "[]".to_doc(),
             };
         }
-        let elements = join(elements.iter().map(|e| self.pattern(e)), break_(",", ", "));
+        let elements = join(
+            elements.iter().map(|element| self.pattern(element)),
+            break_(",", ", "),
+        );
         let doc = break_("[", "[").append(elements);
         match tail {
             None => doc.nest(INDENT).append(break_(",", "")),

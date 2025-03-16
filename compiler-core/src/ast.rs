@@ -475,8 +475,8 @@ impl TypeAst {
             TypeAst::Hole(hole) => buffer.push_str(&hole.name),
             TypeAst::Tuple(tuple) => {
                 buffer.push_str("#(");
-                for (i, elem) in tuple.elements.iter().enumerate() {
-                    elem.print(buffer);
+                for (i, element) in tuple.elements.iter().enumerate() {
+                    element.print(buffer);
                     if i < tuple.elements.len() - 1 {
                         buffer.push_str(", ");
                     }

@@ -681,7 +681,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // it consumes everything that comes below it and returns a single value.
         let last_statement_location = statements
             .iter()
-            .find_or_last(|e| e.is_use())
+            .find_or_last(|statement| statement.is_use())
             .expect("safe: iter from non empty vec")
             .location();
 
@@ -942,7 +942,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         elements: Vec<UntypedExpr>,
         location: SrcSpan,
     ) -> Result<TypedExpr, Error> {
-        let elements: Vec<_> = elements.into_iter().map(|e| self.infer(e)).try_collect()?;
+        let elements: Vec<_> = elements
+            .into_iter()
+            .map(|element| self.infer(element))
+            .try_collect()?;
         let type_ = tuple(elements.iter().map(HasType::type_).collect());
         Ok(TypedExpr::Tuple {
             location,

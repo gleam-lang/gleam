@@ -702,8 +702,8 @@ pub fn edit_distance(a: &str, b: &str, limit: usize) -> Option<usize> {
 
     // row by row
     for i in 1..=a.len() {
-        if let Some(elem) = current.get_mut(0) {
-            *elem = i;
+        if let Some(element) = current.get_mut(0) {
+            *element = i;
         }
         let a_idx = i - 1;
 

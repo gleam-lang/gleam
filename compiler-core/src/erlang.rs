@@ -1245,10 +1245,15 @@ fn expr_list<'a>(
     env: &mut Env<'a>,
 ) -> Document<'a> {
     let elements = join(
-        elements.iter().map(|e| maybe_block_expr(e, env)),
+        elements
+            .iter()
+            .map(|element| maybe_block_expr(element, env)),
         break_(",", ", "),
     );
-    list(elements, tail.as_ref().map(|e| maybe_block_expr(e, env)))
+    list(
+        elements,
+        tail.as_ref().map(|element| maybe_block_expr(element, env)),
+    )
 }
 
 fn list<'a>(elements: Document<'a>, tail: Option<Document<'a>>) -> Document<'a> {
@@ -1340,10 +1345,12 @@ fn const_inline<'a>(literal: &'a TypedConstant, env: &mut Env<'a>) -> Document<'
         Constant::Int { value, .. } => int(value),
         Constant::Float { value, .. } => float(value),
         Constant::String { value, .. } => string(value),
-        Constant::Tuple { elements, .. } => tuple(elements.iter().map(|e| const_inline(e, env))),
+        Constant::Tuple { elements, .. } => {
+            tuple(elements.iter().map(|element| const_inline(element, env)))
+        }
 
         Constant::List { elements, .. } => join(
-            elements.iter().map(|e| const_inline(e, env)),
+            elements.iter().map(|element| const_inline(element, env)),
             break_(",", ", "),
         )
         .nest(INDENT)
@@ -1656,7 +1663,11 @@ fn case<'a>(subjects: &'a [TypedExpr], cs: &'a [TypedClause], env: &mut Env<'a>)
             .expect("erl case printing of single subject");
         maybe_block_expr(subject, env).group()
     } else {
-        tuple(subjects.iter().map(|e| maybe_block_expr(e, env)))
+        tuple(
+            subjects
+                .iter()
+                .map(|element| maybe_block_expr(element, env)),
+        )
     };
     "case "
         .to_doc()
@@ -2063,9 +2074,11 @@ fn expr<'a>(expression: &'a TypedExpr, env: &mut Env<'a>) -> Document<'a> {
             name, left, right, ..
         } => bin_op(name, left, right, env),
 
-        TypedExpr::Tuple { elements, .. } => {
-            tuple(elements.iter().map(|e| maybe_block_expr(e, env)))
-        }
+        TypedExpr::Tuple { elements, .. } => tuple(
+            elements
+                .iter()
+                .map(|element| maybe_block_expr(element, env)),
+        ),
 
         TypedExpr::BitArray { segments, .. } => bit_array(
             segments
@@ -2506,7 +2519,7 @@ impl<'a> TypePrinter<'a> {
 
             Type::Fn { args, retrn } => self.print_fn(args, retrn),
 
-            Type::Tuple { elements } => tuple(elements.iter().map(|e| self.print(e))),
+            Type::Tuple { elements } => tuple(elements.iter().map(|element| self.print(element))),
         }
     }
 
