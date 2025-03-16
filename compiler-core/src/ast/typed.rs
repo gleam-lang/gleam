@@ -180,36 +180,6 @@ pub enum TypedExpr {
 }
 
 impl TypedExpr {
-    /// Determines if the expression is a simple literal whose inlayHints must not be showed
-    /// in a pipeline chain
-    pub fn is_simple_lit(&self) -> bool {
-        match self {
-            TypedExpr::Int { .. }
-            | TypedExpr::Float { .. }
-            | TypedExpr::String { .. }
-            | TypedExpr::BitArray { .. } => true,
-            TypedExpr::Block { .. }
-            | TypedExpr::Pipeline { .. }
-            | TypedExpr::Var { .. }
-            | TypedExpr::Fn { .. }
-            | TypedExpr::List { .. }
-            | TypedExpr::Call { .. }
-            | TypedExpr::BinOp { .. }
-            | TypedExpr::Case { .. }
-            | TypedExpr::RecordAccess { .. }
-            | TypedExpr::ModuleSelect { .. }
-            | TypedExpr::Tuple { .. }
-            | TypedExpr::TupleIndex { .. }
-            | TypedExpr::Todo { .. }
-            | TypedExpr::Panic { .. }
-            | TypedExpr::RecordUpdate { .. }
-            | TypedExpr::NegateBool { .. }
-            | TypedExpr::NegateInt { .. }
-            | TypedExpr::Invalid { .. }
-            | TypedExpr::Echo { .. } => false,
-        }
-    }
-
     pub fn is_println(&self) -> bool {
         let fun = match self {
             TypedExpr::Call { fun, args, .. } if args.len() == 1 => fun.as_ref(),

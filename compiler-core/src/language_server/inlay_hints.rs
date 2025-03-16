@@ -173,7 +173,7 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
 
             prev_hint = Some((
                 this_line,
-                if assign.value.is_simple_lit() {
+                if is_simple_lit(&assign.value) {
                     None
                 } else {
                     Some(this_hint)
@@ -218,4 +218,34 @@ pub fn get_inlay_hints(
 
     visitor.visit_typed_module(&typed_module);
     visitor.hints
+}
+
+/// Determines if the expression is a simple literal (e.g. 42, 42.2, "hello", or <<0, 1, 2>>) whose inlayHints must not be showed
+/// in a pipeline chain
+fn is_simple_lit(typed_expr: &TypedExpr) -> bool {
+    match typed_expr {
+        TypedExpr::Int { .. }
+        | TypedExpr::Float { .. }
+        | TypedExpr::String { .. }
+        | TypedExpr::BitArray { .. } => true,
+        TypedExpr::Block { .. }
+        | TypedExpr::Pipeline { .. }
+        | TypedExpr::Var { .. }
+        | TypedExpr::Fn { .. }
+        | TypedExpr::List { .. }
+        | TypedExpr::Call { .. }
+        | TypedExpr::BinOp { .. }
+        | TypedExpr::Case { .. }
+        | TypedExpr::RecordAccess { .. }
+        | TypedExpr::ModuleSelect { .. }
+        | TypedExpr::Tuple { .. }
+        | TypedExpr::TupleIndex { .. }
+        | TypedExpr::Todo { .. }
+        | TypedExpr::Panic { .. }
+        | TypedExpr::RecordUpdate { .. }
+        | TypedExpr::NegateBool { .. }
+        | TypedExpr::NegateInt { .. }
+        | TypedExpr::Invalid { .. }
+        | TypedExpr::Echo { .. } => false,
+    }
 }
