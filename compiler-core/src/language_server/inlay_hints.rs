@@ -2,8 +2,8 @@ use lsp_types::{InlayHint, InlayHintKind, InlayHintLabel};
 
 use crate::{
     ast::{
-        PipelineAssignmentKind, SrcSpan, TypeAst, TypedExpr, TypedModule, TypedPipelineAssignment,
-        visit::Visit,
+        PipelineAssignmentKind, SrcSpan, Statement, TypeAst, TypedExpr, TypedModule,
+        TypedPipelineAssignment, visit::Visit,
     },
     line_numbers::LineNumbers,
     type_::{self, Type},
@@ -73,10 +73,18 @@ impl InlayHintsVisitor<'_> {
 }
 
 impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
-    fn visit_typed_function(&mut self, fun: &'ast crate::ast::TypedFunction) {
+    fn visit_typed_statement(&mut self, stmt: &'ast crate::ast::TypedStatement) {
         // This must be reset on every statement
         self.current_declaration_printer = type_::printer::Printer::new(self.module_names);
 
+        match stmt {
+            Statement::Expression(expr) => self.visit_typed_expr(expr),
+            Statement::Assignment(assignment) => self.visit_typed_assignment(assignment),
+            Statement::Use(use_) => self.visit_typed_use(use_),
+        }
+    }
+
+    fn visit_typed_function(&mut self, fun: &'ast crate::ast::TypedFunction) {
         for statement in &fun.body {
             self.visit_typed_statement(statement);
         }
