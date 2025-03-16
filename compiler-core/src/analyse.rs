@@ -1933,9 +1933,9 @@ fn get_type_dependencies(type_: &TypeAst) -> Vec<EcoString> {
             }
             deps.extend(get_type_dependencies(return_))
         }
-        TypeAst::Tuple(TypeAstTuple { elems, .. }) => {
-            for elem in elems {
-                deps.extend(get_type_dependencies(elem))
+        TypeAst::Tuple(TypeAstTuple { elements, .. }) => {
+            for element in elements {
+                deps.extend(get_type_dependencies(element))
             }
         }
     }

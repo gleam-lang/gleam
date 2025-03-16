@@ -2520,11 +2520,11 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elems = self.parse_types()?;
+                let elements = self.parse_types()?;
                 let (_, end) = self.expect_one(&Token::RightParen)?;
                 Ok(Some(TypeAst::Tuple(TypeAstTuple {
                     location: SrcSpan { start, end },
-                    elems,
+                    elements,
                 })))
             }
 
