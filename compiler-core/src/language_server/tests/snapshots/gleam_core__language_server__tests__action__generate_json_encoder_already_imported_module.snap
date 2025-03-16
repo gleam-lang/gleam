@@ -21,9 +21,10 @@ pub type Wibble {
 }
 
 fn encode_wibble(wibble: Wibble) -> json_encoding.Json {
+  let Wibble(a:, b:, c:) = wibble
   json_encoding.object([
-    #("a", json_encoding.int(wibble.a)),
-    #("b", json_encoding.float(wibble.b)),
-    #("c", json_encoding.string(wibble.c)),
+    #("a", json_encoding.int(a)),
+    #("b", json_encoding.float(b)),
+    #("c", json_encoding.string(c)),
   ])
 }

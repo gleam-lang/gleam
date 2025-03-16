@@ -18,8 +18,9 @@ pub type Wibble {
 }
 
 fn encode_wibble(wibble: Wibble) -> json.Json {
+  let Wibble(values:) = wibble
   json.object([
-    #("values", json.array(wibble.values, fn(value) {
+    #("values", json.array(values, fn(value) {
       json.preprocessed_array([
         json.int(value.0),
         json.string(value.1),

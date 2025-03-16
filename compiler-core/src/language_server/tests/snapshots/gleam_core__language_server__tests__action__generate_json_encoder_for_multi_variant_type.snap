@@ -21,16 +21,16 @@ pub type Wibble {
 
 fn encode_wibble(wibble: Wibble) -> json.Json {
   case wibble {
-    Wibble(..) -> json.object([
+    Wibble(wibble:, next:) -> json.object([
       #("type", json.string("wibble")),
-      #("wibble", json.int(wibble.wibble)),
-      #("next", encode_wibble(wibble.next)),
+      #("wibble", json.int(wibble)),
+      #("next", encode_wibble(next)),
     ])
-    Wobble(..) -> json.object([
+    Wobble(wobble:, text:, values:) -> json.object([
       #("type", json.string("wobble")),
-      #("wobble", json.float(wibble.wobble)),
-      #("text", json.string(wibble.text)),
-      #("values", json.array(wibble.values, json.bool)),
+      #("wobble", json.float(wobble)),
+      #("text", json.string(text)),
+      #("values", json.array(values, json.bool)),
     ])
   }
 }

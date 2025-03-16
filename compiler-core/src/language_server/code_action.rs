@@ -3407,7 +3407,17 @@ impl<'a> GenerateJsonEncoder<'a> {
         // require pattern matching on the argument as we can access all its fields
         // with the usual record access syntax.
         if rest.is_empty() {
-            return self.constructor_encoder(mode, first, custom_type.name.clone(), record_name, 2);
+            let encoder = self.constructor_encoder(mode, first, custom_type.name.clone(), 2)?;
+            let unpacking = if first.arguments.is_empty() {
+                ""
+            } else {
+                &eco_format!(
+                    "let {name}({fields}:) = {record_name}\n  ",
+                    name = first.name,
+                    fields = first.argument_labels().join(":, ")
+                )
+            };
+            return Some(eco_format!("{unpacking}{encoder}"));
         }
 
         // Otherwise we generate an encoder for a type with multiple constructors:
@@ -3416,17 +3426,12 @@ impl<'a> GenerateJsonEncoder<'a> {
         let mut branches = Vec::with_capacity(constructors_size);
         for constructor in iter::once(first).chain(rest) {
             let RecordConstructor { name, .. } = constructor;
-            let encoder = self.constructor_encoder(
-                mode,
-                constructor,
-                custom_type.name.clone(),
-                record_name.clone(),
-                4,
-            )?;
+            let encoder =
+                self.constructor_encoder(mode, constructor, custom_type.name.clone(), 4)?;
             let unpacking = if constructor.arguments.is_empty() {
                 ""
             } else {
-                "(..)"
+                &eco_format!("({}:)", constructor.argument_labels().join(":, "))
             };
             branches.push(eco_format!("    {name}{unpacking} -> {encoder}"));
         }
@@ -3444,7 +3449,6 @@ impl<'a> GenerateJsonEncoder<'a> {
         mode: EncodingMode,
         constructor: &TypedRecordConstructor,
         type_name: EcoString,
-        record_name: EcoString,
         nesting: usize,
     ) -> Option<EcoString> {
         let json_module = self.printer.print_module(JSON_MODULE);
@@ -3461,7 +3465,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         let mut encoder_printer =
             EncoderPrinter::new(&self.module.ast.names, type_name, self.module.name.clone());
 
-        // These aare the fields of the json object to encode.
+        // These are the fields of the json object to encode.
         let mut fields = Vec::with_capacity(constructor.arguments.len());
         if mode == EncodingMode::ObjectWithTypeTag {
             // Any needed type tag is always going to be the first field in the object
@@ -3476,7 +3480,7 @@ impl<'a> GenerateJsonEncoder<'a> {
                 label: RecordLabel::Labeled(label),
                 type_: &argument.type_,
             };
-            let encoder = encoder_printer.encode_field(&record_name, &field, nesting + 2);
+            let encoder = encoder_printer.encode_field(&field, nesting + 2);
             fields.push(encoder);
         }
 
@@ -3683,14 +3687,9 @@ impl<'a> EncoderPrinter<'a> {
         }
     }
 
-    fn encode_field(
-        &mut self,
-        record_name: &str,
-        field: &RecordField<'_>,
-        indent: usize,
-    ) -> EcoString {
+    fn encode_field(&mut self, field: &RecordField<'_>, indent: usize) -> EcoString {
         let field_name = field.label.variable_name();
-        let encoder = self.encoder_for(&format!("{record_name}.{field_name}"), field.type_, indent);
+        let encoder = self.encoder_for(&field_name, field.type_, indent);
 
         eco_format!(
             r#"{indent}#("{field_name}", {encoder})"#,
