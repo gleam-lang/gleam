@@ -543,3 +543,53 @@ pub fn main() {
         find_position_of("Wibble").nth_occurrence(2),
     );
 }
+
+#[test]
+fn references_for_aliased_const() {
+    assert_references!(
+        (
+            "mod",
+            "
+import app.{wibble as other}
+
+fn wobble() {
+  other
+}
+"
+        ),
+        "
+pub const wibble = 123
+
+pub fn main() {
+  wibble
+}
+",
+        find_position_of("wibble").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn references_for_aliased_function() {
+    assert_references!(
+        (
+            "mod",
+            "
+import app.{wibble as other}
+
+fn wobble() {
+  other()
+}
+"
+        ),
+        "
+pub fn wibble() {
+  123
+}
+
+pub fn main() {
+  wibble()
+}
+",
+        find_position_of("wibble").nth_occurrence(2),
+    );
+}
