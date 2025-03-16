@@ -248,12 +248,14 @@ impl<A> RecordConstructor<A> {
         self.documentation = Some(new_doc);
     }
 
-    pub fn argument_labels<'a>(&'a self) -> Vec<&'a str> {
+    pub fn argument_labels(&self) -> Vec<&str> {
         self.arguments
             .iter()
-            .filter_map(|argument| match &argument.label {
-                Some((_location, label)) => Some(label.as_str()),
-                None => None,
+            .filter_map(|argument| {
+                argument
+                    .label
+                    .as_ref()
+                    .map(|(_location, label)| label.as_str())
             })
             .collect()
     }
