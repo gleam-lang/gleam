@@ -98,6 +98,28 @@ pub(crate) struct Generator<'module, 'ast> {
     // at the top level of the function to use in place of pushing new stack
     // frames.
     pub tail_recursion_used: bool,
+    /// Statements to be compiled when lifting blocks into statement scope.
+    /// For example, when compiling the following code:
+    /// ```gleam
+    /// let a = {
+    ///   let b = 1
+    ///   b + 1
+    /// }
+    /// ```
+    /// There will be 2 items in `statement_level`: The first will be `let _block;`
+    /// The second will be the generated code for the block being assigned to `a`.
+    /// This lets use return `_block` as the value that the block evaluated to,
+    /// while still including the necessary code in the output at the right place.
+    ///
+    /// Once the `let` statement has compiled its value, it will add anything accumulated
+    /// in `statement_level` to the generated code, so it will result in:
+    ///
+    /// ```javascript
+    /// let _block;
+    /// {...}
+    /// let a = _block;
+    /// ```
+    ///
     statement_level: Vec<Document<'ast>>,
 }
 
