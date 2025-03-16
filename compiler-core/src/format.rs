@@ -2176,9 +2176,9 @@ impl<'comments> Formatter<'comments> {
             } => self.pattern_constructor(name, args, module, *spread, location),
 
             Pattern::Tuple {
-                elems, location, ..
+                elements, location, ..
             } => {
-                let args = elems.iter().map(|e| self.pattern(e)).collect_vec();
+                let args = elements.iter().map(|e| self.pattern(e)).collect_vec();
                 "#".to_doc()
                     .append(self.wrap_args(args, location.end))
                     .group()

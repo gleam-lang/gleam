@@ -583,10 +583,10 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                 Ok(())
             }
 
-            Pattern::Tuple { elems, .. } => {
+            Pattern::Tuple { elements, .. } => {
                 // We don't check the length because type system ensures it's a
                 // tuple of the correct size
-                for (index, pattern) in elems.iter().enumerate() {
+                for (index, pattern) in elements.iter().enumerate() {
                     self.push_int(index);
                     self.traverse_pattern(subject, pattern)?;
                     self.pop();

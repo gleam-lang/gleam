@@ -86,8 +86,8 @@ fn print<'a>(
             panic!("Erlang generation performed with uninferred pattern constructor")
         }
 
-        Pattern::Tuple { elems, .. } => tuple(
-            elems
+        Pattern::Tuple { elements, .. } => tuple(
+            elements
                 .iter()
                 .map(|p| print(p, vars, define_variables, env, guards)),
         ),

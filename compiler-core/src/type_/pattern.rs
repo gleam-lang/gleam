@@ -594,46 +594,46 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 }),
             },
 
-            Pattern::Tuple { elems, location } => match collapse_links(type_.clone()).deref() {
+            Pattern::Tuple { elements, location } => match collapse_links(type_.clone()).deref() {
                 Type::Tuple { elems: type_elems } => {
-                    if elems.len() != type_elems.len() {
+                    if elements.len() != type_elems.len() {
                         return Err(Error::IncorrectArity {
                             labels: vec![],
                             location,
                             expected: type_elems.len(),
-                            given: elems.len(),
+                            given: elements.len(),
                         });
                     }
 
-                    let elems = elems
+                    let elements = elements
                         .into_iter()
                         .zip(type_elems)
                         .map(|(pattern, type_)| self.unify(pattern, type_.clone(), None))
                         .try_collect()?;
-                    Ok(Pattern::Tuple { elems, location })
+                    Ok(Pattern::Tuple { elements, location })
                 }
 
                 Type::Var { .. } => {
-                    let elems_types: Vec<_> = (0..(elems.len()))
+                    let elems_types: Vec<_> = (0..(elements.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
                     unify(tuple(elems_types.clone()), type_)
                         .map_err(|e| convert_unify_error(e, location))?;
-                    let elems = elems
+                    let elements = elements
                         .into_iter()
                         .zip(elems_types)
                         .map(|(pattern, type_)| self.unify(pattern, type_, None))
                         .try_collect()?;
-                    Ok(Pattern::Tuple { elems, location })
+                    Ok(Pattern::Tuple { elements, location })
                 }
 
                 _ => {
-                    let elems_types = (0..(elems.len()))
+                    let elements_types = (0..(elements.len()))
                         .map(|_| self.environment.new_unbound_var())
                         .collect();
 
                     Err(Error::CouldNotUnify {
-                        given: tuple(elems_types),
+                        given: tuple(elements_types),
                         expected: type_,
                         situation: None,
                         location,

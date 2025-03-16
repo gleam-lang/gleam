@@ -1492,7 +1492,7 @@ where
             spread,
             type_,
         ),
-        Pattern::Tuple { location, elems } => v.visit_typed_pattern_tuple(location, elems),
+        Pattern::Tuple { location, elements } => v.visit_typed_pattern_tuple(location, elements),
         Pattern::BitArray { location, segments } => {
             v.visit_typed_pattern_bit_array(location, segments)
         }
