@@ -77,13 +77,17 @@ impl<'ast> Visit<'ast> for InlayHintsVisitor<'_> {
         // This must be reset on every statement
         self.current_declaration_printer = type_::printer::Printer::new(self.module_names);
 
-        for st in &fun.body {
-            self.visit_typed_statement(st);
+        for statement in &fun.body {
+            self.visit_typed_statement(statement);
         }
 
         if self.config.function_parameter_types {
-            for arg in &fun.arguments {
-                self.push_binding_annotation(&arg.type_, arg.annotation.as_ref(), &arg.location);
+            for argument in &fun.arguments {
+                self.push_binding_annotation(
+                    &argument.type_,
+                    argument.annotation.as_ref(),
+                    &argument.location,
+                );
             }
         }
 
