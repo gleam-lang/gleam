@@ -1330,6 +1330,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
@@ -1355,7 +1356,14 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportFirstPass<'as
                 }
             }
         }
-        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+        ast::visit::visit_type_ast_constructor(
+            self,
+            location,
+            name_location,
+            module,
+            name,
+            arguments,
+        );
     }
 
     fn visit_typed_expr_module_select(
@@ -1657,6 +1665,7 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
@@ -1673,7 +1682,14 @@ impl<'ast> ast::visit::Visit<'ast> for QualifiedToUnqualifiedImportSecondPass<'a
                 self.remove_module_qualifier(*location);
             }
         }
-        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+        ast::visit::visit_type_ast_constructor(
+            self,
+            location,
+            name_location,
+            module,
+            name,
+            arguments,
+        );
     }
 
     fn visit_typed_expr_module_select(
@@ -1882,6 +1898,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
@@ -1895,7 +1912,14 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportFirstPass<'as
             self.get_module_import_from_type_constructor(name);
         }
 
-        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+        ast::visit::visit_type_ast_constructor(
+            self,
+            location,
+            name_location,
+            module,
+            name,
+            arguments,
+        );
     }
 
     fn visit_typed_expr_var(
@@ -2084,6 +2108,7 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
     fn visit_type_ast_constructor(
         &mut self,
         location: &'ast SrcSpan,
+        name_location: &'ast SrcSpan,
         module: &'ast Option<(EcoString, SrcSpan)>,
         name: &'ast EcoString,
         arguments: &'ast Vec<ast::TypeAst>,
@@ -2096,7 +2121,14 @@ impl<'ast> ast::visit::Visit<'ast> for UnqualifiedToQualifiedImportSecondPass<'a
                 self.add_module_qualifier(*location);
             }
         }
-        ast::visit::visit_type_ast_constructor(self, location, module, name, arguments);
+        ast::visit::visit_type_ast_constructor(
+            self,
+            location,
+            name_location,
+            module,
+            name,
+            arguments,
+        );
     }
 
     fn visit_typed_expr_var(

@@ -593,3 +593,167 @@ pub fn main() {
         find_position_of("wibble").nth_occurrence(2),
     );
 }
+
+#[test]
+fn references_for_private_type() {
+    assert_references!(
+        "
+type Wibble { Wibble }
+
+fn main() -> Wibble {
+  todo
+}
+
+fn wobble(w: Wibble) {
+  todo
+}
+",
+        find_position_of("Wibble"),
+    );
+}
+
+#[test]
+fn references_for_private_type_from_reference() {
+    assert_references!(
+        "
+type Wibble { Wibble }
+
+fn main() -> Wibble {
+  todo
+}
+
+fn wobble(w: Wibble) {
+  todo
+}
+",
+        find_position_of("-> Wibble").under_char('W'),
+    );
+}
+
+#[test]
+fn references_for_public_type() {
+    assert_references!(
+        (
+            "mod",
+            "
+import app.{type Wibble}
+
+fn wobble() -> Wibble {
+  todo
+}
+
+fn other(w: app.Wibble) {
+  todo
+}
+"
+        ),
+        "
+pub type Wibble { Wibble }
+
+pub fn main() -> Wibble {
+  todo
+}
+",
+        find_position_of("Wibble"),
+    );
+}
+
+#[test]
+fn references_for_type_from_qualified_reference() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod
+
+pub fn main() -> mod.Wibble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wibble"),
+    );
+}
+
+#[test]
+fn references_for_type_from_unqualified_reference() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble}
+
+pub fn main() -> Wibble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("Wibble").nth_occurrence(2),
+    );
+}
+
+#[test]
+fn references_for_aliased_type() {
+    assert_references!(
+        (
+            "mod",
+            "
+import app.{type Wibble as Wobble}
+
+fn wobble() -> Wobble {
+  todo
+}
+
+fn other(w: app.Wibble) {
+  todo
+}
+"
+        ),
+        "
+pub type Wibble { Wibble }
+
+pub fn main() -> Wibble {
+  todo
+}
+",
+        find_position_of("-> Wibble").under_char('W'),
+    );
+}
+
+#[test]
+fn references_for_type_from_let_annotation() {
+    assert_references!(
+        (
+            "mod",
+            "
+pub type Wibble { Wibble }
+
+fn wobble() -> Wibble {
+  todo
+}
+"
+        ),
+        "
+import mod.{type Wibble}
+
+pub fn main() -> Wibble {
+  let _: mod.Wibble = todo
+}
+",
+        find_position_of("mod.Wibble").under_char('W'),
+    );
+}

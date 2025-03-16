@@ -1144,3 +1144,134 @@ pub fn main() {
         find_position_of("Wibble }")
     );
 }
+
+#[test]
+fn rename_type_from_definition() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() -> app.Wibble { todo }
+"
+        ),
+        "
+pub type Wibble { Constructor }
+
+pub fn main(w: Wibble) -> Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
+
+#[test]
+fn rename_type_from_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+fn wibble() -> app.Wibble { todo }
+"
+        ),
+        "
+pub type Wibble { Constructor }
+
+pub fn main(w: Wibble) -> Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble").nth_occurrence(2)
+    );
+}
+
+#[test]
+fn rename_type_from_qualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble { Constructor }
+
+fn wibble(w: Wibble) -> Wibble { todo }
+"
+        ),
+        "
+import mod
+
+pub fn main(w: mod.Wibble) -> mod.Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
+
+#[test]
+fn rename_type_from_unqualified_reference() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble { Constructor }
+
+fn wibble(w: Wibble) -> Wibble { todo }
+"
+        ),
+        "
+import mod.{type Wibble}
+
+pub fn main(w: Wibble) -> mod.Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble)")
+    );
+}
+
+#[test]
+fn rename_aliased_type() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app.{type Wibble as Wobble}
+
+fn wibble() -> Wobble { todo }
+"
+        ),
+        "
+pub type Wibble { Constructor }
+
+pub fn main(w: Wibble) -> Wibble { todo }
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
+
+#[test]
+fn no_rename_type_with_invalid_name() {
+    assert_no_rename!(
+        "
+type Wibble { Wobble }
+",
+        "a_type_name",
+        find_position_of("Wibble")
+    );
+}
+
+#[test]
+fn no_rename_type_from_other_package() {
+    let src = "
+import wibble
+
+pub fn main() -> wibble.Wibble { todo }
+";
+
+    assert_no_rename!(
+        &TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble }"),
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}

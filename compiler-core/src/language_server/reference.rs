@@ -211,8 +211,8 @@ pub fn reference_for_ast_node(
                 RenameTarget::Unqualified
             },
         }),
-        Located::Annotation { ast, type_ } => match type_.as_ref() {
-            Type::Named { module, name, .. } => {
+        Located::Annotation { ast, type_ } => match type_.named_type_name() {
+            Some((module, name)) => {
                 let target_kind = match ast {
                     ast::TypeAst::Constructor(constructor) => {
                         if constructor.module.is_some() {
@@ -227,13 +227,13 @@ pub fn reference_for_ast_node(
                     | ast::TypeAst::Hole(_) => RenameTarget::Unqualified,
                 };
                 Some(Referenced::ModuleType {
-                    module: module.clone(),
-                    name: name.clone(),
+                    module,
+                    name,
                     location: ast.location(),
                     target_kind,
                 })
             }
-            Type::Fn { .. } | Type::Var { .. } | Type::Tuple { .. } => None,
+            None => None,
         },
         Located::ModuleStatement(Definition::CustomType(CustomType {
             name,

@@ -61,12 +61,20 @@ expression: "let assert [x]: List(Int) = [2]"
                             start: 16,
                             end: 25,
                         },
+                        name_location: SrcSpan {
+                            start: 16,
+                            end: 20,
+                        },
                         module: None,
                         name: "List",
                         arguments: [
                             Constructor(
                                 TypeAstConstructor {
                                     location: SrcSpan {
+                                        start: 21,
+                                        end: 24,
+                                    },
+                                    name_location: SrcSpan {
                                         start: 21,
                                         end: 24,
                                     },
