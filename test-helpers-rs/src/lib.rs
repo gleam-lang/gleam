@@ -79,8 +79,8 @@ pub fn to_in_memory_filesystem(path: &Utf8Path) -> InMemoryFileSystem {
         .follow_links(true)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_type().is_file())
-        .map(|d| d.into_path());
+        .filter(|entry| entry.file_type().is_file())
+        .map(|entry| entry.into_path());
 
     for fullpath in files {
         let content = std::fs::read(&fullpath).unwrap();

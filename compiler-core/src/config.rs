@@ -551,7 +551,10 @@ fn manifest_package(
         version: Version::parse(version).unwrap(),
         build_tools: vec![],
         otp_app: None,
-        requirements: requirements.iter().map(|e| (*e).into()).collect(),
+        requirements: requirements
+            .iter()
+            .map(|requirement| (*requirement).into())
+            .collect(),
         source: crate::manifest::ManifestPackageSource::Hex {
             outer_checksum: Base16Checksum(vec![]),
         },

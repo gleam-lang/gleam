@@ -394,11 +394,11 @@ impl<'comments> Formatter<'comments> {
                     let unqualified_types = unqualified_types
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| docvec!["type ", e]);
+                        .map(|type_| docvec!["type ", type_]);
                     let unqualified_values = unqualified_values
                         .iter()
                         .sorted_by(|a, b| a.name.cmp(&b.name))
-                        .map(|e| e.to_doc());
+                        .map(|value| value.to_doc());
                     let unqualified = join(
                         unqualified_types.chain(unqualified_values),
                         flex_break(",", ", "),
@@ -475,7 +475,7 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.const_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.const_expr(e)))
                     .collect_vec();
 
                 self.bit_array(
@@ -802,7 +802,7 @@ impl<'comments> Formatter<'comments> {
         let args = function
             .arguments
             .iter()
-            .map(|e| self.fn_arg(e))
+            .map(|argument| self.fn_arg(argument))
             .collect_vec();
         let signature = pub_(function.publicity)
             .append("fn ")
@@ -853,7 +853,7 @@ impl<'comments> Formatter<'comments> {
         location: &SrcSpan,
         end_of_head_byte_index: &u32,
     ) -> Document<'a> {
-        let args_docs = args.iter().map(|e| self.fn_arg(e)).collect_vec();
+        let args_docs = args.iter().map(|arg| self.fn_arg(arg)).collect_vec();
         let args = self
             .wrap_args(args_docs, *end_of_head_byte_index)
             .group()
@@ -1063,7 +1063,7 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.bit_array_segment_expr(e)))
+                    .map(|segment| bit_array_segment(segment, |e| self.bit_array_segment_expr(e)))
                     .collect_vec();
 
                 self.bit_array(
@@ -2195,7 +2195,7 @@ impl<'comments> Formatter<'comments> {
             } => {
                 let segment_docs = segments
                     .iter()
-                    .map(|s| bit_array_segment(s, |e| self.pattern(e)))
+                    .map(|segment| bit_array_segment(segment, |pattern| self.pattern(pattern)))
                     .collect_vec();
 
                 self.bit_array(segment_docs, false, location)
@@ -2909,7 +2909,9 @@ where
         BitArraySegment { value, options, .. } if options.is_empty() => to_doc(value),
 
         BitArraySegment { value, options, .. } => to_doc(value).append(":").append(join(
-            options.iter().map(|o| segment_option(o, |e| to_doc(e))),
+            options
+                .iter()
+                .map(|option| segment_option(option, |value| to_doc(value))),
             "-".to_doc(),
         )),
     }

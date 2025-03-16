@@ -414,7 +414,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 elements,
                 tail,
             } => {
-                let elements = elements.into_iter().map(|e| self.fold_expr(e)).collect();
+                let elements = elements
+                    .into_iter()
+                    .map(|element| self.fold_expr(element))
+                    .collect();
                 let tail = tail.map(|e| Box::new(self.fold_expr(*e)));
                 UntypedExpr::List {
                     location,

@@ -386,7 +386,7 @@ where
         let mut accumulator = Feedback::none();
         let projects = std::mem::take(&mut self.changed_projects);
         for path in projects {
-            let (_, feedback) = self.respond_with_engine(path, |e| e.compile_please());
+            let (_, feedback) = self.respond_with_engine(path, |this| this.compile_please());
             accumulator.append_feedback(feedback);
         }
         accumulator
