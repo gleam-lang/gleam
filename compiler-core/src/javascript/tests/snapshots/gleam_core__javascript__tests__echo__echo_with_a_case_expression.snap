@@ -23,12 +23,16 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  let _block;
-  let $ = 1;
-  {
-    _block = 2;
-  }
-  return echo(_block, "src/module.gleam", 3);
+  return echo(
+    (() => {
+      let $ = 1;
+      {
+        return 2;
+      }
+    })(),
+    "src/module.gleam",
+    3,
+  );
 }
 
 // ...omitted code from `templates/echo.mjs`...

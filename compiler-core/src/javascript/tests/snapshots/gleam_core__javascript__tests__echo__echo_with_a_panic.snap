@@ -22,16 +22,20 @@ import {
 } from "../gleam.mjs";
 
 export function main() {
-  let _block;
-  throw makeError(
-    "panic",
-    "my/mod",
+  return echo(
+    (() => {
+      throw makeError(
+        "panic",
+        "my/mod",
+        3,
+        "main",
+        "`panic` expression evaluated.",
+        {}
+      )
+    })(),
+    "src/module.gleam",
     3,
-    "main",
-    "`panic` expression evaluated.",
-    {}
-  )
-  return echo(_block, "src/module.gleam", 3);
+  );
 }
 
 // ...omitted code from `templates/echo.mjs`...

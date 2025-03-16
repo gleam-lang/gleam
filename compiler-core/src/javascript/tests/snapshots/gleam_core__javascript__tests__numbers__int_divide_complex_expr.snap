@@ -16,12 +16,15 @@ fn go() {
 import { divideInt } from "../gleam.mjs";
 
 function go() {
-  let _block;
-  let $ = 1 >= 0;
-  if ($) {
-    _block = 2;
-  } else {
-    _block = 4;
-  }
-  return divideInt(_block, 2);
+  return divideInt(
+    (() => {
+      let $ = 1 >= 0;
+      if ($) {
+        return 2;
+      } else {
+        return 4;
+      }
+    })(),
+    2
+  );
 }

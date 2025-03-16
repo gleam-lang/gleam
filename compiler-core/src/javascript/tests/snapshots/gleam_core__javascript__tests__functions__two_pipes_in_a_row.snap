@@ -24,11 +24,14 @@ export class Function extends $CustomType {
 }
 
 export function main() {
-  let _block;
-  let _pipe = () => { return 1; };
-  _block = new Function(_pipe);
-  let _block$1;
-  let _pipe$1 = () => { return 2; };
-  _block$1 = new Function(_pipe$1);
-  return toList([_block, _block$1]);
+  return toList([
+    (() => {
+      let _pipe = () => { return 1; };
+      return new Function(_pipe);
+    })(),
+    (() => {
+      let _pipe = () => { return 2; };
+      return new Function(_pipe);
+    })(),
+  ]);
 }

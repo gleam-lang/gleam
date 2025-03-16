@@ -13,10 +13,10 @@ fn go(x) {
 import { toList } from "../gleam.mjs";
 
 function go(x) {
-  let _block;
-  {
-    true;
-    _block = 1;
-  }
-  return toList([_block]);
+  return toList([
+    (() => {
+      true;
+      return 1;
+    })(),
+  ]);
 }

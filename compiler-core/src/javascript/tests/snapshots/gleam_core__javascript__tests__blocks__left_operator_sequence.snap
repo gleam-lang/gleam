@@ -14,10 +14,8 @@ fn go() {
 
 ----- COMPILED JAVASCRIPT
 function go() {
-  let _block;
-  {
+  return 1 === (() => {
     1;
-    _block = 2;
-  }
-  return 1 === _block;
+    return 2;
+  })();
 }
