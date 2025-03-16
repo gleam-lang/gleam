@@ -1,10 +1,11 @@
 use crate::{
-    analyse::{self, name::correct_name_case},
+    Error, Result, Warning,
+    analyse::name::correct_name_case,
     ast::{
         self, CustomType, Definition, DefinitionLocation, ModuleConstant, SrcSpan, TypedArg,
         TypedExpr, TypedFunction, TypedModule, TypedPattern,
     },
-    build::{type_constructor_from_modules, Located, Module, UnqualifiedImport},
+    build::{Located, Module, UnqualifiedImport, type_constructor_from_modules},
     config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     language_server::{
@@ -13,10 +14,9 @@ use crate::{
     line_numbers::LineNumbers,
     paths::ProjectPaths,
     type_::{
-        self, error::VariableOrigin, printer::Printer, Deprecation, ModuleInterface, Type,
-        TypeConstructor, ValueConstructor, ValueConstructorVariant,
+        self, Deprecation, ModuleInterface, Type, TypeConstructor, ValueConstructor,
+        ValueConstructorVariant, error::VariableOrigin, printer::Printer,
     },
-    Error, Error, Error, Result, Result, Result, Warning, Warning, Warning,
 };
 use camino::Utf8PathBuf;
 use ecow::EcoString;
@@ -30,25 +30,27 @@ use lsp_types::{
 use std::{collections::HashSet, sync::Arc};
 
 use super::{
+    DownloadDependencies, MakeLocker,
     code_action::{
-        code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
+        AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
+        ConvertToUse, ExpandFunctionCapture, ExtractVariable, FillInMissingLabelledArgs,
+        GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder, InlineVariable,
+        InterpolateString, LetAssertToCase, PatternMatchOnValue, RedundantTupleInCaseSubject,
+        UseLabelShorthandSyntax, code_action_add_missing_patterns,
+        code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
-        code_action_inexhaustive_let_to_case, AddAnnotations, CodeActionBuilder, ConvertFromUse,
-        ConvertToFunctionCall, ConvertToPipe, ConvertToUse, ExpandFunctionCapture, ExtractVariable,
-        FillInMissingLabelledArgs, GenerateDynamicDecoder, GenerateFunction, GenerateJsonEncoder,
-        InlineVariable, InterpolateString, LetAssertToCase, PatternMatchOnValue,
-        RedundantTupleInCaseSubject, UseLabelShorthandSyntax,
+        code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
     configuration::SharedConfig,
     inlay_hints,
     reference::{
-        find_module_value_references, find_variable_references, reference_for_ast_node, Referenced,
+        Referenced, find_module_value_references, find_variable_references, reference_for_ast_node,
     },
     rename::{
-        rename_local_variable, rename_module_value, RenameTarget, Renamed, VariableRenameKind,
+        RenameTarget, Renamed, VariableRenameKind, rename_local_variable, rename_module_value,
     },
-    signature_help, src_span_to_lsp_range, DownloadDependencies, MakeLocker,
+    signature_help, src_span_to_lsp_range,
 };
 
 #[derive(Debug, PartialEq, Eq)]

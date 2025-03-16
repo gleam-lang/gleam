@@ -35,12 +35,12 @@ pub enum Request {
     ShowInlayHints(lsp::InlayHintParams),
     PrepareRename(lsp::TextDocumentPositionParams),
     Rename(lsp::RenameParams),
+    FindReferences(lsp::ReferenceParams),
 }
 
 #[derive(Debug)]
 pub enum Response {
     Configuration(Configuration),
-    FindReferences(lsp::ReferenceParams),
 }
 
 impl Request {
