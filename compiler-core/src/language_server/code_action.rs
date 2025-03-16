@@ -5218,8 +5218,8 @@ impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
 }
 
 /// Code action to replace a `..` in a pattern with all the missing fields that
-/// have not been explicitly provided: the ignored missing fields are added as
-/// `_`, while labelled ones are introduced with the shorthand syntax.
+/// have not been explicitly provided; labelled ones are introduced with the
+/// shorthand syntax.
 ///
 /// ```gleam
 /// pub type Pokemon {
@@ -5234,17 +5234,17 @@ impl<'ast> ast::visit::Visit<'ast> for InterpolateString<'ast> {
 /// Would become
 /// ```gleam
 /// pub fn main() {
-///   let Pokemon(_, name:, moves:) = todo
+///   let Pokemon(int, name:, moves:) = todo
 /// }
 ///
-pub struct ReplaceSpreadWithIgnoredFields<'a> {
+pub struct FillUnusedFields<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    data: Option<ReplaceSpreadData>,
+    data: Option<FillUnusedFieldsData>,
 }
 
-pub struct ReplaceSpreadData {
+pub struct FillUnusedFieldsData {
     /// All the missing positional and labelled fields.
     positional: Vec<Arc<Type>>,
     labelled: Vec<(EcoString, Arc<Type>)>,
@@ -5258,7 +5258,7 @@ pub struct ReplaceSpreadData {
     spread_location: SrcSpan,
 }
 
-impl<'a> ReplaceSpreadWithIgnoredFields<'a> {
+impl<'a> FillUnusedFields<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -5275,7 +5275,7 @@ impl<'a> ReplaceSpreadWithIgnoredFields<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(ReplaceSpreadData {
+        let Some(FillUnusedFieldsData {
             positional,
             labelled,
             first_labelled_argument_start,
@@ -5347,7 +5347,7 @@ impl<'a> ReplaceSpreadWithIgnoredFields<'a> {
         }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Replace `..` with ignored fields")
+        CodeActionBuilder::new("Fill unused fields")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -5356,7 +5356,7 @@ impl<'a> ReplaceSpreadWithIgnoredFields<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for ReplaceSpreadWithIgnoredFields<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for FillUnusedFields<'ast> {
     fn visit_typed_pattern(&mut self, pattern: &'ast TypedPattern) {
         // We can only interpolate/split a string if the cursor is somewhere
         // within its location, otherwise we skip it.
@@ -5389,7 +5389,7 @@ impl<'ast> ast::visit::Visit<'ast> for ReplaceSpreadWithIgnoredFields<'ast> {
                     .last()
                     .map(|arg| arg.location.end);
 
-                self.data = Some(ReplaceSpreadData {
+                self.data = Some(FillUnusedFieldsData {
                     positional,
                     labelled,
                     first_labelled_argument_start,
