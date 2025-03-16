@@ -428,22 +428,22 @@ pub enum RuntimeCheck {
     },
     StringPrefix {
         prefix: EcoString,
-        rest_arg: Variable,
+        rest: Variable,
     },
     Tuple {
         size: usize,
-        args: Vec<Variable>,
+        elements: Vec<Variable>,
     },
     BitArray {
         value: EcoString,
     },
     Variant {
         index: usize,
-        args: Vec<Variable>,
+        fields: Vec<Variable>,
     },
     NonEmptyList {
-        first_arg: Variable,
-        rest_arg: Variable,
+        first: Variable,
+        rest: Variable,
     },
     EmptyList,
 }
@@ -460,22 +460,18 @@ impl RuntimeCheck {
             RuntimeCheck::String { value } => RuntimeCheckKind::String {
                 value: value.clone(),
             },
-            RuntimeCheck::StringPrefix {
-                prefix,
-                rest_arg: _,
-            } => RuntimeCheckKind::StringPrefix {
+            RuntimeCheck::StringPrefix { prefix, rest: _ } => RuntimeCheckKind::StringPrefix {
                 prefix: prefix.clone(),
             },
-            RuntimeCheck::Tuple { size, args: _ } => RuntimeCheckKind::Tuple { size: *size },
+            RuntimeCheck::Tuple { size, elements: _ } => RuntimeCheckKind::Tuple { size: *size },
             RuntimeCheck::BitArray { value } => RuntimeCheckKind::BitArray {
                 value: value.clone(),
             },
-            RuntimeCheck::Variant { index, args: _ } => RuntimeCheckKind::Variant { index: *index },
+            RuntimeCheck::Variant { index, fields: _ } => {
+                RuntimeCheckKind::Variant { index: *index }
+            }
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
-            RuntimeCheck::NonEmptyList {
-                first_arg: _,
-                rest_arg: _,
-            } => RuntimeCheckKind::NonEmptyList,
+            RuntimeCheck::NonEmptyList { first: _, rest: _ } => RuntimeCheckKind::NonEmptyList,
         }
     }
 }
@@ -993,7 +989,7 @@ impl<'a> Compiler<'a> {
             },
             (RuntimeCheckKind::StringPrefix { prefix }, _) => RuntimeCheck::StringPrefix {
                 prefix: prefix.clone(),
-                rest_arg: self.fresh_variable(string()),
+                rest: self.fresh_variable(string()),
             },
             (RuntimeCheckKind::Tuple { .. }, BranchMode::Tuple { elements }) => {
                 self.is_tuple_check(elements)
@@ -1047,32 +1043,47 @@ impl<'a> Compiler<'a> {
             // After making sure a value is not an empty list we'll have to perform
             // additional checks on its first item and on the tail.
             (
-                Pattern::NonEmptyList { first, rest },
-                RuntimeCheck::NonEmptyList {
-                    first_arg,
-                    rest_arg,
+                Pattern::NonEmptyList {
+                    first: first_pattern,
+                    rest: rest_pattern,
                 },
-            ) => vec![first_arg.is(*first), rest_arg.is(*rest)],
+                RuntimeCheck::NonEmptyList {
+                    first: first_variable,
+                    rest: rest_variable,
+                },
+            ) => vec![
+                first_variable.is(*first_pattern),
+                rest_variable.is(*rest_pattern),
+            ],
 
             // After making sure a value is a specific variant we'll have to check each
             // of its arguments respects the given patterns (as shown in the doc example for
             // this function!)
-            (Pattern::Variant { fields, .. }, RuntimeCheck::Variant { args, .. }) => {
-                (args.iter().zip(fields))
-                    .map(|(arg, pattern)| arg.is(*pattern))
-                    .collect_vec()
-            }
+            (
+                Pattern::Variant {
+                    fields: patterns, ..
+                },
+                RuntimeCheck::Variant {
+                    fields: variables, ..
+                },
+            ) => (variables.iter().zip(patterns))
+                .map(|(field, pattern)| field.is(*pattern))
+                .collect_vec(),
 
             // Tuples are exactly the same as variants: after making sure we're dealing with
             // a tuple, we will have to check that each of its elements matches the given
             // pattern: `a is #(1, _)` will result in the following checks
             // `a0 is 1, a1 is _` (where `a0` and `a1` are fresh variable names we use to
             // refer to each of the tuple's elements).
-            (Pattern::Tuple { elements }, RuntimeCheck::Tuple { args, .. }) => {
-                (args.iter().zip(elements))
-                    .map(|(arg, pattern)| arg.is(*pattern))
-                    .collect_vec()
-            }
+            (
+                Pattern::Tuple { elements: patterns },
+                RuntimeCheck::Tuple {
+                    elements: variables,
+                    ..
+                },
+            ) => (variables.iter().zip(patterns))
+                .map(|(element, pattern)| element.is(*pattern))
+                .collect_vec(),
 
             // Strings are quite fun: if we've checked at runtime a string starts with a given
             // prefix and we want to check that it's some overlapping literal value we'll still
@@ -1082,14 +1093,9 @@ impl<'a> Compiler<'a> {
             // and we've just successfully ran the runtime check for `a is "wib" <> rest`.
             // So we know the string already starts with `"wib"` what we have to check now
             // is that the remaining part `rest` is `"ble"`.
-            (
-                Pattern::String { value },
-                RuntimeCheck::StringPrefix {
-                    prefix, rest_arg, ..
-                },
-            ) => {
+            (Pattern::String { value }, RuntimeCheck::StringPrefix { prefix, rest, .. }) => {
                 let remaining = value.strip_prefix(prefix.as_str()).unwrap_or(value);
-                vec![rest_arg.is(self.string_pattern(remaining))]
+                vec![rest.is(self.string_pattern(remaining))]
             }
 
             // String prefixes are similar to strings, but a bit more involved. Let's say we're
@@ -1120,7 +1126,7 @@ impl<'a> Compiler<'a> {
                 },
                 RuntimeCheck::StringPrefix {
                     prefix: prefix0,
-                    rest_arg: rest0,
+                    rest: rest0,
                 },
             ) => {
                 let remaining = prefix1.strip_prefix(prefix0.as_str()).unwrap_or(prefix1);
@@ -1141,10 +1147,10 @@ impl<'a> Compiler<'a> {
     ) -> RuntimeCheck {
         RuntimeCheck::Variant {
             index,
-            args: constructor
+            fields: constructor
                 .parameters
                 .iter()
-                .map(|p| p.type_.clone())
+                .map(|parameter| parameter.type_.clone())
                 .map(|type_| self.fresh_variable(type_))
                 .collect_vec(),
         }
@@ -1155,8 +1161,8 @@ impl<'a> Compiler<'a> {
     ///
     fn is_list_check(&mut self, inner_type: Arc<Type>) -> RuntimeCheck {
         RuntimeCheck::NonEmptyList {
-            first_arg: self.fresh_variable(inner_type.clone()),
-            rest_arg: self.fresh_variable(Arc::new(Type::list(inner_type))),
+            first: self.fresh_variable(inner_type.clone()),
+            rest: self.fresh_variable(Arc::new(Type::list(inner_type))),
         }
     }
 
@@ -1166,7 +1172,7 @@ impl<'a> Compiler<'a> {
     fn is_tuple_check(&mut self, elements: &[Arc<Type>]) -> RuntimeCheck {
         RuntimeCheck::Tuple {
             size: elements.len(),
-            args: elements
+            elements: elements
                 .iter()
                 .map(|type_| self.fresh_variable(type_.clone()))
                 .collect_vec(),
