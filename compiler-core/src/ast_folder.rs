@@ -305,7 +305,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 container,
             } => self.fold_field_access(location, label_location, label, container),
 
-            UntypedExpr::Tuple { location, elems } => self.fold_tuple(location, elems),
+            UntypedExpr::Tuple { location, elements } => self.fold_tuple(location, elements),
 
             UntypedExpr::TupleIndex {
                 location,
@@ -511,9 +511,9 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 }
             }
 
-            UntypedExpr::Tuple { location, elems } => {
-                let elems = elems.into_iter().map(|e| self.fold_expr(e)).collect();
-                UntypedExpr::Tuple { location, elems }
+            UntypedExpr::Tuple { location, elements } => {
+                let elements = elements.into_iter().map(|e| self.fold_expr(e)).collect();
+                UntypedExpr::Tuple { location, elements }
             }
 
             UntypedExpr::TupleIndex {
@@ -781,8 +781,8 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
         }
     }
 
-    fn fold_tuple(&mut self, location: SrcSpan, elems: Vec<UntypedExpr>) -> UntypedExpr {
-        UntypedExpr::Tuple { location, elems }
+    fn fold_tuple(&mut self, location: SrcSpan, elements: Vec<UntypedExpr>) -> UntypedExpr {
+        UntypedExpr::Tuple { location, elements }
     }
 
     fn fold_tuple_index(

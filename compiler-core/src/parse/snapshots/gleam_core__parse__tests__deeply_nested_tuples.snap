@@ -14,25 +14,25 @@ expression: "\nlet tup = #(#(#(#(4))))\n{{{tup.0}.0}.0}.0\n"
                     start: 11,
                     end: 24,
                 },
-                elems: [
+                elements: [
                     Tuple {
                         location: SrcSpan {
                             start: 13,
                             end: 23,
                         },
-                        elems: [
+                        elements: [
                             Tuple {
                                 location: SrcSpan {
                                     start: 15,
                                     end: 22,
                                 },
-                                elems: [
+                                elements: [
                                     Tuple {
                                         location: SrcSpan {
                                             start: 17,
                                             end: 21,
                                         },
-                                        elems: [
+                                        elements: [
                                             Int {
                                                 location: SrcSpan {
                                                     start: 19,

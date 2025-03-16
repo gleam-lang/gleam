@@ -329,8 +329,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             } => self.infer_block(statements, location),
 
             UntypedExpr::Tuple {
-                location, elems, ..
-            } => self.infer_tuple(elems, location),
+                location, elements, ..
+            } => self.infer_tuple(elements, location),
 
             UntypedExpr::Float {
                 location, value, ..

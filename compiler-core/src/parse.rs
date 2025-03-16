@@ -580,13 +580,13 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elems =
+                let elements =
                     Parser::series_of(self, &Parser::parse_expression, Some(&Token::Comma))?;
                 let (_, end) =
                     self.expect_one_following_series(&Token::RightParen, "an expression")?;
                 UntypedExpr::Tuple {
                     location: SrcSpan { start, end },
-                    elems,
+                    elements,
                 }
             }
 

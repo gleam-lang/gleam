@@ -1053,7 +1053,7 @@ impl<'comments> Formatter<'comments> {
             .append(".")
             .append(label.as_str()),
 
-            UntypedExpr::Tuple { elems, location } => self.tuple(elems, location),
+            UntypedExpr::Tuple { elements, location } => self.tuple(elements, location),
 
             UntypedExpr::BitArray {
                 segments, location, ..

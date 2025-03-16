@@ -88,7 +88,7 @@ pub enum UntypedExpr {
 
     Tuple {
         location: SrcSpan,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     TupleIndex {
