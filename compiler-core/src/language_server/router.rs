@@ -11,12 +11,13 @@ use crate::{
 };
 use std::{
     collections::{HashMap, hash_map::Entry},
+    sync::{Arc, RwLock},
     time::SystemTime,
 };
 
 use camino::{Utf8Path, Utf8PathBuf};
 
-use super::{configuration::SharedConfig, feedback::FeedbackBookKeeper};
+use super::{configuration::Configuration, feedback::FeedbackBookKeeper};
 
 /// The language server instance serves a language client, typically a text
 /// editor. The editor could have multiple Gleam projects open at once, so run
@@ -30,7 +31,7 @@ pub(crate) struct Router<IO, Reporter> {
     io: FileSystemProxy<IO>,
     engines: HashMap<Utf8PathBuf, Project<IO, Reporter>>,
     progress_reporter: Reporter,
-    user_config: SharedConfig,
+    user_config: Arc<RwLock<Configuration>>,
 }
 
 impl<IO, Reporter> Router<IO, Reporter>
@@ -49,7 +50,7 @@ where
     pub fn new(
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
-        user_config: SharedConfig,
+        user_config: Arc<RwLock<Configuration>>,
     ) -> Self {
         Self {
             io,
@@ -134,7 +135,7 @@ where
         path: Utf8PathBuf,
         io: FileSystemProxy<IO>,
         progress_reporter: Reporter,
-        user_config: SharedConfig,
+        user_config: Arc<RwLock<Configuration>>,
     ) -> Result<Project<IO, Reporter>, Error> {
         tracing::info!(?path, "creating_new_language_server_engine");
         let paths = ProjectPaths::new(path);

@@ -27,7 +27,10 @@ use lsp_types::{
     PrepareRenameResponse, Range, SignatureHelp, SymbolKind, SymbolTag, TextEdit, Url,
     WorkspaceEdit,
 };
-use std::{collections::HashSet, sync::Arc};
+use std::{
+    collections::HashSet,
+    sync::{Arc, RwLock},
+};
 
 use super::{
     DownloadDependencies, MakeLocker,
@@ -42,7 +45,7 @@ use super::{
         code_action_inexhaustive_let_to_case,
     },
     completer::Completer,
-    configuration::SharedConfig,
+    configuration::Configuration,
     inlay_hints,
     reference::{
         Referenced, find_module_value_references, find_variable_references, reference_for_ast_node,
@@ -91,7 +94,7 @@ pub struct LanguageServerEngine<IO, Reporter> {
     hex_deps: HashSet<EcoString>,
 
     /// Configuration the user has set in their editor.
-    pub(crate) user_config: SharedConfig,
+    pub(crate) user_config: Arc<RwLock<Configuration>>,
 }
 
 impl<'a, IO, Reporter> LanguageServerEngine<IO, Reporter>
@@ -112,7 +115,7 @@ where
         progress_reporter: Reporter,
         io: FileSystemProxy<IO>,
         paths: ProjectPaths,
-        user_config: SharedConfig,
+        user_config: Arc<RwLock<Configuration>>,
     ) -> Result<Self> {
         let locker = io.inner().make_locker(&paths, config.target)?;
 

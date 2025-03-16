@@ -1,7 +1,4 @@
 use serde::Deserialize;
-use std::sync::{Arc, RwLock};
-
-pub type SharedConfig = Arc<RwLock<Configuration>>;
 
 #[derive(Debug, Default, Clone, Deserialize, PartialEq, Eq)]
 #[serde(default)]

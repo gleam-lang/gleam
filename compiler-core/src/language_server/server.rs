@@ -1,5 +1,5 @@
 use super::{
-    configuration::SharedConfig,
+    configuration::Configuration,
     messages::{Message, MessageBuffer, Next, Notification, Request, Response, ResponseHandler},
     progress::ConnectionProgressReporter,
 };
@@ -25,7 +25,10 @@ use lsp_types::{
     PublishDiagnosticsParams, Range, RenameOptions, TextEdit, Url,
 };
 use serde_json::Value as Json;
-use std::collections::{HashMap, HashSet};
+use std::{
+    collections::{HashMap, HashSet},
+    sync::{Arc, RwLock},
+};
 
 /// This class is responsible for handling the language server protocol and
 /// delegating the work to the engine.
@@ -46,7 +49,7 @@ pub struct LanguageServer<'a, IO> {
     changed_projects: HashSet<Utf8PathBuf>,
     io: FileSystemProxy<IO>,
     message_buffer: MessageBuffer,
-    config: SharedConfig,
+    config: Arc<RwLock<Configuration>>,
 }
 
 impl<'a, IO> LanguageServer<'a, IO>
@@ -64,7 +67,7 @@ where
         let reporter = ConnectionProgressReporter::new(connection, &initialise_params);
         let io = FileSystemProxy::new(io);
 
-        let config = SharedConfig::default();
+        let config: Arc<RwLock<Configuration>> = Default::default();
         let router = Router::new(reporter, io.clone(), config.clone());
 
         Ok(Self {
