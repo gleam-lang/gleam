@@ -1630,8 +1630,11 @@ impl CaseToCompile {
                 self.insert(Pattern::Assign { name, pattern })
             }
 
-            TypedPattern::Tuple { elems, .. } => {
-                let elements = elems.iter().map(|elem| self.register(elem)).collect_vec();
+            TypedPattern::Tuple { elements, .. } => {
+                let elements = elements
+                    .iter()
+                    .map(|elem| self.register(elem))
+                    .collect_vec();
                 self.insert(Pattern::Tuple { elements })
             }
 

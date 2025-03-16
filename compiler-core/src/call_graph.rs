@@ -323,7 +323,7 @@ impl<'a> CallGraphBuilder<'a> {
             }
 
             Pattern::Tuple {
-                elems: patterns, ..
+                elements: patterns, ..
             } => {
                 for pattern in patterns {
                     self.pattern(pattern);

@@ -1189,7 +1189,7 @@ pub trait PatternFolder {
                 spread,
             ),
 
-            Pattern::Tuple { location, elems } => self.fold_pattern_tuple(location, elems),
+            Pattern::Tuple { location, elements } => self.fold_pattern_tuple(location, elements),
 
             Pattern::BitArray { location, segments } => {
                 self.fold_pattern_bit_array(location, segments)
@@ -1318,9 +1318,9 @@ pub trait PatternFolder {
     fn fold_pattern_tuple(
         &mut self,
         location: SrcSpan,
-        elems: Vec<UntypedPattern>,
+        elements: Vec<UntypedPattern>,
     ) -> UntypedPattern {
-        Pattern::Tuple { location, elems }
+        Pattern::Tuple { location, elements }
     }
 
     fn fold_pattern_bit_array(
@@ -1427,9 +1427,9 @@ pub trait PatternFolder {
                 }
             }
 
-            Pattern::Tuple { location, elems } => {
-                let elems = elems.into_iter().map(|p| self.fold_pattern(p)).collect();
-                Pattern::Tuple { location, elems }
+            Pattern::Tuple { location, elements } => {
+                let elements = elements.into_iter().map(|p| self.fold_pattern(p)).collect();
+                Pattern::Tuple { location, elements }
             }
 
             Pattern::BitArray { location, segments } => {

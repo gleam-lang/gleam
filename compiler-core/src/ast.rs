@@ -1848,7 +1848,7 @@ pub enum Pattern<Type> {
 
     Tuple {
         location: SrcSpan,
-        elems: Vec<Self>,
+        elements: Vec<Self>,
     },
 
     BitArray {
@@ -2004,7 +2004,9 @@ impl TypedPattern {
 
             Pattern::Discard { type_, .. } => type_.clone(),
 
-            Pattern::Tuple { elems, .. } => type_::tuple(elems.iter().map(|p| p.type_()).collect()),
+            Pattern::Tuple { elements, .. } => {
+                type_::tuple(elements.iter().map(|p| p.type_()).collect())
+            }
         }
     }
 
@@ -2048,7 +2050,9 @@ impl TypedPattern {
                 .find_map(|p| p.find_node(byte_index))
                 .or_else(|| tail.as_ref().and_then(|p| p.find_node(byte_index))),
 
-            Pattern::Tuple { elems, .. } => elems.iter().find_map(|p| p.find_node(byte_index)),
+            Pattern::Tuple { elements, .. } => {
+                elements.iter().find_map(|p| p.find_node(byte_index))
+            }
 
             Pattern::BitArray { segments, .. } => segments
                 .iter()

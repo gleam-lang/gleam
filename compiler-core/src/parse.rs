@@ -1304,11 +1304,12 @@ where
             Some((start, Token::Hash, _)) => {
                 self.advance();
                 let _ = self.expect_one(&Token::LeftParen)?;
-                let elems = Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
+                let elements =
+                    Parser::series_of(self, &Parser::parse_pattern, Some(&Token::Comma))?;
                 let (_, end) = self.expect_one_following_series(&Token::RightParen, "a pattern")?;
                 Pattern::Tuple {
                     location: SrcSpan { start, end },
-                    elems,
+                    elements,
                 }
             }
             // BitArray
