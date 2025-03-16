@@ -163,7 +163,14 @@ fn rename_references_in_module(
     let mut edits = TextEdits::new(&source_information.line_numbers);
 
     for reference in references {
-        edits.replace(reference.location, new_name.clone());
+        match reference.kind {
+            // If the reference is an alias, the alias name will remain unchanged.
+            ReferenceKind::Alias => {}
+            ReferenceKind::Qualified
+            | ReferenceKind::Unqualified
+            | ReferenceKind::Import
+            | ReferenceKind::Definition => edits.replace(reference.location, new_name.clone()),
+        }
     }
 
     let Some(uri) = url_from_path(source_information.path.as_str()) else {
@@ -193,7 +200,7 @@ fn alias_references_in_module(
     for reference in references {
         match reference.kind {
             ReferenceKind::Qualified => {}
-            ReferenceKind::Unqualified => {
+            ReferenceKind::Unqualified | ReferenceKind::Alias => {
                 edits.replace(reference.location, params.new_name.clone())
             }
             ReferenceKind::Import => {

@@ -1119,3 +1119,28 @@ pub fn main() {
         find_position_of("wibble").to_selection()
     );
 }
+
+#[test]
+fn rename_aliased_value() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app.{Wibble as Wobble}
+
+fn wobble() {
+  Wobble
+}
+"
+        ),
+        "
+pub type Wibble { Wibble }
+
+pub fn main() {
+  Wibble
+}
+",
+        "Wubble",
+        find_position_of("Wibble }").to_selection()
+    );
+}

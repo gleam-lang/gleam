@@ -13,6 +13,7 @@ pub enum ReferenceKind {
     Unqualified,
     Import,
     Definition,
+    Alias,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]

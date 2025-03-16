@@ -153,6 +153,7 @@ impl ModuleDecoder {
             Which::Unqualified(_) => ReferenceKind::Unqualified,
             Which::Import(_) => ReferenceKind::Import,
             Which::Definition(_) => ReferenceKind::Definition,
+            Which::Alias(_) => ReferenceKind::Alias,
         })
     }
 

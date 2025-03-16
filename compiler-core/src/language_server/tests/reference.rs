@@ -519,3 +519,27 @@ pub fn wibble() {
         find_position_of("fn")
     );
 }
+
+#[test]
+fn references_for_aliased_value() {
+    assert_references!(
+        (
+            "mod",
+            "
+import app.{Wibble as Wobble}
+
+fn wobble() {
+  Wobble
+}
+"
+        ),
+        "
+pub type Wibble { Wibble }
+
+pub fn main() {
+  Wibble
+}
+",
+        find_position_of("Wibble").nth_occurrence(2),
+    );
+}

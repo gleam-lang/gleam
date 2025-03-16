@@ -58,6 +58,7 @@ struct ReferenceKind {
     unqualified @1 :Void;
     import @2 :Void;
     definition @3 :Void;
+    alias @4 :Void;
   }
 }
 
