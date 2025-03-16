@@ -2414,9 +2414,9 @@ fn type_var_ids(type_: &Type, ids: &mut HashMap<u64, u64>) {
             }
             type_var_ids(retrn, ids);
         }
-        Type::Tuple { elems } => {
-            for elem in elems {
-                type_var_ids(elem, ids)
+        Type::Tuple { elements } => {
+            for element in elements {
+                type_var_ids(element, ids)
             }
         }
     }
@@ -2506,7 +2506,7 @@ impl<'a> TypePrinter<'a> {
 
             Type::Fn { args, retrn } => self.print_fn(args, retrn),
 
-            Type::Tuple { elems } => tuple(elems.iter().map(|e| self.print(e))),
+            Type::Tuple { elements } => tuple(elements.iter().map(|e| self.print(e))),
         }
     }
 

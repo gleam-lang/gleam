@@ -153,8 +153,8 @@ fn result_with_variant(a: Arc<Type>, e: Arc<Type>, variant_index: Option<u16>) -
     })
 }
 
-pub fn tuple(elems: Vec<Arc<Type>>) -> Arc<Type> {
-    Arc::new(Type::Tuple { elems })
+pub fn tuple(elements: Vec<Arc<Type>>) -> Arc<Type> {
+    Arc::new(Type::Tuple { elements })
 }
 
 pub fn fn_(args: Vec<Arc<Type>>, retrn: Arc<Type>) -> Arc<Type> {

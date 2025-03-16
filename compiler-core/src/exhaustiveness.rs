@@ -584,8 +584,8 @@ impl Variable {
                 inner_type: args.first().expect("list has a type argument").clone(),
             },
 
-            Type::Tuple { elems } => BranchMode::Tuple {
-                elements: elems.clone(),
+            Type::Tuple { elements } => BranchMode::Tuple {
+                elements: elements.clone(),
             },
 
             Type::Named {
@@ -1467,8 +1467,8 @@ impl ConstructorSpecialiser {
                 type_: Arc::new(RefCell::new(self.specialise_var(type_))),
             },
 
-            Type::Tuple { elems } => Type::Tuple {
-                elems: elems.iter().map(|e| self.specialise_type(e)).collect(),
+            Type::Tuple { elements } => Type::Tuple {
+                elements: elements.iter().map(|e| self.specialise_type(e)).collect(),
             },
         })
     }

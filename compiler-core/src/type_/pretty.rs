@@ -83,7 +83,7 @@ impl Printer {
 
             Type::Var { type_, .. } => self.type_var_doc(&type_.borrow()),
 
-            Type::Tuple { elems, .. } => self.args_to_gleam_doc(elems).surround("#(", ")"),
+            Type::Tuple { elements, .. } => self.args_to_gleam_doc(elements).surround("#(", ")"),
         }
     }
 

@@ -567,10 +567,10 @@ fn from_type_helper(type_: &Type, id_map: &mut IdMap) -> TypeInterface {
             return_: Box::new(from_type_helper(retrn, id_map)),
         },
 
-        Type::Tuple { elems } => TypeInterface::Tuple {
-            elements: elems
+        Type::Tuple { elements } => TypeInterface::Tuple {
+            elements: elements
                 .iter()
-                .map(|elem| from_type_helper(elem.as_ref(), id_map))
+                .map(|element| from_type_helper(element.as_ref(), id_map))
                 .collect(),
         },
 

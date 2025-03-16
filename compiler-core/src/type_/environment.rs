@@ -606,8 +606,8 @@ impl Environment<'_> {
                 self.instantiate(retrn.clone(), ids, hydrator),
             ),
 
-            Type::Tuple { elems } => tuple(
-                elems
+            Type::Tuple { elements } => tuple(
+                elements
                     .iter()
                     .map(|t| self.instantiate(t.clone(), ids, hydrator))
                     .collect(),
@@ -912,10 +912,17 @@ pub fn unify(t1: Arc<Type>, t2: Arc<Type>) -> Result<(), UnifyError> {
             Ok(())
         }
 
-        (Type::Tuple { elems: elems1, .. }, Type::Tuple { elems: elems2, .. })
-            if elems1.len() == elems2.len() =>
-        {
-            for (a, b) in elems1.iter().zip(elems2) {
+        (
+            Type::Tuple {
+                elements: elements1,
+                ..
+            },
+            Type::Tuple {
+                elements: elements2,
+                ..
+            },
+        ) if elements1.len() == elements2.len() => {
+            for (a, b) in elements1.iter().zip(elements2) {
                 unify_enclosed_type(t1.clone(), t2.clone(), unify(a.clone(), b.clone()))?;
             }
             Ok(())
