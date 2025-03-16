@@ -20,7 +20,7 @@ pub fn main() {
 -- app.gleam
 
 pub const something = 10
-          ↑             
+          ↑▔▔▔▔▔▔▔▔     
 
 
 ----- AFTER RENAME

@@ -6,7 +6,7 @@ expression: "\npub fn wibble(wibble: Float) {\n  wibble /. 0.3\n}\n"
 -- app.gleam
 
 pub fn wibble(wibble: Float) {
-              ↑               
+              ↑▔▔▔▔▔          
   wibble /. 0.3
 }
 

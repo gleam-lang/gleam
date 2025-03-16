@@ -1,6 +1,8 @@
 use std::collections::HashMap;
 
-use lsp_types::{Position, RenameParams, TextDocumentPositionParams, Url, WorkDoneProgressParams};
+use lsp_types::{
+    Position, Range, RenameParams, TextDocumentPositionParams, Url, WorkDoneProgressParams,
+};
 
 use crate::language_server::tests::{TestProject, find_position_of};
 
@@ -10,8 +12,8 @@ fn rename(
     tester: &TestProject<'_>,
     new_name: &str,
     position: Position,
-) -> Option<lsp_types::WorkspaceEdit> {
-    let _ = tester.at(position, |engine, params, _| {
+) -> Option<(Range, lsp_types::WorkspaceEdit)> {
+    let prepare_rename_response = tester.at(position, |engine, params, _| {
         let params = TextDocumentPositionParams {
             text_document: params.text_document,
             position,
@@ -19,7 +21,11 @@ fn rename(
         engine.prepare_rename(params).result.unwrap()
     })?;
 
-    tester.at(position, |engine, params, _| {
+    let lsp_types::PrepareRenameResponse::Range(range) = prepare_rename_response else {
+        return None;
+    };
+
+    let edit = tester.at(position, |engine, params, _| {
         let params = RenameParams {
             text_document_position: TextDocumentPositionParams {
                 text_document: params.text_document,
@@ -29,19 +35,19 @@ fn rename(
             work_done_progress_params: WorkDoneProgressParams::default(),
         };
         engine.rename(params).result.unwrap()
-    })
+    })?;
+
+    Some((range, edit))
 }
 
 fn apply_rename(
     tester: &TestProject<'_>,
     new_name: &str,
     position: Position,
-) -> HashMap<String, String> {
-    let changes = rename(tester, new_name, position)
-        .expect("Rename failed")
-        .changes
-        .expect("No text edit found");
-    apply_code_edit(tester, changes)
+) -> (Range, HashMap<String, String>) {
+    let (range, edit) = rename(tester, new_name, position).expect("Rename failed");
+    let changes = edit.changes.expect("No text edit found");
+    (range, apply_code_edit(tester, changes))
 }
 
 fn apply_code_edit(
@@ -60,23 +66,23 @@ fn apply_code_edit(
 }
 
 macro_rules! assert_rename {
-    ($code:literal, $new_name:literal, $range:expr $(,)?) => {
-        assert_rename!(TestProject::for_source($code), $new_name, $range);
+    ($code:literal, $new_name:literal, $position:expr $(,)?) => {
+        assert_rename!(TestProject::for_source($code), $new_name, $position);
     };
 
-    (($module_name:literal, $module_src:literal), $code:literal, $new_name:literal, $range:expr $(,)?) => {
+    (($module_name:literal, $module_src:literal), $code:literal, $new_name:literal, $position:expr $(,)?) => {
         assert_rename!(
             TestProject::for_source($code).add_module($module_name, $module_src),
             $new_name,
-            $range
+            $position
         );
     };
 
-    ($project:expr, $new_name:literal, $range:expr $(,)?) => {
+    ($project:expr, $new_name:literal, $position:expr $(,)?) => {
         let project = $project;
         let src = project.src;
-        let range = $range.find_range(src);
-        let result = apply_rename(&project, $new_name, range.start);
+        let position = $position.find_position(src);
+        let (range, result) = apply_rename(&project, $new_name, position);
 
         let mut output = String::from("----- BEFORE RENAME\n");
         for (name, src) in project.root_package_modules.iter() {
@@ -108,15 +114,15 @@ macro_rules! assert_rename {
 }
 
 macro_rules! assert_no_rename {
-    ($code:literal, $new_name:literal, $range:expr $(,)?) => {
+    ($code:literal, $new_name:literal, $position:expr $(,)?) => {
         let project = TestProject::for_source($code);
-        assert_no_rename!(&project, $new_name, $range);
+        assert_no_rename!(&project, $new_name, $position);
     };
 
-    ($project:expr, $new_name:literal, $range:expr $(,)?) => {
+    ($project:expr, $new_name:literal, $position:expr $(,)?) => {
         let src = $project.src;
-        let range = $range.find_range(src);
-        let result = rename($project, $new_name, range.start);
+        let position = $position.find_position(src);
+        let result = rename($project, $new_name, position);
         assert_eq!(result, None);
     };
 }
@@ -131,7 +137,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble").nth_occurrence(2).to_selection(),
+        find_position_of("wibble").nth_occurrence(2),
     );
 }
 
@@ -146,7 +152,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble /").to_selection(),
+        find_position_of("wibble /"),
     );
 }
 
@@ -161,7 +167,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble").nth_occurrence(4).to_selection(),
+        find_position_of("wibble").nth_occurrence(4),
     );
 }
 
@@ -179,7 +185,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble.").to_selection(),
+        find_position_of("wibble."),
     );
 }
 #[test]
@@ -196,7 +202,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble ||").to_selection(),
+        find_position_of("wibble ||"),
     );
 }
 
@@ -211,7 +217,7 @@ pub fn main() {
 }
 ",
         "some_value",
-        find_position_of("wibble =").to_selection()
+        find_position_of("wibble =")
     );
 }
 
@@ -225,7 +231,7 @@ pub fn main() {
 }
 ",
         "second_element",
-        find_position_of("wibble,").to_selection()
+        find_position_of("wibble,")
     );
 }
 
@@ -239,9 +245,7 @@ pub fn main() {
 }
 ",
         "the_error",
-        find_position_of("something")
-            .nth_occurrence(2)
-            .to_selection()
+        find_position_of("something").nth_occurrence(2)
     );
 }
 
@@ -255,7 +259,7 @@ pub fn main() {
 }
 ",
         "the_error",
-        find_position_of("something)").to_selection()
+        find_position_of("something)")
     );
 }
 
@@ -268,7 +272,7 @@ pub fn add(first_number: Int, x: Int) -> Int {
 }
 ",
         "second_number",
-        find_position_of("x +").to_selection()
+        find_position_of("x +")
     );
 }
 
@@ -281,7 +285,7 @@ pub fn wibble(wibble: Float) {
 }
 ",
         "wobble",
-        find_position_of("wibble:").to_selection()
+        find_position_of("wibble:")
     );
 }
 
@@ -299,7 +303,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble +").to_selection()
+        find_position_of("wibble +")
     );
 }
 
@@ -317,7 +321,7 @@ pub fn main() {
 }
 ",
         "wobble",
-        find_position_of("wibble:)").to_selection()
+        find_position_of("wibble:)")
     );
 }
 
@@ -335,7 +339,7 @@ pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
 }
 ",
         "size_of_prefix",
-        find_position_of("prefix_size =").to_selection()
+        find_position_of("prefix_size =")
     );
 }
 
@@ -353,7 +357,7 @@ pub fn starts_with(bits: BitArray, prefix: BitArray) -> Bool {
 }
 ",
         "size_of_prefix",
-        find_position_of("prefix_size)").to_selection()
+        find_position_of("prefix_size)")
     );
 }
 
@@ -364,7 +368,7 @@ fn no_rename_keyword() {
 pub fn main() {}
 ",
         "wibble",
-        find_position_of("fn").to_selection(),
+        find_position_of("fn"),
     );
 }
 
@@ -378,7 +382,7 @@ pub fn main() {
 }
 ",
         "Not_AValid_Name",
-        find_position_of("wibble").nth_occurrence(2).to_selection()
+        find_position_of("wibble").nth_occurrence(2)
     );
 }
 
@@ -405,7 +409,7 @@ fn something_else() {
 }
 ",
         "some_function",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -432,9 +436,7 @@ fn something_else() {
 }
 ",
         "some_function",
-        find_position_of("something")
-            .nth_occurrence(2)
-            .to_selection()
+        find_position_of("something").nth_occurrence(2)
     );
 }
 
@@ -457,7 +459,7 @@ pub fn main() {
 }
 ",
         "some_function",
-        find_position_of("wibble").to_selection()
+        find_position_of("wibble")
     );
 }
 
@@ -481,7 +483,7 @@ pub fn main() {
 }
 ",
         "some_function",
-        find_position_of("wibble(").to_selection()
+        find_position_of("wibble(")
     );
 }
 
@@ -508,7 +510,7 @@ fn something_else() {
 }
 ",
         "some_function",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -529,7 +531,7 @@ pub fn main() {
     assert_rename!(
         TestProject::for_source(src).add_hex_module("gleam/list", "pub fn map(_, _) {}"),
         "empty_list",
-        find_position_of("list()").to_selection()
+        find_position_of("list()")
     );
 }
 
@@ -557,7 +559,7 @@ pub fn something() {
 }
 ",
         "function",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -571,7 +573,7 @@ pub fn main() {
 }
 ",
         "Not_AValid_Name",
-        find_position_of("main").to_selection()
+        find_position_of("main")
     );
 }
 
@@ -588,7 +590,7 @@ pub fn main() {
     assert_no_rename!(
         &TestProject::for_source(src).add_hex_module("wibble", "pub fn wobble() { todo }"),
         "something",
-        find_position_of("wobble").to_selection()
+        find_position_of("wobble")
     );
 }
 
@@ -613,7 +615,7 @@ pub fn main() {
 }
 ",
         "ten",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -638,9 +640,7 @@ pub fn main() {
 }
 ",
         "ten",
-        find_position_of("something")
-            .nth_occurrence(2)
-            .to_selection()
+        find_position_of("something").nth_occurrence(2)
     );
 }
 
@@ -665,7 +665,7 @@ pub fn main() {
 }
 ",
         "ten",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -690,7 +690,7 @@ pub fn main() {
 }
 ",
         "ten",
-        find_position_of("something +").to_selection()
+        find_position_of("something +")
     );
 }
 
@@ -715,7 +715,7 @@ pub fn main() {
 }
 ",
         "ten",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -734,7 +734,7 @@ pub fn main() {
     assert_rename!(
         TestProject::for_source(src).add_hex_module("gleam/list", "pub fn map(_, _) {}"),
         "empty_list",
-        find_position_of("list =").to_selection()
+        find_position_of("list =")
     );
 }
 
@@ -760,7 +760,7 @@ pub fn main() {
 pub const something = 10
 ",
         "constant",
-        find_position_of("something").to_selection()
+        find_position_of("something")
     );
 }
 
@@ -771,7 +771,7 @@ fn no_rename_constant_with_invalid_name() {
 const value = 10
 ",
         "Ten",
-        find_position_of("value").to_selection()
+        find_position_of("value")
     );
 }
 
@@ -788,7 +788,7 @@ pub fn main() {
     assert_no_rename!(
         &TestProject::for_source(src).add_hex_module("wibble", "pub const wobble = 2"),
         "something",
-        find_position_of("wobble").to_selection()
+        find_position_of("wobble")
     );
 }
 
@@ -815,7 +815,7 @@ pub fn main() {
 }
 ",
         "Wibble",
-        find_position_of("Constructor(Int").to_selection()
+        find_position_of("Constructor(Int")
     );
 }
 
@@ -842,7 +842,7 @@ pub fn main() {
 }
 ",
         "Wibble",
-        find_position_of("Constructor(10").to_selection()
+        find_position_of("Constructor(10")
     );
 }
 
@@ -869,7 +869,7 @@ pub fn main() {
 }
 ",
         "Variant",
-        find_position_of("Constructor").to_selection()
+        find_position_of("Constructor")
     );
 }
 
@@ -896,7 +896,7 @@ pub fn main() {
 }
 ",
         "Number",
-        find_position_of("Constructor(75").to_selection()
+        find_position_of("Constructor(75")
     );
 }
 
@@ -923,7 +923,7 @@ pub fn main() {
 }
 ",
         "MakeAWibble",
-        find_position_of("Constructor").to_selection()
+        find_position_of("Constructor")
     );
 }
 
@@ -936,7 +936,7 @@ pub type Wibble {
 }
 ",
         "name_in_snake_case",
-        find_position_of("Constructor").to_selection()
+        find_position_of("Constructor")
     );
 }
 
@@ -957,7 +957,7 @@ pub fn main(t) {
 }
 ",
         "Renamed",
-        find_position_of("X").to_selection()
+        find_position_of("X")
     );
 }
 
@@ -984,7 +984,7 @@ pub type Type {
 }
 ",
         "Renamed",
-        find_position_of("X").to_selection()
+        find_position_of("X")
     );
 }
 
@@ -1011,7 +1011,7 @@ pub type Type {
 }
 ",
         "Renamed",
-        find_position_of("X").to_selection()
+        find_position_of("X")
     );
 }
 
@@ -1032,7 +1032,7 @@ fn wibble() {
 }
 ",
         "Variant",
-        find_position_of("Wibble(10)").to_selection()
+        find_position_of("Wibble(10)")
     );
 }
 
@@ -1053,7 +1053,7 @@ pub fn main(t) {
 }
 ",
         "Renamed",
-        find_position_of("X ->").to_selection()
+        find_position_of("X ->")
     );
 }
 
@@ -1070,7 +1070,7 @@ pub fn main() {
     assert_no_rename!(
         &TestProject::for_source(src).add_hex_module("wibble", "pub type Wibble { Wibble(Int) }"),
         "Constructor",
-        find_position_of("Wibble").to_selection()
+        find_position_of("Wibble")
     );
 }
 
@@ -1093,7 +1093,7 @@ pub fn main() {
 }
 ",
         "some_function",
-        find_position_of("wibble").to_selection()
+        find_position_of("wibble")
     );
 }
 
@@ -1116,7 +1116,7 @@ pub fn main() {
 }
 ",
         "some_function",
-        find_position_of("wibble").to_selection()
+        find_position_of("wibble")
     );
 }
 

@@ -7,7 +7,7 @@ expression: "\npub fn main() {\n  let wibble = 10\n  let wobble = wibble + 1\n  
 
 pub fn main() {
   let wibble = 10
-      ↑          
+      ↑▔▔▔▔▔     
   let wobble = wibble + 1
   wobble - wibble
 }

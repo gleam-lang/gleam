@@ -8,7 +8,7 @@ expression: "\nimport gleam/list\n\npub fn list() {\n  []\n}\n\npub fn main() {\
 import gleam/list
 
 pub fn list() {
-       ↑       
+       ↑▔▔▔    
   []
 }
 

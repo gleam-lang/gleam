@@ -18,7 +18,7 @@ pub const something = 10
 
 pub fn main() {
   something + { 4 * something }
-  ↑                            
+  ↑▔▔▔▔▔▔▔▔                    
 }
 
 

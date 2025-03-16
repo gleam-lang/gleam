@@ -20,7 +20,7 @@ pub type Wibble {
 
 pub fn main() {
   Constructor(10)
-  ↑              
+  ↑▔▔▔▔▔▔▔▔▔▔    
 }
 
 

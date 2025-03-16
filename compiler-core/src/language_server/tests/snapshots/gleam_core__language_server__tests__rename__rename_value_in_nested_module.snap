@@ -16,7 +16,7 @@ import sub/mod
 
 pub fn main() {
   mod.wibble()
-      ↑       
+      ↑▔▔▔▔▔  
 }
 
 

@@ -12,7 +12,7 @@ pub type Wibble {
 
 fn wibble() {
   case Wibble(10) {
-       ↑           
+       ↑▔▔▔▔▔      
     Wibble(20) -> todo
     Wibble(_) -> panic
   }

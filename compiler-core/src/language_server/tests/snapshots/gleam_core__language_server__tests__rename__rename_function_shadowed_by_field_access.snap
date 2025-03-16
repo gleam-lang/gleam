@@ -20,7 +20,7 @@ pub fn main() {
 -- app.gleam
 
 pub fn something() {
-       ↑            
+       ↑▔▔▔▔▔▔▔▔    
   todo
 }
 

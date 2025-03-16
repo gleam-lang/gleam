@@ -16,7 +16,7 @@ fn wibble() {
 
 pub type Wibble {
   Constructor(Int)
-  ↑               
+  ↑▔▔▔▔▔▔▔▔▔▔     
 }
 
 pub fn main() {
