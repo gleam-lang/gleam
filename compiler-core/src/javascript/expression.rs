@@ -37,9 +37,44 @@ impl Position {
     pub fn is_tail(&self) -> bool {
         matches!(self, Self::Tail)
     }
+
+    #[must_use]
+    pub fn ordering(&self) -> Ordering {
+        match self {
+            Self::NotTail(ordering) => *ordering,
+            Self::Tail | Self::Assign(_) => Ordering::Loose,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
+/// Determines whether we can lift blocks into statement level instead of using
+/// immediately invoked function expressions. Consider the following piece of code:
+///
+/// ```gleam
+/// some_function(function_with_side_effect(), {
+///   let a = 10
+///   other_function_with_side_effects(a)
+/// })
+/// ```
+/// Here, if we lift the block that is the second argument of the function, we
+/// would end up running `other_function_with_side_effects` before
+/// `function_with_side_effects`. This would be invalid, as code in Gleam should be
+/// evaluated left-to-right, top-to-bottom. In this case, the ordering would be
+/// `Strict`, indicating that we cannot lift the block.
+///
+/// However, in this example:
+///
+/// ```gleam
+/// let value = !{
+///   let value = False
+///   some_function_with_side_effect()
+///   value
+/// }
+/// ```
+/// The only expression is the block, meaning it can be safely lifted without
+/// changing the evaluation order of the program. So the ordering is `Loose`.
+///
 pub enum Ordering {
     Strict,
     Loose,
@@ -470,17 +505,17 @@ impl<'module, 'a> Generator<'module, 'a> {
 
     pub fn not_in_tail_position<CompileFn>(
         &mut self,
+        // If ordering is None, it is inherited from the parent scope.
+        // It will be None in cases like `!x`, where `x` can be lifted
+        // only if the ordering is already loose.
         ordering: Option<Ordering>,
         compile: CompileFn,
     ) -> Output<'a>
     where
         CompileFn: Fn(&mut Self) -> Output<'a>,
     {
-        let new_ordering = match (ordering, &self.scope_position) {
-            (Some(ordering), _) => ordering,
-            (None, Position::NotTail(ordering)) => *ordering,
-            (None, Position::Assign(_) | Position::Tail) => Ordering::Loose,
-        };
+        let new_ordering = ordering.unwrap_or(self.scope_position.ordering());
+
         let function_position =
             std::mem::replace(&mut self.function_position, Position::NotTail(new_ordering));
         let scope_position =
