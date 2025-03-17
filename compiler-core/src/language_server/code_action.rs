@@ -12,6 +12,7 @@ use crate::{
     },
     build::{Located, Module},
     config::PackageConfig,
+    exhaustiveness::CompiledCase,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
@@ -133,6 +134,7 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
         type_: &'ast Arc<Type>,
         subjects: &'ast [TypedExpr],
         clauses: &'ast [ast::TypedClause],
+        compiled_case: &'ast CompiledCase,
     ) {
         for (subject_idx, subject) in subjects.iter().enumerate() {
             let TypedExpr::Tuple {
@@ -181,7 +183,7 @@ impl<'ast> ast::visit::Visit<'ast> for RedundantTupleInCaseSubject<'_> {
             self.hovered = self.hovered || overlaps(self.params.range, range);
         }
 
-        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses)
+        ast::visit::visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case)
     }
 }
 

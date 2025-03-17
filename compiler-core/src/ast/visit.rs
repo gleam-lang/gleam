@@ -40,6 +40,7 @@
 
 use crate::{
     analyse::Inferred,
+    exhaustiveness::CompiledCase,
     type_::{
         ModuleValueConstructor, PatternConstructor, TypedCallArg, ValueConstructor,
         error::VariableOrigin,
@@ -206,8 +207,9 @@ pub trait Visit<'ast> {
         type_: &'ast Arc<Type>,
         subjects: &'ast [TypedExpr],
         clauses: &'ast [TypedClause],
+        compiled_case: &'ast CompiledCase,
     ) {
-        visit_typed_expr_case(self, location, type_, subjects, clauses);
+        visit_typed_expr_case(self, location, type_, subjects, clauses, compiled_case);
     }
 
     fn visit_typed_expr_record_access(
@@ -767,7 +769,8 @@ where
             type_,
             subjects,
             clauses,
-        } => v.visit_typed_expr_case(location, type_, subjects, clauses),
+            compiled_case,
+        } => v.visit_typed_expr_case(location, type_, subjects, clauses, compiled_case),
         TypedExpr::RecordAccess {
             location,
             type_,
@@ -986,6 +989,7 @@ pub fn visit_typed_expr_case<'a, V>(
     _type_: &'a Arc<Type>,
     subjects: &'a [TypedExpr],
     clauses: &'a [TypedClause],
+    _compiled_case: &'a CompiledCase,
 ) where
     V: Visit<'a> + ?Sized,
 {
