@@ -1,0 +1,31 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nfn wibble(value: Int) -> Int {\n  wobble(value)\n}\n\nfn wobble(value: Int) -> Int {\n  wibble(value)\n}\n"
+---
+----- SOURCE CODE
+
+fn wibble(value: Int) -> Int {
+  wobble(value)
+}
+
+fn wobble(value: Int) -> Int {
+  wibble(value)
+}
+
+
+----- WARNING
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ fn wibble(value: Int) -> Int {
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.
+
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:6:1
+  │
+6 │ fn wobble(value: Int) -> Int {
+  │ ^^^^^^^^^^^^^^^^^^^^^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.
