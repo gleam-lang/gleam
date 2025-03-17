@@ -3004,7 +3004,7 @@ fn can_be_constant(
         }
 
         // Attempt to extract whole tuple as long as it's comprised of only literals
-        TypedExpr::Tuple { elems, .. } => elems
+        TypedExpr::Tuple { elements, .. } => elements
             .iter()
             .all(|element| can_be_constant(module, element, Some(mc))),
 
