@@ -450,7 +450,7 @@ struct PatternCheck {
 /// arguments: that pattern will be replaced by three new ones `a0 is 1`,
 /// `a1 is _` and `a2 is []`. Those new variables are the `args`.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RuntimeCheck {
     Int {
         value: EcoString,
@@ -651,6 +651,7 @@ impl Variable {
 /// series of checks to perform at runtime to understand if a value matches with
 /// a given pattern.
 ///
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Decision {
     /// This is the final node of the tree, once we get to this one we know we
     /// have a body to run because a given pattern matched.
@@ -756,21 +757,12 @@ struct Compiler<'a> {
 
 /// The result of compiling a pattern match expression.
 ///
-pub struct Match {
-    pub tree: Decision,
+pub struct CompileCaseResult {
+    pub compiled_case: CompiledCase,
     pub diagnostics: Diagnostics,
-    pub subject_variables: Vec<Variable>,
 }
 
-/// Whether a clause is reachable, or why it is unreachable.
-///
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Reachability {
-    Reachable,
-    Unreachable(UnreachableCaseClauseReason),
-}
-
-impl Match {
+impl CompileCaseResult {
     pub fn is_reachable(&self, clause: usize) -> Reachability {
         if self.diagnostics.reachable.contains(&clause) {
             Reachability::Reachable
@@ -784,6 +776,20 @@ impl Match {
     pub fn missing_patterns(&self, environment: &Environment<'_>) -> Vec<EcoString> {
         missing_patterns::missing_patterns(self, environment)
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CompiledCase {
+    pub tree: Decision,
+    pub subject_variables: Vec<Variable>,
+}
+
+/// Whether a clause is reachable, or why it is unreachable.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reachability {
+    Reachable,
+    Unreachable(UnreachableCaseClauseReason),
 }
 
 /// A type for storing diagnostics produced by the decision tree compiler.
@@ -1616,7 +1622,7 @@ impl CaseToCompile {
         self.branches.push(branch);
     }
 
-    pub fn compile(self, env: &Environment<'_>) -> Match {
+    pub fn compile(self, env: &Environment<'_>) -> CompileCaseResult {
         let mut compiler = Compiler::new(env, self.variable_id, self.patterns);
 
         let decision = if self.branches.is_empty() {
@@ -1631,10 +1637,12 @@ impl CaseToCompile {
             compiler.compile(self.branches.into())
         };
 
-        Match {
-            tree: decision,
+        CompileCaseResult {
             diagnostics: compiler.diagnostics,
-            subject_variables: self.subject_variables,
+            compiled_case: CompiledCase {
+                tree: decision,
+                subject_variables: self.subject_variables,
+            },
         }
     }
 

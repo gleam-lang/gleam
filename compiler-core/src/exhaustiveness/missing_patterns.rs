@@ -1,16 +1,19 @@
-use super::{Decision, Match, RuntimeCheck, Variable, printer::Printer};
+use super::{CompileCaseResult, Decision, RuntimeCheck, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
 use std::collections::{HashMap, HashSet};
 
 /// Returns a list of patterns not covered by the match expression.
-pub fn missing_patterns(matches: &Match, environment: &Environment<'_>) -> Vec<EcoString> {
+pub fn missing_patterns(
+    result: &CompileCaseResult,
+    environment: &Environment<'_>,
+) -> Vec<EcoString> {
     let mut names = HashSet::new();
     let mut steps = Vec::new();
 
     add_missing_patterns(
-        &matches.tree,
-        &matches.subject_variables,
+        &result.compiled_case.tree,
+        &result.compiled_case.subject_variables,
         &mut steps,
         &mut names,
         environment,
