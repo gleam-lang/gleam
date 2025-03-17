@@ -1,0 +1,17 @@
+---
+source: compiler-core/src/parse/tests.rs
+expression: "\n@target(\npub fn one() {}"
+---
+----- SOURCE CODE
+
+@target(
+pub fn one() {}
+
+----- ERROR
+error: Syntax error
+  ┌─ /src/parse/error.gleam:2:8
+  │
+2 │ @target(
+  │        ^ I was expecting a target name after this
+
+Try `erlang`, `javascript`.
