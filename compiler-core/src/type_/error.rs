@@ -134,12 +134,6 @@ impl ModuleSuggestion {
         }
     }
 
-    pub fn name(&self) -> &EcoString {
-        match self {
-            ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => name,
-        }
-    }
-
     pub fn last_name_component(&self) -> &str {
         match self {
             ModuleSuggestion::Imported(name) | ModuleSuggestion::Importable(name) => {
