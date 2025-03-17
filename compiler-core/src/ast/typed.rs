@@ -3,7 +3,10 @@ use std::sync::OnceLock;
 use type_::{FieldMap, TypedCallArg};
 
 use super::*;
-use crate::type_::{HasType, Type, ValueConstructorVariant, bool};
+use crate::{
+    exhaustiveness::CompiledCase,
+    type_::{HasType, Type, ValueConstructorVariant, bool},
+};
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypedExpr {
@@ -87,6 +90,7 @@ pub enum TypedExpr {
         type_: Arc<Type>,
         subjects: Vec<Self>,
         clauses: Vec<Clause<Self, Arc<Type>, EcoString>>,
+        compiled_case: CompiledCase,
     },
 
     RecordAccess {
