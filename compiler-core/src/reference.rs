@@ -132,9 +132,9 @@ impl ReferenceTracker {
         for (name, information) in self.value_information.iter() {
             _ = unused_values.insert(name.clone(), *information);
         }
-        for value in self.public_values.iter() {
-            let index = self.names.get_by_left(value).expect("Value exists");
-            self.mark_value_as_used(&mut unused_values, value, *index);
+        for name in self.public_values.iter() {
+            let index = self.names.get_by_left(name).expect("Value exists");
+            self.mark_value_as_used(&mut unused_values, name, *index);
         }
 
         unused_values
