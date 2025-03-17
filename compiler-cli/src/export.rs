@@ -96,8 +96,8 @@ pub(crate) fn erlang_shipment(paths: &ProjectPaths) -> Result<()> {
         "
 Your Erlang shipment has been generated to {out}.
 
-It can be copied to a compatible server with Erlang installed and run with one of the following
-scripts:
+It can be copied to a compatible server with Erlang installed and run with
+one of the following scripts:
     - {ENTRYPOINT_FILENAME_POWERSHELL} (PowerShell script)
     - {ENTRYPOINT_FILENAME_POSIX_SHELL} (POSIX Shell script)
 ",
