@@ -3510,7 +3510,7 @@ functions are declared separately from types.";
                         });
                     Ok(Target::Erlang)
                 }
-                _ => self.next_tok_unexpected(Target::variant_strings()),
+                _ => parse_error(ParseErrorType::UnknownTarget, SrcSpan::new(start, end)),
             },
             _ => self.next_tok_unexpected(Target::variant_strings()),
         }
