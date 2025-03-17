@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\ntype Couple {\n  Couple(l: Int, r: Int)\n}\n\npub fn main() {\n  let c1 = Couple(l: 1, r: 1)\n  let c2 = Couple(..c1, r: 1)\n}\n"
+---
+----- BEFORE ACTION
+
+type Couple {
+  Couple(l: Int, r: Int)
+}
+
+pub fn main() {
+  let c1 = Couple(l: 1, r: 1)
+  let c2 = Couple(..c1, r: 1)
+                    ↑        
+}
+
+
+----- AFTER ACTION
+
+type Couple {
+  Couple(l: Int, r: Int)
+}
+
+pub fn main() {
+  let c2 = Couple(..Couple(l: 1, r: 1), r: 1)
+}

@@ -174,6 +174,10 @@
   record capture produces invalid code.
   ([Matias Carlander](https://github.com/matiascr))
 
+- Fixed a bug where the "Inline variable" code action would not work properly
+  if used inside a record update.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
