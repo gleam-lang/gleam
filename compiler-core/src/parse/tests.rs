@@ -660,6 +660,15 @@ pub fn one(x: Int) -> Int {
 }
 
 #[test]
+fn unknown_target() {
+    assert_module_error!(
+        r#"
+@target(abc)
+pub fn one() {}"#
+    );
+}
+
+#[test]
 fn unknown_attribute() {
     assert_module_error!(
         r#"@go_faster()
