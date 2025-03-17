@@ -1092,7 +1092,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             );
 
             environment.references.register_value(
-                &name,
+                &constructor.name,
                 ValueKind::TypeVariant,
                 constructor.location,
                 value_constructor_publicity,
