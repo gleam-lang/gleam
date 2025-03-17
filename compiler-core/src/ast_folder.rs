@@ -1,4 +1,5 @@
 use ecow::EcoString;
+use itertools::Itertools;
 use num_bigint::BigInt;
 use vec1::Vec1;
 
@@ -28,49 +29,53 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
             .map(|group| {
                 group
                     .into_iter()
-                    .map(|d| {
-                        let TargetedDefinition { definition, target } = d;
-                        match definition {
-                            Definition::Function(f) => {
-                                let f = self.fold_function_definition(f, target);
-                                let definition = self.walk_function_definition(f);
-                                TargetedDefinition { definition, target }
-                            }
-
-                            Definition::TypeAlias(a) => {
-                                let a = self.fold_type_alias(a, target);
-                                let definition = self.walk_type_alias(a);
-                                TargetedDefinition { definition, target }
-                            }
-
-                            Definition::CustomType(t) => {
-                                let t = self.fold_custom_type(t, target);
-                                let definition = self.walk_custom_type(t);
-                                TargetedDefinition { definition, target }
-                            }
-
-                            Definition::Import(i) => {
-                                let i = self.fold_import(i, target);
-                                let definition = self.walk_import(i);
-                                TargetedDefinition { definition, target }
-                            }
-
-                            Definition::ModuleConstant(c) => {
-                                let c = self.fold_module_constant(c, target);
-                                let definition = self.walk_module_constant(c);
-                                TargetedDefinition { definition, target }
-                            }
-                        }
-                    })
-                    .collect()
+                    .map(|definition| self.walk_targeted_definition(definition))
+                    .collect_vec()
             })
-            .collect();
+            .collect_vec();
         module
+    }
+
+    fn walk_targeted_definition(&mut self, definition: TargetedDefinition) -> TargetedDefinition {
+        let TargetedDefinition { definition, target } = definition;
+        match definition {
+            Definition::Function(function) => {
+                let function = self.fold_function_definition(function, target);
+                let definition = self.walk_function_definition(function);
+                TargetedDefinition { definition, target }
+            }
+
+            Definition::TypeAlias(alias) => {
+                let alias = self.fold_type_alias(alias, target);
+                let definition = self.walk_type_alias(alias);
+                TargetedDefinition { definition, target }
+            }
+
+            Definition::CustomType(custom_type) => {
+                let custom_type = self.fold_custom_type(custom_type, target);
+                let definition = self.walk_custom_type(custom_type);
+                TargetedDefinition { definition, target }
+            }
+
+            Definition::Import(import) => {
+                let import = self.fold_import(import, target);
+                let definition = self.walk_import(import);
+                TargetedDefinition { definition, target }
+            }
+
+            Definition::ModuleConstant(constant) => {
+                let constant = self.fold_module_constant(constant, target);
+                let definition = self.walk_module_constant(constant);
+                TargetedDefinition { definition, target }
+            }
+        }
     }
 
     /// You probably don't want to override this method.
     fn walk_function_definition(&mut self, mut function: UntypedFunction) -> UntypedDefinition {
-        function.body = function.body.mapped(|s| self.fold_statement(s));
+        function.body = function
+            .body
+            .mapped(|statement| self.fold_statement(statement));
         function.return_annotation = function
             .return_annotation
             .map(|type_| self.fold_type(type_));
@@ -113,8 +118,8 @@ pub trait UntypedModuleFolder: TypeAstFolder + UntypedExprFolder {
     }
 
     /// You probably don't want to override this method.
-    fn walk_import(&mut self, i: UntypedImport) -> UntypedDefinition {
-        Definition::Import(i)
+    fn walk_import(&mut self, import: UntypedImport) -> UntypedDefinition {
+        Definition::Import(import)
     }
 
     /// You probably don't want to override this method.
