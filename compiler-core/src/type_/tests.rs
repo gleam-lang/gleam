@@ -3070,6 +3070,51 @@ pub fn main() {
 }
 
 #[test]
+fn variant_inference_with_let_assert() {
+    assert_module_infer!(
+        "
+type Wibble {
+  Wibble(n: Int, b: Bool)
+  Wobble
+}
+
+pub fn main() {
+  let wibble = wibble()
+  let assert Wibble(..) = wibble
+  wibble.n
+}
+
+fn wibble() {
+  Wibble(1, True)
+}
+",
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
+fn variant_inference_with_let_assert_and_alias() {
+    assert_module_infer!(
+        "
+type Wibble {
+  Wibble(n: Int, b: Bool)
+  Wobble
+}
+
+pub fn main() {
+  let assert Wibble(..) as wibble = wibble()
+  wibble.n
+}
+
+fn wibble() {
+  Wibble(1, True)
+}
+",
+        vec![("main", "fn() -> Int")]
+    );
+}
+
+#[test]
 fn private_types_not_available_in_other_modules() {
     assert_with_module_error!(
         ("wibble", "type Wibble"),
