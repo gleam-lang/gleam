@@ -8,7 +8,7 @@ use gleam_core::{
 
 use crate::{
     cli,
-    dependencies::{self, UseManifest, parse_gleam_add_specifier},
+    dependencies::{self, parse_gleam_add_specifier},
     fs,
 };
 

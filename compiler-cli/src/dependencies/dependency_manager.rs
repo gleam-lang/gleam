@@ -218,9 +218,14 @@ where
                     &mut provided_packages,
                     &mut vec![],
                 )?,
-                Requirement::Git { git } => {
-                    provide_git_package(name.clone(), &git, project_paths, &mut provided_packages)?
-                }
+                Requirement::Git { git, ref_ } => provide_git_package(
+                    name.clone(),
+                    &git,
+                    &ref_,
+                    project_paths,
+                    &mut provided_packages,
+                    &mut Vec::new(),
+                )?,
             };
             let _ = root_requirements.insert(name, version);
         }
