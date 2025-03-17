@@ -1,6 +1,6 @@
 use gleam_core::{
     Result, Warning,
-    build::{Mode, NullTelemetry, Target},
+    build::{NullTelemetry, Target},
     error::{Error, FileIoAction, FileKind, OS, ShellCommandFailureReason, parse_os},
     io::{
         BeamCompiler, Command, CommandExecutor, Content, DirEntry, FileSystemReader,
