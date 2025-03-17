@@ -219,6 +219,9 @@
   if used inside a record update.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- Fixed a bug where variant inference wouldn't work on `let assert` assignments.
+  ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
