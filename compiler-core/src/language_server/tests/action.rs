@@ -80,7 +80,7 @@ const INLINE_VARIABLE: &str = "Inline variable";
 const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INTERPOLATE_STRING: &str = "Interpolate string";
 const FILL_UNUSED_FIELDS: &str = "Fill unused fields";
-const REMOVE_ECHO: &str = "Remove `echo`";
+const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this module";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -204,7 +204,7 @@ pub fn main() {
 #[test]
 fn remove_echo() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   echo 1 + 2
 }",
@@ -215,7 +215,7 @@ fn remove_echo() {
 #[test]
 fn remove_echo_selecting_expression() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   echo 1 + 2
 }",
@@ -226,7 +226,7 @@ fn remove_echo_selecting_expression() {
 #[test]
 fn remove_echo_as_function_arg() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   wibble([], echo 1 + 2)
 }",
@@ -237,7 +237,7 @@ fn remove_echo_as_function_arg() {
 #[test]
 fn remove_echo_in_pipeline_step() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   [1, 2, 3]
   |> echo
@@ -250,7 +250,7 @@ fn remove_echo_in_pipeline_step() {
 #[test]
 fn remove_echo_in_single_line_pipeline_step() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   [1, 2, 3] |> echo |> wibble
 }",
@@ -261,7 +261,7 @@ fn remove_echo_in_single_line_pipeline_step() {
 #[test]
 fn remove_echo_last_in_long_pipeline_step() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   [1, 2, 3]
   |> wibble
@@ -274,7 +274,7 @@ fn remove_echo_last_in_long_pipeline_step() {
 #[test]
 fn remove_echo_last_in_short_pipeline_step() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   [1, 2, 3]
   |> echo
@@ -286,7 +286,7 @@ fn remove_echo_last_in_short_pipeline_step() {
 #[test]
 fn remove_echo_before_pipeline() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   echo [1, 2, 3] |> wibble
 }",
@@ -297,7 +297,7 @@ fn remove_echo_before_pipeline() {
 #[test]
 fn remove_echo_before_pipeline_selecting_step() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   echo [1, 2, 3] |> wibble
 }",
@@ -306,11 +306,24 @@ fn remove_echo_before_pipeline_selecting_step() {
 }
 
 #[test]
-fn remove_echo_removes_closest_one() {
+fn remove_echo_removes_all_echos() {
     assert_code_action!(
-        REMOVE_ECHO,
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
         "pub fn main() {
   echo wibble(echo 1, 2)
+}",
+        find_position_of("echo").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn remove_echo_removes_all_echos_1() {
+    assert_code_action!(
+        REMOVE_ALL_ECHOS_FROM_THIS_MODULE,
+        "pub fn main() {
+  echo 1 |> echo |> echo |> wibble |> echo
+  echo wibble(echo 1, echo 2)
+  echo 1
 }",
         find_position_of("echo").nth_occurrence(2).to_selection()
     );
