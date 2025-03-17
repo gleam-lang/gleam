@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nconst value = 10\n\nfn unused() {\n  value\n}\n"
+---
+----- SOURCE CODE
+
+const value = 10
+
+fn unused() {
+  value
+}
+
+
+----- WARNING
+warning: Unused private constant
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ const value = 10
+  │ ^^^^^^^^^^^ This private constant is never used
+
+Hint: You can safely remove it.
+
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ fn unused() {
+  │ ^^^^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.

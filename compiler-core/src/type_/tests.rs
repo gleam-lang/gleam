@@ -22,6 +22,7 @@ mod assert;
 mod assignments;
 mod conditional_compilation;
 mod custom_types;
+mod dead_code_detection;
 mod echo;
 mod errors;
 mod exhaustiveness;
