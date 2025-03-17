@@ -1438,8 +1438,9 @@ fn first_parsed_docstring(src: &str) -> EcoString {
 
     parsed
         .module
-        .definitions
-        .first()
+        .iter_definitions()
+        .peekable()
+        .peek()
         .expect("parsed a definition")
         .definition
         .get_doc()

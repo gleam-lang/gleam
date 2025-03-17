@@ -104,9 +104,8 @@ impl<'env> Env<'env> {
 
 pub fn records(module: &TypedModule) -> Vec<(&str, String)> {
     module
-        .definitions
-        .iter()
-        .filter_map(|s| match s {
+        .iter_definitions()
+        .filter_map(|definition| match definition {
             Definition::CustomType(CustomType {
                 publicity: Publicity::Public,
                 constructors,
@@ -192,9 +191,9 @@ fn module_document<'a>(
     // would result in an error as it tries to reference this private function.
     let overridden_publicity = find_private_functions_referenced_in_importable_constants(module);
 
-    for s in &module.definitions {
+    for definition in module.iter_definitions() {
         register_imports(
-            s,
+            definition,
             &mut exports,
             &mut type_exports,
             &mut type_defs,
@@ -240,9 +239,9 @@ fn module_document<'a>(
 
     let mut needs_function_docs = false;
     let mut echo_used = false;
-    let mut statements = Vec::with_capacity(module.definitions.len());
-    for definition in module.definitions.iter() {
-        if let Some((statement_document, env)) = module_statement(
+    let mut definitions = Vec::with_capacity(module.total_definitions());
+    for definition in module.iter_definitions() {
+        if let Some((definition_document, env)) = module_definition(
             definition,
             &module.name,
             module.type_info.is_internal,
@@ -252,7 +251,7 @@ fn module_document<'a>(
         ) {
             needs_function_docs = needs_function_docs || env.needs_function_docs;
             echo_used = echo_used || env.echo_used;
-            statements.push(statement_document);
+            definitions.push(definition_document);
         }
     }
 
@@ -290,7 +289,7 @@ fn module_document<'a>(
         documentation_directive,
         module_doc,
         type_defs,
-        join(statements, lines(2)),
+        join(definitions, lines(2)),
     ];
 
     let module = if echo_used {
@@ -419,15 +418,15 @@ fn register_imports(
     }
 }
 
-fn module_statement<'a>(
-    statement: &'a TypedDefinition,
+fn module_definition<'a>(
+    definition: &'a TypedDefinition,
     module: &'a str,
     is_internal_module: bool,
     line_numbers: &'a LineNumbers,
     src_path: &'a Utf8Path,
     project_root: &'a Utf8Path,
 ) -> Option<(Document<'a>, Env<'a>)> {
-    match statement {
+    match definition {
         Definition::TypeAlias(TypeAlias { .. })
         | Definition::CustomType(CustomType { .. })
         | Definition::Import(Import { .. })
@@ -2599,10 +2598,10 @@ fn find_private_functions_referenced_in_importable_constants(
 ) -> HashSet<EcoString> {
     let mut overridden_publicity = HashSet::new();
 
-    for def in module.definitions.iter() {
-        if let Definition::ModuleConstant(c) = def {
-            if c.publicity.is_importable() {
-                find_referenced_private_functions(&c.value, &mut overridden_publicity)
+    for definition in module.iter_definitions() {
+        if let Definition::ModuleConstant(constant) = definition {
+            if constant.publicity.is_importable() {
+                find_referenced_private_functions(&constant.value, &mut overridden_publicity)
             }
         }
     }

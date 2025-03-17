@@ -783,7 +783,7 @@ fn infer_module_type_retention_test() {
     let module: UntypedModule = crate::ast::Module {
         documentation: vec![],
         name: "ok".into(),
-        definitions: vec![],
+        groups: vec![],
         type_info: (),
         names: Default::default(),
     };

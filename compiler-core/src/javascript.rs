@@ -111,9 +111,8 @@ impl<'a> Generator<'a> {
         // Generate JavaScript code for each statement
         let statements = self.collect_definitions().into_iter().chain(
             self.module
-                .definitions
-                .iter()
-                .flat_map(|s| self.statement(s)),
+                .iter_definitions()
+                .flat_map(|definition| self.statement(definition)),
         );
 
         // Two lines between each statement
@@ -366,9 +365,8 @@ impl<'a> Generator<'a> {
 
     fn collect_definitions(&mut self) -> Vec<Output<'a>> {
         self.module
-            .definitions
-            .iter()
-            .flat_map(|statement| match statement {
+            .iter_definitions()
+            .flat_map(|definition| match definition {
                 Definition::CustomType(CustomType {
                     publicity,
                     constructors,
@@ -387,8 +385,8 @@ impl<'a> Generator<'a> {
     fn collect_imports(&mut self) -> Imports<'a> {
         let mut imports = Imports::new();
 
-        for statement in &self.module.definitions {
-            match statement {
+        for definition in self.module.iter_definitions() {
+            match definition {
                 Definition::Import(Import {
                     module,
                     as_name,
@@ -586,8 +584,8 @@ impl<'a> Generator<'a> {
     }
 
     fn register_module_definitions_in_scope(&mut self) {
-        for statement in self.module.definitions.iter() {
-            match statement {
+        for definition in self.module.iter_definitions() {
+            match definition {
                 Definition::ModuleConstant(ModuleConstant { name, .. }) => {
                     self.register_in_scope(name)
                 }

@@ -420,7 +420,7 @@ where
             };
             let line_numbers = LineNumbers::new(&module.code);
 
-            for definition in &module.ast.definitions {
+            for definition in module.ast.iter_definitions() {
                 match definition {
                     // Typically, imports aren't considered document symbols.
                     Definition::Import(_) => {}
@@ -1564,12 +1564,16 @@ fn get_hexdocs_link_section(
     ast: &TypedModule,
     hex_deps: &HashSet<EcoString>,
 ) -> Option<String> {
-    let package_name = ast.definitions.iter().find_map(|def| match def {
-        Definition::Import(p) if p.module == module_name && hex_deps.contains(&p.package) => {
-            Some(&p.package)
-        }
-        _ => None,
-    })?;
+    let package_name = ast
+        .iter_definitions()
+        .find_map(|definition| match definition {
+            Definition::Import(import)
+                if import.module == module_name && hex_deps.contains(&import.package) =>
+            {
+                Some(&import.package)
+            }
+            _ => None,
+        })?;
 
     Some(format_hexdocs_link_section(
         package_name,

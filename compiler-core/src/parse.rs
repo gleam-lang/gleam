@@ -241,7 +241,7 @@ where
             name: "".into(),
             documentation: vec![],
             type_info: (),
-            definitions,
+            groups: vec![definitions],
             names: Default::default(),
         };
         Ok(Parsed {

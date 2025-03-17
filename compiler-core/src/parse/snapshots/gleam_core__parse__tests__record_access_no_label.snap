@@ -7,160 +7,162 @@ Parsed {
         name: "",
         documentation: [],
         type_info: (),
-        definitions: [
-            TargetedDefinition {
-                definition: CustomType(
-                    CustomType {
-                        location: SrcSpan {
-                            start: 1,
-                            end: 12,
-                        },
-                        end_position: 43,
-                        name: "Wibble",
-                        name_location: SrcSpan {
-                            start: 6,
-                            end: 12,
-                        },
-                        publicity: Private,
-                        constructors: [
-                            RecordConstructor {
-                                location: SrcSpan {
-                                    start: 19,
-                                    end: 41,
-                                },
-                                name_location: SrcSpan {
-                                    start: 19,
-                                    end: 25,
-                                },
-                                name: "Wibble",
-                                arguments: [
-                                    RecordConstructorArg {
-                                        label: Some(
-                                            (
-                                                SrcSpan {
-                                                    start: 26,
-                                                    end: 32,
-                                                },
-                                                "wibble",
-                                            ),
-                                        ),
-                                        ast: Constructor(
-                                            TypeAstConstructor {
-                                                location: SrcSpan {
-                                                    start: 34,
-                                                    end: 40,
-                                                },
-                                                name_location: SrcSpan {
-                                                    start: 34,
-                                                    end: 40,
-                                                },
-                                                module: None,
-                                                name: "String",
-                                                arguments: [],
-                                            },
-                                        ),
-                                        location: SrcSpan {
-                                            start: 26,
-                                            end: 40,
-                                        },
-                                        type_: (),
-                                        doc: None,
-                                    },
-                                ],
-                                documentation: None,
-                                deprecation: NotDeprecated,
+        groups: [
+            [
+                TargetedDefinition {
+                    definition: CustomType(
+                        CustomType {
+                            location: SrcSpan {
+                                start: 1,
+                                end: 12,
                             },
-                        ],
-                        documentation: None,
-                        deprecation: NotDeprecated,
-                        opaque: false,
-                        parameters: [],
-                        typed_parameters: [],
-                    },
-                ),
-                target: None,
-            },
-            TargetedDefinition {
-                definition: Function(
-                    Function {
-                        location: SrcSpan {
-                            start: 45,
-                            end: 56,
-                        },
-                        end_position: 75,
-                        name: Some(
-                            (
-                                SrcSpan {
-                                    start: 48,
-                                    end: 54,
-                                },
-                                "wobble",
-                            ),
-                        ),
-                        arguments: [],
-                        body: [
-                            Expression(
-                                FieldAccess {
+                            end_position: 43,
+                            name: "Wibble",
+                            name_location: SrcSpan {
+                                start: 6,
+                                end: 12,
+                            },
+                            publicity: Private,
+                            constructors: [
+                                RecordConstructor {
                                     location: SrcSpan {
-                                        start: 61,
-                                        end: 73,
+                                        start: 19,
+                                        end: 41,
                                     },
-                                    label_location: SrcSpan {
-                                        start: 72,
-                                        end: 73,
+                                    name_location: SrcSpan {
+                                        start: 19,
+                                        end: 25,
                                     },
-                                    label: "",
-                                    container: Call {
+                                    name: "Wibble",
+                                    arguments: [
+                                        RecordConstructorArg {
+                                            label: Some(
+                                                (
+                                                    SrcSpan {
+                                                        start: 26,
+                                                        end: 32,
+                                                    },
+                                                    "wibble",
+                                                ),
+                                            ),
+                                            ast: Constructor(
+                                                TypeAstConstructor {
+                                                    location: SrcSpan {
+                                                        start: 34,
+                                                        end: 40,
+                                                    },
+                                                    name_location: SrcSpan {
+                                                        start: 34,
+                                                        end: 40,
+                                                    },
+                                                    module: None,
+                                                    name: "String",
+                                                    arguments: [],
+                                                },
+                                            ),
+                                            location: SrcSpan {
+                                                start: 26,
+                                                end: 40,
+                                            },
+                                            type_: (),
+                                            doc: None,
+                                        },
+                                    ],
+                                    documentation: None,
+                                    deprecation: NotDeprecated,
+                                },
+                            ],
+                            documentation: None,
+                            deprecation: NotDeprecated,
+                            opaque: false,
+                            parameters: [],
+                            typed_parameters: [],
+                        },
+                    ),
+                    target: None,
+                },
+                TargetedDefinition {
+                    definition: Function(
+                        Function {
+                            location: SrcSpan {
+                                start: 45,
+                                end: 56,
+                            },
+                            end_position: 75,
+                            name: Some(
+                                (
+                                    SrcSpan {
+                                        start: 48,
+                                        end: 54,
+                                    },
+                                    "wobble",
+                                ),
+                            ),
+                            arguments: [],
+                            body: [
+                                Expression(
+                                    FieldAccess {
                                         location: SrcSpan {
                                             start: 61,
-                                            end: 72,
+                                            end: 73,
                                         },
-                                        fun: Var {
+                                        label_location: SrcSpan {
+                                            start: 72,
+                                            end: 73,
+                                        },
+                                        label: "",
+                                        container: Call {
                                             location: SrcSpan {
                                                 start: 61,
-                                                end: 67,
+                                                end: 72,
                                             },
-                                            name: "Wibble",
-                                        },
-                                        arguments: [
-                                            CallArg {
-                                                label: None,
+                                            fun: Var {
                                                 location: SrcSpan {
-                                                    start: 68,
-                                                    end: 71,
+                                                    start: 61,
+                                                    end: 67,
                                                 },
-                                                value: String {
+                                                name: "Wibble",
+                                            },
+                                            arguments: [
+                                                CallArg {
+                                                    label: None,
                                                     location: SrcSpan {
                                                         start: 68,
                                                         end: 71,
                                                     },
-                                                    value: "a",
+                                                    value: String {
+                                                        location: SrcSpan {
+                                                            start: 68,
+                                                            end: 71,
+                                                        },
+                                                        value: "a",
+                                                    },
+                                                    implicit: None,
                                                 },
-                                                implicit: None,
-                                            },
-                                        ],
+                                            ],
+                                        },
                                     },
-                                },
-                            ),
-                        ],
-                        publicity: Private,
-                        deprecation: NotDeprecated,
-                        return_annotation: None,
-                        return_type: (),
-                        documentation: None,
-                        external_erlang: None,
-                        external_javascript: None,
-                        implementations: Implementations {
-                            gleam: true,
-                            can_run_on_erlang: true,
-                            can_run_on_javascript: true,
-                            uses_erlang_externals: false,
-                            uses_javascript_externals: false,
+                                ),
+                            ],
+                            publicity: Private,
+                            deprecation: NotDeprecated,
+                            return_annotation: None,
+                            return_type: (),
+                            documentation: None,
+                            external_erlang: None,
+                            external_javascript: None,
+                            implementations: Implementations {
+                                gleam: true,
+                                can_run_on_erlang: true,
+                                can_run_on_javascript: true,
+                                uses_erlang_externals: false,
+                                uses_javascript_externals: false,
+                            },
                         },
-                    },
-                ),
-                target: None,
-            },
+                    ),
+                    target: None,
+                },
+            ],
         ],
         names: Names {
             local_types: {},

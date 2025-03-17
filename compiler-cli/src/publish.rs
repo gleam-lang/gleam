@@ -135,13 +135,15 @@ fn check_for_name_squatting(package: &Package) -> Result<(), Error> {
         return Ok(());
     }
 
-    let definitions = &module.ast.definitions;
-
-    if definitions.len() > 2 {
+    if module.ast.total_definitions() > 2 {
         return Ok(());
     }
 
-    let Some(main) = definitions.iter().find_map(|d| d.main_function()) else {
+    let Some(main) = module
+        .ast
+        .iter_definitions()
+        .find_map(|definition| definition.main_function())
+    else {
         return Ok(());
     };
 

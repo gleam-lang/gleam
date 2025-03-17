@@ -17,8 +17,7 @@ pub fn position_of_first_definition_if_import(
     // As "self.module.ast.definitions"  could be sorted, let's find the actual first definition by position.
     let first_definition = module
         .ast
-        .definitions
-        .iter()
+        .iter_definitions()
         .min_by(|a, b| a.location().start.cmp(&b.location().start));
     let import = first_definition.and_then(get_import);
     import.map(|import| src_span_to_lsp_range(import.location, line_numbers).start)

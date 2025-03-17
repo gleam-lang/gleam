@@ -8,7 +8,7 @@ use crate::{
     GLEAM_CORE_PACKAGE_NAME,
     ast::{
         self, Arg, BitArrayOption, CustomType, Definition, DefinitionLocation, Function,
-        GroupedStatements, Import, ModuleConstant, Publicity, RecordConstructor,
+        GroupedDefinitions, Import, ModuleConstant, Publicity, RecordConstructor,
         RecordConstructorArg, SrcSpan, Statement, TypeAlias, TypeAst, TypeAstConstructor,
         TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, TypedDefinition, TypedExpr,
         TypedFunction, TypedModule, UntypedArg, UntypedCustomType, UntypedFunction, UntypedImport,
@@ -164,8 +164,8 @@ impl<A> ModuleAnalyzerConstructor<'_, A> {
             line_numbers,
             src_path,
             problems: Problems::new(),
-            value_names: HashMap::with_capacity(module.definitions.len()),
-            hydrators: HashMap::with_capacity(module.definitions.len()),
+            value_names: HashMap::with_capacity(module.total_definitions()),
+            hydrators: HashMap::with_capacity(module.total_definitions()),
             module_name: module.name.clone(),
             minimum_required_version: Version::new(0, 1, 0),
         }
@@ -210,74 +210,82 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             self.target_support,
         );
 
-        let statements = GroupedStatements::new(module.into_iter_statements(self.target));
-        let statements_count = statements.len();
+        let definitions =
+            GroupedDefinitions::new(module.into_iter_definitions_for_target(self.target));
+        let definitions_count = definitions.len();
 
         // Register any modules, types, and values being imported
         // We process imports first so that anything imported can be referenced
         // anywhere in the module.
-        let mut env = Importer::run(self.origin, env, &statements.imports, &mut self.problems);
+        let mut env = Importer::run(self.origin, env, &definitions.imports, &mut self.problems);
 
         // Register types so they can be used in constructors and functions
         // earlier in the module.
-        for t in &statements.custom_types {
-            if let Err(error) = self.register_types_from_custom_type(t, &mut env) {
+        for custom_type in &definitions.custom_types {
+            if let Err(error) = self.register_types_from_custom_type(custom_type, &mut env) {
                 return self.all_errors(error);
             }
         }
 
-        let sorted_aliases = match sorted_type_aliases(&statements.type_aliases) {
+        let sorted_aliases = match sorted_type_aliases(&definitions.type_aliases) {
             Ok(it) => it,
             Err(error) => return self.all_errors(error),
         };
-        for t in sorted_aliases {
-            self.register_type_alias(t, &mut env);
+        for type_alias in sorted_aliases {
+            self.register_type_alias(type_alias, &mut env);
         }
 
-        for f in &statements.functions {
-            if let Err(error) = self.register_value_from_function(f, &mut env) {
+        for function in &definitions.functions {
+            if let Err(error) = self.register_value_from_function(function, &mut env) {
                 return self.all_errors(error);
             }
         }
 
         // Infer the types of each statement in the module
-        let mut typed_statements = Vec::with_capacity(statements_count);
-        for i in statements.imports {
-            optionally_push(&mut typed_statements, self.analyse_import(i, &env));
+        let mut typed_groups = Vec::with_capacity(definitions_count);
+        for import in definitions.imports {
+            optionally_push_group(&mut typed_groups, self.analyse_import(import, &env));
         }
-        for t in statements.custom_types {
-            optionally_push(&mut typed_statements, self.analyse_custom_type(t, &mut env));
+        for custom_type in definitions.custom_types {
+            optionally_push_group(
+                &mut typed_groups,
+                self.analyse_custom_type(custom_type, &mut env),
+            );
         }
-        for t in statements.type_aliases {
-            typed_statements.push(analyse_type_alias(t, &mut env));
+        for type_alias in definitions.type_aliases {
+            typed_groups.push(vec![analyse_type_alias(type_alias, &mut env)]);
         }
 
         // Sort functions and constants into dependency order for inference. Definitions that do
         // not depend on other definitions are inferred first, then ones that depend
         // on those, etc.
         let definition_groups =
-            match into_dependency_order(statements.functions, statements.constants) {
+            match into_dependency_order(definitions.functions, definitions.constants) {
                 Ok(it) => it,
                 Err(error) => return self.all_errors(error),
             };
-        let mut working_group = vec![];
 
         for group in definition_groups {
             // A group may have multiple functions that depend on each other through
             // mutual recursion.
-
+            let mut working_group = vec![];
             for definition in group {
-                let def = match definition {
-                    CallGraphNode::Function(f) => self.infer_function(f, &mut env),
-                    CallGraphNode::ModuleConstant(c) => self.infer_module_constant(c, &mut env),
+                let definition = match definition {
+                    CallGraphNode::Function(function) => self.infer_function(function, &mut env),
+                    CallGraphNode::ModuleConstant(constant) => {
+                        self.infer_module_constant(constant, &mut env)
+                    }
                 };
-                working_group.push(def);
+                working_group.push(definition);
             }
 
             // Now that the entire group has been inferred, generalise their types.
-            for inferred in working_group.drain(..) {
-                typed_statements.push(generalise_statement(inferred, &self.module_name, &mut env));
-            }
+            let working_group = working_group
+                .into_iter()
+                .map(|definition| generalise_definition(definition, &self.module_name, &mut env))
+                .collect_vec();
+
+            typed_groups.push(working_group);
         }
 
         // Generate warnings for unused items
@@ -324,7 +332,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let module = ast::Module {
             documentation: documentation.clone(),
             name: self.module_name.clone(),
-            definitions: typed_statements,
+            groups: typed_groups,
             type_info: ModuleInterface {
                 name: self.module_name,
                 types,
@@ -1516,9 +1524,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
     }
 }
 
-fn optionally_push<T>(vector: &mut Vec<T>, item: Option<T>) {
+fn optionally_push_group<T>(vector: &mut Vec<Vec<T>>, item: Option<T>) {
     if let Some(item) = item {
-        vector.push(item)
+        vector.push(vec![item])
     }
 }
 
@@ -1630,12 +1638,12 @@ where
     }
 }
 
-fn generalise_statement(
-    s: TypedDefinition,
+fn generalise_definition(
+    definition: TypedDefinition,
     module_name: &EcoString,
     environment: &mut Environment<'_>,
 ) -> TypedDefinition {
-    match s {
+    match definition {
         Definition::Function(function) => generalise_function(function, environment, module_name),
         Definition::ModuleConstant(constant) => {
             generalise_module_constant(constant, environment, module_name)
