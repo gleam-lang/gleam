@@ -1967,6 +1967,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         tree: exhaustiveness::Decision::Fail,
                         subject_variables: vec![],
                     },
+                    compiled_case: CompiledCase {
+                        tree: exhaustiveness::Decision::Fail,
+                        subject_variables: vec![],
+                    },
                     subjects: typed_subjects,
                     clauses: Vec::new(),
                 };
@@ -2004,13 +2008,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
-        // The exhaustiveness checker expects patterns to be valid and to type check;
-        // if they are invalid, it will crash. Therefore, if any errors were found
-        // when type checking the pattern, we don't perform the exhaustiveness check.
-        let compiled_case = if patterns_typechecked_successfully {
-            self.check_case_exhaustiveness(location, &subject_types, &typed_clauses)
-        } else {
-            CompiledCase::failure()
+        if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
+            self.problems.error(e);
         };
 
         // We track if the case expression is used like an if: that is all its
