@@ -5940,3 +5940,22 @@ pub fn main() {
         find_position_of("wibble").to_selection()
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4342
+#[test]
+fn inline_variable_in_record_update() {
+    assert_code_action!(
+        INLINE_VARIABLE,
+        "
+type Couple {
+  Couple(l: Int, r: Int)
+}
+
+pub fn main() {
+  let c1 = Couple(l: 1, r: 1)
+  let c2 = Couple(..c1, r: 1)
+}
+",
+        find_position_of("c1,").to_selection()
+    );
+}
