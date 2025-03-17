@@ -154,7 +154,8 @@
   a module and across multiple modules.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
-- The language server now offers a code action to remove `echo`. For example:
+- The language server now offers a code action to remove all `echo`s in a
+  module. For example:
 
   ```gleam
   pub fn main() {
@@ -162,10 +163,11 @@
     |> echo
     // ^^^^ If you put your cursor over here
     |> list.filter(int.is_even)
+    |> echo
   }
   ```
 
-  Triggering the code action would remove the `echo` pipeline step:
+  Triggering the code action would remove all the `echo` pipeline steps:
 
   ```gleam
   pub fn main() {
@@ -174,7 +176,7 @@
   }
   ```
 
-  This would also work with `echo` used before an expression:
+  This also works with all the `echo`s used before an expression:
 
   ```gleam
   pub fn main() {

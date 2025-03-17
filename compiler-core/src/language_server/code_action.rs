@@ -5407,7 +5407,7 @@ impl<'ast> ast::visit::Visit<'ast> for FillUnusedFields<'ast> {
 
 /// Code action to remove an echo.
 ///
-pub struct RemoveEcho<'a> {
+pub struct RemoveEchos<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
@@ -5419,7 +5419,7 @@ pub struct RemoveEcho<'a> {
     second_to_latest_pipe_step: Option<SrcSpan>,
 }
 
-impl<'a> RemoveEcho<'a> {
+impl<'a> RemoveEchos<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
@@ -5459,7 +5459,7 @@ impl<'a> RemoveEcho<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
+impl<'ast> ast::visit::Visit<'ast> for RemoveEchos<'ast> {
     fn visit_typed_expr_echo(
         &mut self,
         location: &'ast SrcSpan,
