@@ -5411,7 +5411,8 @@ pub struct RemoveEcho<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
-    echo_span_to_delete: Option<SrcSpan>,
+    is_hovering_echo: bool,
+    echo_spans_to_delete: Vec<SrcSpan>,
     // We need to keep a reference to the two latest pipeline assignments we
     // run into to properly delete an echo that's inside a pipeline.
     latest_pipe_step: Option<SrcSpan>,
@@ -5428,7 +5429,8 @@ impl<'a> RemoveEcho<'a> {
             module,
             params,
             edits: TextEdits::new(line_numbers),
-            echo_span_to_delete: None,
+            is_hovering_echo: false,
+            echo_spans_to_delete: vec![],
             latest_pipe_step: None,
             second_to_latest_pipe_step: None,
         }
@@ -5437,14 +5439,18 @@ impl<'a> RemoveEcho<'a> {
     pub fn code_actions(mut self) -> Vec<CodeAction> {
         self.visit_typed_module(&self.module.ast);
 
-        let Some(echo_span_to_delete) = self.echo_span_to_delete else {
+        // We only want to trigger the action if we're over one of the echos in
+        // the module
+        if !self.is_hovering_echo {
             return vec![];
         };
 
-        self.edits.delete(echo_span_to_delete);
+        for span in self.echo_spans_to_delete {
+            self.edits.delete(span);
+        }
 
         let mut action = Vec::with_capacity(1);
-        CodeActionBuilder::new("Remove `echo`")
+        CodeActionBuilder::new("Remove all `echo`s from this module")
             .kind(CodeActionKind::REFACTOR_REWRITE)
             .changes(self.params.text_document.uri.clone(), self.edits.edits)
             .preferred(false)
@@ -5471,15 +5477,15 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
         // ```
         //
         let echo_range = self.edits.src_span_to_lsp_range(*location);
-        if !within(self.params.range, echo_range) {
-            return;
+        if within(self.params.range, echo_range) {
+            self.is_hovering_echo = true;
         }
 
         if let Some(expression) = expression {
             // If there's an expression we delete everything we find until its
             // start (excluded).
             let span_to_delete = SrcSpan::new(location.start, expression.location().start);
-            self.echo_span_to_delete = Some(span_to_delete);
+            self.echo_spans_to_delete.push(span_to_delete);
         } else {
             // Othwerise we know we're inside a pipeline, we take the closest step
             // that is not echo itself and delete everything from its end until the
@@ -5495,7 +5501,7 @@ impl<'ast> ast::visit::Visit<'ast> for RemoveEcho<'ast> {
                 .or(self.second_to_latest_pipe_step);
             if let Some(step_preceding_echo) = step_preceding_echo {
                 let span_to_delete = SrcSpan::new(step_preceding_echo.end, location.start + 4);
-                self.echo_span_to_delete = Some(span_to_delete);
+                self.echo_spans_to_delete.push(span_to_delete);
             }
         }
 
