@@ -3482,14 +3482,17 @@ functions are declared separately from types.";
         }
     }
 
-    // Expect a target name. e.g. `javascript` or `erlang`
-    fn expect_target(&mut self) -> Result<Target, ParseError> {
+    // Expect a target name. e.g. `javascript` or `erlang`.
+    // The location of the preceding left parenthesis is required
+    // to give the correct error span in case the target name is missing.
+    fn expect_target(&mut self, paren_location: SrcSpan) -> Result<Target, ParseError> {
         let (start, t, end) = match self.next_tok() {
             Some(t) => t,
             None => {
                 return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 });
             }
         };
+        let location = SrcSpan::new(start, end);
         match t {
             Token::Name { name } => match name.as_str() {
                 "javascript" => Ok(Target::JavaScript),
@@ -3497,7 +3500,7 @@ functions are declared separately from types.";
                 "js" => {
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
-                            location: SrcSpan { start, end },
+                            location,
                             target: Target::JavaScript,
                         });
                     Ok(Target::JavaScript)
@@ -3505,14 +3508,14 @@ functions are declared separately from types.";
                 "erl" => {
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
-                            location: SrcSpan { start, end },
+                            location,
                             target: Target::Erlang,
                         });
                     Ok(Target::Erlang)
                 }
-                _ => parse_error(ParseErrorType::UnknownTarget, SrcSpan::new(start, end)),
+                _ => parse_error(ParseErrorType::UnknownTarget, location),
             },
-            _ => self.next_tok_unexpected(Target::variant_strings()),
+            _ => parse_error(ParseErrorType::ExpectedTargetName, paren_location),
         }
     }
 
@@ -3761,10 +3764,7 @@ functions are declared separately from types.";
                 let _ = self.expect_one(&Token::LeftParen)?;
                 self.parse_external_attribute(start, end, attributes)
             }
-            "target" => {
-                let _ = self.expect_one(&Token::LeftParen)?;
-                self.parse_target_attribute(start, end, attributes)
-            }
+            "target" => self.parse_target_attribute(start, end, attributes),
             "deprecated" => {
                 let _ = self.expect_one(&Token::LeftParen)?;
                 self.parse_deprecated_attribute(start, end, attributes)
@@ -3782,7 +3782,8 @@ functions are declared separately from types.";
         end: u32,
         attributes: &mut Attributes,
     ) -> Result<u32, ParseError> {
-        let target = self.expect_target()?;
+        let (paren_start, paren_end) = self.expect_one(&Token::LeftParen)?;
+        let target = self.expect_target(SrcSpan::new(paren_start, paren_end))?;
         if attributes.target.is_some() {
             return parse_error(ParseErrorType::DuplicateAttribute, SrcSpan { start, end });
         }
