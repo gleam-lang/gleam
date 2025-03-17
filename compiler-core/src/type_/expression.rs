@@ -1473,7 +1473,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         };
 
         let type_ = value.type_();
-
         let kind = self.infer_assignment_kind(kind.clone());
 
         // Ensure the pattern matches the type of the value
@@ -1485,7 +1484,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             &self.hydrator,
             self.problems,
         );
-        let unify_result = pattern_typer.unify(pattern, type_.clone(), None);
+
+        let value_variable_name = match value {
+            TypedExpr::Var { ref name, .. } => Some(name.clone()),
+            _ => None,
+        };
+        let unify_result = pattern_typer.unify(pattern, type_.clone(), value_variable_name);
 
         let minimum_required_version = pattern_typer.minimum_required_version;
         if minimum_required_version > self.minimum_required_version {
