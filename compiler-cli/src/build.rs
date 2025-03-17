@@ -2,7 +2,7 @@ use std::{rc::Rc, time::Instant};
 
 use gleam_core::{
     Result,
-    build::{Built, Codegen, Mode, NullTelemetry, Options, ProjectCompiler, Telemetry},
+    build::{Built, Codegen, NullTelemetry, Options, ProjectCompiler, Telemetry},
     manifest::Manifest,
     paths::ProjectPaths,
     warning::WarningEmitterIO,
@@ -15,7 +15,7 @@ use crate::{
 };
 
 pub fn download_dependencies(paths: &ProjectPaths, telemetry: impl Telemetry) -> Result<Manifest> {
-    crate::dependencies::download(
+    dependencies::download(
         paths,
         telemetry,
         None,
