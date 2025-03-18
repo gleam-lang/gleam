@@ -3492,7 +3492,6 @@ functions are declared separately from types.";
                 return parse_error(ParseErrorType::UnexpectedEof, SrcSpan { start: 0, end: 0 });
             }
         };
-        let location = SrcSpan::new(start, end);
         match t {
             Token::Name { name } => match name.as_str() {
                 "javascript" => Ok(Target::JavaScript),
@@ -3500,7 +3499,7 @@ functions are declared separately from types.";
                 "js" => {
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
-                            location,
+                            location: SrcSpan::new(start, end),
                             target: Target::JavaScript,
                         });
                     Ok(Target::JavaScript)
@@ -3508,12 +3507,12 @@ functions are declared separately from types.";
                 "erl" => {
                     self.warnings
                         .push(DeprecatedSyntaxWarning::DeprecatedTargetShorthand {
-                            location,
+                            location: SrcSpan::new(start, end),
                             target: Target::Erlang,
                         });
                     Ok(Target::Erlang)
                 }
-                _ => parse_error(ParseErrorType::UnknownTarget, location),
+                _ => parse_error(ParseErrorType::UnknownTarget, SrcSpan::new(start, end)),
             },
             _ => parse_error(ParseErrorType::ExpectedTargetName, paren_location),
         }
