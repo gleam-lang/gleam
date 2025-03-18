@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble.{Wibble}\n\nfn unused() {\n  Wibble\n}\n"
+---
+----- SOURCE CODE
+
+import wibble.{Wibble}
+
+fn unused() {
+  Wibble
+}
+
+
+----- WARNING
+warning: Unused imported item
+  ┌─ /src/warning/wrn.gleam:2:16
+  │
+2 │ import wibble.{Wibble}
+  │                ^^^^^^ This imported constructor is never used
+
+Hint: You can safely remove it.
+
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ fn unused() {
+  │ ^^^^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.

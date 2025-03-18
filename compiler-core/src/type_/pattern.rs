@@ -71,14 +71,8 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
         match &mut self.mode {
             PatternMode::Initial => {
                 // Register usage for the unused variable detection
-                self.environment.init_usage(
-                    name.into(),
-                    EntityKind::Variable {
-                        origin: origin.clone(),
-                    },
-                    location,
-                    self.problems,
-                );
+                self.environment
+                    .init_usage(name.into(), origin.clone(), location, self.problems);
                 // Ensure there are no duplicate variable names in the pattern
                 if self.initial_pattern_vars.contains(name) {
                     return Err(UnifyError::DuplicateVarInPattern { name: name.into() });

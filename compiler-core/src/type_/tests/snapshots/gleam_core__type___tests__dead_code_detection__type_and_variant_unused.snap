@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\ntype PrivateType {\n  PrivateConstructor\n}\n"
+---
+----- SOURCE CODE
+
+type PrivateType {
+  PrivateConstructor
+}
+
+
+----- WARNING
+warning: Unused private type
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ type PrivateType {
+  │ ^^^^^^^^^^^^^^^^ This private type is never used
+
+Hint: You can safely remove it.
+
+warning: Unused private constructor
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   PrivateConstructor
+  │   ^^^^^^^^^^^^^^^^^^ This private constructor is never used
+
+Hint: You can safely remove it.

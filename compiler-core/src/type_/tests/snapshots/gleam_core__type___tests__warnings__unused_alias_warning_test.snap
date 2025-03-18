@@ -13,6 +13,14 @@ pub const one = 1
         
 
 ----- WARNING
+warning: Unused imported value
+  ┌─ /src/warning/wrn.gleam:2:34
+  │
+2 │             import gleam/wibble.{one} as wobble
+  │                                  ^^^ This imported value is never used
+
+Hint: You can safely remove it.
+
 warning: Unused imported module alias
   ┌─ /src/warning/wrn.gleam:2:39
   │
