@@ -220,6 +220,7 @@ jobs:
           gleam export package-information --out="gleam.json"
           cat gleam.json
         working-directory: ./test/project_erlang
+        if: ${{ matrix.run-integration-tests }}
 
       - name: test/external_only_javascript
         run: ./test.sh
