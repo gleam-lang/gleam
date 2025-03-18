@@ -503,9 +503,7 @@ impl RuntimeCheck {
             RuntimeCheck::BitArray { value } => RuntimeCheckKind::BitArray {
                 value: value.clone(),
             },
-            RuntimeCheck::Variant { index, fields: _ } => {
-                RuntimeCheckKind::Variant { index: *index }
-            }
+            RuntimeCheck::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
             RuntimeCheck::NonEmptyList { first: _, rest: _ } => RuntimeCheckKind::NonEmptyList,
         }
@@ -1175,7 +1173,13 @@ impl<'a> Compiler<'a> {
                 },
             ) => {
                 let remaining = prefix1.strip_prefix(prefix0.as_str()).unwrap_or(prefix1);
-                vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                // If the prefixes are exactly the same then the only remaining check
+                // is for the two remaining bits to be the same.
+                if remaining.is_empty() {
+                    vec![rest0.is(*rest1)]
+                } else {
+                    vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                }
             }
 
             (_, _) => unreachable!("invalid pattern overlapping"),
@@ -1325,7 +1329,7 @@ impl BranchSplitter {
     fn add_checked_branch(
         &mut self,
         pattern: Pattern,
-        branch: Branch,
+        mut branch: Branch,
         branch_mode: &BranchMode,
         compiler: &mut Compiler<'_>,
     ) {
@@ -1339,9 +1343,14 @@ impl BranchSplitter {
             // with any of the existing ones. So we add it as a possible new path
             // we might have to go down to in the decision tree.
             self.save_index_of_new_choice(kind.clone());
+
+            let check = compiler.fresh_runtime_check(kind, branch_mode);
+            for new_check in compiler.new_checks(&pattern, &check) {
+                branch.add_check(new_check);
+            }
             let mut branches = self.fallback.clone();
             branches.push_back(branch);
-            let check = compiler.fresh_runtime_check(kind, branch_mode);
+
             self.choices.push((check, branches));
         } else {
             // Otherwise, we know that the check for this branch overlaps with
