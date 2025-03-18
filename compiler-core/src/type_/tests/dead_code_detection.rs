@@ -102,6 +102,17 @@ pub fn public_function() {
 }
 
 #[test]
+fn type_and_variant_unused() {
+    assert_warning!(
+        "
+type PrivateType {
+  PrivateConstructor
+}
+"
+    );
+}
+
+#[test]
 fn imported_module_only_referenced_by_unused_function() {
     assert_warning!(
         (
@@ -157,6 +168,48 @@ import wibble.{type Wibble}
 
 fn unused() -> Wibble {
   panic
+}
+"
+    );
+}
+
+#[test]
+fn imported_value_used_by_public_function() {
+    assert_no_warnings!(
+        ("thepackage", "wibble", "pub type Wibble { Wibble }"),
+        "
+import wibble.{Wibble}
+
+pub fn main() {
+  Wibble
+}
+"
+    );
+}
+
+#[test]
+fn imported_type_used_by_public_function() {
+    assert_no_warnings!(
+        ("thepackage", "wibble", "pub type Wibble { Wibble }"),
+        "
+import wibble.{type Wibble}
+
+pub fn main() -> Wibble {
+  wibble.Wibble
+}
+"
+    );
+}
+
+#[test]
+fn imported_type_used_by_public_function_parameter() {
+    assert_no_warnings!(
+        ("thepackage", "wibble", "pub type Wibble { Wibble }"),
+        "
+import wibble.{type Wibble}
+
+pub fn main(a: Wibble) {
+  a
 }
 "
     );
