@@ -1,6 +1,7 @@
 mod stale_package_remover;
 use crate::error::{FileIoAction, FileKind};
 use crate::io::FileSystemReader;
+use crate::io::ordered_map;
 use crate::manifest::Manifest;
 use crate::requirement::Requirement;
 use crate::version::COMPILER_VERSION;
@@ -135,9 +136,9 @@ pub struct PackageConfig {
     pub description: EcoString,
     #[serde(default, alias = "docs")]
     pub documentation: Docs,
-    #[serde(default)]
+    #[serde(default, serialize_with = "ordered_map")]
     pub dependencies: Dependencies,
-    #[serde(default, rename = "dev-dependencies")]
+    #[serde(default, rename = "dev-dependencies", serialize_with = "ordered_map")]
     pub dev_dependencies: Dependencies,
     #[serde(default)]
     pub repository: Repository,
