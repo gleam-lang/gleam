@@ -252,6 +252,10 @@
 - Fixed a bug where variant inference wouldn't work on `let assert` assignments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the error message for an unknown or missing target name
+  in the target attribute would point to a subsequent token.
+  ([Alexander Keleschovsky](https://github.com/AlecGhost))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter
