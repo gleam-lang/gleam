@@ -1,12 +1,11 @@
 use ecow::EcoString;
 
 use crate::{
-    ast::{SrcSpan, UnqualifiedImport, UntypedImport},
+    ast::{Publicity, SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
-    reference::ReferenceKind,
+    reference::{EntityKind, ReferenceKind},
     type_::{
-        EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
-        ValueConstructorVariant,
+        Environment, Error, ModuleInterface, Problems, UnusedModuleAlias, ValueConstructorVariant,
     },
 };
 
@@ -102,6 +101,13 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             &type_info.parameters,
         );
 
+        self.environment.references.register_type(
+            &type_info.module,
+            &import.name,
+            EntityKind::ImportedType,
+            import.location,
+        );
+
         self.environment.references.register_type_reference(
             type_info.module.clone(),
             import.name.clone(),
@@ -114,15 +120,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             .insert_type_constructor(imported_name.clone(), type_info)
         {
             self.problems.error(e);
-            return;
         }
-
-        self.environment.init_usage(
-            imported_name.clone(),
-            EntityKind::ImportedType,
-            import.location,
-            self.problems,
-        );
     }
 
     fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
@@ -168,16 +166,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         match variant {
             ValueConstructorVariant::Record { name, module, .. } => {
-                self.environment.init_usage(
-                    used_name.clone(),
-                    EntityKind::ImportedConstructor,
-                    location,
-                    self.problems,
-                );
                 self.environment.names.named_constructor_in_scope(
                     module.clone(),
                     name.clone(),
                     used_name.clone(),
+                );
+                self.environment.references.register_value(
+                    module,
+                    import_name,
+                    EntityKind::ImportedConstructor,
+                    location,
+                    Publicity::Private,
                 );
                 self.environment.references.register_value_reference(
                     module.clone(),
@@ -188,11 +187,12 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
             | ValueConstructorVariant::ModuleFn { module, .. } => {
-                self.environment.init_usage(
-                    used_name.clone(),
+                self.environment.references.register_value(
+                    module,
+                    import_name,
                     EntityKind::ImportedValue,
                     location,
-                    self.problems,
+                    Publicity::Private,
                 );
                 self.environment.references.register_value_reference(
                     module.clone(),
@@ -201,12 +201,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     ReferenceKind::Import,
                 );
             }
-            _ => self.environment.init_usage(
-                used_name.clone(),
-                EntityKind::ImportedValue,
-                location,
-                self.problems,
-            ),
+            _ => {}
         };
 
         // Check if value already was imported

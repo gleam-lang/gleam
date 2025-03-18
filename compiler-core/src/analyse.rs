@@ -20,7 +20,7 @@ use crate::{
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
-    reference::{ReferenceKind, ValueKind},
+    reference::{EntityKind, ReferenceKind},
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
         RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
@@ -385,9 +385,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
 
-        environment
-            .references
-            .register_value(&name, ValueKind::Constant, location, publicity);
+        environment.references.register_value(
+            &environment.current_module,
+            &name,
+            EntityKind::Constant,
+            location,
+            publicity,
+        );
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -534,7 +538,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         environment
             .references
-            .register_value(&name, ValueKind::Function, location, publicity);
+            .set_current_function(&environment.current_module, &name);
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -1004,6 +1008,26 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 continue;
             }
 
+            // If the constructor belongs to an opaque type then it's going to be
+            // considered as private.
+            let value_constructor_publicity = if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            };
+
+            environment.references.register_value(
+                &environment.current_module,
+                &constructor.name,
+                EntityKind::Constructor,
+                constructor.location,
+                value_constructor_publicity,
+            );
+
+            environment
+                .references
+                .register_type_reference_in_call_graph(&environment.current_module, name);
+
             let mut field_map_builder = FieldMapBuilder::new(constructor.arguments.len() as u32);
             let mut args_types = Vec::with_capacity(constructor.arguments.len());
             let mut fields = Vec::with_capacity(constructor.arguments.len());
@@ -1065,14 +1089,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             };
             index += 1;
 
-            // If the contructor belongs to an opaque type then it's going to be
-            // considered as private.
-            let value_constructor_publicity = if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            };
-
             // If the whole custom type is deprecated all of its varints are too.
             // Otherwise just the varint(s) attributed as deprecated are.
             let deprecate_constructor = if deprecation.is_deprecated() {
@@ -1089,13 +1105,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     type_: type_.clone(),
                     variant: constructor_info.clone(),
                 },
-            );
-
-            environment.references.register_value(
-                &constructor.name,
-                ValueKind::TypeVariant,
-                constructor.location,
-                value_constructor_publicity,
             );
 
             environment.references.register_value_reference(
@@ -1239,6 +1248,15 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name.clone(),
         );
 
+        if publicity.is_private() {
+            environment.references.register_type(
+                &environment.current_module,
+                name,
+                EntityKind::PrivateType,
+                *location,
+            );
+        }
+
         environment.references.register_type_reference(
             environment.current_module.clone(),
             name.clone(),
@@ -1252,14 +1270,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             });
         }
 
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                &mut self.problems,
-            );
-        };
         Ok(())
     }
 
@@ -1337,16 +1347,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         let result = tryblock();
         self.record_if_error(result);
-
-        // Register the type for detection of dead code.
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                &mut self.problems,
-            );
-        };
     }
 
     fn make_type_vars(
@@ -1401,6 +1401,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         let (name_location, name) = name.as_ref().expect("A module's function must be named");
 
         self.check_name_case(*name_location, name, Named::Function);
+
+        environment.references.register_value(
+            &environment.current_module,
+            name,
+            EntityKind::Function,
+            *location,
+            *publicity,
+        );
 
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for Arg {
