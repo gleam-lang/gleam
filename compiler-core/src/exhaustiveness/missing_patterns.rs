@@ -1,6 +1,7 @@
-use super::{CompileCaseResult, Decision, RuntimeCheck, Variable, printer::Printer};
+use super::{CompileCaseResult, Decision, FallbackCheck, RuntimeCheck, Variable, printer::Printer};
 use crate::type_::environment::Environment;
 use ecow::EcoString;
+use itertools::Itertools;
 use std::collections::{HashMap, HashSet};
 
 /// Returns a list of patterns not covered by the match expression.
@@ -8,18 +9,10 @@ pub fn missing_patterns(
     result: &CompileCaseResult,
     environment: &Environment<'_>,
 ) -> Vec<EcoString> {
-    let mut names = HashSet::new();
-    let mut steps = Vec::new();
-
-    add_missing_patterns(
-        &result.compiled_case.tree,
-        &result.compiled_case.subject_variables,
-        &mut steps,
-        &mut names,
-        environment,
-    );
-
-    let mut missing: Vec<EcoString> = names.into_iter().collect();
+    let subjects = &result.compiled_case.subject_variables;
+    let mut generator = MissingPatternsGenerator::new(subjects, environment);
+    generator.add_missing_patterns(&result.compiled_case.tree);
+    let mut missing = generator.missing.into_iter().collect_vec();
 
     // Sorting isn't necessary, but it makes it a bit easier to write tests.
     missing.sort();
@@ -65,119 +58,141 @@ impl Term {
     }
 }
 
-fn add_missing_patterns(
-    node: &Decision,
-    subjects: &Vec<Variable>,
-    terms: &mut Vec<Term>,
-    missing: &mut HashSet<EcoString>,
-    environment: &Environment<'_>,
-) {
-    match node {
-        Decision::Run { .. } => {}
+struct MissingPatternsGenerator<'a, 'env> {
+    subjects: &'a Vec<Variable>,
+    terms: Vec<Term>,
+    missing: HashSet<EcoString>,
+    environment: &'a Environment<'env>,
+    printer: Printer<'a>,
+}
 
-        Decision::Fail => {
-            let mut mapping = HashMap::new();
-            let printer = Printer::new(&environment.names);
+impl<'a, 'env> MissingPatternsGenerator<'a, 'env> {
+    fn new(subjects: &'a Vec<Variable>, environment: &'a Environment<'env>) -> Self {
+        MissingPatternsGenerator {
+            subjects,
+            terms: vec![],
+            missing: HashSet::new(),
+            environment,
+            printer: Printer::new(&environment.names),
+        }
+    }
 
-            // At this point the terms stack looks something like this:
-            // `[term, term + arguments, term, ...]`. To construct a pattern
-            // name from this stack, we first map all variables to their
-            // term indexes. This is needed because when a term defines
-            // arguments, the terms for those arguments don't necessarily
-            // appear in order in the term stack.
-            //
-            // This mapping is then used when (recursively) generating a
-            // pattern name.
-            //
-            // This approach could probably be done more efficiently, so if
-            // you're reading this and happen to know of a way, please
-            // submit a merge request :)
-            for (index, step) in terms.iter().enumerate() {
-                _ = mapping.insert(step.variable().id, index);
+    fn print_terms(&self, mapping: HashMap<usize, usize>) -> EcoString {
+        self.printer
+            .print_terms(&self.subjects, &self.terms, &mapping)
+    }
+
+    fn add_missing_patterns(&mut self, node: &Decision) {
+        match node {
+            Decision::Run { .. } => {}
+
+            Decision::Guard { if_false, .. } => self.add_missing_patterns(if_false),
+
+            Decision::Fail => {
+                // At this point the terms stack looks something like this:
+                // `[term, term + arguments, term, ...]`. To construct a pattern
+                // name from this stack, we first map all variables to their
+                // term indexes. This is needed because when a term defines
+                // arguments, the terms for those arguments don't necessarily
+                // appear in order in the term stack.
+                //
+                // This mapping is then used when (recursively) generating a
+                // pattern name.
+                //
+                // This approach could probably be done more efficiently, so if
+                // you're reading this and happen to know of a way, please
+                // submit a merge request :)
+                let mut mapping = HashMap::new();
+                for (index, step) in self.terms.iter().enumerate() {
+                    _ = mapping.insert(step.variable().id, index);
+                }
+                let pattern = self.print_terms(mapping);
+                _ = self.missing.insert(pattern);
             }
 
-            let pattern = printer.print_terms(subjects, terms, &mapping);
+            Decision::Switch {
+                var,
+                choices,
+                fallback,
+                fallback_check,
+            } => {
+                for (check, body) in choices {
+                    self.add_missing_patterns_after_check(var, check, body);
+                }
 
-            _ = missing.insert(pattern);
-        }
-
-        Decision::Guard { if_false, .. } => {
-            add_missing_patterns(if_false, subjects, terms, missing, environment);
-        }
-
-        Decision::Switch {
-            var,
-            choices,
-            fallback,
-        } => {
-            for (check, body) in choices {
-                let term = check_to_term(var.clone(), check, environment);
-                terms.push(term);
-                add_missing_patterns(body, subjects, terms, missing, environment);
-                _ = terms.pop();
-            }
-
-            add_missing_patterns(fallback, subjects, terms, missing, environment);
-        }
-
-        Decision::ExhaustiveSwitch { var, choices } => {
-            for (check, body) in choices {
-                let term = check_to_term(var.clone(), check, environment);
-                terms.push(term);
-                add_missing_patterns(body, subjects, terms, missing, environment);
-                _ = terms.pop();
+                match fallback_check {
+                    FallbackCheck::InfiniteCatchAll => {
+                        self.add_missing_patterns(fallback);
+                    }
+                    FallbackCheck::RuntimeCheck { check } => {
+                        self.add_missing_patterns_after_check(var, check, fallback)
+                    }
+                    FallbackCheck::CatchAll { ignored_checks } => {
+                        for check in ignored_checks {
+                            self.add_missing_patterns_after_check(var, check, fallback);
+                        }
+                    }
+                };
             }
         }
     }
-}
 
-fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>) -> Term {
-    match check {
-        RuntimeCheck::Int { .. }
-        | RuntimeCheck::Float { .. }
-        | RuntimeCheck::String { .. }
-        | RuntimeCheck::BitArray { .. }
-        | RuntimeCheck::StringPrefix { .. } => Term::Infinite { variable },
+    fn add_missing_patterns_after_check(
+        &mut self,
+        var: &Variable,
+        check: &RuntimeCheck,
+        body: &Box<Decision>,
+    ) {
+        let term = self.check_to_term(var.clone(), check);
+        self.terms.push(term);
+        self.add_missing_patterns(body);
+        _ = self.terms.pop();
+    }
 
-        RuntimeCheck::Tuple { elements, .. } => Term::Tuple {
-            variable,
-            elements: elements.clone(),
-        },
+    fn check_to_term(&self, variable: Variable, check: &RuntimeCheck) -> Term {
+        match check {
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::BitArray { .. }
+            | RuntimeCheck::StringPrefix { .. } => Term::Infinite { variable },
 
-        RuntimeCheck::Variant {
-            index,
-            fields,
-            labels: _,
-            match_: _,
-        } => {
-            let (module, name) = variable
-                .type_
-                .named_type_name()
-                .expect("Should be a named type");
-
-            let name = env
-                .get_constructors_for_type(&module, &name)
-                .expect("Custom type constructor must have custom type kind")
-                .variants
-                .get(*index)
-                .expect("Custom type constructor exist for type")
-                .name
-                .clone();
-
-            Term::Variant {
+            RuntimeCheck::Tuple { elements, .. } => Term::Tuple {
                 variable,
-                name,
-                module,
-                fields: fields.clone(),
+                elements: elements.clone(),
+            },
+
+            RuntimeCheck::Variant { index, fields, .. } => {
+                let (module, name) = variable
+                    .type_
+                    .named_type_name()
+                    .expect("Should be a named type");
+
+                let name = self
+                    .environment
+                    .get_constructors_for_type(&module, &name)
+                    .expect("Custom type constructor must have custom type kind")
+                    .variants
+                    .get(*index)
+                    .expect("Custom type constructor exist for type")
+                    .name
+                    .clone();
+
+                Term::Variant {
+                    variable,
+                    name,
+                    module,
+                    fields: fields.clone(),
+                }
             }
+
+            RuntimeCheck::NonEmptyList { first, rest } => Term::List {
+                variable,
+                first: first.clone(),
+                rest: rest.clone(),
+            },
+
+            RuntimeCheck::EmptyList => Term::EmptyList { variable },
         }
-
-        RuntimeCheck::NonEmptyList { first, rest } => Term::List {
-            variable,
-            first: first.clone(),
-            rest: rest.clone(),
-        },
-
-        RuntimeCheck::EmptyList => Term::EmptyList { variable },
     }
 }
