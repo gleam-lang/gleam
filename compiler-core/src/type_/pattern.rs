@@ -426,9 +426,11 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .module_types
                             .keys()
                             .any(|type_| type_ == &name),
-                        suggestions: self
-                            .environment
-                            .suggest_modules_for_type_or_value(Imported::Value(name.clone()), None),
+                        suggestions: self.environment.suggest_modules_for_type_or_value(
+                            &name,
+                            Layer::Value,
+                            None,
+                        ),
                     })?;
                 self.environment.increment_usage(&name);
                 let type_ =

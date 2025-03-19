@@ -116,11 +116,14 @@ pub enum TypeOrVariableSuggestion {
 
 impl TypeOrVariableSuggestion {
     pub fn suggestion(&self, name: &str, layer: Layer) -> String {
-        let module = self.name();
-
-        match layer {
-            Layer::Type => format!("Did you mean to import `{module}.{{type {name}}}`?"),
-            Layer::Value => format!("Did you mean to import `{module}.{{{name}}}`"),
+        match self {
+            TypeOrVariableSuggestion::Importable(module) => match layer {
+                Layer::Type => format!("Did you mean to import `{module}.{{type {name}}}`?"),
+                Layer::Value => format!("Did you mean to import `{module}.{{{name}}}`?"),
+            },
+            TypeOrVariableSuggestion::Imported(module) => {
+                format!("Did you mean to update the import of `{module}`?")
+            }
         }
     }
 

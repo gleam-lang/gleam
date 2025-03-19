@@ -23,4 +23,4 @@ error: Unknown type
 The type `Wibble` is not defined or imported in this module.
 There is a value in scope with the name `Wibble`, but no type in scope with
 that name.
-Hint: Did you mean to import `module.{type Wibble}`?
+Hint: Did you mean to update the import of `module`?

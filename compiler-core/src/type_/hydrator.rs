@@ -251,7 +251,8 @@ impl Hydrator {
                             location: *location,
                             hint,
                             suggestions: environment.suggest_modules_for_type_or_value(
-                                Imported::Type(name.clone()),
+                                name,
+                                Layer::Type,
                                 None,
                             ),
                         })

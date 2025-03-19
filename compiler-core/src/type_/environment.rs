@@ -2,7 +2,7 @@ use pubgrub::range::Range;
 
 use crate::{
     analyse::TargetSupport,
-    ast::{PIPE_VARIABLE, Publicity},
+    ast::{Layer, PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
     uid::UniqueIdGenerator,
@@ -393,8 +393,7 @@ impl Environment<'_> {
                 .ok_or_else(|| UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self
-                        .suggest_modules_for_type_or_value(Imported::Type(name.clone()), arity),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Type, arity),
                 }),
 
             Some((module_name, _)) => {
@@ -444,8 +443,7 @@ impl Environment<'_> {
                 UnknownTypeConstructorError::Type {
                     name: name.clone(),
                     hint: self.unknown_type_hint(name),
-                    suggestions: self
-                        .suggest_modules_for_type_or_value(Imported::Type(name.clone()), arity),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Type, arity),
                 }
             }),
 
@@ -483,8 +481,7 @@ impl Environment<'_> {
                     name: name.clone(),
                     variables: self.local_value_names(),
                     type_with_name_in_scope,
-                    suggestions: self
-                        .suggest_modules_for_type_or_value(Imported::Value(name.clone()), arity),
+                    suggestions: self.suggest_modules_for_type_or_value(name, Layer::Value, arity),
                 }
             }),
 
@@ -754,63 +751,89 @@ impl Environment<'_> {
     /// Suggest modules to import or use, for an unqualified type
     pub fn suggest_modules_for_type_or_value(
         &self,
-        imported: Imported,
+        name: &EcoString,
+        layer: Layer,
         arity: Option<usize>,
     ) -> Vec<TypeOrVariableSuggestion> {
+        if layer.is_value() && name.chars().next().is_none_or(|c| c.is_lowercase()) {
+            return vec![];
+        }
+
         let mut suggestions = self
             .importable_modules
             .iter()
-            .filter_map(|(importable, module_info)| {
-                match &imported {
-                    // Don't suggest importing modules if they are already imported
-                    _ if self
-                        .imported_modules
-                        .contains_key(importable.split('/').last().unwrap_or(importable)) =>
-                    {
-                        None
-                    }
-                    Imported::Type(name)
-                        if module_info.get_public_type(name).is_some()
-                            && (arity.is_none()
-                                || module_info.get_public_type(name).unwrap().parameters.len()
-                                    == arity.unwrap()) =>
-                    {
-                        Some(TypeOrVariableSuggestion::Importable(importable.clone()))
-                    }
-                    Imported::Value(name)
-                        if module_info.get_public_value(name).is_some()
-                            && module_info.get_public_value(name).unwrap().type_.fn_arity()
-                                == arity =>
-                    {
-                        Some(TypeOrVariableSuggestion::Importable(importable.clone()))
-                    }
-                    _ => None,
-                }
+            .filter_map(|(importable, module_info)| match layer {
+                Layer::Type => match module_info.get_public_type(name) {
+                    Some(type_) => match arity {
+                        Some(arity) => {
+                            if type_.parameters.len() == arity {
+                                Some(TypeOrVariableSuggestion::Importable(importable.clone()))
+                            } else {
+                                None
+                            }
+                        }
+                        None => Some(TypeOrVariableSuggestion::Importable(importable.clone())),
+                    },
+                    None => None,
+                },
+                Layer::Value => match module_info.get_public_value(name) {
+                    Some(value) => match arity {
+                        Some(_) => {
+                            if value.type_.fn_arity() == arity {
+                                Some(TypeOrVariableSuggestion::Importable(importable.clone()))
+                            } else {
+                                None
+                            }
+                        }
+                        None => Some(TypeOrVariableSuggestion::Importable(importable.clone())),
+                    },
+                    None => None,
+                },
             })
             .collect_vec();
 
-        suggestions.extend(self.imported_modules.iter().filter_map(
-            |(module, (_, module_info))| match &imported {
-                Imported::Type(name)
-                    if module_info.get_public_type(name).is_some()
-                        && (arity.is_none()
-                            || module_info.get_public_type(name).unwrap().parameters.len()
-                                == arity.unwrap()) =>
-                {
-                    Some(TypeOrVariableSuggestion::Imported(module.clone()))
-                }
-                Imported::Value(name)
-                    if module_info.get_public_value(name).is_some()
-                        && module_info.get_public_value(name).unwrap().type_.fn_arity()
-                            == arity =>
-                {
-                    Some(TypeOrVariableSuggestion::Imported(module.clone()))
-                }
-                _ => None,
-            },
-        ));
+        suggestions.extend(
+            self.imported_modules
+                .iter()
+                .filter_map(|(_, (_, module_info))| match layer {
+                    Layer::Type => match module_info.get_public_type(name) {
+                        Some(type_) => match arity {
+                            Some(arity) => {
+                                if type_.parameters.len() == arity {
+                                    Some(TypeOrVariableSuggestion::Imported(
+                                        module_info.name.clone(),
+                                    ))
+                                } else {
+                                    None
+                                }
+                            }
+                            None => {
+                                Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
+                            }
+                        },
+                        None => None,
+                    },
+                    Layer::Value => match module_info.get_public_value(name) {
+                        Some(value) => match arity {
+                            Some(_) => {
+                                if value.type_.fn_arity() == arity {
+                                    Some(TypeOrVariableSuggestion::Imported(
+                                        module_info.name.clone(),
+                                    ))
+                                } else {
+                                    None
+                                }
+                            }
+                            None => {
+                                Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
+                            }
+                        },
+                        None => None,
+                    },
+                }),
+        );
 
-        // Filter and sort options based on if its already imported and on alphabetical order.
+        // Sort options based on if its already imported and on lexicographical order.
         suggestions.into_iter().sorted().collect()
     }
 

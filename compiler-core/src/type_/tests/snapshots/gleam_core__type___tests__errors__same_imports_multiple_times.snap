@@ -35,4 +35,3 @@ error: Unknown variable
   │                                  ^^^
 
 The name `zoo` is not in scope here.
-Hint: Did you mean to import `wibble.{zoo}`
