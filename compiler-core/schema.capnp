@@ -107,6 +107,14 @@ struct TypeConstructor {
   deprecated @4 :Text;
   origin @5 :SrcSpan;
   documentation @6 :Text;
+  kind @7 :TypeKind;
+}
+
+struct TypeKind {
+  union {
+    customType @0 :Void;
+    alias @1 :Void;
+  }
 }
 
 struct AccessorsMap {

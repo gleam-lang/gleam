@@ -214,3 +214,51 @@ pub fn main(a: Wibble) {
 "
     );
 }
+
+#[test]
+fn unused_type_alias() {
+    assert_warning!(
+        "
+type Wibble = Int
+"
+    );
+}
+
+#[test]
+fn private_type_alias_only_referenced_by_unused_function() {
+    assert_warning!(
+        "
+type Wibble = Int
+
+fn unused() -> Wibble {
+  10
+}
+"
+    );
+}
+
+#[test]
+fn private_type_alias_underlying_type_referenced_by_public_function() {
+    assert_warning!(
+        "
+type Wibble = Int
+
+pub fn used() -> Int {
+  10
+}
+"
+    );
+}
+
+#[test]
+fn private_type_alias_referenced_by_public_function() {
+    assert_no_warnings!(
+        "
+type Wibble = Int
+
+pub fn used() -> Wibble {
+  10
+}
+"
+    );
+}

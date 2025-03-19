@@ -5,7 +5,8 @@ use crate::{
     build::Origin,
     reference::{EntityKind, ReferenceKind},
     type_::{
-        Environment, Error, ModuleInterface, Problems, UnusedModuleAlias, ValueConstructorVariant,
+        Environment, Error, ModuleInterface, Problems, TypeKind, UnusedModuleAlias,
+        ValueConstructorVariant,
     },
 };
 
@@ -101,12 +102,20 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             &type_info.parameters,
         );
 
-        self.environment.references.register_type(
-            &type_info.module,
-            &import.name,
-            EntityKind::ImportedType,
-            import.location,
-        );
+        match type_info.kind {
+            TypeKind::CustomType => self.environment.references.register_type(
+                &type_info.module,
+                &import.name,
+                EntityKind::ImportedType,
+                import.location,
+            ),
+            TypeKind::Alias => self.environment.references.register_type_alias(
+                imported_name.clone(),
+                import.location,
+                Publicity::Private,
+                EntityKind::ImportedType,
+            ),
+        }
 
         self.environment.references.register_type_reference(
             type_info.module.clone(),

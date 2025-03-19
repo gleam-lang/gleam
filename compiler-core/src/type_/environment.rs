@@ -666,6 +666,7 @@ impl Environment<'_> {
             let name = match entity {
                 Entity::ModuleValue { name }
                 | Entity::ModuleType { name }
+                | Entity::TypeAlias { name }
                 | Entity::ImportedValue { name, .. }
                 | Entity::ImportedType { name, .. } => name,
             };
