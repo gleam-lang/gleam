@@ -272,18 +272,18 @@ pub struct Body {
     /// The tuples are in the form `(name, value)`, so `(wibble, var)`
     /// corresponds to `let wibble = var`.
     ///
-    bindings: Vec<(EcoString, BoundValue)>,
+    pub bindings: Vec<(EcoString, BoundValue)>,
 
     /// The index of the clause in the case expression that should be run.
     ///
-    clause_index: usize,
+    pub clause_index: usize,
 }
 
 /// A value that can appear on the right hand side of one of the assignments we
 /// find at the top of a body.
 ///
 #[derive(Clone, Eq, PartialEq, Debug)]
-enum BoundValue {
+pub enum BoundValue {
     /// `let a = variable`
     ///
     Variable(Variable),
@@ -577,8 +577,8 @@ impl VariantMatch {
 ///
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Variable {
-    id: usize,
-    type_: Arc<Type>,
+    pub id: usize,
+    pub type_: Arc<Type>,
 }
 
 impl Variable {
@@ -618,12 +618,7 @@ impl Variable {
 /// performing a `PatternCheck` on a variable with a specific type.
 ///
 enum BranchMode {
-    /// This covers numbers, functions, variables, and bitarrays.
-    ///
-    /// TODO)) In the future it won't be the case: bitarrays will be special
-    /// cased to improve on exhaustiveness checking and to be used for code
-    /// generation.
-    ///
+    /// This covers numbers, functions, variables, strings, and bitarrays.
     Infinite,
     Tuple {
         elements: Vec<Arc<Type>>,
@@ -705,13 +700,7 @@ pub enum Decision {
     /// This is the final node of the tree, once we get to this one we know we
     /// have a body to run because a given pattern matched.
     ///
-    Run {
-        // todo)) since the tree is not used for code generation, this field is unused.
-        // But it will be useful once we also use this for code gen purposes and not
-        // just for exhaustiveness checking
-        #[allow(dead_code)]
-        body: Body,
-    },
+    Run { body: Body },
 
     /// We have to make this decision when we run into a branch that also has a
     /// guard: if it is true we can finally run the body of the branch, stored in
@@ -720,13 +709,7 @@ pub enum Decision {
     /// have another `DecisionTree` to traverse, stored in `if_false`.
     ///
     Guard {
-        // todo)) since the tree is not used for code generation, the `guard` and
-        // `if_true` fields are unused.
-        // But they will be useful once we also use this for code gen purposes and not
-        // just for exhaustiveness checking
-        #[allow(dead_code)]
         guard: usize,
-        #[allow(dead_code)]
         if_true: Body,
         if_false: Box<Decision>,
     },
