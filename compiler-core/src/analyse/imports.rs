@@ -5,8 +5,7 @@ use crate::{
     build::Origin,
     reference::{EntityKind, ReferenceKind},
     type_::{
-        Environment, Error, ModuleInterface, Problems, TypeKind, UnusedModuleAlias,
-        ValueConstructorVariant,
+        Environment, Error, ModuleInterface, Problems, UnusedModuleAlias, ValueConstructorVariant,
     },
 };
 
@@ -102,24 +101,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             &type_info.parameters,
         );
 
-        match type_info.kind {
-            TypeKind::CustomType => self.environment.references.register_type(
-                &type_info.module,
-                &import.name,
-                EntityKind::ImportedType,
-                import.location,
-            ),
-            TypeKind::Alias => self.environment.references.register_type_alias(
-                imported_name.clone(),
-                import.location,
-                Publicity::Private,
-                EntityKind::ImportedType,
-            ),
-        }
+        self.environment.references.register_type(
+            imported_name.clone(),
+            EntityKind::ImportedType,
+            import.location,
+            Publicity::Private,
+        );
 
         self.environment.references.register_type_reference(
             type_info.module.clone(),
             import.name.clone(),
+            imported_name,
             import.imported_name_location,
             ReferenceKind::Import,
         );
@@ -181,15 +173,16 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                     used_name.clone(),
                 );
                 self.environment.references.register_value(
-                    module,
-                    import_name,
+                    used_name.clone(),
                     EntityKind::ImportedConstructor,
                     location,
                     Publicity::Private,
                 );
+
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
+                    used_name,
                     import.imported_name_location,
                     ReferenceKind::Import,
                 );
@@ -197,8 +190,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             ValueConstructorVariant::ModuleConstant { module, .. }
             | ValueConstructorVariant::ModuleFn { module, .. } => {
                 self.environment.references.register_value(
-                    module,
-                    import_name,
+                    used_name.clone(),
                     EntityKind::ImportedValue,
                     location,
                     Publicity::Private,
@@ -206,6 +198,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
+                    used_name,
                     import.imported_name_location,
                     ReferenceKind::Import,
                 );

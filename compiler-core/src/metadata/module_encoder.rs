@@ -9,7 +9,7 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
-        TypeAliasConstructor, TypeConstructor, TypeKind, TypeValueConstructor, TypeVar,
+        TypeAliasConstructor, TypeConstructor,  TypeValueConstructor, TypeVar,
         TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
         expression::Implementations,
     },
@@ -283,14 +283,6 @@ impl<'a> ModuleEncoder<'a> {
                 .map(EcoString::as_str)
                 .unwrap_or_default(),
         );
-        self.build_type_kind(builder.init_kind(), constructor.kind);
-    }
-
-    fn build_type_kind(&self, mut builder: type_kind::Builder<'_>, kind: TypeKind) {
-        match kind {
-            TypeKind::CustomType => builder.set_custom_type(()),
-            TypeKind::Alias => builder.set_alias(()),
-        }
     }
 
     fn build_type_alias_constructor(
