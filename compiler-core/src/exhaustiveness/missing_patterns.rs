@@ -144,7 +144,12 @@ fn check_to_term(variable: Variable, check: &RuntimeCheck, env: &Environment<'_>
             elements: elements.clone(),
         },
 
-        RuntimeCheck::Variant { index, fields } => {
+        RuntimeCheck::Variant {
+            index,
+            fields,
+            labels: _,
+            match_: _,
+        } => {
             let (module, name) = variable
                 .type_
                 .named_type_name()
