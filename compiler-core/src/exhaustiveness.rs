@@ -352,6 +352,8 @@ pub enum Pattern {
     },
     Variant {
         index: usize,
+        name: EcoString,
+        module: Option<EcoString>,
         fields: Vec<Id<Pattern>>,
     },
     NonEmptyList {
@@ -473,7 +475,9 @@ pub enum RuntimeCheck {
         value: EcoString,
     },
     Variant {
+        match_: VariantMatch,
         index: usize,
+        labels: HashMap<usize, EcoString>,
         fields: Vec<Variable>,
     },
     NonEmptyList {
@@ -507,6 +511,16 @@ impl RuntimeCheck {
             RuntimeCheck::NonEmptyList { first: _, rest: _ } => RuntimeCheckKind::NonEmptyList,
         }
     }
+
+    pub(crate) fn is_explicitly_matched_on(&self) -> bool {
+        match self {
+            RuntimeCheck::Variant {
+                match_: VariantMatch::NeverExplicitlyMatchedOn { .. },
+                ..
+            } => false,
+            _ => true,
+        }
+    }
 }
 
 #[derive(Eq, PartialEq, Clone, Hash, Debug)]
@@ -520,6 +534,43 @@ pub enum RuntimeCheckKind {
     Variant { index: usize },
     EmptyList,
     NonEmptyList,
+}
+
+/// All possible variant checks are automatically generated beforehand once we
+/// know we are matching on a value with a custom type.
+/// Then if the compiled case is explicitly matching on one of those, we update
+/// it to store additional information: for example how the variant is used
+/// (if qualified or unqualified and if it is aliased).
+///
+/// This way when we get to code generation we can clump all variants that were
+/// never explicitly matched on in a single `else` block without blowing up code
+/// size!
+///
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum VariantMatch {
+    ExplicitlyMatchedOn {
+        name: EcoString,
+        module: Option<EcoString>,
+    },
+    NeverExplicitlyMatchedOn {
+        name: EcoString,
+    },
+}
+
+impl VariantMatch {
+    pub(crate) fn name(&self) -> EcoString {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name, .. } => name.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name } => name.clone(),
+        }
+    }
+
+    pub(crate) fn module(&self) -> Option<EcoString> {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { module, .. } => module.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { .. } => None,
+        }
+    }
 }
 
 /// A variable that can be matched on in a branch.
@@ -1195,6 +1246,15 @@ impl<'a> Compiler<'a> {
     ) -> RuntimeCheck {
         RuntimeCheck::Variant {
             index,
+            match_: VariantMatch::NeverExplicitlyMatchedOn {
+                name: constructor.name.clone(),
+            },
+            labels: constructor
+                .parameters
+                .iter()
+                .enumerate()
+                .filter_map(|(i, parameter)| Some((i, parameter.label.clone()?)))
+                .collect(),
             fields: constructor
                 .parameters
                 .iter()
@@ -1357,10 +1417,10 @@ impl BranchSplitter {
             // as part of those existing paths.
             // We'll add the branch with its newly discovered checks only to those
             // paths.
-            for index in indices_of_overlapping_checks {
+            for index in indices_of_overlapping_checks.iter() {
                 let (overlapping_check, branches) = self
                     .choices
-                    .get_mut(index)
+                    .get_mut(*index)
                     .expect("check to already be a choice");
 
                 let mut branch = branch.clone();
@@ -1368,6 +1428,21 @@ impl BranchSplitter {
                     branch.add_check(new_check);
                 }
                 branches.push_back(branch);
+            }
+        }
+
+        // Then we have to update all variant checks with any new name/module
+        // we might have discovered from the pattern to make sure we're using
+        // the correct qualification to refer to each constructor.
+        if let Pattern::Variant { name, module, .. } = pattern {
+            for index in indices_of_overlapping_checks {
+                let (check, _) = self.choices.get_mut(index).expect("");
+                if let RuntimeCheck::Variant { match_, .. } = check {
+                    *match_ = VariantMatch::ExplicitlyMatchedOn {
+                        module: module.clone(),
+                        name: name.clone(),
+                    }
+                }
             }
         }
     }
@@ -1712,14 +1787,22 @@ impl CaseToCompile {
             TypedPattern::Constructor {
                 arguments,
                 constructor,
+                name,
+                module,
                 ..
             } => {
                 let index = constructor.expect_ref("must be inferred").constructor_index as usize;
+                let module = module.as_ref().map(|(module, _)| module.clone());
                 let fields = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
-                self.insert(Pattern::Variant { index, fields })
+                self.insert(Pattern::Variant {
+                    name: name.clone(),
+                    module,
+                    index,
+                    fields,
+                })
             }
 
             TypedPattern::BitArray { location, .. } => {
