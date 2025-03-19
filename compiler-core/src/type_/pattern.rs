@@ -831,6 +831,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                 self.environment.references.register_value_reference(
                     pattern_constructor.module.clone(),
                     pattern_constructor.name.clone(),
+                    &name,
                     name_location,
                     if module.is_some() {
                         ReferenceKind::Qualified

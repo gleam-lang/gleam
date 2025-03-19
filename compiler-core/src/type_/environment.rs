@@ -5,7 +5,7 @@ use crate::{
     ast::{PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
-    reference::{Entity, EntityKind, ReferenceTracker},
+    reference::{EntityKind, ReferenceTracker},
     uid::UniqueIdGenerator,
 };
 
@@ -119,13 +119,13 @@ impl<'a> Environment<'a> {
             importable_modules,
             imported_module_aliases: HashMap::new(),
             unused_module_aliases: HashMap::new(),
-            current_module: current_module.clone(),
+            current_module,
             local_variable_usages: vec![HashMap::new()],
             target_support,
             names,
             module_type_aliases: HashMap::new(),
             echo_found: false,
-            references: ReferenceTracker::new(current_module),
+            references: ReferenceTracker::new(),
         }
     }
 }
@@ -663,47 +663,33 @@ impl Environment<'_> {
         }
 
         for (entity, info) in self.references.unused_values() {
-            let name = match entity {
-                Entity::ModuleValue { name }
-                | Entity::ModuleType { name }
-                | Entity::TypeAlias { name }
-                | Entity::ImportedValue { name, .. }
-                | Entity::ImportedType { name, .. } => name,
-            };
+            let name = entity.name;
+            let location = info.origin;
 
             let warning = match info.kind {
-                EntityKind::Function => Warning::UnusedPrivateFunction {
-                    location: info.origin,
-                    name,
-                },
-                EntityKind::Constant => Warning::UnusedPrivateModuleConstant {
-                    location: info.origin,
-                    name,
-                },
+                EntityKind::Function => Warning::UnusedPrivateFunction { location, name },
+                EntityKind::Constant => Warning::UnusedPrivateModuleConstant { location, name },
                 EntityKind::Constructor => Warning::UnusedConstructor {
-                    location: info.origin,
+                    location,
                     name,
                     imported: false,
                 },
                 EntityKind::ImportedType => Warning::UnusedType {
                     name,
                     imported: true,
-                    location: info.origin,
+                    location,
                 },
                 EntityKind::ImportedConstructor => Warning::UnusedConstructor {
                     name,
                     imported: true,
-                    location: info.origin,
+                    location,
                 },
                 EntityKind::PrivateType => Warning::UnusedType {
                     name,
                     imported: false,
-                    location: info.origin,
+                    location,
                 },
-                EntityKind::ImportedValue => Warning::UnusedImportedValue {
-                    name,
-                    location: info.origin,
-                },
+                EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
             };
             problems.warning(warning);
         }

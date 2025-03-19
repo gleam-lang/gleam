@@ -1109,6 +1109,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.environment.references.register_value_reference(
                     module_name.clone(),
                     label.clone(),
+                    &label,
                     SrcSpan::new(field_start, location.end),
                     ReferenceKind::Qualified,
                 );
@@ -2353,6 +2354,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.environment.references.register_value_reference(
                             module_name.clone(),
                             label.clone(),
+                            &label,
                             location,
                             ReferenceKind::Qualified,
                         );
@@ -3077,16 +3079,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.environment.references.register_value_reference(
                     module.clone(),
                     value_name.clone(),
+                    referenced_name,
                     location,
                     ReferenceKind::Alias,
                 )
             }
             ValueConstructorVariant::ModuleFn { name, module, .. }
             | ValueConstructorVariant::Record { name, module, .. }
-            | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
-                .environment
-                .references
-                .register_value_reference(module.clone(), name.clone(), location, kind),
+            | ValueConstructorVariant::ModuleConstant { name, module, .. } => {
+                self.environment.references.register_value_reference(
+                    module.clone(),
+                    name.clone(),
+                    referenced_name,
+                    location,
+                    kind,
+                )
+            }
             ValueConstructorVariant::LocalVariable { .. }
             | ValueConstructorVariant::LocalConstant { .. } => {}
         }

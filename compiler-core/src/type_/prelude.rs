@@ -9,7 +9,7 @@ use crate::{
 };
 
 use super::{
-    ModuleInterface, Opaque, References, Type, TypeConstructor, TypeKind, TypeValueConstructor,
+    ModuleInterface, Opaque, References, Type, TypeConstructor, TypeValueConstructor,
     TypeValueConstructorField, TypeVar, TypeVariantConstructors, ValueConstructor,
     ValueConstructorVariant,
 };
@@ -259,7 +259,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                     publicity: Publicity::Public,
                     deprecation: NotDeprecated,
                     documentation: None,
-                    kind: TypeKind::CustomType,
                 };
                 let _ = prelude.types.insert(BIT_ARRAY.into(), v.clone());
             }
@@ -326,7 +325,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
             }
@@ -342,7 +340,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
             }
@@ -358,7 +355,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
             }
@@ -375,7 +371,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
             }
@@ -407,7 +402,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -439,7 +433,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
                 let _ = prelude.types_value_constructors.insert(
@@ -516,7 +509,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
             }
@@ -532,7 +524,6 @@ pub fn build_prelude(ids: &UniqueIdGenerator) -> ModuleInterface {
                         publicity: Publicity::Public,
                         deprecation: NotDeprecated,
                         documentation: None,
-                        kind: TypeKind::CustomType,
                     },
                 );
             }
