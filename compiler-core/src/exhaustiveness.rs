@@ -512,13 +512,13 @@ impl RuntimeCheck {
         }
     }
 
-    pub(crate) fn is_explicitly_matched_on(&self) -> bool {
+    pub(crate) fn is_ignored(&self) -> bool {
         match self {
             RuntimeCheck::Variant {
                 match_: VariantMatch::NeverExplicitlyMatchedOn { .. },
                 ..
-            } => false,
-            _ => true,
+            } => true,
+            _ => false,
         }
     }
 }
@@ -633,7 +633,7 @@ enum BranchMode {
 }
 
 impl BranchMode {
-    fn needs_fallback(&self) -> bool {
+    fn is_infinite(&self) -> bool {
         match self {
             BranchMode::Infinite => true,
             BranchMode::Tuple { .. } | BranchMode::List { .. } | BranchMode::NamedType { .. } => {
@@ -719,24 +719,23 @@ pub enum Decision {
     /// we have to go down to. If none of the checks matches, then we'll have to
     /// go down the `fallback` branch.
     ///
+    /// The type system guarantees that all switches will always have at least
+    /// one last choice that acts as a fallback to pick if none of the others
+    /// matches; no matter the value we're matching on.
+    ///
+    /// In case we're dealing with exhaustive cases (for example on lists/custom
+    /// types) we also keep track of the final check associated with the final
+    /// branch: keep in mind, we don't actually have to run that check because
+    /// we know that the type system guarantees it will always match; but it
+    /// can hold useful informations for type generation so we keep it around.
+    /// You can read the doc for `FallbackCheck` to find out a more in depth
+    /// explanation and some examples!
+    ///
     Switch {
         var: Variable,
         choices: Vec<(RuntimeCheck, Box<Decision>)>,
         fallback: Box<Decision>,
-    },
-
-    /// This is similar to a `Switch` node: we're still picking a possible path
-    /// to follow based on a runtime check. The key difference is that we know
-    /// that one of those is always going to match and so there's no use for a
-    /// fallback branch.
-    ///
-    /// This is used when matching on custom types (and lists!) when we know
-    /// that there's a limited number of choices and exhaustiveness checking
-    /// ensures we'll always deal with all the possible cases.
-    ///
-    ExhaustiveSwitch {
-        var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        fallback_check: FallbackCheck,
     },
 
     /// This is a special node: it represents a missing pattern. If a tree
@@ -745,6 +744,64 @@ pub enum Decision {
     /// what kind of pattern doesn't match!
     ///
     Fail,
+}
+
+/// When we have a swith in the decision tree we know there's always going to be
+/// at least one choice that comes last and we know is going to match no matter
+/// what. This might fall under three different categories.
+///
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum FallbackCheck {
+    /// This corresponds to the catch all added at the end of a case expression
+    /// matching on an infinite type.
+    ///
+    /// ```txt
+    /// case todo {
+    ///   1 -> todo
+    ///   _ -> todo
+    ///   ─┬───────
+    //     ╰── when matching on an infinite type there's going to be a catch all
+    /// }
+    ///
+    InfiniteCatchAll,
+
+    /// This happens when we're matching on a variant whose checks are all
+    /// explicitly written down:
+    ///
+    /// ```txt
+    /// case todo {
+    ///   Ok(_) -> todo
+    ///   Error(Nil) -> todo
+    ///   ─┬────────────────
+    //     ╰── when matching on a custom type (or list!) we'll have to write all
+    //         variants down, so there's always going to be a last one.
+    /// }
+    /// ```
+    ///
+    /// The type system will make sure that this last check will always match,
+    /// no matter what, if none of the other checks matches. We still keep the
+    /// correspongin runtime check around because it's useful for code generation!
+    ///
+    RuntimeCheck { check: RuntimeCheck },
+
+    /// This is a special case for a catch all! It happens when we're matching
+    /// on a variant and use a catch all pattern:
+    ///
+    /// ```txt
+    /// case todo {
+    ///   Ok(_) -> todo
+    ///   _ -> todo
+    ///   ─┬───────
+    ///    ╰── here we know we're just skipping over the `Error` variant with
+    ///       this catch all.
+    /// }
+    /// ```
+    ///
+    /// We know exactly which variants we're skipping, so we keep track of
+    /// those skipped checks (they will end up being useful for reporting
+    /// missing patterns!)
+    ///
+    CatchAll { ignored_checks: Vec<RuntimeCheck> },
 }
 
 impl Decision {
@@ -758,22 +815,6 @@ impl Decision {
             if_true,
             if_false: Box::new(if_false),
         }
-    }
-
-    pub fn switch(
-        var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
-        fallback: Decision,
-    ) -> Self {
-        Self::Switch {
-            var,
-            choices,
-            fallback: Box::new(fallback),
-        }
-    }
-
-    fn exhaustive_switch(var: Variable, choices: Vec<(RuntimeCheck, Box<Decision>)>) -> Decision {
-        Self::ExhaustiveSwitch { var, choices }
     }
 }
 
@@ -986,19 +1027,12 @@ impl<'a> Compiler<'a> {
         // choices they've been split up into.
         let mut splitter = BranchSplitter::from_checks(known_checks);
         self.split_branches(&mut splitter, branches, pivot_var.clone(), &branch_mode);
-        let choices = splitter
-            .choices
-            .into_iter()
-            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
-            .collect_vec();
-
-        if branch_mode.needs_fallback() {
+        if branch_mode.is_infinite() {
             // If the branching is infinite, that means we always need to also have
             // a fallback (imagine you're pattern matching on an `Int` and put no
             // `_` at the end of the case expression).
-            let fallback = self.compile(splitter.fallback);
-            Decision::switch(pivot_var, choices, fallback)
-        } else if choices.is_empty() {
+            self.splitter_to_switch(pivot_var, splitter)
+        } else if splitter.choices.is_empty() {
             // If the branching doesn't need any fallback but we ended up with no
             // checks it means we're trying to pattern match on an external type
             // but haven't provided a catch-all case.
@@ -1008,7 +1042,7 @@ impl<'a> Compiler<'a> {
         } else {
             // Otherwise we know that one of the possible runtime checks is always
             // going to succeed and there's no need to also have a fallback branch.
-            Decision::exhaustive_switch(pivot_var, choices)
+            self.splitter_to_exhaustive_switch(pivot_var, splitter)
         }
     }
 
@@ -1037,6 +1071,76 @@ impl<'a> Compiler<'a> {
 
             splitter.add_checked_branch(checked_pattern, branch, branch_mode, self);
         }
+    }
+
+    /// Compiles the branches in a splitter down to a switch matching on a type
+    /// with infinite variants (like ints, floats and strings). With a fallaback
+    /// branch.
+    ///
+    fn splitter_to_switch(&mut self, var: Variable, splitter: BranchSplitter) -> Decision {
+        let choices = self.compile_all_choices(splitter.choices);
+        let last_choice = self.compile(splitter.fallback);
+        Decision::Switch {
+            var,
+            choices,
+            fallback: Box::new(last_choice),
+            fallback_check: FallbackCheck::InfiniteCatchAll,
+        }
+    }
+
+    /// Compiles the branches in a splitter down to a switch matching on a type
+    /// with a finite known number of variants.
+    ///
+    fn splitter_to_exhaustive_switch(
+        &mut self,
+        var: Variable,
+        splitter: BranchSplitter,
+    ) -> Decision {
+        let mut choices = splitter.choices;
+        let (choices, fallback, fallback_check) =
+            if choices.iter().any(|(check, _)| check.is_ignored()) {
+                // If there's any check that is ignored and not explicitly being
+                // matched on then we want to ignore all of those and clump them
+                // into a single "fallback" branch to avoid bloating the generated
+                // tree.
+                let mut ignored_checks = vec![];
+                let mut remaining_choices = vec![];
+                for choice in choices.into_iter() {
+                    if choice.0.is_ignored() {
+                        ignored_checks.push(choice.0)
+                    } else {
+                        remaining_choices.push(choice)
+                    }
+                }
+
+                let fallback_check = FallbackCheck::CatchAll { ignored_checks };
+                (remaining_choices, splitter.fallback, fallback_check)
+            } else {
+                // Otherwise we just use the last check as the final one that
+                // can be outright skipped.
+                let (last_check, last_choice) = choices.pop().expect("at least one choice");
+                let fallback_check = FallbackCheck::RuntimeCheck { check: last_check };
+                (choices, last_choice, fallback_check)
+            };
+
+        let choices = self.compile_all_choices(choices);
+        let fallback = Box::new(self.compile(fallback));
+        Decision::Switch {
+            var,
+            choices,
+            fallback,
+            fallback_check,
+        }
+    }
+
+    fn compile_all_choices(
+        &mut self,
+        choices: Vec<(RuntimeCheck, VecDeque<Branch>)>,
+    ) -> Vec<(RuntimeCheck, Box<Decision>)> {
+        choices
+            .into_iter()
+            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
+            .collect_vec()
     }
 
     /// Turns a `RuntimeCheckKind` into a new `RuntimeCheck` by coming up with
