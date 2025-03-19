@@ -16,7 +16,7 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, ModuleInterface, Opaque, RecordAccessor,
-        References, Type, TypeAliasConstructor, TypeConstructor, TypeValueConstructor,
+        References, Type, TypeAliasConstructor, TypeConstructor, TypeKind, TypeValueConstructor,
         TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, expression::Implementations,
     },
@@ -179,6 +179,15 @@ impl ModuleDecoder {
             type_,
             deprecation,
             documentation: self.optional_string(self.str(reader.get_documentation()?)?),
+            kind: self.type_kind(reader.get_kind()?)?,
+        })
+    }
+
+    fn type_kind(&self, reader: type_kind::Reader<'_>) -> Result<TypeKind> {
+        use schema::type_kind::Which;
+        Ok(match reader.which()? {
+            Which::CustomType(_) => TypeKind::CustomType,
+            Which::Alias(_) => TypeKind::Alias,
         })
     }
 

@@ -13,8 +13,9 @@ use crate::{
     reference::{Reference, ReferenceKind},
     type_::{
         self, Deprecation, ModuleInterface, Opaque, References, Type, TypeAliasConstructor,
-        TypeConstructor, TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors,
-        ValueConstructor, ValueConstructorVariant, expression::Implementations, prelude,
+        TypeConstructor, TypeKind, TypeValueConstructor, TypeValueConstructorField,
+        TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
+        expression::Implementations, prelude,
     },
     uid::UniqueIdGenerator,
 };
@@ -160,6 +161,7 @@ fn module_with_private_type() {
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
                 documentation: None,
+                kind: TypeKind::Alias,
             },
         )]
         .into(),
@@ -196,6 +198,7 @@ fn module_with_app_type() {
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
                 documentation: None,
+                kind: TypeKind::Alias,
             },
         )]
         .into(),
@@ -232,6 +235,7 @@ fn module_with_fn_type() {
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
                 documentation: None,
+                kind: TypeKind::Alias,
             },
         )]
         .into(),
@@ -268,6 +272,7 @@ fn module_with_tuple_type() {
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
                 documentation: None,
+                kind: TypeKind::Alias,
             },
         )]
         .into(),
@@ -310,6 +315,7 @@ fn module_with_generic_type() {
                     parameters: vec![t1, t2],
                     deprecation: Deprecation::NotDeprecated,
                     documentation: None,
+                    kind: TypeKind::Alias,
                 },
             )]
             .into(),
@@ -351,6 +357,7 @@ fn module_with_type_links() {
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
                     documentation: None,
+                    kind: TypeKind::CustomType,
                 },
             )]
             .into(),
@@ -392,6 +399,7 @@ fn module_with_type_constructor_documentation() {
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
                     documentation: Some("type documentation".into()),
+                    kind: TypeKind::CustomType,
                 },
             )]
             .into(),
@@ -436,6 +444,7 @@ fn module_with_type_constructor_origin() {
                     parameters: vec![],
                     deprecation: Deprecation::NotDeprecated,
                     documentation: None,
+                    kind: TypeKind::CustomType,
                 },
             )]
             .into(),
@@ -1411,6 +1420,7 @@ fn deprecated_type() {
                     message: "oh no".into(),
                 },
                 documentation: None,
+                kind: TypeKind::CustomType,
             },
         )]
         .into(),
@@ -1720,6 +1730,7 @@ fn type_with_inferred_variant() {
                 parameters: vec![],
                 deprecation: Deprecation::NotDeprecated,
                 documentation: None,
+                kind: TypeKind::CustomType,
             },
         )]
         .into(),
