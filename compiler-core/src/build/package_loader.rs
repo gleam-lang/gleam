@@ -116,7 +116,7 @@ where
         for module in CacheFiles::modules_with_meta_files(&self.io, &self.artefact_directory) {
             if (!inputs.contains_key(&module)) {
                 tracing::debug!(%module, "module_removed");
-                CacheFiles::new(&self.artefact_directory, &module).delete(&self.io);
+                CacheFiles::new(&self.artefact_directory, &module).delete(&self.io)?;
                 self.stale_modules.add(module);
             }
         }
@@ -271,7 +271,7 @@ where
         // next time the dependencies might no longer be stale, but we still need to be able to tell
         // that this module needs to be recompiled until it successfully compiles at least once.
         // This can happen if the stale dependency includes breaking changes.
-        CacheFiles::new(&self.artefact_directory, &cached.name).delete(&self.io);
+        CacheFiles::new(&self.artefact_directory, &cached.name).delete(&self.io)?;
 
         read_source(
             self.io.clone(),
@@ -1788,11 +1788,10 @@ impl CacheFiles {
         }
     }
 
-    pub fn delete(&self, io: &dyn io::FileSystemWriter) {
-        // TODO: Should we check for errors here?
-        let _ = io.delete_file(&self.cache_path);
-        let _ = io.delete_file(&self.meta_path);
-        let _ = io.delete_file(&self.warnings_path);
+    pub fn delete(&self, io: &dyn io::FileSystemWriter) -> Result<()> {
+        io.delete_file(&self.cache_path)?;
+        io.delete_file(&self.meta_path)?;
+        io.delete_file(&self.warnings_path)
     }
 
     /// Iterates over `.cache_meta` files in the given directory,
