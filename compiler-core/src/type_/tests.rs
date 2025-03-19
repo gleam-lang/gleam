@@ -46,34 +46,15 @@ macro_rules! assert_infer {
 }
 
 #[macro_export]
-macro_rules! assert_infer_with_module {
-    (
-        ($name1:expr, $module_src1:literal),
-        ($name2:expr, $module_src2:literal),
-        $src:expr, $module:expr $(,)?
-    ) => {
-        let constructors = $crate::type_::tests::infer_module(
-            $src,
-            vec![
-                ("thepackage", $name1, $module_src1),
-                ("thepackage", $name2, $module_src2),
-            ],
-        );
-        let expected = $crate::type_::tests::stringify_tuple_strs($module);
-
-        assert_eq!(($src, constructors), ($src, expected));
-    };
-    (($name:expr, $module_src:literal), $src:expr, $module:expr $(,)?) => {
-        let constructors =
-            $crate::type_::tests::infer_module($src, vec![("thepackage", $name, $module_src)]);
-        let expected = $crate::type_::tests::stringify_tuple_strs($module);
-
-        assert_eq!(($src, constructors), ($src, expected));
-    };
-}
-
-#[macro_export]
 macro_rules! assert_module_infer {
+    ($(($name:expr, $module_src:literal)),+, $src:literal, $module:expr $(,)?) => {
+        let constructors =
+            $crate::type_::tests::infer_module($src, vec![$(("thepackage", $name, $module_src)),*]);
+        let expected = $crate::type_::tests::stringify_tuple_strs($module);
+
+        assert_eq!(($src, constructors), ($src, expected));
+    };
+
     ($src:expr, $module:expr $(,)?) => {{
         let constructors = $crate::type_::tests::infer_module($src, vec![]);
         let expected = $crate::type_::tests::stringify_tuple_strs($module);
@@ -100,6 +81,22 @@ macro_rules! assert_module_error {
     ($src:expr) => {
         let error = $crate::type_::tests::module_error($src, vec![]);
         let output = format!("----- SOURCE CODE\n{}\n\n----- ERROR\n{}", $src, error);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
+        let error = $crate::type_::tests::module_error(
+            $src,
+            vec![
+                $(("thepackage", $name, $module_src)),*
+            ],
+        );
+
+        let mut output = String::from("----- SOURCE CODE\n");
+        for (name, src) in [$(($name, $module_src)),*] {
+            output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
+        }
+        output.push_str(&format!("-- main.gleam\n{}\n\n----- ERROR\n{error}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 }
@@ -161,57 +158,6 @@ macro_rules! assert_error {
     };
 }
 
-#[macro_export]
-macro_rules! assert_with_module_error {
-    (($name:expr, $module_src:literal), $src:expr $(,)?) => {
-        let error =
-            $crate::type_::tests::module_error($src, vec![("thepackage", $name, $module_src)]);
-        let output = format!(
-            "----- SOURCE CODE
--- {}.gleam
-{}
-
--- main.gleam
-{}
-
------ ERROR
-{}",
-            $name, $module_src, $src, error
-        );
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-
-    (
-        ($name:expr, $module_src:literal),
-        ($name2:expr, $module_src2:literal),
-        $src:expr $(,)?
-    ) => {
-        let error = $crate::type_::tests::module_error(
-            $src,
-            vec![
-                ("thepackage", $name, $module_src),
-                ("thepackage", $name2, $module_src2),
-            ],
-        );
-        let output = format!(
-            "----- SOURCE CODE
--- {}.gleam
-{}
-
--- {}.gleam
-{}
-
--- main.gleam
-{}
-
------ ERROR
-{}",
-            $name, $module_src, $name2, $module_src2, $src, error
-        );
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-}
-
 fn get_warnings(
     src: &str,
     deps: Vec<DependencyModule<'_>>,
@@ -250,8 +196,15 @@ fn print_warnings(warnings: Vec<crate::warning::Warning>) -> String {
 }
 
 #[macro_export]
-macro_rules! assert_warnings_with_imports {
-    ($(($name:literal, $module_src:literal)),+; $src:literal,) => {
+macro_rules! assert_warning {
+    ($src:expr) => {
+        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], crate::build::Target::Erlang, None);
+        assert!(!warning.is_empty());
+        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
+        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
+    };
+
+    ($(($name:expr, $module_src:literal)),+, $src:literal $(,)?) => {
         let warning = $crate::type_::tests::get_printed_warnings(
             $src,
             vec![
@@ -266,28 +219,6 @@ macro_rules! assert_warnings_with_imports {
             output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
         }
         output.push_str(&format!("-- main.gleam\n{}\n\n----- WARNING\n{warning}", $src));
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-}
-
-#[macro_export]
-macro_rules! assert_warning {
-    ($src:expr) => {
-        let warning = $crate::type_::tests::get_printed_warnings($src, vec![], crate::build::Target::Erlang, None);
-        assert!(!warning.is_empty());
-        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
-        insta::assert_snapshot!(insta::internals::AutoName, output, $src);
-    };
-
-    ($(($name:expr, $module_src:literal)),+, $src:expr) => {
-        let warning = $crate::type_::tests::get_printed_warnings(
-            $src,
-            vec![$(("thepackage", $name, $module_src)),*],
-            crate::build::Target::Erlang,
-            None
-        );
-        assert!(!warning.is_empty());
-        let output = format!("----- SOURCE CODE\n{}\n\n----- WARNING\n{}", $src, warning);
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
 
@@ -2022,7 +1953,7 @@ pub fn get(wibble) {
 
 #[test]
 fn variant_inference_for_imported_type() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         (
             "wibble",
             "
@@ -2048,7 +1979,7 @@ pub fn main(wibble) {
 
 #[test]
 fn local_variable_variant_inference_for_imported_type() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         (
             "wibble",
             "
@@ -3116,7 +3047,7 @@ fn wibble() {
 
 #[test]
 fn private_types_not_available_in_other_modules() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "type Wibble"),
         "
 import wibble

@@ -37,10 +37,10 @@ mod use_;
 pub static CURRENT_PACKAGE: &str = "thepackage";
 
 #[macro_export]
-macro_rules! assert_js_with_multiple_imports {
-    ($(($name:literal, $module_src:literal)),+; $src:literal) => {
+macro_rules! assert_js {
+    ($(($name:literal, $module_src:literal)),+, $src:literal $(,)?) => {
         let compiled =
-            $crate::javascript::tests::compile_js($src, vec![$((CURRENT_PACKAGE, $name, $module_src)),*]).expect("compilation failed");
+            $crate::javascript::tests::compile_js($src, vec![$(($crate::javascript::tests::CURRENT_PACKAGE, $name, $module_src)),*]).expect("compilation failed");
             let mut output = String::from("----- SOURCE CODE\n");
             for (name, src) in [$(($name, $module_src)),*] {
                 output.push_str(&format!("-- {name}.gleam\n{src}\n\n"));
@@ -48,10 +48,7 @@ macro_rules! assert_js_with_multiple_imports {
             output.push_str(&format!("-- main.gleam\n{}\n\n----- COMPILED JAVASCRIPT\n{compiled}", $src));
         insta::assert_snapshot!(insta::internals::AutoName, output, $src);
     };
-}
 
-#[macro_export]
-macro_rules! assert_js {
     (($dep_package:expr, $dep_name:expr, $dep_src:expr), $src:expr $(,)?) => {{
         let compiled =
             $crate::javascript::tests::compile_js($src, vec![($dep_package, $dep_name, $dep_src)])

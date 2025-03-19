@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport wibble\n\npub fn main() {\n  wibble.println\n  1\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub fn println(a) { Nil }
+
+-- main.gleam
 
 import wibble
 

@@ -1,7 +1,5 @@
 use crate::{assert_js, assert_ts_def};
 
-use super::CURRENT_PACKAGE;
-
 #[test]
 fn exported_functions() {
     assert_js!(
@@ -212,7 +210,7 @@ fn reserved_word_fn() {
 #[test]
 fn reserved_word_imported() {
     assert_js!(
-        (CURRENT_PACKAGE, "for", "pub fn class() { 1 }"),
+        ("for", "pub fn class() { 1 }"),
         r#"import for.{class}
 
 pub fn export() {
@@ -225,7 +223,7 @@ pub fn export() {
 #[test]
 fn reserved_word_imported_alias() {
     assert_js!(
-        (CURRENT_PACKAGE, "for", "pub fn class() { 1 }"),
+        ("for", "pub fn class() { 1 }"),
         r#"import for.{class as while} as function
 
 pub fn export() {
@@ -370,7 +368,7 @@ pub fn version(n) {
 #[test]
 fn pipe_shadow_import() {
     assert_js!(
-        (CURRENT_PACKAGE, "wibble", "pub fn println(x: String) {  }"),
+        ("wibble", "pub fn println(x: String) {  }"),
         r#"
         import wibble.{println}
         pub fn main() {

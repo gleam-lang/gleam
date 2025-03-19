@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "\nimport x as y\nconst z = y.v\n"
 ---
 ----- SOURCE CODE
+-- x.gleam
+pub const v = 1
+
+-- main.gleam
 
 import x as y
 const z = y.v

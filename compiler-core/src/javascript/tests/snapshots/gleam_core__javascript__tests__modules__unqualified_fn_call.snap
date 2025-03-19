@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "import rocket_ship.{launch}\npub fn go() { launch() }\n"
 ---
 ----- SOURCE CODE
+-- rocket_ship.gleam
+pub fn launch() { 1 }
+
+-- main.gleam
 import rocket_ship.{launch}
 pub fn go() { launch() }
 

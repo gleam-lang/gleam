@@ -1,6 +1,5 @@
 use crate::{
     assert_error, assert_internal_module_error, assert_module_error, assert_module_syntax_error,
-    assert_with_module_error,
 };
 
 #[test]
@@ -1772,7 +1771,7 @@ fn negate_string() {
 
 #[test]
 fn ambiguous_type_error() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Thing { Thing }"),
         "import wibble pub type Thing { Thing }
         pub fn main() {
@@ -1783,7 +1782,7 @@ fn ambiguous_type_error() {
 
 #[test]
 fn ambiguous_import_error_no_unqualified() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble/sub", "pub fn wobble() { 1 }"),
         ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
@@ -1798,7 +1797,7 @@ fn ambiguous_import_error_no_unqualified() {
 
 #[test]
 fn ambiguous_import_error_with_unqualified() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble/sub", "pub fn wobble() { 1 }"),
         ("wibble2/sub", "pub fn wobble() { 1 }"),
         "
@@ -1813,7 +1812,7 @@ fn ambiguous_import_error_with_unqualified() {
 
 #[test]
 fn same_imports_multiple_times() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "gleam/wibble",
             "
@@ -1831,7 +1830,7 @@ fn same_imports_multiple_times() {
 
 #[test]
 fn same_imports_multiple_times_1() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1853,7 +1852,7 @@ fn same_imports_multiple_times_1() {
 
 #[test]
 fn same_imports_multiple_times_2() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1875,7 +1874,7 @@ fn same_imports_multiple_times_2() {
 
 #[test]
 fn same_imports_multiple_times_3() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1897,7 +1896,7 @@ fn same_imports_multiple_times_3() {
 
 #[test]
 fn same_imports_multiple_times_4() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1919,7 +1918,7 @@ fn same_imports_multiple_times_4() {
 
 #[test]
 fn same_imports_multiple_times_5() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1941,7 +1940,7 @@ fn same_imports_multiple_times_5() {
 
 #[test]
 fn same_imports_multiple_times_6() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -1963,7 +1962,7 @@ fn same_imports_multiple_times_6() {
 
 #[test]
 fn same_imports_multiple_times_7() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "one",
             "
@@ -2039,7 +2038,7 @@ pub fn main(user: User) {
 
 #[test]
 fn unknown_imported_module_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one/two", ""),
         "
 import one/two
@@ -2053,7 +2052,7 @@ pub fn main(_x: two.Thing) {
 
 #[test]
 fn value_imported_as_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "gleam/wibble",
             "pub type Wibble {
@@ -2066,7 +2065,7 @@ fn value_imported_as_type() {
 
 #[test]
 fn type_imported_as_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "gleam/wibble",
             "pub type Wibble {
@@ -2225,7 +2224,7 @@ pub fn main() {
 
 #[test]
 fn unknown_module_suggest_import() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("utils", "pub fn helpful() {}"),
         "
 pub fn main() {
@@ -2237,7 +2236,7 @@ pub fn main() {
 
 #[test]
 fn unknown_module_suggest_typo_for_imported_module() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub fn wobble() {}"),
         "
 import wibble
@@ -2250,7 +2249,7 @@ pub fn main() {
 
 #[test]
 fn unknown_module_suggest_typo_for_unimported_module() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble/wobble", "pub fn wubble() {}"),
         "
 pub fn main() {
@@ -2262,7 +2261,7 @@ pub fn main() {
 
 #[test]
 fn qualified_type_mismatched_type_error() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wobble"),
         "
 import wibble
@@ -2273,7 +2272,7 @@ const my_wobble: wibble.Wobble = Nil
 
 #[test]
 fn qualified_type_similar_type_name() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Int"),
         "
 import wibble
@@ -2284,7 +2283,7 @@ const value: wibble.Int = 20
 
 #[test]
 fn qualified_type_not_a_function() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Function { Function(fn() -> Nil) }"),
         "
 import wibble.{type Function as FuncWrapper}
@@ -2313,7 +2312,7 @@ pub fn main(not_a_record: gleam.Int) {
 
 #[test]
 fn qualified_type_invalid_operands() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("maths", "pub type Vector { Vector(x: Float, y: Float) }"),
         "
 import maths as math
@@ -2326,7 +2325,7 @@ pub fn add_two_vectors(a: math.Vector, b: math.Vector) {
 
 #[test]
 fn qualified_type_invalid_pipe_argument() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "mod",
             "pub type Wibble pub fn takes_wibble(value: Wibble) { value }"
@@ -2358,7 +2357,7 @@ const list_of_bools = [True, False, gleam.False]
 
 #[test]
 fn qualified_type_not_a_tuple() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Pair(a, b) { Pair(a, b) }"),
         "
 import mod.{type Pair as Duo}
@@ -2371,7 +2370,7 @@ pub fn first(pair: Duo(a, b)) {
 
 #[test]
 fn qualified_type_not_fn_in_use() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("some_mod", "pub type Function(param1, param2, return)"),
         "
 import some_mod as sm
@@ -2384,7 +2383,7 @@ pub fn main(func: sm.Function(Int, String, Float)) {
 
 #[test]
 fn qualified_type_use_fn_without_callback() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "some_mod",
             "pub type NotACallback pub fn do_a_thing(a: Int, _b: NotACallback) { a }"
@@ -2414,7 +2413,7 @@ fn add_1(to x) { x + 1 }
 
 #[test]
 fn unknown_field_that_appears_in_an_imported_variant_has_note() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "some_mod",
             "pub type Wibble {
@@ -2535,7 +2534,7 @@ pub fn b_to_a(value: MyRecord) {
 
 #[test]
 fn record_update_wrong_variant_imported_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         (
             "wibble",
             "
