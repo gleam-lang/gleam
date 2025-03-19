@@ -171,28 +171,25 @@ pub fn generate_html<IO: FileSystemReader>(
 
         let functions: Vec<DocsFunction<'_>> = module
             .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| function(&source_links, statement))
+            .iter_definitions()
+            .filter(|definition| !definition.is_internal())
+            .flat_map(|definition| function(&source_links, definition))
             .sorted()
             .collect();
 
         let types: Vec<Type<'_>> = module
             .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| type_(&source_links, statement))
+            .iter_definitions()
+            .filter(|definition| !definition.is_internal())
+            .flat_map(|definition| type_(&source_links, definition))
             .sorted()
             .collect();
 
         let constants: Vec<Constant<'_>> = module
             .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| constant(&source_links, statement))
+            .iter_definitions()
+            .filter(|definition| !definition.is_internal())
+            .flat_map(|definition| constant(&source_links, definition))
             .sorted()
             .collect();
 

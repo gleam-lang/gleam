@@ -7,62 +7,64 @@ Parsed {
         name: "",
         documentation: [],
         type_info: (),
-        definitions: [
-            TargetedDefinition {
-                definition: CustomType(
-                    CustomType {
-                        location: SrcSpan {
-                            start: 1,
-                            end: 12,
-                        },
-                        end_position: 61,
-                        name: "Wibble",
-                        name_location: SrcSpan {
-                            start: 6,
-                            end: 12,
-                        },
-                        publicity: Private,
-                        constructors: [
-                            RecordConstructor {
-                                location: SrcSpan {
-                                    start: 40,
-                                    end: 47,
-                                },
-                                name_location: SrcSpan {
-                                    start: 40,
-                                    end: 47,
-                                },
-                                name: "Wibble1",
-                                arguments: [],
-                                documentation: None,
-                                deprecation: Deprecated {
-                                    message: "1",
-                                },
+        groups: [
+            [
+                TargetedDefinition {
+                    definition: CustomType(
+                        CustomType {
+                            location: SrcSpan {
+                                start: 1,
+                                end: 12,
                             },
-                            RecordConstructor {
-                                location: SrcSpan {
-                                    start: 52,
-                                    end: 59,
-                                },
-                                name_location: SrcSpan {
-                                    start: 52,
-                                    end: 59,
-                                },
-                                name: "Wibble2",
-                                arguments: [],
-                                documentation: None,
-                                deprecation: NotDeprecated,
+                            end_position: 61,
+                            name: "Wibble",
+                            name_location: SrcSpan {
+                                start: 6,
+                                end: 12,
                             },
-                        ],
-                        documentation: None,
-                        deprecation: NotDeprecated,
-                        opaque: false,
-                        parameters: [],
-                        typed_parameters: [],
-                    },
-                ),
-                target: None,
-            },
+                            publicity: Private,
+                            constructors: [
+                                RecordConstructor {
+                                    location: SrcSpan {
+                                        start: 40,
+                                        end: 47,
+                                    },
+                                    name_location: SrcSpan {
+                                        start: 40,
+                                        end: 47,
+                                    },
+                                    name: "Wibble1",
+                                    arguments: [],
+                                    documentation: None,
+                                    deprecation: Deprecated {
+                                        message: "1",
+                                    },
+                                },
+                                RecordConstructor {
+                                    location: SrcSpan {
+                                        start: 52,
+                                        end: 59,
+                                    },
+                                    name_location: SrcSpan {
+                                        start: 52,
+                                        end: 59,
+                                    },
+                                    name: "Wibble2",
+                                    arguments: [],
+                                    documentation: None,
+                                    deprecation: NotDeprecated,
+                                },
+                            ],
+                            documentation: None,
+                            deprecation: NotDeprecated,
+                            opaque: false,
+                            parameters: [],
+                            typed_parameters: [],
+                        },
+                    ),
+                    target: None,
+                },
+            ],
         ],
         names: Names {
             local_types: {},

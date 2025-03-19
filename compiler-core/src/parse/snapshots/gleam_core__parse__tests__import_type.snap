@@ -7,62 +7,64 @@ Parsed {
         name: "",
         documentation: [],
         type_info: (),
-        definitions: [
-            TargetedDefinition {
-                definition: Import(
-                    Import {
-                        documentation: None,
-                        location: SrcSpan {
-                            start: 0,
-                            end: 48,
+        groups: [
+            [
+                TargetedDefinition {
+                    definition: Import(
+                        Import {
+                            documentation: None,
+                            location: SrcSpan {
+                                start: 0,
+                                end: 48,
+                            },
+                            module: "wibble",
+                            as_name: None,
+                            unqualified_values: [
+                                UnqualifiedImport {
+                                    location: SrcSpan {
+                                        start: 28,
+                                        end: 34,
+                                    },
+                                    imported_name_location: SrcSpan {
+                                        start: 28,
+                                        end: 34,
+                                    },
+                                    name: "Wobble",
+                                    as_name: None,
+                                },
+                            ],
+                            unqualified_types: [
+                                UnqualifiedImport {
+                                    location: SrcSpan {
+                                        start: 15,
+                                        end: 26,
+                                    },
+                                    imported_name_location: SrcSpan {
+                                        start: 20,
+                                        end: 26,
+                                    },
+                                    name: "Wobble",
+                                    as_name: None,
+                                },
+                                UnqualifiedImport {
+                                    location: SrcSpan {
+                                        start: 36,
+                                        end: 47,
+                                    },
+                                    imported_name_location: SrcSpan {
+                                        start: 41,
+                                        end: 47,
+                                    },
+                                    name: "Wabble",
+                                    as_name: None,
+                                },
+                            ],
+                            package: (),
                         },
-                        module: "wibble",
-                        as_name: None,
-                        unqualified_values: [
-                            UnqualifiedImport {
-                                location: SrcSpan {
-                                    start: 28,
-                                    end: 34,
-                                },
-                                imported_name_location: SrcSpan {
-                                    start: 28,
-                                    end: 34,
-                                },
-                                name: "Wobble",
-                                as_name: None,
-                            },
-                        ],
-                        unqualified_types: [
-                            UnqualifiedImport {
-                                location: SrcSpan {
-                                    start: 15,
-                                    end: 26,
-                                },
-                                imported_name_location: SrcSpan {
-                                    start: 20,
-                                    end: 26,
-                                },
-                                name: "Wobble",
-                                as_name: None,
-                            },
-                            UnqualifiedImport {
-                                location: SrcSpan {
-                                    start: 36,
-                                    end: 47,
-                                },
-                                imported_name_location: SrcSpan {
-                                    start: 41,
-                                    end: 47,
-                                },
-                                name: "Wabble",
-                                as_name: None,
-                            },
-                        ],
-                        package: (),
-                    },
-                ),
-                target: None,
-            },
+                    ),
+                    target: None,
+                },
+            ],
         ],
         names: Names {
             local_types: {},

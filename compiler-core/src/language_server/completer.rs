@@ -251,7 +251,7 @@ where
         let mut already_imported_values = std::collections::HashSet::new();
 
         // Search the ast for import statements
-        for import in self.module.ast.definitions.iter().filter_map(get_import) {
+        for import in self.module.ast.iter_definitions().filter_map(get_import) {
             // Find the import that matches the module being imported from
             if import.module == module_being_imported_from.name {
                 // Add the values and types that have already been imported
@@ -432,7 +432,7 @@ where
         }
 
         // Imported modules
-        for import in self.module.ast.definitions.iter().filter_map(get_import) {
+        for import in self.module.ast.iter_definitions().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             let Some(module) = self.compiler.get_module_interface(&import.module) else {
@@ -595,12 +595,21 @@ where
 
             // Find the function that the cursor is in and push completions for
             // its arguments and local variables.
-            if let Some(fun) = self.module.ast.definitions.iter().find_map(|d| match d {
-                Definition::Function(f) if f.full_location().contains(cursor) => Some(f),
-                _ => None,
-            }) {
+            if let Some(function) =
+                self.module
+                    .ast
+                    .iter_definitions()
+                    .find_map(|definition| match definition {
+                        Definition::Function(function)
+                            if function.full_location().contains(cursor) =>
+                        {
+                            Some(function)
+                        }
+                        _ => None,
+                    })
+            {
                 completions.extend(
-                    LocalCompletion::new(mod_name, insert_range, cursor).fn_completions(fun),
+                    LocalCompletion::new(mod_name, insert_range, cursor).fn_completions(function),
                 );
             }
 
@@ -620,7 +629,7 @@ where
         }
 
         // Imported modules
-        for import in self.module.ast.definitions.iter().filter_map(get_import) {
+        for import in self.module.ast.iter_definitions().filter_map(get_import) {
             // The module may not be known of yet if it has not previously
             // compiled yet in this editor session.
             let Some(module) = self.compiler.get_module_interface(&import.module) else {

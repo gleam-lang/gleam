@@ -1269,8 +1269,8 @@ impl<'a> QualifiedToUnqualifiedImportFirstPass<'a> {
     ) -> Option<&'a ast::Import<EcoString>> {
         let mut matching_import = None;
 
-        for def in &self.module.ast.definitions {
-            if let ast::Definition::Import(import) = def {
+        for definition in self.module.ast.iter_definitions() {
+            if let ast::Definition::Import(import) = definition {
                 let imported = if layer.is_value() {
                     &import.unqualified_values
                 } else {
@@ -1818,9 +1818,8 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
         self.unqualified_constructor =
             self.module
                 .ast
-                .definitions
-                .iter()
-                .find_map(|def| match def {
+                .iter_definitions()
+                .find_map(|definition| match definition {
                     ast::Definition::Import(import) if import.module == *module_name => import
                         .unqualified_values
                         .iter()
@@ -1840,17 +1839,16 @@ impl<'a> UnqualifiedToQualifiedImportFirstPass<'a> {
         self.unqualified_constructor =
             self.module
                 .ast
-                .definitions
-                .iter()
-                .find_map(|def| match def {
+                .iter_definitions()
+                .find_map(|definition| match definition {
                     ast::Definition::Import(import) => {
-                        if let Some(ty) = import
-                            .unqualified_types
-                            .iter()
-                            .find(|ty| ty.used_name() == constructor_name)
+                        if let Some(unqualified_import) =
+                            import.unqualified_types.iter().find(|unqualified_import| {
+                                unqualified_import.used_name() == constructor_name
+                            })
                         {
                             return Some(UnqualifiedConstructor {
-                                constructor: ty,
+                                constructor: unqualified_import,
                                 module_name: import.used_name()?,
                                 layer: ast::Layer::Type,
                             });

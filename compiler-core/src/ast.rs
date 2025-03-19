@@ -45,24 +45,42 @@ pub type TypedModule = Module<type_::ModuleInterface, TypedDefinition>;
 pub type UntypedModule = Module<(), TargetedDefinition>;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct Module<Info, Statements> {
+pub struct Module<Info, Definitions> {
     pub name: EcoString,
     pub documentation: Vec<EcoString>,
     pub type_info: Info,
-    pub definitions: Vec<Statements>,
+    pub groups: Vec<Vec<Definitions>>,
     pub names: Names,
+}
+
+impl<Info, Definitions> Module<Info, Definitions> {
+    pub fn iter_definitions(&self) -> impl Iterator<Item = &Definitions> {
+        self.groups.iter().flat_map(|group| group.iter())
+    }
+
+    pub(crate) fn iter_mut_definitions(&mut self) -> impl Iterator<Item = &mut Definitions> {
+        self.groups.iter_mut().flat_map(|group| group.iter_mut())
+    }
+
+    pub fn into_iter_definitions(self) -> impl Iterator<Item = Definitions> {
+        self.groups.into_iter().flat_map(|group| group.into_iter())
+    }
+
+    /// The total number of definitions in this module.
+    ///
+    pub fn total_definitions(&self) -> usize {
+        self.groups.iter().map(|group| group.len()).sum()
+    }
 }
 
 impl TypedModule {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.definitions
-            .iter()
-            .find_map(|statement| statement.find_node(byte_index))
+        self.iter_definitions()
+            .find_map(|definition| definition.find_node(byte_index))
     }
 
     pub fn find_statement(&self, byte_index: u32) -> Option<&TypedStatement> {
-        self.definitions
-            .iter()
+        self.iter_definitions()
             .find_map(|definition| definition.find_statement(byte_index))
     }
 }
@@ -91,8 +109,8 @@ impl TargetedDefinition {
 
 impl UntypedModule {
     pub fn dependencies(&self, target: Target) -> Vec<(EcoString, SrcSpan)> {
-        self.iter_statements(target)
-            .flat_map(|s| match s {
+        self.iter_definitions_for_target(target)
+            .flat_map(|definition| match definition {
                 Definition::Import(Import {
                     module, location, ..
                 }) => Some((module.clone(), *location)),
@@ -101,18 +119,22 @@ impl UntypedModule {
             .collect()
     }
 
-    pub fn iter_statements(&self, target: Target) -> impl Iterator<Item = &UntypedDefinition> {
-        self.definitions
-            .iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| &def.definition)
+    pub fn iter_definitions_for_target(
+        &self,
+        target: Target,
+    ) -> impl Iterator<Item = &UntypedDefinition> {
+        self.iter_definitions()
+            .filter(move |definition| definition.is_for(target))
+            .map(|definition| &definition.definition)
     }
 
-    pub fn into_iter_statements(self, target: Target) -> impl Iterator<Item = UntypedDefinition> {
-        self.definitions
-            .into_iter()
-            .filter(move |def| def.is_for(target))
-            .map(|def| def.definition)
+    pub fn into_iter_definitions_for_target(
+        self,
+        target: Target,
+    ) -> impl Iterator<Item = UntypedDefinition> {
+        self.into_iter_definitions()
+            .filter(move |definition| definition.is_for(target))
+            .map(|definition| definition.definition)
     }
 }
 
@@ -2353,7 +2375,7 @@ pub enum TodoKind {
 }
 
 #[derive(Debug, Default)]
-pub struct GroupedStatements {
+pub struct GroupedDefinitions {
     pub functions: Vec<UntypedFunction>,
     pub constants: Vec<UntypedModuleConstant>,
     pub custom_types: Vec<UntypedCustomType>,
@@ -2361,12 +2383,12 @@ pub struct GroupedStatements {
     pub type_aliases: Vec<UntypedTypeAlias>,
 }
 
-impl GroupedStatements {
-    pub fn new(statements: impl IntoIterator<Item = UntypedDefinition>) -> Self {
+impl GroupedDefinitions {
+    pub fn new(definitions: impl IntoIterator<Item = UntypedDefinition>) -> Self {
         let mut this = Self::default();
 
-        for statement in statements {
-            this.add(statement)
+        for definition in definitions {
+            this.add(definition)
         }
 
         this
