@@ -762,6 +762,7 @@ impl Environment<'_> {
         let mut suggestions = self
             .importable_modules
             .iter()
+<<<<<<< HEAD
             .filter_map(|(importable, module_info)| match layer {
                 Layer::Type => match module_info.get_public_type(name) {
                     Some(type_) => match arity {
