@@ -23,7 +23,7 @@ use crate::{
     reference::{EntityKind, ReferenceKind},
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
-        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor, TypeKind,
+        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
         TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, Warning,
         environment::*,
@@ -386,8 +386,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         self.check_name_case(name_location, &name, Named::Constant);
 
         environment.references.register_value(
-            &environment.current_module,
-            &name,
+            name.clone(),
             EntityKind::Constant,
             location,
             publicity,
@@ -446,6 +445,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.references.register_value_reference(
             environment.current_module.clone(),
             name.clone(),
+            &name,
             name_location,
             ReferenceKind::Definition,
         );
@@ -536,9 +536,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(|(a, t)| a.set_type(t.clone()))
             .collect_vec();
 
-        environment
-            .references
-            .set_current_function(&environment.current_module, &name);
+        environment.references.set_current_function(name.clone());
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -661,6 +659,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.references.register_value_reference(
             environment.current_module.clone(),
             name.clone(),
+            &name,
             name_location,
             ReferenceKind::Definition,
         );
@@ -1017,8 +1016,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             };
 
             environment.references.register_value(
-                &environment.current_module,
-                &constructor.name,
+                constructor.name.clone(),
                 EntityKind::Constructor,
                 constructor.location,
                 value_constructor_publicity,
@@ -1026,7 +1024,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
             environment
                 .references
-                .register_type_reference_in_call_graph(&environment.current_module, name);
+                .register_type_reference_in_call_graph(name.clone());
 
             let mut field_map_builder = FieldMapBuilder::new(constructor.arguments.len() as u32);
             let mut args_types = Vec::with_capacity(constructor.arguments.len());
@@ -1110,6 +1108,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment.references.register_value_reference(
                 environment.current_module.clone(),
                 constructor.name.clone(),
+                &constructor.name,
                 constructor.name_location,
                 ReferenceKind::Definition,
             );
@@ -1238,7 +1237,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     publicity,
                     type_,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                    kind: TypeKind::CustomType,
                 },
             )
             .expect("name uniqueness checked above");
@@ -1249,18 +1247,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name.clone(),
         );
 
-        if publicity.is_private() {
-            environment.references.register_type(
-                &environment.current_module,
-                name,
-                EntityKind::PrivateType,
-                *location,
-            );
-        }
+        environment.references.register_type(
+            name.clone(),
+            EntityKind::PrivateType,
+            *location,
+            publicity,
+        );
 
         environment.references.register_type_reference(
             environment.current_module.clone(),
             name.clone(),
+            name,
             *name_location,
             ReferenceKind::Definition,
         );
@@ -1321,7 +1318,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
-                    kind: TypeKind::Alias,
                 },
             )?;
 
@@ -1338,11 +1334,11 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 },
             )?;
 
-            environment.references.register_type_alias(
+            environment.references.register_type(
                 name.clone(),
+                EntityKind::PrivateType,
                 *location,
                 *publicity,
-                EntityKind::PrivateType,
             );
 
             if let Some(name) = hydrator.unused_type_variables().next() {
@@ -1412,8 +1408,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         self.check_name_case(*name_location, name, Named::Function);
 
         environment.references.register_value(
-            &environment.current_module,
-            name,
+            name.clone(),
             EntityKind::Function,
             *location,
             *publicity,

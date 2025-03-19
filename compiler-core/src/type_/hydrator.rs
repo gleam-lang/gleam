@@ -2,7 +2,7 @@ use super::*;
 use crate::{
     analyse::name::check_name_case,
     ast::{Layer, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar},
-    reference::Qualification,
+    reference::ReferenceKind,
 };
 use std::sync::Arc;
 
@@ -143,18 +143,26 @@ impl Hydrator {
                     })?
                     .clone();
 
-                environment
-                    .references
-                    .register_type_or_type_alias_reference(
+                if let Some((type_module, type_name)) = return_type.named_type_name() {
+                    let reference_kind = if module.is_some() {
+                        ReferenceKind::Qualified
+                    } else if name != &type_name {
+                        ReferenceKind::Alias
+                    } else {
+                        ReferenceKind::Unqualified
+                    };
+                    environment.references.register_type_reference(
+                        type_module,
+                        type_name,
                         name,
-                        &return_type,
                         *name_location,
-                        if module.is_some() {
-                            Qualification::Qualified
-                        } else {
-                            Qualification::Unqualified
-                        },
+                        reference_kind,
                     );
+                } else {
+                    environment
+                        .references
+                        .register_type_reference_in_call_graph(name.clone());
+                }
 
                 match deprecation {
                     Deprecation::NotDeprecated => {}

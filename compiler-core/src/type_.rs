@@ -1259,19 +1259,12 @@ pub struct TypeConstructor {
     pub type_: Arc<Type>,
     pub deprecation: Deprecation,
     pub documentation: Option<EcoString>,
-    pub kind: TypeKind,
 }
 impl TypeConstructor {
     pub(crate) fn with_location(mut self, location: SrcSpan) -> Self {
         self.origin = location;
         self
     }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum TypeKind {
-    CustomType,
-    Alias,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
