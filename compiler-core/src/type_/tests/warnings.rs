@@ -1,7 +1,7 @@
 use super::*;
 use crate::{
     assert_js_no_warnings, assert_js_warning, assert_no_warnings, assert_warning,
-    assert_warnings_with_gleam_version, assert_warnings_with_imports,
+    assert_warnings_with_gleam_version,
 };
 
 #[test]
@@ -984,8 +984,8 @@ fn unused_module_wuth_alias_warning_test() {
 
 #[test]
 fn unused_alias_warning_test() {
-    assert_warnings_with_imports!(
-        ("gleam/wibble", "pub const one = 1");
+    assert_warning!(
+        ("gleam/wibble", "pub const one = 1"),
         r#"
             import gleam/wibble.{one} as wobble
             const one = one
@@ -1011,9 +1011,9 @@ fn discarded_module_no_warnings_test() {
 
 #[test]
 fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
-    assert_warnings_with_imports!(
+    assert_warning!(
         ("a/wibble", "pub const one = 1"),
-        ("b/wibble", "pub const two = 2");
+        ("b/wibble", "pub const two = 2"),
         r#"
             import a/wibble
             import b/wibble as wobble

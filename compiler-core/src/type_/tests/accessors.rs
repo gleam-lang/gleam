@@ -1,8 +1,8 @@
-use crate::assert_infer_with_module;
+use crate::assert_module_infer;
 
 #[test]
 fn bug_3629() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("imported", "pub type Wibble"),
         r#"
 import imported

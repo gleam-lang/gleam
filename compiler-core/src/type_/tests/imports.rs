@@ -1,9 +1,9 @@
-use crate::{assert_infer_with_module, assert_module_error, assert_with_module_error};
+use crate::{assert_module_error, assert_module_infer};
 
 // https://github.com/gleam-lang/gleam/issues/1760
 #[test]
 fn import_value_with_same_name_as_imported_module() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("other", "pub const other = 1"),
         "
 import other.{other}
@@ -15,7 +15,7 @@ pub const a = other
 
 #[test]
 fn imported_constant_record() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("one/two", "pub type Thing { Thing(Int) }"),
         "
 import one/two
@@ -28,7 +28,7 @@ pub const a = two.Thing(1)
 
 #[test]
 fn using_private_constructor() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type Two { Two }"),
         "import one
 
@@ -40,7 +40,7 @@ pub fn main() {
 
 #[test]
 fn using_private_constructor_pattern() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type Two { Two }"),
         "import one
 
@@ -52,7 +52,7 @@ pub fn main(x) {
 
 #[test]
 fn using_opaque_constructor() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "pub opaque type Two { Two }"),
         "import one
 
@@ -64,7 +64,7 @@ pub fn main() {
 
 #[test]
 fn using_private_function() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "fn two() { 2 }"),
         "import one
 
@@ -76,7 +76,7 @@ pub fn main() {
 
 #[test]
 fn using_private_type_alias() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type X = Int"),
         "import one
 
@@ -88,7 +88,7 @@ pub fn main() {
 
 #[test]
 fn using_private_unqualified_type_alias() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type X = Int"),
         "import one.{X}
 
@@ -100,7 +100,7 @@ pub fn main() {
 
 #[test]
 fn using_private_external_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type X"),
         "import one
 
@@ -112,7 +112,7 @@ pub fn main() {
 
 #[test]
 fn using_private_unqualified_external_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type X"),
         "import one.{X}
 
@@ -124,7 +124,7 @@ pub fn main() {
 
 #[test]
 fn using_private_custom_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type X { Y }"),
         "import one
 
@@ -136,7 +136,7 @@ pub fn main() {
 
 #[test]
 fn using_private_unqualified_custom_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type X { Y }"),
         "import one.{X}
 
@@ -148,7 +148,7 @@ pub fn main() {
 
 #[test]
 fn unqualified_using_private_constructor() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type Two { Two }"),
         "import one.{Two}
 
@@ -160,7 +160,7 @@ pub fn main() {
 
 #[test]
 fn unqualified_using_private_constructor_pattern() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "type Two { Two }"),
         "import one.{Two}
 
@@ -172,7 +172,7 @@ pub fn main(x) {
 
 #[test]
 fn unqualified_using_opaque_constructor() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "pub opaque type Two { Two }"),
         "import one.{Two}
 
@@ -184,7 +184,7 @@ pub fn main() {
 
 #[test]
 fn unqualified_using_private_function() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "fn two() { 2 }"),
         "import one.{two}
 
@@ -196,7 +196,7 @@ pub fn main() {
 
 #[test]
 fn import_type() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("one", "pub type One = Int"),
         "import one.{type One}
 
@@ -210,7 +210,7 @@ pub fn main() -> One {
 
 #[test]
 fn import_type_duplicate() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "pub type One = Int"),
         "import one.{One, type One}
 
@@ -223,7 +223,7 @@ pub fn main() -> One {
 
 #[test]
 fn import_type_duplicate_with_as() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "pub type One = Int"),
         "import one.{type One as MyOne, type One as MyOne}
 
@@ -234,7 +234,7 @@ pub type X = One
 
 #[test]
 fn import_type_duplicate_with_as_multiline() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one", "pub type One = Int"),
         "import one.{
           type One as MyOne,
@@ -249,7 +249,7 @@ pub type X = One
 // https://github.com/gleam-lang/gleam/issues/2379
 #[test]
 fn deprecated_type_import_conflict() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("one", "pub type X { X }"),
         "import one.{X, type X}",
         vec![]
@@ -258,7 +258,7 @@ fn deprecated_type_import_conflict() {
 
 #[test]
 fn aliased_unqualified_type_and_value() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("one", "pub type X { X }"),
         "import one.{X as XX, type X as XX}",
         vec![]
@@ -267,7 +267,7 @@ fn aliased_unqualified_type_and_value() {
 
 #[test]
 fn deprecated_type_import_conflict_two_modules() {
-    assert_infer_with_module!(
+    assert_module_infer!(
         ("one", "pub type X { X }"),
         ("two", "pub type X { X }"),
         "
@@ -280,7 +280,7 @@ fn deprecated_type_import_conflict_two_modules() {
 
 #[test]
 fn imported_constructor_instead_of_type() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("module", "pub type Wibble { Wibble }"),
         "import module.{Wibble}
 
@@ -315,7 +315,7 @@ pub fn main() -> Integer {
 
 #[test]
 fn module_alias_used_as_a_name() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("one/two", ""),
         "
 import one/two

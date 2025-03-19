@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/functions.rs
 expression: "\n        import wibble.{println}\n        pub fn main() {\n          let println =\n            \"oh dear\"\n            |> println\n          println\n        }"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub fn println(x: String) {  }
+
+-- main.gleam
 
         import wibble.{println}
         pub fn main() {

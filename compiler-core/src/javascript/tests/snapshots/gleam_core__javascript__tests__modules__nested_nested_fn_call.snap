@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/modules.rs
 expression: "import one/two/three\npub fn go() { three.go() }"
 ---
 ----- SOURCE CODE
+-- one/two/three.gleam
+pub fn go() { 1 }
+
+-- main.gleam
 import one/two/three
 pub fn go() { three.go() }
 

@@ -3,6 +3,10 @@ source: compiler-core/src/type_/tests/warnings.rs
 expression: "\nimport wibble\n\npub fn wobble(a) { a }\n\npub fn main() {\n  1 |> wobble |> wibble.Wibble\n  1\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+pub type Wibble { Wibble(Int) }
+
+-- main.gleam
 
 import wibble
 

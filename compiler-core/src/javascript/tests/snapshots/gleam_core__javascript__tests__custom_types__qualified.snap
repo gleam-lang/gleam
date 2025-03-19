@@ -3,6 +3,10 @@ source: compiler-core/src/javascript/tests/custom_types.rs
 expression: "import other\n\npub fn main() {\n  other.One\n}\n"
 ---
 ----- SOURCE CODE
+-- other.gleam
+pub type One { One }
+
+-- main.gleam
 import other
 
 pub fn main() {

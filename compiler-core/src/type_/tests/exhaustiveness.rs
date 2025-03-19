@@ -1,6 +1,4 @@
-use crate::{
-    assert_error, assert_module_error, assert_no_warnings, assert_warning, assert_with_module_error,
-};
+use crate::{assert_error, assert_module_error, assert_no_warnings, assert_warning};
 
 #[test]
 fn whatever() {
@@ -991,7 +989,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_module_names() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble
@@ -1007,7 +1005,7 @@ pub fn main(wobble_thing) {
 
 #[test]
 fn case_error_prints_module_alias() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble as wobble
@@ -1022,7 +1020,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_unqualified_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble}
@@ -1037,7 +1035,7 @@ pub fn main(wibble) {
 
 #[test]
 fn case_error_prints_aliased_unqualified_value() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("wibble", "pub type Wibble { Wibble Wobble }"),
         "
 import wibble.{Wibble, Wobble as Wubble}
@@ -1080,7 +1078,7 @@ pub fn main(res: Result(Int, Nil)) {
 
 #[test]
 fn case_error_prints_module_when_shadowed() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble}
@@ -1097,7 +1095,7 @@ pub fn main() {
 
 #[test]
 fn case_error_prints_module_when_aliased_and_shadowed() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble as Wobble}
@@ -1114,7 +1112,7 @@ pub fn main() {
 
 #[test]
 fn case_error_prints_unqualifed_when_aliased() {
-    assert_with_module_error!(
+    assert_module_error!(
         ("mod", "pub type Wibble { Wibble Wobble }"),
         "
 import mod.{Wibble as Wobble}

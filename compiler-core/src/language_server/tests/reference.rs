@@ -93,7 +93,7 @@ macro_rules! assert_references {
         let project = $project;
         let src = project.src;
         let position = $position.find_position(src);
-        let result = dbg!(find_references(&project, position)).expect("References not found");
+        let result = find_references(&project, position).expect("References not found");
 
         let mut output = String::new();
         for (name, src) in project.root_package_modules.iter() {
