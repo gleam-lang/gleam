@@ -25,7 +25,7 @@ use askama::Template;
 use ecow::EcoString;
 use itertools::Itertools;
 use serde::Serialize;
-use serde_json::to_string as serde_to_string;
+use serde_json::{json, to_string as serde_to_string};
 
 const MAX_COLUMNS: isize = 65;
 
@@ -480,11 +480,11 @@ pub fn generate_json_package_interface(
 }
 
 pub fn generate_json_package_information(path: Utf8PathBuf, config: &PackageConfig) -> OutputFile {
+    let gleam_toml = serde_json::to_string(&config).expect("JSON module interface serialisation");
+
     OutputFile {
         path,
-        content: Content::Text(
-            serde_json::to_string(&config).expect("JSON module interface serialisation"),
-        ),
+        content: Content::Text(json!({"gleam.toml": gleam_toml}).to_string()),
     }
 }
 
