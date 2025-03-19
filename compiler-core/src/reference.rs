@@ -1,6 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
-use crate::ast::{self, Publicity, SrcSpan};
+use crate::{
+    ast::{self, Publicity, SrcSpan},
+    type_::Type,
+};
 use bimap::BiMap;
 use ecow::EcoString;
 use petgraph::{
@@ -46,8 +49,15 @@ pub enum EntityKind {
 pub enum Entity {
     ModuleValue { name: EcoString },
     ModuleType { name: EcoString },
+    TypeAlias { name: EcoString },
     ImportedValue { module: EcoString, name: EcoString },
     ImportedType { module: EcoString, name: EcoString },
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum Qualification {
+    Qualified,
+    Unqualified,
 }
 
 #[derive(Debug, Default)]
@@ -57,9 +67,10 @@ pub struct ReferenceTracker {
     graph: StableGraph<(), (), Directed>,
     entities: BiMap<Entity, NodeIndex>,
     current_function: NodeIndex,
-    public_values: HashSet<EcoString>,
+    public_entities: HashMap<EcoString, ast::Layer>,
     entity_information: HashMap<Entity, EntityInformation>,
     current_module: EcoString,
+    type_aliases: HashSet<EcoString>,
 
     /// The locations of the references to each value in this module, used for
     /// renaming and go-to reference.
@@ -80,6 +91,9 @@ impl ReferenceTracker {
         if module == &self.current_module {
             match layer {
                 ast::Layer::Value => Entity::ModuleValue { name: name.clone() },
+                ast::Layer::Type if self.type_aliases.contains(name) => {
+                    Entity::TypeAlias { name: name.clone() }
+                }
                 ast::Layer::Type => Entity::ModuleType { name: name.clone() },
             }
         } else {
@@ -125,7 +139,7 @@ impl ReferenceTracker {
         self.current_function = self.get_or_create_node(module, name, ast::Layer::Value);
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                _ = self.public_values.insert(name.clone());
+                _ = self.public_entities.insert(name.clone(), ast::Layer::Value);
             }
             Publicity::Private => {}
         }
@@ -158,6 +172,34 @@ impl ReferenceTracker {
         );
     }
 
+    pub fn register_type_alias(
+        &mut self,
+        name: EcoString,
+        location: SrcSpan,
+        publicity: Publicity,
+        kind: EntityKind,
+    ) {
+        _ = self.type_aliases.insert(name.clone());
+
+        let current_module = self.current_module.clone();
+        self.current_function = self.get_or_create_node(&current_module, &name, ast::Layer::Type);
+        match publicity {
+            Publicity::Public | Publicity::Internal { .. } => {
+                _ = self.public_entities.insert(name.clone(), ast::Layer::Type);
+            }
+            Publicity::Private => {}
+        }
+
+        let entity = Entity::TypeAlias { name };
+        _ = self.entity_information.insert(
+            entity.clone(),
+            EntityInformation {
+                kind,
+                origin: location,
+            },
+        );
+    }
+
     pub fn register_value_reference(
         &mut self,
         module: EcoString,
@@ -177,6 +219,41 @@ impl ReferenceTracker {
             .entry((module, name))
             .or_default()
             .push(Reference { location, kind });
+    }
+
+    pub fn register_type_or_type_alias_reference(
+        &mut self,
+        name: &EcoString,
+        type_: &Type,
+        location: SrcSpan,
+        qualification: Qualification,
+    ) {
+        if let Some((module, type_name)) = type_.named_type_name() {
+            let kind = match qualification {
+                Qualification::Qualified => ReferenceKind::Qualified,
+                Qualification::Unqualified if name != &type_name => ReferenceKind::Alias,
+                Qualification::Unqualified => ReferenceKind::Unqualified,
+            };
+
+            self.type_references
+                .entry((module, type_name))
+                .or_default()
+                .push(Reference { location, kind });
+        }
+
+        match qualification {
+            Qualification::Qualified => {}
+            Qualification::Unqualified => {
+                if self.type_aliases.contains(name) {
+                    let current_module = self.current_module.clone();
+                    let index = self.get_or_create_node(&current_module, &name, ast::Layer::Type);
+                    _ = self.graph.add_edge(self.current_function, index, ());
+                } else if let Some((module, name)) = type_.named_type_name() {
+                    let index = self.get_or_create_node(&module, &name, ast::Layer::Type);
+                    _ = self.graph.add_edge(self.current_function, index, ());
+                }
+            }
+        }
     }
 
     pub fn register_type_reference(
@@ -210,8 +287,8 @@ impl ReferenceTracker {
         for (entity, information) in self.entity_information.iter() {
             _ = unused_values.insert(entity.clone(), *information);
         }
-        for name in self.public_values.iter() {
-            let entity = self.entity(&self.current_module, name, ast::Layer::Value);
+        for (name, layer) in self.public_entities.iter() {
+            let entity = self.entity(&self.current_module, name, *layer);
             let index = self.entities.get_by_left(&entity).expect("Entity exists");
             self.mark_value_as_used(&mut unused_values, &entity, *index);
         }

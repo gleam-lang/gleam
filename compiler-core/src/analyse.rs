@@ -23,7 +23,7 @@ use crate::{
     reference::{EntityKind, ReferenceKind},
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
-        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
+        RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor, TypeKind,
         TypeValueConstructor, TypeValueConstructorField, TypeVariantConstructors, ValueConstructor,
         ValueConstructorVariant, Warning,
         environment::*,
@@ -1238,6 +1238,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     publicity,
                     type_,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    kind: TypeKind::CustomType,
                 },
             )
             .expect("name uniqueness checked above");
@@ -1320,6 +1321,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     deprecation: deprecation.clone(),
                     publicity: *publicity,
                     documentation: documentation.as_ref().map(|(_, doc)| doc.clone()),
+                    kind: TypeKind::Alias,
                 },
             )?;
 
@@ -1335,6 +1337,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     arity,
                 },
             )?;
+
+            environment.references.register_type_alias(
+                name.clone(),
+                *location,
+                *publicity,
+                EntityKind::PrivateType,
+            );
 
             if let Some(name) = hydrator.unused_type_variables().next() {
                 return Err(Error::UnusedTypeAliasParameter {
