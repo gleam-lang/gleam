@@ -62,6 +62,10 @@
   - `entrypoint.ps1` for PowerShell
   ([Greg Burri](https://github.com/ummon))
 
+- `gleam export` now takes a `package-information` option to export the
+  project's `gleam.toml` as a JSON file.
+  ([Rodrigo Álvarez](https://github.com/Papipo))
+
 ### Language server
 
 - The language server now allows renaming of functions, constants,
