@@ -331,9 +331,9 @@ impl<'module, 'a> Generator<'module, 'a> {
     }
 
     fn bit_array(&mut self, segments: &'a [TypedExprBitArraySegment]) -> Output<'a> {
-        self.tracker.bit_array_literal_used = true;
-
         use BitArrayOption as Opt;
+
+        self.tracker.bit_array_literal_used = true;
 
         // Collect all the values used in segments.
         let segments_array = array(segments.iter().map(|segment| {
@@ -341,17 +341,17 @@ impl<'module, 'a> Generator<'module, 'a> {
                 this.wrap_expression(&segment.value)
             })?;
 
-            if segment.type_.is_int() || segment.type_.is_float() {
-                if segment.has_native_option() {
-                    return Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    });
-                }
+            if segment.has_native_option() {
+                return Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                });
+            }
 
-                let details = self.sized_bit_array_segment_details(segment)?;
-
-                if segment.type_.is_int() {
+            match segment.options.as_slice() {
+                // Int segment
+                _ if segment.type_.is_int() => {
+                    let details = self.sized_bit_array_segment_details(segment)?;
                     match (details.size_value, segment.value.as_ref()) {
                         (Some(size_value), TypedExpr::Int { int_value, .. })
                             if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
@@ -372,73 +372,63 @@ impl<'module, 'a> Generator<'module, 'a> {
 
                         _ => {
                             self.tracker.sized_integer_segment_used = true;
-                            Ok(docvec![
-                                "sizedInt(",
-                                value,
-                                ", ",
-                                details.size,
-                                ", ",
-                                bool(segment.endianness().is_big()),
-                                ")"
-                            ])
+                            let size = details.size;
+                            let is_big = bool(segment.endianness().is_big());
+                            Ok(docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"])
                         }
                     }
-                } else {
-                    self.tracker.float_bit_array_segment_used = true;
-                    Ok(docvec![
-                        "sizedFloat(",
-                        value,
-                        ", ",
-                        details.size,
-                        ", ",
-                        bool(segment.endianness().is_big()),
-                        ")"
-                    ])
                 }
-            } else {
-                match segment.options.as_slice() {
-                    // UTF8 strings
-                    [Opt::Utf8 { .. }] => {
-                        self.tracker.string_bit_array_segment_used = true;
-                        Ok(docvec!["stringBits(", value, ")"])
+
+                // Float segment
+                _ if segment.type_.is_float() => {
+                    self.tracker.float_bit_array_segment_used = true;
+                    let details = self.sized_bit_array_segment_details(segment)?;
+                    let size = details.size;
+                    let is_big = bool(segment.endianness().is_big());
+                    Ok(docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"])
+                }
+
+                // UTF8 strings
+                [Opt::Utf8 { .. }] => {
+                    self.tracker.string_bit_array_segment_used = true;
+                    Ok(docvec!["stringBits(", value, ")"])
+                }
+
+                // UTF8 codepoints
+                [Opt::Utf8Codepoint { .. }] => {
+                    self.tracker.codepoint_bit_array_segment_used = true;
+                    Ok(docvec!["codepointBits(", value, ")"])
+                }
+
+                // Bit arrays
+                [Opt::Bits { .. }] => Ok(value),
+
+                // Bit arrays with explicit size. The explicit size slices the bit array to the
+                // specified size. A runtime exception is thrown if the size exceeds the number
+                // of bits in the bit array.
+                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
+                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
+                    TypedExpr::Int { value: size, .. } => {
+                        self.tracker.bit_array_slice_used = true;
+                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
                     }
 
-                    // UTF8 codepoints
-                    [Opt::Utf8Codepoint { .. }] => {
-                        self.tracker.codepoint_bit_array_segment_used = true;
-                        Ok(docvec!["codepointBits(", value, ")"])
+                    TypedExpr::Var { name, .. } => {
+                        self.tracker.bit_array_slice_used = true;
+                        Ok(docvec!["bitArraySlice(", value, ", 0, ", name, ")"])
                     }
 
-                    // Bit arrays
-                    [Opt::Bits { .. }] => Ok(value),
-
-                    // Bit arrays with explicit size. The explicit size slices the bit array to the
-                    // specified size. A runtime exception is thrown if the size exceeds the number
-                    // of bits in the bit array.
-                    [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-                    | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                        TypedExpr::Int { value: size, .. } => {
-                            self.tracker.bit_array_slice_used = true;
-                            Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
-                        }
-
-                        TypedExpr::Var { name, .. } => {
-                            self.tracker.bit_array_slice_used = true;
-                            Ok(docvec!["bitArraySlice(", value, ", 0, ", name, ")"])
-                        }
-
-                        _ => Err(Error::Unsupported {
-                            feature: "This bit array segment option".into(),
-                            location: segment.location,
-                        }),
-                    },
-
-                    // Anything else
                     _ => Err(Error::Unsupported {
                         feature: "This bit array segment option".into(),
                         location: segment.location,
                     }),
-                }
+                },
+
+                // Anything else
+                _ => Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                }),
             }
         }))?;
 
@@ -1693,24 +1683,24 @@ fn bit_array<'a>(
     segments: &'a [TypedConstantBitArraySegment],
     mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
 ) -> Output<'a> {
-    tracker.bit_array_literal_used = true;
-
     use BitArrayOption as Opt;
 
+    tracker.bit_array_literal_used = true;
     let segments_array = array(segments.iter().map(|segment| {
         let value = constant_expr_fun(tracker, &segment.value)?;
 
-        if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
-            if segment.has_native_option() {
-                return Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                });
-            }
-            let details =
-                sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
+        if segment.has_native_option() {
+            return Err(Error::Unsupported {
+                feature: "This bit array segment option".into(),
+                location: segment.location,
+            });
+        }
 
-            if segment.type_ == crate::type_::int() {
+        match segment.options.as_slice() {
+            // Int segment
+            _ if segment.type_.is_int() => {
+                let details =
+                    sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
                 match (details.size_value, segment.value.as_ref()) {
                     (Some(size_value), Constant::Int { int_value, .. })
                         if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
@@ -1731,68 +1721,59 @@ fn bit_array<'a>(
 
                     _ => {
                         tracker.sized_integer_segment_used = true;
-                        Ok(docvec![
-                            "sizedInt(",
-                            value,
-                            ", ",
-                            details.size,
-                            ", ",
-                            bool(segment.endianness().is_big()),
-                            ")"
-                        ])
+                        let size = details.size;
+                        let is_big = bool(segment.endianness().is_big());
+                        Ok(docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"])
                     }
                 }
-            } else {
-                tracker.float_bit_array_segment_used = true;
-                Ok(docvec![
-                    "sizedFloat(",
-                    value,
-                    ", ",
-                    details.size,
-                    ", ",
-                    bool(segment.endianness().is_big()),
-                    ")"
-                ])
             }
-        } else {
-            match segment.options.as_slice() {
-                // UTF8 strings
-                [Opt::Utf8 { .. }] => {
-                    tracker.string_bit_array_segment_used = true;
-                    Ok(docvec!["stringBits(", value, ")"])
+
+            // Float segments
+            _ if segment.type_.is_float() => {
+                tracker.float_bit_array_segment_used = true;
+                let details =
+                    sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
+                let size = details.size;
+                let is_big = bool(segment.endianness().is_big());
+                Ok(docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"])
+            }
+
+            // UTF8 strings
+            [Opt::Utf8 { .. }] => {
+                tracker.string_bit_array_segment_used = true;
+                Ok(docvec!["stringBits(", value, ")"])
+            }
+
+            // UTF8 codepoints
+            [Opt::Utf8Codepoint { .. }] => {
+                tracker.codepoint_bit_array_segment_used = true;
+                Ok(docvec!["codepointBits(", value, ")"])
+            }
+
+            // Bit arrays
+            [Opt::Bits { .. }] => Ok(value),
+
+            // Bit arrays with explicit size. The explicit size slices the bit array to the
+            // specified size. A runtime exception is thrown if the size exceeds the number
+            // of bits in the bit array.
+            [Opt::Bits { .. }, Opt::Size { value: size, .. }]
+            | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
+                Constant::Int { value: size, .. } => {
+                    tracker.bit_array_slice_used = true;
+                    Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
                 }
 
-                // UTF8 codepoints
-                [Opt::Utf8Codepoint { .. }] => {
-                    tracker.codepoint_bit_array_segment_used = true;
-                    Ok(docvec!["codepointBits(", value, ")"])
-                }
-
-                // Bit arrays
-                [Opt::Bits { .. }] => Ok(value),
-
-                // Bit arrays with explicit size. The explicit size slices the bit array to the
-                // specified size. A runtime exception is thrown if the size exceeds the number
-                // of bits in the bit array.
-                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                    Constant::Int { value: size, .. } => {
-                        tracker.bit_array_slice_used = true;
-                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
-                    }
-
-                    _ => Err(Error::Unsupported {
-                        feature: "This bit array segment option".into(),
-                        location: segment.location,
-                    }),
-                },
-
-                // Anything else
                 _ => Err(Error::Unsupported {
                     feature: "This bit array segment option".into(),
                     location: segment.location,
                 }),
-            }
+            },
+
+            // Anything else
+            _ => Err(Error::Unsupported {
+                feature: "This bit array segment option".into(),
+                location: segment.location,
+            }),
         }
     }))?;
 
