@@ -993,25 +993,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .type_
             .clone();
 
-        let Accessors {
-            shared_accessors,
-            variant_specific_accessors,
-        } = custom_type_accessors(constructors, &mut hydrator, environment, &mut self.problems)?;
-
-        let map = AccessorsMap {
-            publicity: if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            },
-            shared_accessors,
-            // TODO: improve the ownership here so that we can use the
-            // `return_type_constructor` below rather than looking it up twice.
-            type_: type_.clone(),
-            variant_specific_accessors,
-        };
-        environment.insert_accessors(name.clone(), map);
-
         let mut constructors_data = vec![];
 
         let mut index = 0;
@@ -1150,6 +1131,25 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 constructor.name.clone(),
             );
         }
+
+        let Accessors {
+            shared_accessors,
+            variant_specific_accessors,
+        } = custom_type_accessors(&constructors_data)?;
+
+        let map = AccessorsMap {
+            publicity: if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            },
+            shared_accessors,
+            // TODO: improve the ownership here so that we can use the
+            // `return_type_constructor` below rather than looking it up twice.
+            type_: type_.clone(),
+            variant_specific_accessors,
+        };
+        environment.insert_accessors(name.clone(), map);
 
         let opaque = if *opaque {
             Opaque::Opaque
@@ -1807,46 +1807,39 @@ struct Accessors {
     variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>>,
 }
 
-fn custom_type_accessors<A: std::fmt::Debug>(
-    constructors: &[RecordConstructor<A>],
-    hydrator: &mut Hydrator,
-    environment: &mut Environment<'_>,
-    problems: &mut Problems,
-) -> Result<Accessors, Error> {
+fn custom_type_accessors(constructors: &[TypeValueConstructor]) -> Result<Accessors, Error> {
     let args = get_compatible_record_fields(constructors);
 
     let mut shared_accessors = HashMap::with_capacity(args.len());
 
-    hydrator.disallow_new_type_variables();
-    for (index, label, ast) in args {
-        let type_ = hydrator.type_from_ast(ast, environment, problems)?;
+    for (index, label, type_) in args {
         let _ = shared_accessors.insert(
             label.clone(),
             RecordAccessor {
                 index: index as u64,
                 label: label.clone(),
-                type_,
+                type_: type_.clone(),
             },
         );
     }
 
-    let mut variant_specific_accessors = Vec::with_capacity(constructors.len());
+    let mut variant_specific_accessors: Vec<HashMap<EcoString, RecordAccessor>> =
+        Vec::with_capacity(constructors.len());
 
     for constructor in constructors {
-        let mut fields = HashMap::with_capacity(constructor.arguments.len());
+        let mut fields = HashMap::with_capacity(constructor.parameters.len());
 
-        for (index, argument) in constructor.arguments.iter().enumerate() {
-            let Some((_location, label)) = &argument.label else {
+        for (index, parameter) in constructor.parameters.iter().enumerate() {
+            let Some(label) = &parameter.label else {
                 continue;
             };
 
-            let type_ = hydrator.type_from_ast(&argument.ast, environment, problems)?;
             let _ = fields.insert(
                 label.clone(),
                 RecordAccessor {
                     index: index as u64,
                     label: label.clone(),
-                    type_,
+                    type_: parameter.type_.clone(),
                 },
             );
         }
@@ -1861,9 +1854,9 @@ fn custom_type_accessors<A: std::fmt::Debug>(
 
 /// Returns the fields that have the same label and type across all variants of
 /// the given type.
-fn get_compatible_record_fields<A: std::fmt::Debug>(
-    constructors: &[RecordConstructor<A>],
-) -> Vec<(usize, &EcoString, &TypeAst)> {
+fn get_compatible_record_fields(
+    constructors: &[TypeValueConstructor],
+) -> Vec<(usize, &EcoString, &Arc<Type>)> {
     let mut compatible = vec![];
 
     let first = match constructors.first() {
@@ -1871,10 +1864,10 @@ fn get_compatible_record_fields<A: std::fmt::Debug>(
         None => return compatible,
     };
 
-    'next_argument: for (index, first_argument) in first.arguments.iter().enumerate() {
+    'next_argument: for (index, first_parameter) in first.parameters.iter().enumerate() {
         // Fields without labels do not have accessors
-        let first_label = match first_argument.label.as_ref() {
-            Some((_, label)) => label,
+        let first_label = match first_parameter.label.as_ref() {
+            Some(label) => label,
             None => continue 'next_argument,
         };
 
@@ -1882,22 +1875,22 @@ fn get_compatible_record_fields<A: std::fmt::Debug>(
         // with the same label and the same type
         for constructor in constructors.iter().skip(1) {
             // The field must exist in all variants
-            let argument = match constructor.arguments.get(index) {
+            let parameter = match constructor.parameters.get(index) {
                 Some(argument) => argument,
                 None => continue 'next_argument,
             };
 
             // The labels must be the same
-            if argument
+            if parameter
                 .label
                 .as_ref()
-                .is_none_or(|(_, arg_label)| arg_label != first_label)
+                .is_none_or(|arg_label| arg_label != first_label)
             {
                 continue 'next_argument;
             }
 
             // The types must be the same
-            if !argument.ast.is_logically_equal(&first_argument.ast) {
+            if !parameter.type_.same_as(&first_parameter.type_) {
                 continue 'next_argument;
             }
         }
@@ -1905,7 +1898,7 @@ fn get_compatible_record_fields<A: std::fmt::Debug>(
         // The previous loop did not find any incompatible fields in the other
         // variants so this field is compatible across variants and we should
         // generate an accessor for it.
-        compatible.push((index, first_label, &first_argument.ast))
+        compatible.push((index, first_label, &first_parameter.type_))
     }
 
     compatible

@@ -213,23 +213,24 @@ pub fn reference_for_ast_node(
         }),
         Located::Annotation { ast, type_ } => match type_.named_type_name() {
             Some((module, name)) => {
-                let target_kind = match ast {
+                let (target_kind, location) = match ast {
                     ast::TypeAst::Constructor(constructor) => {
-                        if constructor.module.is_some() {
+                        let kind = if constructor.module.is_some() {
                             RenameTarget::Qualified
                         } else {
                             RenameTarget::Unqualified
-                        }
+                        };
+                        (kind, constructor.name_location)
                     }
                     ast::TypeAst::Fn(_)
                     | ast::TypeAst::Var(_)
                     | ast::TypeAst::Tuple(_)
-                    | ast::TypeAst::Hole(_) => RenameTarget::Unqualified,
+                    | ast::TypeAst::Hole(_) => (RenameTarget::Unqualified, ast.location()),
                 };
                 Some(Referenced::ModuleType {
                     module,
                     name,
-                    location: ast.location(),
+                    location,
                     target_kind,
                 })
             }

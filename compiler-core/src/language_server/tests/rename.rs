@@ -1275,3 +1275,59 @@ pub fn main() -> wibble.Wibble { todo }
         find_position_of("Wibble")
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4372
+#[test]
+fn rename_type_referenced_in_variant_constructor_argument() {
+    assert_rename!(
+        (
+            "mod",
+            "
+import app
+
+pub type Wobble {
+  Wobble(w: app.Wibble)
+}
+"
+        ),
+        "
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() {
+  let wibble = Wibble
+}
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
+
+// https://github.com/gleam-lang/gleam/issues/4372
+#[test]
+fn rename_type_from_variant_constructor_argument() {
+    assert_rename!(
+        (
+            "mod",
+            "
+pub type Wibble {
+  Wibble
+}
+
+pub fn main() {
+  let wibble = Wibble
+}
+"
+        ),
+        "
+import mod
+
+pub type Wobble {
+  Wobble(w: mod.Wibble)
+}
+",
+        "SomeType",
+        find_position_of("Wibble")
+    );
+}
