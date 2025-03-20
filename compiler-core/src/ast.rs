@@ -2175,6 +2175,56 @@ pub struct BitArraySegment<Value, Type> {
     pub type_: Type,
 }
 
+#[derive(Debug, PartialEq, Copy, Clone)]
+pub enum Endianness {
+    Big,
+    Little,
+}
+
+impl Endianness {
+    pub fn is_big(&self) -> bool {
+        *self == Endianness::Big
+    }
+}
+
+impl<Value> BitArraySegment<Value, Arc<Type>> {
+    #[must_use]
+    pub fn has_native_option(&self) -> bool {
+        self.options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Native { .. }))
+    }
+
+    pub fn endiannes(&self) -> Endianness {
+        if self
+            .options
+            .iter()
+            .any(|x| matches!(x, BitArrayOption::Little { .. }))
+        {
+            Endianness::Little
+        } else {
+            Endianness::Big
+        }
+    }
+
+    pub fn size(&self) -> Option<&Value> {
+        self.options.iter().find_map(|x| match x {
+            BitArrayOption::Size { value, .. } => Some(value.as_ref()),
+            _ => None,
+        })
+    }
+
+    pub fn unit(&self) -> u8 {
+        self.options
+            .iter()
+            .find_map(|option| match option {
+                BitArrayOption::Unit { value, .. } => Some(*value),
+                _ => None,
+            })
+            .unwrap_or(1)
+    }
+}
+
 impl TypedExprBitArraySegment {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
         self.value.find_node(byte_index)

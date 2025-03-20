@@ -4,7 +4,6 @@ use std::sync::OnceLock;
 use super::{expression::is_js_scalar, *};
 use crate::{
     analyse::Inferred,
-    javascript::endianness::Endianness,
     strings::convert_string_escape_chars,
     type_::{FieldMap, PatternConstructor},
 };

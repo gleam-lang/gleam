@@ -7,7 +7,6 @@ use super::{
 };
 use crate::{
     ast::*,
-    javascript::endianness::Endianness,
     line_numbers::LineNumbers,
     pretty::*,
     type_::{
@@ -443,70 +442,37 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         segment: &'a TypedExprBitArraySegment,
     ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-        use BitArrayOption as Opt;
-
-        if segment
-            .options
-            .iter()
-            .any(|x| matches!(x, Opt::Native { .. }))
-        {
+        if segment.has_native_option() {
             return Err(Error::Unsupported {
                 feature: "This bit array segment option".into(),
                 location: segment.location,
             });
         }
 
-        let endianness = if segment
-            .options
-            .iter()
-            .any(|x| matches!(x, Opt::Little { .. }))
-        {
-            Endianness::Little
-        } else {
-            Endianness::Big
-        };
-
-        let size = segment
-            .options
-            .iter()
-            .find(|x| matches!(x, Opt::Size { .. }));
-
-        let unit = segment
-            .options
-            .iter()
-            .find_map(|option| match option {
-                Opt::Unit { value, .. } => Some(*value),
-                _ => None,
-            })
-            .unwrap_or(1);
+        let endianness = segment.endiannes();
+        let size = segment.size();
+        let unit = segment.unit();
 
         let (size_value, size) = match size {
-            Some(Opt::Size { value: size, .. }) => match *size.clone() {
-                TypedExpr::Int { int_value, .. } => {
-                    let size_value = int_value * unit as usize;
-                    let size = eco_format!("{}", size_value).to_doc();
+            Some(TypedExpr::Int { int_value, .. }) => {
+                let size_value = int_value * unit;
+                let size = eco_format!("{}", size_value).to_doc();
+                (Some(size_value), size)
+            }
+            Some(size) => {
+                let mut size = self.not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(size)
+                })?;
 
-                    (Some(size_value), size)
+                if unit != 1 {
+                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
                 }
-                _ => {
-                    let mut size = self.not_in_tail_position(Some(Ordering::Strict), |this| {
-                        this.wrap_expression(size)
-                    })?;
 
-                    if unit != 1 {
-                        size = size.group().append(" * ".to_doc().append(unit.to_doc()));
-                    }
+                (None, size)
+            }
 
-                    (None, size)
-                }
-            },
-            _ => {
-                let size_value = if segment.type_ == crate::type_::int() {
-                    8usize
-                } else {
-                    64usize
-                };
-
+            None => {
+                let size_value: usize = if segment.type_.is_int() { 8 } else { 64 };
                 (Some(BigInt::from(size_value)), docvec![size_value])
             }
         };

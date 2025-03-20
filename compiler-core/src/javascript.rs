@@ -1,4 +1,3 @@
-mod endianness;
 mod expression;
 mod import;
 mod pattern;
@@ -869,7 +868,7 @@ pub(crate) const SAFE_INT_SEGMENT_MAX_SIZE: usize = 48;
 pub(crate) fn bit_array_segment_int_value_to_bytes(
     mut value: BigInt,
     size: BigInt,
-    endianness: endianness::Endianness,
+    endianness: Endianness,
 ) -> Result<Vec<u8>, Error> {
     // Clamp negative sizes to zero
     let size = size.max(BigInt::ZERO);
