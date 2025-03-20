@@ -3,13 +3,13 @@ use std::collections::HashMap;
 use ecow::EcoString;
 use futures::future;
 use gleam_core::{
+    Error, Result,
     build::{Mode, Telemetry},
     config::PackageConfig,
     dependency,
     manifest::Manifest,
     paths::ProjectPaths,
     requirement::Requirement,
-    Error, Result,
 };
 
 use crate::{
@@ -19,9 +19,9 @@ use crate::{
 };
 
 use super::{
-    add_missing_packages, is_same_requirements, lookup_package, provide_git_package,
-    provide_local_package, read_manifest_from_disc, remove_extra_packages, unlock_packages,
-    CheckMajorVersions, LocalPackages, UseManifest,
+    CheckMajorVersions, LocalPackages, UseManifest, add_missing_packages, is_same_requirements,
+    lookup_package, provide_git_package, provide_local_package, read_manifest_from_disc,
+    remove_extra_packages, unlock_packages,
 };
 
 pub struct DependencyManagerConfig {

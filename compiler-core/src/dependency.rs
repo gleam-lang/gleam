@@ -1,6 +1,6 @@
 use std::{borrow::Borrow, cell::RefCell, collections::HashMap, error::Error as StdError, rc::Rc};
 
-use crate::{manifest, Error, Result};
+use crate::{Error, Result, manifest};
 
 use ecow::EcoString;
 use hexpm::{
