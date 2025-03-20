@@ -240,6 +240,10 @@
 
   ([Matias Carlander](https://github.com/matiascr))
 
+- The language server will now only offer the code action to generate a JSON
+  encoder if the `gleam_json` package is installed as a dependency.
+  ([Surya Rose](https://github.com/GearsDatapacks))
+
 ### Formatter
 
 ### Bug fixes
