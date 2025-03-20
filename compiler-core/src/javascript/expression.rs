@@ -1796,8 +1796,8 @@ fn bit_array<'a>(
 #[derive(Debug)]
 struct SizedBitArraySegmentDetails<'a> {
     size: Document<'a>,
-    /// The size of the bit array segment stored as a BigInt. This has a value when the segment's
-    /// size is known at compile time.
+    /// The size of the bit array segment stored as a BigInt.
+    /// This has a value when the segment's size is known at compile time.
     size_value: Option<BigInt>,
 }
 
@@ -1806,58 +1806,33 @@ fn sized_bit_array_segment_details<'a>(
     tracker: &mut UsageTracker,
     constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
 ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-    use BitArrayOption as Opt;
-
-    if segment
-        .options
-        .iter()
-        .any(|x| matches!(x, Opt::Native { .. }))
-    {
+    if segment.has_native_option() {
         return Err(Error::Unsupported {
             feature: "This bit array segment option".into(),
             location: segment.location,
         });
     }
 
-    let unit = segment
-        .options
-        .iter()
-        .find_map(|option| match option {
-            Opt::Unit { value, .. } => Some(*value),
-            _ => None,
-        })
-        .unwrap_or(1);
-
-    let size = segment
-        .options
-        .iter()
-        .find(|x| matches!(x, Opt::Size { .. }));
-
+    let size = segment.size();
+    let unit = segment.unit();
     let (size_value, size) = match size {
-        Some(Opt::Size { value: size, .. }) => match *size.clone() {
-            Constant::Int { int_value, .. } => {
-                let size_value = int_value * unit as usize;
-                let size = eco_format!("{}", size_value).to_doc();
+        Some(Constant::Int { int_value, .. }) => {
+            let size_value = int_value * unit;
+            let size = eco_format!("{}", size_value).to_doc();
+            (Some(size_value), size)
+        }
+        Some(size) => {
+            let mut size = constant_expr_fun(tracker, size)?;
 
-                (Some(size_value), size)
+            if unit != 1 {
+                size = size.group().append(" * ".to_doc().append(unit.to_doc()));
             }
-            _ => {
-                let mut size = constant_expr_fun(tracker, size)?;
 
-                if unit != 1 {
-                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
-                }
+            (None, size)
+        }
 
-                (None, size)
-            }
-        },
-        _ => {
-            let size_value = if segment.type_ == crate::type_::int() {
-                8usize
-            } else {
-                64usize
-            };
-
+        None => {
+            let size_value: usize = if segment.type_.is_int() { 8 } else { 64 };
             (Some(BigInt::from(size_value)), docvec![size_value])
         }
     };
