@@ -397,6 +397,7 @@ struct TestProject<'a> {
     hex_modules: Vec<(&'a str, &'a str)>,
     dev_hex_modules: Vec<(&'a str, &'a str)>,
     indirect_hex_modules: Vec<(&'a str, &'a str)>,
+    package_modules: HashMap<&'a str, Vec<(&'a str, &'a str)>>,
 }
 
 impl<'a> TestProject<'a> {
@@ -409,6 +410,7 @@ impl<'a> TestProject<'a> {
             hex_modules: vec![],
             dev_hex_modules: vec![],
             indirect_hex_modules: vec![],
+            package_modules: HashMap::new(),
         }
     }
 
@@ -475,6 +477,14 @@ impl<'a> TestProject<'a> {
         self
     }
 
+    pub fn add_package_module(mut self, package: &'a str, name: &'a str, src: &'a str) -> Self {
+        self.package_modules
+            .entry(package)
+            .or_default()
+            .push((name, src));
+        self
+    }
+
     pub fn build_engine(
         &self,
         io: &mut LanguageServerTestIO,
@@ -491,6 +501,13 @@ impl<'a> TestProject<'a> {
         self.indirect_hex_modules.iter().for_each(|(name, code)| {
             _ = io.hex_dep_module("indirect_hex", name, code);
         });
+
+        for (package, modules) in self.package_modules.iter() {
+            io.add_hex_package(package);
+            for (module, code) in modules {
+                _ = io.hex_dep_module(package, module, code);
+            }
+        }
 
         let mut engine = setup_engine(io);
 
