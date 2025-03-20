@@ -170,7 +170,7 @@ pub fn package_interface(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
 
 pub fn package_information(paths: &ProjectPaths, out: Utf8PathBuf) -> Result<()> {
     let config = crate::config::root_config(paths)?;
-    let out = gleam_core::docs::generate_json_package_information(out, &config);
+    let out = gleam_core::docs::generate_json_package_information(out, config);
     crate::fs::write_outputs_under(&[out], paths.root())?;
     Ok(())
 }

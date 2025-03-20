@@ -14,6 +14,7 @@ use serde::ser::{Serialize, SerializeMap, Serializer};
 #[serde(untagged, remote = "Self")]
 pub enum Requirement {
     Hex {
+        #[serde(deserialize_with = "deserialise_range")]
         version: Range,
     },
     Path {
@@ -84,6 +85,14 @@ impl Serialize for Requirement {
 }
 
 // Deserialization
+
+fn deserialise_range<'de, D>(deserializer: D) -> Result<Range, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let version = String::deserialize(deserializer)?;
+    Ok(Range::new(version))
+}
 
 #[derive(Debug, Copy, Clone)]
 pub struct Void;
