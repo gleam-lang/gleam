@@ -3782,7 +3782,7 @@ pub struct GenerateJsonEncoder<'a> {
 }
 
 const JSON_MODULE: &str = "gleam/json";
-const JSON_PACKAGE_NAME: &str = "gleam_json";
+pub const JSON_PACKAGE_NAME: &str = "gleam_json";
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 enum EncodingMode {

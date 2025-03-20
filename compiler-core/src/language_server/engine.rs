@@ -37,7 +37,7 @@ use super::{
         AddAnnotations, CodeActionBuilder, ConvertFromUse, ConvertToFunctionCall, ConvertToPipe,
         ConvertToUse, ExpandFunctionCapture, ExtractConstant, ExtractVariable,
         FillInMissingLabelledArgs, FillUnusedFields, GenerateDynamicDecoder, GenerateFunction,
-        GenerateJsonEncoder, InlineVariable, InterpolateString, LetAssertToCase,
+        GenerateJsonEncoder, InlineVariable, InterpolateString, JSON_PACKAGE_NAME, LetAssertToCase,
         PatternMatchOnValue, RedundantTupleInCaseSubject, RemoveEchos, UseLabelShorthandSyntax,
         code_action_add_missing_patterns, code_action_convert_qualified_constructor_to_unqualified,
         code_action_convert_unqualified_constructor_to_qualified, code_action_import_module,
@@ -400,7 +400,11 @@ where
             );
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
-            GenerateJsonEncoder::new(module, &lines, &params, &mut actions).code_actions();
+            if this.compiler.has_dependency(JSON_PACKAGE_NAME)
+                || this.compiler.has_dev_dependency(JSON_PACKAGE_NAME)
+            {
+                GenerateJsonEncoder::new(module, &lines, &params, &mut actions).code_actions();
+            }
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             Ok(if actions.is_empty() {
                 None

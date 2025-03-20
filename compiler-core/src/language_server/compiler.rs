@@ -187,6 +187,20 @@ where
     pub fn get_module_interface(&self, name: &str) -> Option<&ModuleInterface> {
         self.project_compiler.get_importable_modules().get(name)
     }
+
+    pub fn has_dependency(&self, package: &str) -> bool {
+        self.project_compiler
+            .config
+            .dependencies
+            .contains_key(package)
+    }
+
+    pub fn has_dev_dependency(&self, package: &str) -> bool {
+        self.project_compiler
+            .config
+            .dev_dependencies
+            .contains_key(package)
+    }
 }
 
 impl<IO> LspProjectCompiler<IO> {
