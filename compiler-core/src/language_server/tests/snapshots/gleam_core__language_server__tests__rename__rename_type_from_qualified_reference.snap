@@ -15,7 +15,7 @@ fn wibble(w: Wibble) -> Wibble { todo }
 import mod
 
 pub fn main(w: mod.Wibble) -> mod.Wibble { todo }
-               ↑▔▔▔▔▔▔▔▔▔                        
+                   ↑▔▔▔▔▔                        
 
 
 ----- AFTER RENAME
