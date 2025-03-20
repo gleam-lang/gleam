@@ -759,20 +759,28 @@ impl Environment<'_> {
             return vec![];
         }
 
+        let mut imported_modules = HashSet::new();
+
         let mut suggestions = self
-            .importable_modules
+            .imported_modules
             .iter()
-            .filter_map(|(importable, module_info)| match layer {
+            .filter_map(|(_, (_, module_info))| match layer {
                 Layer::Type => match module_info.get_public_type(name) {
                     Some(type_) => match arity {
                         Some(arity) => {
                             if type_.parameters.len() == arity {
-                                Some(TypeOrVariableSuggestion::Importable(importable.clone()))
+                                // Should be impossible to exist already
+                                let _ = imported_modules.insert(module_info.name.clone());
+                                Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
                             } else {
                                 None
                             }
                         }
-                        None => Some(TypeOrVariableSuggestion::Importable(importable.clone())),
+                        None => {
+                            // Should be impossible to exist already
+                            let _ = imported_modules.insert(module_info.name.clone());
+                            Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
+                        }
                     },
                     None => None,
                 },
@@ -780,36 +788,40 @@ impl Environment<'_> {
                     Some(value) => match arity {
                         Some(_) => {
                             if value.type_.fn_arity() == arity {
-                                Some(TypeOrVariableSuggestion::Importable(importable.clone()))
+                                // Should be impossible to exist already
+                                let _ = imported_modules.insert(module_info.name.clone());
+                                Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
                             } else {
                                 None
                             }
                         }
-                        None => Some(TypeOrVariableSuggestion::Importable(importable.clone())),
+                        None => {
+                            // Should be impossible to exist already
+                            let _ = imported_modules.insert(module_info.name.clone());
+                            Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
+                        }
                     },
                     None => None,
                 },
             })
             .collect_vec();
 
-        suggestions.extend(
-            self.imported_modules
-                .iter()
-                .filter_map(|(_, (_, module_info))| match layer {
+        suggestions.extend(self.importable_modules.iter().filter_map(
+            |(importable, module_info)| {
+                if imported_modules.contains(importable) {
+                    return None;
+                }
+                match layer {
                     Layer::Type => match module_info.get_public_type(name) {
                         Some(type_) => match arity {
                             Some(arity) => {
                                 if type_.parameters.len() == arity {
-                                    Some(TypeOrVariableSuggestion::Imported(
-                                        module_info.name.clone(),
-                                    ))
+                                    Some(TypeOrVariableSuggestion::Importable(importable.clone()))
                                 } else {
                                     None
                                 }
                             }
-                            None => {
-                                Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
-                            }
+                            None => Some(TypeOrVariableSuggestion::Importable(importable.clone())),
                         },
                         None => None,
                     },
@@ -817,21 +829,18 @@ impl Environment<'_> {
                         Some(value) => match arity {
                             Some(_) => {
                                 if value.type_.fn_arity() == arity {
-                                    Some(TypeOrVariableSuggestion::Imported(
-                                        module_info.name.clone(),
-                                    ))
+                                    Some(TypeOrVariableSuggestion::Importable(importable.clone()))
                                 } else {
                                     None
                                 }
                             }
-                            None => {
-                                Some(TypeOrVariableSuggestion::Imported(module_info.name.clone()))
-                            }
+                            None => Some(TypeOrVariableSuggestion::Importable(importable.clone())),
                         },
                         None => None,
                     },
-                }),
-        );
+                }
+            },
+        ));
 
         // Sort options based on if its already imported and on lexicographical order.
         suggestions.into_iter().sorted().collect()
