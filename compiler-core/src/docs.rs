@@ -24,8 +24,8 @@ use crate::{
 use askama::Template;
 use ecow::EcoString;
 use itertools::Itertools;
-use serde::Serialize;
-use serde_json::{json, to_string as serde_to_string};
+use serde::{Deserialize, Serialize};
+use serde_json::to_string as serde_to_string;
 
 const MAX_COLUMNS: isize = 65;
 
@@ -33,6 +33,12 @@ const MAX_COLUMNS: isize = 65;
 pub enum DocContext {
     HexPublish,
     Build,
+}
+
+#[derive(PartialEq, Debug, Serialize, Deserialize)]
+pub struct PackageInformation {
+    #[serde(rename = "gleam.toml")]
+    package_config: PackageConfig,
 }
 
 pub fn generate_html<IO: FileSystemReader>(
@@ -479,13 +485,18 @@ pub fn generate_json_package_interface(
     }
 }
 
-pub fn generate_json_package_information(path: Utf8PathBuf, config: &PackageConfig) -> OutputFile {
-    let gleam_toml = serde_json::to_string(&config).expect("JSON module interface serialisation");
-
+pub fn generate_json_package_information(path: Utf8PathBuf, config: PackageConfig) -> OutputFile {
     OutputFile {
         path,
-        content: Content::Text(json!({"gleam.toml": gleam_toml}).to_string()),
+        content: Content::Text(package_information_as_json(config)),
     }
+}
+
+fn package_information_as_json(config: PackageConfig) -> String {
+    let info = PackageInformation {
+        package_config: config,
+    };
+    serde_json::to_string_pretty(&info).expect("JSON module information serialisation")
 }
 
 fn page_unnest(path: &str) -> String {
@@ -888,4 +899,68 @@ enum SearchProgrammingLanguage {
     // Elixir,
     // Erlang,
     Gleam,
+}
+
+#[test]
+fn package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+licences = ["Apache-2.0", "MIT"]
+description = "Pretty complex config"
+target = "erlang"
+repository = { type = "github", user = "example", repo = "my_dep" }
+links = [{ title = "Home page", href = "https://example.com" }]
+internal_modules = ["my_app/internal"]
+gleam = ">= 0.30.0"
+
+[dependencies]
+gleam_stdlib = ">= 0.18.0 and < 2.0.0"
+my_other_project = { path = "../my_other_project" }
+
+[dev-dependencies]
+gleeunit = ">= 1.0.0 and < 2.0.0"
+
+[documentation]
+pages = [{ title = "My Page", path = "my-page.html", source = "./path/to/my-page.md" }]
+
+[erlang]
+application_start_module = "my_app/application"
+extra_applications = ["inets", "ssl"]
+
+[javascript]
+typescript_declarations = true
+runtime = "node"
+
+[javascript.deno]
+allow_all = false
+allow_ffi = true
+allow_env = ["DATABASE_URL"]
+allow_net = ["example.com:443"]
+allow_read = ["./database.sqlite"]
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let info = PackageInformation {
+        package_config: config.clone(),
+    };
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
+
+    let roundtrip: PackageInformation = serde_json::from_str(&json).unwrap();
+    assert_eq!(info, roundtrip);
+}
+
+#[test]
+fn barebones_package_config_to_json() {
+    let input = r#"
+name = "my_project"
+version = "1.0.0"
+"#;
+
+    let config = toml::from_str::<PackageConfig>(&input).unwrap();
+    let json = package_information_as_json(config);
+    let output = format!("--- GLEAM.TOML\n{input}\n\n--- EXPORTED JSON\n\n{json}");
+    insta::assert_snapshot!(output);
 }
