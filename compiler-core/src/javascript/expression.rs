@@ -342,6 +342,13 @@ impl<'module, 'a> Generator<'module, 'a> {
             })?;
 
             if segment.type_.is_int() || segment.type_.is_float() {
+                if segment.has_native_option() {
+                    return Err(Error::Unsupported {
+                        feature: "This bit array segment option".into(),
+                        location: segment.location,
+                    });
+                }
+
                 let details = self.sized_bit_array_segment_details(segment)?;
 
                 if segment.type_.is_int() {
@@ -442,13 +449,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         &mut self,
         segment: &'a TypedExprBitArraySegment,
     ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-        if segment.has_native_option() {
-            return Err(Error::Unsupported {
-                feature: "This bit array segment option".into(),
-                location: segment.location,
-            });
-        }
-
         let size = segment.size();
         let unit = segment.unit();
         let (size_value, size) = match size {
@@ -1701,6 +1701,12 @@ fn bit_array<'a>(
         let value = constant_expr_fun(tracker, &segment.value)?;
 
         if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+            if segment.has_native_option() {
+                return Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                });
+            }
             let details =
                 sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
 
@@ -1806,13 +1812,6 @@ fn sized_bit_array_segment_details<'a>(
     tracker: &mut UsageTracker,
     constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
 ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-    if segment.has_native_option() {
-        return Err(Error::Unsupported {
-            feature: "This bit array segment option".into(),
-            location: segment.location,
-        });
-    }
-
     let size = segment.size();
     let unit = segment.unit();
     let (size_value, size) = match size {
@@ -1821,6 +1820,7 @@ fn sized_bit_array_segment_details<'a>(
             let size = eco_format!("{}", size_value).to_doc();
             (Some(size_value), size)
         }
+
         Some(size) => {
             let mut size = constant_expr_fun(tracker, size)?;
 
