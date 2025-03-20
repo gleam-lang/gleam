@@ -341,10 +341,10 @@ impl<'module, 'a> Generator<'module, 'a> {
                 this.wrap_expression(&segment.value)
             })?;
 
-            if segment.type_ == crate::type_::int() || segment.type_ == crate::type_::float() {
+            if segment.type_.is_int() || segment.type_.is_float() {
                 let details = self.sized_bit_array_segment_details(segment)?;
 
-                if segment.type_ == crate::type_::int() {
+                if segment.type_.is_int() {
                     match (details.size_value, segment.value.as_ref()) {
                         (Some(size_value), TypedExpr::Int { int_value, .. })
                             if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
@@ -353,7 +353,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                             let bytes = bit_array_segment_int_value_to_bytes(
                                 int_value.clone(),
                                 size_value,
-                                details.endianness,
+                                segment.endianness(),
                             )?;
 
                             Ok(u8_slice(&bytes))
@@ -371,7 +371,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                                 ", ",
                                 details.size,
                                 ", ",
-                                bool(details.endianness.is_big()),
+                                bool(segment.endianness().is_big()),
                                 ")"
                             ])
                         }
@@ -384,7 +384,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                         ", ",
                         details.size,
                         ", ",
-                        bool(details.endianness.is_big()),
+                        bool(segment.endianness().is_big()),
                         ")"
                     ])
                 }
@@ -449,10 +449,8 @@ impl<'module, 'a> Generator<'module, 'a> {
             });
         }
 
-        let endianness = segment.endiannes();
         let size = segment.size();
         let unit = segment.unit();
-
         let (size_value, size) = match size {
             Some(TypedExpr::Int { int_value, .. }) => {
                 let size_value = int_value * unit;
@@ -477,11 +475,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             }
         };
 
-        Ok(SizedBitArraySegmentDetails {
-            size,
-            size_value,
-            endianness,
-        })
+        Ok(SizedBitArraySegmentDetails { size, size_value })
     }
 
     pub fn wrap_return(&mut self, document: Document<'a>) -> Document<'a> {
@@ -1719,7 +1713,7 @@ fn bit_array<'a>(
                         let bytes = bit_array_segment_int_value_to_bytes(
                             int_value.clone(),
                             size_value,
-                            details.endianness,
+                            segment.endianness(),
                         )?;
 
                         Ok(u8_slice(&bytes))
@@ -1737,7 +1731,7 @@ fn bit_array<'a>(
                             ", ",
                             details.size,
                             ", ",
-                            bool(details.endianness.is_big()),
+                            bool(segment.endianness().is_big()),
                             ")"
                         ])
                     }
@@ -1750,7 +1744,7 @@ fn bit_array<'a>(
                     ", ",
                     details.size,
                     ", ",
-                    bool(details.endianness.is_big()),
+                    bool(segment.endianness().is_big()),
                     ")"
                 ])
             }
@@ -1805,7 +1799,6 @@ struct SizedBitArraySegmentDetails<'a> {
     /// The size of the bit array segment stored as a BigInt. This has a value when the segment's
     /// size is known at compile time.
     size_value: Option<BigInt>,
-    endianness: Endianness,
 }
 
 fn sized_bit_array_segment_details<'a>(
@@ -1825,16 +1818,6 @@ fn sized_bit_array_segment_details<'a>(
             location: segment.location,
         });
     }
-
-    let endianness = if segment
-        .options
-        .iter()
-        .any(|x| matches!(x, Opt::Little { .. }))
-    {
-        Endianness::Little
-    } else {
-        Endianness::Big
-    };
 
     let unit = segment
         .options
@@ -1879,11 +1862,7 @@ fn sized_bit_array_segment_details<'a>(
         }
     };
 
-    Ok(SizedBitArraySegmentDetails {
-        size,
-        size_value,
-        endianness,
-    })
+    Ok(SizedBitArraySegmentDetails { size, size_value })
 }
 
 pub fn string(value: &str) -> Document<'_> {

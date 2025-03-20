@@ -2195,7 +2195,7 @@ impl<Value> BitArraySegment<Value, Arc<Type>> {
             .any(|x| matches!(x, BitArrayOption::Native { .. }))
     }
 
-    pub fn endiannes(&self) -> Endianness {
+    pub fn endianness(&self) -> Endianness {
         if self
             .options
             .iter()
