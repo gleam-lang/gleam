@@ -126,20 +126,6 @@ impl TypeOrVariableSuggestion {
             }
         }
     }
-
-    pub fn name(&self) -> &EcoString {
-        match self {
-            TypeOrVariableSuggestion::Imported(name)
-            | TypeOrVariableSuggestion::Importable(name) => name,
-        }
-    }
-
-    pub fn last_name_component(&self) -> &str {
-        match self {
-            TypeOrVariableSuggestion::Imported(name)
-            | TypeOrVariableSuggestion::Importable(name) => name.split('/').last().unwrap_or(name),
-        }
-    }
 }
 
 /// A suggestion for an unknown module
