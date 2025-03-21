@@ -66,7 +66,7 @@
   project's `gleam.toml` as a JSON file.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
-- Improve error message when giving the wrong password for a local token.
+- Improve error messages when encrypting and decrypting local Hex AIP key.
   ([Samuel Cristobal](https://github.com/scristobal))
 
 ### Language server

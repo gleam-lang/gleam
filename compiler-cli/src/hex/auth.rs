@@ -62,7 +62,10 @@ encrypt your Hex API key.
             );
         }
         let password = self.ask_local_password()?;
-        let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)?;
+        let encrypted = encryption::encrypt_with_passphrase(api_key.as_bytes(), &password)
+            .map_err(|e| Error::FailedToEncryptLocalHexApiKey {
+                detail: e.to_string(),
+            })?;
 
         crate::fs::write(&path, &format!("{name}\n{encrypted}"))?;
         println!("Encrypted Hex API key written to {path}");
@@ -110,11 +113,13 @@ encrypt your Hex API key.
         let Some(EncryptedApiKey { encrypted, .. }) = self.read_stored_api_key()? else {
             return Ok(None);
         };
+
         let password = self.ask_local_password()?;
         let unencrypted = encryption::decrypt_with_passphrase(encrypted.as_bytes(), &password)
-            .map_err(|e| Error::FailedToDecryptApiKey {
+            .map_err(|e| Error::FailedToDecryptLocalHexApiKey {
                 detail: e.to_string(),
             })?;
+
         Ok(Some(UnencryptedApiKey { unencrypted }))
     }
 

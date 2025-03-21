@@ -316,14 +316,11 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         wrongfully_allowed_version: SmallVersion,
     },
 
-    #[error("Failed to encrypt data")]
-    FailedToEncrypt { detail: String },
+    #[error("Failed to encrypt local Hex APIT key")]
+    FailedToEncryptLocalHexApiKey { detail: String },
 
-    #[error("Failed to decrypt data")]
-    FailedToDecrypt { detail: String },
-
-    #[error("Failed to decrypt API key")]
-    FailedToDecryptApiKey { detail: String },
+    #[error("Failed to decrypt local Hex API key")]
+    FailedToDecryptLocalHexApiKey { detail: String },
 }
 
 /// This is to make clippy happy and not make the error variant too big by
@@ -1460,8 +1457,8 @@ https://learn.microsoft.com/en-us/windows/apps/get-started/enable-your-device-fo
             }
 
 
-            Error::FailedToEncrypt { detail } => {
-                let text = wrap_format!("A problem was encountered encrypting data.
+            Error::FailedToEncryptLocalHexApiKey { detail } => {
+                let text = wrap_format!("A problem was encountered encrypting the local Hex API key with the given password.
 The error from the encryption library was:
 
     {detail}"
@@ -1475,29 +1472,14 @@ The error from the encryption library was:
                 }]
             }
 
-            Error::FailedToDecrypt { detail } => {
-                let text = wrap_format!("A problem was encountered decrypting data.
+            Error::FailedToDecryptLocalHexApiKey { detail }=> {
+                let text = wrap_format!("Unable to decrypt the local Hex API key with the given password.
 The error from the encryption library was:
 
     {detail}"
 );
                 vec![Diagnostic {
-                    title: "Failed to decrypt data".into(),
-                    text,
-                    hint: None,
-                    level: Level::Error,
-                    location: None,
-                }]
-            }
-
-            Error::FailedToDecryptApiKey { detail } => {
-                let text = wrap_format!("Unable to decrypt the local Hex token with the given password.
-The error from the encryption library was:
-
-    {detail}"
-);
-                vec![Diagnostic {
-                    title: "Failed to decrypt Hex token".into(),
+                    title: "Failed to decrypt local Hex API key".into(),
                     text,
                     hint: None,
                     level: Level::Error,
