@@ -3,6 +3,12 @@ source: compiler-core/src/type_/tests/dead_code_detection.rs
 expression: "\nimport wibble.{type Wibble}\n\nfn unused() -> Wibble {\n  panic\n}\n"
 ---
 ----- SOURCE CODE
+-- wibble.gleam
+
+pub type Wibble
+
+
+-- main.gleam
 
 import wibble.{type Wibble}
 

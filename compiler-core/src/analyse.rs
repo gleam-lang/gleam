@@ -385,12 +385,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
 
-        environment.references.register_value(
-            name.clone(),
-            EntityKind::Constant,
-            location,
-            publicity,
-        );
+        environment.references.begin_constant();
 
         let definition = FunctionDefinition {
             has_body: true,
@@ -441,6 +436,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             Deprecation::NotDeprecated,
         );
         environment.insert_module_value(name.clone(), variant);
+
+        environment
+            .references
+            .register_constant(name.clone(), location, publicity);
 
         environment.references.register_value_reference(
             environment.current_module.clone(),

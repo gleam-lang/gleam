@@ -262,3 +262,38 @@ pub fn used() -> Wibble {
 "
     );
 }
+
+#[test]
+fn shadowed_imported_value_marked_unused() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub const wibble = 1
+"
+        ),
+        "
+import wibble.{wibble}
+
+pub const wibble = 2
+"
+    );
+}
+
+#[test]
+fn used_shadowed_imported_value() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub const wibble = 1
+"
+        ),
+        "
+import wibble.{wibble}
+
+pub const wibble = wibble
+"
+    );
+}

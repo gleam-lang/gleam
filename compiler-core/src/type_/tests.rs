@@ -214,6 +214,7 @@ macro_rules! assert_warning {
             crate::build::Target::Erlang,
             None
         );
+        assert!(!warning.is_empty());
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
