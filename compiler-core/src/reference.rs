@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 
-use crate::ast::{self, Publicity, SrcSpan};
-use bimap::BiMap;
+use crate::ast::{Publicity, SrcSpan};
+use bimap::{BiMap, Overwritten};
 use ecow::EcoString;
 use petgraph::{
     Directed, Direction,
@@ -25,10 +25,8 @@ pub struct Reference {
 
 pub type ReferenceMap = HashMap<(EcoString, EcoString), Vec<Reference>>;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 pub struct EntityInformation {
-    pub name: EcoString,
-    pub layer: ast::Layer,
     pub origin: SrcSpan,
     pub kind: EntityKind,
 }
@@ -44,10 +42,17 @@ pub enum EntityKind {
     ImportedValue,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+enum EntityLayer {
+    Type,
+    Value,
+    Shadowed,
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct Entity {
     pub name: EcoString,
-    pub layer: ast::Layer,
+    layer: EntityLayer,
 }
 
 #[derive(Debug, Default)]
@@ -58,7 +63,7 @@ pub struct ReferenceTracker {
     entities: BiMap<Entity, NodeIndex>,
     current_function: NodeIndex,
     public_entities: Vec<Entity>,
-    entity_information: Vec<EntityInformation>,
+    entity_information: HashMap<Entity, EntityInformation>,
 
     /// The locations of the references to each value in this module, used for
     /// renaming and go-to reference.
@@ -73,7 +78,7 @@ impl ReferenceTracker {
         Self::default()
     }
 
-    fn get_or_create_node(&mut self, name: EcoString, layer: ast::Layer) -> NodeIndex {
+    fn get_or_create_node(&mut self, name: EcoString, layer: EntityLayer) -> NodeIndex {
         let entity = Entity { name, layer };
 
         match self.entities.get_by_left(&entity) {
@@ -86,6 +91,57 @@ impl ReferenceTracker {
         }
     }
 
+    fn create_node(&mut self, name: EcoString, layer: EntityLayer) -> NodeIndex {
+        let entity = Entity { name, layer };
+        let index = self.graph.add_node(());
+
+        self.create_node_and_maybe_shadow(entity, index);
+
+        index
+    }
+
+    fn create_node_and_maybe_shadow(&mut self, entity: Entity, index: NodeIndex) {
+        match self.entities.insert(entity, index) {
+            Overwritten::Neither => {}
+            Overwritten::Left(mut entity, index)
+            | Overwritten::Right(mut entity, index)
+            | Overwritten::Pair(mut entity, index)
+            | Overwritten::Both((mut entity, index), _) => {
+                if let Some(information) = self.entity_information.get(&entity) {
+                    entity.layer = EntityLayer::Shadowed;
+                    _ = self.entity_information.insert(entity.clone(), *information);
+                    _ = self.entities.insert(entity, index);
+                }
+            }
+        }
+    }
+
+    pub fn begin_constant(&mut self) {
+        self.current_function = self.graph.add_node(());
+    }
+
+    pub fn register_constant(&mut self, name: EcoString, location: SrcSpan, publicity: Publicity) {
+        let entity = Entity {
+            name,
+            layer: EntityLayer::Value,
+        };
+        self.create_node_and_maybe_shadow(entity.clone(), self.current_function);
+        match publicity {
+            Publicity::Public | Publicity::Internal { .. } => {
+                _ = self.public_entities.push(entity.clone());
+            }
+            Publicity::Private => {}
+        }
+
+        _ = self.entity_information.insert(
+            entity,
+            EntityInformation {
+                kind: EntityKind::Constant,
+                origin: location,
+            },
+        );
+    }
+
     pub fn register_value(
         &mut self,
         name: EcoString,
@@ -93,10 +149,10 @@ impl ReferenceTracker {
         location: SrcSpan,
         publicity: Publicity,
     ) {
-        self.current_function = self.get_or_create_node(name.clone(), ast::Layer::Value);
+        self.current_function = self.create_node(name.clone(), EntityLayer::Value);
         let entity = Entity {
             name,
-            layer: ast::Layer::Value,
+            layer: EntityLayer::Value,
         };
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
@@ -105,16 +161,17 @@ impl ReferenceTracker {
             Publicity::Private => {}
         }
 
-        _ = self.entity_information.push(EntityInformation {
-            name: entity.name,
-            layer: ast::Layer::Value,
-            kind,
-            origin: location,
-        });
+        _ = self.entity_information.insert(
+            entity,
+            EntityInformation {
+                kind,
+                origin: location,
+            },
+        );
     }
 
     pub fn set_current_function(&mut self, name: EcoString) {
-        self.current_function = self.get_or_create_node(name, ast::Layer::Value);
+        self.current_function = self.get_or_create_node(name, EntityLayer::Value);
     }
 
     pub fn register_type(
@@ -124,10 +181,10 @@ impl ReferenceTracker {
         location: SrcSpan,
         publicity: Publicity,
     ) {
-        self.current_function = self.get_or_create_node(name.clone(), ast::Layer::Type);
+        self.current_function = self.create_node(name.clone(), EntityLayer::Type);
         let entity = Entity {
             name,
-            layer: ast::Layer::Type,
+            layer: EntityLayer::Type,
         };
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
@@ -136,12 +193,13 @@ impl ReferenceTracker {
             Publicity::Private => {}
         }
 
-        _ = self.entity_information.push(EntityInformation {
-            name: entity.name,
-            layer: ast::Layer::Type,
-            kind,
-            origin: location,
-        });
+        _ = self.entity_information.insert(
+            entity,
+            EntityInformation {
+                kind,
+                origin: location,
+            },
+        );
     }
 
     pub fn register_value_reference(
@@ -155,7 +213,7 @@ impl ReferenceTracker {
         match kind {
             ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
-                let target = self.get_or_create_node(referenced_name.clone(), ast::Layer::Value);
+                let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
                 _ = self.graph.add_edge(self.current_function, target, ());
             }
         }
@@ -188,21 +246,15 @@ impl ReferenceTracker {
     }
 
     pub fn register_type_reference_in_call_graph(&mut self, name: EcoString) {
-        let target = self.get_or_create_node(name, ast::Layer::Type);
+        let target = self.get_or_create_node(name, EntityLayer::Type);
         _ = self.graph.add_edge(self.current_function, target, ());
     }
 
     pub fn unused_values(&self) -> HashMap<Entity, EntityInformation> {
         let mut unused_values = HashMap::with_capacity(self.entities.len());
 
-        for information in self.entity_information.iter() {
-            _ = unused_values.insert(
-                Entity {
-                    name: information.name.clone(),
-                    layer: information.layer,
-                },
-                information.clone(),
-            );
+        for (entity, information) in self.entity_information.iter() {
+            _ = unused_values.insert(entity.clone(), information.clone());
         }
         for entity in self.public_entities.iter() {
             let index = self.entities.get_by_left(entity).expect("Entity exists");
@@ -220,8 +272,9 @@ impl ReferenceTracker {
     ) {
         if unused.remove(entity).is_some() {
             for node in self.graph.neighbors_directed(index, Direction::Outgoing) {
-                let entity = self.entities.get_by_right(&node).expect("Value exists");
-                self.mark_value_as_used(unused, entity, node);
+                if let Some(entity) = self.entities.get_by_right(&node) {
+                    self.mark_value_as_used(unused, entity, node);
+                }
             }
         }
     }
