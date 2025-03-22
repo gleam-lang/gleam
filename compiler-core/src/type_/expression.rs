@@ -2966,15 +2966,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
             // Look in the current scope for a binding with this name
-            None => {
-                let constructor = self
-                    .environment
-                    .get_variable(name)
-                    .cloned()
-                    .ok_or_else(|| self.report_name_error(name, location))?;
-
-                constructor
-            }
+            None => self
+                .environment
+                .get_variable(name)
+                .cloned()
+                .ok_or_else(|| self.report_name_error(name, location))?,
 
             // Look in an imported module for a binding with this name
             Some((module_name, module_location)) => {

@@ -131,7 +131,7 @@ impl ReferenceTracker {
         self.create_node_and_maybe_shadow(entity.clone(), self.current_function);
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                _ = self.public_entities.push(entity.clone());
+                self.public_entities.push(entity.clone());
             }
             Publicity::Private => {}
         }
@@ -159,7 +159,7 @@ impl ReferenceTracker {
         };
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                _ = self.public_entities.push(entity.clone());
+                self.public_entities.push(entity.clone());
             }
             Publicity::Private => {}
         }
@@ -191,7 +191,7 @@ impl ReferenceTracker {
         };
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
-                _ = self.public_entities.push(entity.clone());
+                self.public_entities.push(entity.clone());
             }
             Publicity::Private => {}
         }
@@ -278,11 +278,12 @@ impl ReferenceTracker {
         let mut unused_values = HashMap::with_capacity(self.entities.len());
 
         for (entity, information) in self.entity_information.iter() {
-            _ = unused_values.insert(entity.clone(), information.clone());
+            _ = unused_values.insert(entity.clone(), *information);
         }
         for entity in self.public_entities.iter() {
-            let index = self.entities.get_by_left(entity).expect("Entity exists");
-            self.mark_value_as_used(&mut unused_values, entity, *index);
+            if let Some(index) = self.entities.get_by_left(entity) {
+                self.mark_value_as_used(&mut unused_values, entity, *index);
+            }
         }
 
         unused_values

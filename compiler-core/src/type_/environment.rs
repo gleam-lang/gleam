@@ -591,20 +591,16 @@ impl Environment<'_> {
         location: SrcSpan,
         problems: &mut Problems,
     ) {
-        match self
+        if let Some((origin, location, false)) = self
             .local_variable_usages
             .last_mut()
             .expect("Attempted to access non-existent entity usages scope")
             .insert(name.clone(), (origin, location, false))
         {
-            Some((origin, location, false)) => {
-                // an entity was overwritten in the top most scope without being used
-                let mut unused = HashMap::with_capacity(1);
-                let _ = unused.insert(name, (origin, location, false));
-                self.handle_unused_variables(unused, problems);
-            }
-
-            _ => {}
+            // an entity was overwritten in the top most scope without being used
+            let mut unused = HashMap::with_capacity(1);
+            let _ = unused.insert(name, (origin, location, false));
+            self.handle_unused_variables(unused, problems);
         }
     }
 
