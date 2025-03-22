@@ -36,10 +36,12 @@ pub enum EntityKind {
     Function,
     Constant,
     Constructor,
-    PrivateType,
+    Type,
     ImportedConstructor,
     ImportedType,
     ImportedValue,
+    ImportedModule,
+    ModuleAlias,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -47,6 +49,7 @@ enum EntityLayer {
     Type,
     Value,
     Shadowed,
+    Module,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -202,6 +205,22 @@ impl ReferenceTracker {
         );
     }
 
+    pub fn register_module(&mut self, name: EcoString, kind: EntityKind, location: SrcSpan) {
+        self.current_function = self.create_node(name.clone(), EntityLayer::Module);
+        let entity = Entity {
+            name,
+            layer: EntityLayer::Module,
+        };
+
+        _ = self.entity_information.insert(
+            entity,
+            EntityInformation {
+                kind,
+                origin: location,
+            },
+        );
+    }
+
     pub fn register_value_reference(
         &mut self,
         module: EcoString,
@@ -247,6 +266,11 @@ impl ReferenceTracker {
 
     pub fn register_type_reference_in_call_graph(&mut self, name: EcoString) {
         let target = self.get_or_create_node(name, EntityLayer::Type);
+        _ = self.graph.add_edge(self.current_function, target, ());
+    }
+
+    pub fn register_module_reference(&mut self, name: EcoString) {
+        let target = self.get_or_create_node(name, EntityLayer::Module);
         _ = self.graph.add_edge(self.current_function, target, ());
     }
 
