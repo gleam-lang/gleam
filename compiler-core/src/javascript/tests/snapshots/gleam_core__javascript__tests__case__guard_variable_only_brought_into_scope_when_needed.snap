@@ -1,0 +1,38 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\nfn go(x) {\n  case x {\n    // We want `a` to be defined before the guard check, and\n    // `b` to be defined only if the predicate on a matches!\n    [a, b] if a == 1 -> a + b\n    _ -> 2\n  }\n}\n"
+---
+----- SOURCE CODE
+
+fn go(x) {
+  case x {
+    // We want `a` to be defined before the guard check, and
+    // `b` to be defined only if the predicate on a matches!
+    [a, b] if a == 1 -> a + b
+    _ -> 2
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+function go(x) {
+  if (x.hasLength(0)) {
+    return 2;
+  } else {
+    if (x.tail.hasLength(0)) {
+      return 2;
+    } else {
+      if (x.tail.tail.hasLength(0)) {
+        let a = x.head;
+        if (a === 1) {
+          let b = x.tail.head;
+          return a + b;
+        } else {
+          return 2;
+        }
+      } else {
+        return 2;
+      }
+    }
+  }
+}

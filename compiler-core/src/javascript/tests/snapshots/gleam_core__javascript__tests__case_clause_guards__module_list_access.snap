@@ -20,8 +20,8 @@ import { toList, isEqual } from "../gleam.mjs";
 
 export function main() {
   let names = toList(["Tony Stark", "Bruce Wayne"]);
-  if (isEqual(names, $hero.heroes)) {
-    let n = names;
+  let n = names;
+  if (isEqual(n, $hero.heroes)) {
     return true;
   } else {
     return false;

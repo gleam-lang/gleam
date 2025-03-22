@@ -54,7 +54,7 @@ fn tuple_with_block_element() {
         r#"
 fn go() {
   #(
-    "1", 
+    "1",
     {
       "2"
       "3"
@@ -126,19 +126,6 @@ fn go(a) {
     #(2, a) -> a
     #(1, 1) -> 1
     #(a, b) -> a + b
-  }
-}
-"#,
-        r#"function go(a) {
-  if (a[0] === 2) {
-    let a$1 = a[1];
-    return a$1;
-  } else if (a[0] === 1 && a[1] === 1) {
-    return 1;
-  } else {
-    let a$1 = a[0];
-    let b = a[1];
-    return a$1 + b;
   }
 }
 "#

@@ -32,8 +32,8 @@ export class Person extends $CustomType {
 export function main() {
   let given_name = "jack";
   let raiden = new Person("raiden", "jack", 31);
-  if (given_name === raiden.name) {
-    let name = given_name;
+  let name = given_name;
+  if (name === raiden.name) {
     return "It's jack";
   } else {
     return "It's not jack";

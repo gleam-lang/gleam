@@ -1,5 +1,51 @@
 use crate::assert_js;
 
+#[test]
+fn tuple_and_guard() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case #(1, 2) {
+    #(1, a) if a == 2 -> 1
+    #(_, _) -> 2
+  }
+}
+"#,
+    )
+}
+
+#[test]
+fn guard_variable_only_brought_into_scope_when_needed() {
+    assert_js!(
+        r#"
+fn go(x) {
+  case x {
+    // We want `a` to be defined before the guard check, and
+    // `b` to be defined only if the predicate on a matches!
+    [a, b] if a == 1 -> a + b
+    _ -> 2
+  }
+}
+"#
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/4221
+#[test]
+fn guard_variable_only_brought_into_scope_when_needed_1() {
+    assert_js!(
+        r#"
+pub fn main() {
+  case 1 {
+    i if i == 1 -> True
+    i if i < 2 -> True
+    _ -> False
+  }
+}
+"#
+    )
+}
+
 // https://github.com/gleam-lang/gleam/issues/1187
 #[test]
 fn pointless() {

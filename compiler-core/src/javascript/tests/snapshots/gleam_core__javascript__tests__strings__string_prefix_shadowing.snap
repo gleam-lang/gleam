@@ -15,8 +15,8 @@ pub fn go(x) {
 ----- COMPILED JAVASCRIPT
 export function go(x) {
   if (x.startsWith("Hello, ")) {
-    let name = x.slice(7);
     let x$1 = "Hello, ";
+    let name = x.slice(7);
     return x$1;
   } else {
     return "Unknown";

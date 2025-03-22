@@ -1,3 +1,4 @@
+mod decision;
 mod expression;
 mod import;
 mod pattern;
@@ -515,8 +516,18 @@ impl<'a> Generator<'a> {
             "export const "
         };
 
-        let document =
-            expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
+        let mut generator = expression::Generator::new(
+            self.module.name.clone(),
+            &self.module.type_info.src_path,
+            self.project_root,
+            self.line_numbers,
+            "".into(),
+            vec![],
+            &mut self.tracker,
+            self.module_scope.clone(),
+        );
+
+        let document = generator.constant_expression(Context::Constant, value)?;
 
         Ok(docvec![
             head,
