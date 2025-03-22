@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble\n\ntype Wibble {\n  Wibble(wobble: Int)\n}\n\npub fn main() {\n  let wibble = Wibble(10)\n  // This does not reference the `wibble` module!\n  wibble.wobble\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub const wibble = 1
+
+
+-- main.gleam
+
+import wibble
+
+type Wibble {
+  Wibble(wobble: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(10)
+  // This does not reference the `wibble` module!
+  wibble.wobble
+}
+
+
+----- WARNING
+warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ import wibble
+  │ ^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
