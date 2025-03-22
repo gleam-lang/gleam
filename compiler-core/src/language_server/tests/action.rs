@@ -6363,13 +6363,19 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 
 #[test]
 fn generate_json_encoder() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Person {
   Person(name: String, age: Int, height: Float, is_cool: Bool)
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type").to_selection()
     );
 }
@@ -6411,7 +6417,8 @@ pub type Wibble(value) {
         GENERATE_JSON_ENCODER,
         TestProject::for_source(src)
             .add_module("gleam/option", "pub type Option(a)")
-            .add_module("gleam/dict", "pub type Dict(k, v)"),
+            .add_module("gleam/dict", "pub type Dict(k, v)")
+            .add_package_module("gleam_json", "gleam/json", "pub type Json"),
         find_position_of("type W").to_selection()
     );
 }
@@ -6443,7 +6450,11 @@ pub type Wibble {
 
     assert_code_action!(
         GENERATE_JSON_ENCODER,
-        TestProject::for_source(src).add_module("gleam/json", "pub type Json"),
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type W").to_selection()
     );
 }
@@ -6463,55 +6474,79 @@ pub fn main() {
 
 #[test]
 fn generate_json_encoder_tuple() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble(tuple: #(Int, Float, #(String, Bool)))
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type W").to_selection()
     );
 }
 
 #[test]
 fn generate_json_encoder_for_variant_with_no_fields() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type W").to_selection()
     );
 }
 
 #[test]
 fn generate_json_encoder_for_type_with_multiple_variants_with_no_fields() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble
   Wobble
   Woo
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type W").to_selection()
     );
 }
 
 #[test]
 fn generate_json_encoder_for_variants_with_mixed_fields() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble
   Wobble(field: String, field1: Int)
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type W").to_selection()
     );
 }
@@ -6545,7 +6580,8 @@ pub type LinkedList {
     assert_code_action!(
         GENERATE_JSON_ENCODER,
         TestProject::for_source(src)
-            .add_module("gleam/option", "pub type Option(a) { Some(a) None }"),
+            .add_module("gleam/option", "pub type Option(a) { Some(a) None }")
+            .add_package_module("gleam_json", "gleam/json", "pub type Json"),
         find_position_of("type").to_selection()
     );
 }
@@ -6568,42 +6604,60 @@ fn map(list: List(a), fun: fn(a) -> b) -> List(b) { todo }
 
 #[test]
 fn generate_json_encoder_list_of_tuples() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble(values: List(#(Int, String)))
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_json_encoder_for_multi_variant_type() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   Wibble(wibble: Int, next: Wibble)
   Wobble(wobble: Float, text: String, values: List(Bool))
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type").to_selection()
     );
 }
 
 #[test]
 fn generate_json_encoder_for_multi_variant_type_multi_word_name() {
-    assert_code_action!(
-        GENERATE_JSON_ENCODER,
-        "
+    let src = "
 pub type Wibble {
   OneTwoThree(wibble: Int, next: Wibble)
   FourFive(wobble: Float, text: String, values: List(Bool))
   SixSevenEight(one_two: Float)
 }
-",
+";
+
+    assert_code_action!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
         find_position_of("type").to_selection()
     );
 }
@@ -6715,11 +6769,30 @@ pub fn main() {
 
 #[test]
 fn no_code_action_to_generate_json_encoder_for_type_without_labels() {
+    let src = "
+pub type Wibble {
+  Wibble(Int, Int, String)
+}
+    ";
+
+    assert_no_code_actions!(
+        GENERATE_JSON_ENCODER,
+        TestProject::for_source(src).add_package_module(
+            "gleam_json",
+            "gleam/json",
+            "pub type Json"
+        ),
+        find_position_of("type").to_selection()
+    );
+}
+
+#[test]
+fn no_code_action_to_generate_json_encoder_without_gleam_json_dependency() {
     assert_no_code_actions!(
         GENERATE_JSON_ENCODER,
         "
 pub type Wibble {
-  Wibble(Int, Int, String)
+  Wibble(w: Int)
 }
 ",
         find_position_of("type").to_selection()

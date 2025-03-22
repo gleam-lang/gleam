@@ -11,6 +11,7 @@ use crate::{
         visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
+    config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
@@ -3779,6 +3780,7 @@ pub struct GenerateJsonEncoder<'a> {
     edits: TextEdits<'a>,
     printer: Printer<'a>,
     actions: &'a mut Vec<CodeAction>,
+    config: &'a PackageConfig,
 }
 
 const JSON_MODULE: &str = "gleam/json";
@@ -3810,6 +3812,7 @@ impl<'a> GenerateJsonEncoder<'a> {
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
         actions: &'a mut Vec<CodeAction>,
+        config: &'a PackageConfig,
     ) -> Self {
         let printer = Printer::new(&module.ast.names);
         Self {
@@ -3818,11 +3821,16 @@ impl<'a> GenerateJsonEncoder<'a> {
             edits: TextEdits::new(line_numbers),
             printer,
             actions,
+            config,
         }
     }
 
     pub fn code_actions(&mut self) {
-        self.visit_typed_module(&self.module.ast);
+        if self.config.dependencies.contains_key(JSON_PACKAGE_NAME)
+            || self.config.dev_dependencies.contains_key(JSON_PACKAGE_NAME)
+        {
+            self.visit_typed_module(&self.module.ast);
+        }
     }
 
     fn custom_type_encoder_body(
