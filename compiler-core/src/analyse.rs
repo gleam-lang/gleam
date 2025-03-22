@@ -1246,12 +1246,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name.clone(),
         );
 
-        environment.references.register_type(
-            name.clone(),
-            EntityKind::PrivateType,
-            *location,
-            publicity,
-        );
+        environment
+            .references
+            .register_type(name.clone(), EntityKind::Type, *location, publicity);
 
         environment.references.register_type_reference(
             environment.current_module.clone(),
@@ -1293,6 +1290,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         self.check_name_case(*name_location, name, Named::TypeAlias);
 
+        environment
+            .references
+            .register_type(name.clone(), EntityKind::Type, *location, *publicity);
+
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
         let mut hydrator = Hydrator::new();
@@ -1332,13 +1333,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                     arity,
                 },
             )?;
-
-            environment.references.register_type(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                *publicity,
-            );
 
             if let Some(name) = hydrator.unused_type_variables().next() {
                 return Err(Error::UnusedTypeAliasParameter {

@@ -33,11 +33,6 @@ pub struct Environment<'a> {
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
     pub imported_modules: HashMap<EcoString, (SrcSpan, &'a ModuleInterface)>,
-    pub unused_modules: HashMap<EcoString, SrcSpan>,
-
-    /// Names of modules that have been imported with as name.
-    pub imported_module_aliases: HashMap<EcoString, SrcSpan>,
-    pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<EcoString, ValueConstructor>,
@@ -111,14 +106,11 @@ impl<'a> Environment<'a> {
             module_types_constructors: prelude.types_value_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
-            unused_modules: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
             unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
-            imported_module_aliases: HashMap::new(),
-            unused_module_aliases: HashMap::new(),
             current_module,
             local_variable_usages: vec![HashMap::new()],
             target_support,
@@ -128,12 +120,6 @@ impl<'a> Environment<'a> {
             references: ReferenceTracker::new(),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UnusedModuleAlias {
-    pub location: SrcSpan,
-    pub module_name: EcoString,
 }
 
 #[derive(Debug)]
@@ -388,8 +374,8 @@ impl Environment<'_> {
                             .suggest_modules(module_name, Imported::Type(name.clone())),
                     }
                 })?;
-                let _ = self.unused_modules.remove(module_name);
-                let _ = self.unused_module_aliases.remove(module_name);
+                self.references
+                    .register_module_reference(module_name.clone());
                 module.get_public_type(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
@@ -473,8 +459,8 @@ impl Environment<'_> {
                             .suggest_modules(module_name, Imported::Value(name.clone())),
                     }
                 })?;
-                let _ = self.unused_modules.remove(module_name);
-                let _ = self.unused_module_aliases.remove(module_name);
+                self.references
+                    .register_module_reference(module_name.clone());
                 module.get_public_value(name).ok_or_else(|| {
                     UnknownValueConstructorError::ModuleValue {
                         name: name.clone(),
@@ -645,23 +631,6 @@ impl Environment<'_> {
             .expect("Expected a bottom level of entity usages.");
         self.handle_unused_variables(unused, problems);
 
-        for (name, location) in self.unused_modules.clone().into_iter() {
-            problems.warning(Warning::UnusedImportedModule {
-                name: name.clone(),
-                location,
-            });
-        }
-
-        for (name, info) in self.unused_module_aliases.iter() {
-            if !self.unused_modules.contains_key(name) {
-                problems.warning(Warning::UnusedImportedModuleAlias {
-                    alias: name.clone(),
-                    location: info.location,
-                    module_name: info.module_name.clone(),
-                });
-            }
-        }
-
         for (entity, info) in self.references.unused_values() {
             let name = entity.name;
             let location = info.origin;
@@ -684,12 +653,24 @@ impl Environment<'_> {
                     imported: true,
                     location,
                 },
-                EntityKind::PrivateType => Warning::UnusedType {
+                EntityKind::Type => Warning::UnusedType {
                     name,
                     imported: false,
                     location,
                 },
                 EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
+                EntityKind::ImportedModule => Warning::UnusedImportedModule { name, location },
+                EntityKind::ModuleAlias => {
+                    let module_name = match self.imported_modules.get(&name) {
+                        Some((_, module)) => module.name.clone(),
+                        None => name.clone(),
+                    };
+                    Warning::UnusedImportedModuleAlias {
+                        module_name,
+                        alias: name,
+                        location,
+                    }
+                }
             };
             problems.warning(warning);
         }
