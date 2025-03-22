@@ -204,20 +204,6 @@ impl<IO> LspProjectCompiler<IO> {
     pub fn get_source(&self, module: &str) -> Option<&ModuleSourceInformation> {
         self.sources.get(module)
     }
-
-    pub fn has_dependency(&self, package: &str) -> bool {
-        self.project_compiler
-            .config
-            .dependencies
-            .contains_key(package)
-    }
-
-    pub fn has_dev_dependency(&self, package: &str) -> bool {
-        self.project_compiler
-            .config
-            .dev_dependencies
-            .contains_key(package)
-    }
 }
 
 #[derive(Debug)]
