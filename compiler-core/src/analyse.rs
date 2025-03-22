@@ -535,6 +535,9 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(|(a, t)| a.set_type(t.clone()))
             .collect_vec();
 
+        // We have already registered the function in the `register_value_from_function`
+        // method, but here we must set this as the current function again, so that anything
+        // we reference in the body of it can be tracked properly in the call graph.
         environment.references.set_current_function(name.clone());
 
         // Infer the type using the preregistered args + return types as a starting point
