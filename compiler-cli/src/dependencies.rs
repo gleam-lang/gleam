@@ -30,7 +30,7 @@ mod tests;
 
 use crate::{
     TreeOptions,
-    build_lock::BuildLock,
+    build_lock::{BuildLock, Guard},
     cli,
     fs::{self, ProjectIO},
     http::HttpClient,
@@ -232,7 +232,7 @@ pub fn cleanup<Telem: Telemetry>(paths: &ProjectPaths, telemetry: Telem) -> Resu
     crate::config::ensure_config_exists(paths)?;
 
     let lock = BuildLock::new_packages(paths)?;
-    let _guard = lock.lock(&telemetry);
+    let _guard: Guard = lock.lock(&telemetry)?;
 
     // Read the project config
     let config = crate::root_config(paths)?;
@@ -363,7 +363,7 @@ pub fn download<Telem: Telemetry>(
     crate::config::ensure_config_exists(paths)?;
 
     let lock = BuildLock::new_packages(paths)?;
-    let _guard = lock.lock(&telemetry);
+    let _guard: Guard = lock.lock(&telemetry)?;
 
     let fs = ProjectIO::boxed();
 

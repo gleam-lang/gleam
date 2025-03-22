@@ -264,6 +264,10 @@
 - Fixed a bug where variant inference wouldn't work on `let assert` assignments.
   ([Giacomo Cavalieri](https://github.com/giacomocavalieri))
 
+- Fixed a bug where the build tool could fail to lock the build directory but
+  not report an error.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter

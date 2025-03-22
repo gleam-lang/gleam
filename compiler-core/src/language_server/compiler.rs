@@ -19,6 +19,8 @@ use std::{collections::HashMap, rc::Rc};
 
 use camino::Utf8PathBuf;
 
+use super::LockGuard;
+
 /// A wrapper around the project compiler which makes it possible to repeatedly
 /// recompile the top level package, reusing the information about the already
 /// compiled dependency packages.
@@ -59,7 +61,7 @@ where
         // package before we run for the first time.
         // TODO: remove this once the caches have contain all the information
         {
-            let _guard = locker.lock_for_build();
+            let _guard: LockGuard = locker.lock_for_build()?;
             let path = paths.build_directory_for_package(Mode::Lsp, target, &name);
             io.delete_directory(&path)?;
         }
@@ -98,7 +100,10 @@ where
 
     pub fn compile(&mut self) -> Outcome<Vec<Utf8PathBuf>, Error> {
         // Lock the build directory to ensure to ensure we are the only one compiling
-        let _lock_guard = self.locker.lock_for_build();
+        let _lock_guard: LockGuard = match self.locker.lock_for_build() {
+            Ok(it) => it,
+            Err(err) => return err.into(),
+        };
 
         // Verify that the build directory was created using the same version of
         // Gleam as we are running. If it is not then we discard the build

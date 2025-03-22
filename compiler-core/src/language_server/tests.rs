@@ -261,9 +261,9 @@ impl TestLocker {
 }
 
 impl Locker for TestLocker {
-    fn lock_for_build(&self) -> LockGuard {
+    fn lock_for_build(&self) -> Result<LockGuard> {
         self.record(Action::LockBuild);
-        LockGuard(Box::new(Guard(self.actions.clone())))
+        Ok(LockGuard(Box::new(Guard(self.actions.clone()))))
     }
 }
 

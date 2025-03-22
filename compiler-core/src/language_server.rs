@@ -30,7 +30,7 @@ use std::any::Any;
 pub struct LockGuard(pub Box<dyn Any>);
 
 pub trait Locker {
-    fn lock_for_build(&self) -> LockGuard;
+    fn lock_for_build(&self) -> Result<LockGuard>;
 }
 
 pub trait MakeLocker {
