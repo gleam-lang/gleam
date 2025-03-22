@@ -506,3 +506,28 @@ pub fn main() {
 "
     );
 }
+
+#[test]
+// https://github.com/gleam-lang/gleam/issues/3552
+fn constructor_used_if_type_alias_shadows_it() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(String)
+}
+"
+        ),
+        r#"
+import wibble.{Wibble}
+
+type Wibble =
+  wibble.Wibble
+
+pub fn main() {
+  Wibble("hello")
+}
+"#
+    );
+}
