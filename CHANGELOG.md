@@ -268,6 +268,10 @@
   not report an error.
   ([Louis Pilfold](https://github.com/lpil))
 
+- Fixed a bug where the language server would be too eager to recompile modules
+  when it could use the cache from previous compilations.
+  ([Louis Pilfold](https://github.com/lpil))
+
 ## v1.9.1 - 2025-03-10
 
 ### Formatter

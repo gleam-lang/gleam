@@ -170,14 +170,19 @@ where
         self.options.target.unwrap_or(self.config.target)
     }
 
-    /// Compiles all packages in the project and returns the compiled
-    /// information from the root package
-    pub fn compile(mut self) -> Result<Built> {
+    pub fn reset_state_for_new_compile_run(&mut self) {
         // We make sure the stale module tracker is empty before we start, to
         // avoid mistakenly thinking a module is stale due to outdated state
         // from a previous build. A ProjectCompiler instance is re-used by the
         // LSP engine so state could be reused if we don't reset it.
+
         self.stale_modules.empty();
+    }
+
+    /// Compiles all packages in the project and returns the compiled
+    /// information from the root package
+    pub fn compile(mut self) -> Result<Built> {
+        self.reset_state_for_new_compile_run();
 
         // Each package may specify a Gleam version that it supports, so we
         // verify that this version is appropriate.
@@ -257,6 +262,11 @@ where
     }
 
     pub fn compile_dependencies(&mut self) -> Result<Vec<Module>, Error> {
+        assert!(
+            self.stale_modules.is_empty(),
+            "The project compiler stale tracker was not emptied from the previous compilation"
+        );
+
         let sequence = order_packages(&self.packages)?;
         let mut modules = vec![];
 

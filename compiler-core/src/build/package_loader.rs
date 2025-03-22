@@ -1641,6 +1641,10 @@ impl StaleTracker {
     pub fn empty(&mut self) {
         let _ = self.0.drain(); // Clears the set but retains allocated memory
     }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
 }
 
 #[derive(Debug)]

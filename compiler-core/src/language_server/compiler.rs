@@ -112,6 +112,8 @@ where
             return e.into();
         }
 
+        self.project_compiler.reset_state_for_new_compile_run();
+
         let compiled_dependencies = match self.project_compiler.compile_dependencies() {
             Ok(it) => it,
             Err(err) => return err.into(),
