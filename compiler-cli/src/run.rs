@@ -3,6 +3,7 @@ use std::{rc::Rc, sync::OnceLock};
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
+    Warning,
     analyse::TargetSupport,
     build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
@@ -11,7 +12,6 @@ use gleam_core::{
     paths::ProjectPaths,
     type_::ModuleFunction,
     warning::WarningEmitter,
-    Warning,
 };
 
 use crate::{
@@ -144,11 +144,7 @@ pub fn setup(
 
     // Warn incase the main function being run has been deprecated
     if main_function.deprecation.is_deprecated() {
-        let deprecation_message = match main_function.deprecation {
-            gleam_core::type_::Deprecation::Deprecated { message } => Some(message),
-            gleam_core::type_::Deprecation::NotDeprecated => None,
-        };
-        if let Some(message) = deprecation_message {
+        if let gleam_core::type_::Deprecation::Deprecated { message } = main_function.deprecation {
             let warning = Warning::DeprecatedMain { message };
             warning_emitter.emit(warning);
         }

@@ -234,10 +234,15 @@ impl Warning {
                 hint: None,
             },
             Warning::InternalMain { module } => {
-                let message = format!("The module {} has been marked internal", module);
+                let message = format!(
+                    "The module {} has been marked internal.\
+It is intended for use within the library\
+and is not recommended for public use",
+                    module
+                );
                 Diagnostic {
                     title: "Internal main function".into(),
-                    text: message,
+                    text: wrap(message.as_str()),
                     level: diagnostic::Level::Warning,
                     location: None,
                     hint: None,
@@ -1025,23 +1030,22 @@ See: https://tour.gleam.run/advanced-features/{name}/"
                     panic_position: unreachable_code_kind,
                 } => {
                     let text = match unreachable_code_kind {
-                        PanicPosition::PreviousExpression =>
-                            "This code is unreachable because it comes after a `panic`.",
-                        PanicPosition::PreviousFunctionArgument =>
+                        PanicPosition::PreviousExpression => {
+                            "This code is unreachable because it comes after a `panic`."
+                        }
+                        PanicPosition::PreviousFunctionArgument => {
                             "This argument is unreachable because the previous one always panics. \
-Your code will crash before reaching this point.",
-                        PanicPosition::LastFunctionArgument =>
-                            "This function call is unreachable because its last argument always panics. \
-<<<<<<< HEAD
 Your code will crash before reaching this point."
                         }
+                        PanicPosition::LastFunctionArgument => {
+                            "This function call is unreachable because its last argument always panics. \
+Your code will crash before reaching this point."
+                        }
+
                         PanicPosition::EchoExpression => {
                             "This `echo` won't print anything because the expression it \
 should be printing always panics."
                         }
-=======
-Your code will crash before reaching this point.",
->>>>>>> 8fbfe3026 (refactor: remove unnecessary changes)
                     };
 
                     Diagnostic {
