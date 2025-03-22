@@ -228,9 +228,6 @@ expression: "compile(config, modules)"
 
 
 
-
-
-
       </nav>
 
       <main class="content">
@@ -239,8 +236,6 @@ expression: "compile(config, modules)"
   <a href="#module-name">app</a>
   <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
 </h1>
-
-
 
 
 
