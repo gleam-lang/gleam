@@ -11,6 +11,7 @@ use crate::{
         visit::{Visit as _, visit_typed_call_arg, visit_typed_pattern_call_arg},
     },
     build::{Located, Module},
+    config::PackageConfig,
     io::{BeamCompiler, CommandExecutor, FileSystemReader, FileSystemWriter},
     line_numbers::LineNumbers,
     parse::{extra::ModuleExtra, lexer::str_to_keyword},
@@ -3773,13 +3774,13 @@ impl<'a> DecoderPrinter<'a> {
 
 /// Builder for code action to apply the "Generate JSON encoder" action.
 ///
-pub struct GenerateJsonEncoder<'a, CompilerIO> {
+pub struct GenerateJsonEncoder<'a> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     printer: Printer<'a>,
     actions: &'a mut Vec<CodeAction>,
-    compiler: &'a LspProjectCompiler<CompilerIO>,
+    config: &'a PackageConfig,
 }
 
 const JSON_MODULE: &str = "gleam/json";
@@ -3805,13 +3806,13 @@ impl EncodingMode {
     }
 }
 
-impl<'a, IO> GenerateJsonEncoder<'a, IO> {
+impl<'a> GenerateJsonEncoder<'a> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
         actions: &'a mut Vec<CodeAction>,
-        compiler: &'a LspProjectCompiler<IO>,
+        config: &'a PackageConfig,
     ) -> Self {
         let printer = Printer::new(&module.ast.names);
         Self {
@@ -3820,13 +3821,13 @@ impl<'a, IO> GenerateJsonEncoder<'a, IO> {
             edits: TextEdits::new(line_numbers),
             printer,
             actions,
-            compiler,
+            config,
         }
     }
 
     pub fn code_actions(&mut self) {
-        if self.compiler.has_dependency(JSON_PACKAGE_NAME)
-            || self.compiler.has_dev_dependency(JSON_PACKAGE_NAME)
+        if self.config.dependencies.contains_key(JSON_PACKAGE_NAME)
+            || self.config.dev_dependencies.contains_key(JSON_PACKAGE_NAME)
         {
             self.visit_typed_module(&self.module.ast);
         }
@@ -3947,7 +3948,7 @@ impl<'a, IO> GenerateJsonEncoder<'a, IO> {
     }
 }
 
-impl<'ast, IO> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast, IO> {
+impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
         let range = self.edits.src_span_to_lsp_range(custom_type.location);
         if !overlaps(self.params.range, range) {

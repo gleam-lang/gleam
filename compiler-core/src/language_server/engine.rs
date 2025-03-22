@@ -400,8 +400,14 @@ where
             );
             actions.extend(InlineVariable::new(module, &lines, &params).code_actions());
             GenerateDynamicDecoder::new(module, &lines, &params, &mut actions).code_actions();
-            GenerateJsonEncoder::new(module, &lines, &params, &mut actions, &this.compiler)
-                .code_actions();
+            GenerateJsonEncoder::new(
+                module,
+                &lines,
+                &params,
+                &mut actions,
+                &this.compiler.project_compiler.config,
+            )
+            .code_actions();
             AddAnnotations::new(module, &lines, &params).code_action(&mut actions);
             Ok(if actions.is_empty() {
                 None
