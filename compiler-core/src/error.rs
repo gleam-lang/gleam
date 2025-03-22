@@ -316,7 +316,7 @@ file_names.iter().map(|x| x.as_str()).join(", "))]
         wrongfully_allowed_version: SmallVersion,
     },
 
-    #[error("Failed to encrypt local Hex APIT key")]
+    #[error("Failed to encrypt local Hex API key")]
     FailedToEncryptLocalHexApiKey { detail: String },
 
     #[error("Failed to decrypt local Hex API key")]
