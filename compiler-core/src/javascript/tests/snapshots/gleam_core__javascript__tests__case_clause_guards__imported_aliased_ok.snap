@@ -23,8 +23,8 @@ export class Ok extends $CustomType {}
 
 function func() {
   let $ = (var0) => { return new Y(var0); };
-  if (isEqual($, (var0) => { return new Y(var0); })) {
-    let y = $;
+  let y = $;
+  if (isEqual(y, (var0) => { return new Y(var0); })) {
     return true;
   } else {
     return false;

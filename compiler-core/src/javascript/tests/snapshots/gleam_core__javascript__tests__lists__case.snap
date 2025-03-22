@@ -18,11 +18,15 @@ fn go(xs) {
 function go(xs) {
   if (xs.hasLength(0)) {
     return 0;
-  } else if (xs.hasLength(1)) {
-    return 1;
-  } else if (xs.hasLength(2)) {
-    return 2;
   } else {
-    return 9999;
+    if (xs.tail.hasLength(0)) {
+      return 1;
+    } else {
+      if (xs.tail.tail.hasLength(0)) {
+        return 2;
+      } else {
+        return 9999;
+      }
+    }
   }
 }

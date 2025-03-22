@@ -25,6 +25,7 @@ use crate::type_::{
 use std::sync::Arc;
 
 use ecow::EcoString;
+use im::{HashSet, hashset};
 use num_bigint::{BigInt, Sign};
 use num_traits::{One, ToPrimitive};
 #[cfg(test)]
@@ -1868,6 +1869,42 @@ impl TypedClauseGuard {
             | ClauseGuard::LtEqFloat { .. } => type_::bool(),
         }
     }
+
+    pub(crate) fn referenced_variables(&self) -> HashSet<&EcoString> {
+        match self {
+            ClauseGuard::Var { name, .. } => hashset![name],
+
+            ClauseGuard::Not { expression, .. } => expression.referenced_variables(),
+            ClauseGuard::TupleIndex { tuple, .. } => tuple.referenced_variables(),
+            ClauseGuard::FieldAccess { container, .. } => container.referenced_variables(),
+            ClauseGuard::Constant(constant) => constant.referenced_variables(),
+            ClauseGuard::ModuleSelect { .. } => HashSet::new(),
+
+            ClauseGuard::Equals { left, right, .. }
+            | ClauseGuard::NotEquals { left, right, .. }
+            | ClauseGuard::GtInt { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. }
+            | ClauseGuard::LtInt { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. }
+            | ClauseGuard::GtFloat { left, right, .. }
+            | ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::LtFloat { left, right, .. }
+            | ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::AddInt { left, right, .. }
+            | ClauseGuard::AddFloat { left, right, .. }
+            | ClauseGuard::SubInt { left, right, .. }
+            | ClauseGuard::SubFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. }
+            | ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::DivInt { left, right, .. }
+            | ClauseGuard::DivFloat { left, right, .. }
+            | ClauseGuard::RemainderInt { left, right, .. }
+            | ClauseGuard::And { left, right, .. }
+            | ClauseGuard::Or { left, right, .. } => left
+                .referenced_variables()
+                .union(right.referenced_variables()),
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Default, Clone, Copy, serde::Serialize, serde::Deserialize)]
@@ -2658,6 +2695,31 @@ impl<A> BitArrayOption<A> {
             | BitArrayOption::Native { .. }
             | BitArrayOption::Size { .. }
             | BitArrayOption::Unit { .. } => false,
+        }
+    }
+}
+
+impl BitArrayOption<TypedConstant> {
+    fn referenced_variables(&self) -> HashSet<&EcoString> {
+        match self {
+            BitArrayOption::Bytes { .. }
+            | BitArrayOption::Int { .. }
+            | BitArrayOption::Float { .. }
+            | BitArrayOption::Bits { .. }
+            | BitArrayOption::Utf8 { .. }
+            | BitArrayOption::Utf16 { .. }
+            | BitArrayOption::Utf32 { .. }
+            | BitArrayOption::Utf8Codepoint { .. }
+            | BitArrayOption::Utf16Codepoint { .. }
+            | BitArrayOption::Utf32Codepoint { .. }
+            | BitArrayOption::Signed { .. }
+            | BitArrayOption::Unsigned { .. }
+            | BitArrayOption::Big { .. }
+            | BitArrayOption::Little { .. }
+            | BitArrayOption::Unit { .. }
+            | BitArrayOption::Native { .. } => hashset![],
+
+            BitArrayOption::Size { value, .. } => value.referenced_variables(),
         }
     }
 }

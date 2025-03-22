@@ -18,9 +18,7 @@ export function bad() {
   return (state) => {
     let _block;
     let $ = undefined;
-    {
-      _block = state;
-    }
+    _block = state;
     let state$1 = _block;
     return state$1;
   };

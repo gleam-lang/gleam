@@ -19,8 +19,8 @@ import { isEqual } from "../gleam.mjs";
 
 function func() {
   let $ = new B();
-  if (isEqual($, new B())) {
-    let x = $;
+  let x = $;
+  if (isEqual(x, new B())) {
     return true;
   } else {
     return false;

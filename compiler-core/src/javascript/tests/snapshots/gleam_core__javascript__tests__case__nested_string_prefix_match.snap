@@ -17,13 +17,33 @@ import { Ok, toList } from "../gleam.mjs";
 
 function main() {
   let $ = new Ok(toList(["a", "b c", "d"]));
-  if ($.isOk() &&
-  $[0].hasLength(3) &&
-  $[0].head === "a" &&
-  $[0].tail.head.startsWith("b ") &&
-  $[0].tail.tail.head === "d") {
+  if ($[0].hasLength(0)) {
     return 1;
   } else {
-    return 1;
+    if ($[0].tail.hasLength(0)) {
+      return 1;
+    } else {
+      if ($[0].tail.tail.hasLength(0)) {
+        return 1;
+      } else {
+        if ($[0].tail.tail.tail.hasLength(0)) {
+          if ($[0].tail.tail.head === "d") {
+            if ($[0].tail.head.startsWith("b ")) {
+              if ($[0].head === "a") {
+                return 1;
+              } else {
+                return 1;
+              }
+            } else {
+              return 1;
+            }
+          } else {
+            return 1;
+          }
+        } else {
+          return 1;
+        }
+      }
+    }
   }
 }
