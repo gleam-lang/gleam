@@ -1,8 +1,9 @@
-use std::sync::OnceLock;
+use std::{rc::Rc, sync::OnceLock};
 
 use camino::Utf8PathBuf;
 use ecow::EcoString;
 use gleam_core::{
+    Warning,
     analyse::TargetSupport,
     build::{Built, Codegen, Compile, Mode, NullTelemetry, Options, Runtime, Target, Telemetry},
     config::{DenoFlag, PackageConfig},
@@ -10,9 +11,13 @@ use gleam_core::{
     io::{Command, CommandExecutor, Stdio},
     paths::ProjectPaths,
     type_::ModuleFunction,
+    warning::WarningEmitter,
 };
 
-use crate::{config::PackageKind, fs::ProjectIO};
+use crate::{
+    config::PackageKind,
+    fs::{ConsoleWarningEmitter, ProjectIO},
+};
 
 #[derive(Debug, Clone, Copy)]
 pub enum Which {
@@ -90,10 +95,12 @@ pub fn setup(
     let root_config = crate::config::root_config(paths)?;
 
     // Determine which module to run
-    let module = module.unwrap_or(match which {
-        Which::Src => root_config.name.to_string(),
-        Which::Test => format!("{}_test", &root_config.name),
-    });
+    let module: EcoString = module
+        .unwrap_or(match which {
+            Which::Src => root_config.name.to_string(),
+            Which::Test => format!("{}_test", &root_config.name),
+        })
+        .into();
 
     let target = target.unwrap_or(mod_config.target);
 
@@ -119,11 +126,36 @@ pub fn setup(
         },
         no_print_progress,
     };
+    // Warn incase the module being run has been as internal
+    let warnings = Rc::new(ConsoleWarningEmitter);
+    let warning_emitter = WarningEmitter::new(warnings.clone());
 
-    let built = crate::build::main(paths, options, manifest)?;
+    let built = crate::build::main(paths, options, manifest, warnings)?;
+
+    // Warn incase the module being run has been as internal
+    let internal_module = built.is_internal(&module).unwrap();
+    if internal_module {
+        let warning = Warning::InternalMain {
+            module: module.clone(),
+        };
+        warning_emitter.emit(warning);
+    }
 
     // A module can not be run if it does not exist or does not have a public main function.
     let main_function = get_or_suggest_main_function(built, &module, target)?;
+
+    // Warn incase the main function being run has been deprecated
+
+    match main_function.deprecation {
+        gleam_core::type_::Deprecation::Deprecated { message } => {
+            let warning = Warning::DeprecatedMain { message };
+            warning_emitter.emit(warning);
+        }
+        gleam_core::type_::Deprecation::NotDeprecated => {}
+    }
+
+    // Don't exit on ctrl+c as it is used by child erlang shell
+    ctrlc::set_handler(move || {}).expect("Error setting Ctrl-C handler");
 
     telemetry.running(&format!("{module}.main"));
 
