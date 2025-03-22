@@ -3773,16 +3773,17 @@ impl<'a> DecoderPrinter<'a> {
 
 /// Builder for code action to apply the "Generate JSON encoder" action.
 ///
-pub struct GenerateJsonEncoder<'a> {
+pub struct GenerateJsonEncoder<'a, CompilerIO> {
     module: &'a Module,
     params: &'a CodeActionParams,
     edits: TextEdits<'a>,
     printer: Printer<'a>,
     actions: &'a mut Vec<CodeAction>,
+    compiler: &'a LspProjectCompiler<CompilerIO>,
 }
 
 const JSON_MODULE: &str = "gleam/json";
-pub const JSON_PACKAGE_NAME: &str = "gleam_json";
+const JSON_PACKAGE_NAME: &str = "gleam_json";
 
 #[derive(Eq, PartialEq, Copy, Clone)]
 enum EncodingMode {
@@ -3804,12 +3805,13 @@ impl EncodingMode {
     }
 }
 
-impl<'a> GenerateJsonEncoder<'a> {
+impl<'a, IO> GenerateJsonEncoder<'a, IO> {
     pub fn new(
         module: &'a Module,
         line_numbers: &'a LineNumbers,
         params: &'a CodeActionParams,
         actions: &'a mut Vec<CodeAction>,
+        compiler: &'a LspProjectCompiler<IO>,
     ) -> Self {
         let printer = Printer::new(&module.ast.names);
         Self {
@@ -3818,11 +3820,16 @@ impl<'a> GenerateJsonEncoder<'a> {
             edits: TextEdits::new(line_numbers),
             printer,
             actions,
+            compiler,
         }
     }
 
     pub fn code_actions(&mut self) {
-        self.visit_typed_module(&self.module.ast);
+        if self.compiler.has_dependency(JSON_PACKAGE_NAME)
+            || self.compiler.has_dev_dependency(JSON_PACKAGE_NAME)
+        {
+            self.visit_typed_module(&self.module.ast);
+        }
     }
 
     fn custom_type_encoder_body(
@@ -3940,7 +3947,7 @@ impl<'a> GenerateJsonEncoder<'a> {
     }
 }
 
-impl<'ast> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast> {
+impl<'ast, IO> ast::visit::Visit<'ast> for GenerateJsonEncoder<'ast, IO> {
     fn visit_typed_custom_type(&mut self, custom_type: &'ast ast::TypedCustomType) {
         let range = self.edits.src_span_to_lsp_range(custom_type.location);
         if !overlaps(self.params.range, range) {
