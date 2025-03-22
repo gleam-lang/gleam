@@ -17,8 +17,8 @@ import { divideFloat } from "../gleam.mjs";
 
 export function main() {
   let $ = divideFloat(5.1, 0.0);
-  if ($ === (divideFloat(5.1, 0.0))) {
-    let x = $;
+  let x = $;
+  if (x === (divideFloat(5.1, 0.0))) {
     return true;
   } else {
     return false;

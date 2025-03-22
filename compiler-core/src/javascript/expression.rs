@@ -87,7 +87,7 @@ pub(crate) struct Generator<'module, 'ast> {
     line_numbers: &'module LineNumbers,
     function_name: Option<EcoString>,
     function_arguments: Vec<Option<&'module EcoString>>,
-    current_scope_vars: im::HashMap<EcoString, usize>,
+    pub current_scope_vars: im::HashMap<EcoString, usize>,
     pub function_position: Position,
     pub scope_position: Position,
     // We register whether these features are used within an expression so that
@@ -255,8 +255,17 @@ impl<'module, 'a> Generator<'module, 'a> {
             TypedExpr::TupleIndex { tuple, index, .. } => self.tuple_index(tuple, *index),
 
             TypedExpr::Case {
-                subjects, clauses, ..
-            } => self.case(subjects, clauses),
+                subjects,
+                clauses,
+                compiled_case,
+                ..
+            } => {
+                let clauses = clauses
+                    .iter()
+                    .map(|clause| (&clause.then, clause.guard.as_ref()))
+                    .collect_vec();
+                decision::print(compiled_case, clauses, subjects, self)
+            }
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
@@ -612,7 +621,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn variable(&mut self, name: &'a EcoString, constructor: &'a ValueConstructor) -> Output<'a> {
         match &constructor.variant {
             ValueConstructorVariant::LocalConstant { literal } => {
-                constant_expression(Context::Function, self.tracker, literal)
+                self.constant_expression(Context::Function, literal)
             }
             ValueConstructorVariant::Record { arity, .. } => {
                 let type_ = constructor.type_.clone();
@@ -685,7 +694,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         Ok(documents.to_doc().force_break())
     }
 
-    fn expression_flattening_blocks(&mut self, expression: &'a TypedExpr) -> Output<'a> {
+    pub(crate) fn expression_flattening_blocks(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::Block { statements, .. } => self.statements(statements),
             _ => {
@@ -815,7 +824,9 @@ impl<'module, 'a> Generator<'module, 'a> {
         }
 
         // Otherwise we need to compile the patterns
+        //
         let (subject, subject_assignment) = pattern::assign_subject(self, value);
+        let subject = subject.to_doc();
         // Value needs to be rendered before traversing pattern to have correctly incremented variables.
         let value =
             self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(value))?;
@@ -829,7 +840,9 @@ impl<'module, 'a> Generator<'module, 'a> {
             Position::Tail => docvec![
                 line(),
                 "return ",
-                subject_assignment.clone().unwrap_or_else(|| value.clone()),
+                subject_assignment
+                    .clone()
+                    .map_or_else(|| value.clone(), |s| s.to_doc()),
                 ";"
             ],
             Position::Assign(block_variable) => docvec![
@@ -1788,23 +1801,6 @@ impl<'module, 'a> Generator<'module, 'a> {
         join(assignments, line())
     }
 
-    fn pattern_take_assignments_doc(
-        &self,
-        compiled_pattern: &mut CompiledPattern<'a>,
-    ) -> Document<'a> {
-        let assignments = std::mem::take(&mut compiled_pattern.assignments);
-        Self::pattern_assignments_doc(assignments)
-    }
-
-    fn pattern_take_checks_doc(
-        &self,
-        compiled_pattern: &mut CompiledPattern<'a>,
-        match_desired: bool,
-    ) -> Document<'a> {
-        let checks = std::mem::take(&mut compiled_pattern.checks);
-        self.pattern_checks_doc(checks, match_desired)
-    }
-
     fn pattern_checks_doc(
         &self,
         checks: Vec<pattern::Check<'a>>,
@@ -1851,6 +1847,490 @@ impl<'module, 'a> Generator<'module, 'a> {
             Ok(self.line_numbers.line_number(location.start).to_doc()),
         ])?;
         Ok(self.wrap_return(docvec!["echo", echo_argument]))
+    }
+
+    pub(crate) fn constant_expression(
+        &mut self,
+        context: Context,
+        expression: &'a TypedConstant,
+    ) -> Output<'a> {
+        match expression {
+            Constant::Int { value, .. } => Ok(int(value)),
+            Constant::Float { value, .. } => Ok(float(value)),
+            Constant::String { value, .. } => Ok(string(value)),
+            Constant::Tuple { elements, .. } => array(
+                elements
+                    .iter()
+                    .map(|element| self.constant_expression(context, element)),
+            ),
+
+            Constant::List { elements, .. } => {
+                self.tracker.list_used = true;
+                let list = list(
+                    elements
+                        .iter()
+                        .map(|element| self.constant_expression(context, element)),
+                )?;
+
+                match context {
+                    Context::Constant => Ok(docvec!["/* @__PURE__ */ ", list]),
+                    Context::Function => Ok(list),
+                }
+            }
+
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
+                Ok("true".to_doc())
+            }
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
+                Ok("false".to_doc())
+            }
+            Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
+
+            Constant::Record {
+                args,
+                module,
+                name,
+                tag,
+                type_,
+                ..
+            } => {
+                if type_.is_result() {
+                    if tag == "Ok" {
+                        self.tracker.ok_used = true;
+                    } else {
+                        self.tracker.error_used = true;
+                    }
+                }
+
+                // If there's no arguments and the type is a function that takes
+                // arguments then this is the constructor being referenced, not the
+                // function being called.
+                if let Some(arity) = type_.fn_arity() {
+                    if args.is_empty() && arity != 0 {
+                        let arity = arity as u16;
+                        return Ok(record_constructor(
+                            type_.clone(),
+                            None,
+                            name,
+                            arity,
+                            self.tracker,
+                        ));
+                    }
+                }
+
+                let field_values: Vec<_> = args
+                    .iter()
+                    .map(|arg| self.constant_expression(context, &arg.value))
+                    .try_collect()?;
+
+                let constructor = construct_record(
+                    module.as_ref().map(|(module, _)| module.as_str()),
+                    name,
+                    field_values,
+                );
+                match context {
+                    Context::Constant => Ok(docvec!["/* @__PURE__ */ ", constructor]),
+                    Context::Function => Ok(constructor),
+                }
+            }
+
+            Constant::BitArray { segments, .. } => {
+                let bit_array = self.constant_bit_array(segments)?;
+                match context {
+                    Context::Constant => Ok(docvec!["/* @__PURE__ */ ", bit_array]),
+                    Context::Function => Ok(bit_array),
+                }
+            }
+
+            Constant::Var { name, module, .. } => Ok({
+                match module {
+                    None => maybe_escape_identifier(name).to_doc(),
+                    Some((module, _)) => {
+                        // JS keywords can be accessed here, but we must escape anyway
+                        // as we escape when exporting such names in the first place,
+                        // and the imported name has to match the exported name.
+                        docvec!["$", module, ".", maybe_escape_identifier(name)]
+                    }
+                }
+            }),
+
+            Constant::StringConcatenation { left, right, .. } => {
+                let left = self.constant_expression(context, left)?;
+                let right = self.constant_expression(context, right)?;
+                Ok(docvec![left, " + ", right])
+            }
+
+            Constant::Invalid { .. } => {
+                panic!("invalid constants should not reach code generation")
+            }
+        }
+    }
+
+    fn constant_bit_array(&mut self, segments: &'a [TypedConstantBitArraySegment]) -> Output<'a> {
+        use BitArrayOption as Opt;
+
+        self.tracker.bit_array_literal_used = true;
+        let segments_array = array(segments.iter().map(|segment| {
+            let value = self.constant_expression(Context::Constant, &segment.value)?;
+
+            if segment.has_native_option() {
+                return Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                });
+            }
+
+            match segment.options.as_slice() {
+                // Int segment
+                _ if segment.type_.is_int() => {
+                    let details = self.constant_sized_bit_array_segment_details(segment)?;
+                    match (details.size_value, segment.value.as_ref()) {
+                        (Some(size_value), Constant::Int { int_value, .. })
+                            if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
+                                && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
+                        {
+                            let bytes = bit_array_segment_int_value_to_bytes(
+                                int_value.clone(),
+                                size_value,
+                                segment.endianness(),
+                            )?;
+
+                            Ok(u8_slice(&bytes))
+                        }
+
+                        (Some(size_value), _) if size_value == 8.into() => Ok(value),
+
+                        (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
+
+                        _ => {
+                            self.tracker.sized_integer_segment_used = true;
+                            let size = details.size;
+                            let is_big = bool(segment.endianness().is_big());
+                            Ok(docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"])
+                        }
+                    }
+                }
+
+                // Float segments
+                _ if segment.type_.is_float() => {
+                    self.tracker.float_bit_array_segment_used = true;
+                    let details = self.constant_sized_bit_array_segment_details(segment)?;
+                    let size = details.size;
+                    let is_big = bool(segment.endianness().is_big());
+                    Ok(docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"])
+                }
+
+                // UTF8 strings
+                [Opt::Utf8 { .. }] => {
+                    self.tracker.string_bit_array_segment_used = true;
+                    Ok(docvec!["stringBits(", value, ")"])
+                }
+
+                // UTF8 codepoints
+                [Opt::Utf8Codepoint { .. }] => {
+                    self.tracker.codepoint_bit_array_segment_used = true;
+                    Ok(docvec!["codepointBits(", value, ")"])
+                }
+
+                // Bit arrays
+                [Opt::Bits { .. }] => Ok(value),
+
+                // Bit arrays with explicit size. The explicit size slices the bit array to the
+                // specified size. A runtime exception is thrown if the size exceeds the number
+                // of bits in the bit array.
+                [Opt::Bits { .. }, Opt::Size { value: size, .. }]
+                | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
+                    Constant::Int { value: size, .. } => {
+                        self.tracker.bit_array_slice_used = true;
+                        Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
+                    }
+
+                    _ => Err(Error::Unsupported {
+                        feature: "This bit array segment option".into(),
+                        location: segment.location,
+                    }),
+                },
+
+                // Anything else
+                _ => Err(Error::Unsupported {
+                    feature: "This bit array segment option".into(),
+                    location: segment.location,
+                }),
+            }
+        }))?;
+
+        Ok(docvec!["toBitArray(", segments_array, ")"])
+    }
+
+    fn constant_sized_bit_array_segment_details(
+        &mut self,
+        segment: &'a TypedConstantBitArraySegment,
+    ) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
+        let size = segment.size();
+        let unit = segment.unit();
+        let (size_value, size) = match size {
+            Some(Constant::Int { int_value, .. }) => {
+                let size_value = int_value * unit;
+                let size = eco_format!("{}", size_value).to_doc();
+                (Some(size_value), size)
+            }
+
+            Some(size) => {
+                let mut size = self.constant_expression(Context::Constant, size)?;
+                if unit != 1 {
+                    size = size.group().append(" * ".to_doc().append(unit.to_doc()));
+                }
+
+                (None, size)
+            }
+
+            None => {
+                let size_value: usize = if segment.type_.is_int() { 8 } else { 64 };
+                (Some(BigInt::from(size_value)), docvec![size_value])
+            }
+        };
+
+        Ok(SizedBitArraySegmentDetails { size, size_value })
+    }
+
+    pub(crate) fn guard(&mut self, guard: &'a TypedClauseGuard) -> Output<'a> {
+        match guard {
+            ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " === ", right])
+            }
+
+            ClauseGuard::NotEquals { left, right, .. } if is_js_scalar(left.type_()) => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " !== ", right])
+            }
+
+            ClauseGuard::Equals { left, right, .. } => {
+                let left = self.guard(left)?;
+                let right = self.guard(right)?;
+                Ok(self.prelude_equal_call(true, left, right))
+            }
+
+            ClauseGuard::NotEquals { left, right, .. } => {
+                let left = self.guard(left)?;
+                let right = self.guard(right)?;
+                Ok(self.prelude_equal_call(false, left, right))
+            }
+
+            ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " > ", right])
+            }
+
+            ClauseGuard::GtEqFloat { left, right, .. }
+            | ClauseGuard::GtEqInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " >= ", right])
+            }
+
+            ClauseGuard::LtFloat { left, right, .. } | ClauseGuard::LtInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " < ", right])
+            }
+
+            ClauseGuard::LtEqFloat { left, right, .. }
+            | ClauseGuard::LtEqInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " <= ", right])
+            }
+
+            ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " + ", right])
+            }
+
+            ClauseGuard::SubFloat { left, right, .. } | ClauseGuard::SubInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " - ", right])
+            }
+
+            ClauseGuard::MultFloat { left, right, .. }
+            | ClauseGuard::MultInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " * ", right])
+            }
+
+            ClauseGuard::DivFloat { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                self.tracker.float_division_used = true;
+                Ok(docvec!["divideFloat", wrap_args([left, right])])
+            }
+
+            ClauseGuard::DivInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                self.tracker.int_division_used = true;
+                Ok(docvec!["divideInt", wrap_args([left, right])])
+            }
+
+            ClauseGuard::RemainderInt { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                self.tracker.int_remainder_used = true;
+                Ok(docvec!["remainderInt", wrap_args([left, right])])
+            }
+
+            ClauseGuard::Or { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " || ", right])
+            }
+
+            ClauseGuard::And { left, right, .. } => {
+                let left = self.wrapped_guard(left)?;
+                let right = self.wrapped_guard(right)?;
+                Ok(docvec![left, " && ", right])
+            }
+
+            ClauseGuard::Var { name, .. } => Ok(self.local_var(name).to_doc()),
+
+            ClauseGuard::TupleIndex { tuple, index, .. } => {
+                Ok(docvec![self.guard(tuple,)?, "[", index, "]"])
+            }
+
+            ClauseGuard::FieldAccess {
+                label, container, ..
+            } => Ok(docvec![
+                self.guard(container,)?,
+                ".",
+                maybe_escape_property_doc(label)
+            ]),
+
+            ClauseGuard::ModuleSelect {
+                module_alias,
+                label,
+                ..
+            } => Ok(docvec!["$", module_alias, ".", label]),
+
+            ClauseGuard::Not { expression, .. } => Ok(docvec!["!", self.guard(expression,)?]),
+
+            ClauseGuard::Constant(constant) => self.guard_constant_expression(constant),
+        }
+    }
+
+    fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
+        match guard {
+            ClauseGuard::Var { .. }
+            | ClauseGuard::TupleIndex { .. }
+            | ClauseGuard::Constant(_)
+            | ClauseGuard::Not { .. }
+            | ClauseGuard::FieldAccess { .. } => self.guard(guard),
+
+            ClauseGuard::Equals { .. }
+            | ClauseGuard::NotEquals { .. }
+            | ClauseGuard::GtInt { .. }
+            | ClauseGuard::GtEqInt { .. }
+            | ClauseGuard::LtInt { .. }
+            | ClauseGuard::LtEqInt { .. }
+            | ClauseGuard::GtFloat { .. }
+            | ClauseGuard::GtEqFloat { .. }
+            | ClauseGuard::LtFloat { .. }
+            | ClauseGuard::LtEqFloat { .. }
+            | ClauseGuard::AddInt { .. }
+            | ClauseGuard::AddFloat { .. }
+            | ClauseGuard::SubInt { .. }
+            | ClauseGuard::SubFloat { .. }
+            | ClauseGuard::MultInt { .. }
+            | ClauseGuard::MultFloat { .. }
+            | ClauseGuard::DivInt { .. }
+            | ClauseGuard::DivFloat { .. }
+            | ClauseGuard::RemainderInt { .. }
+            | ClauseGuard::Or { .. }
+            | ClauseGuard::And { .. }
+            | ClauseGuard::ModuleSelect { .. } => Ok(docvec!["(", self.guard(guard,)?, ")"]),
+        }
+    }
+
+    // TODO)) This could be simplified by making the var case a function to change as
+    //        needed.
+    fn guard_constant_expression(&mut self, expression: &'a TypedConstant) -> Output<'a> {
+        match expression {
+            Constant::Tuple { elements, .. } => array(
+                elements
+                    .iter()
+                    .map(|element| self.guard_constant_expression(element)),
+            ),
+
+            Constant::List { elements, .. } => {
+                self.tracker.list_used = true;
+                list(
+                    elements
+                        .iter()
+                        .map(|element| self.guard_constant_expression(element)),
+                )
+            }
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
+                Ok("true".to_doc())
+            }
+            Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
+                Ok("false".to_doc())
+            }
+            Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
+
+            Constant::Record {
+                args,
+                module,
+                name,
+                tag,
+                type_,
+                ..
+            } => {
+                if type_.is_result() {
+                    if tag == "Ok" {
+                        self.tracker.ok_used = true;
+                    } else {
+                        self.tracker.error_used = true;
+                    }
+                }
+
+                // If there's no arguments and the type is a function that takes
+                // arguments then this is the constructor being referenced, not the
+                // function being called.
+                if let Some(arity) = type_.fn_arity() {
+                    if args.is_empty() && arity != 0 {
+                        let arity = arity as u16;
+                        return Ok(record_constructor(
+                            type_.clone(),
+                            None,
+                            name,
+                            arity,
+                            self.tracker,
+                        ));
+                    }
+                }
+
+                let field_values: Vec<_> = args
+                    .iter()
+                    .map(|arg| self.guard_constant_expression(&arg.value))
+                    .try_collect()?;
+                Ok(construct_record(
+                    module.as_ref().map(|(module, _)| module.as_str()),
+                    name,
+                    field_values,
+                ))
+            }
+
+            Constant::BitArray { segments, .. } => self.constant_bit_array(segments),
+
+            Constant::Var { name, .. } => Ok(self.local_var(name).to_doc()),
+
+            expression => self.constant_expression(Context::Function, expression),
+        }
     }
 }
 
@@ -1928,320 +2408,16 @@ pub fn float(value: &str) -> Document<'_> {
     out.to_doc()
 }
 
-pub(crate) fn guard_constant_expression<'a>(
-    assignments: &mut Vec<Assignment<'a>>,
-    tracker: &mut UsageTracker,
-    expression: &'a TypedConstant,
-) -> Output<'a> {
-    match expression {
-        Constant::Tuple { elements, .. } => array(
-            elements
-                .iter()
-                .map(|element| guard_constant_expression(assignments, tracker, element)),
-        ),
-
-        Constant::List { elements, .. } => {
-            tracker.list_used = true;
-            list(
-                elements
-                    .iter()
-                    .map(|element| guard_constant_expression(assignments, tracker, element)),
-            )
-        }
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
-            Ok("true".to_doc())
-        }
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
-            Ok("false".to_doc())
-        }
-        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
-
-        Constant::Record {
-            args,
-            module,
-            name,
-            tag,
-            type_,
-            ..
-        } => {
-            if type_.is_result() {
-                if tag == "Ok" {
-                    tracker.ok_used = true;
-                } else {
-                    tracker.error_used = true;
-                }
-            }
-
-            // If there's no arguments and the type is a function that takes
-            // arguments then this is the constructor being referenced, not the
-            // function being called.
-            if let Some(arity) = type_.fn_arity() {
-                if args.is_empty() && arity != 0 {
-                    let arity = arity as u16;
-                    return Ok(record_constructor(
-                        type_.clone(),
-                        None,
-                        name,
-                        arity,
-                        tracker,
-                    ));
-                }
-            }
-
-            let field_values: Vec<_> = args
-                .iter()
-                .map(|arg| guard_constant_expression(assignments, tracker, &arg.value))
-                .try_collect()?;
-            Ok(construct_record(
-                module.as_ref().map(|(module, _)| module.as_str()),
-                name,
-                field_values,
-            ))
-        }
-
-        Constant::BitArray { segments, .. } => bit_array(tracker, segments, |tracker, constant| {
-            guard_constant_expression(assignments, tracker, constant)
-        }),
-
-        Constant::Var { name, .. } => Ok(assignments
-            .iter()
-            .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone())
-            .unwrap_or_else(|| maybe_escape_identifier(name).to_doc())),
-
-        expression => constant_expression(Context::Function, tracker, expression),
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
 /// The context where the constant expression is used, it might be inside a
 /// function call, or in the definition of another constant.
 ///
 /// Based on the context we might want to annotate pure function calls as
 /// "@__PURE__".
 ///
+#[derive(Debug, Clone, Copy)]
 pub enum Context {
     Constant,
     Function,
-}
-
-pub(crate) fn constant_expression<'a>(
-    context: Context,
-    tracker: &mut UsageTracker,
-    expression: &'a TypedConstant,
-) -> Output<'a> {
-    match expression {
-        Constant::Int { value, .. } => Ok(int(value)),
-        Constant::Float { value, .. } => Ok(float(value)),
-        Constant::String { value, .. } => Ok(string(value)),
-        Constant::Tuple { elements, .. } => array(
-            elements
-                .iter()
-                .map(|element| constant_expression(context, tracker, element)),
-        ),
-
-        Constant::List { elements, .. } => {
-            tracker.list_used = true;
-            let list = list(
-                elements
-                    .iter()
-                    .map(|element| constant_expression(context, tracker, element)),
-            )?;
-
-            match context {
-                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", list]),
-                Context::Function => Ok(list),
-            }
-        }
-
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "True" => {
-            Ok("true".to_doc())
-        }
-        Constant::Record { type_, name, .. } if type_.is_bool() && name == "False" => {
-            Ok("false".to_doc())
-        }
-        Constant::Record { type_, .. } if type_.is_nil() => Ok("undefined".to_doc()),
-
-        Constant::Record {
-            args,
-            module,
-            name,
-            tag,
-            type_,
-            ..
-        } => {
-            if type_.is_result() {
-                if tag == "Ok" {
-                    tracker.ok_used = true;
-                } else {
-                    tracker.error_used = true;
-                }
-            }
-
-            // If there's no arguments and the type is a function that takes
-            // arguments then this is the constructor being referenced, not the
-            // function being called.
-            if let Some(arity) = type_.fn_arity() {
-                if args.is_empty() && arity != 0 {
-                    let arity = arity as u16;
-                    return Ok(record_constructor(
-                        type_.clone(),
-                        None,
-                        name,
-                        arity,
-                        tracker,
-                    ));
-                }
-            }
-
-            let field_values: Vec<_> = args
-                .iter()
-                .map(|arg| constant_expression(context, tracker, &arg.value))
-                .try_collect()?;
-
-            let constructor = construct_record(
-                module.as_ref().map(|(module, _)| module.as_str()),
-                name,
-                field_values,
-            );
-            match context {
-                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", constructor]),
-                Context::Function => Ok(constructor),
-            }
-        }
-
-        Constant::BitArray { segments, .. } => {
-            let bit_array = bit_array(tracker, segments, |tracker, expr| {
-                constant_expression(context, tracker, expr)
-            })?;
-            match context {
-                Context::Constant => Ok(docvec!["/* @__PURE__ */ ", bit_array]),
-                Context::Function => Ok(bit_array),
-            }
-        }
-
-        Constant::Var { name, module, .. } => Ok({
-            match module {
-                None => maybe_escape_identifier(name).to_doc(),
-                Some((module, _)) => {
-                    // JS keywords can be accessed here, but we must escape anyway
-                    // as we escape when exporting such names in the first place,
-                    // and the imported name has to match the exported name.
-                    docvec!["$", module, ".", maybe_escape_identifier(name)]
-                }
-            }
-        }),
-
-        Constant::StringConcatenation { left, right, .. } => {
-            let left = constant_expression(context, tracker, left)?;
-            let right = constant_expression(context, tracker, right)?;
-            Ok(docvec![left, " + ", right])
-        }
-
-        Constant::Invalid { .. } => panic!("invalid constants should not reach code generation"),
-    }
-}
-
-fn bit_array<'a>(
-    tracker: &mut UsageTracker,
-    segments: &'a [TypedConstantBitArraySegment],
-    mut constant_expr_fun: impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
-) -> Output<'a> {
-    use BitArrayOption as Opt;
-
-    tracker.bit_array_literal_used = true;
-    let segments_array = array(segments.iter().map(|segment| {
-        let value = constant_expr_fun(tracker, &segment.value)?;
-
-        if segment.has_native_option() {
-            return Err(Error::Unsupported {
-                feature: "This bit array segment option".into(),
-                location: segment.location,
-            });
-        }
-
-        match segment.options.as_slice() {
-            // Int segment
-            _ if segment.type_.is_int() => {
-                let details =
-                    sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
-                match (details.size_value, segment.value.as_ref()) {
-                    (Some(size_value), Constant::Int { int_value, .. })
-                        if size_value <= SAFE_INT_SEGMENT_MAX_SIZE.into()
-                            && (&size_value % BigInt::from(8) == BigInt::ZERO) =>
-                    {
-                        let bytes = bit_array_segment_int_value_to_bytes(
-                            int_value.clone(),
-                            size_value,
-                            segment.endianness(),
-                        )?;
-
-                        Ok(u8_slice(&bytes))
-                    }
-
-                    (Some(size_value), _) if size_value == 8.into() => Ok(value),
-
-                    (Some(size_value), _) if size_value <= 0.into() => Ok(nil()),
-
-                    _ => {
-                        tracker.sized_integer_segment_used = true;
-                        let size = details.size;
-                        let is_big = bool(segment.endianness().is_big());
-                        Ok(docvec!["sizedInt(", value, ", ", size, ", ", is_big, ")"])
-                    }
-                }
-            }
-
-            // Float segments
-            _ if segment.type_.is_float() => {
-                tracker.float_bit_array_segment_used = true;
-                let details =
-                    sized_bit_array_segment_details(segment, tracker, &mut constant_expr_fun)?;
-                let size = details.size;
-                let is_big = bool(segment.endianness().is_big());
-                Ok(docvec!["sizedFloat(", value, ", ", size, ", ", is_big, ")"])
-            }
-
-            // UTF8 strings
-            [Opt::Utf8 { .. }] => {
-                tracker.string_bit_array_segment_used = true;
-                Ok(docvec!["stringBits(", value, ")"])
-            }
-
-            // UTF8 codepoints
-            [Opt::Utf8Codepoint { .. }] => {
-                tracker.codepoint_bit_array_segment_used = true;
-                Ok(docvec!["codepointBits(", value, ")"])
-            }
-
-            // Bit arrays
-            [Opt::Bits { .. }] => Ok(value),
-
-            // Bit arrays with explicit size. The explicit size slices the bit array to the
-            // specified size. A runtime exception is thrown if the size exceeds the number
-            // of bits in the bit array.
-            [Opt::Bits { .. }, Opt::Size { value: size, .. }]
-            | [Opt::Size { value: size, .. }, Opt::Bits { .. }] => match &**size {
-                Constant::Int { value: size, .. } => {
-                    tracker.bit_array_slice_used = true;
-                    Ok(docvec!["bitArraySlice(", value, ", 0, ", size, ")"])
-                }
-
-                _ => Err(Error::Unsupported {
-                    feature: "This bit array segment option".into(),
-                    location: segment.location,
-                }),
-            },
-
-            // Anything else
-            _ => Err(Error::Unsupported {
-                feature: "This bit array segment option".into(),
-                location: segment.location,
-            }),
-        }
-    }))?;
-
-    Ok(docvec!["toBitArray(", segments_array, ")"])
 }
 
 #[derive(Debug)]
@@ -2250,39 +2426,6 @@ struct SizedBitArraySegmentDetails<'a> {
     /// The size of the bit array segment stored as a BigInt.
     /// This has a value when the segment's size is known at compile time.
     size_value: Option<BigInt>,
-}
-
-fn sized_bit_array_segment_details<'a>(
-    segment: &'a TypedConstantBitArraySegment,
-    tracker: &mut UsageTracker,
-    constant_expr_fun: &mut impl FnMut(&mut UsageTracker, &'a TypedConstant) -> Output<'a>,
-) -> Result<SizedBitArraySegmentDetails<'a>, Error> {
-    let size = segment.size();
-    let unit = segment.unit();
-    let (size_value, size) = match size {
-        Some(Constant::Int { int_value, .. }) => {
-            let size_value = int_value * unit;
-            let size = eco_format!("{}", size_value).to_doc();
-            (Some(size_value), size)
-        }
-
-        Some(size) => {
-            let mut size = constant_expr_fun(tracker, size)?;
-
-            if unit != 1 {
-                size = size.group().append(" * ".to_doc().append(unit.to_doc()));
-            }
-
-            (None, size)
-        }
-
-        None => {
-            let size_value: usize = if segment.type_.is_int() { 8 } else { 64 };
-            (Some(BigInt::from(size_value)), docvec![size_value])
-        }
-    };
-
-    Ok(SizedBitArraySegmentDetails { size, size_value })
 }
 
 pub fn string(value: &str) -> Document<'_> {
@@ -2295,7 +2438,17 @@ pub fn string(value: &str) -> Document<'_> {
     }
 }
 
-pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) -> Output<'a> {
+pub fn string_from_eco<'a>(value: EcoString) -> Document<'a> {
+    if value.contains('\n') {
+        value.replace("\n", r"\n").to_doc().surround("\"", "\"")
+    } else {
+        value.to_doc().surround("\"", "\"")
+    }
+}
+
+pub(crate) fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(
+    elements: Elements,
+) -> Output<'a> {
     let elements = Itertools::intersperse(elements.into_iter(), Ok(break_(",", ", ")))
         .collect::<Result<Vec<_>, _>>()?;
     if elements.is_empty() {
@@ -2312,7 +2465,7 @@ pub fn array<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Elements) 
     }
 }
 
-fn list<'a, I: IntoIterator<Item = Output<'a>>>(elements: I) -> Output<'a>
+pub(crate) fn list<'a, I: IntoIterator<Item = Output<'a>>>(elements: I) -> Output<'a>
 where
     I::IntoIter: DoubleEndedIterator + ExactSizeIterator,
 {
@@ -2346,7 +2499,7 @@ fn call_arguments<'a, Elements: IntoIterator<Item = Output<'a>>>(elements: Eleme
     .group())
 }
 
-fn construct_record<'a>(
+pub(crate) fn construct_record<'a>(
     module: Option<&'a str>,
     name: &'a str,
     arguments: impl IntoIterator<Item = Document<'a>>,
@@ -2482,7 +2635,7 @@ fn immediately_invoked_function_expression_document(document: Document<'_>) -> D
     .group()
 }
 
-fn record_constructor<'a>(
+pub(crate) fn record_constructor<'a>(
     type_: Arc<Type>,
     qualifier: Option<&'a str>,
     name: &'a str,

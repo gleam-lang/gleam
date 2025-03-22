@@ -25,9 +25,7 @@ import {
 export function main() {
   let _block;
   let $ = 1;
-  {
-    _block = 2;
-  }
+  _block = 2;
   return echo(_block, "src/module.gleam", 3);
 }
 

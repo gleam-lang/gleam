@@ -16,8 +16,8 @@ import { isEqual, toBitArray } from "../gleam.mjs";
 
 export function main() {
   let $ = 5;
-  if (isEqual(toBitArray([$]), toBitArray([$]))) {
-    let z = $;
+  let z = $;
+  if (isEqual(toBitArray([z]), toBitArray([z]))) {
     return undefined;
   } else {
     return undefined;

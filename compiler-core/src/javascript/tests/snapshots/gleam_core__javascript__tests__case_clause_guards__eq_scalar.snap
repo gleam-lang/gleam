@@ -13,8 +13,8 @@ pub fn main(xs, y: Int) {
 
 ----- COMPILED JAVASCRIPT
 export function main(xs, y) {
-  if (xs[0] === y) {
-    let x = xs[0];
+  let x = xs[0];
+  if (x === y) {
     return 1;
   } else {
     return 0;

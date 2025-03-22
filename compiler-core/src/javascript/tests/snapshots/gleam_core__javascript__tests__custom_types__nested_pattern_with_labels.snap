@@ -24,11 +24,7 @@ export class Box extends $CustomType {
 }
 
 function go(x) {
-  if (x instanceof Box && x.b instanceof Box) {
-    let a = x.b.a;
-    let b = x.b.b;
-    return a + b;
-  } else {
-    return 1;
-  }
+  let a = x.b.a;
+  let b = x.b.b;
+  return a + b;
 }

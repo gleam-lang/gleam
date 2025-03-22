@@ -17,10 +17,8 @@ pub fn main() {
 export function main() {
   let text = "first defined";
   let $ = "defined again";
-  {
-    let text$1 = $;
-    undefined
-  }
-  let text$1 = "a third time";
-  return text$1;
+  let text$1 = $;
+  undefined
+  let text$2 = "a third time";
+  return text$2;
 }
