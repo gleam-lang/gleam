@@ -513,14 +513,14 @@ fn create_sample_search_data() -> SearchData {
                 reference: "gleam/option.html#Option".to_string(),
             },
             SearchItem {
-                type_: SearchItemType::Function,
+                type_: SearchItemType::Value,
                 parent_title: "gleam/option".to_string(),
                 title: "unwrap".to_string(),
                 content: "Extracts the value from an `Option`, returning a default value if there is none.".to_string(),
                 reference: "gleam/option.html#unwrap".to_string(),
             },
             SearchItem {
-                type_: SearchItemType::Constant,
+                type_: SearchItemType::Value,
                 parent_title: "gleam/dynamic/decode".to_string(),
                 title: "bool".to_string(),
                 content: "A decoder that decodes `Bool` values.\n\n # Examples\n\n \n let result = decode.run(dynamic.from(True), decode.bool)\n assert result == Ok(True)\n \n".to_string(),
