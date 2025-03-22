@@ -1,0 +1,33 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\nimport wibble.{Wibble}\n\ntype Wibble =\n  wibble.Wibble\n\npub fn main() {\n  Wibble(\"hello\")\n}\n"
+---
+----- SOURCE CODE
+-- wibble.gleam
+
+pub type Wibble {
+  Wibble(String)
+}
+
+
+-- main.gleam
+
+import wibble.{Wibble}
+
+type Wibble =
+  wibble.Wibble
+
+pub fn main() {
+  Wibble("hello")
+}
+
+
+----- WARNING
+warning: Unused private type
+  ┌─ /src/warning/wrn.gleam:4:1
+  │  
+4 │ ╭ type Wibble =
+5 │ │   wibble.Wibble
+  │ ╰───────────────^ This private type is never used
+
+Hint: You can safely remove it.
