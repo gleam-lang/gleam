@@ -2973,9 +2973,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .cloned()
                     .ok_or_else(|| self.report_name_error(name, location))?;
 
-                // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name);
-
                 constructor
             }
 
@@ -3098,8 +3095,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     kind,
                 )
             }
-            ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::LocalConstant { .. } => {}
+            ValueConstructorVariant::LocalVariable { .. } => {
+                self.environment.increment_usage(referenced_name)
+            }
+            ValueConstructorVariant::LocalConstant { .. } => {}
         }
     }
 

@@ -460,3 +460,49 @@ pub const wibble = wibble
 "
     );
 }
+
+#[test]
+fn imported_module_marked_unused_when_shadowed_in_record_access() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub const wibble = 1
+"
+        ),
+        "
+import wibble
+
+type Wibble {
+  Wibble(wobble: Int)
+}
+
+pub fn main() {
+  let wibble = Wibble(10)
+  // This does not reference the `wibble` module!
+  wibble.wobble
+}
+"
+    );
+}
+
+#[test]
+fn local_variable_marked_unused_when_shadowed_in_module_access() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub const wibble = 1
+"
+        ),
+        "
+import wibble
+
+pub fn main() {
+  let wibble = 10
+  // This does not reference the `wibble` variable!
+  wibble.wibble
+}
+"
+    );
+}
