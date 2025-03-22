@@ -9,7 +9,7 @@ use crate::{
     schema_capnp::{self as schema, *},
     type_::{
         self, AccessorsMap, Deprecation, FieldMap, Opaque, RecordAccessor, Type,
-        TypeAliasConstructor, TypeConstructor,  TypeValueConstructor, TypeVar,
+        TypeAliasConstructor, TypeConstructor, TypeValueConstructor, TypeVar,
         TypeVariantConstructors, ValueConstructor, ValueConstructorVariant,
         expression::Implementations,
     },
