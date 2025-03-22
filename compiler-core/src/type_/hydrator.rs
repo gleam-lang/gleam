@@ -154,9 +154,14 @@ impl Hydrator {
                     environment.references.register_type_reference(
                         type_module,
                         type_name,
+                        name,
                         *name_location,
                         reference_kind,
                     );
+                } else {
+                    environment
+                        .references
+                        .register_type_reference_in_call_graph(name.clone());
                 }
 
                 match deprecation {

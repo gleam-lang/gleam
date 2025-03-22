@@ -1109,6 +1109,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.environment.references.register_value_reference(
                     module_name.clone(),
                     label.clone(),
+                    &label,
                     SrcSpan::new(field_start, location.end),
                     ReferenceKind::Qualified,
                 );
@@ -2353,6 +2354,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         self.environment.references.register_value_reference(
                             module_name.clone(),
                             label.clone(),
+                            &label,
                             location,
                             ReferenceKind::Qualified,
                         );
@@ -2426,11 +2428,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-            // Register this imported module as having been used, to inform
-            // warnings of unused imports later
-            let _ = self.environment.unused_modules.remove(module_alias);
-            let _ = self.environment.unused_module_aliases.remove(module_alias);
-
+            self.environment
+                .references
+                .register_module_reference(module_alias.clone());
             let constructor = constructor.clone();
             let module_name = module.name.clone();
 
@@ -2966,18 +2966,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> Result<ValueConstructor, Error> {
         let constructor = match module {
             // Look in the current scope for a binding with this name
-            None => {
-                let constructor = self
-                    .environment
-                    .get_variable(name)
-                    .cloned()
-                    .ok_or_else(|| self.report_name_error(name, location))?;
-
-                // Register the value as seen for detection of unused values
-                self.environment.increment_usage(name);
-
-                constructor
-            }
+            None => self
+                .environment
+                .get_variable(name)
+                .cloned()
+                .ok_or_else(|| self.report_name_error(name, location))?,
 
             // Look in an imported module for a binding with this name
             Some((module_name, module_location)) => {
@@ -2992,6 +2985,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             .environment
                             .suggest_modules(module_name, Imported::Value(name.clone())),
                     })?;
+
+                self.environment
+                    .references
+                    .register_module_reference(module_name.clone());
+
                 module
                     .values
                     .get(name)
@@ -3077,18 +3075,26 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 self.environment.references.register_value_reference(
                     module.clone(),
                     value_name.clone(),
+                    referenced_name,
                     location,
                     ReferenceKind::Alias,
                 )
             }
             ValueConstructorVariant::ModuleFn { name, module, .. }
             | ValueConstructorVariant::Record { name, module, .. }
-            | ValueConstructorVariant::ModuleConstant { name, module, .. } => self
-                .environment
-                .references
-                .register_value_reference(module.clone(), name.clone(), location, kind),
-            ValueConstructorVariant::LocalVariable { .. }
-            | ValueConstructorVariant::LocalConstant { .. } => {}
+            | ValueConstructorVariant::ModuleConstant { name, module, .. } => {
+                self.environment.references.register_value_reference(
+                    module.clone(),
+                    name.clone(),
+                    referenced_name,
+                    location,
+                    kind,
+                )
+            }
+            ValueConstructorVariant::LocalVariable { .. } => {
+                self.environment.increment_usage(referenced_name)
+            }
+            ValueConstructorVariant::LocalConstant { .. } => {}
         }
     }
 
@@ -3169,12 +3175,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } if args.is_empty() => {
-                // Register the module as having been used if it was imported
-                if let Some((module, _)) = &module {
-                    _ = self.environment.unused_modules.remove(module);
-                    _ = self.environment.unused_module_aliases.remove(module);
-                }
-
                 // Type check the record constructor
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
@@ -3214,12 +3214,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 // field_map, is always None here because untyped not yet unified
                 ..
             } => {
-                // Register the module as having been used if it was imported
-                if let Some((module, _)) = &module {
-                    _ = self.environment.unused_modules.remove(module);
-                    _ = self.environment.unused_module_aliases.remove(module);
-                }
-
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
 
                 let (tag, field_map) = match &constructor.variant {
@@ -3348,12 +3342,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 name,
                 ..
             } => {
-                // Register the module as having been used if it was imported
-                if let Some((module, _)) = &module {
-                    _ = self.environment.unused_modules.remove(module);
-                    _ = self.environment.unused_module_aliases.remove(module);
-                }
-
                 // Infer the type of this constant
                 let constructor = self.infer_value_constructor(&module, &name, &location)?;
                 match constructor.variant {
@@ -3957,9 +3945,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             // can identify if it is unused
                             body_typer.environment.init_usage(
                                 name.clone(),
-                                EntityKind::Variable {
-                                    origin: VariableOrigin::Variable(name.clone()),
-                                },
+                                VariableOrigin::Variable(name.clone()),
                                 arg.location,
                                 body_typer.problems,
                             );

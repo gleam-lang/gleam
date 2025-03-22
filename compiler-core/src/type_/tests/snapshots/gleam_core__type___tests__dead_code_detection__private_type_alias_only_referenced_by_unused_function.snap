@@ -1,0 +1,29 @@
+---
+source: compiler-core/src/type_/tests/dead_code_detection.rs
+expression: "\ntype Wibble = Int\n\nfn unused() -> Wibble {\n  10\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble = Int
+
+fn unused() -> Wibble {
+  10
+}
+
+
+----- WARNING
+warning: Unused private type
+  ┌─ /src/warning/wrn.gleam:2:1
+  │
+2 │ type Wibble = Int
+  │ ^^^^^^^^^^^^^^^^^ This private type is never used
+
+Hint: You can safely remove it.
+
+warning: Unused private function
+  ┌─ /src/warning/wrn.gleam:4:1
+  │
+4 │ fn unused() -> Wibble {
+  │ ^^^^^^^^^^^^^^^^^^^^^ This private function is never used
+
+Hint: You can safely remove it.

@@ -5,7 +5,7 @@ use crate::{
     ast::{PIPE_VARIABLE, Publicity},
     build::Target,
     error::edit_distance,
-    reference::ReferenceTracker,
+    reference::{EntityKind, ReferenceTracker},
     uid::UniqueIdGenerator,
 };
 
@@ -33,11 +33,6 @@ pub struct Environment<'a> {
     /// Modules that have been imported by the current module, along with the
     /// location of the import statement where they were imported.
     pub imported_modules: HashMap<EcoString, (SrcSpan, &'a ModuleInterface)>,
-    pub unused_modules: HashMap<EcoString, SrcSpan>,
-
-    /// Names of modules that have been imported with as name.
-    pub imported_module_aliases: HashMap<EcoString, SrcSpan>,
-    pub unused_module_aliases: HashMap<EcoString, UnusedModuleAlias>,
 
     /// Values defined in the current function (or the prelude)
     pub scope: im::HashMap<EcoString, ValueConstructor>,
@@ -56,11 +51,11 @@ pub struct Environment<'a> {
     /// Accessors defined in the current module
     pub accessors: HashMap<EcoString, AccessorsMap>,
 
-    /// entity_usages is a stack of scopes. When an entity is created it is
-    /// added to the top scope. When an entity is used we crawl down the scope
-    /// stack for an entity with that name and mark it as used.
-    /// NOTE: The bool in the tuple here tracks if the entity has been used
-    pub entity_usages: Vec<HashMap<EcoString, (EntityKind, SrcSpan, bool)>>,
+    /// local_variable_usages is a stack of scopes. When a local variable is created it is
+    /// added to the top scope. When a local variable is used we crawl down the scope
+    /// stack for a variable with that name and mark it as used.
+    /// NOTE: The bool in the tuple here tracks if the variable has been used
+    pub local_variable_usages: Vec<HashMap<EcoString, (VariableOrigin, SrcSpan, bool)>>,
 
     /// Used to determine if all functions/constants need to support the current
     /// compilation target.
@@ -111,16 +106,13 @@ impl<'a> Environment<'a> {
             module_types_constructors: prelude.types_value_constructors.clone(),
             module_values: HashMap::new(),
             imported_modules: HashMap::new(),
-            unused_modules: HashMap::new(),
             unqualified_imported_names: HashMap::new(),
             unqualified_imported_types: HashMap::new(),
             accessors: prelude.accessors.clone(),
             scope: prelude.values.clone().into(),
             importable_modules,
-            imported_module_aliases: HashMap::new(),
-            unused_module_aliases: HashMap::new(),
             current_module,
-            entity_usages: vec![HashMap::new()],
+            local_variable_usages: vec![HashMap::new()],
             target_support,
             names,
             module_type_aliases: HashMap::new(),
@@ -128,30 +120,6 @@ impl<'a> Environment<'a> {
             references: ReferenceTracker::new(),
         }
     }
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct UnusedModuleAlias {
-    pub location: SrcSpan,
-    pub module_name: EcoString,
-}
-
-/// For Keeping track of entity usages and knowing which error to display.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub enum EntityKind {
-    PrivateConstant,
-    // String here is the type constructor's type name
-    PrivateTypeConstructor(EcoString),
-    PrivateFunction,
-    ImportedConstructor,
-    ImportedType,
-    ImportedValue,
-    PrivateType,
-    Variable {
-        /// The origin of the variable so we know how it could be
-        /// rewritten to ignore it when unused.
-        origin: VariableOrigin,
-    },
 }
 
 #[derive(Debug)]
@@ -179,7 +147,7 @@ impl Environment<'_> {
 
     pub fn open_new_scope(&mut self) -> ScopeResetData {
         let local_values = self.scope.clone();
-        self.entity_usages.push(HashMap::new());
+        self.local_variable_usages.push(HashMap::new());
         ScopeResetData { local_values }
     }
 
@@ -190,7 +158,7 @@ impl Environment<'_> {
         problems: &mut Problems,
     ) {
         let unused = self
-            .entity_usages
+            .local_variable_usages
             .pop()
             .expect("There was no top entity scope.");
 
@@ -199,7 +167,7 @@ impl Environment<'_> {
         // been used beyond the point where the error occurred, so we don't want
         // to incorrectly warn about them.
         if was_successful {
-            self.handle_unused(unused, problems);
+            self.handle_unused_variables(unused, problems);
         }
         self.scope = data.local_values;
     }
@@ -406,8 +374,8 @@ impl Environment<'_> {
                             .suggest_modules(module_name, Imported::Type(name.clone())),
                     }
                 })?;
-                let _ = self.unused_modules.remove(module_name);
-                let _ = self.unused_module_aliases.remove(module_name);
+                self.references
+                    .register_module_reference(module_name.clone());
                 module.get_public_type(name).ok_or_else(|| {
                     UnknownTypeConstructorError::ModuleType {
                         name: name.clone(),
@@ -491,8 +459,8 @@ impl Environment<'_> {
                             .suggest_modules(module_name, Imported::Value(name.clone())),
                     }
                 })?;
-                let _ = self.unused_modules.remove(module_name);
-                let _ = self.unused_module_aliases.remove(module_name);
+                self.references
+                    .register_module_reference(module_name.clone());
                 module.get_public_value(name).ok_or_else(|| {
                     UnknownValueConstructorError::ModuleValue {
                         name: name.clone(),
@@ -615,59 +583,38 @@ impl Environment<'_> {
         }
     }
 
-    /// Inserts an entity at the current scope for usage tracking.
+    /// Inserts a local variable at the current scope for usage tracking.
     pub fn init_usage(
         &mut self,
         name: EcoString,
-        kind: EntityKind,
+        origin: VariableOrigin,
         location: SrcSpan,
         problems: &mut Problems,
     ) {
-        use EntityKind::*;
-
-        match self
-            .entity_usages
+        if let Some((origin, location, false)) = self
+            .local_variable_usages
             .last_mut()
             .expect("Attempted to access non-existent entity usages scope")
-            .insert(name.clone(), (kind, location, false))
+            .insert(name.clone(), (origin, location, false))
         {
-            // Private types can be shadowed by a constructor with the same name
-            //
-            // TODO: Improve this so that we can tell if an imported overridden
-            // type is actually used or not by tracking whether usages apply to
-            // the value or type scope
-            Some((ImportedType | PrivateType, _, _)) => {}
-
-            Some((kind, location, false)) => {
-                // an entity was overwritten in the top most scope without being used
-                let mut unused = HashMap::with_capacity(1);
-                let _ = unused.insert(name, (kind, location, false));
-                self.handle_unused(unused, problems);
-            }
-
-            _ => {}
+            // an entity was overwritten in the top most scope without being used
+            let mut unused = HashMap::with_capacity(1);
+            let _ = unused.insert(name, (origin, location, false));
+            self.handle_unused_variables(unused, problems);
         }
     }
 
     /// Increments an entity's usage in the current or nearest enclosing scope
     pub fn increment_usage(&mut self, name: &EcoString) {
-        let mut name = name.clone();
+        let name = name.clone();
 
-        while let Some((kind, _, used)) = self
-            .entity_usages
+        if let Some((_, _, used)) = self
+            .local_variable_usages
             .iter_mut()
             .rev()
             .find_map(|scope| scope.get_mut(&name))
         {
             *used = true;
-
-            match kind {
-                // If a type constructor is used, we consider its type also used
-                EntityKind::PrivateTypeConstructor(type_name) if *type_name != name => {
-                    name = type_name.clone();
-                }
-                _ => break,
-            }
         }
     }
 
@@ -675,36 +622,23 @@ impl Environment<'_> {
     /// Returns the list of unused imported module location for the removed unused lsp action.
     pub fn convert_unused_to_warnings(&mut self, problems: &mut Problems) {
         let unused = self
-            .entity_usages
+            .local_variable_usages
             .pop()
             .expect("Expected a bottom level of entity usages.");
-        self.handle_unused(unused, problems);
+        self.handle_unused_variables(unused, problems);
 
-        for (name, location) in self.unused_modules.clone().into_iter() {
-            problems.warning(Warning::UnusedImportedModule {
-                name: name.clone(),
-                location,
-            });
-        }
+        for (entity, info) in self.references.unused_values() {
+            let name = entity.name;
+            let location = info.origin;
 
-        for (name, info) in self.unused_module_aliases.iter() {
-            if !self.unused_modules.contains_key(name) {
-                problems.warning(Warning::UnusedImportedModuleAlias {
-                    alias: name.clone(),
-                    location: info.location,
-                    module_name: info.module_name.clone(),
-                });
-            }
-        }
-    }
-
-    fn handle_unused(
-        &mut self,
-        unused: HashMap<EcoString, (EntityKind, SrcSpan, bool)>,
-        problems: &mut Problems,
-    ) {
-        for (name, (kind, location, _)) in unused.into_iter().filter(|(_, (_, _, used))| !used) {
-            let warning = match kind {
+            let warning = match info.kind {
+                EntityKind::Function => Warning::UnusedPrivateFunction { location, name },
+                EntityKind::Constant => Warning::UnusedPrivateModuleConstant { location, name },
+                EntityKind::Constructor => Warning::UnusedConstructor {
+                    location,
+                    name,
+                    imported: false,
+                },
                 EntityKind::ImportedType => Warning::UnusedType {
                     name,
                     imported: true,
@@ -715,25 +649,38 @@ impl Environment<'_> {
                     imported: true,
                     location,
                 },
-                EntityKind::PrivateConstant => {
-                    Warning::UnusedPrivateModuleConstant { name, location }
-                }
-                EntityKind::PrivateTypeConstructor(_) => Warning::UnusedConstructor {
-                    name,
-                    imported: false,
-                    location,
-                },
-                EntityKind::PrivateFunction => Warning::UnusedPrivateFunction { name, location },
-                EntityKind::PrivateType => Warning::UnusedType {
+                EntityKind::Type => Warning::UnusedType {
                     name,
                     imported: false,
                     location,
                 },
                 EntityKind::ImportedValue => Warning::UnusedImportedValue { name, location },
-                EntityKind::Variable { origin } => Warning::UnusedVariable { location, origin },
+                EntityKind::ImportedModule => Warning::UnusedImportedModule { name, location },
+                EntityKind::ModuleAlias => {
+                    let module_name = match self.imported_modules.get(&name) {
+                        Some((_, module)) => module.name.clone(),
+                        None => name.clone(),
+                    };
+                    Warning::UnusedImportedModuleAlias {
+                        module_name,
+                        alias: name,
+                        location,
+                    }
+                }
             };
-
             problems.warning(warning);
+        }
+    }
+
+    fn handle_unused_variables(
+        &mut self,
+        unused: HashMap<EcoString, (VariableOrigin, SrcSpan, bool)>,
+        problems: &mut Problems,
+    ) {
+        for (origin, location, used) in unused.into_values() {
+            if !used {
+                problems.warning(Warning::UnusedVariable { location, origin });
+            }
         }
     }
 

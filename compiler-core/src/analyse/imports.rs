@@ -1,13 +1,10 @@
 use ecow::EcoString;
 
 use crate::{
-    ast::{SrcSpan, UnqualifiedImport, UntypedImport},
+    ast::{Publicity, SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
-    reference::ReferenceKind,
-    type_::{
-        EntityKind, Environment, Error, ModuleInterface, Problems, UnusedModuleAlias,
-        ValueConstructorVariant,
-    },
+    reference::{EntityKind, ReferenceKind},
+    type_::{Environment, Error, ModuleInterface, Problems, ValueConstructorVariant},
 };
 
 use super::Imported;
@@ -102,9 +99,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             &type_info.parameters,
         );
 
+        self.environment.references.register_type(
+            imported_name.clone(),
+            EntityKind::ImportedType,
+            import.location,
+            Publicity::Private,
+        );
+
         self.environment.references.register_type_reference(
             type_info.module.clone(),
             import.name.clone(),
+            imported_name,
             import.imported_name_location,
             ReferenceKind::Import,
         );
@@ -114,15 +119,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             .insert_type_constructor(imported_name.clone(), type_info)
         {
             self.problems.error(e);
-            return;
         }
-
-        self.environment.init_usage(
-            imported_name.clone(),
-            EntityKind::ImportedType,
-            import.location,
-            self.problems,
-        );
     }
 
     fn register_unqualified_value(&mut self, import: &UnqualifiedImport, module: &ModuleInterface) {
@@ -168,45 +165,43 @@ impl<'context, 'problems> Importer<'context, 'problems> {
 
         match variant {
             ValueConstructorVariant::Record { name, module, .. } => {
-                self.environment.init_usage(
-                    used_name.clone(),
-                    EntityKind::ImportedConstructor,
-                    location,
-                    self.problems,
-                );
                 self.environment.names.named_constructor_in_scope(
                     module.clone(),
                     name.clone(),
                     used_name.clone(),
                 );
+                self.environment.references.register_value(
+                    used_name.clone(),
+                    EntityKind::ImportedConstructor,
+                    location,
+                    Publicity::Private,
+                );
+
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
+                    used_name,
                     import.imported_name_location,
                     ReferenceKind::Import,
                 );
             }
             ValueConstructorVariant::ModuleConstant { module, .. }
             | ValueConstructorVariant::ModuleFn { module, .. } => {
-                self.environment.init_usage(
+                self.environment.references.register_value(
                     used_name.clone(),
                     EntityKind::ImportedValue,
                     location,
-                    self.problems,
+                    Publicity::Private,
                 );
                 self.environment.references.register_value_reference(
                     module.clone(),
                     import_name.clone(),
+                    used_name,
                     import.imported_name_location,
                     ReferenceKind::Import,
                 );
             }
-            _ => self.environment.init_usage(
-                used_name.clone(),
-                EntityKind::ImportedValue,
-                location,
-                self.problems,
-            ),
+            _ => {}
         };
 
         // Check if value already was imported
@@ -254,26 +249,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
                 // When the module has no unqualified imports, we track its usage
                 // so we can warn if not used by the end of the type checking
-                let _ = self
-                    .environment
-                    .unused_modules
-                    .insert(used_name.clone(), import.location);
-            }
 
-            if let Some(alias_location) = import.alias_location() {
-                // We also register it's name to differentiate between unused module
-                // and unused module name. See 'convert_unused_to_warnings'.
-                let _ = self
-                    .environment
-                    .imported_module_aliases
-                    .insert(used_name.clone(), alias_location);
-
-                let _ = self.environment.unused_module_aliases.insert(
+                self.environment.references.register_module(
                     used_name.clone(),
-                    UnusedModuleAlias {
-                        location: alias_location,
-                        module_name: import.module.clone(),
-                    },
+                    EntityKind::ImportedModule,
+                    import.location,
+                );
+            } else if let Some(alias_location) = import.alias_location() {
+                self.environment.references.register_module(
+                    used_name.clone(),
+                    EntityKind::ModuleAlias,
+                    alias_location,
                 );
             }
 

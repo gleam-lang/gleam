@@ -20,7 +20,7 @@ use crate::{
     dep_tree,
     line_numbers::LineNumbers,
     parse::SpannedString,
-    reference::ReferenceKind,
+    reference::{EntityKind, ReferenceKind},
     type_::{
         self, AccessorsMap, Deprecation, ModuleInterface, Opaque, PatternConstructor,
         RecordAccessor, References, Type, TypeAliasConstructor, TypeConstructor,
@@ -385,6 +385,8 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         } = c;
         self.check_name_case(name_location, &name, Named::Constant);
 
+        environment.references.begin_constant();
+
         let definition = FunctionDefinition {
             has_body: true,
             has_erlang_external: false,
@@ -435,21 +437,17 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         );
         environment.insert_module_value(name.clone(), variant);
 
+        environment
+            .references
+            .register_constant(name.clone(), location, publicity);
+
         environment.references.register_value_reference(
             environment.current_module.clone(),
             name.clone(),
+            &name,
             name_location,
             ReferenceKind::Definition,
         );
-
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateConstant,
-                location,
-                &mut self.problems,
-            );
-        }
 
         Definition::ModuleConstant(ModuleConstant {
             documentation: doc,
@@ -537,9 +535,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             .map(|(a, t)| a.set_type(t.clone()))
             .collect_vec();
 
-        environment
-            .references
-            .enter_function(environment.current_module.clone(), name.clone());
+        // We have already registered the function in the `register_value_from_function`
+        // method, but here we must set this as the current function again, so that anything
+        // we reference in the body of it can be tracked properly in the call graph.
+        environment.references.set_current_function(name.clone());
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
@@ -662,6 +661,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         environment.references.register_value_reference(
             environment.current_module.clone(),
             name.clone(),
+            &name,
             name_location,
             ReferenceKind::Definition,
         );
@@ -1009,6 +1009,25 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
                 continue;
             }
 
+            // If the constructor belongs to an opaque type then it's going to be
+            // considered as private.
+            let value_constructor_publicity = if *opaque {
+                Publicity::Private
+            } else {
+                *publicity
+            };
+
+            environment.references.register_value(
+                constructor.name.clone(),
+                EntityKind::Constructor,
+                constructor.location,
+                value_constructor_publicity,
+            );
+
+            environment
+                .references
+                .register_type_reference_in_call_graph(name.clone());
+
             let mut field_map_builder = FieldMapBuilder::new(constructor.arguments.len() as u32);
             let mut args_types = Vec::with_capacity(constructor.arguments.len());
             let mut fields = Vec::with_capacity(constructor.arguments.len());
@@ -1070,14 +1089,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             };
             index += 1;
 
-            // If the contructor belongs to an opaque type then it's going to be
-            // considered as private.
-            let value_constructor_publicity = if *opaque {
-                Publicity::Private
-            } else {
-                *publicity
-            };
-
             // If the whole custom type is deprecated all of its varints are too.
             // Otherwise just the varint(s) attributed as deprecated are.
             let deprecate_constructor = if deprecation.is_deprecated() {
@@ -1099,18 +1110,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             environment.references.register_value_reference(
                 environment.current_module.clone(),
                 constructor.name.clone(),
+                &constructor.name,
                 constructor.name_location,
                 ReferenceKind::Definition,
             );
-
-            if value_constructor_publicity.is_private() {
-                environment.init_usage(
-                    constructor.name.clone(),
-                    EntityKind::PrivateTypeConstructor(name.clone()),
-                    constructor.location,
-                    &mut self.problems,
-                );
-            }
 
             constructors_data.push(TypeValueConstructor {
                 name: constructor.name.clone(),
@@ -1246,9 +1249,14 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             name.clone(),
         );
 
+        environment
+            .references
+            .register_type(name.clone(), EntityKind::Type, *location, publicity);
+
         environment.references.register_type_reference(
             environment.current_module.clone(),
             name.clone(),
+            name,
             *name_location,
             ReferenceKind::Definition,
         );
@@ -1259,14 +1267,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             });
         }
 
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                &mut self.problems,
-            );
-        };
         Ok(())
     }
 
@@ -1292,6 +1292,10 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         }
 
         self.check_name_case(*name_location, name, Named::TypeAlias);
+
+        environment
+            .references
+            .register_type(name.clone(), EntityKind::Type, *location, *publicity);
 
         // Use the hydrator to convert the AST into a type, erroring if the AST was invalid
         // in some fashion.
@@ -1344,16 +1348,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         };
         let result = tryblock();
         self.record_if_error(result);
-
-        // Register the type for detection of dead code.
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateType,
-                *location,
-                &mut self.problems,
-            );
-        };
     }
 
     fn make_type_vars(
@@ -1409,6 +1403,13 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
 
         self.check_name_case(*name_location, name, Named::Function);
 
+        environment.references.register_value(
+            name.clone(),
+            EntityKind::Function,
+            *location,
+            *publicity,
+        );
+
         let mut builder = FieldMapBuilder::new(args.len() as u32);
         for Arg {
             names, location, ..
@@ -1458,14 +1459,6 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
             *publicity,
             deprecation.clone(),
         );
-        if publicity.is_private() {
-            environment.init_usage(
-                name.clone(),
-                EntityKind::PrivateFunction,
-                *location,
-                &mut self.problems,
-            );
-        };
         Ok(())
     }
 

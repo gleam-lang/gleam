@@ -22,6 +22,7 @@ mod assert;
 mod assignments;
 mod conditional_compilation;
 mod custom_types;
+mod dead_code_detection;
 mod echo;
 mod errors;
 mod exhaustiveness;
@@ -213,6 +214,7 @@ macro_rules! assert_warning {
             crate::build::Target::Erlang,
             None
         );
+        assert!(!warning.is_empty());
 
         let mut output = String::from("----- SOURCE CODE\n");
         for (name, src) in [$(($name, $module_src)),*] {
