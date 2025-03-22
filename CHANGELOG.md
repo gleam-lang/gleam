@@ -66,7 +66,7 @@
   project's `gleam.toml` as a JSON file.
   ([Rodrigo Álvarez](https://github.com/Papipo))
 
-- Improve error messages when encrypting and decrypting local Hex AIP key.
+- Improve error messages when encrypting and decrypting local Hex API key.
   ([Samuel Cristobal](https://github.com/scristobal))
 
 ### Language server
