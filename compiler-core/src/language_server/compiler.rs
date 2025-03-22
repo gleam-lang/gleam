@@ -187,6 +187,16 @@ where
     pub fn get_module_interface(&self, name: &str) -> Option<&ModuleInterface> {
         self.project_compiler.get_importable_modules().get(name)
     }
+}
+
+impl<IO> LspProjectCompiler<IO> {
+    pub fn take_warnings(&mut self) -> Vec<Warning> {
+        self.warnings.take()
+    }
+
+    pub fn get_source(&self, module: &str) -> Option<&ModuleSourceInformation> {
+        self.sources.get(module)
+    }
 
     pub fn has_dependency(&self, package: &str) -> bool {
         self.project_compiler
@@ -200,16 +210,6 @@ where
             .config
             .dev_dependencies
             .contains_key(package)
-    }
-}
-
-impl<IO> LspProjectCompiler<IO> {
-    pub fn take_warnings(&mut self) -> Vec<Warning> {
-        self.warnings.take()
-    }
-
-    pub fn get_source(&self, module: &str) -> Option<&ModuleSourceInformation> {
-        self.sources.get(module)
     }
 }
 
