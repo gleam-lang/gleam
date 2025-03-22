@@ -119,6 +119,22 @@ impl ReferenceTracker {
         }
     }
 
+    /// This function exists because of a specific edge-case where constants
+    /// can shadow imported values. For example:
+    /// ```gleam
+    /// import math.{pi}
+    ///
+    /// pub const pi = pi
+    /// ```
+    /// Here, the new `pi` constant shadows the imported `pi` value, but it still
+    /// references it, so it should not be marked as unused.
+    /// In order for this to work, we must first set the `current_function` field
+    /// so that the `pi` value is referenced by the public `pi` constant.
+    /// However, we can't insert the `pi` constant into the name scope yet, since
+    /// then it would count as referencing itself. We first need to set `current_function`,
+    /// then once we have analysed the right-hand-side of the constant, we can
+    /// register it in the scope using `register_constant`.
+    ///
     pub fn begin_constant(&mut self) {
         self.current_function = self.graph.add_node(());
     }
