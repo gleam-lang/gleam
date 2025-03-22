@@ -95,10 +95,12 @@ pub fn setup(
     let root_config = crate::config::root_config(paths)?;
 
     // Determine which module to run
-    let module = module.unwrap_or(match which {
-        Which::Src => root_config.name.to_string(),
-        Which::Test => format!("{}_test", &root_config.name),
-    });
+    let module: EcoString = module
+        .unwrap_or(match which {
+            Which::Src => root_config.name.to_string(),
+            Which::Test => format!("{}_test", &root_config.name),
+        })
+        .into();
 
     let target = target.unwrap_or(mod_config.target);
 
@@ -124,17 +126,17 @@ pub fn setup(
         },
         no_print_progress,
     };
+    // Warn incase the module being run has been as internal
+    let warnings = Rc::new(ConsoleWarningEmitter);
+    let warning_emitter = WarningEmitter::new(warnings.clone());
 
-    let built = crate::build::main(paths, options, manifest)?;
+    let built = crate::build::main(paths, options, manifest, warnings)?;
 
     // Warn incase the module being run has been as internal
-    let warning_emitter = WarningEmitter::new(Rc::new(ConsoleWarningEmitter));
-
-    // Warn incase the module being run has been as internal
-    let internal_module = built.is_internal(&module.clone().into()).unwrap_or(false);
+    let internal_module = built.is_internal(&module).unwrap();
     if internal_module {
         let warning = Warning::InternalMain {
-            module: module.clone().into(),
+            module: module.clone(),
         };
         warning_emitter.emit(warning);
     }
@@ -143,11 +145,13 @@ pub fn setup(
     let main_function = get_or_suggest_main_function(built, &module, target)?;
 
     // Warn incase the main function being run has been deprecated
-    if main_function.deprecation.is_deprecated() {
-        if let gleam_core::type_::Deprecation::Deprecated { message } = main_function.deprecation {
+
+    match main_function.deprecation {
+        gleam_core::type_::Deprecation::Deprecated { message } => {
             let warning = Warning::DeprecatedMain { message };
             warning_emitter.emit(warning);
         }
+        gleam_core::type_::Deprecation::NotDeprecated => {}
     }
 
     // Don't exit on ctrl+c as it is used by child erlang shell
