@@ -1,91 +1,91 @@
-{% extends "documentation_layout.html" %} {% block sidebar_content %} {% if
-!types.is_empty() %}
+{% extends "documentation_layout.html" %}
+
+{% block sidebar_content %}
+{% if !types.is_empty() %}
 <h2>Types</h2>
 <ul>
   {% for typ in types %}
   <li><a href="#{{ typ.name }}">{{ typ.name }}</a></li>
   {% endfor %}
 </ul>
-{% endif %} {% if !values.is_empty() %}
+{% endif %}
+
+{% if !values.is_empty() %}
 <h2>Values</h2>
 <ul>
-  {% endif %} {% if !values.is_empty() %} {% for value in values %}
+  {% for value in values %}
   <li><a href="#{{ value.name }}">{{ value.name }}</a></li>
-  {% endfor %} {% endif %} {% if !values.is_empty() %}
+  {% endfor %}
 </ul>
-{% endif %} {% endblock %} {% block content %}
+{% endif %}
+{% endblock %}
+
+{% block content %}
 <h1 id="module-name" class="module-name">
   <a href="#module-name">{{ module_name }}</a>
-  <svg class="icon icon-gleam-chasse">
-    <use xlink:href="#icon-gleam-chasse"></use>
-  </svg>
+  <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
 </h1>
-{{ documentation|safe }} {% if !types.is_empty() %}
+{{ documentation|safe }}
+
+{% if !types.is_empty() %}
 <section class="module-members">
   <h1 id="module-types" class="module-member-kind">
     <a href="#module-types">Types</a>
-    <svg class="icon icon-gleam-chasse-2">
-      <use xlink:href="#icon-gleam-chasse-2"></use>
-    </svg>
+    <svg class="icon icon-gleam-chasse-2"><use xlink:href="#icon-gleam-chasse-2"></use></svg>
   </h1>
 
   {% for typ in types %}
   <div class="member">
     <div class="member-name">
       <h2 id="{{ typ.name }}">
-        <a href="#{{ typ.name }}"> {{ typ.name }} </a>
-      </h2>
-      {% if typ.opaque %} <span class="visibility-tag">opaque</span> {% endif %}
+        <a href="#{{ typ.name }}">
+          {{ typ.name }}
+        </a>
+      </h2>{% if typ.opaque %} <span class="visibility-tag">opaque</span> {% endif %}
       {% if !typ.source_url.is_empty() %}
-      <a
-        class="member-source"
-        alt="View Source"
-        title="View Source"
-        href="{{ typ.source_url|safe }}"
-      >
+      <a class="member-source" alt="View Source" title="View Source" href="{{ typ.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
     </div>
     {% if !typ.deprecation_message.is_empty() %}
-    <p><b>Deprecated:</b> {{ typ.deprecation_message }}</p>
+    <p>
+      <b>Deprecated:</b> {{ typ.deprecation_message }}
+    </p>
     {% endif %}
     <div class="custom-type-constructors">
       <div class="rendered-markdown">{{ typ.documentation|safe }}</div>
       <pre><code class="hljs gleam">{{ typ.definition }}</code></pre>
       {% if !typ.constructors.is_empty() %}
-      <h3>Constructors</h3>
+      <h3>
+        Constructors
+      </h3>
       <ul class="constructor-list">
         {% for constructor in typ.constructors %}
         <li class="constructor-item">
           <div class="constructor-row">
-            <svg class="icon icon-star">
-              <use xlink:href="#icon-star"></use>
-            </svg>
-            <pre
-              class="constructor-name"
-            ><code class="hljs gleam">{{ constructor.definition }}</code></pre>
+            <svg class="icon icon-star"><use xlink:href="#icon-star"></use></svg>
+            <pre class="constructor-name"><code class="hljs gleam">{{ constructor.definition }}</code></pre>
           </div>
 
           <div class="constructor-item-docs">
-            {{ constructor.documentation|safe }} {% if
-            !constructor.arguments.is_empty() %}
-            <h4>Arguments</h4>
+            {{ constructor.documentation|safe }}
 
-            <ul class="constructor-argument-list">
-              {% for argument in constructor.arguments %}
-              <li>
-                <div class="constructor-argument-item">
-                  <p class="constructor-argument-label">
-                    <i>{{ argument.name }}</i>
-                  </p>
-                  <div class="constructor-argument-doc">
-                    {{ argument.doc|safe }}
-                  </div>
-                </div>
-              </li>
-              {% endfor %}
-            </ul>
+            {% if !constructor.arguments.is_empty() %}
+            <h4>
+              Arguments
+            </h4>
+
+            <dl class="constructor-argument-list">
+            {% for argument in constructor.arguments %}
+              <dt class="constructor-argument-label">
+                {{ argument.name }}
+              </dt>
+              <dd class="constructor-argument-doc">
+                {{ argument.doc|safe }}
+              </dd>
+            {% endfor %}
+            </dl>
             {% endif %}
           </div>
         </li>
@@ -96,27 +96,24 @@
   </div>
   {% endfor %}
 </section>
-{% endif %} {% if !values.is_empty() %}
+{% endif %}
+
+{% if !values.is_empty() %}
 <section class="module-members">
-  <h1 id="module-constants" class="module-member-kind">
-    <a href="#module-constants">Values</a>
-    <svg class="icon icon-gleam-chasse">
-      <use xlink:href="#icon-gleam-chasse"></use>
-    </svg>
+  <h1 id="module-values" class="module-member-kind">
+    <a href="#module-values">Values</a>
+    <svg class="icon icon-gleam-chasse"><use xlink:href="#icon-gleam-chasse"></use></svg>
   </h1>
   {% for value in values %}
   <div class="member">
     <div class="member-name">
       <h2 id="{{ value.name }}">
-        <a href="#{{ value.name }}"> {{ value.name }} </a>
+        <a href="#{{ value.name }}">
+          {{ value.name }}
+        </a>
       </h2>
       {% if !value.source_url.is_empty() %}
-      <a
-        class="member-source"
-        alt="View Source"
-        title="View Source"
-        href="{{ value.source_url|safe }}"
-      >
+      <a class="member-source" alt="View Source" title="View Source" href="{{ value.source_url|safe }}">
         &lt;/&gt;
       </a>
       {% endif %}
@@ -124,10 +121,13 @@
 
     <pre><code class="hljs gleam">{{ value.definition }}</code></pre>
     {% if !value.deprecation_message.is_empty() %}
-    <p><b>Deprecated:</b> {{ value.deprecation_message }}</p>
+    <p>
+      <b>Deprecated:</b> {{ value.deprecation_message }}
+    </p>
     {% endif %}
     <div class="rendered-markdown">{{ value.documentation|safe }}</div>
   </div>
   {% endfor %}
 </section>
-{% endif %} {% endblock %}
+{% endif %}
+{% endblock %}
