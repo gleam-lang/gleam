@@ -18,11 +18,11 @@ use std::{collections::HashMap, sync::OnceLock};
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
-pub fn print<'a, 'generator, 'module>(
+pub fn print<'a>(
     compiled_case: &'a CompiledCase,
     clauses: Vec<(&'a TypedExpr, Option<&'a TypedClauseGuard>)>,
     subjects: &'a [TypedExpr],
-    expression_generator: &'generator mut Generator<'module, 'a>,
+    expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
     // The case subjects might be repeated in the generated code, so we want to
     // assign those to variables (if they're not already ones) and use those;
@@ -71,7 +71,7 @@ pub struct DecisionPrinter<'module, 'generator, 'a> {
     variable_values: HashMap<usize, EcoString>,
 }
 
-impl<'module, 'generator, 'a> DecisionPrinter<'module, 'generator, 'a> {
+impl<'a> DecisionPrinter<'_, '_, 'a> {
     fn set_pattern_variable_value(&mut self, variable: &Variable, value: EcoString) {
         let _ = self.variable_values.insert(variable.id, value);
     }
@@ -105,12 +105,12 @@ impl<'module, 'generator, 'a> DecisionPrinter<'module, 'generator, 'a> {
         }
     }
 
-    fn bindings(&mut self, bindings: &'a Vec<(EcoString, BoundValue)>) -> Document<'a> {
+    fn bindings(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
         let bindings = (bindings.iter()).map(|(variable, value)| self.binding(variable, value));
         join(bindings, line())
     }
 
-    fn bindings_ref(&mut self, bindings: &Vec<&'a (EcoString, BoundValue)>) -> Document<'a> {
+    fn bindings_ref(&mut self, bindings: &[&'a (EcoString, BoundValue)]) -> Document<'a> {
         let bindings = (bindings.iter()).map(|(variable, value)| self.binding(variable, value));
         join(bindings, line())
     }
@@ -329,7 +329,7 @@ impl<'module, 'generator, 'a> DecisionPrinter<'module, 'generator, 'a> {
     }
 }
 
-fn let_<'a>(variable_name: EcoString, value: Document<'a>) -> Document<'a> {
+fn let_(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
     docvec!["let ", variable_name, " = ", value, ";"]
 }
 
