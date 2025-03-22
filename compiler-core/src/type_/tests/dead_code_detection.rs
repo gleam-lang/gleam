@@ -113,6 +113,17 @@ type PrivateType {
 }
 
 #[test]
+fn type_used_by_public_alias() {
+    assert_no_warnings!(
+        "
+type PrivateType
+
+pub type PublicAlias = PrivateType
+"
+    );
+}
+
+#[test]
 fn imported_module_only_referenced_by_unused_function() {
     assert_warning!(
         (
@@ -129,6 +140,158 @@ import wibble
 fn unused() {
   wibble.Wibble
 }
+"
+    );
+}
+
+#[test]
+fn imported_module_alias_only_referenced_by_unused_function() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble as wobble
+
+fn unused() {
+  wobble.Wibble
+}
+"
+    );
+}
+
+#[test]
+fn imported_module_alias_only_referenced_by_unused_function_with_unqualified() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble.{type Wibble} as wobble
+
+fn unused() {
+  wobble.Wibble
+}
+
+pub fn main() -> Wibble {
+  panic
+}
+"
+    );
+}
+
+#[test]
+fn imported_module_used_by_public_function() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble
+
+pub fn main() {
+  wibble.Wibble(4)
+}
+"
+    );
+}
+
+#[test]
+fn imported_module_used_in_type() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble
+
+pub fn main() -> wibble.Wibble {
+  panic
+}
+"
+    );
+}
+
+#[test]
+fn imported_module_used_by_public_constant() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble
+
+pub const value = wibble.Wibble(42)
+"
+    );
+}
+
+#[test]
+fn imported_module_used_in_type_variant() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble
+
+pub type Wobble {
+  Wobble(w: wibble.Wibble)
+}
+"
+    );
+}
+
+#[test]
+fn imported_module_used_in_type_alias() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub type Wibble {
+  Wibble(Int)
+}
+"
+        ),
+        "
+import wibble
+
+pub type Wobble = wibble.Wibble
 "
     );
 }

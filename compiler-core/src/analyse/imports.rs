@@ -4,9 +4,7 @@ use crate::{
     ast::{Publicity, SrcSpan, UnqualifiedImport, UntypedImport},
     build::Origin,
     reference::{EntityKind, ReferenceKind},
-    type_::{
-        Environment, Error, ModuleInterface, Problems, UnusedModuleAlias, ValueConstructorVariant,
-    },
+    type_::{Environment, Error, ModuleInterface, Problems, ValueConstructorVariant},
 };
 
 use super::Imported;
@@ -251,26 +249,17 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             if import.unqualified_types.is_empty() && import.unqualified_values.is_empty() {
                 // When the module has no unqualified imports, we track its usage
                 // so we can warn if not used by the end of the type checking
-                let _ = self
-                    .environment
-                    .unused_modules
-                    .insert(used_name.clone(), import.location);
-            }
 
-            if let Some(alias_location) = import.alias_location() {
-                // We also register it's name to differentiate between unused module
-                // and unused module name. See 'convert_unused_to_warnings'.
-                let _ = self
-                    .environment
-                    .imported_module_aliases
-                    .insert(used_name.clone(), alias_location);
-
-                let _ = self.environment.unused_module_aliases.insert(
+                self.environment.references.register_module(
                     used_name.clone(),
-                    UnusedModuleAlias {
-                        location: alias_location,
-                        module_name: import.module.clone(),
-                    },
+                    EntityKind::ImportedModule,
+                    import.location,
+                );
+            } else if let Some(alias_location) = import.alias_location() {
+                self.environment.references.register_module(
+                    used_name.clone(),
+                    EntityKind::ModuleAlias,
+                    alias_location,
                 );
             }
 

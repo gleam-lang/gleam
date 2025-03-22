@@ -18,6 +18,14 @@ pub const two = 2
 
 ----- WARNING
 warning: Unused imported module
+  ┌─ /src/warning/wrn.gleam:2:13
+  │
+2 │             import a/wibble
+  │             ^^^^^^^^^^^^^^^ This imported module is never used
+
+Hint: You can safely remove it.
+
+warning: Unused imported module
   ┌─ /src/warning/wrn.gleam:3:13
   │
 3 │             import b/wibble as wobble
