@@ -1,6 +1,6 @@
 use crate::{cli, http::HttpClient};
 use gleam_core::{Error, Result, encryption, hex, paths::global_hexpm_credentials_path};
-use std::time::SystemTime;
+use std::{env::VarError, time::SystemTime};
 
 pub const USER_PROMPT: &str = "https://hex.pm username";
 pub const USER_ENV_NAME: &str = "HEXPM_USER";
@@ -135,16 +135,28 @@ encrypt your Hex API key.
     }
 }
 
+fn get_env_password() -> std::result::Result<String, VarError> {
+    std::env::var(PASS_ENV_NAME).inspect(|_| {
+        println!("Using {PASS_ENV_NAME} environment variable, but note it will be deprecated in favour of {API_ENV_NAME}");
+    })
+}
+
 fn ask_local_password() -> std::result::Result<String, Error> {
-    std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
+    get_env_password().or_else(|_| cli::ask_password(LOCAL_PASS_PROMPT))
 }
 
 fn ask_password() -> std::result::Result<String, Error> {
-    std::env::var(PASS_ENV_NAME).or_else(|_| cli::ask_password(PASS_PROMPT))
+    get_env_password().or_else(|_| cli::ask_password(PASS_PROMPT))
+}
+
+fn get_env_username() -> std::result::Result<String, VarError> {
+    std::env::var(USER_ENV_NAME).inspect(|_| {
+        println!("Using {USER_ENV_NAME} environment variable, but note it will be deprecated in favour of {API_ENV_NAME}");
+    })
 }
 
 fn ask_username() -> std::result::Result<String, Error> {
-    std::env::var(USER_ENV_NAME).or_else(|_| cli::ask(USER_PROMPT))
+    get_env_username().or_else(|_| cli::ask(USER_PROMPT))
 }
 
 pub fn generate_api_key_name() -> String {
