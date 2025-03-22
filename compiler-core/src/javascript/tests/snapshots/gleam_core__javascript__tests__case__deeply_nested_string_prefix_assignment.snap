@@ -49,12 +49,9 @@ class Wabble extends $CustomType {
 
 export function main() {
   let tmp = new Wibble(new Wobble(new Wabble([42, "wibble"])));
-  if (tmp instanceof Wibble &&
-  tmp[0] instanceof Wobble &&
-  tmp[0].wabble instanceof Wabble &&
-  tmp[0].wabble.tuple[1].startsWith("w")) {
-    let rest = tmp[0].wabble.tuple[1].slice(1);
+  if (tmp[0].wabble.tuple[1].startsWith("w")) {
     let wibble = "w";
+    let rest = tmp[0].wabble.tuple[1].slice(1);
     return wibble + rest;
   } else {
     throw makeError(

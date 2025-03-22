@@ -17,8 +17,8 @@ import { remainderInt } from "../gleam.mjs";
 
 export function main() {
   let $ = remainderInt(4, 0);
-  if ($ === (remainderInt(4, 0))) {
-    let x = $;
+  let x = $;
+  if (x === (remainderInt(4, 0))) {
     return true;
   } else {
     return false;

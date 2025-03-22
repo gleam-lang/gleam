@@ -19,8 +19,8 @@ import * as $myhero from "../../package/hero/submodule.mjs";
 
 export function main() {
   let name = "Tony Stark";
-  if (name === $myhero.ironman.name) {
-    let n = name;
+  let n = name;
+  if (n === $myhero.ironman.name) {
     return true;
   } else {
     return false;

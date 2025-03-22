@@ -1,7 +1,7 @@
 use num_bigint::BigInt;
 use std::sync::OnceLock;
 
-use super::{expression::is_js_scalar, *};
+use super::*;
 use crate::{
     analyse::Inferred,
     strings::convert_string_escape_chars,
@@ -189,10 +189,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
         self.expression_generator.next_local_var(name)
     }
 
-    fn local_var(&mut self, name: &EcoString) -> EcoString {
-        self.expression_generator.local_var(name)
-    }
-
     fn push_string(&mut self, s: &'a str) {
         self.path.push(Index::String(s));
     }
@@ -317,221 +313,11 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
             })
     }
 
-    pub fn generate(
-        &mut self,
-        subjects: &[Document<'a>],
-        patterns: &'a [TypedPattern],
-        guard: Option<&'a TypedClauseGuard>,
-    ) -> Result<CompiledPattern<'a>, Error> {
-        for (subject, pattern) in subjects.iter().zip_eq(patterns) {
-            self.traverse_pattern(subject, pattern)?;
-        }
-        if let Some(guard) = guard {
-            self.push_guard_check(guard)?;
-        }
-
-        Ok(self.take_compiled())
-    }
-
     pub fn take_compiled(&mut self) -> CompiledPattern<'a> {
         CompiledPattern {
             checks: std::mem::take(&mut self.checks),
             assignments: std::mem::take(&mut self.assignments),
         }
-    }
-
-    fn push_guard_check(&mut self, guard: &'a TypedClauseGuard) -> Result<(), Error> {
-        let expression = self.guard(guard)?;
-        self.checks.push(Check::Guard { expression });
-        Ok(())
-    }
-
-    fn wrapped_guard(&mut self, guard: &'a TypedClauseGuard) -> Result<Document<'a>, Error> {
-        match guard {
-            ClauseGuard::Var { .. }
-            | ClauseGuard::TupleIndex { .. }
-            | ClauseGuard::Constant(_)
-            | ClauseGuard::Not { .. }
-            | ClauseGuard::FieldAccess { .. } => self.guard(guard),
-
-            ClauseGuard::Equals { .. }
-            | ClauseGuard::NotEquals { .. }
-            | ClauseGuard::GtInt { .. }
-            | ClauseGuard::GtEqInt { .. }
-            | ClauseGuard::LtInt { .. }
-            | ClauseGuard::LtEqInt { .. }
-            | ClauseGuard::GtFloat { .. }
-            | ClauseGuard::GtEqFloat { .. }
-            | ClauseGuard::LtFloat { .. }
-            | ClauseGuard::LtEqFloat { .. }
-            | ClauseGuard::AddInt { .. }
-            | ClauseGuard::AddFloat { .. }
-            | ClauseGuard::SubInt { .. }
-            | ClauseGuard::SubFloat { .. }
-            | ClauseGuard::MultInt { .. }
-            | ClauseGuard::MultFloat { .. }
-            | ClauseGuard::DivInt { .. }
-            | ClauseGuard::DivFloat { .. }
-            | ClauseGuard::RemainderInt { .. }
-            | ClauseGuard::Or { .. }
-            | ClauseGuard::And { .. }
-            | ClauseGuard::ModuleSelect { .. } => Ok(docvec!["(", self.guard(guard)?, ")"]),
-        }
-    }
-
-    fn guard(&mut self, guard: &'a TypedClauseGuard) -> Output<'a> {
-        Ok(match guard {
-            ClauseGuard::Equals { left, right, .. } if is_js_scalar(left.type_()) => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " === ", right]
-            }
-
-            ClauseGuard::NotEquals { left, right, .. } if is_js_scalar(left.type_()) => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " !== ", right]
-            }
-
-            ClauseGuard::Equals { left, right, .. } => {
-                let left = self.guard(left)?;
-                let right = self.guard(right)?;
-                self.expression_generator
-                    .prelude_equal_call(true, left, right)
-            }
-
-            ClauseGuard::NotEquals { left, right, .. } => {
-                let left = self.guard(left)?;
-                let right = self.guard(right)?;
-                self.expression_generator
-                    .prelude_equal_call(false, left, right)
-            }
-
-            ClauseGuard::GtFloat { left, right, .. } | ClauseGuard::GtInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " > ", right]
-            }
-
-            ClauseGuard::GtEqFloat { left, right, .. }
-            | ClauseGuard::GtEqInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " >= ", right]
-            }
-
-            ClauseGuard::LtFloat { left, right, .. } | ClauseGuard::LtInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " < ", right]
-            }
-
-            ClauseGuard::LtEqFloat { left, right, .. }
-            | ClauseGuard::LtEqInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " <= ", right]
-            }
-
-            ClauseGuard::AddFloat { left, right, .. } | ClauseGuard::AddInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " + ", right]
-            }
-
-            ClauseGuard::SubFloat { left, right, .. } | ClauseGuard::SubInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " - ", right]
-            }
-
-            ClauseGuard::MultFloat { left, right, .. }
-            | ClauseGuard::MultInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " * ", right]
-            }
-
-            ClauseGuard::DivFloat { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                self.expression_generator.tracker.float_division_used = true;
-                docvec!["divideFloat", wrap_args([left, right])]
-            }
-
-            ClauseGuard::DivInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                self.expression_generator.tracker.int_division_used = true;
-                docvec!["divideInt", wrap_args([left, right])]
-            }
-
-            ClauseGuard::RemainderInt { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                self.expression_generator.tracker.int_remainder_used = true;
-                docvec!["remainderInt", wrap_args([left, right])]
-            }
-
-            ClauseGuard::Or { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " || ", right]
-            }
-
-            ClauseGuard::And { left, right, .. } => {
-                let left = self.wrapped_guard(left)?;
-                let right = self.wrapped_guard(right)?;
-                docvec![left, " && ", right]
-            }
-
-            ClauseGuard::Var { name, .. } => self
-                .path_doc_from_assignments(name)
-                .unwrap_or_else(|| self.local_var(name).to_doc()),
-
-            ClauseGuard::TupleIndex { tuple, index, .. } => {
-                docvec![self.guard(tuple)?, "[", index, "]"]
-            }
-
-            ClauseGuard::FieldAccess {
-                label, container, ..
-            } => {
-                docvec![
-                    self.guard(container)?,
-                    ".",
-                    maybe_escape_property_doc(label)
-                ]
-            }
-
-            ClauseGuard::ModuleSelect {
-                module_alias,
-                label,
-                ..
-            } => docvec!["$", module_alias, ".", label],
-
-            ClauseGuard::Not { expression, .. } => {
-                docvec!["!", self.guard(expression)?]
-            }
-
-            ClauseGuard::Constant(constant) => {
-                return expression::guard_constant_expression(
-                    &mut self.assignments,
-                    self.expression_generator.tracker,
-                    constant,
-                );
-            }
-        })
-    }
-
-    /// Get the path that would assign a variable, if there is one for the given name.
-    /// This is in used in clause guards where may use variables defined in
-    /// patterns can be referenced, but in the compiled JavaScript they have not
-    /// yet been defined.
-    fn path_doc_from_assignments(&self, name: &str) -> Option<Document<'a>> {
-        self.assignments
-            .iter()
-            .find(|assignment| assignment.name == name)
-            .map(|assignment| assignment.subject.clone())
     }
 
     pub fn traverse_pattern(
@@ -655,7 +441,6 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
                     let var = self.next_local_var(left).to_doc();
                     self.assignments.push(Assignment {
                         subject: expression::string(left_side_string),
-                        name: left,
                         var,
                     });
                 }
@@ -1003,7 +788,7 @@ impl<'module_ctx, 'expression_gen, 'a> Generator<'module_ctx, 'expression_gen, '
     fn push_assignment(&mut self, subject: Document<'a>, name: &'a EcoString) {
         let var = self.next_local_var(name).to_doc();
         let subject = self.apply_path_to_subject(subject);
-        self.assignments.push(Assignment { subject, var, name });
+        self.assignments.push(Assignment { subject, var });
     }
 
     fn push_string_prefix_check(&mut self, subject: Document<'a>, prefix: &'a str) {
@@ -1074,15 +859,8 @@ pub struct CompiledPattern<'a> {
     pub assignments: Vec<Assignment<'a>>,
 }
 
-impl CompiledPattern<'_> {
-    pub fn has_assignments(&self) -> bool {
-        !self.assignments.is_empty()
-    }
-}
-
 #[derive(Debug)]
 pub struct Assignment<'a> {
-    pub name: &'a str,
     var: Document<'a>,
     pub subject: Document<'a>,
 }
@@ -1125,22 +903,11 @@ pub enum Check<'a> {
         subject: Document<'a>,
         expected_to_be_truthy: bool,
     },
-    Guard {
-        expression: Document<'a>,
-    },
 }
 
 impl<'a> Check<'a> {
     pub fn into_doc(self, match_desired: bool) -> Document<'a> {
         match self {
-            Check::Guard { expression } => {
-                if match_desired {
-                    expression
-                } else {
-                    docvec!["!", expression]
-                }
-            }
-
             Check::Booly {
                 expected_to_be_truthy,
                 subject,
@@ -1245,7 +1012,6 @@ impl<'a> Check<'a> {
             | Check::BitArrayBitSize { .. }
             | Check::StringPrefix { .. }
             | Check::Booly { .. } => false,
-            Check::Guard { .. } => true,
         }
     }
 }
@@ -1253,7 +1019,7 @@ impl<'a> Check<'a> {
 pub(crate) fn assign_subject<'a>(
     expression_generator: &mut expression::Generator<'_, 'a>,
     subject: &'a TypedExpr,
-) -> (Document<'a>, Option<Document<'a>>) {
+) -> (EcoString, Option<EcoString>) {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
     match subject {
@@ -1262,29 +1028,15 @@ pub(crate) fn assign_subject<'a>(
         // performing computation or side effects multiple times.
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.is_local_variable() => {
-            (expression_generator.local_var(name).to_doc(), None)
-        }
+        } if constructor.is_local_variable() => (expression_generator.local_var(name), None),
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
             let subject = expression_generator
-                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()))
-                .to_doc();
+                .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
             (subject.clone(), Some(subject))
         }
     }
-}
-
-pub(crate) fn assign_subjects<'a>(
-    expression_generator: &mut expression::Generator<'_, 'a>,
-    subjects: &'a [TypedExpr],
-) -> Vec<(Document<'a>, Option<Document<'a>>)> {
-    let mut out = Vec::with_capacity(subjects.len());
-    for subject in subjects {
-        out.push(assign_subject(expression_generator, subject))
-    }
-    out
 }
 
 /// Calculates the length of str as utf16 without escape characters.

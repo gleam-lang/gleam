@@ -19,8 +19,8 @@ import * as $hero from "../../package/hero.mjs";
 
 export function main() {
   let name = "Bruce Wayne";
-  if (name === $hero.batman.secret_identity.name) {
-    let n = name;
+  let n = name;
+  if (n === $hero.batman.secret_identity.name) {
     return true;
   } else {
     return false;
