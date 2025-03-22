@@ -531,3 +531,67 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn imported_type_and_constructor_with_same_name() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+import wibble.{type Wibble, Wibble}
+
+pub fn main() {
+  Wibble
+}
+"
+    );
+}
+
+#[test]
+fn imported_type_and_constructor_with_same_name2() {
+    assert_warning!(
+        (
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+import wibble.{type Wibble, Wibble}
+
+pub fn main() -> Wibble {
+  wibble.Wibble
+}
+"
+    );
+}
+
+#[test]
+fn imported_type_and_constructor_with_same_name3() {
+    assert_no_warnings!(
+        (
+            "thepackage",
+            "wibble",
+            "
+pub type Wibble {
+  Wibble
+}
+"
+        ),
+        "
+import wibble.{type Wibble, Wibble}
+
+pub fn main() -> Wibble {
+  Wibble
+}
+"
+    );
+}
