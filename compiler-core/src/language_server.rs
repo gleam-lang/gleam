@@ -1,10 +1,12 @@
 mod code_action;
 mod compiler;
 mod completer;
+mod configuration;
 mod edits;
 mod engine;
 mod feedback;
 mod files;
+mod inlay_hints;
 mod messages;
 mod progress;
 mod reference;
@@ -41,13 +43,15 @@ pub trait DownloadDependencies {
     fn download_dependencies(&self, paths: &ProjectPaths) -> Result<Manifest>;
 }
 
-pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
-    let start = line_numbers.line_and_column_number(location.start);
-    let end = line_numbers.line_and_column_number(location.end);
+pub fn src_offset_to_lsp_position(offset: u32, line_numbers: &LineNumbers) -> Position {
+    let line_col = line_numbers.line_and_column_number(offset);
+    Position::new(line_col.line - 1, line_col.column - 1)
+}
 
+pub fn src_span_to_lsp_range(location: SrcSpan, line_numbers: &LineNumbers) -> Range {
     Range::new(
-        Position::new(start.line - 1, start.column - 1),
-        Position::new(end.line - 1, end.column - 1),
+        src_offset_to_lsp_position(location.start, line_numbers),
+        src_offset_to_lsp_position(location.end, line_numbers),
     )
 }
 
