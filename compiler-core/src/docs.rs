@@ -175,15 +175,6 @@ pub fn generate_html<IO: FileSystemReader>(
         let rendered_documentation =
             render_markdown(&documentation_content.clone(), MarkdownSource::Comment);
 
-        let functions: Vec<DocsFunction<'_>> = module
-            .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| function(&source_links, statement))
-            .sorted()
-            .collect();
-
         let types: Vec<Type<'_>> = module
             .ast
             .definitions
@@ -193,14 +184,16 @@ pub fn generate_html<IO: FileSystemReader>(
             .sorted()
             .collect();
 
-        let constants: Vec<Constant<'_>> = module
-            .ast
-            .definitions
-            .iter()
-            .filter(|statement| !statement.is_internal())
-            .flat_map(|statement| constant(&source_links, statement))
-            .sorted()
-            .collect();
+      let values: Vec<DocsValues<'_>> = module
+          .ast
+          .definitions
+          .iter()
+          .filter(|statement| !statement.is_internal())
+          .flat_map(|statement| {
+              value(&source_links, statement)
+          })
+          .sorted()
+          .collect();
 
         types.iter().for_each(|type_| {
             let constructors = type_
@@ -234,9 +227,9 @@ pub fn generate_html<IO: FileSystemReader>(
                 reference: format!("{}.html#{}", module.name, type_.name),
             })
         });
-        constants.iter().for_each(|constant| {
+        values.iter().for_each(|constant| {
             search_items.push(SearchItem {
-                type_: SearchItemType::Constant,
+                type_: SearchItemType::Value,
                 parent_title: module.name.to_string(),
                 title: constant.name.to_string(),
                 content: format!(
@@ -248,20 +241,7 @@ pub fn generate_html<IO: FileSystemReader>(
                 reference: format!("{}.html#{}", module.name, constant.name),
             })
         });
-        functions.iter().for_each(|function| {
-            search_items.push(SearchItem {
-                type_: SearchItemType::Function,
-                parent_title: module.name.to_string(),
-                title: function.name.to_string(),
-                content: format!(
-                    "{}\n{}\n{}",
-                    function.signature,
-                    function.text_documentation,
-                    import_synonyms(&module.name, function.name)
-                ),
-                reference: format!("{}.html#{}", module.name, function.name),
-            })
-        });
+
         search_items.push(SearchItem {
             type_: SearchItemType::Module,
             parent_title: module.name.to_string(),
@@ -288,9 +268,8 @@ pub fn generate_html<IO: FileSystemReader>(
             module_name: EcoString::from(&name),
             file_path: &path.clone(),
             project_version: &config.version.to_string(),
-            functions,
             types,
-            constants,
+            values,
             rendering_timestamp: &rendering_timestamp,
         };
 
@@ -561,48 +540,6 @@ fn import_synonyms(parent: &str, child: &str) -> String {
     format!("Synonyms:\n{parent}.{child}\n{parent} {child}")
 }
 
-fn function<'a>(
-    source_links: &SourceLinker,
-    statement: &'a TypedDefinition,
-) -> Option<DocsFunction<'a>> {
-    let mut formatter = format::Formatter::new();
-
-    match statement {
-        Definition::Function(Function {
-            publicity: Publicity::Public,
-            name,
-            documentation: doc,
-            arguments: args,
-            return_type: ret,
-            location,
-            deprecation,
-            ..
-        }) => {
-            let (_, name) = name
-                .as_ref()
-                .expect("Function in a definition must be named");
-
-            Some(DocsFunction {
-                name,
-                documentation: markdown_documentation(doc),
-                text_documentation: text_documentation(doc),
-                signature: print(
-                    formatter
-                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
-                        .group(),
-                ),
-                source_url: source_links.url(*location),
-                deprecation_message: match deprecation {
-                    Deprecation::NotDeprecated => "".to_string(),
-                    Deprecation::Deprecated { message } => message.to_string(),
-                },
-            })
-        }
-
-        _ => None,
-    }
-}
-
 fn text_documentation(doc: &Option<(u32, EcoString)>) -> String {
     let raw_text = doc
         .as_ref()
@@ -743,12 +680,43 @@ fn type_<'a>(source_links: &SourceLinker, statement: &'a TypedDefinition) -> Opt
     }
 }
 
-fn constant<'a>(
+fn value<'a>(
     source_links: &SourceLinker,
     statement: &'a TypedDefinition,
-) -> Option<Constant<'a>> {
+) -> Option<DocsValues<'a>> {
     let mut formatter = format::Formatter::new();
     match statement {
+        Definition::Function(Function {
+            publicity: Publicity::Public,
+            name,
+            documentation: doc,
+            arguments: args,
+            return_type: ret,
+            location,
+            deprecation,
+            ..
+        }) => {
+            let (_, name) = name
+                .as_ref()
+                .expect("Function in a definition must be named");
+
+            return Some(DocsValues {
+                name,
+                definition: print(
+                    formatter
+                        .docs_fn_signature(Publicity::Public, name, args, ret.clone(), location)
+                        .group(),
+                ),
+                documentation: markdown_documentation(doc),
+                text_documentation: text_documentation(doc),
+                source_url: source_links.url(*location),
+                deprecation_message: match deprecation {
+                    Deprecation::NotDeprecated => "".to_string(),
+                    Deprecation::Deprecated { message } => message.to_string(),
+                },
+            })
+        },
+
         Definition::ModuleConstant(ModuleConstant {
             publicity: Publicity::Public,
             documentation: doc,
@@ -756,12 +724,13 @@ fn constant<'a>(
             value,
             location,
             ..
-        }) => Some(Constant {
+        }) => Some(DocsValues {
             name,
             definition: print(formatter.docs_const_expr(Publicity::Public, name, value)),
             documentation: markdown_documentation(doc),
             text_documentation: text_documentation(doc),
             source_url: source_links.url(*location),
+            deprecation_message: "".to_string(),
         }),
 
         _ => None,
@@ -776,16 +745,6 @@ fn print(doc: pretty::Document<'_>) -> String {
 struct Link {
     name: String,
     path: String,
-}
-
-#[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct DocsFunction<'a> {
-    name: &'a str,
-    signature: String,
-    documentation: String,
-    text_documentation: String,
-    source_url: String,
-    deprecation_message: String,
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord, Debug)]
@@ -815,12 +774,13 @@ struct Type<'a> {
 }
 
 #[derive(PartialEq, Eq, PartialOrd, Ord)]
-struct Constant<'a> {
+struct DocsValues<'a> {
     name: &'a str,
     definition: String,
     documentation: String,
     text_documentation: String,
     source_url: String,
+    deprecation_message: String,
 }
 
 #[derive(Template)]
@@ -856,9 +816,8 @@ struct ModuleTemplate<'a> {
     pages: &'a [Link],
     links: &'a [Link],
     modules: &'a [Link],
-    functions: Vec<DocsFunction<'a>>,
     types: Vec<Type<'a>>,
-    constants: Vec<Constant<'a>>,
+    values: Vec<DocsValues<'a>>,
     documentation: String,
     rendering_timestamp: &'a str,
 }
@@ -886,8 +845,7 @@ struct SearchItem {
 #[derive(Serialize, PartialEq, Eq, PartialOrd, Ord, Clone)]
 #[serde(rename_all = "lowercase")]
 enum SearchItemType {
-    Constant,
-    Function,
+    Value,
     Module,
     Page,
     Type,
