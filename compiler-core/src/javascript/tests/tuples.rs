@@ -142,16 +142,6 @@ fn go(x) {
     _ -> 1
   }
 }
-"#,
-        r#"function go(x) {
-  if (x[0] === 2) {
-    let a = x[1][0];
-    let b = x[1][1];
-    return a + b;
-  } else {
-    return 1;
-  }
-}
 "#
     );
 }

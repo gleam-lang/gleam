@@ -15,7 +15,8 @@ fn go(x) {
 ----- COMPILED JAVASCRIPT
 function go(x) {
   let $ = [1, 2];
-  if ($[0] === 1) {
+  let pattern = $[0];
+  if (pattern === 1) {
     let a = $[1];
     if (a === 2) {
       return 1;
