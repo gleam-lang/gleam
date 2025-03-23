@@ -1524,8 +1524,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-        let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
-        match (&kind, exhaustiveness_check) {
+        let (compiled_case, exhaustive) =
+            self.check_let_exhaustiveness(location, value.type_(), &pattern);
+
+        match (&kind, exhaustive) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
             (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
 
@@ -1546,7 +1548,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Otherwise we just don't care, asserting will ignore the any missing
             // pattern error.
             (AssignmentKind::Assert { .. }, Err(_)) => {}
-        }
+        };
+
+        // If the pattern is a let assert we want to include the compiled case
+        // we got from the analysis so that it can be used for code generation!
+        let kind = match kind {
+            AssignmentKind::Let | AssignmentKind::Generated => kind,
+            AssignmentKind::Assert {
+                location, message, ..
+            } => AssignmentKind::Assert {
+                location,
+                message,
+                compiled_case,
+            },
+        };
 
         Assignment {
             location,
@@ -1564,7 +1579,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
             AssignmentKind::Generated => AssignmentKind::Generated,
-            AssignmentKind::Assert { location, message } => {
+            AssignmentKind::Assert {
+                location,
+                message,
+                compiled_case,
+            } => {
                 let message = match message {
                     Some(message) => {
                         self.track_feature_usage(
@@ -1584,7 +1603,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     None => None,
                 };
-                AssignmentKind::Assert { location, message }
+                AssignmentKind::Assert {
+                    location,
+                    message,
+                    compiled_case,
+                }
             }
         }
     }
@@ -4013,20 +4036,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject: Arc<Type>,
         pattern: &TypedPattern,
-    ) -> Result<(), Error> {
+    ) -> (CompiledCase, Result<(), Error>) {
         let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
-        if output.diagnostics.missing {
+        let result = if output.diagnostics.missing {
             Err(Error::InexhaustiveLetAssignment {
                 location,
                 missing: output.missing_patterns(self.environment),
             })
         } else {
             Ok(())
-        }
+        };
+        (output.compiled_case, result)
     }
 
     fn check_case_exhaustiveness(

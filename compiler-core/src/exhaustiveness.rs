@@ -858,6 +858,15 @@ pub struct CompiledCase {
     pub subject_variables: Vec<Variable>,
 }
 
+impl Default for CompiledCase {
+    fn default() -> Self {
+        CompiledCase {
+            tree: Decision::Fail,
+            subject_variables: vec![],
+        }
+    }
+}
+
 /// Whether a clause is reachable, or why it is unreachable.
 ///
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
