@@ -361,7 +361,11 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
             }
 
             RuntimeCheck::Variant { match_, .. } if var.type_.is_result() => {
-                docvec![var_value, ".is", match_.name(), "()"]
+                if match_.name() == "Ok" {
+                    docvec![var_value, ".isOk()"]
+                } else {
+                    docvec!["!", var_value, ".isOk()"]
+                }
             }
 
             RuntimeCheck::Variant { match_, .. } => {
