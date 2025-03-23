@@ -21,7 +21,8 @@ function anything() {
     if ($.hasLength(0)) {
       
     } else {
-      if ($.tail.hasLength(0)) {
+      let pattern = $.tail;
+      if (pattern.hasLength(0)) {
         if (false || true) {
           let a = $.head;
           return a;
