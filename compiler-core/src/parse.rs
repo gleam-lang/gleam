@@ -69,6 +69,7 @@ use crate::ast::{
 };
 use crate::build::Target;
 use crate::error::wrap;
+use crate::exhaustiveness::CompiledCase;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
 use crate::type_::error::VariableOrigin;
@@ -1011,6 +1012,7 @@ where
                 AssignmentKind::Assert {
                     location: SrcSpan::new(assert_start, assert_end),
                     message: None,
+                    compiled_case: CompiledCase::default(),
                 }
             }
             _ => AssignmentKind::Let,
