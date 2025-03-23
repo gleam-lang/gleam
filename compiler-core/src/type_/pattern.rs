@@ -426,7 +426,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                             .module_types
                             .keys()
                             .any(|type_| type_ == &name),
-                        suggestions: self.environment.suggest_modules_for_type_or_value(
+                        suggestions: self.environment.suggest_unqualified_modules(
                             &name,
                             Layer::Value,
                             None,

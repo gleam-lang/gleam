@@ -108,26 +108,6 @@ pub enum UnknownField {
     NoFields,
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TypeOrVariableSuggestion {
-    Imported(EcoString),
-    Importable(EcoString),
-}
-
-impl TypeOrVariableSuggestion {
-    pub fn suggestion(&self, name: &str, layer: Layer) -> String {
-        match self {
-            TypeOrVariableSuggestion::Importable(module) => match layer {
-                Layer::Type => format!("Did you mean to import `{module}.{{type {name}}}`?"),
-                Layer::Value => format!("Did you mean to import `{module}.{{{name}}}`?"),
-            },
-            TypeOrVariableSuggestion::Imported(module) => {
-                format!("Did you mean to update the import of `{module}`?")
-            }
-        }
-    }
-}
-
 /// A suggestion for an unknown module
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 pub enum ModuleSuggestion {
@@ -139,7 +119,7 @@ pub enum ModuleSuggestion {
 }
 
 impl ModuleSuggestion {
-    pub fn suggestion(&self, module: &str) -> String {
+    pub fn qualified_suggestion(&self, module: &str) -> String {
         match self {
             ModuleSuggestion::Importable(name) => {
                 // Add a little extra information if the names don't match
@@ -151,6 +131,18 @@ impl ModuleSuggestion {
                 }
             }
             ModuleSuggestion::Imported(name) => format!("Did you mean `{name}`?"),
+        }
+    }
+
+    pub fn unqualified_suggestion(&self, name: &str, layer: Layer) -> String {
+        match self {
+            ModuleSuggestion::Importable(module) => match layer {
+                Layer::Type => format!("Did you mean to import `{module}.{{type {name}}}`?"),
+                Layer::Value => format!("Did you mean to import `{module}.{{{name}}}`?"),
+            },
+            ModuleSuggestion::Imported(module) => {
+                format!("Did you mean to update the import of `{module}`?")
+            }
         }
     }
 
@@ -193,14 +185,14 @@ pub enum Error {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
-        suggestions: Vec<TypeOrVariableSuggestion>,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     UnknownType {
         location: SrcSpan,
         name: EcoString,
         hint: UnknownTypeHint,
-        suggestions: Vec<TypeOrVariableSuggestion>,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     UnknownModule {
@@ -1175,7 +1167,7 @@ pub enum UnknownValueConstructorError {
         name: EcoString,
         variables: Vec<EcoString>,
         type_with_name_in_scope: bool,
-        suggestions: Vec<TypeOrVariableSuggestion>,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     Module {
@@ -1261,7 +1253,7 @@ pub enum UnknownTypeConstructorError {
     Type {
         name: EcoString,
         hint: UnknownTypeHint,
-        suggestions: Vec<TypeOrVariableSuggestion>,
+        suggestions: Vec<ModuleSuggestion>,
     },
 
     Module {

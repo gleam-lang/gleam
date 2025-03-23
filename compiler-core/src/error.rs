@@ -2295,7 +2295,7 @@ but no type in scope with that name."
                         title: "Unknown type".into(),
                         text,
                         hint: match label_text {
-                            None => suggestions.first().map(|suggestion| suggestion.suggestion(name, Layer::Type)),
+                            None => suggestions.first().map(|suggestion| suggestion.unqualified_suggestion(name, Layer::Type)),
                             Some(_) => None
                         },
                         level: Level::Error,
@@ -2332,7 +2332,7 @@ but no type in scope with that name."
                     Diagnostic {
                         title: "Unknown variable".into(),
                         text,
-                        hint: suggestions.first().map(|suggestion| suggestion.suggestion(name, Layer::Value)),
+                        hint: suggestions.first().map(|suggestion| suggestion.unqualified_suggestion(name, Layer::Value)),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {
@@ -2387,7 +2387,7 @@ Private types can only be used within the module that defines them.",
                 } => Diagnostic {
                     title: "Unknown module".into(),
                     text: format!("No module has been found with the name `{name}`."),
-                    hint: suggestions.first().map(|suggestion| suggestion.suggestion(name)),
+                    hint: suggestions.first().map(|suggestion| suggestion.qualified_suggestion(name)),
                     level: Level::Error,
                     location: Some(Location {
                         label: Label {

@@ -2308,7 +2308,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     location: *module_location,
                     suggestions: self
                         .environment
-                        .suggest_modules(module_alias, Imported::Value(label.clone())),
+                        .suggest_qualified_modules(module_alias, Imported::Value(label.clone())),
                 })?;
 
             let constructor =
@@ -2888,7 +2888,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                         name: module_name.clone(),
                         suggestions: self
                             .environment
-                            .suggest_modules(module_name, Imported::Value(name.clone())),
+                            .suggest_qualified_modules(module_name, Imported::Value(name.clone())),
                     })?;
                 module
                     .values
@@ -2958,7 +2958,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     .module_types
                     .keys()
                     .any(|typ| typ == name),
-                suggestions: self.environment.suggest_modules_for_type_or_value(
+                suggestions: self.environment.suggest_unqualified_modules(
                     name,
                     Layer::Value,
                     arity,
