@@ -1,6 +1,6 @@
 ---
 source: compiler-core/src/type_/tests/warnings.rs
-expression: "\n            import a/wibble\n            import b/wibble as wobble\n            const one = wibble.one\n        "
+expression: "\n            import a/wibble\n            import b/wibble as wobble\n            pub const one = wibble.one\n        "
 ---
 ----- SOURCE CODE
 -- a/wibble.gleam
@@ -13,30 +13,14 @@ pub const two = 2
 
             import a/wibble
             import b/wibble as wobble
-            const one = wibble.one
+            pub const one = wibble.one
         
 
 ----- WARNING
-warning: Unused imported module
-  ┌─ /src/warning/wrn.gleam:2:13
-  │
-2 │             import a/wibble
-  │             ^^^^^^^^^^^^^^^ This imported module is never used
-
-Hint: You can safely remove it.
-
 warning: Unused imported module
   ┌─ /src/warning/wrn.gleam:3:13
   │
 3 │             import b/wibble as wobble
   │             ^^^^^^^^^^^^^^^^^^^^^^^^^ This imported module is never used
-
-Hint: You can safely remove it.
-
-warning: Unused private constant
-  ┌─ /src/warning/wrn.gleam:4:13
-  │
-4 │             const one = wibble.one
-  │             ^^^^^^^^^ This private constant is never used
 
 Hint: You can safely remove it.
