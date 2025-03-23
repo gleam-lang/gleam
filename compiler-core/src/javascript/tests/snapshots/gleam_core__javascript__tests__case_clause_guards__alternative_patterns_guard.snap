@@ -16,7 +16,8 @@ export function main(xs) {
   if (xs.hasLength(0)) {
     return 0;
   } else {
-    if (xs.tail.hasLength(0)) {
+    let pattern = xs.tail;
+    if (pattern.hasLength(0)) {
       let x = xs.head;
       if (x === 1) {
         return x;
@@ -24,8 +25,9 @@ export function main(xs) {
         return 0;
       }
     } else {
-      if (xs.tail.tail.hasLength(0)) {
-        let x = xs.tail.head;
+      let pattern$1 = pattern.tail;
+      if (pattern$1.hasLength(0)) {
+        let x = pattern.head;
         if (x === 1) {
           return x;
         } else {
