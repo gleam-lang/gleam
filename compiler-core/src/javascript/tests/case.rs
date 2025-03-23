@@ -294,7 +294,7 @@ fn deeply_nested_string_prefix_assignment() {
         r#"
 type Wibble {
   Wibble(Wobble)
-}            
+}
 type Wobble {
   Wobble(wabble: Wabble)
 }
@@ -311,4 +311,28 @@ pub fn main() {
 }
 "#
     )
+}
+
+// https://github.com/gleam-lang/gleam/issues/4383
+#[test]
+fn record_update_in_pipeline_in_case_clause() {
+    assert_js!(
+        "
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+fn identity(x) {
+  x
+}
+
+fn go(x) {
+  case x {
+    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity
+    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity
+    _ -> panic
+  }
+}
+"
+    );
 }
