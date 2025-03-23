@@ -2971,3 +2971,88 @@ pub fn main() {
 "#
     );
 }
+
+#[test]
+fn suggest_unqualified_import_for_type_without_existing_import() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble {
+                Wobble
+            }
+            "
+        ),
+        "
+        pub fn go(wob: Wobble) { 1 }
+        "
+    );
+}
+
+#[test]
+fn suggest_unqualified_import_for_type_with_existing_import() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble {
+                Wobble
+            }
+            "
+        ),
+        "
+        import gleam/wibble
+        pub fn go(wob: Wobble) { 1 }
+        "
+    );
+}
+
+#[test]
+fn suggest_unqualified_import_for_constructor_without_existing_import() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble {
+                Wobble
+            }
+            "
+        ),
+        "
+        pub fn go() { Wobble }
+        "
+    );
+}
+
+#[test]
+fn suggest_unqualified_import_for_constructor_with_existing_import() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub type Wobble {
+                Wobble
+            }
+            "
+        ),
+        "
+        import gleam/wibble
+        pub fn go() { Wobble }
+        "
+    );
+}
+
+#[test]
+fn dont_suggest_unqualified_import_for_value() {
+    assert_with_module_error!(
+        (
+            "gleam/wibble",
+            "
+            pub fn wobble() { 1 }
+            "
+        ),
+        "
+        pub fn go() { wobble() }
+        "
+    );
+}

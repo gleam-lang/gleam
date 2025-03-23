@@ -866,11 +866,11 @@ impl Environment<'_> {
                 };
                 // If we couldn't find the arity of the value, consider all modules.
                 if arity == None {
-                    return Some(ModuleSuggestion::Imported(module_info.name.clone()));
+                    return Some(ModuleSuggestion::Importable(module_info.name.clone()));
                 }
                 // Make sure the arities match.
                 if value.type_.fn_arity() == arity {
-                    Some(ModuleSuggestion::Imported(module_info.name.clone()))
+                    Some(ModuleSuggestion::Importable(module_info.name.clone()))
                 } else {
                     None
                 }

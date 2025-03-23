@@ -1,0 +1,27 @@
+---
+source: compiler-core/src/type_/tests/errors.rs
+expression: "\n        import gleam/wibble\n        pub fn go(wob: Wobble) { 1 }\n        "
+---
+----- SOURCE CODE
+-- gleam/wibble.gleam
+
+            pub type Wobble {
+                Wobble
+            }
+            
+
+-- main.gleam
+
+        import gleam/wibble
+        pub fn go(wob: Wobble) { 1 }
+        
+
+----- ERROR
+error: Unknown type
+  ┌─ /src/one/two.gleam:3:24
+  │
+3 │         pub fn go(wob: Wobble) { 1 }
+  │                        ^^^^^^
+
+The type `Wobble` is not defined or imported in this module.
+Hint: Did you mean to update the import of `gleam/wibble`?
