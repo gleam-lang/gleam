@@ -31,6 +31,8 @@ pub struct EntityInformation {
     pub kind: EntityKind,
 }
 
+/// Information about an "Entity". This determines how we warn about an entity
+/// being unused.
 #[derive(Debug, Clone, Copy)]
 pub enum EntityKind {
     Function,
@@ -44,11 +46,28 @@ pub enum EntityKind {
     ModuleAlias,
 }
 
+/// Like `ast::Layer`, this type differentiates between different scopes. For example,
+/// there can be a `wibble` value, a `wibble` module and a `wibble` type in the same
+/// scope all at once!
+///
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 enum EntityLayer {
+    /// An entity which exists in the type layer: a custom type, type variable
+    /// or type alias.
     Type,
+    /// An entity which exists in the value layer: a constant, function or
+    /// custom type variant constructor.
     Value,
+    /// An entity which has been shadowed. This allows us to keep track of unused
+    /// imports even if they have been shadowed by another value in the current
+    /// module.
+    /// This extra variant is needed because we used `Entity` as a key in a hashmap,
+    /// and so a duplicate key would not be able to exist.
+    /// We also would not want to get this shadowed entity when performing a lookup
+    /// of a named entity; we only want it to register it as an entity in the
+    /// `unused` function.
     Shadowed,
+    /// The name of an imported module. Modules are separate to values!
     Module,
 }
 
@@ -64,7 +83,7 @@ pub struct ReferenceTracker {
     /// used for dead code detection.
     graph: StableGraph<(), (), Directed>,
     entities: BiMap<Entity, NodeIndex>,
-    current_function: NodeIndex,
+    current_node: NodeIndex,
     public_entities: Vec<Entity>,
     entity_information: HashMap<Entity, EntityInformation>,
 
@@ -110,6 +129,11 @@ impl ReferenceTracker {
             | Overwritten::Right(mut entity, index)
             | Overwritten::Pair(mut entity, index)
             | Overwritten::Both((mut entity, index), _) => {
+                // If an entity with the same name as this already exists,
+                // we still need to keep track of its usage! Thought it cannot
+                // be referenced anymore, it still might have been used before this
+                // point, or need to be marked as unused.
+                // To do this, we keep track of a "Shadowed" entity in `entity_information`.
                 if let Some(information) = self.entity_information.get(&entity) {
                     entity.layer = EntityLayer::Shadowed;
                     _ = self.entity_information.insert(entity.clone(), *information);
@@ -136,7 +160,7 @@ impl ReferenceTracker {
     /// register it in the scope using `register_constant`.
     ///
     pub fn begin_constant(&mut self) {
-        self.current_function = self.graph.add_node(());
+        self.current_node = self.graph.add_node(());
     }
 
     pub fn register_constant(&mut self, name: EcoString, location: SrcSpan, publicity: Publicity) {
@@ -144,7 +168,7 @@ impl ReferenceTracker {
             name,
             layer: EntityLayer::Value,
         };
-        self.create_node_and_maybe_shadow(entity.clone(), self.current_function);
+        self.create_node_and_maybe_shadow(entity.clone(), self.current_node);
         match publicity {
             Publicity::Public | Publicity::Internal { .. } => {
                 self.public_entities.push(entity.clone());
@@ -168,7 +192,7 @@ impl ReferenceTracker {
         location: SrcSpan,
         publicity: Publicity,
     ) {
-        self.current_function = self.create_node(name.clone(), EntityLayer::Value);
+        self.current_node = self.create_node(name.clone(), EntityLayer::Value);
         let entity = Entity {
             name,
             layer: EntityLayer::Value,
@@ -189,8 +213,8 @@ impl ReferenceTracker {
         );
     }
 
-    pub fn set_current_function(&mut self, name: EcoString) {
-        self.current_function = self.get_or_create_node(name, EntityLayer::Value);
+    pub fn set_current_node(&mut self, name: EcoString) {
+        self.current_node = self.get_or_create_node(name, EntityLayer::Value);
     }
 
     pub fn register_type(
@@ -200,7 +224,7 @@ impl ReferenceTracker {
         location: SrcSpan,
         publicity: Publicity,
     ) {
-        self.current_function = self.create_node(name.clone(), EntityLayer::Type);
+        self.current_node = self.create_node(name.clone(), EntityLayer::Type);
         let entity = Entity {
             name,
             layer: EntityLayer::Type,
@@ -222,7 +246,7 @@ impl ReferenceTracker {
     }
 
     pub fn register_module(&mut self, name: EcoString, kind: EntityKind, location: SrcSpan) {
-        self.current_function = self.create_node(name.clone(), EntityLayer::Module);
+        self.current_node = self.create_node(name.clone(), EntityLayer::Module);
         let entity = Entity {
             name,
             layer: EntityLayer::Module,
@@ -249,7 +273,7 @@ impl ReferenceTracker {
             ReferenceKind::Qualified | ReferenceKind::Import | ReferenceKind::Definition => {}
             ReferenceKind::Alias | ReferenceKind::Unqualified => {
                 let target = self.get_or_create_node(referenced_name.clone(), EntityLayer::Value);
-                _ = self.graph.add_edge(self.current_function, target, ());
+                _ = self.graph.add_edge(self.current_node, target, ());
             }
         }
 
@@ -280,17 +304,23 @@ impl ReferenceTracker {
             .push(Reference { location, kind });
     }
 
+    /// Like `register_type_reference`, but doesn't modify `self.type_references`.
+    /// This is used when we define a constructor for a custom type. The constructor
+    /// doesn't actually "reference" its type, but if the constructor is used, the
+    /// type should also be considered used. The best way to represent this relationship
+    /// is to make a connection between them in the call graph.
+    ///
     pub fn register_type_reference_in_call_graph(&mut self, name: EcoString) {
         let target = self.get_or_create_node(name, EntityLayer::Type);
-        _ = self.graph.add_edge(self.current_function, target, ());
+        _ = self.graph.add_edge(self.current_node, target, ());
     }
 
     pub fn register_module_reference(&mut self, name: EcoString) {
         let target = self.get_or_create_node(name, EntityLayer::Module);
-        _ = self.graph.add_edge(self.current_function, target, ());
+        _ = self.graph.add_edge(self.current_node, target, ());
     }
 
-    pub fn unused_values(&self) -> HashMap<Entity, EntityInformation> {
+    pub fn unused(&self) -> HashMap<Entity, EntityInformation> {
         let mut unused_values = HashMap::with_capacity(self.entities.len());
 
         for (entity, information) in self.entity_information.iter() {
@@ -298,14 +328,14 @@ impl ReferenceTracker {
         }
         for entity in self.public_entities.iter() {
             if let Some(index) = self.entities.get_by_left(entity) {
-                self.mark_value_as_used(&mut unused_values, entity, *index);
+                self.mark_entity_as_used(&mut unused_values, entity, *index);
             }
         }
 
         unused_values
     }
 
-    fn mark_value_as_used(
+    fn mark_entity_as_used(
         &self,
         unused: &mut HashMap<Entity, EntityInformation>,
         entity: &Entity,
@@ -314,7 +344,7 @@ impl ReferenceTracker {
         if unused.remove(entity).is_some() {
             for node in self.graph.neighbors_directed(index, Direction::Outgoing) {
                 if let Some(entity) = self.entities.get_by_right(&node) {
-                    self.mark_value_as_used(unused, entity, node);
+                    self.mark_entity_as_used(unused, entity, node);
                 }
             }
         }

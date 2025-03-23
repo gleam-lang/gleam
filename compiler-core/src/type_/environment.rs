@@ -627,7 +627,7 @@ impl Environment<'_> {
             .expect("Expected a bottom level of entity usages.");
         self.handle_unused_variables(unused, problems);
 
-        for (entity, info) in self.references.unused_values() {
+        for (entity, info) in self.references.unused() {
             let name = entity.name;
             let location = info.origin;
 

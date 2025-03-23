@@ -988,7 +988,7 @@ fn unused_alias_warning_test() {
         ("gleam/wibble", "pub const one = 1"),
         r#"
             import gleam/wibble.{one} as wobble
-            const one = one
+            pub const one = one
         "#,
     );
 }
@@ -1017,7 +1017,7 @@ fn unused_alias_for_duplicate_module_no_warning_for_alias_test() {
         r#"
             import a/wibble
             import b/wibble as wobble
-            const one = wibble.one
+            pub const one = wibble.one
         "#,
     );
 }

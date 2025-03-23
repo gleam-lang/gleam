@@ -538,7 +538,7 @@ impl<'a, A> ModuleAnalyzer<'a, A> {
         // We have already registered the function in the `register_value_from_function`
         // method, but here we must set this as the current function again, so that anything
         // we reference in the body of it can be tracked properly in the call graph.
-        environment.references.set_current_function(name.clone());
+        environment.references.set_current_node(name.clone());
 
         // Infer the type using the preregistered args + return types as a starting point
         let result = environment.in_new_scope(&mut self.problems, |environment, problems| {
