@@ -2295,7 +2295,7 @@ but no type in scope with that name."
                         title: "Unknown type".into(),
                         text,
                         hint: match label_text {
-                            None => suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name)),
+                            None => suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Type)),
                             Some(_) => None
                         },
                         level: Level::Error,
@@ -2332,7 +2332,7 @@ but no type in scope with that name."
                     Diagnostic {
                         title: "Unknown variable".into(),
                         text,
-                        hint: suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name)),
+                        hint: suggestions.first().map(|suggestion| suggestion.suggest_unqualified_import(name, Layer::Value)),
                         level: Level::Error,
                         location: Some(Location {
                             label: Label {

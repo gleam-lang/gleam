@@ -5,9 +5,7 @@ expression: "\n        pub fn go() { Wobble }\n        "
 ----- SOURCE CODE
 -- gleam/wibble.gleam
 
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             
 
 -- main.gleam
@@ -23,4 +21,4 @@ error: Unknown variable
   │                       ^^^^^^
 
 The custom type variant constructor `Wobble` is not in scope here.
-Hint: Did you mean to import `gleam/wibble.{Wobble}`?
+Hint: Did you mean to import the `Wobble` value from the `gleam/wibble` module?

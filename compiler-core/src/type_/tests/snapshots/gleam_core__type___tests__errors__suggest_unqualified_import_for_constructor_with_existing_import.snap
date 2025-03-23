@@ -5,9 +5,7 @@ expression: "\n        import gleam/wibble\n        pub fn go() { Wobble }\n    
 ----- SOURCE CODE
 -- gleam/wibble.gleam
 
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             
 
 -- main.gleam

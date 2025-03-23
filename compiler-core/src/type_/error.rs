@@ -134,11 +134,16 @@ impl ModuleSuggestion {
         }
     }
 
-    pub fn suggest_unqualified_import(&self, name: &str) -> String {
+    pub fn suggest_unqualified_import(&self, name: &str, layer: Layer) -> String {
         match self {
-            ModuleSuggestion::Importable(module) => {
-                format!("Did you mean to import `{module}.{name}`?")
-            }
+            ModuleSuggestion::Importable(module) => match layer {
+                Layer::Type => {
+                    format!("Did you mean to import the `{name}` type from the `{module}` module?")
+                }
+                Layer::Value => {
+                    format!("Did you mean to import the `{name}` value from the `{module}` module?")
+                }
+            },
 
             ModuleSuggestion::Imported(module) => {
                 format!("Did you mean to update the import of `{module}`?")

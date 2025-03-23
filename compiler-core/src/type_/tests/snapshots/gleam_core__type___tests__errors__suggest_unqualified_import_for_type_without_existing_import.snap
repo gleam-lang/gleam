@@ -5,9 +5,7 @@ expression: "\n        pub fn go(wob: Wobble) { 1 }\n        "
 ----- SOURCE CODE
 -- gleam/wibble.gleam
 
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             
 
 -- main.gleam
@@ -23,4 +21,4 @@ error: Unknown type
   │                        ^^^^^^
 
 The type `Wobble` is not defined or imported in this module.
-Hint: Did you mean to import `gleam/wibble.{type Wobble}`?
+Hint: Did you mean to import the `Wobble` type from the `gleam/wibble` module?

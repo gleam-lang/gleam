@@ -2978,9 +2978,7 @@ fn suggest_unqualified_import_for_type_without_existing_import() {
         (
             "gleam/wibble",
             "
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             "
         ),
         "
@@ -2995,9 +2993,7 @@ fn suggest_unqualified_import_for_type_with_existing_import() {
         (
             "gleam/wibble",
             "
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             "
         ),
         "
@@ -3013,9 +3009,7 @@ fn suggest_unqualified_import_for_constructor_without_existing_import() {
         (
             "gleam/wibble",
             "
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             "
         ),
         "
@@ -3030,9 +3024,7 @@ fn suggest_unqualified_import_for_constructor_with_existing_import() {
         (
             "gleam/wibble",
             "
-            pub type Wobble {
-                Wobble
-            }
+            pub type Wobble { Wobble }
             "
         ),
         "
