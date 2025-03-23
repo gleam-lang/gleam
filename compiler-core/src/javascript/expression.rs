@@ -211,14 +211,18 @@ impl<'module, 'a> Generator<'module, 'a> {
             Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(_use) => self.expression(&_use.call),
         }?;
+        Ok(self.add_statement_level(expression_doc))
+    }
+
+    fn add_statement_level(&mut self, expression: Document<'a>) -> Document<'a> {
         if self.statement_level.is_empty() {
-            Ok(expression_doc)
+            expression
         } else {
             let mut statements = std::mem::take(&mut self.statement_level);
-            statements.push(expression_doc);
-            Ok(Itertools::intersperse(statements.into_iter(), line())
+            statements.push(expression);
+            Itertools::intersperse(statements.into_iter(), line())
                 .collect_vec()
-                .to_doc())
+                .to_doc()
         }
     }
 
@@ -678,7 +682,10 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn expression_flattening_blocks(&mut self, expression: &'a TypedExpr) -> Output<'a> {
         match expression {
             TypedExpr::Block { statements, .. } => self.statements(statements),
-            _ => self.expression(expression),
+            _ => {
+                let expression_document = self.expression(expression)?;
+                Ok(self.add_statement_level(expression_document))
+            }
         }
     }
 

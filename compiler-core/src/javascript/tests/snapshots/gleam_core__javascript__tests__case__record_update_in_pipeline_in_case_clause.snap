@@ -1,0 +1,62 @@
+---
+source: compiler-core/src/javascript/tests/case.rs
+expression: "\ntype Wibble {\n  Wibble(wibble: Int, wobble: Int)\n}\n\nfn identity(x) {\n  x\n}\n\nfn go(x) {\n  case x {\n    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity\n    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity\n    _ -> panic\n  }\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble(wibble: Int, wobble: Int)
+}
+
+fn identity(x) {
+  x
+}
+
+fn go(x) {
+  case x {
+    Wibble(1, _) -> Wibble(..x, wibble: 4) |> identity
+    Wibble(_, 3) -> Wibble(..x, wobble: 10) |> identity
+    _ -> panic
+  }
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
+
+class Wibble extends $CustomType {
+  constructor(wibble, wobble) {
+    super();
+    this.wibble = wibble;
+    this.wobble = wobble;
+  }
+}
+
+function identity(x) {
+  return x;
+}
+
+function go(x) {
+  if (x instanceof Wibble && x.wibble === 1) {
+    let _block;
+    let _record = x;
+    _block = new Wibble(4, _record.wobble);
+    let _pipe = _block;
+    return identity(_pipe);
+  } else if (x instanceof Wibble && x.wobble === 3) {
+    let _block;
+    let _record = x;
+    _block = new Wibble(_record.wibble, 10);
+    let _pipe = _block;
+    return identity(_pipe);
+  } else {
+    throw makeError(
+      "panic",
+      "my/mod",
+      14,
+      "go",
+      "`panic` expression evaluated.",
+      {}
+    )
+  }
+}
