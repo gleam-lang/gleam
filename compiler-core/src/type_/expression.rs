@@ -1831,7 +1831,20 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                 }
             }
-        }
+        };
+
+        // If the pattern is a let assert we want to include the compiled case
+        // we got from the analysis so that it can be used for code generation!
+        let kind = match kind {
+            AssignmentKind::Let | AssignmentKind::Generated => kind,
+            AssignmentKind::Assert {
+                location, message, ..
+            } => AssignmentKind::Assert {
+                location,
+                message,
+                compiled_case,
+            },
+        };
 
         Assignment {
             location,
@@ -1849,9 +1862,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
             AssignmentKind::Generated => AssignmentKind::Generated,
-            AssignmentKind::Assert { location, message } => {
+            AssignmentKind::Assert {
+                location,
+                message,
+                compiled_case,
+            } => {
                 self.purity = Purity::Impure;
-
                 let message = match message {
                     Some(message) => {
                         self.track_feature_usage(
@@ -1871,7 +1887,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     None => None,
                 };
-                AssignmentKind::Assert { location, message }
+                AssignmentKind::Assert {
+                    location,
+                    message,
+                    compiled_case,
+                }
             }
         }
     }
@@ -4318,7 +4338,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject: Arc<Type>,
         pattern: &TypedPattern,
-    ) -> (CompileCaseResult, Result<(), Error>) {
+    ) -> Result<(), Error> {
         let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
@@ -4331,8 +4351,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             })
         } else {
             Ok(())
-        };
-        (output, result)
+        }
     }
 
     fn check_case_exhaustiveness(
