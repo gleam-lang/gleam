@@ -34,15 +34,21 @@ pub fn print<'a>(
         clauses,
         expression_generator,
         variable_values: HashMap::new(),
+        scoped_variable_names: HashMap::new(),
     };
 
     // Might have to add those to the scope!!!!
-    for (var, (subject_value, _assignment)) in compiled_case
+    for (var, (subject_value, assignment)) in compiled_case
         .subject_variables
         .iter()
         .zip(subjects_assignments.iter())
     {
         printer.set_pattern_variable_value(var, subject_value.clone());
+        if let Some(name) = assignment {
+            printer.bind_variable(name.clone(), var);
+        } else {
+            printer.bind_variable(subject_value.clone(), var);
+        }
     }
 
     let decision = printer.decision(&compiled_case.tree)?;
@@ -68,7 +74,57 @@ pub struct DecisionPrinter<'module, 'generator, 'a> {
     /// to a constructor field, tuple element and so on. Pattern variables never
     /// end up in the generated code but we replace them with their actual value.
     /// We store those values as we find them in this map.
+    ///
     variable_values: HashMap<usize, EcoString>,
+
+    /// When we discover new variables after a runtime check we don't immediately
+    /// generate assignments for each of them, because that could lead to wasted
+    /// work. Let's consider the following check:
+    ///
+    /// ```txt
+    /// a is Wibble(3, c, 1) -> c
+    /// a is _ -> 1
+    /// ```
+    ///
+    /// If we generated variables for it as soon as we enter its corresponding
+    /// branch we would find ourselves with this piece of code:
+    ///
+    /// ```js
+    /// if (a instanceof Wibble) {
+    ///   let a$0 = wibble.0;
+    ///   let a$1 = wibble.1;
+    ///   let a$2 = wibble.2;
+    ///
+    ///   // and now we go on checking these new variables
+    /// }
+    /// ```
+    ///
+    /// However, by extracting all the fields immediately we might end up doing
+    /// wasted work: as soon as we find out that `a$0 != 3` we don't even need
+    /// to check the other fields, we know the pattern can't match! So we
+    /// extracted two fields we're not even checking.
+    ///
+    /// To avoid this situation, we only bind a variable to a name right before
+    /// we're checking it so we're sure we're never generating useless bindings.
+    /// The previous example would become something like this:
+    ///
+    /// ```js
+    /// if (a instanceof Wibble) {
+    ///   let a$0 = wibble.0;
+    ///   if (a$0 === 3) {
+    ///     let a$2 = wibble.2
+    ///     // further checks
+    ///   } else {
+    ///     return 1;
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// In this map we store the name a variable is bound to in the current
+    /// scope. For example here we know that `wibble.0` is bound to the name
+    /// `a$0`.
+    ///
+    scoped_variable_names: HashMap<usize, EcoString>,
 }
 
 impl<'a> DecisionPrinter<'_, '_, 'a> {
@@ -76,7 +132,23 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
         let _ = self.variable_values.insert(variable.id, value);
     }
 
+    fn bind_variable(&mut self, name: EcoString, variable: &Variable) {
+        let _ = self.scoped_variable_names.insert(variable.id, name);
+    }
+
+    #[must_use]
+    fn is_bound_in_scope(&self, variable: &Variable) -> bool {
+        self.scoped_variable_names.contains_key(&variable.id)
+    }
+
     fn get_variable_value(&self, variable: &Variable) -> EcoString {
+        // If the pattern variable was already assigned to a variable that is
+        // in scope we use that variable name!
+        if let Some(name) = self.scoped_variable_names.get(&variable.id) {
+            return name.clone();
+        }
+
+        // Otherwise we fallback to using its value directly.
         self.variable_values
             .get(&variable.id)
             .expect("pattern variable used before assignment")
@@ -119,7 +191,7 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
         let (body, _) = &self
             .clauses
             .get(clause_index)
-            .expect("decision tree invalid clause index");
+            .expect("invalid clause index");
 
         self.expression_generator.expression_flattening_blocks(body)
     }
@@ -150,19 +222,31 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
                 self.decision(fallback)
             }
             _ => {
-                let mut first = true;
-                let mut if_ = nil();
-                for (check, decision) in choices {
+                let mut if_ = if self.is_bound_in_scope(var) {
+                    // If the variable is already bound to a name in the current
+                    // scope we don't have to generate any additional code...
+                    nil()
+                } else {
+                    // ... if it's not we will be binding the value to a variable
+                    // name so we can use this variable to reference it and never
+                    // do any duplicate work recomputing its value every time
+                    // this pattern variable is used.
+                    let name = self.expression_generator.next_local_var(&"pattern".into());
+                    let value = self.get_variable_value(var);
+                    self.bind_variable(name.clone(), var);
+                    docvec![let_(name, value.to_doc()), line()]
+                };
+
+                for (i, (check, decision)) in choices.iter().enumerate() {
                     self.record_check_assignments(var, check);
-                    let body = self.inside_new_scope(|this| this.decision(decision))?;
                     let check_doc = self.runtime_check(var, check);
-                    let branch = if first {
-                        first = false;
+                    let body = self.inside_new_scope(|this| this.decision(decision))?;
+
+                    let branch = if i == 0 {
                         docvec!["if (", check_doc, ") "]
                     } else {
                         docvec![" else if (", check_doc, ") "]
                     };
-
                     if_ = if_.append(docvec![branch, break_block(body)]);
                 }
 
@@ -190,8 +274,10 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
         F: Fn(&mut Self) -> A,
     {
         let old_scope = self.expression_generator.current_scope_vars.clone();
+        let old_names = self.scoped_variable_names.clone();
         let output = run(self);
         self.expression_generator.current_scope_vars = old_scope;
+        self.scoped_variable_names = old_names;
         output
     }
 
@@ -206,7 +292,7 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
             .get(guard)
             .expect("invalid clause index")
             .1
-            .expect("missing guard should");
+            .expect("missing guard");
 
         // Before generating the if-else condition we want to generate all the
         // assignments that will be needed by the guard condition so we can rest
@@ -291,6 +377,9 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
         }
     }
 
+    /// In case the check introduces new variables, this will record their
+    /// actual value to be used by later checks and assignments
+    ///
     fn record_check_assignments(&mut self, var: &Variable, check: &RuntimeCheck) {
         let value = self.get_variable_value(var);
         match check {

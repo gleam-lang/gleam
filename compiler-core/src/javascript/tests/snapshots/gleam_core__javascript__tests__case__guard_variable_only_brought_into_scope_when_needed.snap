@@ -19,13 +19,15 @@ function go(x) {
   if (x.hasLength(0)) {
     return 2;
   } else {
-    if (x.tail.hasLength(0)) {
+    let pattern = x.tail;
+    if (pattern.hasLength(0)) {
       return 2;
     } else {
-      if (x.tail.tail.hasLength(0)) {
+      let pattern$1 = pattern.tail;
+      if (pattern$1.hasLength(0)) {
         let a = x.head;
         if (a === 1) {
-          let b = x.tail.head;
+          let b = pattern.head;
           return a + b;
         } else {
           return 2;
