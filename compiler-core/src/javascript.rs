@@ -134,6 +134,14 @@ impl<'a> Generator<'a> {
             self.register_prelude_usage(&mut imports, "toList", None);
         };
 
+        if self.tracker.list_empty_class_used {
+            self.register_prelude_usage(&mut imports, "Empty", Some("$Empty"));
+        };
+
+        if self.tracker.list_non_empty_class_used {
+            self.register_prelude_usage(&mut imports, "NonEmpty", Some("$NonEmpty"));
+        };
+
         if self.tracker.prepend_used {
             self.register_prelude_usage(&mut imports, "prepend", Some("listPrepend"));
         };
@@ -838,6 +846,8 @@ fn maybe_escape_property_doc(label: &str) -> Document<'_> {
 pub(crate) struct UsageTracker {
     pub ok_used: bool,
     pub list_used: bool,
+    pub list_empty_class_used: bool,
+    pub list_non_empty_class_used: bool,
     pub prepend_used: bool,
     pub error_used: bool,
     pub int_remainder_used: bool,
