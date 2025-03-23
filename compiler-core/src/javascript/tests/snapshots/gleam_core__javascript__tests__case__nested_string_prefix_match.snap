@@ -13,24 +13,24 @@ fn main() {
 
 
 ----- COMPILED JAVASCRIPT
-import { Ok, toList } from "../gleam.mjs";
+import { Ok, toList, Empty as $Empty } from "../gleam.mjs";
 
 function main() {
   let $ = new Ok(toList(["a", "b c", "d"]));
   let pattern = $[0];
-  if (pattern.hasLength(0)) {
+  if (pattern instanceof $Empty) {
     return 1;
   } else {
     let pattern$1 = pattern.tail;
-    if (pattern$1.hasLength(0)) {
+    if (pattern$1 instanceof $Empty) {
       return 1;
     } else {
       let pattern$2 = pattern$1.tail;
-      if (pattern$2.hasLength(0)) {
+      if (pattern$2 instanceof $Empty) {
         return 1;
       } else {
         let pattern$3 = pattern$2.tail;
-        if (pattern$3.hasLength(0)) {
+        if (pattern$3 instanceof $Empty) {
           let pattern$4 = pattern$2.head;
           if (pattern$4 === "d") {
             let pattern$5 = pattern$1.head;

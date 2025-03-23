@@ -12,17 +12,19 @@ pub fn main(xs) -> Int {
 
 
 ----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
 export function main(xs) {
-  if (xs.hasLength(0)) {
+  if (xs instanceof $Empty) {
     return 1;
   } else {
     let pattern = xs.tail;
-    if (pattern.hasLength(0)) {
+    if (pattern instanceof $Empty) {
       let x = xs.head;
       return x;
     } else {
       let pattern$1 = pattern.tail;
-      if (pattern$1.hasLength(0)) {
+      if (pattern$1 instanceof $Empty) {
         let x = pattern.head;
         return x;
       } else {
