@@ -53,9 +53,7 @@ impl<'context, 'problems> Importer<'context, 'problems> {
             self.problems.error(Error::UnknownModule {
                 location,
                 name: name.clone(),
-                suggestions: self
-                    .environment
-                    .suggest_qualified_modules(&name, Imported::Module),
+                suggestions: self.environment.suggest_modules(&name, Imported::Module),
             });
             return;
         };

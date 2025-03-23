@@ -119,7 +119,7 @@ pub enum ModuleSuggestion {
 }
 
 impl ModuleSuggestion {
-    pub fn qualified_suggestion(&self, module: &str) -> String {
+    pub fn suggest_import(&self, module: &str) -> String {
         match self {
             ModuleSuggestion::Importable(name) => {
                 // Add a little extra information if the names don't match
@@ -134,12 +134,12 @@ impl ModuleSuggestion {
         }
     }
 
-    pub fn unqualified_suggestion(&self, name: &str, layer: Layer) -> String {
+    pub fn suggest_unqualified_import(&self, name: &str) -> String {
         match self {
-            ModuleSuggestion::Importable(module) => match layer {
-                Layer::Type => format!("Did you mean to import `{module}.{{type {name}}}`?"),
-                Layer::Value => format!("Did you mean to import `{module}.{{{name}}}`?"),
-            },
+            ModuleSuggestion::Importable(module) => {
+                format!("Did you mean to import `{module}.{name}`?")
+            }
+
             ModuleSuggestion::Imported(module) => {
                 format!("Did you mean to update the import of `{module}`?")
             }

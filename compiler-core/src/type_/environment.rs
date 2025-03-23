@@ -401,7 +401,7 @@ impl Environment<'_> {
                     UnknownTypeConstructorError::Module {
                         name: module_name.clone(),
                         suggestions: self
-                            .suggest_qualified_modules(module_name, Imported::Type(name.clone())),
+                            .suggest_modules(module_name, Imported::Type(name.clone())),
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
@@ -451,8 +451,7 @@ impl Environment<'_> {
                 let module = self.importable_modules.get(m).ok_or_else(|| {
                     UnknownTypeConstructorError::Module {
                         name: name.clone(),
-                        suggestions: self
-                            .suggest_qualified_modules(m, Imported::Type(name.clone())),
+                        suggestions: self.suggest_modules(m, Imported::Type(name.clone())),
                     }
                 })?;
                 module.types_value_constructors.get(name).ok_or_else(|| {
@@ -491,7 +490,7 @@ impl Environment<'_> {
                     UnknownValueConstructorError::Module {
                         name: module_name.clone(),
                         suggestions: self
-                            .suggest_qualified_modules(module_name, Imported::Value(name.clone())),
+                            .suggest_modules(module_name, Imported::Value(name.clone())),
                     }
                 })?;
                 let _ = self.unused_modules.remove(module_name);
@@ -881,11 +880,7 @@ impl Environment<'_> {
     }
 
     /// Suggest modules to import or use, for an unknown module
-    pub fn suggest_qualified_modules(
-        &self,
-        module: &str,
-        imported: Imported,
-    ) -> Vec<ModuleSuggestion> {
+    pub fn suggest_modules(&self, module: &str, imported: Imported) -> Vec<ModuleSuggestion> {
         let mut suggestions = self
             .importable_modules
             .iter()
