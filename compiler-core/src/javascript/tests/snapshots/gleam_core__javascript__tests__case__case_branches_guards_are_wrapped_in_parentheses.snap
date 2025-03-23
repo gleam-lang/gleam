@@ -13,16 +13,16 @@ fn anything() -> a {
 
 
 ----- COMPILED JAVASCRIPT
-import { toList } from "../gleam.mjs";
+import { toList, Empty as $Empty } from "../gleam.mjs";
 
 function anything() {
   while (true) {
     let $ = toList([]);
-    if ($.hasLength(0)) {
+    if ($ instanceof $Empty) {
       
     } else {
       let pattern = $.tail;
-      if (pattern.hasLength(0)) {
+      if (pattern instanceof $Empty) {
         if (false || true) {
           let a = $.head;
           return a;

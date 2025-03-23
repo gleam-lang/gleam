@@ -376,8 +376,14 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
 
                 docvec![var_value, " instanceof ", qualification, match_.name()]
             }
-            RuntimeCheck::NonEmptyList { .. } => docvec!["!", var_value, ".hasLength(0)"],
-            RuntimeCheck::EmptyList => docvec![var_value, ".hasLength(0)"],
+            RuntimeCheck::NonEmptyList { .. } => {
+                self.expression_generator.tracker.list_non_empty_class_used = true;
+                docvec![var_value, " instanceof $NonEmpty"]
+            }
+            RuntimeCheck::EmptyList => {
+                self.expression_generator.tracker.list_empty_class_used = true;
+                docvec![var_value, " instanceof $Empty"]
+            }
         }
     }
 
