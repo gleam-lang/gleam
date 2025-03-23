@@ -1,6 +1,21 @@
 use crate::assert_js;
 
 #[test]
+fn case_on_error() {
+    assert_js!(
+        r#"
+fn a_result() { Error(1) }
+
+pub fn main() {
+  case a_result() {
+    Error(_) -> 1
+    _ -> 2
+  }
+}"#
+    );
+}
+
+#[test]
 fn tuple_and_guard() {
     assert_js!(
         r#"
