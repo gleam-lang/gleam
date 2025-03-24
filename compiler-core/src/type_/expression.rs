@@ -609,7 +609,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     statements.push(statement);
                     break; // Inferring the use has consumed the rest of the exprs
                 }
-
                 Statement::Expression(expression) => {
                     let location = expression.location();
                     let expression = match self.infer_or_error(expression) {
@@ -628,11 +627,11 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     statements.push(Statement::Expression(expression));
                 }
-
                 Statement::Assignment(assignment) => {
                     let assignment = self.infer_assignment(assignment);
                     statements.push(Statement::Assignment(assignment));
                 }
+                Statement::Assert(_) => todo!(),
             }
         }
 
@@ -4278,7 +4277,7 @@ fn extract_typed_use_call_assignments(
         .iter()
         .take(assignments_count)
         .map(|statement| match statement {
-            Statement::Expression(_) | Statement::Use(_) => None,
+            Statement::Expression(_) | Statement::Use(_) | Statement::Assert(_) => None,
             Statement::Assignment(assignment) => Some(UseAssignment {
                 location: assignment.location,
                 pattern: assignment.pattern.clone(),

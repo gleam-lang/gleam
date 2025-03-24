@@ -889,6 +889,7 @@ fn statement<'a>(statement: &'a TypedStatement, env: &mut Env<'a>) -> Document<'
         Statement::Expression(e) => expr(e, env),
         Statement::Assignment(a) => assignment(a, env),
         Statement::Use(use_) => expr(&use_.call, env),
+        Statement::Assert(_) => todo!(),
     }
 }
 

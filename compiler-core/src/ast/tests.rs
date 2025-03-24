@@ -59,7 +59,7 @@ fn compile_module(src: &str) -> TypedModule {
 fn get_bare_expression(statement: &TypedStatement) -> &TypedExpr {
     match statement {
         Statement::Expression(expression) => expression,
-        Statement::Use(_) | Statement::Assignment(_) => {
+        Statement::Use(_) | Statement::Assignment(_) | Statement::Assert(_) => {
             panic!("Expected expression, got {statement:?}")
         }
     }
