@@ -212,60 +212,60 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
         fallback: &'a Decision,
         fallback_check: &'a FallbackCheck,
     ) -> Output<'a> {
-        match choices {
-            // If there's just a single choice we can just generate the code for
-            // it: no need to do any checking, we know it must match!
-            [] => {
-                if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-                    self.record_check_assignments(var, check);
-                }
-                self.decision(fallback)
+        // If there's just a single choice we can just generate the code for
+        // it: no need to do any checking, we know it must match!
+        if choices.is_empty() {
+            if let FallbackCheck::RuntimeCheck { check } = fallback_check {
+                self.record_check_assignments(var, check);
             }
-            _ => {
-                let mut if_ = if self.is_bound_in_scope(var) {
-                    // If the variable is already bound to a name in the current
-                    // scope we don't have to generate any additional code...
-                    nil()
-                } else {
-                    // ... if it's not we will be binding the value to a variable
-                    // name so we can use this variable to reference it and never
-                    // do any duplicate work recomputing its value every time
-                    // this pattern variable is used.
-                    let name = self.expression_generator.next_local_var(&"pattern".into());
-                    let value = self.get_variable_value(var);
-                    self.bind_variable(name.clone(), var);
-                    docvec![let_(name, value.to_doc()), line()]
-                };
+            return self.decision(fallback);
+        }
 
-                for (i, (check, decision)) in choices.iter().enumerate() {
-                    self.record_check_assignments(var, check);
-                    let check_doc = self.runtime_check(var, check);
-                    let body = self.inside_new_scope(|this| this.decision(decision))?;
+        // Otherwise we'll have to generate a series of if-else to check which
+        // pattern is going to match!
 
-                    let branch = if i == 0 {
-                        docvec!["if (", check_doc, ") "]
-                    } else {
-                        docvec![" else if (", check_doc, ") "]
-                    };
-                    if_ = if_.append(docvec![branch, break_block(body)]);
-                }
+        let mut if_ = if self.is_bound_in_scope(var) {
+            // If the variable is already bound to a name in the current
+            // scope we don't have to generate any additional code...
+            nil()
+        } else {
+            // ... if it's not we will be binding the value to a variable
+            // name so we can use this variable to reference it and never
+            // do any duplicate work recomputing its value every time
+            // this pattern variable is used.
+            let name = self.expression_generator.next_local_var(&"pattern".into());
+            let value = self.get_variable_value(var);
+            self.bind_variable(name.clone(), var);
+            docvec![let_(name, value.to_doc()), line()]
+        };
 
-                // In case there's some new variables we can extract after the
-                // successful check we store those. But we don't need to perform
-                // the check itself: the type system makes sure that, if we ever
-                // get here, the check is going to match no matter what!
-                if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-                    self.record_check_assignments(var, check);
-                }
+        for (i, (check, decision)) in choices.iter().enumerate() {
+            self.record_check_assignments(var, check);
+            let check_doc = self.runtime_check(var, check);
+            let body = self.inside_new_scope(|this| this.decision(decision))?;
 
-                let body = self.inside_new_scope(|this| this.decision(fallback))?;
-                if body.is_empty() {
-                    Ok(if_)
-                } else {
-                    let else_ = docvec![" else ", break_block(body)];
-                    Ok(docvec![if_, else_])
-                }
-            }
+            let branch = if i == 0 {
+                docvec!["if (", check_doc, ") "]
+            } else {
+                docvec![" else if (", check_doc, ") "]
+            };
+            if_ = if_.append(docvec![branch, break_block(body)]);
+        }
+
+        // In case there's some new variables we can extract after the
+        // successful final check we store those. But we don't need to perform
+        // the check itself: the type system makes sure that, if we ever
+        // get here, the check is going to match no matter what!
+        if let FallbackCheck::RuntimeCheck { check } = fallback_check {
+            self.record_check_assignments(var, check);
+        }
+
+        let body = self.inside_new_scope(|this| this.decision(fallback))?;
+        if body.is_empty() {
+            Ok(if_)
+        } else {
+            let else_ = docvec![" else ", break_block(body)];
+            Ok(docvec![if_, else_])
         }
     }
 
