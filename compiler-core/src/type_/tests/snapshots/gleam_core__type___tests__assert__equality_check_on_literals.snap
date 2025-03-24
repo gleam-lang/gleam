@@ -1,0 +1,20 @@
+---
+source: compiler-core/src/type_/tests/assert.rs
+expression: "\npub fn main() {\n  assert 1 == 2\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert 1 == 2
+}
+
+
+----- WARNING
+warning: Assertion of a literal value
+  ┌─ /src/warning/wrn.gleam:3:10
+  │
+3 │   assert 1 == 2
+  │          ^^^^^^ There's no need to assert this value
+
+Asserting that a literal value is true is redundant since you can already
+tell whether it will be true or false.

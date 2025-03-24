@@ -1735,6 +1735,12 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         };
 
+        if value.is_known_value() {
+            self.problems.warning(Warning::AssertLiteralValue {
+                location: value_location,
+            });
+        }
+
         match unify(bool(), value.type_()) {
             Ok(()) => {}
             Err(error) => self

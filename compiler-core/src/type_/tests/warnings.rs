@@ -2558,8 +2558,8 @@ fn bool_assert_requires_v1_10() {
     assert_warnings_with_gleam_version!(
         Range::higher_than(Version::new(1, 0, 0)),
         "
-pub fn main() {
-  assert 1 == 2
+pub fn go(x) {
+  assert x == 2
 }
 ",
     );
