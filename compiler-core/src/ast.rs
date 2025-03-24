@@ -19,7 +19,7 @@ use crate::type_::expression::Implementations;
 use crate::type_::printer::Names;
 use crate::type_::{
     self, Deprecation, ModuleValueConstructor, PatternConstructor, Type, TypedCallArg,
-    ValueConstructor,
+    ValueConstructor, bool_with_variant,
 };
 use std::sync::Arc;
 
@@ -2840,8 +2840,10 @@ impl TypedStatement {
         match self {
             Statement::Expression(expression) => expression.type_(),
             Statement::Assignment(assignment) => assignment.type_(),
-            Statement::Use(_use) => _use.call.type_(),
-            Statement::Assert(assert) => assert.value.type_(),
+            Statement::Use(use_) => use_.call.type_(),
+            // Assert statements panic if the value is false, so the return value will
+            // always be true!
+            Statement::Assert(_) => bool_with_variant(Some(true)),
         }
     }
 

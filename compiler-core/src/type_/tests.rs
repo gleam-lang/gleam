@@ -30,6 +30,7 @@ mod externals;
 mod functions;
 mod guards;
 mod imports;
+mod let_assert;
 mod pipes;
 mod pretty;
 mod target_implementations;
