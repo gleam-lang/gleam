@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\ntype Wibble {\n  Wibble(w: Int)\n  Wobble(w: String)\n}\n\npub fn main() {\n  let assert Wobble(w) = Wibble(10)\n  w\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+  Wibble(w: Int)
+  Wobble(w: String)
+}
+
+pub fn main() {
+  let assert Wobble(w) = Wibble(10)
+  w
+}
+
+
+----- WARNING
+warning: Assertion on inferred variant
+  ┌─ /src/warning/wrn.gleam:8:14
+  │
+8 │   let assert Wobble(w) = Wibble(10)
+  │              ^^^^^^^^^
+
+This assertion is will always crash since it matches on a variant which is
+never present.

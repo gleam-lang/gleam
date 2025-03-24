@@ -2525,7 +2525,7 @@ fn let_assert_with_message_requires_v1_7() {
         Range::higher_than(Version::new(1, 0, 0)),
         r#"
 pub fn main() {
-  let assert Ok(10) = Error(20) as "This will crash..."
+  let assert Ok(10) = Ok(20) as "This will crash..."
 }
 "#,
     );
@@ -3010,6 +3010,23 @@ pub fn main(a) {
     1 -> panic
     _ -> [1, panic]
   }
+}
+"
+    );
+}
+
+#[test]
+fn assert_on_inferred_variant() {
+    assert_warning!(
+        "
+type Wibble {
+  Wibble(w: Int)
+  Wobble(w: String)
+}
+
+pub fn main() {
+  let assert Wobble(w) = Wibble(10)
+  w
 }
 "
     );

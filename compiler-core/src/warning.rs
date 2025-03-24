@@ -940,6 +940,24 @@ hidden from the package's documentation.",
                     }),
                 },
 
+                type_::Warning::AssertAssignmentOnInferredVariant { location } => Diagnostic {
+                    title: "Assertion on inferred variant".into(),
+                    text: wrap(
+                        "This assertion is will always crash since it matches on a variant which is never present.",
+                    ),
+                    hint: None,
+                    level: diagnostic::Level::Warning,
+                    location: Some(Location {
+                        label: diagnostic::Label {
+                            text: None,
+                            span: *location,
+                        },
+                        path: path.clone(),
+                        src: src.clone(),
+                        extra_labels: vec![],
+                    }),
+                },
+
                 type_::Warning::TodoOrPanicUsedAsFunction {
                     kind,
                     location,
