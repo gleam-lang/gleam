@@ -1183,6 +1183,9 @@ where
     V: Visit<'a> + ?Sized,
 {
     v.visit_typed_expr(&assert.value);
+    if let Some(message) = &assert.message {
+        v.visit_typed_expr(message);
+    }
 }
 
 pub fn visit_typed_call_arg<'a, V>(v: &mut V, arg: &'a TypedCallArg)

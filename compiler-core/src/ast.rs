@@ -2865,7 +2865,13 @@ impl TypedStatement {
                     None
                 }
             }),
-            Statement::Assert(assert) => assert.find_node(byte_index),
+            Statement::Assert(assert) => assert.find_node(byte_index).or_else(|| {
+                if assert.location.contains(byte_index) {
+                    Some(Located::Statement(self))
+                } else {
+                    None
+                }
+            }),
         }
     }
 
@@ -2952,11 +2958,20 @@ pub type UntypedAssert = Assert<UntypedExpr>;
 pub struct Assert<Expression> {
     pub location: SrcSpan,
     pub value: Expression,
+    pub message: Option<Expression>,
 }
 
 impl TypedAssert {
     pub fn find_node(&self, byte_index: u32) -> Option<Located<'_>> {
-        self.value.find_node(byte_index)
+        if let Some(found) = self.value.find_node(byte_index) {
+            return Some(found);
+        }
+        if let Some(message) = &self.message {
+            if let Some(found) = message.find_node(byte_index) {
+                return Some(found);
+            }
+        }
+        None
     }
 }
 

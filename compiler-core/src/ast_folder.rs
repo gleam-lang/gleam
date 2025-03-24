@@ -663,9 +663,18 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 })
             }
 
-            Statement::Assert(Assert { location, value }) => {
+            Statement::Assert(Assert {
+                location,
+                value,
+                message,
+            }) => {
                 let value = self.fold_expr(value);
-                Statement::Assert(Assert { location, value })
+                let message = message.map(|message| self.fold_expr(message));
+                Statement::Assert(Assert {
+                    location,
+                    value,
+                    message,
+                })
             }
         }
     }
