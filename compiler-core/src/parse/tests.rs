@@ -1773,6 +1773,11 @@ fn assert_statement() {
 }
 
 #[test]
+fn assert_statement_with_message() {
+    assert_parse!(r#"assert False as "Uh oh""#);
+}
+
+#[test]
 fn assert_statement_without_expression() {
     assert_error!("assert");
 }
