@@ -259,13 +259,7 @@ impl<'module, 'a> Generator<'module, 'a> {
                 clauses,
                 compiled_case,
                 ..
-            } => {
-                let clauses = clauses
-                    .iter()
-                    .map(|clause| (&clause.then, clause.guard.as_ref()))
-                    .collect_vec();
-                decision::print(compiled_case, clauses, subjects, self)
-            }
+            } => decision::case(compiled_case, clauses, subjects, self),
 
             TypedExpr::Call { fun, args, .. } => self.call(fun, args),
             TypedExpr::Fn { args, body, .. } => self.fn_(args, body),
