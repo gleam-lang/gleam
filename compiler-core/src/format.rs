@@ -2455,6 +2455,23 @@ impl<'comments> Formatter<'comments> {
         commented(doc, comments)
     }
 
+    fn assert<'a>(&mut self, assert: &'a UntypedAssert) -> Document<'a> {
+        let comments = self.pop_comments(assert.location.start);
+
+        let message = assert.message.as_ref().map(|message| {
+            break_("", " ")
+                .nest(INDENT)
+                .append("as ".to_doc().append(self.expr(message).group()))
+        });
+
+        let document = "assert "
+            .to_doc()
+            .append(self.expr(&assert.value))
+            .append(message);
+
+        commented(document, comments)
+    }
+
     fn bit_array<'a>(
         &mut self,
         segments: Vec<Document<'a>>,
@@ -2544,7 +2561,7 @@ impl<'comments> Formatter<'comments> {
             Statement::Expression(expression) => self.expr(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(use_) => self.use_(use_),
-            Statement::Assert(_) => todo!(),
+            Statement::Assert(assert) => self.assert(assert),
         }
     }
 
