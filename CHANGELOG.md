@@ -291,7 +291,7 @@
   pub fn f(pokemon_type: PokemonType) {
     case pokemon_type {
       Water -> soak()
-      //       ^^^^^^ selecting the right-hand side of the `->` in a clause
+      //       ^^^^^^ selecting a case clause that's not a block
       Fire -> burn()
     }
   }

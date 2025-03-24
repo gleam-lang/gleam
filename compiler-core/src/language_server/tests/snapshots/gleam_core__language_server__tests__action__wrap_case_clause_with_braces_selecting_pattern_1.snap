@@ -1,0 +1,35 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\ntype PokemonType {\n  Water\n  Fire\n}\n\npub fn f(option) {\n  case pokemon_type {\n    Water -> soak()\n    Fire -> burn()\n  }\n}"
+---
+----- BEFORE ACTION
+
+type PokemonType {
+  Water
+  Fire
+}
+
+pub fn f(option) {
+  case pokemon_type {
+    Water -> soak()
+    ↑              
+    Fire -> burn()
+  }
+}
+
+
+----- AFTER ACTION
+
+type PokemonType {
+  Water
+  Fire
+}
+
+pub fn f(option) {
+  case pokemon_type {
+    Water -> {
+      soak()
+    }
+    Fire -> burn()
+  }
+}
