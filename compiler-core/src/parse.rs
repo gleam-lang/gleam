@@ -57,14 +57,15 @@ mod token;
 use crate::Warning;
 use crate::analyse::Inferred;
 use crate::ast::{
-    Arg, ArgNames, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment,
-    CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, CustomType, Definition, Function,
-    FunctionLiteralKind, HasLocation, Import, Module, ModuleConstant, Pattern, Publicity,
-    RecordBeingUpdated, RecordConstructor, RecordConstructorArg, SrcSpan, Statement,
-    TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn, TypeAstHole,
-    TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause, UntypedClauseGuard,
-    UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule, UntypedPattern,
-    UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use, UseAssignment,
+    Arg, ArgNames, Assert, AssignName, Assignment, AssignmentKind, BinOp, BitArrayOption,
+    BitArraySegment, CAPTURE_VARIABLE, CallArg, Clause, ClauseGuard, Constant, CustomType,
+    Definition, Function, FunctionLiteralKind, HasLocation, Import, Module, ModuleConstant,
+    Pattern, Publicity, RecordBeingUpdated, RecordConstructor, RecordConstructorArg, SrcSpan,
+    Statement, TargetedDefinition, TodoKind, TypeAlias, TypeAst, TypeAstConstructor, TypeAstFn,
+    TypeAstHole, TypeAstTuple, TypeAstVar, UnqualifiedImport, UntypedArg, UntypedClause,
+    UntypedClauseGuard, UntypedConstant, UntypedDefinition, UntypedExpr, UntypedModule,
+    UntypedPattern, UntypedRecordUpdateArg, UntypedStatement, UntypedUseAssignment, Use,
+    UseAssignment,
 };
 use crate::build::Target;
 use crate::error::wrap;
@@ -1067,6 +1068,17 @@ where
         }))
     }
 
+    // An assert statement, with `Assert` already consumed
+    fn parse_assert(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
+        let value = self.expect_expression()?;
+        let end = value.location().end;
+
+        Ok(Statement::Assert(Assert {
+            location: SrcSpan { start, end },
+            value,
+        }))
+    }
+
     // examples:
     //   expr
     //   expr expr..
@@ -1104,6 +1116,11 @@ where
             Some((start, Token::Let, _)) => {
                 self.advance();
                 Ok(Some(self.parse_assignment(start)?))
+            }
+
+            Some((start, Token::Assert, _)) => {
+                self.advance();
+                Ok(Some(self.parse_assert(start)?))
             }
 
             token => {

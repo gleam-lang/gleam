@@ -5,14 +5,15 @@ use vec1::Vec1;
 use crate::{
     analyse::Inferred,
     ast::{
-        AssignName, Assignment, BinOp, CallArg, Constant, Definition, FunctionLiteralKind, Pattern,
-        RecordBeingUpdated, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
+        Assert, AssignName, Assignment, BinOp, CallArg, Constant, Definition, FunctionLiteralKind,
+        Pattern, RecordBeingUpdated, SrcSpan, Statement, TargetedDefinition, TodoKind, TypeAst,
         TypeAstConstructor, TypeAstFn, TypeAstHole, TypeAstTuple, TypeAstVar, UntypedArg,
-        UntypedAssignment, UntypedClause, UntypedConstant, UntypedConstantBitArraySegment,
-        UntypedCustomType, UntypedDefinition, UntypedExpr, UntypedExprBitArraySegment,
-        UntypedFunction, UntypedImport, UntypedModule, UntypedModuleConstant, UntypedPattern,
-        UntypedPatternBitArraySegment, UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias,
-        UntypedUse, UntypedUseAssignment, Use, UseAssignment,
+        UntypedAssert, UntypedAssignment, UntypedClause, UntypedConstant,
+        UntypedConstantBitArraySegment, UntypedCustomType, UntypedDefinition, UntypedExpr,
+        UntypedExprBitArraySegment, UntypedFunction, UntypedImport, UntypedModule,
+        UntypedModuleConstant, UntypedPattern, UntypedPatternBitArraySegment,
+        UntypedRecordUpdateArg, UntypedStatement, UntypedTypeAlias, UntypedUse,
+        UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
     type_::error::VariableOrigin,
@@ -609,6 +610,7 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                 Statement::Assignment(self.fold_assignment(assignment))
             }
             Statement::Use(use_) => Statement::Use(self.fold_use(use_)),
+            Statement::Assert(assert) => Statement::Assert(self.fold_assert(assert)),
         }
     }
 
@@ -659,6 +661,11 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
                     call,
                     assignments,
                 })
+            }
+
+            Statement::Assert(Assert { location, value }) => {
+                let value = self.fold_expr(value);
+                Statement::Assert(Assert { location, value })
             }
         }
     }
@@ -885,6 +892,10 @@ pub trait UntypedExprFolder: TypeAstFolder + UntypedConstantFolder + PatternFold
 
     fn fold_use(&mut self, use_: UntypedUse) -> UntypedUse {
         use_
+    }
+
+    fn fold_assert(&mut self, assert: UntypedAssert) -> UntypedAssert {
+        assert
     }
 }
 

@@ -157,6 +157,9 @@ impl<'a> CallGraphBuilder<'a> {
                     self.pattern(&assignment.pattern);
                 }
             }
+            Statement::Assert(assert) => {
+                self.expression(&assert.value);
+            }
         };
     }
 

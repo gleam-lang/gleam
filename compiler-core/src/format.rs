@@ -2544,6 +2544,7 @@ impl<'comments> Formatter<'comments> {
             Statement::Expression(expression) => self.expr(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
             Statement::Use(use_) => self.use_(use_),
+            Statement::Assert(_) => todo!(),
         }
     }
 

@@ -2685,7 +2685,7 @@ impl<'ast> ast::visit::Visit<'ast> for ConvertToUse<'ast> {
 
 fn turn_statement_into_use(statement: &TypedStatement) -> Option<CallLocations> {
     match statement {
-        ast::Statement::Use(_) | ast::Statement::Assignment(_) => None,
+        ast::Statement::Use(_) | ast::Statement::Assignment(_) | ast::Statement::Assert(_) => None,
         ast::Statement::Expression(expression) => turn_expression_into_use(expression),
     }
 }
