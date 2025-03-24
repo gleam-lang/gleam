@@ -30,168 +30,6 @@ pub fn case<'a>(
     Ok(docvec![assignments_to_doc(assignments), decision].force_break())
 }
 
-/// This is a useful piece of state that is kept separate from the generator
-/// itself so we can reuse it both with cases and let asserts without rewriting
-/// everything from scratch.
-///
-struct Variables<'generator, 'module, 'a> {
-    expression_generator: &'generator mut Generator<'module, 'a>,
-
-    /// All the pattern variables will be assigned a specific value: being bound
-    /// to a constructor field, tuple element and so on. Pattern variables never
-    /// end up in the generated code but we replace them with their actual value.
-    /// We store those values as we find them in this map.
-    ///
-    variable_values: HashMap<usize, EcoString>,
-
-    /// When we discover new variables after a runtime check we don't immediately
-    /// generate assignments for each of them, because that could lead to wasted
-    /// work. Let's consider the following check:
-    ///
-    /// ```txt
-    /// a is Wibble(3, c, 1) -> c
-    /// a is _ -> 1
-    /// ```
-    ///
-    /// If we generated variables for it as soon as we enter its corresponding
-    /// branch we would find ourselves with this piece of code:
-    ///
-    /// ```js
-    /// if (a instanceof Wibble) {
-    ///   let a$0 = wibble.0;
-    ///   let a$1 = wibble.1;
-    ///   let a$2 = wibble.2;
-    ///
-    ///   // and now we go on checking these new variables
-    /// }
-    /// ```
-    ///
-    /// However, by extracting all the fields immediately we might end up doing
-    /// wasted work: as soon as we find out that `a$0 != 3` we don't even need
-    /// to check the other fields, we know the pattern can't match! So we
-    /// extracted two fields we're not even checking.
-    ///
-    /// To avoid this situation, we only bind a variable to a name right before
-    /// we're checking it so we're sure we're never generating useless bindings.
-    /// The previous example would become something like this:
-    ///
-    /// ```js
-    /// if (a instanceof Wibble) {
-    ///   let a$0 = wibble.0;
-    ///   if (a$0 === 3) {
-    ///     let a$2 = wibble.2
-    ///     // further checks
-    ///   } else {
-    ///     return 1;
-    ///   }
-    /// }
-    /// ```
-    ///
-    /// In this map we store the name a variable is bound to in the current
-    /// scope. For example here we know that `wibble.0` is bound to the name
-    /// `a$0`.
-    ///
-    scoped_variable_names: HashMap<usize, EcoString>,
-}
-
-impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
-    fn new(expression_generator: &'generator mut Generator<'module, 'a>) -> Self {
-        Variables {
-            expression_generator,
-            variable_values: HashMap::new(),
-            scoped_variable_names: HashMap::new(),
-        }
-    }
-
-    fn assign_subjects(
-        &mut self,
-        compiled_case: &'a CompiledCase,
-        subjects: &'a [TypedExpr],
-    ) -> Result<Vec<SubjectAssignment<'a>>, Error> {
-        let assignments = assign_subjects(self.expression_generator, subjects)?;
-        for (variable, assignment) in compiled_case
-            .subject_variables
-            .iter()
-            .zip(assignments.iter())
-        {
-            self.set_value(variable, assignment.name());
-            self.bind(assignment.name(), variable);
-        }
-        Ok(assignments)
-    }
-
-    fn next_local_var(&mut self, name: &EcoString) -> EcoString {
-        self.expression_generator.next_local_var(name)
-    }
-
-    fn set_value(&mut self, variable: &Variable, value: EcoString) {
-        let _ = self.variable_values.insert(variable.id, value);
-    }
-
-    fn bind(&mut self, name: EcoString, variable: &Variable) {
-        let _ = self.scoped_variable_names.insert(variable.id, name);
-    }
-
-    #[must_use]
-    fn is_bound_in_scope(&self, variable: &Variable) -> bool {
-        self.scoped_variable_names.contains_key(&variable.id)
-    }
-
-    /// In case the check introduces new variables, this will record their
-    /// actual value to be used by later checks and assignments
-    ///
-    fn record_check_assignments(&mut self, variable: &Variable, check: &RuntimeCheck) {
-        let value = self.get_value(variable);
-        match check {
-            RuntimeCheck::Int { .. }
-            | RuntimeCheck::Float { .. }
-            | RuntimeCheck::String { .. }
-            | RuntimeCheck::BitArray { .. }
-            | RuntimeCheck::EmptyList => (),
-
-            RuntimeCheck::StringPrefix { rest, prefix } => {
-                let prefix_size = utf16_no_escape_len(prefix);
-                self.set_value(rest, eco_format!("{value}.slice({prefix_size})"));
-            }
-
-            RuntimeCheck::Tuple { elements, .. } => {
-                for (i, element) in elements.iter().enumerate() {
-                    self.set_value(element, eco_format!("{value}[{i}]"));
-                }
-            }
-
-            RuntimeCheck::Variant { fields, labels, .. } => {
-                for (i, field) in fields.iter().enumerate() {
-                    let access = match labels.get(&i) {
-                        Some(label) => eco_format!("{value}.{label}"),
-                        None => eco_format!("{value}[{i}]"),
-                    };
-                    self.set_value(field, access);
-                }
-            }
-
-            RuntimeCheck::NonEmptyList { first, rest } => {
-                self.set_value(first, eco_format!("{value}.head"));
-                self.set_value(rest, eco_format!("{value}.tail"));
-            }
-        }
-    }
-
-    fn get_value(&self, variable: &Variable) -> EcoString {
-        // If the pattern variable was already assigned to a variable that is
-        // in scope we use that variable name!
-        if let Some(name) = self.scoped_variable_names.get(&variable.id) {
-            return name.clone();
-        }
-
-        // Otherwise we fallback to using its value directly.
-        self.variable_values
-            .get(&variable.id)
-            .expect("pattern variable used before assignment")
-            .clone()
-    }
-}
-
 struct CasePrinter<'module, 'generator, 'a> {
     clauses: &'a [TypedClause],
     variables: Variables<'generator, 'module, 'a>,
@@ -378,23 +216,20 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
     }
 
-    fn runtime_check(&mut self, var: &Variable, runtime_check: &RuntimeCheck) -> Document<'a> {
-        let var_value = self.variables.get_value(var);
+    fn runtime_check(&mut self, variable: &Variable, runtime_check: &RuntimeCheck) -> Document<'a> {
+        let value = self.variables.get_value(variable);
         match runtime_check {
             RuntimeCheck::String { value } => {
-                docvec![var_value, " === ", string_from_eco(value.clone())]
+                docvec![value, " === ", string_from_eco(value.clone())]
             }
 
             RuntimeCheck::Int { value } | RuntimeCheck::Float { value } => {
-                docvec![var_value, " === ", value]
+                docvec![value, " === ", value]
             }
 
-            RuntimeCheck::StringPrefix { prefix, .. } => docvec![
-                var_value,
-                ".startsWith(",
-                string_from_eco(prefix.clone()),
-                ")"
-            ],
+            RuntimeCheck::StringPrefix { prefix, .. } => {
+                docvec![value, ".startsWith(", string_from_eco(prefix.clone()), ")"]
+            }
 
             RuntimeCheck::BitArray { value } => docvec!["TODO"],
 
@@ -403,19 +238,19 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             // as the type system ensures it must match.
             RuntimeCheck::Tuple { .. } => unreachable!("tried generating runtime check for tuple"),
 
-            RuntimeCheck::Variant { match_, .. } if var.type_.is_bool() => {
+            RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
                 if match_.name() == "True" {
-                    var_value.to_doc()
+                    value.to_doc()
                 } else {
-                    docvec!["!", var_value]
+                    docvec!["!", value]
                 }
             }
 
-            RuntimeCheck::Variant { match_, .. } if var.type_.is_result() => {
+            RuntimeCheck::Variant { match_, .. } if variable.type_.is_result() => {
                 if match_.name() == "Ok" {
-                    docvec![var_value, ".isOk()"]
+                    docvec![value, ".isOk()"]
                 } else {
-                    docvec!["!", var_value, ".isOk()"]
+                    docvec!["!", value, ".isOk()"]
                 }
             }
 
@@ -425,34 +260,186 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                     .map(|module| eco_format!("${module}."))
                     .unwrap_or_default();
 
-                docvec![var_value, " instanceof ", qualification, match_.name()]
+                docvec![value, " instanceof ", qualification, match_.name()]
             }
             RuntimeCheck::NonEmptyList { .. } => {
                 self.variables
                     .expression_generator
                     .tracker
                     .list_non_empty_class_used = true;
-                docvec![var_value, " instanceof $NonEmpty"]
+                docvec![value, " instanceof $NonEmpty"]
             }
             RuntimeCheck::EmptyList => {
                 self.variables
                     .expression_generator
                     .tracker
                     .list_empty_class_used = true;
-                docvec![var_value, " instanceof $Empty"]
+                docvec![value, " instanceof $Empty"]
             }
         }
     }
 }
 
-fn let_(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
-    docvec!["let ", variable_name, " = ", value, ";"]
+/// This is a useful piece of state that is kept separate from the generator
+/// itself so we can reuse it both with cases and let asserts without rewriting
+/// everything from scratch.
+///
+struct Variables<'generator, 'module, 'a> {
+    expression_generator: &'generator mut Generator<'module, 'a>,
+
+    /// All the pattern variables will be assigned a specific value: being bound
+    /// to a constructor field, tuple element and so on. Pattern variables never
+    /// end up in the generated code but we replace them with their actual value.
+    /// We store those values as we find them in this map.
+    ///
+    variable_values: HashMap<usize, EcoString>,
+
+    /// When we discover new variables after a runtime check we don't immediately
+    /// generate assignments for each of them, because that could lead to wasted
+    /// work. Let's consider the following check:
+    ///
+    /// ```txt
+    /// a is Wibble(3, c, 1) -> c
+    /// a is _ -> 1
+    /// ```
+    ///
+    /// If we generated variables for it as soon as we enter its corresponding
+    /// branch we would find ourselves with this piece of code:
+    ///
+    /// ```js
+    /// if (a instanceof Wibble) {
+    ///   let a$0 = wibble.0;
+    ///   let a$1 = wibble.1;
+    ///   let a$2 = wibble.2;
+    ///
+    ///   // and now we go on checking these new variables
+    /// }
+    /// ```
+    ///
+    /// However, by extracting all the fields immediately we might end up doing
+    /// wasted work: as soon as we find out that `a$0 != 3` we don't even need
+    /// to check the other fields, we know the pattern can't match! So we
+    /// extracted two fields we're not even checking.
+    ///
+    /// To avoid this situation, we only bind a variable to a name right before
+    /// we're checking it so we're sure we're never generating useless bindings.
+    /// The previous example would become something like this:
+    ///
+    /// ```js
+    /// if (a instanceof Wibble) {
+    ///   let a$0 = wibble.0;
+    ///   if (a$0 === 3) {
+    ///     let a$2 = wibble.2
+    ///     // further checks
+    ///   } else {
+    ///     return 1;
+    ///   }
+    /// }
+    /// ```
+    ///
+    /// In this map we store the name a variable is bound to in the current
+    /// scope. For example here we know that `wibble.0` is bound to the name
+    /// `a$0`.
+    ///
+    scoped_variable_names: HashMap<usize, EcoString>,
 }
 
-/// Calculates the length of str as utf16 without escape characters.
-///
-fn utf16_no_escape_len(str: &EcoString) -> usize {
-    convert_string_escape_chars(str).encode_utf16().count()
+impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
+    fn new(expression_generator: &'generator mut Generator<'module, 'a>) -> Self {
+        Variables {
+            expression_generator,
+            variable_values: HashMap::new(),
+            scoped_variable_names: HashMap::new(),
+        }
+    }
+
+    fn assign_subjects(
+        &mut self,
+        compiled_case: &'a CompiledCase,
+        subjects: &'a [TypedExpr],
+    ) -> Result<Vec<SubjectAssignment<'a>>, Error> {
+        let assignments = assign_subjects(self.expression_generator, subjects)?;
+        for (variable, assignment) in compiled_case
+            .subject_variables
+            .iter()
+            .zip(assignments.iter())
+        {
+            self.set_value(variable, assignment.name());
+            self.bind(assignment.name(), variable);
+        }
+        Ok(assignments)
+    }
+
+    fn next_local_var(&mut self, name: &EcoString) -> EcoString {
+        self.expression_generator.next_local_var(name)
+    }
+
+    fn set_value(&mut self, variable: &Variable, value: EcoString) {
+        let _ = self.variable_values.insert(variable.id, value);
+    }
+
+    fn bind(&mut self, name: EcoString, variable: &Variable) {
+        let _ = self.scoped_variable_names.insert(variable.id, name);
+    }
+
+    #[must_use]
+    fn is_bound_in_scope(&self, variable: &Variable) -> bool {
+        self.scoped_variable_names.contains_key(&variable.id)
+    }
+
+    /// In case the check introduces new variables, this will record their
+    /// actual value to be used by later checks and assignments
+    ///
+    fn record_check_assignments(&mut self, variable: &Variable, check: &RuntimeCheck) {
+        let value = self.get_value(variable);
+        match check {
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::BitArray { .. }
+            | RuntimeCheck::EmptyList => (),
+
+            RuntimeCheck::StringPrefix { rest, prefix } => {
+                let prefix_size = utf16_no_escape_len(prefix);
+                self.set_value(rest, eco_format!("{value}.slice({prefix_size})"));
+            }
+
+            RuntimeCheck::Tuple { elements, .. } => {
+                for (i, element) in elements.iter().enumerate() {
+                    self.set_value(element, eco_format!("{value}[{i}]"));
+                }
+            }
+
+            RuntimeCheck::Variant { fields, labels, .. } => {
+                for (i, field) in fields.iter().enumerate() {
+                    let access = match labels.get(&i) {
+                        Some(label) => eco_format!("{value}.{label}"),
+                        None => eco_format!("{value}[{i}]"),
+                    };
+                    self.set_value(field, access);
+                }
+            }
+
+            RuntimeCheck::NonEmptyList { first, rest } => {
+                self.set_value(first, eco_format!("{value}.head"));
+                self.set_value(rest, eco_format!("{value}.tail"));
+            }
+        }
+    }
+
+    fn get_value(&self, variable: &Variable) -> EcoString {
+        // If the pattern variable was already assigned to a variable that is
+        // in scope we use that variable name!
+        if let Some(name) = self.scoped_variable_names.get(&variable.id) {
+            return name.clone();
+        }
+
+        // Otherwise we fallback to using its value directly.
+        self.variable_values
+            .get(&variable.id)
+            .expect("pattern variable used before assignment")
+            .clone()
+    }
 }
 
 enum SubjectAssignment<'a> {
@@ -569,4 +556,14 @@ fn join_with_line<'a>(one: Document<'a>, other: Document<'a>) -> Document<'a> {
     } else {
         docvec![one, line(), other]
     }
+}
+
+fn let_(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
+    docvec!["let ", variable_name, " = ", value, ";"]
+}
+
+/// Calculates the length of str as utf16 without escape characters.
+///
+fn utf16_no_escape_len(str: &EcoString) -> usize {
+    convert_string_escape_chars(str).encode_utf16().count()
 }
