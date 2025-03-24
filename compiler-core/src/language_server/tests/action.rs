@@ -7215,6 +7215,47 @@ pub fn f(result) {
 }
 
 #[test]
+fn wrap_case_clause_with_braces_selecting_pattern_1() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BRACES,
+        "
+type PokemonType {
+  Water
+  Fire
+}
+
+pub fn f(option) {
+  case pokemon_type {
+    Water -> soak()
+    Fire -> burn()
+  }
+}",
+        find_position_of("Water").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn wrap_case_clause_with_braces_selecting_pattern_2() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BRACES,
+        "
+type PokemonType {
+  Water
+  Fire
+  Sleep
+}
+
+pub fn f(option) {
+  case pokemon_type {
+    Water | Fire -> evade()
+    Sleep -> sleep()
+  }
+}",
+        find_position_of("Fire").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
 fn do_not_wrap_case_clause_with_braces_1() {
     assert_no_code_actions!(
         WRAP_CASE_CLAUSE_IN_BRACES,
