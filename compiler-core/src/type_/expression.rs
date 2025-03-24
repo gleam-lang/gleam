@@ -12,7 +12,7 @@ use crate::{
         UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
-    exhaustiveness::{self, Reachability},
+    exhaustiveness::{self, Match, Reachability},
     reference::ReferenceKind,
 };
 use hexpm::version::Version;
@@ -1524,7 +1524,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-        let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
+        let (output, exhaustiveness_check) =
+            self.check_let_exhaustiveness(location, value.type_(), &pattern);
         match (&kind, exhaustiveness_check) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
             (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
@@ -1543,9 +1544,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 })
             }
 
-            // Otherwise we just don't care, asserting will ignore the any missing
-            // pattern error.
-            (AssignmentKind::Assert { .. }, Err(_)) => {}
+            // Otherwise, if the pattern is never reachable (through variant inference),
+            // we can warn the user about this.
+            (AssignmentKind::Assert { .. }, Err(_)) => {
+                // There is only one pattern to match, so it is index 0
+                match output.is_reachable(0) {
+                    Reachability::Unreachable(UnreachableCaseClauseReason::ImpossibleVariant) => {
+                        self.problems
+                            .warning(Warning::AssertAssignmentOnInferredVariant {
+                                location: pattern.location(),
+                            })
+                    }
+                    // A duplicate pattern warning should not happen, since there is only on pattern.
+                    Reachability::Reachable
+                    | Reachability::Unreachable(UnreachableCaseClauseReason::DuplicatePattern) => {}
+                }
+            }
         }
 
         Assignment {
@@ -4009,20 +4023,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject: Arc<Type>,
         pattern: &TypedPattern,
-    ) -> Result<(), Error> {
+    ) -> (Match, Result<(), Error>) {
         let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
-        if output.diagnostics.missing {
+        let result = if output.diagnostics.missing {
             Err(Error::InexhaustiveLetAssignment {
                 location,
                 missing: output.missing_patterns(self.environment),
             })
         } else {
             Ok(())
-        }
+        };
+        (output, result)
     }
 
     fn check_case_exhaustiveness(

@@ -864,6 +864,10 @@ pub enum Warning {
         location: SrcSpan,
     },
 
+    AssertAssignmentOnInferredVariant {
+        location: SrcSpan,
+    },
+
     /// When a `todo` or `panic` is used as a function instead of providing the
     /// error message with the `as` syntax.
     ///
@@ -1125,6 +1129,7 @@ impl Warning {
             | Warning::OpaqueExternalType { location, .. }
             | Warning::InternalTypeLeak { location, .. }
             | Warning::RedundantAssertAssignment { location, .. }
+            | Warning::AssertAssignmentOnInferredVariant { location, .. }
             | Warning::TodoOrPanicUsedAsFunction { location, .. }
             | Warning::UnreachableCodeAfterPanic { location, .. }
             | Warning::RedundantPipeFunctionCapture { location, .. }
