@@ -1,0 +1,21 @@
+---
+source: compiler-core/src/type_/tests/let_assert.rs
+expression: let assert 1 = 2 as 3
+---
+----- SOURCE CODE
+let assert 1 = 2 as 3
+
+----- ERROR
+error: Type mismatch
+  ┌─ /src/one/two.gleam:1:21
+  │
+1 │ let assert 1 = 2 as 3
+  │                     ^
+
+Expected type:
+
+    String
+
+Found type:
+
+    Int
