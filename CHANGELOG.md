@@ -283,6 +283,33 @@
   encoder if the `gleam_json` package is installed as a dependency.
   ([Surya Rose](https://github.com/GearsDatapacks))
 
+- The language server will offer to wrap the body of case clauses in braces to
+  easily turn them into blocks. Useful when adding more expressions to an
+  existing clause.
+
+  ```gleam
+  pub fn f(pokemon_type: PokemonType) {
+    case pokemon_type {
+      Water -> soak()
+      //       ^^^^^^ selecting the right-hand side of the `->` in a clause
+      Fire -> burn()
+    }
+  }
+  ```
+  Becomes
+  ```gleam
+  pub fn f(pokemon_type: PokemonType) {
+    case pokemon_type {
+      Water -> {
+        soak()
+      }
+      Fire -> burn()
+    }
+  }
+  ```
+
+  ([Matias Carlander](https://github.com/matiascr))
+
 ### Formatter
 
 ### Container images

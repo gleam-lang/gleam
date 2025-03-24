@@ -82,6 +82,7 @@ const CONVERT_TO_PIPE: &str = "Convert to pipe";
 const INTERPOLATE_STRING: &str = "Interpolate string";
 const FILL_UNUSED_FIELDS: &str = "Fill unused fields";
 const REMOVE_ALL_ECHOS_FROM_THIS_MODULE: &str = "Remove all `echo`s from this module";
+const WRAP_CASE_CLAUSE_IN_BRACES: &str = "Wrap case clause with braces";
 
 macro_rules! assert_code_action {
     ($title:expr, $code:literal, $range:expr $(,)?) => {
@@ -7175,5 +7176,79 @@ pub fn main() {
 }
 ",
         find_position_of("c1,").to_selection()
+    );
+}
+
+#[test]
+fn wrap_case_clause_with_braces_1() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BRACES,
+        "
+pub fn f(option) {
+  case option {
+    Some(content) -> content
+    None -> panic
+  }
+}",
+        find_position_of("content").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn wrap_case_clause_with_braces_2() {
+    assert_code_action!(
+        WRAP_CASE_CLAUSE_IN_BRACES,
+        "
+pub fn f(result) {
+  case result {
+    Ok(reresult) -> {
+      case reresult {
+        Ok(w) -> w
+        Error(_) -> panic
+      }
+    }
+    Error(_) -> panic
+  }
+}",
+        find_position_of("w").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn do_not_wrap_case_clause_with_braces_1() {
+    assert_no_code_actions!(
+        WRAP_CASE_CLAUSE_IN_BRACES,
+        "
+pub fn f(option) {
+  case option {
+    Some(content) -> {
+      content
+    }
+    None -> panic
+  }
+}",
+        find_position_of("content").nth_occurrence(2).to_selection()
+    );
+}
+
+#[test]
+fn do_not_wrap_case_clause_with_braces_2() {
+    assert_no_code_actions!(
+        WRAP_CASE_CLAUSE_IN_BRACES,
+        "
+pub fn f(result) {
+  case result {
+    Ok(reresult) -> {
+      case reresult {
+        Ok(w) -> {
+          w
+        }
+        Error(_) -> panic
+      }
+    }
+    Error(_) -> panic
+  }
+}",
+        find_position_of("w").nth_occurrence(2).to_selection()
     );
 }
