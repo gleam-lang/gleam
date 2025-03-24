@@ -2554,6 +2554,18 @@ pub fn main() {
 }
 
 #[test]
+fn bool_assert_requires_v1_10() {
+    assert_warnings_with_gleam_version!(
+        Range::higher_than(Version::new(1, 0, 0)),
+        "
+pub fn main() {
+  assert 1 == 2
+}
+",
+    );
+}
+
+#[test]
 fn javascript_unsafe_int_decimal() {
     assert_js_warning!(
         r#"

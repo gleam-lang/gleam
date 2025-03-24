@@ -361,3 +361,15 @@ pub fn main() {
     );
     assert_eq!(version, Version::new(1, 2, 0));
 }
+
+#[test]
+fn bool_assert_requires_v1_10() {
+    let version = infer_version(
+        "
+pub fn main() {
+  assert 1 != 2
+}
+",
+    );
+    assert_eq!(version, Version::new(1, 10, 0));
+}

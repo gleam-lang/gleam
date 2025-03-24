@@ -1732,6 +1732,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         });
 
+        self.track_feature_usage(FeatureKind::BoolAssert, location);
+
         Assert {
             location,
             value,
