@@ -2,14 +2,15 @@ use super::{pipe::PipeTyper, *};
 use crate::{
     analyse::{infer_bit_array_option, name::check_argument_names},
     ast::{
-        Arg, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg, Clause,
-        ClauseGuard, Constant, FunctionLiteralKind, HasLocation, ImplicitCallArgOrigin, Layer,
-        RECORD_UPDATE_VARIABLE, RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst,
-        TypedArg, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant, TypedExpr,
-        TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg, UntypedAssignment,
-        UntypedClause, UntypedClauseGuard, UntypedConstant, UntypedConstantBitArraySegment,
-        UntypedExpr, UntypedExprBitArraySegment, UntypedMultiPattern, UntypedStatement, UntypedUse,
-        UntypedUseAssignment, Use, UseAssignment,
+        Arg, Assert, Assignment, AssignmentKind, BinOp, BitArrayOption, BitArraySegment, CallArg,
+        Clause, ClauseGuard, Constant, FunctionLiteralKind, HasLocation, ImplicitCallArgOrigin,
+        Layer, RECORD_UPDATE_VARIABLE, RecordBeingUpdated, SrcSpan, Statement, TodoKind, TypeAst,
+        TypedArg, TypedAssert, TypedAssignment, TypedClause, TypedClauseGuard, TypedConstant,
+        TypedExpr, TypedMultiPattern, TypedStatement, USE_ASSIGNMENT_VARIABLE, UntypedArg,
+        UntypedAssert, UntypedAssignment, UntypedClause, UntypedClauseGuard, UntypedConstant,
+        UntypedConstantBitArraySegment, UntypedExpr, UntypedExprBitArraySegment,
+        UntypedMultiPattern, UntypedStatement, UntypedUse, UntypedUseAssignment, Use,
+        UseAssignment,
     },
     build::Target,
     exhaustiveness::{self, CompileCaseResult, CompiledCase, Reachability},
@@ -631,7 +632,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     let assignment = self.infer_assignment(assignment);
                     statements.push(Statement::Assignment(assignment));
                 }
-                Statement::Assert(_) => todo!(),
+                Statement::Assert(assert) => {
+                    let assert = self.infer_assert(assert);
+                    statements.push(Statement::Assert(assert));
+                }
             }
         }
 
@@ -1692,6 +1696,61 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 AssignmentKind::Assert { location, message }
             }
         }
+    }
+
+    fn infer_assert(&mut self, assert: UntypedAssert) -> TypedAssert {
+        let Assert {
+            value,
+            location,
+            message,
+        } = assert;
+        let value_location = value.location();
+
+        let value = match self.infer(value) {
+            Ok(value) => value,
+            Err(error) => {
+                self.problems.error(error);
+                self.error_expr(value_location)
+            }
+        };
+
+        match unify(bool(), value.type_()) {
+            Ok(()) => {}
+            Err(error) => self
+                .problems
+                .error(convert_unify_error(error, value_location)),
+        }
+
+        let message = message.map(|message| {
+            let message_location = message.location();
+            match self.infer_assert_message(message) {
+                Ok(value) => value,
+                Err(error) => {
+                    self.problems.error(error);
+                    self.error_expr(message_location)
+                }
+            }
+        });
+
+        Assert {
+            location,
+            value,
+            message,
+        }
+    }
+
+    fn infer_assert_message(&mut self, message: UntypedExpr) -> Result<TypedExpr, Error> {
+        let message_location = message.location();
+        let message = self.infer(message)?;
+
+        match unify(string(), message.type_()) {
+            Ok(()) => {}
+            Err(error) => self
+                .problems
+                .error(convert_unify_error(error, message_location)),
+        }
+
+        Ok(message)
     }
 
     fn infer_case(
