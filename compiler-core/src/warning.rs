@@ -1121,6 +1121,7 @@ See: https://tour.gleam.run/functions/pipelines/",
                         FeatureKind::JavaScriptUnalignedBitArray => {
                             "Use of unaligned bit arrays on the JavaScript target was"
                         }
+                        FeatureKind::BoolAssert => "The boolean `assert` statement was",
                     };
 
                     Diagnostic {

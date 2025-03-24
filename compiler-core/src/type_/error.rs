@@ -976,6 +976,7 @@ pub enum FeatureKind {
     LetAssertWithMessage,
     VariantWithDeprecatedAnnotation,
     JavaScriptUnalignedBitArray,
+    BoolAssert,
 }
 
 impl FeatureKind {
@@ -1004,6 +1005,8 @@ impl FeatureKind {
 
             FeatureKind::JavaScriptUnalignedBitArray => Version::new(1, 9, 0),
             FeatureKind::UnannotatedFloatSegment => Version::new(1, 10, 0),
+
+            FeatureKind::BoolAssert => Version::new(1, 10, 0),
         }
     }
 }

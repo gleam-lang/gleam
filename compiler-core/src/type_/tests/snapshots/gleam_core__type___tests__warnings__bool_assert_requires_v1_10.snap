@@ -1,0 +1,24 @@
+---
+source: compiler-core/src/type_/tests/warnings.rs
+expression: "\npub fn main() {\n  assert 1 == 2\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  assert 1 == 2
+}
+
+
+----- WARNING
+warning: Incompatible gleam version range
+  ┌─ /src/warning/wrn.gleam:3:3
+  │
+3 │   assert 1 == 2
+  │   ^^^^^^^^^^^^^ This requires a Gleam version >= 1.10.0
+
+The boolean `assert` statement was introduced in version v1.10.0. But the
+Gleam version range specified in your `gleam.toml` would allow this code to
+run on an earlier version like v1.0.0, resulting in compilation errors!
+Hint: Remove the version constraint from your `gleam.toml` or update it to be:
+
+    gleam = ">= 1.10.0"
