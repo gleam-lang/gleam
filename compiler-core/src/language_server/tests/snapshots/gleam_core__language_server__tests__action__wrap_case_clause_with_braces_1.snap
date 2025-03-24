@@ -1,0 +1,25 @@
+---
+source: compiler-core/src/language_server/tests/action.rs
+expression: "\npub fn f(option) {\n  case option {\n    Some(content) -> content\n    None -> panic\n  }\n}"
+---
+----- BEFORE ACTION
+
+pub fn f(option) {
+  case option {
+    Some(content) -> content
+                     ↑      
+    None -> panic
+  }
+}
+
+
+----- AFTER ACTION
+
+pub fn f(option) {
+  case option {
+    Some(content) -> {
+      content
+    }
+    None -> panic
+  }
+}
