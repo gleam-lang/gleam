@@ -23,12 +23,12 @@ import * as $other from "../other.mjs";
 import { Two } from "../other.mjs";
 
 export function main(x) {
-  let pattern = x.a;
-  if (pattern === 1) {
+  let $ = x.a;
+  if ($ === 1) {
     return 1;
   } else {
-    let pattern$1 = x.b;
-    if (pattern$1 === 2) {
+    let $1 = x.b;
+    if ($1 === 2) {
       let c = x.c;
       return c;
     } else {

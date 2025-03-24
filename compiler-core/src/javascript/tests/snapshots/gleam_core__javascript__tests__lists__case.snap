@@ -21,12 +21,12 @@ function go(xs) {
   if (xs instanceof $Empty) {
     return 0;
   } else {
-    let pattern = xs.tail;
-    if (pattern instanceof $Empty) {
+    let $ = xs.tail;
+    if ($ instanceof $Empty) {
       return 1;
     } else {
-      let pattern$1 = pattern.tail;
-      if (pattern$1 instanceof $Empty) {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
         return 2;
       } else {
         return 9999;

@@ -29,10 +29,10 @@ class Wibble extends $CustomType {
 
 export function main() {
   let tmp = new Wibble("wibble");
-  let pattern = tmp.wobble;
-  if (pattern.startsWith("w")) {
+  let $ = tmp.wobble;
+  if ($.startsWith("w")) {
     let wibble = "w";
-    let rest = pattern.slice(1);
+    let rest = $.slice(1);
     return wibble + rest;
   } else {
     throw makeError(

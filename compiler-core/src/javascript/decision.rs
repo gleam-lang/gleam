@@ -279,7 +279,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             // name so we can use this variable to reference it and never
             // do any duplicate work recomputing its value every time
             // this pattern variable is used.
-            let name = self.variables.next_local_var(&"pattern".into());
+            let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
             docvec![let_(name, value.to_doc()), line()]

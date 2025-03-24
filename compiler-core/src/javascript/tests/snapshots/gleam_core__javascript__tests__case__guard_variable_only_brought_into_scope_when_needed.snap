@@ -21,15 +21,15 @@ function go(x) {
   if (x instanceof $Empty) {
     return 2;
   } else {
-    let pattern = x.tail;
-    if (pattern instanceof $Empty) {
+    let $ = x.tail;
+    if ($ instanceof $Empty) {
       return 2;
     } else {
-      let pattern$1 = pattern.tail;
-      if (pattern$1 instanceof $Empty) {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
         let a = x.head;
         if (a === 1) {
-          let b = pattern.head;
+          let b = $.head;
           return a + b;
         } else {
           return 2;
