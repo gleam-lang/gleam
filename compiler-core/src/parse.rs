@@ -1071,11 +1071,20 @@ where
     // An assert statement, with `Assert` already consumed
     fn parse_assert(&mut self, start: u32) -> Result<UntypedStatement, ParseError> {
         let value = self.expect_expression()?;
-        let end = value.location().end;
+        let mut end = value.location().end;
+
+        let message = if self.maybe_one(&Token::As).is_some() {
+            let message_expression = self.expect_expression_unit(ExpressionUnitContext::Other)?;
+            end = message_expression.location().end;
+            Some(message_expression)
+        } else {
+            None
+        };
 
         Ok(Statement::Assert(Assert {
             location: SrcSpan { start, end },
             value,
+            message,
         }))
     }
 

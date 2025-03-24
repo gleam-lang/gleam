@@ -32,6 +32,7 @@ expression: assert 10 != 11
                     int_value: 11,
                 },
             },
+            message: None,
         },
     ),
 ]
