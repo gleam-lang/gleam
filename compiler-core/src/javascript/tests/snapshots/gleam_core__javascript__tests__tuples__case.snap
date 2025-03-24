@@ -15,21 +15,21 @@ fn go(a) {
 
 ----- COMPILED JAVASCRIPT
 function go(a) {
-  let pattern = a[0];
-  if (pattern === 2) {
+  let $ = a[0];
+  if ($ === 2) {
     let a$1 = a[1];
     return a$1;
-  } else if (pattern === 1) {
-    let pattern$1 = a[1];
-    if (pattern$1 === 1) {
+  } else if ($ === 1) {
+    let $1 = a[1];
+    if ($1 === 1) {
       return 1;
     } else {
-      let a$1 = pattern;
-      let b = pattern$1;
+      let a$1 = $;
+      let b = $1;
       return a$1 + b;
     }
   } else {
-    let a$1 = pattern;
+    let a$1 = $;
     let b = a[1];
     return a$1 + b;
   }

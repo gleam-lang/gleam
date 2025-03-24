@@ -18,14 +18,14 @@ export function main(xs) {
   if (xs instanceof $Empty) {
     return 1;
   } else {
-    let pattern = xs.tail;
-    if (pattern instanceof $Empty) {
+    let $ = xs.tail;
+    if ($ instanceof $Empty) {
       let x = xs.head;
       return x;
     } else {
-      let pattern$1 = pattern.tail;
-      if (pattern$1 instanceof $Empty) {
-        let x = pattern.head;
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
+        let x = $.head;
         return x;
       } else {
         return 1;
