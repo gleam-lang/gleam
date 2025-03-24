@@ -21,8 +21,8 @@ function anything() {
     if ($ instanceof $Empty) {
       
     } else {
-      let pattern = $.tail;
-      if (pattern instanceof $Empty) {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
         if (false || true) {
           let a = $.head;
           return a;

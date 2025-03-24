@@ -17,26 +17,26 @@ import { Ok, toList, Empty as $Empty } from "../gleam.mjs";
 
 function main() {
   let $ = new Ok(toList(["a", "b c", "d"]));
-  let pattern = $[0];
-  if (pattern instanceof $Empty) {
+  let $1 = $[0];
+  if ($1 instanceof $Empty) {
     return 1;
   } else {
-    let pattern$1 = pattern.tail;
-    if (pattern$1 instanceof $Empty) {
+    let $2 = $1.tail;
+    if ($2 instanceof $Empty) {
       return 1;
     } else {
-      let pattern$2 = pattern$1.tail;
-      if (pattern$2 instanceof $Empty) {
+      let $3 = $2.tail;
+      if ($3 instanceof $Empty) {
         return 1;
       } else {
-        let pattern$3 = pattern$2.tail;
-        if (pattern$3 instanceof $Empty) {
-          let pattern$4 = pattern$2.head;
-          if (pattern$4 === "d") {
-            let pattern$5 = pattern$1.head;
-            if (pattern$5.startsWith("b ")) {
-              let pattern$6 = pattern.head;
-              if (pattern$6 === "a") {
+        let $4 = $3.tail;
+        if ($4 instanceof $Empty) {
+          let $5 = $3.head;
+          if ($5 === "d") {
+            let $6 = $2.head;
+            if ($6.startsWith("b ")) {
+              let $7 = $1.head;
+              if ($7 === "a") {
                 return 1;
               } else {
                 return 1;
