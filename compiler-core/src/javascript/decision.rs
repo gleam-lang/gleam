@@ -1,5 +1,5 @@
 use super::{
-    Output,
+    Error, Output,
     expression::{Generator, Ordering},
 };
 use crate::{
@@ -25,45 +25,9 @@ pub fn case<'a>(
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
     let mut variables = Variables::new(expression_generator);
-    let subjects_assignments = variables.setup_subjects(compiled_case, subjects);
+    let assignments = variables.assign_subjects(compiled_case, subjects)?;
     let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree)?;
-
-    // Each of the subjects might end up being stored in a variable before the
-    // code of the decision tree can run. This is needed because we can't just
-    // repeat a subject code multiple times if the decision tree needs it.
-    // Imagine this example:
-    // ```gleam
-    // case wibble("a") {
-    //   1 -> todo
-    //   2 -> todo
-    //   _ -> todo
-    // }
-    // ```
-    // If the decision tree ended up looking something like this:
-    // ```js
-    // if (wibble("a") === 1) {}
-    // else if (wibble("a") === 2) {}
-    // else {}
-    // ```
-    // It would be quite bad as we would end up running the same function
-    // multiple times instead of just once!
-    //
-    // So if `setup_subjects` decided to bind a subject into a variable so that
-    // can be reused to safely refer to a subject's value, we'll have to generate
-    // the code for that binding.
-    let mut assignments = vec![];
-    for assignment in subjects_assignments.into_iter() {
-        let SubjectAssignment::BindToVariable { name, value } = assignment else {
-            continue;
-        };
-
-        let value = expression_generator
-            .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(value))?;
-
-        assignments.push(docvec![let_(name, value), line()])
-    }
-
-    Ok(docvec![assignments, decision].force_break())
+    Ok(docvec![assignments_to_doc(assignments), decision].force_break())
 }
 
 /// This is a useful piece of state that is kept separate from the generator
@@ -139,16 +103,12 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         }
     }
 
-    fn setup_subjects(
+    fn assign_subjects(
         &mut self,
         compiled_case: &'a CompiledCase,
         subjects: &'a [TypedExpr],
-    ) -> Vec<SubjectAssignment<'a>> {
-        // The case subjects might be repeated in the generated code, so we want to
-        // assign those to variables (if they're not already ones) and use those;
-        // otherwise we'd end up calling the same functions multiple times, which
-        // would change the program's meaning!
-        let assignments = assign_subjects(self.expression_generator, subjects);
+    ) -> Result<Vec<SubjectAssignment<'a>>, Error> {
+        let assignments = assign_subjects(self.expression_generator, subjects)?;
         for (variable, assignment) in compiled_case
             .subject_variables
             .iter()
@@ -157,7 +117,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             self.set_value(variable, assignment.name());
             self.bind(assignment.name(), variable);
         }
-        assignments
+        Ok(assignments)
     }
 
     fn next_local_var(&mut self, name: &EcoString) -> EcoString {
@@ -498,7 +458,7 @@ fn utf16_no_escape_len(str: &EcoString) -> usize {
 enum SubjectAssignment<'a> {
     BindToVariable {
         name: EcoString,
-        value: &'a TypedExpr,
+        value: Document<'a>,
     },
     AlreadyAVariable {
         name: EcoString,
@@ -517,18 +477,18 @@ impl SubjectAssignment<'_> {
 fn assign_subjects<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     subjects: &'a [TypedExpr],
-) -> Vec<SubjectAssignment<'a>> {
+) -> Result<Vec<SubjectAssignment<'a>>, Error> {
     let mut out = Vec::with_capacity(subjects.len());
     for subject in subjects {
-        out.push(assign_subject(expression_generator, subject))
+        out.push(assign_subject(expression_generator, subject)?)
     }
-    out
+    Ok(out)
 }
 
 fn assign_subject<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     subject: &'a TypedExpr,
-) -> SubjectAssignment<'a> {
+) -> Result<SubjectAssignment<'a>, Error> {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
     match subject {
@@ -537,21 +497,65 @@ fn assign_subject<'a>(
         // performing computation or side effects multiple times.
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.is_local_variable() => SubjectAssignment::AlreadyAVariable {
+        } if constructor.is_local_variable() => Ok(SubjectAssignment::AlreadyAVariable {
             name: expression_generator.local_var(name),
-        },
+        }),
 
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
             let name = expression_generator
                 .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
-            SubjectAssignment::BindToVariable {
-                value: subject,
-                name,
-            }
+            let value = expression_generator
+                .not_in_tail_position(Some(Ordering::Strict), |this| {
+                    this.wrap_expression(subject)
+                })?;
+
+            Ok(SubjectAssignment::BindToVariable { value, name })
         }
     }
+}
+
+fn assignments_to_doc(assignments: Vec<SubjectAssignment<'_>>) -> Document<'_> {
+    // Each of the subjects might end up being stored in a variable before the
+    // code of the decision tree can run. This is needed because we can't just
+    // repeat a subject code multiple times if the decision tree needs it.
+    // Imagine this example:
+    // ```gleam
+    // case wibble("a") {
+    //   1 -> todo
+    //   2 -> todo
+    //   _ -> todo
+    // }
+    // ```
+    // If the decision tree ended up looking something like this:
+    // ```js
+    // if (wibble("a") === 1) {}
+    // else if (wibble("a") === 2) {}
+    // else {}
+    // ```
+    // It would be quite bad as we would end up running the same function
+    // multiple times instead of just once!
+    //
+    // So if `setup_subjects` decided to bind a subject into a variable so that
+    // can be reused to safely refer to a subject's value, we'll have to generate
+    // the code for that binding:
+    //
+    // ```js
+    // // Now this is safe!
+    // let $ = wibble("a")
+    // if ($ === 1) {}
+    // else if ($ === 2) {}
+    // else {}
+    // ```
+    let mut assignments_docs = vec![];
+    for assignment in assignments.into_iter() {
+        let SubjectAssignment::BindToVariable { name, value } = assignment else {
+            continue;
+        };
+        assignments_docs.push(docvec![let_(name, value), line()])
+    }
+    assignments_docs.to_doc()
 }
 
 /// Appends the second document to the first one separating the two with a newline.
