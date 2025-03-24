@@ -24,49 +24,49 @@ pub fn case<'a>(
     subjects: &'a [TypedExpr],
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
-    // The case subjects might be repeated in the generated code, so we want to
-    // assign those to variables (if they're not already ones) and use those;
-    // otherwise we'd end up calling the same functions multiple times, which
-    // would change the program's meaning!
-    let subjects_assignments = assign_subjects(expression_generator, subjects);
+    let mut variables = Variables::new(expression_generator);
+    let subjects_assignments = variables.setup_subjects(compiled_case, subjects);
+    let decision = CasePrinter { clauses, variables }.decision(&compiled_case.tree)?;
 
-    let mut printer = CasePrinter {
-        clauses,
-        expression_generator,
-        variable_values: HashMap::new(),
-        scoped_variable_names: HashMap::new(),
-    };
-
-    for (var, (subject_value, assignment)) in compiled_case
-        .subject_variables
-        .iter()
-        .zip(subjects_assignments.iter())
-    {
-        printer.set_pattern_variable_value(var, subject_value.clone());
-        if let Some(name) = assignment {
-            printer.bind_variable(name.clone(), var);
-        } else {
-            printer.bind_variable(subject_value.clone(), var);
-        }
-    }
-
-    let decision = printer.decision(&compiled_case.tree)?;
-
-    // Then if there's any assignment we write those before the generated
-    // decision tree.
-    let mut subject_assignments_docs = vec![];
+    // Each of the subjects might end up being stored in a variable before the
+    // code of the decision tree can run. This is needed because we can't just
+    // repeat a subject code multiple times if the decision tree needs it.
+    // Imagine this example:
+    // ```gleam
+    // case wibble("a") {
+    //   1 -> todo
+    //   2 -> todo
+    //   _ -> todo
+    // }
+    // ```
+    // If the decision tree ended up looking something like this:
+    // ```js
+    // if (wibble("a") === 1) {}
+    // else if (wibble("a") === 2) {}
+    // else {}
+    // ```
+    // It would be quite bad as we would end up running the same function
+    // multiple times instead of just once!
+    //
+    // So if `setup_subjects` decided to bind a subject into a variable so that
+    // can be reused to safely refer to a subject's value, we'll have to generate
+    // the code for that binding.
+    let mut assignments = vec![];
     for ((_, assignment), subject) in subjects_assignments.into_iter().zip(subjects) {
         let Some(var) = assignment else { continue };
         let value = expression_generator
             .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(subject))?;
-        subject_assignments_docs.push(let_(var, value).append(line()))
+        assignments.push(let_(var, value).append(line()))
     }
 
-    Ok(docvec![subject_assignments_docs, decision].force_break())
+    Ok(docvec![assignments, decision].force_break())
 }
 
-pub struct CasePrinter<'module, 'generator, 'a> {
-    clauses: &'a [TypedClause],
+/// This is a useful piece of state that is kept separate from the generator
+/// itself so we can reuse it both with cases and let asserts without rewriting
+/// everything from scratch.
+///
+struct Variables<'generator, 'module, 'a> {
     expression_generator: &'generator mut Generator<'module, 'a>,
 
     /// All the pattern variables will be assigned a specific value: being bound
@@ -126,12 +126,50 @@ pub struct CasePrinter<'module, 'generator, 'a> {
     scoped_variable_names: HashMap<usize, EcoString>,
 }
 
-impl<'a> CasePrinter<'_, '_, 'a> {
-    fn set_pattern_variable_value(&mut self, variable: &Variable, value: EcoString) {
+impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
+    fn new(expression_generator: &'generator mut Generator<'module, 'a>) -> Self {
+        Variables {
+            expression_generator,
+            variable_values: HashMap::new(),
+            scoped_variable_names: HashMap::new(),
+        }
+    }
+
+    fn setup_subjects(
+        &mut self,
+        compiled_case: &'a CompiledCase,
+        subjects: &'a [TypedExpr],
+    ) -> Vec<(EcoString, Option<EcoString>)> {
+        // The case subjects might be repeated in the generated code, so we want to
+        // assign those to variables (if they're not already ones) and use those;
+        // otherwise we'd end up calling the same functions multiple times, which
+        // would change the program's meaning!
+        let subjects_assignments = assign_subjects(self.expression_generator, subjects);
+        for (var, (subject_value, assignment)) in compiled_case
+            .subject_variables
+            .iter()
+            .zip(subjects_assignments.iter())
+        {
+            self.set_value(var, subject_value.clone());
+            if let Some(name) = assignment {
+                self.bind(name.clone(), var);
+            } else {
+                self.bind(subject_value.clone(), var);
+            }
+        }
+
+        subjects_assignments
+    }
+
+    fn next_local_var(&mut self, name: &EcoString) -> EcoString {
+        self.expression_generator.next_local_var(name)
+    }
+
+    fn set_value(&mut self, variable: &Variable, value: EcoString) {
         let _ = self.variable_values.insert(variable.id, value);
     }
 
-    fn bind_variable(&mut self, name: EcoString, variable: &Variable) {
+    fn bind(&mut self, name: EcoString, variable: &Variable) {
         let _ = self.scoped_variable_names.insert(variable.id, name);
     }
 
@@ -140,7 +178,47 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         self.scoped_variable_names.contains_key(&variable.id)
     }
 
-    fn get_variable_value(&self, variable: &Variable) -> EcoString {
+    /// In case the check introduces new variables, this will record their
+    /// actual value to be used by later checks and assignments
+    ///
+    fn record_check_assignments(&mut self, variable: &Variable, check: &RuntimeCheck) {
+        let value = self.get_value(variable);
+        match check {
+            RuntimeCheck::Int { .. }
+            | RuntimeCheck::Float { .. }
+            | RuntimeCheck::String { .. }
+            | RuntimeCheck::BitArray { .. }
+            | RuntimeCheck::EmptyList => (),
+
+            RuntimeCheck::StringPrefix { rest, prefix } => {
+                let prefix_size = utf16_no_escape_len(prefix);
+                self.set_value(rest, eco_format!("{value}.slice({prefix_size})"));
+            }
+
+            RuntimeCheck::Tuple { elements, .. } => {
+                for (i, element) in elements.iter().enumerate() {
+                    self.set_value(element, eco_format!("{value}[{i}]"));
+                }
+            }
+
+            RuntimeCheck::Variant { fields, labels, .. } => {
+                for (i, field) in fields.iter().enumerate() {
+                    let access = match labels.get(&i) {
+                        Some(label) => eco_format!("{value}.{label}"),
+                        None => eco_format!("{value}[{i}]"),
+                    };
+                    self.set_value(field, access);
+                }
+            }
+
+            RuntimeCheck::NonEmptyList { first, rest } => {
+                self.set_value(first, eco_format!("{value}.head"));
+                self.set_value(rest, eco_format!("{value}.tail"));
+            }
+        }
+    }
+
+    fn get_value(&self, variable: &Variable) -> EcoString {
         // If the pattern variable was already assigned to a variable that is
         // in scope we use that variable name!
         if let Some(name) = self.scoped_variable_names.get(&variable.id) {
@@ -153,7 +231,14 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .expect("pattern variable used before assignment")
             .clone()
     }
+}
 
+struct CasePrinter<'module, 'generator, 'a> {
+    clauses: &'a [TypedClause],
+    variables: Variables<'generator, 'module, 'a>,
+}
+
+impl<'a> CasePrinter<'_, '_, 'a> {
     fn decision(&mut self, decision: &'a Decision) -> Output<'a> {
         match decision {
             Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
@@ -193,13 +278,15 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .expect("invalid clause index")
             .then;
 
-        self.expression_generator.expression_flattening_blocks(body)
+        self.variables
+            .expression_generator
+            .expression_flattening_blocks(body)
     }
 
     fn binding(&mut self, variable_name: &'a EcoString, value: &'a BoundValue) -> Document<'a> {
-        let variable_name = self.expression_generator.next_local_var(variable_name);
+        let variable_name = self.variables.next_local_var(variable_name);
         let assigned_value = match value {
-            BoundValue::Variable(variable) => self.get_variable_value(variable).to_doc(),
+            BoundValue::Variable(variable) => self.variables.get_value(variable).to_doc(),
             BoundValue::LiteralString(value) => string(value),
         };
         let_(variable_name.clone(), assigned_value)
@@ -216,7 +303,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         // it: no need to do any checking, we know it must match!
         if choices.is_empty() {
             if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-                self.record_check_assignments(var, check);
+                self.variables.record_check_assignments(var, check);
             }
             return self.decision(fallback);
         }
@@ -224,7 +311,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         // Otherwise we'll have to generate a series of if-else to check which
         // pattern is going to match!
 
-        let mut if_ = if self.is_bound_in_scope(var) {
+        let mut if_ = if self.variables.is_bound_in_scope(var) {
             // If the variable is already bound to a name in the current
             // scope we don't have to generate any additional code...
             nil()
@@ -233,14 +320,14 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             // name so we can use this variable to reference it and never
             // do any duplicate work recomputing its value every time
             // this pattern variable is used.
-            let name = self.expression_generator.next_local_var(&"pattern".into());
-            let value = self.get_variable_value(var);
-            self.bind_variable(name.clone(), var);
+            let name = self.variables.next_local_var(&"pattern".into());
+            let value = self.variables.get_value(var);
+            self.variables.bind(name.clone(), var);
             docvec![let_(name, value.to_doc()), line()]
         };
 
         for (i, (check, decision)) in choices.iter().enumerate() {
-            self.record_check_assignments(var, check);
+            self.variables.record_check_assignments(var, check);
             let check_doc = self.runtime_check(var, check);
             let body = self.inside_new_scope(|this| this.decision(decision))?;
 
@@ -257,7 +344,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         // the check itself: the type system makes sure that, if we ever
         // get here, the check is going to match no matter what!
         if let FallbackCheck::RuntimeCheck { check } = fallback_check {
-            self.record_check_assignments(var, check);
+            self.variables.record_check_assignments(var, check);
         }
 
         let body = self.inside_new_scope(|this| this.decision(fallback))?;
@@ -273,11 +360,15 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     where
         F: Fn(&mut Self) -> A,
     {
-        let old_scope = self.expression_generator.current_scope_vars.clone();
-        let old_names = self.scoped_variable_names.clone();
+        let old_scope = self
+            .variables
+            .expression_generator
+            .current_scope_vars
+            .clone();
+        let old_names = self.variables.scoped_variable_names.clone();
         let output = run(self);
-        self.expression_generator.current_scope_vars = old_scope;
-        self.scoped_variable_names = old_names;
+        self.variables.expression_generator.current_scope_vars = old_scope;
+        self.variables.scoped_variable_names = old_names;
         output
     }
 
@@ -305,7 +396,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .partition(|(variable, _)| guard_variables.contains(variable));
 
         let check_bindings = self.bindings_ref(&check_bindings);
-        let check = self.expression_generator.guard(guard)?;
+        let check = self.variables.expression_generator.guard(guard)?;
         let if_true = self.inside_new_scope(|this| {
             // All the other bindings are not needed by the guard check will
             // end up directly in the body of the if clause to avoid doing any
@@ -329,7 +420,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     }
 
     fn runtime_check(&mut self, var: &Variable, runtime_check: &RuntimeCheck) -> Document<'a> {
-        let var_value = self.get_variable_value(var);
+        let var_value = self.variables.get_value(var);
         match runtime_check {
             RuntimeCheck::String { value } => {
                 docvec![var_value, " === ", string_from_eco(value.clone())]
@@ -378,52 +469,18 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                 docvec![var_value, " instanceof ", qualification, match_.name()]
             }
             RuntimeCheck::NonEmptyList { .. } => {
-                self.expression_generator.tracker.list_non_empty_class_used = true;
+                self.variables
+                    .expression_generator
+                    .tracker
+                    .list_non_empty_class_used = true;
                 docvec![var_value, " instanceof $NonEmpty"]
             }
             RuntimeCheck::EmptyList => {
-                self.expression_generator.tracker.list_empty_class_used = true;
+                self.variables
+                    .expression_generator
+                    .tracker
+                    .list_empty_class_used = true;
                 docvec![var_value, " instanceof $Empty"]
-            }
-        }
-    }
-
-    /// In case the check introduces new variables, this will record their
-    /// actual value to be used by later checks and assignments
-    ///
-    fn record_check_assignments(&mut self, var: &Variable, check: &RuntimeCheck) {
-        let value = self.get_variable_value(var);
-        match check {
-            RuntimeCheck::Int { .. }
-            | RuntimeCheck::Float { .. }
-            | RuntimeCheck::String { .. }
-            | RuntimeCheck::BitArray { .. }
-            | RuntimeCheck::EmptyList => (),
-
-            RuntimeCheck::StringPrefix { rest, prefix } => {
-                let prefix_size = utf16_no_escape_len(prefix);
-                self.set_pattern_variable_value(rest, eco_format!("{value}.slice({prefix_size})"));
-            }
-
-            RuntimeCheck::Tuple { elements, .. } => {
-                for (i, element) in elements.iter().enumerate() {
-                    self.set_pattern_variable_value(element, eco_format!("{value}[{i}]"));
-                }
-            }
-
-            RuntimeCheck::Variant { fields, labels, .. } => {
-                for (i, field) in fields.iter().enumerate() {
-                    let access = match labels.get(&i) {
-                        Some(label) => eco_format!("{value}.{label}"),
-                        None => eco_format!("{value}[{i}]"),
-                    };
-                    self.set_pattern_variable_value(field, access);
-                }
-            }
-
-            RuntimeCheck::NonEmptyList { first, rest } => {
-                self.set_pattern_variable_value(first, eco_format!("{value}.head"));
-                self.set_pattern_variable_value(rest, eco_format!("{value}.tail"));
             }
         }
     }
