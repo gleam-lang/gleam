@@ -3,7 +3,7 @@ use super::{
     expression::{Generator, Ordering},
 };
 use crate::{
-    ast::{TypedClauseGuard, TypedExpr},
+    ast::{TypedClause, TypedExpr},
     docvec,
     exhaustiveness::{
         Body, BoundValue, CompiledCase, Decision, FallbackCheck, RuntimeCheck, Variable,
@@ -18,9 +18,9 @@ use std::{collections::HashMap, sync::OnceLock};
 
 pub static ASSIGNMENT_VAR: &str = "$";
 
-pub fn print<'a>(
+pub fn case<'a>(
     compiled_case: &'a CompiledCase,
-    clauses: Vec<(&'a TypedExpr, Option<&'a TypedClauseGuard>)>,
+    clauses: &'a [TypedClause],
     subjects: &'a [TypedExpr],
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
@@ -30,14 +30,13 @@ pub fn print<'a>(
     // would change the program's meaning!
     let subjects_assignments = assign_subjects(expression_generator, subjects);
 
-    let mut printer = DecisionPrinter {
+    let mut printer = CasePrinter {
         clauses,
         expression_generator,
         variable_values: HashMap::new(),
         scoped_variable_names: HashMap::new(),
     };
 
-    // Might have to add those to the scope!!!!
     for (var, (subject_value, assignment)) in compiled_case
         .subject_variables
         .iter()
@@ -66,8 +65,8 @@ pub fn print<'a>(
     Ok(docvec![subject_assignments_docs, decision].force_break())
 }
 
-pub struct DecisionPrinter<'module, 'generator, 'a> {
-    clauses: Vec<(&'a TypedExpr, Option<&'a TypedClauseGuard>)>,
+pub struct CasePrinter<'module, 'generator, 'a> {
+    clauses: &'a [TypedClause],
     expression_generator: &'generator mut Generator<'module, 'a>,
 
     /// All the pattern variables will be assigned a specific value: being bound
@@ -127,7 +126,7 @@ pub struct DecisionPrinter<'module, 'generator, 'a> {
     scoped_variable_names: HashMap<usize, EcoString>,
 }
 
-impl<'a> DecisionPrinter<'_, '_, 'a> {
+impl<'a> CasePrinter<'_, '_, 'a> {
     fn set_pattern_variable_value(&mut self, variable: &Variable, value: EcoString) {
         let _ = self.variable_values.insert(variable.id, value);
     }
@@ -188,10 +187,11 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
     }
 
     fn body_expression(&mut self, clause_index: usize) -> Output<'a> {
-        let (body, _) = &self
+        let body = &self
             .clauses
             .get(clause_index)
-            .expect("invalid clause index");
+            .expect("invalid clause index")
+            .then;
 
         self.expression_generator.expression_flattening_blocks(body)
     }
@@ -291,7 +291,8 @@ impl<'a> DecisionPrinter<'_, '_, 'a> {
             .clauses
             .get(guard)
             .expect("invalid clause index")
-            .1
+            .guard
+            .as_ref()
             .expect("missing guard");
 
         // Before generating the if-else condition we want to generate all the
