@@ -1,23 +1,36 @@
-use crate::{assert_error, assert_infer, assert_module_infer};
+use crate::{assert_error, assert_infer, assert_module_infer, assert_warning};
 
 #[test]
-fn bool_literal_true() {
-    assert_infer!("assert True", "Bool");
-}
-
-#[test]
-fn bool_literal_false() {
-    assert_infer!("assert False", "Bool");
+fn bool_value() {
+    assert_infer!(
+        "
+let value = True
+assert value
+",
+        "Bool"
+    );
 }
 
 #[test]
 fn equality_check() {
-    assert_infer!("assert 1 == 2", "Bool");
+    assert_infer!(
+        "
+let value = 10
+assert value == 10
+",
+        "Bool"
+    );
 }
 
 #[test]
 fn comparison() {
-    assert_infer!("assert 1 < 2", "Bool");
+    assert_infer!(
+        "
+let value = 4
+assert value < 5
+",
+        "Bool"
+    );
 }
 
 #[test]
@@ -33,6 +46,50 @@ pub fn main() {
 }
 ",
         vec![("main", "fn() -> Bool")]
+    );
+}
+
+#[test]
+fn bool_literal() {
+    assert_warning!(
+        "
+pub fn main() {
+  assert True
+}
+"
+    );
+}
+
+#[test]
+fn negation_of_bool_literal() {
+    assert_warning!(
+        "
+pub fn main() {
+  assert !False
+}
+"
+    );
+}
+
+#[test]
+fn equality_check_on_literals() {
+    assert_warning!(
+        "
+pub fn main() {
+  assert 1 == 2
+}
+"
+    );
+}
+
+#[test]
+fn comparison_on_literals() {
+    assert_warning!(
+        "
+pub fn main() {
+  assert 1 < 2
+}
+"
     );
 }
 

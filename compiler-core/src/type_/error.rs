@@ -959,6 +959,15 @@ pub enum Warning {
     JavaScriptIntUnsafe {
         location: SrcSpan,
     },
+
+    /// When we are trying to use bool assert on a literal value. For example:
+    /// ```gleam
+    /// assert True
+    ///        ^ The programmer knows this will never panic, so it's useless
+    /// ```
+    AssertLiteralValue {
+        location: SrcSpan,
+    },
 }
 
 #[derive(Debug, Eq, Copy, PartialEq, Clone, serde::Serialize, serde::Deserialize)]
@@ -1179,7 +1188,8 @@ impl Warning {
             | Warning::UnreachableCodeAfterPanic { location, .. }
             | Warning::RedundantPipeFunctionCapture { location, .. }
             | Warning::FeatureRequiresHigherGleamVersion { location, .. }
-            | Warning::JavaScriptIntUnsafe { location, .. } => *location,
+            | Warning::JavaScriptIntUnsafe { location, .. }
+            | Warning::AssertLiteralValue { location, .. } => *location,
         }
     }
 
