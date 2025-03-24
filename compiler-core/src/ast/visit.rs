@@ -55,7 +55,7 @@ use crate::type_::Type;
 
 use super::{
     AssignName, BinOp, BitArrayOption, CallArg, Definition, Pattern, PipelineAssignmentKind,
-    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssignment, TypedClause,
+    SrcSpan, Statement, TodoKind, TypeAst, TypedArg, TypedAssert, TypedAssignment, TypedClause,
     TypedClauseGuard, TypedConstant, TypedCustomType, TypedDefinition, TypedExpr,
     TypedExprBitArraySegment, TypedFunction, TypedModule, TypedModuleConstant, TypedPattern,
     TypedPatternBitArraySegment, TypedPipelineAssignment, TypedStatement, TypedUse,
@@ -328,6 +328,10 @@ pub trait Visit<'ast> {
 
     fn visit_typed_use(&mut self, use_: &'ast TypedUse) {
         visit_typed_use(self, use_);
+    }
+
+    fn visit_typed_assert(&mut self, assert: &'ast TypedAssert) {
+        visit_typed_assert(self, assert);
     }
 
     fn visit_typed_pipeline_assignment(&mut self, assignment: &'ast TypedPipelineAssignment) {
@@ -1154,6 +1158,7 @@ where
         Statement::Expression(expr) => v.visit_typed_expr(expr),
         Statement::Assignment(assignment) => v.visit_typed_assignment(assignment),
         Statement::Use(use_) => v.visit_typed_use(use_),
+        Statement::Assert(assert) => v.visit_typed_assert(assert),
     }
 }
 
@@ -1171,6 +1176,13 @@ where
 {
     v.visit_typed_expr(&use_.call);
     // TODO: We should also visit the typed patterns!!
+}
+
+pub fn visit_typed_assert<'a, V>(v: &mut V, assert: &'a TypedAssert)
+where
+    V: Visit<'a> + ?Sized,
+{
+    v.visit_typed_expr(&assert.value);
 }
 
 pub fn visit_typed_call_arg<'a, V>(v: &mut V, arg: &'a TypedCallArg)

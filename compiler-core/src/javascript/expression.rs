@@ -209,7 +209,8 @@ impl<'module, 'a> Generator<'module, 'a> {
         let expression_doc = match statement {
             Statement::Expression(expression) => self.expression(expression),
             Statement::Assignment(assignment) => self.assignment(assignment),
-            Statement::Use(_use) => self.expression(&_use.call),
+            Statement::Use(use_) => self.expression(&use_.call),
+            Statement::Assert(_) => todo!(),
         }?;
         Ok(self.add_statement_level(expression_doc))
     }
@@ -709,6 +710,8 @@ impl<'module, 'a> Generator<'module, 'a> {
                 },
 
                 Statement::Use(use_) => return self.child_expression(&use_.call),
+
+                Statement::Assert(_) => todo!(),
             }
         }
 
@@ -2040,6 +2043,7 @@ fn requires_semicolon(statement: &TypedStatement) -> bool {
 
         Statement::Assignment(_) => false,
         Statement::Use(_) => false,
+        Statement::Assert(_) => false,
     }
 }
 
