@@ -52,11 +52,15 @@ pub fn case<'a>(
     // can be reused to safely refer to a subject's value, we'll have to generate
     // the code for that binding.
     let mut assignments = vec![];
-    for ((_, assignment), subject) in subjects_assignments.into_iter().zip(subjects) {
-        let Some(var) = assignment else { continue };
+    for assignment in subjects_assignments.into_iter() {
+        let SubjectAssignment::BindToVariable { name, value } = assignment else {
+            continue;
+        };
+
         let value = expression_generator
-            .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(subject))?;
-        assignments.push(let_(var, value).append(line()))
+            .not_in_tail_position(Some(Ordering::Strict), |this| this.wrap_expression(value))?;
+
+        assignments.push(docvec![let_(name, value), line()])
     }
 
     Ok(docvec![assignments, decision].force_break())
@@ -139,26 +143,21 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
         &mut self,
         compiled_case: &'a CompiledCase,
         subjects: &'a [TypedExpr],
-    ) -> Vec<(EcoString, Option<EcoString>)> {
+    ) -> Vec<SubjectAssignment<'a>> {
         // The case subjects might be repeated in the generated code, so we want to
         // assign those to variables (if they're not already ones) and use those;
         // otherwise we'd end up calling the same functions multiple times, which
         // would change the program's meaning!
-        let subjects_assignments = assign_subjects(self.expression_generator, subjects);
-        for (var, (subject_value, assignment)) in compiled_case
+        let assignments = assign_subjects(self.expression_generator, subjects);
+        for (variable, assignment) in compiled_case
             .subject_variables
             .iter()
-            .zip(subjects_assignments.iter())
+            .zip(assignments.iter())
         {
-            self.set_value(var, subject_value.clone());
-            if let Some(name) = assignment {
-                self.bind(name.clone(), var);
-            } else {
-                self.bind(subject_value.clone(), var);
-            }
+            self.set_value(variable, assignment.name());
+            self.bind(assignment.name(), variable);
         }
-
-        subjects_assignments
+        assignments
     }
 
     fn next_local_var(&mut self, name: &EcoString) -> EcoString {
@@ -496,10 +495,29 @@ fn utf16_no_escape_len(str: &EcoString) -> usize {
     convert_string_escape_chars(str).encode_utf16().count()
 }
 
+enum SubjectAssignment<'a> {
+    BindToVariable {
+        name: EcoString,
+        value: &'a TypedExpr,
+    },
+    AlreadyAVariable {
+        name: EcoString,
+    },
+}
+
+impl SubjectAssignment<'_> {
+    fn name(&self) -> EcoString {
+        match self {
+            SubjectAssignment::BindToVariable { name, value: _ }
+            | SubjectAssignment::AlreadyAVariable { name } => name.clone(),
+        }
+    }
+}
+
 fn assign_subjects<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     subjects: &'a [TypedExpr],
-) -> Vec<(EcoString, Option<EcoString>)> {
+) -> Vec<SubjectAssignment<'a>> {
     let mut out = Vec::with_capacity(subjects.len());
     for subject in subjects {
         out.push(assign_subject(expression_generator, subject))
@@ -510,22 +528,28 @@ fn assign_subjects<'a>(
 fn assign_subject<'a>(
     expression_generator: &mut Generator<'_, 'a>,
     subject: &'a TypedExpr,
-) -> (EcoString, Option<EcoString>) {
+) -> SubjectAssignment<'a> {
     static ASSIGNMENT_VAR_ECO_STR: OnceLock<EcoString> = OnceLock::new();
 
     match subject {
         // If the value is a variable we don't need to assign it to a new
-        // variable, we can the value expression safely without worrying about
+        // variable, we can use the value expression safely without worrying about
         // performing computation or side effects multiple times.
         TypedExpr::Var {
             name, constructor, ..
-        } if constructor.is_local_variable() => (expression_generator.local_var(name), None),
+        } if constructor.is_local_variable() => SubjectAssignment::AlreadyAVariable {
+            name: expression_generator.local_var(name),
+        },
+
         // If it's not a variable we need to assign it to a variable
         // to avoid rendering the subject expression multiple times
         _ => {
-            let subject = expression_generator
+            let name = expression_generator
                 .next_local_var(ASSIGNMENT_VAR_ECO_STR.get_or_init(|| ASSIGNMENT_VAR.into()));
-            (subject.clone(), Some(subject))
+            SubjectAssignment::BindToVariable {
+                value: subject,
+                name,
+            }
         }
     }
 }
