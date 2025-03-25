@@ -695,7 +695,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
             },
 
             Pattern::BitArray { location, segments } => {
-                self.unify_types(type_, bits(), location);
+                self.unify_types(type_, bit_array(), location);
                 self.infer_pattern_bit_array(segments, location)
             }
 

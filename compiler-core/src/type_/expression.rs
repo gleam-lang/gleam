@@ -1423,7 +1423,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         Ok(TypedExpr::BitArray {
             location,
             segments,
-            type_: bits(),
+            type_: bit_array(),
         })
     }
 
@@ -1527,7 +1527,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                             }
                             _ => (),
                         }
-                    } else if type_ == bits() {
+                    } else if type_ == bit_array() {
                         using_unaligned_bit_array = true;
                     }
 

@@ -2168,7 +2168,7 @@ impl TypedPattern {
             Pattern::Int { .. } => type_::int(),
             Pattern::Float { .. } => type_::float(),
             Pattern::String { .. } => type_::string(),
-            Pattern::BitArray { .. } => type_::bits(),
+            Pattern::BitArray { .. } => type_::bit_array(),
             Pattern::StringPrefix { .. } => type_::string(),
 
             Pattern::Variable { type_, .. }
