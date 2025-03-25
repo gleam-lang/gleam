@@ -1019,7 +1019,7 @@ impl<'module, 'a> Generator<'module, 'a> {
     fn record_access(&mut self, record: &'a TypedExpr, label: &'a str) -> Output<'a> {
         self.not_in_tail_position(None, |this| {
             let record = this.wrap_expression(record)?;
-            Ok(docvec![record, ".", maybe_escape_property_doc(label)])
+            Ok(docvec![record, ".", maybe_escape_property(label)])
         })
     }
 
@@ -1686,7 +1686,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             } => Ok(docvec![
                 self.guard(container,)?,
                 ".",
-                maybe_escape_property_doc(label)
+                maybe_escape_property(label)
             ]),
 
             ClauseGuard::ModuleSelect {

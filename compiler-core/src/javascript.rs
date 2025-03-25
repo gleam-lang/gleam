@@ -351,7 +351,7 @@ impl<'a> Generator<'a> {
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
                     Some((_, name)) => {
-                        docvec!["this.", maybe_escape_property_doc(name), " = ", var, ";"]
+                        docvec!["this.", maybe_escape_property(name), " = ", var, ";"]
                     }
                 }
             }),
@@ -834,11 +834,11 @@ fn maybe_escape_identifier(word: &str) -> EcoString {
     }
 }
 
-fn maybe_escape_property_doc(label: &str) -> Document<'_> {
+fn maybe_escape_property(label: &str) -> EcoString {
     if is_usable_js_property(label) {
-        label.to_doc()
+        EcoString::from(label)
     } else {
-        escape_identifier(label).to_doc()
+        escape_identifier(label)
     }
 }
 
