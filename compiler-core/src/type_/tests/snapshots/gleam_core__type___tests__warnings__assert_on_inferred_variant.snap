@@ -22,5 +22,5 @@ warning: Assertion on inferred variant
 8 │   let assert Wobble(w) = Wibble(10)
   │              ^^^^^^^^^
 
-This assertion is will always crash since it matches on a variant which is
+This assertion will always crash since it matches on a variant which is
 never present.
