@@ -291,3 +291,35 @@ pub fn main() {
 "
     )
 }
+
+// https://github.com/gleam-lang/gleam/issues/4394
+#[test]
+fn assignment_last_in_block() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = {
+    let b = 1
+    let c = b + 1
+  }
+  a
+}
+"
+    )
+}
+
+// https://github.com/gleam-lang/gleam/issues/4394
+#[test]
+fn pattern_assignment_last_in_block() {
+    assert_js!(
+        "
+pub fn main() {
+  let a = {
+    let b = #(1, 2)
+    let #(x, y) = b
+  }
+  a
+}
+"
+    )
+}
