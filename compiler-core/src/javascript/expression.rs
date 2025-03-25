@@ -120,6 +120,11 @@ pub(crate) struct Generator<'module, 'ast> {
     /// ```
     ///
     statement_level: Vec<Document<'ast>>,
+
+    /// This will be true if we've generated a statement that is guaranteed to
+    /// throw. This means we can stop code generation for all following statements
+    /// in the same block!
+    pub statement_always_throws: bool,
 }
 
 impl<'module, 'a> Generator<'module, 'a> {
@@ -158,6 +163,7 @@ impl<'module, 'a> Generator<'module, 'a> {
             function_position: Position::Tail,
             scope_position: Position::Tail,
             statement_level: Vec::new(),
+            statement_always_throws: false,
         }
     }
 
@@ -767,6 +773,13 @@ impl<'module, 'a> Generator<'module, 'a> {
             } else {
                 documents.push(self.statement(statement)?);
             }
+
+            // If we've generated code for a statement that always throws, we
+            // can skip code generation for all the following ones.
+            if self.statement_always_throws {
+                self.statement_always_throws = false;
+                break;
+            }
         }
         self.statement_level = statement_level;
         if count == 1 {
@@ -807,12 +820,12 @@ impl<'module, 'a> Generator<'module, 'a> {
             pattern,
             kind,
             value,
+            compiled_case,
             annotation: _,
             location: _,
+            is_generated: _,
         } = assignment;
 
-        // If it is a simple assignment to a variable we can generate a normal
-        // JS assignment
         if let TypedPattern::Variable { name, .. } = pattern {
             return self.simple_variable_assignment(name, value);
         }
@@ -858,6 +871,15 @@ impl<'module, 'a> Generator<'module, 'a> {
         };
 
         Ok(doc.append(afterwards).force_break())
+
+        match &kind {
+            AssignmentKind::Let => {
+                decision::let_assert(compiled_case, value, SrcSpan::default(), None, self)
+            }
+            AssignmentKind::Assert { location, message } => {
+                decision::let_assert(compiled_case, value, *location, message.as_deref(), self)
+            }
+        }
     }
 
     fn assert(&mut self, assert: &'a TypedAssert) -> Output<'a> {
@@ -1683,7 +1705,7 @@ impl<'module, 'a> Generator<'module, 'a> {
         Ok(doc)
     }
 
-    fn throw_error<Fields>(
+    pub(crate) fn throw_error<Fields>(
         &mut self,
         error_name: &'a str,
         message: &Document<'a>,
@@ -1732,95 +1754,6 @@ impl<'module, 'a> Generator<'module, 'a> {
                 name, arity, type_, ..
             } => record_constructor(type_.clone(), Some(module), name, *arity, self.tracker),
         }
-    }
-
-    fn pattern_into_assignment_doc(
-        &mut self,
-        compiled_pattern: CompiledPattern<'a>,
-        subject: Document<'a>,
-        location: SrcSpan,
-        kind: &'a AssignmentKind<TypedExpr>,
-    ) -> Output<'a> {
-        let any_assignments = !compiled_pattern.assignments.is_empty();
-        let assignments = Self::pattern_assignments_doc(compiled_pattern.assignments);
-
-        // If it's an assert then it is likely that the pattern is inexhaustive. When a value is
-        // provided that does not get matched the code needs to throw an exception, which is done
-        // by the pattern_checks_or_throw_doc method.
-        match kind {
-            AssignmentKind::Assert { message, .. } if !compiled_pattern.checks.is_empty() => {
-                let checks = self.pattern_checks_or_throw_doc(
-                    compiled_pattern.checks,
-                    subject,
-                    location,
-                    message.as_deref(),
-                )?;
-
-                if !any_assignments {
-                    Ok(checks)
-                } else {
-                    Ok(docvec![checks, line(), assignments])
-                }
-            }
-            _ => Ok(assignments),
-        }
-    }
-
-    fn pattern_checks_or_throw_doc(
-        &mut self,
-        checks: Vec<pattern::Check<'a>>,
-        subject: Document<'a>,
-        location: SrcSpan,
-        message: Option<&'a TypedExpr>,
-    ) -> Output<'a> {
-        let checks = self.pattern_checks_doc(checks, false);
-        Ok(docvec![
-            "if (",
-            docvec![break_("", ""), checks].nest(INDENT),
-            break_("", ""),
-            ") {",
-            docvec![
-                line(),
-                self.assignment_no_match(location, subject, message)?
-            ]
-            .nest(INDENT),
-            line(),
-            "}",
-        ]
-        .group())
-    }
-
-    fn pattern_assignments_doc(assignments: Vec<Assignment<'_>>) -> Document<'_> {
-        let assignments = assignments.into_iter().map(Assignment::into_doc);
-        join(assignments, line())
-    }
-
-    fn pattern_checks_doc(
-        &self,
-        checks: Vec<pattern::Check<'a>>,
-        match_desired: bool,
-    ) -> Document<'a> {
-        if checks.is_empty() {
-            return "true".to_doc();
-        };
-        let operator = if match_desired {
-            break_(" &&", " && ")
-        } else {
-            break_(" ||", " || ")
-        };
-
-        let checks_len = checks.len();
-        join(
-            checks.into_iter().map(|check| {
-                if checks_len > 1 && check.may_require_wrapping() {
-                    docvec!["(", check.into_doc(match_desired), ")"]
-                } else {
-                    check.into_doc(match_desired)
-                }
-            }),
-            operator,
-        )
-        .group()
     }
 
     fn echo(&mut self, expression: Document<'a>, location: &'a SrcSpan) -> Output<'a> {
@@ -2427,14 +2360,6 @@ pub fn string(value: &str) -> Document<'_> {
         EcoString::from(value.replace('\n', r"\n"))
             .to_doc()
             .surround("\"", "\"")
-    } else {
-        value.to_doc().surround("\"", "\"")
-    }
-}
-
-pub fn string_from_eco<'a>(value: EcoString) -> Document<'a> {
-    if value.contains('\n') {
-        value.replace("\n", r"\n").to_doc().surround("\"", "\"")
     } else {
         value.to_doc().surround("\"", "\"")
     }

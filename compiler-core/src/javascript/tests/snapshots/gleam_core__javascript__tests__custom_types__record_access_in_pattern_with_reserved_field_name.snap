@@ -36,7 +36,7 @@ export function main() {
   if (a$1.constructor$ === ctor) {
     return undefined;
   } else {
-    let constructor = a.constructor;
+    let constructor = a.constructor$;
     if (ctor === constructor) {
       return undefined;
     } else {
