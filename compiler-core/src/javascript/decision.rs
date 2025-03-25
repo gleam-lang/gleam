@@ -3,7 +3,7 @@ use super::{
     expression::{Generator, Ordering, float, int},
 };
 use crate::{
-    ast::{SrcSpan, TypedClause, TypedExpr},
+    ast::{AssignmentKind, TypedClause, TypedExpr},
     docvec,
     exhaustiveness::{
         Body, BoundValue, CompiledCase, Decision, FallbackCheck, RuntimeCheck, Variable,
@@ -104,7 +104,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             let name = self.variables.next_local_var(&ASSIGNMENT_VAR.into());
             let value = self.variables.get_value(var);
             self.variables.bind(name.clone(), var);
-            docvec![let_(name, value.to_doc()), line()]
+            docvec![let_doc(name, value.to_doc()), line()]
         };
 
         for (i, (check, decision)) in choices.iter().enumerate() {
@@ -265,18 +265,21 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     }
 }
 
-pub fn let_assert<'a>(
+/// Prints the code for a let assignment (it could either be a let assert or
+/// just a destructuring let, either cases are handled correctly by the decision
+/// tree!)
+///
+pub fn let_<'a>(
     compiled_case: &'a CompiledCase,
     subject: &'a TypedExpr,
-    location: SrcSpan,
-    message: Option<&'a TypedExpr>,
+    kind: &'a AssignmentKind<TypedExpr>,
     expression_generator: &mut Generator<'_, 'a>,
 ) -> Output<'a> {
     let is_tail = expression_generator.scope_position.is_tail();
     let mut variables = Variables::new(expression_generator);
     let assignment = variables.assign_subject(compiled_case, subject)?;
     let assignment_name = assignment.name();
-    let decision = LetAssertPrinter::new(variables, location, message)
+    let decision = LetPrinter::new(variables, kind)
         .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
 
     let doc = docvec![assignments_to_doc(vec![assignment]), decision];
@@ -287,23 +290,20 @@ pub fn let_assert<'a>(
     }
 }
 
-struct LetAssertPrinter<'generator, 'module, 'a> {
+struct LetPrinter<'generator, 'module, 'a> {
     variables: Variables<'generator, 'module, 'a>,
-    location: SrcSpan,
-    message: Option<&'a TypedExpr>,
+    kind: &'a AssignmentKind<TypedExpr>,
     is_redundant: bool,
 }
 
-impl<'generator, 'module, 'a> LetAssertPrinter<'generator, 'module, 'a> {
+impl<'generator, 'module, 'a> LetPrinter<'generator, 'module, 'a> {
     fn new(
         variables: Variables<'generator, 'module, 'a>,
-        location: SrcSpan,
-        message: Option<&'a TypedExpr>,
+        kind: &'a AssignmentKind<TypedExpr>,
     ) -> Self {
         Self {
             variables,
-            location,
-            message,
+            kind,
             is_redundant: true,
         }
     }
@@ -351,14 +351,17 @@ impl<'generator, 'module, 'a> LetAssertPrinter<'generator, 'module, 'a> {
     }
 
     fn assignment_no_match(&mut self, subject: Document<'a>) -> Output<'a> {
-        let generator = &mut self.variables.expression_generator;
-        let message = match self.message {
-            None => string("Pattern match failed, no pattern matched the value."),
-            Some(m) => {
-                generator.not_in_tail_position(Some(Ordering::Loose), |this| this.expression(m))?
-            }
+        let AssignmentKind::Assert { location, message } = self.kind else {
+            unreachable!("inexhaustive let made it to code generation");
         };
-        Ok(generator.throw_error("let_assert", &message, self.location, [("value", subject)]))
+
+        let generator = &mut self.variables.expression_generator;
+        let message = match message {
+            None => string("Pattern match failed, no pattern matched the value."),
+            Some(message) => generator
+                .not_in_tail_position(Some(Ordering::Loose), |this| this.expression(message))?,
+        };
+        Ok(generator.throw_error("let_assert", &message, *location, [("value", subject)]))
     }
 
     fn negated_runtime_check(
@@ -634,7 +637,7 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             BoundValue::Variable(variable) => self.get_value(variable).to_doc(),
             BoundValue::LiteralString(value) => string(value),
         };
-        let_(variable_name.clone(), assigned_value)
+        let_doc(variable_name.clone(), assigned_value)
     }
 
     #[must_use]
@@ -795,7 +798,7 @@ fn assignments_to_doc(assignments: Vec<SubjectAssignment<'_>>) -> Document<'_> {
         let SubjectAssignment::BindToVariable { name, value } = assignment else {
             continue;
         };
-        assignments_docs.push(docvec![let_(name, value), line()])
+        assignments_docs.push(docvec![let_doc(name, value), line()])
     }
     assignments_docs.to_doc()
 }
@@ -813,7 +816,7 @@ fn join_with_line<'a>(one: Document<'a>, other: Document<'a>) -> Document<'a> {
     }
 }
 
-fn let_(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
+fn let_doc(variable_name: EcoString, value: Document<'_>) -> Document<'_> {
     docvec!["let ", variable_name, " = ", value, ";"]
 }
 
