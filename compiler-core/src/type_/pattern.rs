@@ -312,7 +312,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
                     }
 
                     // Int segments that aren't a whole number of bytes
-                    BitArrayOption::<TypedPattern>::Size { value, .. } if segment_type == int() => {
+                    BitArrayOption::<TypedPattern>::Size { value, .. } if segment_type.is_int() => {
                         match &**value {
                             Pattern::<_>::Int {
                                 location,
@@ -335,7 +335,7 @@ impl<'a, 'b> PatternTyper<'a, 'b> {
 
         let type_ = {
             match value.deref() {
-                Pattern::Variable { .. } if segment_type == string() => {
+                Pattern::Variable { .. } if segment_type.is_string() => {
                     Err(Error::BitArraySegmentError {
                         error: bit_array::ErrorType::VariableUtfSegmentInPattern,
                         location,
