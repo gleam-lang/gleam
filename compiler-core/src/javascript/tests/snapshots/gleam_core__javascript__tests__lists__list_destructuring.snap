@@ -14,10 +14,10 @@ fn go(x, y) {
 
 
 ----- COMPILED JAVASCRIPT
-import { makeError } from "../gleam.mjs";
+import { Empty as $Empty, NonEmpty as $NonEmpty, makeError } from "../gleam.mjs";
 
 function go(x, y) {
-  if (!x.hasLength(0)) {
+  if (x instanceof $NonEmpty) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -27,7 +27,7 @@ function go(x, y) {
       { value: x }
     )
   }
-  if (!x.hasLength(1)) {
+  if (x instanceof $Empty || x.tail instanceof $NonEmpty) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -38,7 +38,13 @@ function go(x, y) {
     )
   }
   let a = x.head;
-  if (!x.hasLength(2) || x.head !== 1 || x.tail.head !== 2) {
+  if (
+    x instanceof $Empty ||
+    x.tail instanceof $Empty ||
+    x.tail.tail instanceof $NonEmpty ||
+    x.tail.head !== 2 ||
+    x.head !== 1
+  ) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -48,7 +54,12 @@ function go(x, y) {
       { value: x }
     )
   }
-  if (!y.hasLength(2) || y.tail.head[0] !== 3) {
+  if (
+    y instanceof $Empty ||
+    y.tail instanceof $Empty ||
+    y.tail.tail instanceof $NonEmpty ||
+    y.tail.head[0] !== 3
+  ) {
     throw makeError(
       "let_assert",
       "my/mod",
@@ -59,7 +70,7 @@ function go(x, y) {
     )
   }
   let b = y.tail.head[1];
-  if (!y.atLeastLength(1)) {
+  if (y instanceof $Empty) {
     throw makeError(
       "let_assert",
       "my/mod",

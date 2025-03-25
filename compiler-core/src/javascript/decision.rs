@@ -265,6 +265,236 @@ impl<'a> CasePrinter<'_, '_, 'a> {
     }
 }
 
+pub fn let_assert<'a>(
+    compiled_case: &'a CompiledCase,
+    subject: &'a TypedExpr,
+    location: SrcSpan,
+    message: Option<&'a TypedExpr>,
+    expression_generator: &mut Generator<'_, 'a>,
+) -> Output<'a> {
+    let is_tail = expression_generator.scope_position.is_tail();
+    let mut variables = Variables::new(expression_generator);
+    let assignment = variables.assign_subject(compiled_case, subject)?;
+    let assignment_name = assignment.name();
+    let decision = LetAssertPrinter::new(variables, location, message)
+        .decision(assignment_name.clone().to_doc(), &compiled_case.tree)?;
+
+    let doc = docvec![assignments_to_doc(vec![assignment]), decision];
+    if is_tail {
+        Ok(docvec![doc, line(), "return ", assignment_name, ";"])
+    } else {
+        Ok(doc)
+    }
+}
+
+struct LetAssertPrinter<'generator, 'module, 'a> {
+    variables: Variables<'generator, 'module, 'a>,
+    location: SrcSpan,
+    message: Option<&'a TypedExpr>,
+    is_redundant: bool,
+}
+
+impl<'generator, 'module, 'a> LetAssertPrinter<'generator, 'module, 'a> {
+    fn new(
+        variables: Variables<'generator, 'module, 'a>,
+        location: SrcSpan,
+        message: Option<&'a TypedExpr>,
+    ) -> Self {
+        Self {
+            variables,
+            location,
+            message,
+            is_redundant: true,
+        }
+    }
+
+    fn decision(&mut self, subject: Document<'a>, decision: &'a Decision) -> Output<'a> {
+        let Some((checks, body_bindings)) = self.positive_checks_and_bindings(decision) else {
+            // In case we never reach a body, we know that this let assert will
+            // always throw an exception!
+            self.variables.expression_generator.statement_always_throws = true;
+            return self.assignment_no_match(subject);
+        };
+
+        for (variable, check) in checks.iter() {
+            self.variables.record_check_assignments(variable, check);
+        }
+
+        let checks = if self.is_redundant {
+            nil()
+        } else {
+            let checks = checks.iter().filter_map(|(variable, check)| {
+                self.variables.record_check_assignments(variable, check);
+                match check {
+                    RuntimeCheck::Tuple { .. } => None,
+                    _ => Some(self.negated_runtime_check(variable, check)),
+                }
+            });
+            docvec![break_("", ""), join(checks, break_(" ||", " || "))]
+                .nest(INDENT)
+                .append(break_("", ""))
+                .group()
+        };
+
+        let doc = if checks.is_empty() {
+            nil()
+        } else {
+            let exception = self.assignment_no_match(subject)?;
+            docvec!["if (", checks, ") ", break_block(exception)]
+        };
+
+        let body_bindings = body_bindings
+            .iter()
+            .map(|(name, value)| self.variables.body_binding(name, value));
+        let body_bindings = join(body_bindings, line());
+        Ok(join_with_line(doc, body_bindings))
+    }
+
+    fn assignment_no_match(&mut self, subject: Document<'a>) -> Output<'a> {
+        let generator = &mut self.variables.expression_generator;
+        let message = match self.message {
+            None => string("Pattern match failed, no pattern matched the value."),
+            Some(m) => {
+                generator.not_in_tail_position(Some(Ordering::Loose), |this| this.expression(m))?
+            }
+        };
+        Ok(generator.throw_error("let_assert", &message, self.location, [("value", subject)]))
+    }
+
+    fn negated_runtime_check(
+        &mut self,
+        variable: &Variable,
+        runtime_check: &'a RuntimeCheck,
+    ) -> Document<'a> {
+        let value = self.variables.get_value(variable);
+        match runtime_check {
+            RuntimeCheck::String { value: literal } => docvec![value, " !== ", string(&literal)],
+            RuntimeCheck::Float { value: literal } => docvec![value, " !== ", float(literal)],
+            RuntimeCheck::Int { value: literal } => docvec![value, " !== ", int(literal)],
+            RuntimeCheck::StringPrefix { prefix, .. } => {
+                docvec!["!", value, ".startsWith(", string(&prefix), ")"]
+            }
+
+            RuntimeCheck::BitArray { value } => todo!(),
+
+            // When checking on a tuple there's always going to be a single choice
+            // and the code generation will always skip generating the check for it
+            // as the type system ensures it must match.
+            RuntimeCheck::Tuple { .. } => unreachable!("tried generating runtime check for tuple"),
+
+            // Checking a variable is not `Nil` is always going to be false because
+            // the type system ensures that the value we get there must be of type
+            // `Nil` and thus it can't be anything different from `Nil`.
+            RuntimeCheck::Variant { .. } if variable.type_.is_nil() => docvec!["false"],
+
+            RuntimeCheck::Variant { match_, .. } if variable.type_.is_bool() => {
+                if match_.name() == "True" {
+                    docvec!["!", value]
+                } else {
+                    value.to_doc()
+                }
+            }
+
+            RuntimeCheck::Variant { match_, .. } if variable.type_.is_result() => {
+                if match_.name() == "Ok" {
+                    docvec!["!", value, ".isOk()"]
+                } else {
+                    docvec![value, ".isOk()"]
+                }
+            }
+
+            RuntimeCheck::Variant { match_, .. } => {
+                let qualification = match_
+                    .module()
+                    .map(|module| eco_format!("${module}."))
+                    .unwrap_or_default();
+
+                let check = docvec![value, " instanceof ", qualification, match_.name()];
+                docvec!["!(", check, ")"]
+            }
+
+            RuntimeCheck::NonEmptyList { .. } => {
+                self.variables
+                    .expression_generator
+                    .tracker
+                    .list_empty_class_used = true;
+                docvec![value, " instanceof $Empty"]
+            }
+
+            RuntimeCheck::EmptyList => {
+                self.variables
+                    .expression_generator
+                    .tracker
+                    .list_non_empty_class_used = true;
+                docvec![value, " instanceof $NonEmpty"]
+            }
+        }
+    }
+
+    /// A let assert decision tree has a very precise structure: since it's made
+    /// of a single pattern. It will always be a very narrow tree that has a
+    /// single success node with a series of checks leading down to it. If any of
+    /// those checks fails it immediately leads to a `Fail` node that has to result
+    /// in an exception. For example:
+    ///
+    /// ```gleam
+    /// let assert [1, 2, ..] = list
+    /// ```
+    ///
+    /// Will have to check that the first item is `1` and the second one is `2`,
+    /// if any of those checks fail the entire assignment fails.
+    ///
+    /// So we can traverse such a decision tree and collect the sequence of checks
+    /// that need to succeed in order for the assignment to succeed. We also return
+    /// all the bindings that we discover in the final `Run` block so they can be
+    /// used by later code generation steps without having to traverse the whole
+    /// decision tree once again!
+    ///
+    fn positive_checks_and_bindings(
+        &mut self,
+        decision: &'a Decision,
+    ) -> Option<(
+        VecDeque<(Variable, &'a RuntimeCheck)>,
+        &'a Vec<(EcoString, BoundValue)>,
+    )> {
+        match decision {
+            Decision::Run { body, .. } => Some((VecDeque::new(), &body.bindings)),
+            Decision::Guard { .. } => unreachable!("guard in let assert decision tree"),
+            Decision::Fail => {
+                // If the check fails at least once it means it's not a redundant let assert.
+                self.is_redundant = false;
+                None
+            }
+            Decision::Switch {
+                var,
+                choices,
+                fallback,
+                fallback_check,
+            } => {
+                let mut result = None;
+
+                for (check, decision) in choices {
+                    if let Some((mut checks, bindings)) =
+                        self.positive_checks_and_bindings(decision)
+                    {
+                        checks.push_front((var.clone(), check));
+                        result = Some((checks, bindings));
+                    };
+                }
+
+                if let Some((mut checks, bindings)) = self.positive_checks_and_bindings(fallback) {
+                    if let FallbackCheck::RuntimeCheck { check } = fallback_check {
+                        checks.push_front((var.clone(), check));
+                        result = Some((checks, bindings));
+                    };
+                };
+
+                result
+            }
+        }
+    }
+}
+
 /// This is a useful piece of state that is kept separate from the generator
 /// itself so we can reuse it both with cases and let asserts without rewriting
 /// everything from scratch.
@@ -353,6 +583,21 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
             self.bind(assignment.name(), variable);
         }
         Ok(assignments)
+    }
+
+    fn assign_subject(
+        &mut self,
+        compiled_case: &'a CompiledCase,
+        subject: &'a TypedExpr,
+    ) -> Result<SubjectAssignment<'a>, Error> {
+        let variable = compiled_case
+            .subject_variables
+            .first()
+            .expect("decision tree with no subjects");
+        let assignment = assign_subject(self.expression_generator, subject)?;
+        self.set_value(variable, assignment.name());
+        self.bind(assignment.name(), variable);
+        Ok(assignment)
     }
 
     fn next_local_var(&mut self, name: &EcoString) -> EcoString {
