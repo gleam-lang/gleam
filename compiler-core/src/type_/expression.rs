@@ -1463,6 +1463,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             annotation,
             location,
+            is_generated,
+            compiled_case: _,
         } = assignment;
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
@@ -1524,16 +1526,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-        let (compiled_case, exhaustive) =
+        let (compiled_case, not_exhaustive_error) =
             self.check_let_exhaustiveness(location, value.type_(), &pattern);
 
-        match (&kind, exhaustive) {
+        match (&kind, not_exhaustive_error) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
-            (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
+            (AssignmentKind::Let, Ok(_)) => {}
 
             // If the pattern is not exhaustive and we're not asserting we want to
             // report the error!
-            (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
+            (AssignmentKind::Let, Err(e)) => {
                 self.problems.error(e);
             }
 
@@ -1553,20 +1555,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // If the pattern is a let assert we want to include the compiled case
         // we got from the analysis so that it can be used for code generation!
         let kind = match kind {
-            AssignmentKind::Let | AssignmentKind::Generated => kind,
+            AssignmentKind::Let => kind,
             AssignmentKind::Assert {
                 location, message, ..
-            } => AssignmentKind::Assert {
-                location,
-                message,
-                compiled_case,
-            },
+            } => AssignmentKind::Assert { location, message },
         };
 
         Assignment {
             location,
             annotation,
             kind,
+            compiled_case,
+            is_generated,
             pattern,
             value: Box::new(value),
         }
@@ -1578,12 +1578,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
-            AssignmentKind::Generated => AssignmentKind::Generated,
-            AssignmentKind::Assert {
-                location,
-                message,
-                compiled_case,
-            } => {
+            AssignmentKind::Assert { location, message } => {
                 let message = match message {
                     Some(message) => {
                         self.track_feature_usage(
@@ -1603,11 +1598,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     None => None,
                 };
-                AssignmentKind::Assert {
-                    location,
-                    message,
-                    compiled_case,
-                }
+                AssignmentKind::Assert { location, message }
             }
         }
     }
@@ -2657,7 +2648,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 origin: VariableOrigin::Generated,
             },
             annotation: None,
-            kind: AssignmentKind::Generated,
+            is_generated: true,
+            compiled_case: CompiledCase::default(),
+            kind: AssignmentKind::Let,
             value: Box::new(record),
         };
 
@@ -4354,7 +4347,9 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        kind: AssignmentKind::Generated,
+                        is_generated: true,
+                        compiled_case: CompiledCase::default(),
+                        kind: AssignmentKind::Let,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments
