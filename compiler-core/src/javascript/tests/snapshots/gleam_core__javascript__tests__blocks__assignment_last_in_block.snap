@@ -1,0 +1,26 @@
+---
+source: compiler-core/src/javascript/tests/blocks.rs
+expression: "\npub fn main() {\n  let a = {\n    let b = 1\n    let c = b + 1\n  }\n  a\n}\n"
+---
+----- SOURCE CODE
+
+pub fn main() {
+  let a = {
+    let b = 1
+    let c = b + 1
+  }
+  a
+}
+
+
+----- COMPILED JAVASCRIPT
+export function main() {
+  let _block;
+  {
+    let b = 1;
+    let c = b + 1;
+    _block = c;
+  }
+  let a = _block;
+  return a;
+}

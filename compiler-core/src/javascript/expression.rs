@@ -774,10 +774,17 @@ impl<'module, 'a> Generator<'module, 'a> {
             self.not_in_tail_position(Some(Ordering::Loose), |this| this.wrap_expression(value))?;
         let js_name = self.next_local_var(name);
         let assignment = docvec!["let ", js_name.clone(), " = ", subject, ";"];
-        let assignment = if self.scope_position.is_tail() {
-            docvec![assignment, line(), "return ", js_name, ";"]
-        } else {
-            assignment
+        let assignment = match &self.scope_position {
+            Position::NotTail(_) => assignment,
+            Position::Tail => docvec![assignment, line(), "return ", js_name, ";"],
+            Position::Assign(block_variable) => docvec![
+                assignment,
+                line(),
+                block_variable.clone(),
+                " = ",
+                js_name,
+                ";"
+            ],
         };
 
         Ok(assignment.force_break())
@@ -808,15 +815,21 @@ impl<'module, 'a> Generator<'module, 'a> {
         let compiled = pattern_generator.take_compiled();
 
         // If we are in tail position we can return value being assigned
-        let afterwards = if self.scope_position.is_tail() {
-            docvec![
+        let afterwards = match &self.scope_position {
+            Position::NotTail(_) => nil(),
+            Position::Tail => docvec![
                 line(),
                 "return ",
                 subject_assignment.clone().unwrap_or_else(|| value.clone()),
                 ";"
-            ]
-        } else {
-            nil()
+            ],
+            Position::Assign(block_variable) => docvec![
+                line(),
+                block_variable.clone(),
+                " = ",
+                subject_assignment.clone().unwrap_or_else(|| value.clone()),
+                ";"
+            ],
         };
 
         let compiled =
