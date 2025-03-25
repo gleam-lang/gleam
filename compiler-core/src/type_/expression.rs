@@ -1742,6 +1742,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             annotation,
             location,
+            is_generated,
+            compiled_case: _,
         } = assignment;
         let value = self.expr_in_new_scope(|this| this.infer(*value));
         let type_ = value.type_();
@@ -1836,20 +1838,18 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         // If the pattern is a let assert we want to include the compiled case
         // we got from the analysis so that it can be used for code generation!
         let kind = match kind {
-            AssignmentKind::Let | AssignmentKind::Generated => kind,
+            AssignmentKind::Let => kind,
             AssignmentKind::Assert {
                 location, message, ..
-            } => AssignmentKind::Assert {
-                location,
-                message,
-                compiled_case,
-            },
+            } => AssignmentKind::Assert { location, message },
         };
 
         Assignment {
             location,
             annotation,
             kind,
+            compiled_case,
+            is_generated,
             pattern,
             value: Box::new(value),
         }
@@ -1861,7 +1861,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
-            AssignmentKind::Generated => AssignmentKind::Generated,
             AssignmentKind::Assert {
                 location,
                 message,
@@ -1887,11 +1886,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                     }
                     None => None,
                 };
-                AssignmentKind::Assert {
-                    location,
-                    message,
-                    compiled_case,
-                }
+                AssignmentKind::Assert { location, message }
             }
         }
     }
@@ -2980,7 +2975,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 origin: VariableOrigin::Generated,
             },
             annotation: None,
-            kind: AssignmentKind::Generated,
+            is_generated: true,
+            compiled_case: CompiledCase::default(),
+            kind: AssignmentKind::Let,
             value: Box::new(record),
         };
 
@@ -4685,7 +4682,9 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        kind: AssignmentKind::Generated,
+                        is_generated: true,
+                        compiled_case: CompiledCase::default(),
+                        kind: AssignmentKind::Let,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

@@ -265,3 +265,121 @@ pub fn expect(value, message) {
 "#
     );
 }
+
+// https://github.com/gleam-lang/gleam/issues/4471
+#[test]
+fn case_message() {
+    assert_js!(
+        r#"
+pub fn expect(value, message) {
+  let assert Ok(inner) = value as case message {
+    Ok(message) -> message
+    Error(_) -> "No message provided"
+  }
+  inner
+}
+"#
+    );
+}
+
+#[test]
+fn assert_that_always_succeeds() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+}
+
+fn go() {
+  let assert Wibble(n) = Wibble(1)
+  n
+}
+"#,
+    );
+}
+
+#[test]
+fn assert_that_always_fails() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+}
+
+fn go() {
+  let assert Wobble(n) = Wibble(1)
+  n
+}
+"#,
+    );
+}
+
+#[test]
+fn catch_all_assert() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+}
+
+fn go() {
+  let assert _ = Wibble(1)
+  1
+}
+"#,
+    );
+}
+
+#[test]
+fn assert_with_multiple_variants() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+    Woo(Int)
+}
+
+fn go() {
+  let assert Wobble(n) = todo
+  n
+}
+"#,
+    );
+}
+
+#[test]
+fn use_discard_assignment() {
+    assert_js!(
+        r#"
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+    Woo(Int)
+}
+
+fn fun(f) { f(Wibble(1)) }
+
+fn go() {
+  use _ <- fun
+  1
+}
+"#,
+    );
+}
+
+#[test]
+fn use_matching_assignment() {
+    assert_js!(
+        r#"
+fn fun(f) { f(#(2, 4)) }
+
+fn go() {
+  use #(_, n) <- fun
+  n
+}
+"#,
+    );
+}

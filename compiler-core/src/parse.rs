@@ -1012,7 +1012,6 @@ where
                 AssignmentKind::Assert {
                     location: SrcSpan::new(assert_start, assert_end),
                     message: None,
-                    compiled_case: CompiledCase::default(),
                 }
             }
             _ => AssignmentKind::Let,
@@ -1050,7 +1049,7 @@ where
         let mut end = value.location().end;
 
         match &mut kind {
-            AssignmentKind::Let | AssignmentKind::Generated => {}
+            AssignmentKind::Let => {}
             AssignmentKind::Assert { message, .. } => {
                 if self.maybe_one(&Token::As).is_some() {
                     let message_expression =
@@ -1064,6 +1063,8 @@ where
         Ok(Statement::Assignment(Assignment {
             location: SrcSpan { start, end },
             value: Box::new(value),
+            is_generated: false,
+            compiled_case: CompiledCase::default(),
             pattern,
             annotation,
             kind,

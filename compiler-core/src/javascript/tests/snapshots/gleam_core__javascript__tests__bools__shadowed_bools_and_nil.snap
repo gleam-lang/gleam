@@ -32,25 +32,13 @@ function go(x, y) {
       { value: x }
     )
   }
-  if (!(x instanceof False)) {
-    throw makeError(
-      "let_assert",
-      "my/mod",
-      5,
-      "go",
-      "Pattern match failed, no pattern matched the value.",
-      { value: x }
-    )
-  }
-  if (!(y instanceof Nil)) {
-    throw makeError(
-      "let_assert",
-      "my/mod",
-      6,
-      "go",
-      "Pattern match failed, no pattern matched the value.",
-      { value: y }
-    )
-  }
-  return y;
+  throw makeError(
+    "let_assert",
+    "my/mod",
+    5,
+    "go",
+    "Pattern match failed, no pattern matched the value.",
+    { value: x }
+  )
+  
 }
