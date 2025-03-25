@@ -43,7 +43,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         match decision {
             Decision::Fail => unreachable!("Invalid decision tree reached code generation"),
             Decision::Run { body } => {
-                let bindings = self.bindings(&body.bindings);
+                let bindings = self.variables.bindings(&body.bindings);
                 let body = self.body_expression(body.clause_index)?;
                 Ok(join_with_line(bindings, body))
             }
@@ -61,16 +61,6 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         }
     }
 
-    fn bindings(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
-        let bindings = (bindings.iter()).map(|(variable, value)| self.binding(variable, value));
-        join(bindings, line())
-    }
-
-    fn bindings_ref(&mut self, bindings: &[&'a (EcoString, BoundValue)]) -> Document<'a> {
-        let bindings = (bindings.iter()).map(|(variable, value)| self.binding(variable, value));
-        join(bindings, line())
-    }
-
     fn body_expression(&mut self, clause_index: usize) -> Output<'a> {
         let body = &self
             .clauses
@@ -81,15 +71,6 @@ impl<'a> CasePrinter<'_, '_, 'a> {
         self.variables
             .expression_generator
             .expression_flattening_blocks(body)
-    }
-
-    fn binding(&mut self, variable_name: &'a EcoString, value: &'a BoundValue) -> Document<'a> {
-        let variable_name = self.variables.next_local_var(variable_name);
-        let assigned_value = match value {
-            BoundValue::Variable(variable) => self.variables.get_value(variable).to_doc(),
-            BoundValue::LiteralString(value) => string(value),
-        };
-        let_(variable_name.clone(), assigned_value)
     }
 
     fn switch(
@@ -195,14 +176,14 @@ impl<'a> CasePrinter<'_, '_, 'a> {
             .iter()
             .partition(|(variable, _)| guard_variables.contains(variable));
 
-        let check_bindings = self.bindings_ref(&check_bindings);
+        let check_bindings = self.variables.bindings_ref(&check_bindings);
         let check = self.variables.expression_generator.guard(guard)?;
         let if_true = self.inside_new_scope(|this| {
             // All the other bindings are not needed by the guard check will
             // end up directly in the body of the if clause to avoid doing any
             // extra work before making sure the condition is true and they are
             // actually needed.
-            let if_true_bindings = this.bindings_ref(&if_true_bindings);
+            let if_true_bindings = this.variables.bindings_ref(&if_true_bindings);
             let if_true_body = this.body_expression(if_true.clause_index)?;
             Ok(join_with_line(if_true_bindings, if_true_body))
         })?;
@@ -264,6 +245,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
 
                 docvec![value, " instanceof ", qualification, match_.name()]
             }
+
             RuntimeCheck::NonEmptyList { .. } => {
                 self.variables
                     .expression_generator
@@ -271,6 +253,7 @@ impl<'a> CasePrinter<'_, '_, 'a> {
                     .list_non_empty_class_used = true;
                 docvec![value, " instanceof $NonEmpty"]
             }
+
             RuntimeCheck::EmptyList => {
                 self.variables
                     .expression_generator
@@ -382,6 +365,31 @@ impl<'generator, 'module, 'a> Variables<'generator, 'module, 'a> {
 
     fn bind(&mut self, name: EcoString, variable: &Variable) {
         let _ = self.scoped_variable_names.insert(variable.id, name);
+    }
+
+    fn bindings(&mut self, bindings: &'a [(EcoString, BoundValue)]) -> Document<'a> {
+        let bindings =
+            (bindings.iter()).map(|(variable, value)| self.body_binding(variable, value));
+        join(bindings, line())
+    }
+
+    fn bindings_ref(&mut self, bindings: &[&'a (EcoString, BoundValue)]) -> Document<'a> {
+        let bindings =
+            (bindings.iter()).map(|(variable, value)| self.body_binding(variable, value));
+        join(bindings, line())
+    }
+
+    fn body_binding(
+        &mut self,
+        variable_name: &'a EcoString,
+        value: &'a BoundValue,
+    ) -> Document<'a> {
+        let variable_name = self.next_local_var(variable_name);
+        let assigned_value = match value {
+            BoundValue::Variable(variable) => self.get_value(variable).to_doc(),
+            BoundValue::LiteralString(value) => string(value),
+        };
+        let_(variable_name.clone(), assigned_value)
     }
 
     #[must_use]
