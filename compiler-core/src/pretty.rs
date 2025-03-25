@@ -32,6 +32,7 @@ mod tests;
 
 use ecow::{EcoString, eco_format};
 use itertools::Itertools;
+use num_bigint::BigInt;
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{Result, io::Utf8Writer};
@@ -134,6 +135,12 @@ impl<'a> Documentable<'a> for u16 {
 }
 
 impl<'a> Documentable<'a> for u8 {
+    fn to_doc(self) -> Document<'a> {
+        Document::eco_string(eco_format!("{self}"))
+    }
+}
+
+impl<'a> Documentable<'a> for BigInt {
     fn to_doc(self) -> Document<'a> {
         Document::eco_string(eco_format!("{self}"))
     }
