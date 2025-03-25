@@ -57,7 +57,7 @@ impl<T> SegmentOptionCategories<'_, T> {
             Int { .. } => crate::type_::int(),
             Float { .. } => crate::type_::float(),
             Utf8 { .. } | Utf16 { .. } | Utf32 { .. } => crate::type_::string(),
-            Bytes { .. } | Bits { .. } => crate::type_::bits(),
+            Bytes { .. } | Bits { .. } => crate::type_::bit_array(),
             Utf8Codepoint { .. } | Utf16Codepoint { .. } | Utf32Codepoint { .. } => {
                 crate::type_::utf_codepoint()
             }
