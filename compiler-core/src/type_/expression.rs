@@ -12,7 +12,7 @@ use crate::{
         UntypedUseAssignment, Use, UseAssignment,
     },
     build::Target,
-    exhaustiveness::{self, Reachability},
+    exhaustiveness::{self, CompiledCase, Reachability},
     reference::ReferenceKind,
 };
 use hexpm::version::Version;
@@ -1463,6 +1463,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             kind,
             annotation,
             location,
+            is_generated,
+            compiled_case: _,
         } = assignment;
         let value_location = value.location();
         let value = match self.in_new_scope(|value_typer| value_typer.infer(*value)) {
@@ -1524,14 +1526,16 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         }
 
         // Do not perform exhaustiveness checking if user explicitly used `let assert ... = ...`.
-        let exhaustiveness_check = self.check_let_exhaustiveness(location, value.type_(), &pattern);
-        match (&kind, exhaustiveness_check) {
+        let (compiled_case, not_exhaustive_error) =
+            self.check_let_exhaustiveness(location, value.type_(), &pattern);
+
+        match (&kind, not_exhaustive_error) {
             // The pattern is exhaustive in a let assignment, there's no problem here.
-            (AssignmentKind::Let | AssignmentKind::Generated, Ok(_)) => {}
+            (AssignmentKind::Let, Ok(_)) => {}
 
             // If the pattern is not exhaustive and we're not asserting we want to
             // report the error!
-            (AssignmentKind::Let | AssignmentKind::Generated, Err(e)) => {
+            (AssignmentKind::Let, Err(e)) => {
                 self.problems.error(e);
             }
 
@@ -1546,12 +1550,23 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             // Otherwise we just don't care, asserting will ignore the any missing
             // pattern error.
             (AssignmentKind::Assert { .. }, Err(_)) => {}
-        }
+        };
+
+        // If the pattern is a let assert we want to include the compiled case
+        // we got from the analysis so that it can be used for code generation!
+        let kind = match kind {
+            AssignmentKind::Let => kind,
+            AssignmentKind::Assert {
+                location, message, ..
+            } => AssignmentKind::Assert { location, message },
+        };
 
         Assignment {
             location,
             annotation,
             kind,
+            compiled_case,
+            is_generated,
             pattern,
             value: Box::new(value),
         }
@@ -1563,7 +1578,6 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
     ) -> AssignmentKind<TypedExpr> {
         match kind {
             AssignmentKind::Let => AssignmentKind::Let,
-            AssignmentKind::Generated => AssignmentKind::Generated,
             AssignmentKind::Assert { location, message } => {
                 let message = match message {
                     Some(message) => {
@@ -1629,6 +1643,10 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 return TypedExpr::Case {
                     location,
                     type_: return_type,
+                    compiled_case: CompiledCase {
+                        tree: exhaustiveness::Decision::Fail,
+                        subject_variables: vec![],
+                    },
                     subjects: typed_subjects,
                     clauses: Vec::new(),
                 };
@@ -1660,9 +1678,8 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         self.previous_panics = all_clauses_panic || any_subject_panics;
 
-        if let Err(e) = self.check_case_exhaustiveness(location, &subject_types, &typed_clauses) {
-            self.problems.error(e);
-        };
+        let compiled_case =
+            self.check_case_exhaustiveness(location, &subject_types, &typed_clauses);
 
         // We track if the case expression is used like an if: that is all its
         // patterns are discarded and there's at least a guard. For example:
@@ -1684,6 +1701,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
 
         TypedExpr::Case {
             location,
+            compiled_case,
             type_: return_type,
             subjects: typed_subjects,
             clauses: typed_clauses,
@@ -2630,7 +2648,9 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
                 origin: VariableOrigin::Generated,
             },
             annotation: None,
-            kind: AssignmentKind::Generated,
+            is_generated: true,
+            compiled_case: CompiledCase::default(),
+            kind: AssignmentKind::Let,
             value: Box::new(record),
         };
 
@@ -4009,20 +4029,21 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject: Arc<Type>,
         pattern: &TypedPattern,
-    ) -> Result<(), Error> {
+    ) -> (CompiledCase, Result<(), Error>) {
         let mut case = exhaustiveness::CaseToCompile::new(&[subject]);
         case.add_pattern(pattern);
         let output = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
-        if output.diagnostics.missing {
+        let result = if output.diagnostics.missing {
             Err(Error::InexhaustiveLetAssignment {
                 location,
                 missing: output.missing_patterns(self.environment),
             })
         } else {
             Ok(())
-        }
+        };
+        (output.compiled_case, result)
     }
 
     fn check_case_exhaustiveness(
@@ -4030,22 +4051,22 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
         location: SrcSpan,
         subject_types: &[Arc<Type>],
         clauses: &[TypedClause],
-    ) -> Result<(), Error> {
+    ) -> CompiledCase {
         let mut case = exhaustiveness::CaseToCompile::new(subject_types);
         clauses.iter().for_each(|clause| case.add_clause(clause));
-        let output = case.compile(self.environment);
+        let result = case.compile(self.environment);
 
         // Error for missing clauses that would cause a crash
-        if output.diagnostics.missing {
-            return Err(Error::InexhaustiveCaseExpression {
+        if result.diagnostics.missing {
+            self.problems.error(Error::InexhaustiveCaseExpression {
                 location,
-                missing: output.missing_patterns(self.environment),
+                missing: result.missing_patterns(self.environment),
             });
         }
 
         // Emit warnings for unreachable clauses
         for (clause_index, clause) in clauses.iter().enumerate() {
-            match output.is_reachable(clause_index) {
+            match result.is_reachable(clause_index) {
                 Reachability::Reachable => {}
                 Reachability::Unreachable(reason) => {
                     self.problems.warning(Warning::UnreachableCaseClause {
@@ -4056,7 +4077,7 @@ impl<'a, 'b> ExprTyper<'a, 'b> {
             }
         }
 
-        Ok(())
+        result.compiled_case
     }
 
     fn track_feature_usage(&mut self, feature_kind: FeatureKind, location: SrcSpan) {
@@ -4326,7 +4347,9 @@ impl UseAssignments {
                         location,
                         pattern,
                         annotation,
-                        kind: AssignmentKind::Generated,
+                        is_generated: true,
+                        compiled_case: CompiledCase::default(),
+                        kind: AssignmentKind::Let,
                         value: Box::new(UntypedExpr::Var { location, name }),
                     };
                     assignments

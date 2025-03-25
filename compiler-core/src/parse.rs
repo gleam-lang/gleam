@@ -68,6 +68,7 @@ use crate::ast::{
 };
 use crate::build::Target;
 use crate::error::wrap;
+use crate::exhaustiveness::CompiledCase;
 use crate::parse::extra::ModuleExtra;
 use crate::type_::Deprecation;
 use crate::type_::error::VariableOrigin;
@@ -1047,7 +1048,7 @@ where
         let mut end = value.location().end;
 
         match &mut kind {
-            AssignmentKind::Let | AssignmentKind::Generated => {}
+            AssignmentKind::Let => {}
             AssignmentKind::Assert { message, .. } => {
                 if self.maybe_one(&Token::As).is_some() {
                     let message_expression =
@@ -1061,6 +1062,8 @@ where
         Ok(Statement::Assignment(Assignment {
             location: SrcSpan { start, end },
             value: Box::new(value),
+            is_generated: false,
+            compiled_case: CompiledCase::default(),
             pattern,
             annotation,
             kind,

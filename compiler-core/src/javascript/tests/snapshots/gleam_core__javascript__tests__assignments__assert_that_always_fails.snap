@@ -1,0 +1,46 @@
+---
+source: compiler-core/src/javascript/tests/assignments.rs
+expression: "\ntype Wibble {\n    Wibble(Int)\n    Wobble(Int)\n}\n\nfn go() {\n  let assert Wobble(n) = Wibble(1)\n  n\n}\n"
+---
+----- SOURCE CODE
+
+type Wibble {
+    Wibble(Int)
+    Wobble(Int)
+}
+
+fn go() {
+  let assert Wobble(n) = Wibble(1)
+  n
+}
+
+
+----- COMPILED JAVASCRIPT
+import { CustomType as $CustomType, makeError } from "../gleam.mjs";
+
+class Wibble extends $CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+}
+
+class Wobble extends $CustomType {
+  constructor(x0) {
+    super();
+    this[0] = x0;
+  }
+}
+
+function go() {
+  let $ = new Wibble(1);
+  throw makeError(
+    "let_assert",
+    "my/mod",
+    8,
+    "go",
+    "Pattern match failed, no pattern matched the value.",
+    { value: $ }
+  )
+  
+}

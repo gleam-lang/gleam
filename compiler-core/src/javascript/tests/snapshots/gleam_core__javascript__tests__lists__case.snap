@@ -15,14 +15,22 @@ fn go(xs) {
 
 
 ----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
 function go(xs) {
-  if (xs.hasLength(0)) {
+  if (xs instanceof $Empty) {
     return 0;
-  } else if (xs.hasLength(1)) {
-    return 1;
-  } else if (xs.hasLength(2)) {
-    return 2;
   } else {
-    return 9999;
+    let $ = xs.tail;
+    if ($ instanceof $Empty) {
+      return 1;
+    } else {
+      let $1 = $.tail;
+      if ($1 instanceof $Empty) {
+        return 2;
+      } else {
+        return 9999;
+      }
+    }
   }
 }

@@ -36,7 +36,7 @@ export function main() {
       { value: $ }
     )
   }
-  let rest = $.wibble.slice(1);
   let prefix = "w";
+  let rest = $.wibble.slice(1);
   return prefix + rest;
 }

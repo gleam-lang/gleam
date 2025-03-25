@@ -1,6 +1,6 @@
+mod decision;
 mod expression;
 mod import;
-mod pattern;
 #[cfg(test)]
 mod tests;
 mod typescript;
@@ -131,6 +131,14 @@ impl<'a> Generator<'a> {
 
         if self.tracker.list_used {
             self.register_prelude_usage(&mut imports, "toList", None);
+        };
+
+        if self.tracker.list_empty_class_used {
+            self.register_prelude_usage(&mut imports, "Empty", Some("$Empty"));
+        };
+
+        if self.tracker.list_non_empty_class_used {
+            self.register_prelude_usage(&mut imports, "NonEmpty", Some("$NonEmpty"));
         };
 
         if self.tracker.prepend_used {
@@ -342,7 +350,7 @@ impl<'a> Generator<'a> {
                 match &arg.label {
                     None => docvec!["this[", i, "] = ", var, ";"],
                     Some((_, name)) => {
-                        docvec!["this.", maybe_escape_property_doc(name), " = ", var, ";"]
+                        docvec!["this.", maybe_escape_property(name), " = ", var, ";"]
                     }
                 }
             }),
@@ -515,8 +523,18 @@ impl<'a> Generator<'a> {
             "export const "
         };
 
-        let document =
-            expression::constant_expression(Context::Constant, &mut self.tracker, value)?;
+        let mut generator = expression::Generator::new(
+            self.module.name.clone(),
+            &self.module.type_info.src_path,
+            self.project_root,
+            self.line_numbers,
+            "".into(),
+            vec![],
+            &mut self.tracker,
+            self.module_scope.clone(),
+        );
+
+        let document = generator.constant_expression(Context::Constant, value)?;
 
         Ok(docvec![
             head,
@@ -781,18 +799,18 @@ fn is_usable_js_identifier(word: &str) -> bool {
 }
 
 fn is_usable_js_property(label: &str) -> bool {
-    !matches!(
-        label,
-        // `then` to avoid a custom type that defines a `then` function being used as a `thenable`
-        // in Javascript.
+    match label {
+        // `then` to avoid a custom type that defines a `then` function being
+        // used as a `thenable` in Javascript.
         "then"
-            // `constructor` to avoid unintentional overriding of the constructor of records,
-            // leading to potential runtime crashes while using `withFields`.
-            | "constructor"
-            // `prototype` and `__proto__` to avoid unintentionally overriding the prototype chain
-            | "prototype"
-            | "__proto__"
-    )
+        // `constructor` to avoid unintentional overriding of the constructor of
+        // records, leading to potential runtime crashes while using `withFields`.
+        | "constructor"
+        // `prototype` and `__proto__` to avoid unintentionally overriding the
+        // prototype chain.
+        | "prototpye" | "__proto__" => false,
+        _ => true
+    }
 }
 
 fn maybe_escape_identifier_string(word: &str) -> EcoString {
@@ -815,11 +833,11 @@ fn maybe_escape_identifier(word: &str) -> EcoString {
     }
 }
 
-fn maybe_escape_property_doc(label: &str) -> Document<'_> {
+fn maybe_escape_property(label: &str) -> EcoString {
     if is_usable_js_property(label) {
-        label.to_doc()
+        EcoString::from(label)
     } else {
-        escape_identifier(label).to_doc()
+        escape_identifier(label)
     }
 }
 
@@ -827,6 +845,8 @@ fn maybe_escape_property_doc(label: &str) -> Document<'_> {
 pub(crate) struct UsageTracker {
     pub ok_used: bool,
     pub list_used: bool,
+    pub list_empty_class_used: bool,
+    pub list_non_empty_class_used: bool,
     pub prepend_used: bool,
     pub error_used: bool,
     pub int_remainder_used: bool,

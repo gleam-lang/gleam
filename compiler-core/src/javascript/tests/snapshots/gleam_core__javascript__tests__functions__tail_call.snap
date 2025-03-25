@@ -13,11 +13,13 @@ pub fn count(xs, n) {
 
 
 ----- COMPILED JAVASCRIPT
+import { Empty as $Empty } from "../gleam.mjs";
+
 export function count(loop$xs, loop$n) {
   while (true) {
     let xs = loop$xs;
     let n = loop$n;
-    if (xs.hasLength(0)) {
+    if (xs instanceof $Empty) {
       return n;
     } else {
       let xs$1 = xs.tail;

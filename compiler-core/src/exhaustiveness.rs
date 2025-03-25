@@ -273,18 +273,18 @@ pub struct Body {
     /// The tuples are in the form `(name, value)`, so `(wibble, var)`
     /// corresponds to `let wibble = var`.
     ///
-    bindings: Vec<(EcoString, BoundValue)>,
+    pub bindings: Vec<(EcoString, BoundValue)>,
 
     /// The index of the clause in the case expression that should be run.
     ///
-    clause_index: usize,
+    pub clause_index: usize,
 }
 
 /// A value that can appear on the right hand side of one of the assignments we
 /// find at the top of a body.
 ///
 #[derive(Clone, Eq, PartialEq, Debug)]
-enum BoundValue {
+pub enum BoundValue {
     /// `let a = variable`
     ///
     Variable(Variable),
@@ -353,6 +353,8 @@ pub enum Pattern {
     },
     Variant {
         index: usize,
+        name: EcoString,
+        module: Option<EcoString>,
         fields: Vec<Id<Pattern>>,
     },
     NonEmptyList {
@@ -451,7 +453,7 @@ struct PatternCheck {
 /// arguments: that pattern will be replaced by three new ones `a0 is 1`,
 /// `a1 is _` and `a2 is []`. Those new variables are the `args`.
 ///
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum RuntimeCheck {
     Int {
         value: EcoString,
@@ -474,7 +476,9 @@ pub enum RuntimeCheck {
         value: EcoString,
     },
     Variant {
+        match_: VariantMatch,
         index: usize,
+        labels: HashMap<usize, EcoString>,
         fields: Vec<Variable>,
     },
     NonEmptyList {
@@ -503,11 +507,19 @@ impl RuntimeCheck {
             RuntimeCheck::BitArray { value } => RuntimeCheckKind::BitArray {
                 value: value.clone(),
             },
-            RuntimeCheck::Variant { index, fields: _ } => {
-                RuntimeCheckKind::Variant { index: *index }
-            }
+            RuntimeCheck::Variant { index, .. } => RuntimeCheckKind::Variant { index: *index },
             RuntimeCheck::EmptyList => RuntimeCheckKind::EmptyList,
             RuntimeCheck::NonEmptyList { first: _, rest: _ } => RuntimeCheckKind::NonEmptyList,
+        }
+    }
+
+    pub(crate) fn is_ignored(&self) -> bool {
+        match self {
+            RuntimeCheck::Variant {
+                match_: VariantMatch::NeverExplicitlyMatchedOn { .. },
+                ..
+            } => true,
+            _ => false,
         }
     }
 }
@@ -525,12 +537,49 @@ pub enum RuntimeCheckKind {
     NonEmptyList,
 }
 
+/// All possible variant checks are automatically generated beforehand once we
+/// know we are matching on a value with a custom type.
+/// Then if the compiled case is explicitly matching on one of those, we update
+/// it to store additional information: for example how the variant is used
+/// (if qualified or unqualified and if it is aliased).
+///
+/// This way when we get to code generation we can clump all variants that were
+/// never explicitly matched on in a single `else` block without blowing up code
+/// size!
+///
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum VariantMatch {
+    ExplicitlyMatchedOn {
+        name: EcoString,
+        module: Option<EcoString>,
+    },
+    NeverExplicitlyMatchedOn {
+        name: EcoString,
+    },
+}
+
+impl VariantMatch {
+    pub(crate) fn name(&self) -> EcoString {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { name, .. } => name.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { name } => name.clone(),
+        }
+    }
+
+    pub(crate) fn module(&self) -> Option<EcoString> {
+        match self {
+            VariantMatch::ExplicitlyMatchedOn { module, .. } => module.clone(),
+            VariantMatch::NeverExplicitlyMatchedOn { .. } => None,
+        }
+    }
+}
+
 /// A variable that can be matched on in a branch.
 ///
 #[derive(Eq, PartialEq, Clone, Debug)]
 pub struct Variable {
-    id: usize,
-    type_: Arc<Type>,
+    pub id: usize,
+    pub type_: Arc<Type>,
 }
 
 impl Variable {
@@ -570,12 +619,7 @@ impl Variable {
 /// performing a `PatternCheck` on a variable with a specific type.
 ///
 enum BranchMode {
-    /// This covers numbers, functions, variables, and bitarrays.
-    ///
-    /// TODO)) In the future it won't be the case: bitarrays will be special
-    /// cased to improve on exhaustiveness checking and to be used for code
-    /// generation.
-    ///
+    /// This covers numbers, functions, variables, strings, and bitarrays.
     Infinite,
     Tuple {
         elements: Vec<Arc<Type>>,
@@ -590,7 +634,7 @@ enum BranchMode {
 }
 
 impl BranchMode {
-    fn needs_fallback(&self) -> bool {
+    fn is_infinite(&self) -> bool {
         match self {
             BranchMode::Infinite => true,
             BranchMode::Tuple { .. } | BranchMode::List { .. } | BranchMode::NamedType { .. } => {
@@ -652,17 +696,12 @@ impl Variable {
 /// series of checks to perform at runtime to understand if a value matches with
 /// a given pattern.
 ///
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Decision {
     /// This is the final node of the tree, once we get to this one we know we
     /// have a body to run because a given pattern matched.
     ///
-    Run {
-        // todo)) since the tree is not used for code generation, this field is unused.
-        // But it will be useful once we also use this for code gen purposes and not
-        // just for exhaustiveness checking
-        #[allow(dead_code)]
-        body: Body,
-    },
+    Run { body: Body },
 
     /// We have to make this decision when we run into a branch that also has a
     /// guard: if it is true we can finally run the body of the branch, stored in
@@ -671,13 +710,7 @@ pub enum Decision {
     /// have another `DecisionTree` to traverse, stored in `if_false`.
     ///
     Guard {
-        // todo)) since the tree is not used for code generation, the `guard` and
-        // `if_true` fields are unused.
-        // But they will be useful once we also use this for code gen purposes and not
-        // just for exhaustiveness checking
-        #[allow(dead_code)]
         guard: usize,
-        #[allow(dead_code)]
         if_true: Body,
         if_false: Box<Decision>,
     },
@@ -687,24 +720,23 @@ pub enum Decision {
     /// we have to go down to. If none of the checks matches, then we'll have to
     /// go down the `fallback` branch.
     ///
+    /// The type system guarantees that all switches will always have at least
+    /// one last choice that acts as a fallback to pick if none of the others
+    /// matches; no matter the value we're matching on.
+    ///
+    /// In case we're dealing with exhaustive cases (for example on lists/custom
+    /// types) we also keep track of the final check associated with the final
+    /// branch: keep in mind, we don't actually have to run that check because
+    /// we know that the type system guarantees it will always match; but it
+    /// can hold useful informations for type generation so we keep it around.
+    /// You can read the doc for `FallbackCheck` to find out a more in depth
+    /// explanation and some examples!
+    ///
     Switch {
         var: Variable,
         choices: Vec<(RuntimeCheck, Box<Decision>)>,
         fallback: Box<Decision>,
-    },
-
-    /// This is similar to a `Switch` node: we're still picking a possible path
-    /// to follow based on a runtime check. The key difference is that we know
-    /// that one of those is always going to match and so there's no use for a
-    /// fallback branch.
-    ///
-    /// This is used when matching on custom types (and lists!) when we know
-    /// that there's a limited number of choices and exhaustiveness checking
-    /// ensures we'll always deal with all the possible cases.
-    ///
-    ExhaustiveSwitch {
-        var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
+        fallback_check: FallbackCheck,
     },
 
     /// This is a special node: it represents a missing pattern. If a tree
@@ -713,6 +745,64 @@ pub enum Decision {
     /// what kind of pattern doesn't match!
     ///
     Fail,
+}
+
+/// When we have a swith in the decision tree we know there's always going to be
+/// at least one choice that comes last and we know is going to match no matter
+/// what. This might fall under three different categories.
+///
+#[derive(Debug, Eq, PartialEq, Clone)]
+pub enum FallbackCheck {
+    /// This corresponds to the catch all added at the end of a case expression
+    /// matching on an infinite type.
+    ///
+    /// ```txt
+    /// case todo {
+    ///   1 -> todo
+    ///   _ -> todo
+    ///   ─┬───────
+    //     ╰── when matching on an infinite type there's going to be a catch all
+    /// }
+    ///
+    InfiniteCatchAll,
+
+    /// This happens when we're matching on a variant whose checks are all
+    /// explicitly written down:
+    ///
+    /// ```txt
+    /// case todo {
+    ///   Ok(_) -> todo
+    ///   Error(Nil) -> todo
+    ///   ─┬────────────────
+    //     ╰── when matching on a custom type (or list!) we'll have to write all
+    //         variants down, so there's always going to be a last one.
+    /// }
+    /// ```
+    ///
+    /// The type system will make sure that this last check will always match,
+    /// no matter what, if none of the other checks matches. We still keep the
+    /// correspongin runtime check around because it's useful for code generation!
+    ///
+    RuntimeCheck { check: RuntimeCheck },
+
+    /// This is a special case for a catch all! It happens when we're matching
+    /// on a variant and use a catch all pattern:
+    ///
+    /// ```txt
+    /// case todo {
+    ///   Ok(_) -> todo
+    ///   _ -> todo
+    ///   ─┬───────
+    ///    ╰── here we know we're just skipping over the `Error` variant with
+    ///       this catch all.
+    /// }
+    /// ```
+    ///
+    /// We know exactly which variants we're skipping, so we keep track of
+    /// those skipped checks (they will end up being useful for reporting
+    /// missing patterns!)
+    ///
+    CatchAll { ignored_checks: Vec<RuntimeCheck> },
 }
 
 impl Decision {
@@ -726,22 +816,6 @@ impl Decision {
             if_true,
             if_false: Box::new(if_false),
         }
-    }
-
-    pub fn switch(
-        var: Variable,
-        choices: Vec<(RuntimeCheck, Box<Decision>)>,
-        fallback: Decision,
-    ) -> Self {
-        Self::Switch {
-            var,
-            choices,
-            fallback: Box::new(fallback),
-        }
-    }
-
-    fn exhaustive_switch(var: Variable, choices: Vec<(RuntimeCheck, Box<Decision>)>) -> Decision {
-        Self::ExhaustiveSwitch { var, choices }
     }
 }
 
@@ -757,21 +831,12 @@ struct Compiler<'a> {
 
 /// The result of compiling a pattern match expression.
 ///
-pub struct Match {
-    pub tree: Decision,
+pub struct CompileCaseResult {
+    pub compiled_case: CompiledCase,
     pub diagnostics: Diagnostics,
-    pub subject_variables: Vec<Variable>,
 }
 
-/// Whether a clause is reachable, or why it is unreachable.
-///
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
-pub enum Reachability {
-    Reachable,
-    Unreachable(UnreachableCaseClauseReason),
-}
-
-impl Match {
+impl CompileCaseResult {
     pub fn is_reachable(&self, clause: usize) -> Reachability {
         if self.diagnostics.reachable.contains(&clause) {
             Reachability::Reachable
@@ -785,6 +850,29 @@ impl Match {
     pub fn missing_patterns(&self, environment: &Environment<'_>) -> Vec<EcoString> {
         missing_patterns::missing_patterns(self, environment)
     }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct CompiledCase {
+    pub tree: Decision,
+    pub subject_variables: Vec<Variable>,
+}
+
+impl Default for CompiledCase {
+    fn default() -> Self {
+        CompiledCase {
+            tree: Decision::Fail,
+            subject_variables: vec![],
+        }
+    }
+}
+
+/// Whether a clause is reachable, or why it is unreachable.
+///
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Reachability {
+    Reachable,
+    Unreachable(UnreachableCaseClauseReason),
 }
 
 /// A type for storing diagnostics produced by the decision tree compiler.
@@ -949,19 +1037,12 @@ impl<'a> Compiler<'a> {
         // choices they've been split up into.
         let mut splitter = BranchSplitter::from_checks(known_checks);
         self.split_branches(&mut splitter, branches, pivot_var.clone(), &branch_mode);
-        let choices = splitter
-            .choices
-            .into_iter()
-            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
-            .collect_vec();
-
-        if branch_mode.needs_fallback() {
+        if branch_mode.is_infinite() {
             // If the branching is infinite, that means we always need to also have
             // a fallback (imagine you're pattern matching on an `Int` and put no
             // `_` at the end of the case expression).
-            let fallback = self.compile(splitter.fallback);
-            Decision::switch(pivot_var, choices, fallback)
-        } else if choices.is_empty() {
+            self.splitter_to_switch(pivot_var, splitter)
+        } else if splitter.choices.is_empty() {
             // If the branching doesn't need any fallback but we ended up with no
             // checks it means we're trying to pattern match on an external type
             // but haven't provided a catch-all case.
@@ -971,7 +1052,7 @@ impl<'a> Compiler<'a> {
         } else {
             // Otherwise we know that one of the possible runtime checks is always
             // going to succeed and there's no need to also have a fallback branch.
-            Decision::exhaustive_switch(pivot_var, choices)
+            self.splitter_to_exhaustive_switch(pivot_var, splitter)
         }
     }
 
@@ -1000,6 +1081,76 @@ impl<'a> Compiler<'a> {
 
             splitter.add_checked_branch(checked_pattern, branch, branch_mode, self);
         }
+    }
+
+    /// Compiles the branches in a splitter down to a switch matching on a type
+    /// with infinite variants (like ints, floats and strings). With a fallaback
+    /// branch.
+    ///
+    fn splitter_to_switch(&mut self, var: Variable, splitter: BranchSplitter) -> Decision {
+        let choices = self.compile_all_choices(splitter.choices);
+        let last_choice = self.compile(splitter.fallback);
+        Decision::Switch {
+            var,
+            choices,
+            fallback: Box::new(last_choice),
+            fallback_check: FallbackCheck::InfiniteCatchAll,
+        }
+    }
+
+    /// Compiles the branches in a splitter down to a switch matching on a type
+    /// with a finite known number of variants.
+    ///
+    fn splitter_to_exhaustive_switch(
+        &mut self,
+        var: Variable,
+        splitter: BranchSplitter,
+    ) -> Decision {
+        let mut choices = splitter.choices;
+        let (choices, fallback, fallback_check) =
+            if choices.iter().any(|(check, _)| check.is_ignored()) {
+                // If there's any check that is ignored and not explicitly being
+                // matched on then we want to ignore all of those and clump them
+                // into a single "fallback" branch to avoid bloating the generated
+                // tree.
+                let mut ignored_checks = vec![];
+                let mut remaining_choices = vec![];
+                for choice in choices.into_iter() {
+                    if choice.0.is_ignored() {
+                        ignored_checks.push(choice.0)
+                    } else {
+                        remaining_choices.push(choice)
+                    }
+                }
+
+                let fallback_check = FallbackCheck::CatchAll { ignored_checks };
+                (remaining_choices, splitter.fallback, fallback_check)
+            } else {
+                // Otherwise we just use the last check as the final one that
+                // can be outright skipped.
+                let (last_check, last_choice) = choices.pop().expect("at least one choice");
+                let fallback_check = FallbackCheck::RuntimeCheck { check: last_check };
+                (choices, last_choice, fallback_check)
+            };
+
+        let choices = self.compile_all_choices(choices);
+        let fallback = Box::new(self.compile(fallback));
+        Decision::Switch {
+            var,
+            choices,
+            fallback,
+            fallback_check,
+        }
+    }
+
+    fn compile_all_choices(
+        &mut self,
+        choices: Vec<(RuntimeCheck, VecDeque<Branch>)>,
+    ) -> Vec<(RuntimeCheck, Box<Decision>)> {
+        choices
+            .into_iter()
+            .map(|(check, branches)| (check, Box::new(self.compile(branches))))
+            .collect_vec()
     }
 
     /// Turns a `RuntimeCheckKind` into a new `RuntimeCheck` by coming up with
@@ -1169,7 +1320,13 @@ impl<'a> Compiler<'a> {
                 },
             ) => {
                 let remaining = prefix1.strip_prefix(prefix0.as_str()).unwrap_or(prefix1);
-                vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                // If the prefixes are exactly the same then the only remaining check
+                // is for the two remaining bits to be the same.
+                if remaining.is_empty() {
+                    vec![rest0.is(*rest1)]
+                } else {
+                    vec![rest0.is(self.string_prefix_pattern(remaining, *rest1))]
+                }
             }
 
             (_, _) => unreachable!("invalid pattern overlapping"),
@@ -1186,6 +1343,15 @@ impl<'a> Compiler<'a> {
     ) -> RuntimeCheck {
         RuntimeCheck::Variant {
             index,
+            match_: VariantMatch::NeverExplicitlyMatchedOn {
+                name: constructor.name.clone(),
+            },
+            labels: constructor
+                .parameters
+                .iter()
+                .enumerate()
+                .filter_map(|(i, parameter)| Some((i, parameter.label.clone()?)))
+                .collect(),
             fields: constructor
                 .parameters
                 .iter()
@@ -1319,7 +1485,7 @@ impl BranchSplitter {
     fn add_checked_branch(
         &mut self,
         pattern: Pattern,
-        branch: Branch,
+        mut branch: Branch,
         branch_mode: &BranchMode,
         compiler: &mut Compiler<'_>,
     ) {
@@ -1333,9 +1499,14 @@ impl BranchSplitter {
             // with any of the existing ones. So we add it as a possible new path
             // we might have to go down to in the decision tree.
             self.save_index_of_new_choice(kind.clone());
+
+            let check = compiler.fresh_runtime_check(kind, branch_mode);
+            for new_check in compiler.new_checks(&pattern, &check) {
+                branch.add_check(new_check);
+            }
             let mut branches = self.fallback.clone();
             branches.push_back(branch);
-            let check = compiler.fresh_runtime_check(kind, branch_mode);
+
             self.choices.push((check, branches));
         } else {
             // Otherwise, we know that the check for this branch overlaps with
@@ -1343,10 +1514,10 @@ impl BranchSplitter {
             // as part of those existing paths.
             // We'll add the branch with its newly discovered checks only to those
             // paths.
-            for index in indices_of_overlapping_checks {
+            for index in indices_of_overlapping_checks.iter() {
                 let (overlapping_check, branches) = self
                     .choices
-                    .get_mut(index)
+                    .get_mut(*index)
                     .expect("check to already be a choice");
 
                 let mut branch = branch.clone();
@@ -1354,6 +1525,21 @@ impl BranchSplitter {
                     branch.add_check(new_check);
                 }
                 branches.push_back(branch);
+            }
+        }
+
+        // Then we have to update all variant checks with any new name/module
+        // we might have discovered from the pattern to make sure we're using
+        // the correct qualification to refer to each constructor.
+        if let Pattern::Variant { name, module, .. } = pattern {
+            for index in indices_of_overlapping_checks {
+                let (check, _) = self.choices.get_mut(index).expect("");
+                if let RuntimeCheck::Variant { match_, .. } = check {
+                    *match_ = VariantMatch::ExplicitlyMatchedOn {
+                        module: module.clone(),
+                        name: name.clone(),
+                    }
+                }
             }
         }
     }
@@ -1617,7 +1803,7 @@ impl CaseToCompile {
         self.branches.push(branch);
     }
 
-    pub fn compile(self, env: &Environment<'_>) -> Match {
+    pub fn compile(self, env: &Environment<'_>) -> CompileCaseResult {
         let mut compiler = Compiler::new(env, self.variable_id, self.patterns);
 
         let decision = if self.branches.is_empty() {
@@ -1632,10 +1818,12 @@ impl CaseToCompile {
             compiler.compile(self.branches.into())
         };
 
-        Match {
-            tree: decision,
+        CompileCaseResult {
             diagnostics: compiler.diagnostics,
-            subject_variables: self.subject_variables,
+            compiled_case: CompiledCase {
+                tree: decision,
+                subject_variables: self.subject_variables,
+            },
         }
     }
 
@@ -1696,14 +1884,22 @@ impl CaseToCompile {
             TypedPattern::Constructor {
                 arguments,
                 constructor,
+                name,
+                module,
                 ..
             } => {
                 let index = constructor.expect_ref("must be inferred").constructor_index as usize;
+                let module = module.as_ref().map(|(module, _)| module.clone());
                 let fields = arguments
                     .iter()
                     .map(|argument| self.register(&argument.value))
                     .collect_vec();
-                self.insert(Pattern::Variant { index, fields })
+                self.insert(Pattern::Variant {
+                    name: name.clone(),
+                    module,
+                    index,
+                    fields,
+                })
             }
 
             TypedPattern::BitArray { location, .. } => {

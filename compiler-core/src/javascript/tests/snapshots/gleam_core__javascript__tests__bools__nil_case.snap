@@ -13,7 +13,5 @@ fn go(a) {
 
 ----- COMPILED JAVASCRIPT
 function go(a) {
-  {
-    return 0;
-  }
+  return 0;
 }

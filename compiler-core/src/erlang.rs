@@ -2145,9 +2145,7 @@ fn pipeline<'a>(
 
 fn assignment<'a>(assignment: &'a TypedAssignment, env: &mut Env<'a>) -> Document<'a> {
     match &assignment.kind {
-        AssignmentKind::Let | AssignmentKind::Generated => {
-            let_(&assignment.value, &assignment.pattern, env)
-        }
+        AssignmentKind::Let => let_(&assignment.value, &assignment.pattern, env),
         AssignmentKind::Assert { message, .. } => let_assert(
             &assignment.value,
             &assignment.pattern,

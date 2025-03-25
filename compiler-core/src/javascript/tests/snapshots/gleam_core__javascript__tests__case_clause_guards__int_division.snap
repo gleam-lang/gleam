@@ -17,8 +17,8 @@ import { divideInt } from "../gleam.mjs";
 
 export function main() {
   let $ = divideInt(5, 2);
-  if ($ === (divideInt(5, 2))) {
-    let x = $;
+  let x = $;
+  if (x === (divideInt(5, 2))) {
     return true;
   } else {
     return false;

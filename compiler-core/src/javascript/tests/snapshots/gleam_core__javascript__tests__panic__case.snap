@@ -15,14 +15,12 @@ fn go(x) {
 import { makeError } from "../gleam.mjs";
 
 function go(x) {
-  {
-    throw makeError(
-      "panic",
-      "my/mod",
-      4,
-      "go",
-      "`panic` expression evaluated.",
-      {}
-    )
-  }
+  throw makeError(
+    "panic",
+    "my/mod",
+    4,
+    "go",
+    "`panic` expression evaluated.",
+    {}
+  )
 }

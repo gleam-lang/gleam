@@ -933,7 +933,7 @@ impl<'comments> Formatter<'comments> {
         let _ = self.pop_empty_lines(pattern.location().end);
 
         let (keyword, message) = match kind {
-            AssignmentKind::Let | AssignmentKind::Generated => ("let ", None),
+            AssignmentKind::Let => ("let ", None),
             AssignmentKind::Assert { message, .. } => (
                 "let assert ",
                 message.as_ref().map(|message| {
